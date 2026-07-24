@@ -92,12 +92,10 @@ document.querySelector('#approvalList').addEventListener('click', event => {
   notify(`${name}님의 요청을 ${approved ? '승인' : '거절'}했습니다.`);
 });
 
-document.querySelector('#refreshBtn').addEventListener('click', event => {
+document.querySelector('#refreshBtn').addEventListener('click', async event => {
   event.currentTarget.textContent = '↻ 확인 중';
-  setTimeout(() => {
-    event.currentTarget.textContent = '↻ 새로고침';
-    notify('5개 서비스 상태가 모두 정상입니다.');
-  }, 700);
+  await loadMonitorStatus(true);
+  event.currentTarget.textContent = '↻ 새로고침';
 });
 
 document.querySelector('#globalSearch').addEventListener('input', event => {
@@ -136,3 +134,53 @@ mobileMenu.addEventListener('click', () => {
   sidebar.classList.toggle('open');
   mobileMenu.setAttribute('aria-expanded', String(sidebar.classList.contains('open')));
 });
+
+const MONITOR_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/monitor-status.json';
+let monitorRecommendation;
+
+function setHealth(row, site) {
+  const health = row.querySelector('.health');
+  const metrics = row.querySelectorAll('.mini-metric strong');
+  const labels = { online: '정상', degraded: '지연', offline: '장애' };
+  row.dataset.status = site.status;
+  health.classList.remove('online', 'degraded', 'offline');
+  health.classList.add(site.status);
+  health.innerHTML = `<i></i>${labels[site.status] || '확인 불가'}`;
+  metrics[0].textContent = Number.isFinite(site.responseTime) ? `${site.responseTime}ms` : '—';
+  metrics[1].textContent = site.httpStatus || '실패';
+  row.title = `${new Date(site.checkedAt).toLocaleString('ko-KR')} 점검`;
+}
+
+function updateMonitorRecommendation(data) {
+  monitorRecommendation?.remove();
+  const issue = data.sites.find(site => site.status === 'offline') || data.sites.find(site => site.status === 'degraded');
+  if (!issue) return;
+  monitorRecommendation = document.createElement('div');
+  monitorRecommendation.className = 'recommend-item high searchable monitor-recommendation';
+  monitorRecommendation.innerHTML = `<span class="priority">실시간</span><strong>${issue.name} ${issue.status === 'offline' ? '장애 확인' : '응답 지연'}</strong><p>${issue.domain} · HTTP ${issue.httpStatus || '실패'} · ${issue.responseTime}ms</p><button type="button">사이트 확인</button>`;
+  monitorRecommendation.querySelector('button').addEventListener('click', () => window.open(issue.url, '_blank', 'noopener'));
+  document.querySelector('#recommendList').prepend(monitorRecommendation);
+}
+
+async function loadMonitorStatus(announce = false) {
+  try {
+    const response = await fetch(`${MONITOR_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data.sites) || !data.sites.length) throw new Error('점검 결과 대기 중');
+    data.sites.forEach(site => {
+      const row = document.querySelector(`.service-row[data-domain="${site.domain}"]`);
+      if (row) setHealth(row, site);
+    });
+    updateMonitorRecommendation(data);
+    const statusCard = document.querySelector('.stats-grid .stat-card:first-child');
+    statusCard.querySelector('strong').innerHTML = `${data.summary.online} <small>/ ${data.summary.total}</small>`;
+    statusCard.querySelector('p').textContent = data.summary.offline ? `${data.summary.offline}개 서비스 장애` : data.summary.degraded ? `${data.summary.degraded}개 서비스 지연` : '모든 서비스 정상';
+    if (announce) notify(`실측 완료: 정상 ${data.summary.online}, 지연 ${data.summary.degraded}, 장애 ${data.summary.offline}`);
+  } catch (error) {
+    if (announce) notify(`모니터링 결과를 불러오지 못했습니다: ${error.message}`);
+  }
+}
+
+loadMonitorStatus();
+setInterval(loadMonitorStatus, 60000);

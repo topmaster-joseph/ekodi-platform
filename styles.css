@@ -4,3 +4,9 @@
 @media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{width:100%;margin:0}.mobile-menu{display:block;border:0;background:transparent;font-size:20px}.topbar{padding:0 16px;gap:12px}.global-search{width:auto;flex:1}.global-search kbd,.profile-button>span:not(.avatar),.profile-button b{display:none}.content{padding:22px 15px 40px}.page-heading{display:block}.heading-actions{margin-top:18px}.stats-grid{grid-template-columns:1fr 1fr}.workspace-grid,.bottom-grid{display:block}.panel{margin-bottom:14px}.service-row{grid-template-columns:34px 1fr 60px 18px}.mini-metric{display:none}.recommend-list{grid-template-columns:1fr}.approval-row{grid-template-columns:34px 1fr auto}.request-role,.requested{display:none}.approval-actions{grid-column:2/4}.page-heading h1{font-size:22px}}
 @media(max-width:480px){.stats-grid{grid-template-columns:1fr}.service-row{padding:12px}.gate-card{padding:25px}.secondary{display:none}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+/* Live monitoring states */
+.service-row[data-status="degraded"] .health { color: #b7791f; }
+.service-row[data-status="degraded"] .health i { background: #f6ad55; box-shadow: 0 0 0 4px rgba(246, 173, 85, .16); }
+.service-row[data-status="offline"] { background: rgba(254, 226, 226, .5); }
+.service-row[data-status="offline"] .health { color: #c53030; }
+.service-row[data-status="offline"] .health i { background: #e53e3e; box-shadow: 0 0 0 4px rgba(229, 62, 62, .14); }
