@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-07-24T13:02:21.422Z",
+  "generatedAt": "2026-07-24T13:27:52.343Z",
   "summary": {
-    "total": 5,
-    "online": 0,
+    "total": 6,
+    "online": 1,
     "degraded": 0,
     "offline": 5
   },
@@ -14,8 +14,8 @@
       "url": "https://ekodimall.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 201,
-      "checkedAt": "2026-07-24T13:02:20.785Z",
+      "responseTime": 242,
+      "checkedAt": "2026-07-24T13:27:51.529Z",
       "error": "fetch failed"
     },
     {
@@ -25,19 +25,19 @@
       "url": "https://ekodibiz.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 579,
-      "checkedAt": "2026-07-24T13:02:20.844Z",
+      "responseTime": 712,
+      "checkedAt": "2026-07-24T13:27:51.588Z",
       "error": "fetch failed"
     },
     {
-      "id": "book",
-      "name": "에코디북",
+      "id": "publishing",
+      "name": "에코디출판",
       "domain": "ekodibook.kr",
       "url": "https://ekodibook.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 276,
-      "checkedAt": "2026-07-24T13:02:20.845Z",
+      "responseTime": 358,
+      "checkedAt": "2026-07-24T13:27:51.590Z",
       "error": "fetch failed"
     },
     {
@@ -47,8 +47,8 @@
       "url": "https://ekodichurch.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 428,
-      "checkedAt": "2026-07-24T13:02:20.846Z",
+      "responseTime": 542,
+      "checkedAt": "2026-07-24T13:27:51.591Z",
       "error": "fetch failed"
     },
     {
@@ -58,9 +58,20 @@
       "url": "https://ekodilab.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 562,
-      "checkedAt": "2026-07-24T13:02:20.848Z",
+      "responseTime": 728,
+      "checkedAt": "2026-07-24T13:27:51.592Z",
       "error": "fetch failed"
+    },
+    {
+      "id": "mission",
+      "name": "에코디선교회",
+      "domain": "youtube.com/@ekodicommunity",
+      "url": "https://youtube.com/@ekodicommunity",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 749,
+      "checkedAt": "2026-07-24T13:27:51.593Z",
+      "error": null
     }
   ]
 }
