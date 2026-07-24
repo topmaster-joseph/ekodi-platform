@@ -23,14 +23,43 @@ function closePalette() {
   document.querySelectorAll('.command-options button').forEach(button => button.hidden = false);
 }
 
-document.querySelector('#enterConsole').addEventListener('click', () => {
-  gate.classList.add('hidden');
-  shell.setAttribute('aria-hidden', 'false');
-  sessionStorage.setItem('ekodi-console', 'entered');
-  notify('보안 인증이 확인되었습니다.');
+const adminLoginToggle = document.querySelector('#showAdminLogin');
+const adminLoginForm = document.querySelector('#adminLoginForm');
+const adminEmail = document.querySelector('#adminEmail');
+const adminBirthdate = document.querySelector('#adminBirthdate');
+const loginError = document.querySelector('#loginError');
+
+adminBirthdate.max = new Date().toISOString().slice(0, 10);
+
+adminLoginToggle.addEventListener('click', () => {
+  const opening = adminLoginForm.hidden;
+  adminLoginForm.hidden = !opening;
+  adminLoginToggle.setAttribute('aria-expanded', String(opening));
+  adminLoginToggle.textContent = opening ? '관리자 로그인 닫기 ↑' : '관리자 로그인 →';
+  if (opening) setTimeout(() => adminEmail.focus(), 30);
 });
 
-if (sessionStorage.getItem('ekodi-console') === 'entered') {
+adminLoginForm.addEventListener('submit', event => {
+  event.preventDefault();
+  loginError.textContent = '';
+  const formData = new FormData(adminLoginForm);
+  const birthdate = new Date(`${formData.get('birthdate')}T00:00:00`);
+  if (!adminLoginForm.checkValidity()) {
+    adminLoginForm.reportValidity();
+    return;
+  }
+  if (Number.isNaN(birthdate.getTime()) || birthdate >= new Date()) {
+    loginError.textContent = '올바른 생년월일을 입력해 주세요.';
+    return;
+  }
+  gate.classList.add('hidden');
+  shell.setAttribute('aria-hidden', 'false');
+  sessionStorage.setItem('ekodi-console-v2', 'entered');
+  sessionStorage.setItem('ekodi-admin-email', String(formData.get('email')));
+  notify('관리자 로그인이 완료되었습니다.');
+});
+
+if (sessionStorage.getItem('ekodi-console-v2') === 'entered') {
   gate.classList.add('hidden');
   shell.setAttribute('aria-hidden', 'false');
 }

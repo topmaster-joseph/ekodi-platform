@@ -12,19 +12,32 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="access-gate" id="accessGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="access-gate" id="accessGate" aria-labelledby="gateTitle">
     <div class="gate-card">
       <div class="gate-brand"><span class="logo-mark">E</span><strong>EKODI</strong></div>
-      <span class="security-badge">보호된 운영 영역</span>
-      <h1 id="gateTitle">EKODI Control Center</h1>
-      <p>관리자 또는 관리자가 승인한 사용자만 접근할 수 있습니다.</p>
-      <div class="identity-preview">
-        <span class="avatar">김</span>
-        <div><strong>김관리</strong><small>admin@ekodi.kr · 최고 관리자</small></div>
-        <span class="verified">인증됨</span>
+      <span class="security-badge">EKODI PLATFORM</span>
+      <h1 id="gateTitle">에코디 서비스 바로가기</h1>
+      <p>원하는 서비스를 선택하면 해당 사이트로 바로 이동합니다.</p>
+      <nav class="portal-grid" aria-label="에코디 관련 사이트">
+        <a href="https://ekodimall.kr" target="_blank" rel="noopener"><span class="service-logo mall">M</span><strong>에코디몰</strong><small>ekodimall.kr</small><b>↗</b></a>
+        <a href="https://ekodibiz.kr" target="_blank" rel="noopener"><span class="service-logo biz">B</span><strong>에코디비즈</strong><small>ekodibiz.kr</small><b>↗</b></a>
+        <a href="https://ekodibook.kr" target="_blank" rel="noopener"><span class="service-logo book">P</span><strong>에코디출판</strong><small>ekodibook.kr</small><b>↗</b></a>
+        <a href="https://ekodichurch.kr" target="_blank" rel="noopener"><span class="service-logo church">C</span><strong>에코디교회</strong><small>ekodichurch.kr</small><b>↗</b></a>
+        <a href="https://ekodilab.kr" target="_blank" rel="noopener"><span class="service-logo lab">L</span><strong>에코디연구소</strong><small>ekodilab.kr</small><b>↗</b></a>
+        <a href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener"><span class="service-logo mission">S</span><strong>에코디선교회</strong><small>YouTube 채널</small><b>↗</b></a>
+      </nav>
+      <div class="admin-entry">
+        <button class="admin-login-link" id="showAdminLogin" type="button" aria-expanded="false">관리자 로그인 →</button>
+        <form class="admin-login-form" id="adminLoginForm" hidden>
+          <div class="form-heading"><strong>플랫폼 관리자 로그인</strong><small>관리자 정보를 정확하게 입력하세요.</small></div>
+          <label>관리자 이메일<input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="admin@ekodi.kr" required></label>
+          <label>비밀번호<input id="adminPassword" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="8자 이상 입력" required></label>
+          <label>생년월일<input id="adminBirthdate" name="birthdate" type="date" autocomplete="bday" required></label>
+          <p class="login-error" id="loginError" role="alert"></p>
+          <button class="primary full" id="enterConsole" type="submit">관리 콘솔 입장</button>
+        </form>
       </div>
-      <button class="primary full" id="enterConsole" type="button">운영 콘솔 입장</button>
-      <p class="gate-note">실제 배포 시 Cloudflare Access의 이메일·OTP 인증과 관리자 승인 정책으로 보호합니다.</p>
+      <p class="gate-note">관리 콘솔은 승인된 플랫폼 관리자 전용입니다.</p>
     </div>
   </div>
 
