@@ -1,102 +1,133 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="에코디의 모든 서비스를 한곳에서 만나는 통합 플랫폼" />
-  <meta name="theme-color" content="#143e36" />
-  <meta property="og:title" content="EKODI 통합 플랫폼" />
-  <meta property="og:description" content="에코디몰, 에코디비즈, 에코디북, 에코디교회, 에코디연구소를 한곳에서 만나보세요." />
-  <title>EKODI — 더 나은 세상을 잇다</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EKODI 서비스 통합 운영·권한·추천 관리 콘솔">
+  <meta name="theme-color" content="#0b1220">
+  <title>EKODI Control Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="에코디 홈">
-      <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
-      <span>EKODI</span>
-    </a>
-    <nav aria-label="주요 메뉴">
-      <a href="#services">서비스</a>
-      <a class="nav-cta" href="#contact">문의하기 <span>↗</span></a>
-    </nav>
-    <button class="menu-button" type="button" aria-label="메뉴 열기" aria-expanded="false">
-      <span></span><span></span>
-    </button>
-  </header>
-
-  <main id="top">
-    <section class="hero">
-      <div class="eyebrow"><span></span> EKODI UNIVERSE</div>
-      <h1>EKODI의 모든 서비스,<br><em>한곳에서 만나보세요.</em></h1>
-      <p>몰·비즈니스·출판·교회·연구소를 잇는 EKODI 통합 플랫폼</p>
-      <a class="scroll-link" href="#services"><span>서비스 둘러보기</span><b>↓</b></a>
-      <div class="hero-orbit" aria-hidden="true">
-        <div class="orbit-ring"></div>
-        <div class="orb orb-a">E</div>
-        <div class="orb orb-b">D</div>
-        <div class="orb orb-c">C</div>
-        <div class="core"><span>ekodi</span><small>better together</small></div>
+  <div class="access-gate" id="accessGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <div class="gate-card">
+      <div class="gate-brand"><span class="logo-mark">E</span><strong>EKODI</strong></div>
+      <span class="security-badge">보호된 운영 영역</span>
+      <h1 id="gateTitle">EKODI Control Center</h1>
+      <p>관리자 또는 관리자가 승인한 사용자만 접근할 수 있습니다.</p>
+      <div class="identity-preview">
+        <span class="avatar">김</span>
+        <div><strong>김관리</strong><small>admin@ekodi.kr · 최고 관리자</small></div>
+        <span class="verified">인증됨</span>
       </div>
-    </section>
+      <button class="primary full" id="enterConsole" type="button">운영 콘솔 입장</button>
+      <p class="gate-note">실제 배포 시 Cloudflare Access의 이메일·OTP 인증과 관리자 승인 정책으로 보호합니다.</p>
+    </div>
+  </div>
 
-    <section class="services" id="services">
-      <div class="section-heading">
-        <div><span class="section-no">01</span><h2>에코디의 모든 서비스</h2></div>
-        <p>당신의 일상에 필요한 서비스를 선택해<br>각 브랜드의 공간으로 이동하세요.</p>
+  <div class="app-shell" id="appShell" aria-hidden="true">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo-mark">E</span><strong>EKODI</strong><small>CONTROL CENTER</small></div>
+      <nav aria-label="운영 메뉴">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span>통합 현황</button>
+        <button class="nav-item" data-view="services"><span>◫</span>서비스 관리</button>
+        <button class="nav-item" data-view="members"><span>♙</span>사용자·권한 <b class="nav-count" id="navApprovalCount">3</b></button>
+        <button class="nav-item" data-view="recommend"><span>✦</span>추천 센터 <b class="new-dot">NEW</b></button>
+        <button class="nav-item" data-view="activity"><span>≡</span>활동 기록</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="security-state"><span></span><div><strong>접근 정책 정상</strong><small>마지막 확인 2분 전</small></div></div>
+        <button class="nav-item" id="settingsBtn"><span>⚙</span>환경 설정</button>
       </div>
-      <div class="service-grid">
-        <a class="service-card lime" href="https://ekodimall.kr" target="_blank" rel="noopener noreferrer" data-site="에코디몰" aria-label="에코디몰 사이트 새 창에서 열기">
-          <div class="card-top"><span>01</span><b>사이트 열기 ↗</b></div>
-          <div class="card-icon plant" aria-hidden="true"><i></i><i></i><i></i></div>
-          <div class="card-copy"><small>EKODI MALL</small><h3>에코디몰</h3><p>건강하고 가치 있는 상품을 만나는<br>에코디 공식 온라인몰</p></div>
-        </a>
-        <a class="service-card cream" href="https://ekodibiz.kr" target="_blank" rel="noopener noreferrer" data-site="에코디비즈" aria-label="에코디비즈 사이트 새 창에서 열기">
-          <div class="card-top"><span>02</span><b>사이트 열기 ↗</b></div>
-          <div class="card-icon bag" aria-hidden="true"><i></i></div>
-          <div class="card-copy"><small>EKODI BIZ</small><h3>에코디비즈</h3><p>기업과 브랜드의 성장을 잇는<br>전문 비즈니스 파트너</p></div>
-        </a>
-        <a class="service-card sky" href="https://ekodibook.kr" target="_blank" rel="noopener noreferrer" data-site="에코디북" aria-label="에코디북 사이트 새 창에서 열기">
-          <div class="card-top"><span>03</span><b>사이트 열기 ↗</b></div>
-          <div class="card-icon blocks" aria-hidden="true"><i></i><i></i><i></i></div>
-          <div class="card-copy"><small>EKODI BOOK</small><h3>에코디북</h3><p>생각을 깨우고 지혜를 나누는<br>책과 콘텐츠의 공간</p></div>
-        </a>
-        <a class="service-card navy" href="https://ekodichurch.kr" target="_blank" rel="noopener noreferrer" data-site="에코디교회" aria-label="에코디교회 사이트 새 창에서 열기">
-          <div class="card-top"><span>04</span><b>사이트 열기 ↗</b></div>
-          <div class="card-icon people" aria-hidden="true"><i></i><i></i><i></i></div>
-          <div class="card-copy"><small>EKODI CHURCH</small><h3>에코디교회</h3><p>믿음 안에서 함께 성장하는<br>따뜻한 신앙 공동체</p></div>
-        </a>
-        <a class="service-card coral" href="https://ekodilab.kr" target="_blank" rel="noopener noreferrer" data-site="에코디연구소" aria-label="에코디연구소 사이트 새 창에서 열기">
-          <div class="card-top"><span>05</span><b>사이트 열기 ↗</b></div>
-          <div class="card-icon lab" aria-hidden="true"><i></i><i></i><i></i></div>
-          <div class="card-copy"><small>EKODI INSTITUTE</small><h3>에코디연구소</h3><p>더 나은 미래를 탐구하고 제안하는<br>지식 연구 플랫폼</p></div>
-        </a>
-      </div>
-      <p class="link-notice" role="status"><span class="status-dot"></span> 카드를 선택하면 해당 EKODI 공식 사이트가 새 창에서 열립니다.</p>
-    </section>
+    </aside>
 
-    <section class="story" id="story">
-      <span class="section-no">02</span>
-      <p class="story-kicker">ONE VISION, MANY POSSIBILITIES</p>
-      <h2>각기 다른 서비스가 만나<br><em>더 큰 변화를 만듭니다.</em></h2>
-      <div class="story-stats">
-        <div><strong>5</strong><span>Connected services</span></div>
-        <div><strong>1</strong><span>Shared vision</span></div>
-        <div><strong>∞</strong><span>Better possibilities</span></div>
-      </div>
-    </section>
-  </main>
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="메뉴 열기" aria-expanded="false">☰</button>
+        <label class="global-search">
+          <span>⌕</span>
+          <input id="globalSearch" type="search" placeholder="서비스, 사용자, 작업 검색" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </label>
+        <div class="top-actions">
+          <button class="icon-button" id="notificationBtn" aria-label="알림"><span class="alert-dot"></span>♢</button>
+          <button class="profile-button" id="profileBtn"><span class="avatar">김</span><span><strong>김관리</strong><small>최고 관리자</small></span><b>⌄</b></button>
+        </div>
+      </header>
 
-  <footer id="contact">
-    <div class="footer-brand">EKODI</div>
-    <p>더 나은 내일을 함께 만들어갈<br>파트너를 기다립니다.</p>
-    <a href="mailto:hello@ecodi.co.kr">hello@ecodi.co.kr ↗</a>
-    <div class="footer-bottom"><span>© 2026 EKODI. All rights reserved.</span><span>Seoul, Korea</span></div>
-  </footer>
+      <div class="content">
+        <section class="page-heading">
+          <div><p class="eyebrow">2026년 7월 23일 목요일</p><h1>좋은 아침입니다, 김관리님.</h1><p>EKODI 전체 서비스와 승인 업무를 한곳에서 관리하세요.</p></div>
+          <div class="heading-actions"><button class="secondary" id="exportBtn">보고서 내보내기</button><button class="primary" id="quickActionBtn">+ 빠른 작업</button></div>
+        </section>
+
+        <section class="stats-grid" aria-label="핵심 지표">
+          <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>5 <small>/ 5</small></strong><p class="positive">모든 서비스 정상</p></div></article>
+          <article class="stat-card"><div class="stat-icon blue">♙</div><div><span>승인된 사용자</span><strong>42</strong><p>관리자 5 · 운영자 37</p></div></article>
+          <article class="stat-card attention"><div class="stat-icon amber">!</div><div><span>승인 대기</span><strong id="pendingCount">3</strong><p class="warning">확인이 필요합니다</p></div><button class="text-action" data-scroll="approval">검토 →</button></article>
+          <article class="stat-card"><div class="stat-icon violet">✦</div><div><span>오늘의 추천</span><strong id="recommendCount">4</strong><p>업무 최적화 제안</p></div><button class="text-action" data-scroll="recommendations">보기 →</button></article>
+        </section>
+
+        <section class="workspace-grid">
+          <article class="panel services-panel">
+            <div class="panel-head"><div><h2>서비스 운영 현황</h2><p>연결된 EKODI 서비스의 실시간 상태</p></div><button class="ghost" id="refreshBtn">↻ 새로고침</button></div>
+            <div class="service-table" id="serviceTable">
+              <a class="service-row searchable" href="https://ekodimall.kr" target="_blank" rel="noopener"><span class="service-logo mall">M</span><div class="service-name"><strong>에코디몰</strong><small>ekodimall.kr</small></div><span class="health"><i></i>정상</span><div class="mini-metric"><small>오늘 방문</small><strong>1,284</strong></div><div class="mini-metric"><small>처리 업무</small><strong>36건</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" href="https://ekodibiz.kr" target="_blank" rel="noopener"><span class="service-logo biz">B</span><div class="service-name"><strong>에코디비즈</strong><small>ekodibiz.kr</small></div><span class="health"><i></i>정상</span><div class="mini-metric"><small>활성 기업</small><strong>48</strong></div><div class="mini-metric"><small>진행 프로젝트</small><strong>12건</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" href="https://ekodibook.kr" target="_blank" rel="noopener"><span class="service-logo book">K</span><div class="service-name"><strong>에코디북</strong><small>ekodibook.kr</small></div><span class="health"><i></i>정상</span><div class="mini-metric"><small>등록 도서</small><strong>326</strong></div><div class="mini-metric"><small>검수 대기</small><strong>8건</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" href="https://ekodichurch.kr" target="_blank" rel="noopener"><span class="service-logo church">C</span><div class="service-name"><strong>에코디교회</strong><small>ekodichurch.kr</small></div><span class="health"><i></i>정상</span><div class="mini-metric"><small>등록 교회</small><strong>24</strong></div><div class="mini-metric"><small>신규 소식</small><strong>5건</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" href="https://ekodilab.kr" target="_blank" rel="noopener"><span class="service-logo lab">L</span><div class="service-name"><strong>에코디연구소</strong><small>ekodilab.kr</small></div><span class="health"><i></i>정상</span><div class="mini-metric"><small>연구 과제</small><strong>7</strong></div><div class="mini-metric"><small>검토 문서</small><strong>14건</strong></div><span class="open">↗</span></a>
+            </div>
+          </article>
+
+          <aside class="panel recommendation-panel" id="recommendations">
+            <div class="panel-head"><div><span class="ai-label">✦ SMART RECOMMEND</span><h2>추천 작업</h2><p>운영 데이터 기반 우선순위 제안</p></div></div>
+            <div class="recommend-list" id="recommendList">
+              <div class="recommend-item high searchable"><span class="priority">높음</span><strong>에코디북 검수 8건 처리</strong><p>평균 대기시간이 2일을 초과했습니다.</p><button data-action="검수 화면을 열었습니다">검수 시작</button></div>
+              <div class="recommend-item searchable"><span class="priority">추천</span><strong>몰·북 교차 캠페인 생성</strong><p>독서 상품 구매 전환율이 18% 높습니다.</p><button data-action="캠페인 초안을 생성했습니다">초안 만들기</button></div>
+              <div class="recommend-item searchable"><span class="priority">보안</span><strong>장기 미접속 계정 4개 점검</strong><p>90일 이상 활동이 없는 운영 계정입니다.</p><button data-action="계정 점검 목록을 열었습니다">계정 검토</button></div>
+              <div class="recommend-item searchable"><span class="priority">자동화</span><strong>주간 현황 보고 자동화</strong><p>매주 월요일 오전 9시 보고서를 제안합니다.</p><button data-action="주간 보고 자동화가 설정되었습니다">설정</button></div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="panel approval-panel" id="approval">
+            <div class="panel-head"><div><h2>사용자 승인 대기</h2><p>요청 정보와 권한 범위를 확인한 후 승인하세요.</p></div><button class="ghost">전체 보기</button></div>
+            <div class="approval-list" id="approvalList">
+              <div class="approval-row searchable"><span class="avatar pink">이</span><div class="requester"><strong>이서연</strong><small>seoyeon.lee@example.com</small></div><span class="request-role">에코디몰 · 운영자</span><span class="requested">10분 전</span><div class="approval-actions"><button class="reject">거절</button><button class="approve">승인</button></div></div>
+              <div class="approval-row searchable"><span class="avatar sky">박</span><div class="requester"><strong>박준호</strong><small>junho.park@example.com</small></div><span class="request-role">에코디비즈 · 편집자</span><span class="requested">1시간 전</span><div class="approval-actions"><button class="reject">거절</button><button class="approve">승인</button></div></div>
+              <div class="approval-row searchable"><span class="avatar tan">최</span><div class="requester"><strong>최민지</strong><small>minji.choi@example.com</small></div><span class="request-role">에코디연구소 · 열람자</span><span class="requested">어제</span><div class="approval-actions"><button class="reject">거절</button><button class="approve">승인</button></div></div>
+            </div>
+          </article>
+
+          <aside class="panel activity-panel">
+            <div class="panel-head"><div><h2>최근 활동</h2><p>관리자 작업 감사 로그</p></div><button class="ghost">전체 로그</button></div>
+            <ol class="activity-list" id="activityList">
+              <li><span class="activity-icon success">✓</span><div><strong>사용자 권한 변경</strong><p>김관리 · 정수빈을 에코디몰 운영자로 변경</p><small>18분 전</small></div></li>
+              <li><span class="activity-icon info">↻</span><div><strong>콘텐츠 동기화 완료</strong><p>에코디북 · 도서 12건 업데이트</p><small>42분 전</small></div></li>
+              <li><span class="activity-icon warn">!</span><div><strong>보안 정책 업데이트</strong><p>최고 관리자 · 세션 만료 8시간 적용</p><small>2시간 전</small></div></li>
+            </ol>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="command-palette" id="commandPalette" role="dialog" aria-modal="true" aria-label="빠른 작업">
+    <div class="command-box">
+      <div class="command-search"><span>⌕</span><input id="commandInput" placeholder="실행할 작업을 입력하세요"><kbd>ESC</kbd></div>
+      <div class="command-options">
+        <button data-command="신규 사용자 초대 링크를 만들었습니다"><span>＋</span><div><strong>사용자 초대</strong><small>승인 대상자에게 초대 링크 보내기</small></div></button>
+        <button data-command="권한 정책 편집기를 열었습니다"><span>♙</span><div><strong>권한 정책 편집</strong><small>서비스별 역할과 접근 범위 설정</small></div></button>
+        <button data-command="통합 보고서를 생성했습니다"><span>▤</span><div><strong>통합 보고서 생성</strong><small>5개 서비스 운영 현황 내보내기</small></div></button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="script.js"></script>
 </body>
 </html>
-
