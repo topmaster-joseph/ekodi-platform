@@ -4,6 +4,8 @@ const toast = document.querySelector('#toast');
 const palette = document.querySelector('#commandPalette');
 const commandInput = document.querySelector('#commandInput');
 let toastTimer;
+const AUTH_API = 'https://ekodi-auth-api.topmaster-joseph.workers.dev';
+let authMode = 'login';
 
 function notify(message) {
   toast.textContent = message;
@@ -37,9 +39,33 @@ adminLoginToggle.addEventListener('click', () => {
   adminLoginToggle.setAttribute('aria-expanded', String(opening));
   adminLoginToggle.textContent = opening ? '관리자 로그인 닫기 ↑' : '관리자 로그인 →';
   if (opening) setTimeout(() => adminEmail.focus(), 30);
+  if (opening) loadAuthStatus();
 });
 
-adminLoginForm.addEventListener('submit', event => {
+async function loadAuthStatus() {
+  try {
+    const response = await fetch(`${AUTH_API}/api/status`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('인증 서버 연결 실패');
+    const status = await response.json();
+    authMode = status.initialized ? 'login' : 'setup';
+    document.querySelector('.form-heading strong').textContent = authMode === 'setup' ? '최고관리자 최초 등록' : '플랫폼 관리자 로그인';
+    document.querySelector('#enterConsole').textContent = authMode === 'setup' ? '최고관리자 등록 및 입장' : '관리 콘솔 입장';
+    adminEmail.value = status.adminEmail || adminEmail.value;
+    adminEmail.readOnly = authMode === 'setup';
+  } catch {
+    loginError.textContent = '인증 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+  }
+}
+
+function enterAuthenticatedConsole(email, token) {
+  gate.classList.add('hidden');
+  shell.setAttribute('aria-hidden', 'false');
+  sessionStorage.setItem('ekodi-auth-token', token);
+  sessionStorage.setItem('ekodi-admin-email', email);
+  notify('관리자 인증이 완료되었습니다.');
+}
+
+adminLoginForm.addEventListener('submit', async event => {
   event.preventDefault();
   loginError.textContent = '';
   const formData = new FormData(adminLoginForm);
@@ -52,17 +78,46 @@ adminLoginForm.addEventListener('submit', event => {
     loginError.textContent = '올바른 생년월일을 입력해 주세요.';
     return;
   }
-  gate.classList.add('hidden');
-  shell.setAttribute('aria-hidden', 'false');
-  sessionStorage.setItem('ekodi-console-v2', 'entered');
-  sessionStorage.setItem('ekodi-admin-email', String(formData.get('email')));
-  notify('관리자 로그인이 완료되었습니다.');
+  const submitButton = document.querySelector('#enterConsole');
+  submitButton.disabled = true;
+  submitButton.textContent = '서버 인증 중…';
+  try {
+    const response = await fetch(`${AUTH_API}/api/${authMode === 'setup' ? 'setup' : 'login'}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: String(formData.get('email')).trim().toLowerCase(),
+        password: String(formData.get('password')),
+        birthdate: String(formData.get('birthdate'))
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '인증에 실패했습니다.');
+    adminLoginForm.reset();
+    enterAuthenticatedConsole(result.email, result.token);
+  } catch (error) {
+    loginError.textContent = error.message;
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = authMode === 'setup' ? '최고관리자 등록 및 입장' : '관리 콘솔 입장';
+  }
 });
 
-if (sessionStorage.getItem('ekodi-console-v2') === 'entered') {
-  gate.classList.add('hidden');
-  shell.setAttribute('aria-hidden', 'false');
+async function restoreServerSession() {
+  const token = sessionStorage.getItem('ekodi-auth-token');
+  if (!token) return;
+  try {
+    const response = await fetch(`${AUTH_API}/api/session`, { headers: { authorization: `Bearer ${token}` } });
+    if (!response.ok) throw new Error('expired');
+    const result = await response.json();
+    enterAuthenticatedConsole(result.email, token);
+  } catch {
+    sessionStorage.removeItem('ekodi-auth-token');
+    sessionStorage.removeItem('ekodi-admin-email');
+  }
 }
+
+restoreServerSession();
 
 document.querySelector('#quickActionBtn').addEventListener('click', openPalette);
 document.querySelector('#globalSearch').addEventListener('keydown', event => {
