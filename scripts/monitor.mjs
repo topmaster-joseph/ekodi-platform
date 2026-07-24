@@ -4,13 +4,14 @@ import { fileURLToPath } from 'node:url';
 const sites = [
   ['mall', '에코디몰', 'ekodimall.kr'],
   ['biz', '에코디비즈', 'ekodibiz.kr'],
-  ['book', '에코디북', 'ekodibook.kr'],
+  ['publishing', '에코디출판', 'ekodibook.kr'],
   ['church', '에코디교회', 'ekodichurch.kr'],
-  ['lab', '에코디연구소', 'ekodilab.kr']
+  ['lab', '에코디연구소', 'ekodilab.kr'],
+  ['mission', '에코디선교회', 'youtube.com/@ekodicommunity', 'https://youtube.com/@ekodicommunity']
 ];
 
-async function checkSite([id, name, domain]) {
-  const url = `https://${domain}`;
+async function checkSite([id, name, domain, targetUrl]) {
+  const url = targetUrl || `https://${domain}`;
   const started = performance.now();
   const checkedAt = new Date().toISOString();
   try {
