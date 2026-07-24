@@ -65,7 +65,7 @@
         </section>
 
         <section class="stats-grid" aria-label="핵심 지표">
-          <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>5 <small>/ 5</small></strong><p class="positive">모든 서비스 정상</p></div></article>
+          <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>6 <small>/ 6</small></strong><p class="positive">상태 확인 중</p></div></article>
           <article class="stat-card"><div class="stat-icon blue">♙</div><div><span>승인된 사용자</span><strong>42</strong><p>관리자 5 · 운영자 37</p></div></article>
           <article class="stat-card attention"><div class="stat-icon amber">!</div><div><span>승인 대기</span><strong id="pendingCount">3</strong><p class="warning">확인이 필요합니다</p></div><button class="text-action" data-scroll="approval">검토 →</button></article>
           <article class="stat-card"><div class="stat-icon violet">✦</div><div><span>오늘의 추천</span><strong id="recommendCount">4</strong><p>업무 최적화 제안</p></div><button class="text-action" data-scroll="recommendations">보기 →</button></article>
@@ -77,16 +77,17 @@
             <div class="service-table" id="serviceTable">
               <a class="service-row searchable" data-domain="ekodimall.kr" href="https://ekodimall.kr" target="_blank" rel="noopener"><span class="service-logo mall">M</span><div class="service-name"><strong>에코디몰</strong><small>ekodimall.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
               <a class="service-row searchable" data-domain="ekodibiz.kr" href="https://ekodibiz.kr" target="_blank" rel="noopener"><span class="service-logo biz">B</span><div class="service-name"><strong>에코디비즈</strong><small>ekodibiz.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
-              <a class="service-row searchable" data-domain="ekodibook.kr" href="https://ekodibook.kr" target="_blank" rel="noopener"><span class="service-logo book">K</span><div class="service-name"><strong>에코디북</strong><small>ekodibook.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="ekodibook.kr" href="https://ekodibook.kr" target="_blank" rel="noopener"><span class="service-logo book">P</span><div class="service-name"><strong>에코디출판</strong><small>ekodibook.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
               <a class="service-row searchable" data-domain="ekodichurch.kr" href="https://ekodichurch.kr" target="_blank" rel="noopener"><span class="service-logo church">C</span><div class="service-name"><strong>에코디교회</strong><small>ekodichurch.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
               <a class="service-row searchable" data-domain="ekodilab.kr" href="https://ekodilab.kr" target="_blank" rel="noopener"><span class="service-logo lab">L</span><div class="service-name"><strong>에코디연구소</strong><small>ekodilab.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="youtube.com/@ekodicommunity" href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener"><span class="service-logo mission">S</span><div class="service-name"><strong>에코디선교회</strong><small>youtube.com/@ekodicommunity</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
             </div>
           </article>
 
           <aside class="panel recommendation-panel" id="recommendations">
             <div class="panel-head"><div><span class="ai-label">✦ SMART RECOMMEND</span><h2>추천 작업</h2><p>운영 데이터 기반 우선순위 제안</p></div></div>
             <div class="recommend-list" id="recommendList">
-              <div class="recommend-item high searchable"><span class="priority">높음</span><strong>에코디북 검수 8건 처리</strong><p>평균 대기시간이 2일을 초과했습니다.</p><button data-action="검수 화면을 열었습니다">검수 시작</button></div>
+              <div class="recommend-item high searchable"><span class="priority">높음</span><strong>에코디출판 검수 8건 처리</strong><p>평균 대기시간이 2일을 초과했습니다.</p><button data-action="검수 화면을 열었습니다">검수 시작</button></div>
               <div class="recommend-item searchable"><span class="priority">추천</span><strong>몰·북 교차 캠페인 생성</strong><p>독서 상품 구매 전환율이 18% 높습니다.</p><button data-action="캠페인 초안을 생성했습니다">초안 만들기</button></div>
               <div class="recommend-item searchable"><span class="priority">보안</span><strong>장기 미접속 계정 4개 점검</strong><p>90일 이상 활동이 없는 운영 계정입니다.</p><button data-action="계정 점검 목록을 열었습니다">계정 검토</button></div>
               <div class="recommend-item searchable"><span class="priority">자동화</span><strong>주간 현황 보고 자동화</strong><p>매주 월요일 오전 9시 보고서를 제안합니다.</p><button data-action="주간 보고 자동화가 설정되었습니다">설정</button></div>
@@ -108,7 +109,7 @@
             <div class="panel-head"><div><h2>최근 활동</h2><p>관리자 작업 감사 로그</p></div><button class="ghost">전체 로그</button></div>
             <ol class="activity-list" id="activityList">
               <li><span class="activity-icon success">✓</span><div><strong>사용자 권한 변경</strong><p>김관리 · 정수빈을 에코디몰 운영자로 변경</p><small>18분 전</small></div></li>
-              <li><span class="activity-icon info">↻</span><div><strong>콘텐츠 동기화 완료</strong><p>에코디북 · 도서 12건 업데이트</p><small>42분 전</small></div></li>
+              <li><span class="activity-icon info">↻</span><div><strong>콘텐츠 동기화 완료</strong><p>에코디출판 · 도서 12건 업데이트</p><small>42분 전</small></div></li>
               <li><span class="activity-icon warn">!</span><div><strong>보안 정책 업데이트</strong><p>최고 관리자 · 세션 만료 8시간 적용</p><small>2시간 전</small></div></li>
             </ol>
           </aside>
@@ -123,7 +124,7 @@
       <div class="command-options">
         <button data-command="신규 사용자 초대 링크를 만들었습니다"><span>＋</span><div><strong>사용자 초대</strong><small>승인 대상자에게 초대 링크 보내기</small></div></button>
         <button data-command="권한 정책 편집기를 열었습니다"><span>♙</span><div><strong>권한 정책 편집</strong><small>서비스별 역할과 접근 범위 설정</small></div></button>
-        <button data-command="통합 보고서를 생성했습니다"><span>▤</span><div><strong>통합 보고서 생성</strong><small>5개 서비스 운영 현황 내보내기</small></div></button>
+        <button data-command="통합 보고서를 생성했습니다"><span>▤</span><div><strong>통합 보고서 생성</strong><small>6개 서비스 운영 현황 내보내기</small></div></button>
       </div>
     </div>
   </div>

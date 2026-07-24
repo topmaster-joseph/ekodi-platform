@@ -5,6 +5,7 @@
 @media(max-width:480px){.stats-grid{grid-template-columns:1fr}.service-row{padding:12px}.gate-card{padding:25px}.secondary{display:none}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 /* Live monitoring states */
+.mission{background:#ffe5e5;color:#c53030}
 .service-row[data-status="degraded"] .health { color: #b7791f; }
 .service-row[data-status="degraded"] .health i { background: #f6ad55; box-shadow: 0 0 0 4px rgba(246, 173, 85, .16); }
 .service-row[data-status="offline"] { background: rgba(254, 226, 226, .5); }
