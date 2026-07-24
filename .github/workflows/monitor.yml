@@ -1,0 +1,33 @@
+name: EKODI site monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ekodi-site-monitor
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check five EKODI sites
+        run: node scripts/monitor.mjs
+      - name: Publish latest status
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monitor-status.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update EKODI monitoring status"
+          git push
