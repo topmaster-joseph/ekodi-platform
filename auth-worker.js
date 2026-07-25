@@ -121,14 +121,13 @@ export default {
       const data = await readBody(request);
       if (!data || String(data.email).toLowerCase() !== ADMIN_EMAIL) return json({ error: '지정된 최고관리자 이메일만 등록할 수 있습니다.' }, 403, origin);
       if (typeof data.password !== 'string' || data.password.length < 12) return json({ error: '비밀번호는 12자 이상이어야 합니다.' }, 400, origin);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(data.birthdate || '')) return json({ error: '생년월일을 확인해 주세요.' }, 400, origin);
       const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first();
       if (Number(count.count) > 0) return json({ error: '최고관리자 등록이 이미 완료되었습니다.' }, 409, origin);
 
       const passwordSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
       const birthSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
       const passwordDigest = await passwordHash(data.password, passwordSalt);
-      const birthDigest = await sha256(`${birthSalt}:${data.birthdate}`);
+      const birthDigest = await sha256(`${birthSalt}:not-required`);
       const createdAt = new Date().toISOString();
       const result = await env.DB.prepare(`INSERT INTO admins
         (email, password_hash, password_salt, birth_hash, birth_salt, role, created_at)
@@ -148,10 +147,9 @@ export default {
       const data = await readBody(request);
       const email = String(data?.email || '').toLowerCase();
       const admin = await env.DB.prepare('SELECT * FROM admins WHERE email = ?').bind(email).first();
-      if (!admin || typeof data?.password !== 'string' || typeof data?.birthdate !== 'string') return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
+      if (!admin || typeof data?.password !== 'string') return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
       const passwordDigest = await passwordHash(data.password, admin.password_salt);
-      const birthDigest = await sha256(`${admin.birth_salt}:${data.birthdate}`);
-      if (!secureEqual(passwordDigest, admin.password_hash) || !secureEqual(birthDigest, admin.birth_hash)) return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
+      if (!secureEqual(passwordDigest, admin.password_hash)) return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
       const session = await issueSession(env.DB, admin.id);
       return json({ ok: true, email: admin.email, role: admin.role, ...session }, 200, origin);
     }

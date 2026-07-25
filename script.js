@@ -28,10 +28,7 @@ function closePalette() {
 const adminLoginToggle = document.querySelector('#showAdminLogin');
 const adminLoginForm = document.querySelector('#adminLoginForm');
 const adminEmail = document.querySelector('#adminEmail');
-const adminBirthdate = document.querySelector('#adminBirthdate');
 const loginError = document.querySelector('#loginError');
-
-adminBirthdate.max = new Date().toISOString().slice(0, 10);
 
 adminLoginToggle.addEventListener('click', () => {
   const opening = adminLoginForm.hidden;
@@ -69,13 +66,8 @@ adminLoginForm.addEventListener('submit', async event => {
   event.preventDefault();
   loginError.textContent = '';
   const formData = new FormData(adminLoginForm);
-  const birthdate = new Date(`${formData.get('birthdate')}T00:00:00`);
   if (!adminLoginForm.checkValidity()) {
     adminLoginForm.reportValidity();
-    return;
-  }
-  if (Number.isNaN(birthdate.getTime()) || birthdate >= new Date()) {
-    loginError.textContent = '올바른 생년월일을 입력해 주세요.';
     return;
   }
   const submitButton = document.querySelector('#enterConsole');
@@ -87,8 +79,7 @@ adminLoginForm.addEventListener('submit', async event => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         email: String(formData.get('email')).trim().toLowerCase(),
-        password: String(formData.get('password')),
-        birthdate: String(formData.get('birthdate'))
+        password: String(formData.get('password'))
       })
     });
     const result = await response.json();
