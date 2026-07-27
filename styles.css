@@ -30,3 +30,30 @@
 .service-row[data-status="offline"] { background: rgba(254, 226, 226, .5); }
 .service-row[data-status="offline"] .health { color: #c53030; }
 .service-row[data-status="offline"] .health i { background: #e53e3e; box-shadow: 0 0 0 4px rgba(229, 62, 62, .14); }
+
+/* Natural Korean word wrapping */
+body {
+  line-break: strict;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+h1, h2, h3, p {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+/* Long addresses remain contained on narrow screens. */
+.portal-grid small,
+.service-name small,
+.requester small,
+.identity-preview small,
+.gate-note {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
