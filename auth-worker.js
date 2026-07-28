@@ -1,6 +1,6 @@
 const ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
 const ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
-const ITERATIONS = 210000;
+const ITERATIONS = 100000;
 
 const encoder = new TextEncoder();
 
@@ -8,7 +8,7 @@ function cors(origin) {
   return {
     'Access-Control-Allow-Origin': origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN,
     'Access-Control-Allow-Headers': 'content-type, authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
   };
@@ -103,6 +103,32 @@ async function authenticate(request, db) {
     .bind(tokenHash, new Date().toISOString()).first();
 }
 
+
+const EKODI_DOMAINS = [
+  { name: 'ekodimall.kr', service: '에코디몰' },
+  { name: 'ekodibiz.kr', service: '에코디비즈' },
+  { name: 'ekodibook.kr', service: '에코디출판' },
+  { name: 'ekodichurch.kr', service: '에코디교회' },
+  { name: 'ekodilab.kr', service: '에코디연구소' }
+];
+
+async function cfApi(env, path, options = {}) {
+  if (!env.CF_API_TOKEN) throw new Error('도메인 관리 권한이 설정되지 않았습니다.');
+  const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${env.CF_API_TOKEN}`,
+      'content-type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  const data = await response.json();
+  if (!response.ok || data.success === false) {
+    throw new Error(data.errors?.[0]?.message || 'Cloudflare 도메인 요청에 실패했습니다.');
+  }
+  return data.result;
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('origin') || ALLOWED_ORIGIN;
@@ -152,6 +178,48 @@ export default {
       if (!secureEqual(passwordDigest, admin.password_hash)) return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
       const session = await issueSession(env.DB, admin.id);
       return json({ ok: true, email: admin.email, role: admin.role, ...session }, 200, origin);
+    }
+
+
+    if (url.pathname.startsWith('/api/domains')) {
+      const admin = await authenticate(request, env.DB);
+      if (!admin) return json({ error: '관리자 인증이 필요합니다.' }, 401, origin);
+      try {
+        if (request.method === 'GET' && url.pathname === '/api/domains') {
+          const zones = await cfApi(env, '/zones?per_page=50');
+          const domains = EKODI_DOMAINS.map(domain => {
+            const zone = zones.find(item => item.name === domain.name);
+            return { ...domain, connected: Boolean(zone), zoneId: zone?.id || null, status: zone?.status || 'not_connected', nameServers: zone?.name_servers || [] };
+          });
+          return json({ domains }, 200, origin);
+        }
+
+        const match = url.pathname.match(/^\/api\/domains\/([^/]+)\/dns(?:\/([^/]+))?$/);
+        if (match) {
+          const zoneId = match[1];
+          const recordId = match[2];
+          if (request.method === 'GET' && !recordId) {
+            const records = await cfApi(env, `/zones/${zoneId}/dns_records?per_page=100`);
+            return json({ records }, 200, origin);
+          }
+          if (request.method === 'POST' && !recordId) {
+            const body = await readBody(request);
+            const record = await cfApi(env, `/zones/${zoneId}/dns_records`, { method: 'POST', body: JSON.stringify(body) });
+            return json({ record }, 201, origin);
+          }
+          if (request.method === 'PUT' && recordId) {
+            const body = await readBody(request);
+            const record = await cfApi(env, `/zones/${zoneId}/dns_records/${recordId}`, { method: 'PUT', body: JSON.stringify(body) });
+            return json({ record }, 200, origin);
+          }
+          if (request.method === 'DELETE' && recordId) {
+            await cfApi(env, `/zones/${zoneId}/dns_records/${recordId}`, { method: 'DELETE' });
+            return json({ ok: true }, 200, origin);
+          }
+        }
+      } catch (error) {
+        return json({ error: error.message }, 502, origin);
+      }
     }
 
     if (request.method === 'GET' && url.pathname === '/api/session') {
