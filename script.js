@@ -60,6 +60,7 @@ function enterAuthenticatedConsole(email, token) {
   sessionStorage.setItem('ekodi-auth-token', token);
   sessionStorage.setItem('ekodi-admin-email', email);
   notify('관리자 인증이 완료되었습니다.');
+  loadDomains();
 }
 
 adminLoginForm.addEventListener('submit', async event => {
@@ -192,11 +193,13 @@ document.querySelectorAll('.nav-item[data-view]').forEach(button => {
     const labels = {
       dashboard: '통합 현황을 표시합니다.',
       services: '서비스 운영 현황으로 이동했습니다.',
+      domains: '도메인 관리로 이동했습니다.',
       members: '사용자 승인 업무로 이동했습니다.',
       recommend: '추천 작업으로 이동했습니다.',
       activity: '최근 활동 기록으로 이동했습니다.'
     };
     if (button.dataset.view === 'services') document.querySelector('#serviceTable').scrollIntoView({ behavior: 'smooth' });
+    if (button.dataset.view === 'domains') document.querySelector('#domainManagement').scrollIntoView({ behavior: 'smooth' });
     if (button.dataset.view === 'members') document.querySelector('#approval').scrollIntoView({ behavior: 'smooth' });
     if (button.dataset.view === 'recommend') document.querySelector('#recommendations').scrollIntoView({ behavior: 'smooth' });
     notify(labels[button.dataset.view]);
@@ -259,3 +262,172 @@ async function loadMonitorStatus(announce = false) {
 
 loadMonitorStatus();
 setInterval(loadMonitorStatus, 60000);
+
+
+const domainGrid = document.querySelector('#domainGrid');
+const dnsManager = document.querySelector('#dnsManager');
+const dnsRecordList = document.querySelector('#dnsRecordList');
+const dnsRecordForm = document.querySelector('#dnsRecordForm');
+let activeZoneId = null;
+let activeDomainName = '';
+
+function authHeaders(jsonBody = false) {
+  const token = sessionStorage.getItem('ekodi-auth-token');
+  return {
+    authorization: `Bearer ${token || ''}`,
+    ...(jsonBody ? { 'content-type': 'application/json' } : {})
+  };
+}
+
+function domainStatusLabel(status) {
+  return status === 'active' ? '활성' : status === 'pending' ? '확인 중' : 'Cloudflare 미연결';
+}
+
+async function loadDomains() {
+  const token = sessionStorage.getItem('ekodi-auth-token');
+  if (!token || !domainGrid) return;
+  domainGrid.innerHTML = '<p class="domain-loading">도메인 정보를 확인하는 중입니다.</p>';
+  try {
+    const response = await fetch(`${AUTH_API}/api/domains`, { headers: authHeaders() });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || '도메인 정보를 불러오지 못했습니다.');
+    domainGrid.innerHTML = '';
+    data.domains.forEach(domain => {
+      const card = document.createElement('article');
+      card.className = `domain-card ${domain.connected ? 'connected' : 'disconnected'}`;
+      const head = document.createElement('div');
+      head.className = 'domain-card-head';
+      const title = document.createElement('div');
+      const service = document.createElement('strong');
+      service.textContent = domain.service;
+      const name = document.createElement('small');
+      name.textContent = domain.name;
+      title.append(service, name);
+      const state = document.createElement('span');
+      state.className = 'domain-status';
+      state.textContent = domainStatusLabel(domain.status);
+      head.append(title, state);
+      const details = document.createElement('p');
+      details.textContent = domain.connected
+        ? (domain.nameServers.length ? `네임서버: ${domain.nameServers.join(', ')}` : 'Cloudflare에 연결되었습니다.')
+        : '도메인을 Cloudflare Zone에 추가하면 이곳에서 DNS를 직접 관리할 수 있습니다.';
+      const actions = document.createElement('div');
+      actions.className = 'domain-actions';
+      const visit = document.createElement('a');
+      visit.href = `https://${domain.name}`;
+      visit.target = '_blank';
+      visit.rel = 'noopener';
+      visit.className = 'secondary';
+      visit.textContent = '사이트 열기';
+      actions.append(visit);
+      if (domain.connected) {
+        const manage = document.createElement('button');
+        manage.type = 'button';
+        manage.className = 'primary';
+        manage.textContent = 'DNS 관리';
+        manage.addEventListener('click', () => openDnsManager(domain));
+        actions.append(manage);
+      }
+      card.append(head, details, actions);
+      domainGrid.append(card);
+    });
+  } catch (error) {
+    domainGrid.innerHTML = '';
+    const message = document.createElement('p');
+    message.className = 'domain-error';
+    message.textContent = error.message;
+    domainGrid.append(message);
+  }
+}
+
+async function openDnsManager(domain) {
+  activeZoneId = domain.zoneId;
+  activeDomainName = domain.name;
+  document.querySelector('#dnsZoneTitle').textContent = `${domain.name} DNS 레코드`;
+  dnsManager.hidden = false;
+  dnsManager.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  await loadDnsRecords();
+}
+
+async function loadDnsRecords() {
+  dnsRecordList.innerHTML = '<p class="domain-loading">DNS 레코드를 불러오는 중입니다.</p>';
+  try {
+    const response = await fetch(`${AUTH_API}/api/domains/${activeZoneId}/dns`, { headers: authHeaders() });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'DNS 레코드를 불러오지 못했습니다.');
+    dnsRecordList.innerHTML = '';
+    data.records.forEach(record => {
+      const row = document.createElement('div');
+      row.className = 'dns-record-row';
+      const type = document.createElement('strong');
+      type.textContent = record.type;
+      const name = document.createElement('span');
+      name.textContent = record.name;
+      const content = document.createElement('code');
+      content.textContent = record.content;
+      const proxy = document.createElement('small');
+      proxy.textContent = record.proxied ? '프록시 사용' : `TTL ${record.ttl}`;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'reject';
+      remove.textContent = '삭제';
+      remove.addEventListener('click', () => deleteDnsRecord(record.id));
+      row.append(type, name, content, proxy, remove);
+      dnsRecordList.append(row);
+    });
+    if (!data.records.length) dnsRecordList.innerHTML = '<p class="domain-loading">등록된 DNS 레코드가 없습니다.</p>';
+  } catch (error) {
+    dnsRecordList.innerHTML = `<p class="domain-error">${error.message}</p>`;
+  }
+}
+
+async function deleteDnsRecord(recordId) {
+  if (!confirm('이 DNS 레코드를 삭제하시겠습니까?')) return;
+  try {
+    const response = await fetch(`${AUTH_API}/api/domains/${activeZoneId}/dns/${recordId}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'DNS 레코드를 삭제하지 못했습니다.');
+    notify('DNS 레코드를 삭제했습니다.');
+    await loadDnsRecords();
+  } catch (error) {
+    notify(error.message);
+  }
+}
+
+dnsRecordForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = new FormData(dnsRecordForm);
+  const type = String(form.get('type'));
+  const nameValue = String(form.get('name')).trim();
+  const payload = {
+    type,
+    name: nameValue === '@' ? activeDomainName : nameValue,
+    content: String(form.get('content')).trim(),
+    ttl: Number(form.get('ttl')) || 3600,
+    proxied: Boolean(form.get('proxied')) && ['A', 'AAAA', 'CNAME'].includes(type)
+  };
+  try {
+    const response = await fetch(`${AUTH_API}/api/domains/${activeZoneId}/dns`, {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'DNS 레코드를 추가하지 못했습니다.');
+    dnsRecordForm.reset();
+    dnsRecordForm.elements.ttl.value = 3600;
+    notify('DNS 레코드를 추가했습니다.');
+    await loadDnsRecords();
+  } catch (error) {
+    notify(error.message);
+  }
+});
+
+document.querySelector('#refreshDomains')?.addEventListener('click', loadDomains);
+document.querySelector('#closeDnsManager')?.addEventListener('click', () => {
+  dnsManager.hidden = true;
+  activeZoneId = null;
+});

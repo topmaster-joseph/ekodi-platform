@@ -46,6 +46,7 @@
       <nav aria-label="운영 메뉴">
         <button class="nav-item active" data-view="dashboard"><span>⌂</span>통합 현황</button>
         <button class="nav-item" data-view="services"><span>◫</span>서비스 관리</button>
+        <button class="nav-item" data-view="domains"><span>◎</span>도메인 관리</button>
         <button class="nav-item" data-view="members"><span>♙</span>사용자·권한 <b class="nav-count" id="navApprovalCount">3</b></button>
         <button class="nav-item" data-view="recommend"><span>✦</span>추천 센터 <b class="new-dot">NEW</b></button>
         <button class="nav-item" data-view="activity"><span>≡</span>활동 기록</button>
@@ -105,6 +106,23 @@
               <div class="recommend-item searchable"><span class="priority">자동화</span><strong>주간 현황 보고 자동화</strong><p>매주 월요일 오전 9시 보고서를 제안합니다.</p><button data-action="주간 보고 자동화가 설정되었습니다">설정</button></div>
             </div>
           </aside>
+        </section>
+
+        <section class="panel domain-panel" id="domainManagement">
+          <div class="panel-head"><div><h2>도메인 관리</h2><p>EKODI 도메인의 Cloudflare 연결 상태와 DNS 레코드를 관리합니다.</p></div><button class="ghost" id="refreshDomains">↻ 새로고침</button></div>
+          <div class="domain-grid" id="domainGrid"><p class="domain-loading">도메인 정보를 불러오는 중입니다.</p></div>
+          <div class="dns-manager" id="dnsManager" hidden>
+            <div class="dns-manager-head"><div><strong id="dnsZoneTitle">DNS 레코드</strong><small>변경 사항은 Cloudflare에 즉시 반영됩니다.</small></div><button class="ghost" id="closeDnsManager" type="button">닫기</button></div>
+            <form class="dns-form" id="dnsRecordForm">
+              <select name="type" aria-label="DNS 유형"><option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option><option>MX</option></select>
+              <input name="name" aria-label="호스트 이름" placeholder="호스트 이름 또는 @" required>
+              <input name="content" aria-label="연결 값" placeholder="IP 주소 또는 대상 주소" required>
+              <input name="ttl" aria-label="TTL" type="number" min="60" value="3600">
+              <label class="proxy-check"><input name="proxied" type="checkbox"> 프록시</label>
+              <button class="primary" type="submit">레코드 추가</button>
+            </form>
+            <div class="dns-record-list" id="dnsRecordList"></div>
+          </div>
         </section>
 
         <section class="bottom-grid">
