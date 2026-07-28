@@ -72,8 +72,8 @@
       </header>
 
       <div class="content">
-        <section class="page-heading">
-          <div><p class="eyebrow">2026년 7월 23일 목요일</p><h1>좋은 아침입니다, 김관리님.</h1><p>EKODI 전체 서비스와 승인 업무를 한곳에서 관리하세요.</p></div>
+        <section class="page-heading" id="pageHeading">
+          <div><p class="eyebrow" id="viewEyebrow">EKODI 운영 콘솔</p><h1 id="viewTitle" tabindex="-1">통합 현황</h1><p id="viewDescription">EKODI 전체 서비스와 승인 업무를 한곳에서 관리하세요.</p></div>
           <div class="heading-actions"><button class="secondary" id="exportBtn">보고서 내보내기</button><button class="primary" id="quickActionBtn">+ 빠른 작업</button></div>
         </section>
 
@@ -123,6 +123,37 @@
             </form>
             <div class="dns-record-list" id="dnsRecordList"></div>
           </div>
+        </section>
+
+
+        <section class="panel registrar-panel" id="registrarManagement">
+          <div class="panel-head registrar-heading">
+            <div><span class="ai-label">✦ DOMAIN CONTROL</span><h2>도메인 등록기관 관리</h2><p>도메인클럽 등록 정보와 갱신 일정을 관리하고 Cloudflare 연결 업무를 이어서 처리합니다.</p></div>
+            <div class="registrar-head-actions"><a class="secondary" href="https://www.domainclub.kr" target="_blank" rel="noopener">도메인클럽 관리 열기 ↗</a><button class="ghost" id="refreshRegistry" type="button">↻ 등록정보 새로고침</button></div>
+          </div>
+          <div class="registry-summary" id="registrySummary" aria-live="polite">
+            <article><small>등록기관</small><strong>도메인클럽</strong></article>
+            <article><small>관리 도메인</small><strong id="registryTotal">5</strong></article>
+            <article><small>60일 이내 만료</small><strong id="registryExpiring">—</strong></article>
+            <article><small>자동 연장</small><strong id="registryAutoRenew">—</strong></article>
+          </div>
+          <div class="registry-toolbar">
+            <div><strong>등록·연장 관리대장</strong><small>결제 비밀번호는 저장하지 않습니다. 실제 등록·결제는 도메인클럽 보안 화면에서 완료됩니다.</small></div>
+            <a class="primary" href="https://www.domainclub.kr" target="_blank" rel="noopener">+ 신규 도메인 등록</a>
+          </div>
+          <div class="registry-list" id="registryList"><p class="domain-loading">등록 정보를 불러오는 중입니다.</p></div>
+          <form class="registry-form" id="registryForm" hidden>
+            <div class="registry-form-head"><div><strong id="registryFormTitle">등록정보 편집</strong><small>만료일을 입력하면 갱신 권고를 자동으로 표시합니다.</small></div><button class="ghost" id="closeRegistryForm" type="button">닫기</button></div>
+            <input type="hidden" name="domain">
+            <label>등록일<input type="date" name="registeredAt"></label>
+            <label>만료일<input type="date" name="expiresAt"></label>
+            <label>갱신 알림<input type="number" name="reminderDays" min="7" max="365" value="60"><span>일 전</span></label>
+            <label class="toggle-label"><input type="checkbox" name="autoRenew"> 자동 연장 사용</label>
+            <label class="toggle-label"><input type="checkbox" name="transferLock" checked> 이전 잠금</label>
+            <label class="toggle-label"><input type="checkbox" name="whoisPrivacy" checked> 등록정보 보호</label>
+            <label class="registry-memo">관리 메모<input name="memo" maxlength="240" placeholder="계정명·비밀번호를 제외한 운영 메모"></label>
+            <div class="registry-form-actions"><a href="https://www.domainclub.kr" target="_blank" rel="noopener" class="secondary">도메인클럽에서 변경 ↗</a><button class="primary" type="submit">관리대장 저장</button></div>
+          </form>
         </section>
 
         <section class="bottom-grid">

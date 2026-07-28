@@ -71,6 +71,19 @@ async function ensureSchema(db) {
       attempted_at TEXT NOT NULL
     )`)
   ]);
+  await db.prepare(`CREATE TABLE IF NOT EXISTS domain_registry (
+    domain TEXT PRIMARY KEY,
+    registrar TEXT NOT NULL DEFAULT '도메인클럽',
+    registered_at TEXT,
+    expires_at TEXT,
+    auto_renew INTEGER NOT NULL DEFAULT 0,
+    transfer_lock INTEGER NOT NULL DEFAULT 1,
+    whois_privacy INTEGER NOT NULL DEFAULT 1,
+    reminder_days INTEGER NOT NULL DEFAULT 60,
+    memo TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL,
+    updated_by INTEGER
+  )`).run();
 }
 
 async function readBody(request) {
@@ -180,6 +193,41 @@ export default {
       return json({ ok: true, email: admin.email, role: admin.role, ...session }, 200, origin);
     }
 
+
+
+    if (url.pathname.startsWith('/api/registry')) {
+      const admin = await authenticate(request, env.DB);
+      if (!admin) return json({ error: '관리자 인증이 필요합니다.' }, 401, origin);
+      const seed = env.DB.prepare(`INSERT OR IGNORE INTO domain_registry
+        (domain, registrar, auto_renew, transfer_lock, whois_privacy, reminder_days, memo, updated_at)
+        VALUES (?, '도메인클럽', 0, 1, 1, 60, '', ?)`);
+      await env.DB.batch(EKODI_DOMAINS.map(item => seed.bind(item.name, new Date().toISOString())));
+      if (request.method === 'GET' && url.pathname === '/api/registry') {
+        const result = await env.DB.prepare('SELECT * FROM domain_registry ORDER BY domain').all();
+        return json({ records: result.results.map(row => ({
+          domain: row.domain, registrar: row.registrar, registeredAt: row.registered_at || '',
+          expiresAt: row.expires_at || '', autoRenew: Boolean(row.auto_renew),
+          transferLock: Boolean(row.transfer_lock), whoisPrivacy: Boolean(row.whois_privacy),
+          reminderDays: row.reminder_days, memo: row.memo || '', updatedAt: row.updated_at
+        })) }, 200, origin);
+      }
+      const match = url.pathname.match(/^\/api\/registry\/([^/]+)$/);
+      if (request.method === 'PUT' && match) {
+        const domain = decodeURIComponent(match[1]).toLowerCase();
+        if (!EKODI_DOMAINS.some(item => item.name === domain)) return json({ error: '관리 대상 도메인이 아닙니다.' }, 400, origin);
+        const body = await readBody(request);
+        const datePattern = /^$|^\d{4}-\d{2}-\d{2}$/;
+        if (!body || !datePattern.test(String(body.registeredAt || '')) || !datePattern.test(String(body.expiresAt || ''))) return json({ error: '날짜 형식을 확인해 주세요.' }, 400, origin);
+        const reminderDays = Math.min(365, Math.max(7, Number(body.reminderDays) || 60));
+        const memo = String(body.memo || '').trim().slice(0, 240);
+        await env.DB.prepare(`UPDATE domain_registry SET registered_at=?, expires_at=?, auto_renew=?,
+          transfer_lock=?, whois_privacy=?, reminder_days=?, memo=?, updated_at=?, updated_by=? WHERE domain=?`)
+          .bind(body.registeredAt || null, body.expiresAt || null, body.autoRenew ? 1 : 0,
+            body.transferLock ? 1 : 0, body.whoisPrivacy ? 1 : 0, reminderDays, memo,
+            new Date().toISOString(), admin.id, domain).run();
+        return json({ ok: true }, 200, origin);
+      }
+    }
 
     if (url.pathname.startsWith('/api/domains')) {
       const admin = await authenticate(request, env.DB);

@@ -61,6 +61,7 @@ function enterAuthenticatedConsole(email, token) {
   sessionStorage.setItem('ekodi-admin-email', email);
   notify('관리자 인증이 완료되었습니다.');
   loadDomains();
+  loadRegistry();
 }
 
 adminLoginForm.addEventListener('submit', async event => {
@@ -186,25 +187,56 @@ document.querySelector('#settingsBtn').addEventListener('click', () => notify('�
 document.querySelector('#notificationBtn').addEventListener('click', () => notify('새로운 보안 알림이 없습니다.'));
 document.querySelector('#profileBtn').addEventListener('click', () => notify('현재 최고 관리자 권한으로 접속 중입니다.'));
 
-document.querySelectorAll('.nav-item[data-view]').forEach(button => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item[data-view]').forEach(item => item.classList.remove('active'));
-    button.classList.add('active');
-    const labels = {
-      dashboard: '통합 현황을 표시합니다.',
-      services: '서비스 운영 현황으로 이동했습니다.',
-      domains: '도메인 관리로 이동했습니다.',
-      members: '사용자 승인 업무로 이동했습니다.',
-      recommend: '추천 작업으로 이동했습니다.',
-      activity: '최근 활동 기록으로 이동했습니다.'
-    };
-    if (button.dataset.view === 'services') document.querySelector('#serviceTable').scrollIntoView({ behavior: 'smooth' });
-    if (button.dataset.view === 'domains') document.querySelector('#domainManagement').scrollIntoView({ behavior: 'smooth' });
-    if (button.dataset.view === 'members') document.querySelector('#approval').scrollIntoView({ behavior: 'smooth' });
-    if (button.dataset.view === 'recommend') document.querySelector('#recommendations').scrollIntoView({ behavior: 'smooth' });
-    notify(labels[button.dataset.view]);
+const viewMeta = {
+  dashboard: ['통합 현황', 'EKODI 전체 서비스와 승인 업무를 한곳에서 관리하세요.'],
+  services: ['서비스 관리', '연결된 EKODI 서비스의 상태와 바로가기를 관리합니다.'],
+  domains: ['도메인 관리', '도메인클럽 등록·갱신 정보와 Cloudflare DNS를 함께 관리합니다.'],
+  members: ['사용자·권한', '관리자 인증과 사용자 승인 요청을 검토합니다.'],
+  recommend: ['추천 센터', '운영 데이터와 만료 일정을 바탕으로 우선 작업을 제안합니다.'],
+  activity: ['활동 기록', '관리자 작업과 주요 변경 이력을 확인합니다.']
+};
+
+function activateView(view, options = {}) {
+  if (!viewMeta[view]) view = 'dashboard';
+  const isDashboard = view === 'dashboard';
+  const map = {
+    services: document.querySelector('.services-panel'),
+    recommend: document.querySelector('.recommendation-panel'),
+    domains: document.querySelector('.domain-panel'),
+    registrar: document.querySelector('.registrar-panel'),
+    members: document.querySelector('.approval-panel'),
+    activity: document.querySelector('.activity-panel')
+  };
+  Object.entries(map).forEach(([key, element]) => {
+    const visible = isDashboard || key === view || (view === 'domains' && key === 'registrar');
+    element?.classList.toggle('view-hidden', !visible);
   });
+  document.querySelector('.stats-grid')?.classList.toggle('view-hidden', !isDashboard);
+  document.querySelector('.workspace-grid')?.classList.toggle('view-hidden', !isDashboard && !['services','recommend'].includes(view));
+  document.querySelector('.bottom-grid')?.classList.toggle('view-hidden', !isDashboard && !['members','activity'].includes(view));
+  document.querySelector('.workspace-grid')?.classList.toggle('single-column', !isDashboard);
+  document.querySelector('.bottom-grid')?.classList.toggle('single-column', !isDashboard);
+  document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+    const active = item.dataset.view === view;
+    item.classList.toggle('active', active);
+    if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+  });
+  const [title, description] = viewMeta[view];
+  document.querySelector('#viewTitle').textContent = title;
+  document.querySelector('#viewDescription').textContent = description;
+  document.querySelector('#viewEyebrow').textContent = view === 'dashboard' ? 'EKODI 운영 콘솔' : 'EKODI · ' + title;
+  if (options.updateHash !== false && location.hash !== '#' + view) history.pushState({ view }, '', '#' + view);
+  document.querySelector('.content')?.scrollTo({ top: 0, behavior: options.instant ? 'auto' : 'smooth' });
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.querySelector('#mobileMenu')?.setAttribute('aria-expanded', 'false');
+  if (options.focus) document.querySelector('#viewTitle')?.focus({ preventScroll: true });
+}
+
+document.querySelectorAll('.nav-item[data-view]').forEach(button => {
+  button.addEventListener('click', () => activateView(button.dataset.view, { focus: true }));
 });
+window.addEventListener('popstate', () => activateView(location.hash.slice(1), { updateHash: false, instant: true }));
+activateView(location.hash.slice(1) || 'dashboard', { updateHash: false, instant: true });
 
 const mobileMenu = document.querySelector('#mobileMenu');
 mobileMenu.addEventListener('click', () => {
@@ -212,6 +244,85 @@ mobileMenu.addEventListener('click', () => {
   sidebar.classList.toggle('open');
   mobileMenu.setAttribute('aria-expanded', String(sidebar.classList.contains('open')));
 });
+
+
+const registryList = document.querySelector('#registryList');
+const registryForm = document.querySelector('#registryForm');
+let registryRecords = [];
+
+function daysUntil(dateText) {
+  if (!dateText) return null;
+  return Math.ceil((new Date(dateText + 'T23:59:59').getTime() - Date.now()) / 86400000);
+}
+function expiryState(record) {
+  const days = daysUntil(record.expiresAt);
+  if (days === null) return { label: '만료일 미입력', className: '' };
+  if (days < 0) return { label: Math.abs(days) + '일 만료 경과', className: 'danger' };
+  if (days <= Number(record.reminderDays || 60)) return { label: days + '일 후 만료', className: 'warning' };
+  return { label: days + '일 후 만료', className: '' };
+}
+function valueLabel(value, yes = '사용', no = '미사용') { return value ? yes : no; }
+
+function renderRegistry(records) {
+  registryRecords = records;
+  registryList.textContent = '';
+  document.querySelector('#registryTotal').textContent = String(records.length);
+  const expiring = records.filter(item => { const d = daysUntil(item.expiresAt); return d !== null && d <= 60; }).length;
+  const autoRenew = records.filter(item => item.autoRenew).length;
+  document.querySelector('#registryExpiring').textContent = String(expiring);
+  document.querySelector('#registryAutoRenew').textContent = autoRenew + ' / ' + records.length;
+  records.forEach(record => {
+    const row = document.createElement('article'); row.className = 'registry-row searchable';
+    const domain = document.createElement('div'); domain.className = 'registry-domain';
+    const strong = document.createElement('strong'); strong.textContent = record.domain;
+    const registrar = document.createElement('small'); registrar.textContent = record.registrar;
+    domain.append(strong, registrar);
+    const registered = document.createElement('div'); registered.className = 'registry-cell'; registered.innerHTML = '<small>등록일</small><strong></strong>'; registered.querySelector('strong').textContent = record.registeredAt || '미입력';
+    const expires = document.createElement('div'); expires.className = 'registry-cell'; expires.innerHTML = '<small>만료일</small><strong></strong>'; expires.querySelector('strong').textContent = record.expiresAt || '미입력';
+    const state = expiryState(record); const badge = document.createElement('span'); badge.className = 'registry-badge ' + state.className; badge.textContent = state.label;
+    const security = document.createElement('div'); security.className = 'registry-cell'; security.innerHTML = '<small>보호 설정</small><strong></strong>'; security.querySelector('strong').textContent = '잠금 ' + valueLabel(record.transferLock,'ON','OFF') + ' · 자동연장 ' + valueLabel(record.autoRenew,'ON','OFF');
+    const actions = document.createElement('div'); actions.className = 'registry-actions';
+    const edit = document.createElement('button'); edit.type='button'; edit.className='secondary'; edit.textContent='정보 편집'; edit.addEventListener('click', () => openRegistryForm(record));
+    const external = document.createElement('a'); external.className='ghost'; external.href='https://www.domainclub.kr'; external.target='_blank'; external.rel='noopener'; external.textContent='등록기관 ↗';
+    actions.append(edit, external); row.append(domain, registered, expires, badge, security, actions); registryList.append(row);
+  });
+}
+async function loadRegistry() {
+  if (!registryList || !sessionStorage.getItem('ekodi-auth-token')) return;
+  registryList.innerHTML = '<p class="domain-loading">등록 정보를 확인하는 중입니다.</p>';
+  try {
+    const response = await fetch(AUTH_API + '/api/registry', { headers: authHeaders() });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || '등록 정보를 불러오지 못했습니다.');
+    renderRegistry(data.records);
+  } catch (error) { registryList.textContent = error.message; }
+}
+function openRegistryForm(record) {
+  registryForm.hidden = false;
+  registryForm.elements.domain.value = record.domain;
+  registryForm.elements.registeredAt.value = record.registeredAt || '';
+  registryForm.elements.expiresAt.value = record.expiresAt || '';
+  registryForm.elements.reminderDays.value = record.reminderDays || 60;
+  registryForm.elements.autoRenew.checked = Boolean(record.autoRenew);
+  registryForm.elements.transferLock.checked = Boolean(record.transferLock);
+  registryForm.elements.whoisPrivacy.checked = Boolean(record.whoisPrivacy);
+  registryForm.elements.memo.value = record.memo || '';
+  document.querySelector('#registryFormTitle').textContent = record.domain + ' 등록정보 편집';
+  registryForm.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+registryForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const formData = new FormData(registryForm); const domain = formData.get('domain');
+  const payload = { registeredAt:formData.get('registeredAt'), expiresAt:formData.get('expiresAt'), reminderDays:Number(formData.get('reminderDays')), autoRenew:formData.get('autoRenew') === 'on', transferLock:formData.get('transferLock') === 'on', whoisPrivacy:formData.get('whoisPrivacy') === 'on', memo:String(formData.get('memo') || '').trim() };
+  const submit = registryForm.querySelector('button[type="submit"]'); submit.disabled=true;
+  try {
+    const response = await fetch(AUTH_API + '/api/registry/' + encodeURIComponent(domain), { method:'PUT', headers:authHeaders(true), body:JSON.stringify(payload) });
+    const data = await response.json(); if(!response.ok) throw new Error(data.error || '저장하지 못했습니다.');
+    registryForm.hidden=true; await loadRegistry(); notify(domain + ' 등록 관리정보를 저장했습니다.');
+  } catch(error) { notify(error.message); } finally { submit.disabled=false; }
+});
+document.querySelector('#closeRegistryForm')?.addEventListener('click', () => { registryForm.hidden=true; });
+document.querySelector('#refreshRegistry')?.addEventListener('click', loadRegistry);
 
 const MONITOR_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/monitor-status.json';
 let monitorRecommendation;
