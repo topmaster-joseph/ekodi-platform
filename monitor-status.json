@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-05T19:15:27.562Z",
+  "generatedAt": "2026-08-05T20:40:15.839Z",
   "summary": {
     "total": 6,
-    "online": 1,
-    "degraded": 0,
+    "online": 0,
+    "degraded": 1,
     "offline": 5
   },
   "sites": [
@@ -14,8 +14,8 @@
       "url": "https://ekodimall.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 251,
-      "checkedAt": "2026-08-05T19:15:26.170Z",
+      "responseTime": 225,
+      "checkedAt": "2026-08-05T20:40:10.789Z",
       "error": "fetch failed"
     },
     {
@@ -25,8 +25,8 @@
       "url": "https://ekodibiz.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 767,
-      "checkedAt": "2026-08-05T19:15:26.212Z",
+      "responseTime": 4589,
+      "checkedAt": "2026-08-05T20:40:10.874Z",
       "error": "fetch failed"
     },
     {
@@ -36,8 +36,8 @@
       "url": "https://ekodibook.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 404,
-      "checkedAt": "2026-08-05T19:15:26.213Z",
+      "responseTime": 274,
+      "checkedAt": "2026-08-05T20:40:10.875Z",
       "error": "fetch failed"
     },
     {
@@ -47,8 +47,8 @@
       "url": "https://ekodichurch.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 1179,
-      "checkedAt": "2026-08-05T19:15:26.214Z",
+      "responseTime": 4586,
+      "checkedAt": "2026-08-05T20:40:10.876Z",
       "error": "fetch failed"
     },
     {
@@ -58,8 +58,8 @@
       "url": "https://ekodilab.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 1347,
-      "checkedAt": "2026-08-05T19:15:26.215Z",
+      "responseTime": 4961,
+      "checkedAt": "2026-08-05T20:40:10.877Z",
       "error": "fetch failed"
     },
     {
@@ -67,10 +67,10 @@
       "name": "에코디선교회",
       "domain": "youtube.com/@ekodicommunity",
       "url": "https://youtube.com/@ekodicommunity",
-      "status": "online",
+      "status": "degraded",
       "httpStatus": 200,
-      "responseTime": 1188,
-      "checkedAt": "2026-08-05T19:15:26.216Z",
+      "responseTime": 4822,
+      "checkedAt": "2026-08-05T20:40:10.879Z",
       "error": null
     }
   ]
