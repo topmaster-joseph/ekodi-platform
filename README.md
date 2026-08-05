@@ -31,7 +31,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for boundaries, security decisi
 
 ## Local verification
 
-Requires Node.js 20 or newer.
+Requires Node.js 20 or newer; CI and monitoring use Node.js 24.
 
 ```bash
 npm run check
