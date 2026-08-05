@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clampInteger, normalizeKey, normalizeText } from '../src/index.js';
+import { clampInteger, normalizeKey, normalizeText } from '../src/index.ts';
 
 test('shared normalization is null-safe', () => {
   assert.equal(normalizeKey(' EKODI.KR '), 'ekodi.kr');

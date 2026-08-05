@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CMS_AUDIT_ACTIONS, CMS_SITE_IDS, cmsResource, validateMediaMetadata } from '../src/index.js';
+import { CMS_AUDIT_ACTIONS, CMS_SITE_IDS, cmsResource, validateMediaMetadata } from '../src/index.ts';
 
 test('EKCMS exposes stable audit actions and resource names', () => {
   assert.equal(CMS_AUDIT_ACTIONS.publish, 'cms.publish');

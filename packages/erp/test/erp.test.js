@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ERP_MODULES, validateLedgerEntry } from '../src/index.js';
+import { ERP_MODULES, validateLedgerEntry } from '../src/index.ts';
 
 test('ERP modules are explicit', () => {
   assert.deepEqual(ERP_MODULES, ['finance', 'sales', 'purchasing', 'inventory', 'people']);

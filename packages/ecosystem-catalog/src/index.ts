@@ -1,6 +1,18 @@
 import { normalizeKey } from '@ekodi/shared';
 
-export const EKODI_SERVICES = Object.freeze([
+export interface EkodiService {
+  id: string;
+  name: string;
+  domain: string;
+  url: string;
+  targetDomain: string;
+  appPath: string;
+  access?: 'public' | 'private';
+  managedDns: boolean;
+  operational?: boolean;
+}
+
+export const EKODI_SERVICES: readonly Readonly<EkodiService>[] = Object.freeze([
   Object.freeze({ id: 'platform', name: 'EKODI 플랫폼', domain: 'ekodi.kr', url: 'https://ekodi.kr', targetDomain: 'ekodi.kr', appPath: 'apps/platform', access: 'private', managedDns: false, operational: false }),
   Object.freeze({ id: 'mall', name: '에코디몰', domain: 'ekodimall.kr', url: 'https://ekodimall.kr', targetDomain: 'mall.ekodi.kr', appPath: 'apps/mall', managedDns: true }),
   Object.freeze({ id: 'biz', name: '에코디비즈', domain: 'ekodibiz.kr', url: 'https://ekodibiz.kr', targetDomain: 'biz.ekodi.kr', appPath: 'apps/biz', managedDns: true }),
@@ -20,7 +32,7 @@ export const EKODI_SERVICES = Object.freeze([
 
 export const MANAGED_DNS_SERVICES = Object.freeze(EKODI_SERVICES.filter(service => service.managedDns));
 
-export function findServiceByDomain(domain) {
+export function findServiceByDomain(domain: unknown): Readonly<EkodiService> | null {
   const normalized = normalizeKey(domain);
   return EKODI_SERVICES.find(service => service.domain === normalized) || null;
 }

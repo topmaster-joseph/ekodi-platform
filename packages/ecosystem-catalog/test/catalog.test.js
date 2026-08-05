@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { EKODI_SERVICES, findServiceByDomain, MANAGED_DNS_SERVICES } from '../src/index.js';
+import { EKODI_SERVICES, findServiceByDomain, MANAGED_DNS_SERVICES } from '../src/index.ts';
 
 test('catalog defines unique EKODI services', () => {
   assert.equal(EKODI_SERVICES.length, 15);

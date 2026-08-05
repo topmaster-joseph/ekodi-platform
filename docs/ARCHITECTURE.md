@@ -24,7 +24,8 @@ Existing service URLs are retained as legacy sources. The generated application 
 
 ## Security boundaries
 
-- Production CORS origins are explicit and split between the admin console and public content consumers.
+- Production CORS origins are explicit: the requested `ekodi.kr` hosts plus narrowly matched EKODI `workers.dev` preview aliases. Unknown origins receive no CORS grant.
+- First-administrator setup requires a short-lived `SETUP_TOKEN` Worker secret and becomes unavailable after initialization.
 - Administrator passwords use salted PBKDF2 hashes with versioned work factors; legacy hashes upgrade after successful login.
 - Opaque session tokens are stored only as SHA-256 hashes in D1 and expire after eight hours.
 - Login attempts are throttled per hashed client IP.
@@ -52,7 +53,7 @@ Existing service URLs are retained as legacy sources. The generated application 
 ## Acceptance gates
 
 1. `corepack pnpm install --frozen-lockfile` succeeds from a fresh clone on Node.js 24.
-2. `corepack pnpm verify` validates every workspace, test, generated site, and deployment mapping.
+2. `corepack pnpm verify` validates every workspace, Cloudflare runtime integration test, generated site, and deployment mapping.
 3. D1 migrations apply without drift.
 4. API health, production CORS, login, CMS draft/save/publish, registry, DNS, logout, and audit paths pass against the deployed Worker.
 5. Cloudflare Workers Builds is connected for every project, with `main` production and branch previews enabled.

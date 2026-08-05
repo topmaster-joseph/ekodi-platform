@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { AUTH_PERMISSIONS, hasPermission, readBearerToken, SESSION_DURATION_MS, validateAdminPassword } from '@ekodi/auth';
+import type { AuthPermission } from '@ekodi/auth';
 import { databaseFromEnv, isUniqueConstraintError } from '@ekodi/database';
 import { CMS_AUDIT_ACTIONS, CMS_SITE_IDS, cmsResource, publicPage, validateCmsPage, validateMediaMetadata } from '@ekodi/ekcms';
 import { EKODI_SERVICES, MANAGED_DNS_SERVICES } from '@ekodi/ecosystem-catalog';
@@ -8,6 +9,7 @@ const DEFAULT_ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
 const DEFAULT_ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
 const LEGACY_ITERATIONS = 100000;
 const CURRENT_ITERATIONS = 310000;
+const WORKERS_DEV_SUFFIX = '.topmaster-joseph.workers.dev';
 
 type WorkerEnv = {
   ENVIRONMENT?: string;
@@ -15,6 +17,7 @@ type WorkerEnv = {
   ALLOWED_ORIGINS?: string;
   PUBLIC_CONTENT_ORIGINS?: string;
   CF_API_TOKEN?: string;
+  SETUP_TOKEN?: string;
   DB?: D1Database;
   STORAGE?: R2Bucket;
 };
@@ -26,9 +29,69 @@ type CloudflareZone = {
   name_servers?: string[];
 };
 
+type Reply = (data: unknown, status?: number) => Response;
+
+type AdminRecord = {
+  id: number;
+  email: string;
+  password_hash: string;
+  password_salt: string;
+  password_iterations: number;
+  role: string;
+};
+
+type AuthenticatedAdmin = Pick<AdminRecord, 'id' | 'email' | 'role'> & { expires_at: string };
+
+type CmsDatabaseRow = {
+  id: number;
+  site_id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  draft_content: string | null;
+  published_content: string | null;
+  data_classification: string | null;
+  status: string;
+  version: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type MediaDatabaseRow = {
+  id: number;
+  site_id: string;
+  object_key: string;
+  filename: string;
+  content_type: string;
+  size: number;
+  visibility: string;
+  created_at: string;
+};
+
+type DnsRecordValue = {
+  type: string;
+  name: string;
+  content: string;
+  ttl: number;
+  proxied: boolean;
+  priority?: number;
+};
+
+type RevisionRow = {
+  version: number;
+  title: string;
+  summary: string;
+  content: string;
+  data_classification: string | null;
+  event: string;
+  created_at: string;
+  created_by: number | null;
+};
+
 const encoder = new TextEncoder();
 
-function configuredOrigins(env: WorkerEnv = {}) {
+function configuredOrigins(env: WorkerEnv = {}): Set<string> {
   const configured = [env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGIN, env.PUBLIC_CONTENT_ORIGINS || DEFAULT_CONTENT_ORIGINS]
     .filter(Boolean)
     .join(',')
@@ -39,13 +102,25 @@ function configuredOrigins(env: WorkerEnv = {}) {
   return new Set(configured);
 }
 
-export function isAllowedOrigin(origin, env: WorkerEnv = {}) {
-  return !origin || configuredOrigins(env).has(origin);
+function isManagedWorkerOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'https:' || url.port || !url.hostname.endsWith(WORKERS_DEV_SUFFIX)) return false;
+    const workerHost = url.hostname.slice(0, -WORKERS_DEV_SUFFIX.length);
+    const workerNames = ['shy-thunder-39a4', ...EKODI_SERVICES.filter(service => service.id !== 'platform').map(service => `ekodi-${service.id}`)];
+    return workerNames.some(workerName => workerHost === workerName || workerHost.endsWith(`-${workerName}`));
+  } catch {
+    return false;
+  }
 }
 
-function cors(origin, env: WorkerEnv = {}) {
-  const headers = {
-    'Access-Control-Allow-Headers': 'content-type, authorization',
+export function isAllowedOrigin(origin: string | null, env: WorkerEnv = {}): boolean {
+  return !origin || configuredOrigins(env).has(origin) || isManagedWorkerOrigin(origin);
+}
+
+function cors(origin: string | null, env: WorkerEnv = {}): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'content-type, authorization, x-ekodi-setup-token',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
@@ -54,7 +129,7 @@ function cors(origin, env: WorkerEnv = {}) {
   return headers;
 }
 
-function json(data, status = 200, origin = null, env: WorkerEnv = {}) {
+function json(data: unknown, status = 200, origin: string | null = null, env: WorkerEnv = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -66,21 +141,24 @@ function json(data, status = 200, origin = null, env: WorkerEnv = {}) {
   });
 }
 
-function publicJson(data, status = 200, origin = null, env: WorkerEnv = {}) {
+function publicJson(data: unknown, status = 200, origin: string | null = null, env: WorkerEnv = {}): Response {
   const response = json(data, status, origin, env);
   response.headers.set('cache-control', 'public, max-age=60, stale-while-revalidate=300');
   return response;
 }
 
-function bytesToHex(bytes) {
-  return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+function bytesToHex(bytes: ArrayBuffer | ArrayBufferView): string {
+  const view = bytes instanceof ArrayBuffer
+    ? new Uint8Array(bytes)
+    : new Uint8Array(bytes.buffer as ArrayBuffer, bytes.byteOffset, bytes.byteLength);
+  return [...view].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function sha256(value) {
+async function sha256(value: string): Promise<string> {
   return bytesToHex(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
 }
 
-async function passwordHash(password, saltHex, iterations = CURRENT_ITERATIONS) {
+async function passwordHash(password: string, saltHex: string, iterations = CURRENT_ITERATIONS): Promise<string> {
   const salt = Uint8Array.from((saltHex.match(/.{2}/g) || []) as string[], byte => parseInt(byte, 16));
   const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
   return bytesToHex(await crypto.subtle.deriveBits(
@@ -90,14 +168,14 @@ async function passwordHash(password, saltHex, iterations = CURRENT_ITERATIONS) 
   ));
 }
 
-export function secureEqual(left, right) {
+export function secureEqual(left: string, right: string): boolean {
   if (left.length !== right.length) return false;
   let result = 0;
   for (let index = 0; index < left.length; index += 1) result |= left.charCodeAt(index) ^ right.charCodeAt(index);
   return result === 0;
 }
 
-async function ensureSchema(db) {
+async function ensureSchema(db: D1Database): Promise<void> {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS admins (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,6 +232,7 @@ async function ensureSchema(db) {
       title TEXT NOT NULL,
       summary TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL DEFAULT '',
+      data_classification TEXT NOT NULL DEFAULT 'public',
       event TEXT NOT NULL,
       created_at TEXT NOT NULL,
       created_by INTEGER
@@ -184,12 +263,12 @@ async function ensureSchema(db) {
     updated_by INTEGER
   )`).run();
   const adminColumns = await db.prepare('PRAGMA table_info(admins)').all();
-  if (!adminColumns.results.some(column => column.name === 'password_iterations')) {
+  if (!adminColumns.results.some((column: { name?: unknown }) => column.name === 'password_iterations')) {
     await db.prepare(`ALTER TABLE admins ADD COLUMN password_iterations INTEGER NOT NULL DEFAULT ${LEGACY_ITERATIONS}`).run();
   }
 }
 
-async function readBody(request) {
+async function readBody(request: Request): Promise<Record<string, unknown> | null> {
   try {
     return await request.json();
   } catch {
@@ -197,7 +276,7 @@ async function readBody(request) {
   }
 }
 
-async function issueSession(db, adminId) {
+async function issueSession(db: D1Database, adminId: number): Promise<{ token: string; expiresAt: string }> {
   const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
   const token = bytesToHex(tokenBytes);
   const tokenHash = await sha256(token);
@@ -209,14 +288,14 @@ async function issueSession(db, adminId) {
   return { token, expiresAt: expires.toISOString() };
 }
 
-async function authenticate(request, db) {
+async function authenticate(request: Request, db: D1Database): Promise<AuthenticatedAdmin | null> {
   const token = readBearerToken(request.headers);
   if (!token) return null;
   const tokenHash = await sha256(token);
   return db.prepare(`SELECT admins.id, admins.email, admins.role, sessions.expires_at
     FROM sessions JOIN admins ON admins.id = sessions.admin_id
     WHERE sessions.token_hash = ? AND sessions.expires_at > ?`)
-    .bind(tokenHash, new Date().toISOString()).first();
+    .bind(tokenHash, new Date().toISOString()).first<AuthenticatedAdmin>();
 }
 
 
@@ -226,12 +305,13 @@ const DEFAULT_CONTENT_ORIGINS = EKODI_SERVICES.map(service => new URL(service.ur
 const DNS_RECORD_TYPES = new Set(['A', 'AAAA', 'CNAME', 'TXT', 'MX']);
 const CLOUDFLARE_ID = /^[a-f0-9]{32}$/i;
 
-export function validateDnsRecord(body) {
+export function validateDnsRecord(body: unknown): { value: DnsRecordValue; error?: never } | { error: string; value?: never } {
   if (!body || typeof body !== 'object') return { error: 'DNS 레코드 형식을 확인해 주세요.' };
-  const type = String(body.type || '').toUpperCase();
-  const name = String(body.name || '').trim().toLowerCase();
-  const content = String(body.content || '').trim();
-  const ttl = Math.trunc(Number(body.ttl) || 3600);
+  const source = body as Record<string, unknown>;
+  const type = String(source.type || '').toUpperCase();
+  const name = String(source.name || '').trim().toLowerCase();
+  const content = String(source.content || '').trim();
+  const ttl = Math.trunc(Number(source.ttl) || 3600);
   if (!DNS_RECORD_TYPES.has(type)) return { error: '지원하지 않는 DNS 레코드 유형입니다.' };
   if (!name || name.length > 253 || !/^[a-z0-9@*._-]+$/i.test(name)) return { error: 'DNS 호스트 이름을 확인해 주세요.' };
   if (!content || content.length > 2048) return { error: 'DNS 연결 값을 확인해 주세요.' };
@@ -242,18 +322,18 @@ export function validateDnsRecord(body) {
       name,
       content,
       ttl,
-      proxied: Boolean(body.proxied) && ['A', 'AAAA', 'CNAME'].includes(type),
-      ...(type === 'MX' ? { priority: Math.min(65535, Math.max(0, Math.trunc(Number(body.priority) || 10))) } : {})
+      proxied: Boolean(source.proxied) && ['A', 'AAAA', 'CNAME'].includes(type),
+      ...(type === 'MX' ? { priority: Math.min(65535, Math.max(0, Math.trunc(Number(source.priority) || 10))) } : {})
     }
   };
 }
 
-async function writeAudit(db, adminId, action, resource, detail = '') {
+async function writeAudit(db: D1Database, adminId: number | null, action: string, resource: string, detail: unknown = ''): Promise<void> {
   await db.prepare('INSERT INTO audit_logs (admin_id, action, resource, detail, created_at) VALUES (?, ?, ?, ?, ?)')
     .bind(adminId || null, action, resource, String(detail).slice(0, 500), new Date().toISOString()).run();
 }
 
-function cmsPageRecord(row) {
+function cmsPageRecord(row: CmsDatabaseRow) {
   return {
     id: row.id,
     siteId: row.site_id,
@@ -270,7 +350,7 @@ function cmsPageRecord(row) {
   };
 }
 
-function mediaRecord(row) {
+function mediaRecord(row: MediaDatabaseRow) {
   return {
     id: row.id,
     siteId: row.site_id,
@@ -283,11 +363,11 @@ function mediaRecord(row) {
   };
 }
 
-function requirePermission(admin, permission, reply) {
+function requirePermission(admin: AuthenticatedAdmin, permission: AuthPermission, reply: Reply): Response | null {
   return hasPermission(admin.role, permission) ? null : reply({ error: '이 작업을 수행할 권한이 없습니다.' }, 403);
 }
 
-async function cfApi<T = unknown>(env: WorkerEnv, path, options: RequestInit = {}): Promise<T> {
+async function cfApi<T = unknown>(env: WorkerEnv, path: string, options: RequestInit = {}): Promise<T> {
   if (!env.CF_API_TOKEN) throw new Error('도메인 관리 권한이 설정되지 않았습니다.');
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     ...options,
@@ -304,7 +384,7 @@ async function cfApi<T = unknown>(env: WorkerEnv, path, options: RequestInit = {
   return data.result as T;
 }
 
-async function requireManagedZone(env, zoneId) {
+async function requireManagedZone(env: WorkerEnv, zoneId: string): Promise<CloudflareZone> {
   if (!CLOUDFLARE_ID.test(zoneId)) throw new Error('유효하지 않은 Cloudflare Zone ID입니다.');
   const zone = await cfApi<CloudflareZone>(env, `/zones/${zoneId}`);
   if (!EKODI_DOMAINS.some(domain => domain.name === zone?.name)) throw new Error('관리 대상 도메인이 아닙니다.');
@@ -312,42 +392,47 @@ async function requireManagedZone(env, zoneId) {
 }
 
 const worker = {
-  async fetch(request, env) {
+  async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const origin = request.headers.get('origin');
-    const reply = (data, status = 200) => json(data, status, origin, env);
+    const reply: Reply = (data, status = 200) => json(data, status, origin, env);
     if (!isAllowedOrigin(origin, env)) return reply({ error: '허용되지 않은 요청입니다.' }, 403);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') return reply({ ok: true, service: 'ekodi-auth-api', version: 3 });
-    if (!databaseFromEnv(env)) return reply({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
+    if (!env.DB || !databaseFromEnv(env as Record<string, unknown>)) return reply({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
 
     await ensureSchema(env.DB);
     const adminEmail = String(env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).toLowerCase();
 
     if (request.method === 'GET' && url.pathname === '/api/status') {
-      const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first();
-      return reply({ initialized: Number(count.count) > 0, adminEmail });
+      const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first<{ count: number }>();
+      return reply({ initialized: Number(count?.count || 0) > 0, setupAvailable: Boolean(env.SETUP_TOKEN), adminEmail });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/setup') {
+      const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first<{ count: number }>();
+      if (Number(count?.count || 0) > 0) return reply({ error: '최고관리자 등록이 이미 완료되었습니다.' }, 409);
+      const setupToken = String(env.SETUP_TOKEN || '');
+      if (!setupToken) return reply({ error: '최초 등록 토큰이 설정되지 않았습니다. Cloudflare Worker secret을 확인해 주세요.' }, 503);
+      const suppliedSetupToken = request.headers.get('x-ekodi-setup-token') || '';
+      if (!secureEqual(suppliedSetupToken, setupToken)) return reply({ error: '최초 등록 권한을 확인해 주세요.' }, 403);
       const data = await readBody(request);
       if (!data || String(data.email).toLowerCase() !== adminEmail) return reply({ error: '지정된 최고관리자 이메일만 등록할 수 있습니다.' }, 403);
       const passwordValidation = validateAdminPassword(data.password);
-      if (passwordValidation.error) return reply({ error: passwordValidation.error }, 400);
-      const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first();
-      if (Number(count.count) > 0) return reply({ error: '최고관리자 등록이 이미 완료되었습니다.' }, 409);
+      if (!passwordValidation.value) return reply({ error: passwordValidation.error }, 400);
 
       const passwordSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
       const birthSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-      const passwordDigest = await passwordHash(data.password, passwordSalt);
+      const passwordDigest = await passwordHash(passwordValidation.value, passwordSalt);
       const birthDigest = await sha256(`${birthSalt}:not-required`);
       const createdAt = new Date().toISOString();
       const result = await env.DB.prepare(`INSERT INTO admins
         (email, password_hash, password_salt, password_iterations, birth_hash, birth_salt, role, created_at)
         VALUES (?, ?, ?, ?, ?, ?, 'super_admin', ?)`)
         .bind(adminEmail, passwordDigest, passwordSalt, CURRENT_ITERATIONS, birthDigest, birthSalt, createdAt).run();
-      const session = await issueSession(env.DB, result.meta.last_row_id);
-      await writeAudit(env.DB, result.meta.last_row_id, 'admin.setup', 'platform', adminEmail);
+      const adminId = Number(result.meta.last_row_id);
+      const session = await issueSession(env.DB, adminId);
+      await writeAudit(env.DB, adminId, 'admin.setup', 'platform', adminEmail);
       return reply({ ok: true, email: adminEmail, role: 'super_admin', ...session }, 201);
     }
 
@@ -355,14 +440,15 @@ const worker = {
       const ipHash = await sha256(request.headers.get('cf-connecting-ip') || 'unknown');
       const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
       await env.DB.prepare('DELETE FROM login_attempts WHERE attempted_at <= ?').bind(cutoff).run();
-      const attempts = await env.DB.prepare('SELECT COUNT(*) AS count FROM login_attempts WHERE ip_hash = ? AND attempted_at > ?').bind(ipHash, cutoff).first();
-      if (Number(attempts.count) >= 8) return reply({ error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도하세요.' }, 429);
+      const attempts = await env.DB.prepare('SELECT COUNT(*) AS count FROM login_attempts WHERE ip_hash = ? AND attempted_at > ?').bind(ipHash, cutoff).first<{ count: number }>();
+      if (Number(attempts?.count || 0) >= 8) return reply({ error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도하세요.' }, 429);
 
       const data = await readBody(request);
       const email = String(data?.email || '').toLowerCase();
-      const admin = await env.DB.prepare('SELECT * FROM admins WHERE email = ?').bind(email).first();
-      const passwordDigest = admin && typeof data?.password === 'string'
-        ? await passwordHash(data.password, admin.password_salt, Number(admin.password_iterations) || LEGACY_ITERATIONS)
+      const admin = await env.DB.prepare('SELECT * FROM admins WHERE email = ?').bind(email).first<AdminRecord>();
+      const password = typeof data?.password === 'string' ? data.password : null;
+      const passwordDigest = admin && password
+        ? await passwordHash(password, admin.password_salt, Number(admin.password_iterations) || LEGACY_ITERATIONS)
         : null;
       if (!admin || !passwordDigest || !secureEqual(passwordDigest, admin.password_hash)) {
         await env.DB.prepare('INSERT INTO login_attempts (ip_hash, attempted_at) VALUES (?, ?)').bind(ipHash, new Date().toISOString()).run();
@@ -370,7 +456,7 @@ const worker = {
       }
       if (Number(admin.password_iterations) < CURRENT_ITERATIONS) {
         const upgradedSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-        const upgradedHash = await passwordHash(data.password, upgradedSalt, CURRENT_ITERATIONS);
+        const upgradedHash = await passwordHash(password as string, upgradedSalt, CURRENT_ITERATIONS);
         await env.DB.prepare('UPDATE admins SET password_hash = ?, password_salt = ?, password_iterations = ? WHERE id = ?')
           .bind(upgradedHash, upgradedSalt, CURRENT_ITERATIONS, admin.id).run();
       }
@@ -387,7 +473,7 @@ const worker = {
       if (mediaMatch) {
         const siteId = decodeURIComponent(mediaMatch[1]).toLowerCase();
         const asset = await env.DB.prepare(`SELECT * FROM media_assets WHERE id = ? AND site_id = ? AND visibility = 'public'`)
-          .bind(Number(mediaMatch[2]), siteId).first();
+          .bind(Number(mediaMatch[2]), siteId).first<MediaDatabaseRow>();
         if (!asset) return reply({ error: '공개 미디어를 찾을 수 없습니다.' }, 404);
         if (!env.STORAGE) return reply({ error: '미디어 저장소가 설정되지 않았습니다.' }, 503);
         const object = await env.STORAGE.get(asset.object_key);
@@ -406,11 +492,11 @@ const worker = {
       if (!CMS_SITE_IDS.includes(siteId)) return reply({ error: '관리 대상 EKODI 사이트가 아닙니다.' }, 404);
       if (slug) {
         const row = await env.DB.prepare(`SELECT * FROM cms_pages
-          WHERE site_id = ? AND slug = ? AND status = 'published' AND data_classification = 'public'`).bind(siteId, slug).first();
+          WHERE site_id = ? AND slug = ? AND status = 'published' AND data_classification = 'public'`).bind(siteId, slug).first<CmsDatabaseRow>();
         return row ? publicJson({ page: publicPage(row) }, 200, origin, env) : reply({ error: '게시된 콘텐츠를 찾을 수 없습니다.' }, 404);
       }
       const result = await env.DB.prepare(`SELECT * FROM cms_pages
-        WHERE site_id = ? AND status = 'published' AND data_classification = 'public' ORDER BY published_at DESC`).bind(siteId).all();
+        WHERE site_id = ? AND status = 'published' AND data_classification = 'public' ORDER BY published_at DESC`).bind(siteId).all<CmsDatabaseRow>();
       return publicJson({ pages: result.results.map(publicPage) }, 200, origin, env);
     }
 
@@ -424,8 +510,8 @@ const worker = {
         const siteId = String(url.searchParams.get('site') || '').toLowerCase();
         if (siteId && !CMS_SITE_IDS.includes(siteId)) return reply({ error: '관리 대상 EKODI 사이트가 아닙니다.' }, 400);
         const result = siteId
-          ? await env.DB.prepare('SELECT * FROM media_assets WHERE site_id = ? ORDER BY id DESC LIMIT 100').bind(siteId).all()
-          : await env.DB.prepare('SELECT * FROM media_assets ORDER BY id DESC LIMIT 100').all();
+          ? await env.DB.prepare('SELECT * FROM media_assets WHERE site_id = ? ORDER BY id DESC LIMIT 100').bind(siteId).all<MediaDatabaseRow>()
+          : await env.DB.prepare('SELECT * FROM media_assets ORDER BY id DESC LIMIT 100').all<MediaDatabaseRow>();
         return reply({ assets: result.results.map(mediaRecord) });
       }
 
@@ -433,6 +519,7 @@ const worker = {
         const denied = requirePermission(admin, AUTH_PERMISSIONS.MEDIA_WRITE, reply);
         if (denied) return denied;
         if (!env.STORAGE) return reply({ error: '미디어 저장소가 설정되지 않았습니다.' }, 503);
+        const storage = env.STORAGE;
         const form = await request.formData();
         const file = form.get('file');
         const validated = validateMediaMetadata({
@@ -442,10 +529,10 @@ const worker = {
           size: file instanceof File ? file.size : 0,
           visibility: form.get('visibility')
         });
-        if (validated.error || !(file instanceof File)) return reply({ error: validated.error || '파일을 선택해 주세요.' }, 400);
+        if (!validated.value || !(file instanceof File)) return reply({ error: validated.error || '파일을 선택해 주세요.' }, 400);
         const media = validated.value;
         const objectKey = `${media.siteId}/${crypto.randomUUID()}`;
-        await env.STORAGE.put(objectKey, file.stream(), { httpMetadata: { contentType: media.contentType }, customMetadata: { filename: media.filename } });
+        await storage.put(objectKey, file.stream(), { httpMetadata: { contentType: media.contentType }, customMetadata: { filename: media.filename } });
         const now = new Date().toISOString();
         try {
           const result = await env.DB.prepare(`INSERT INTO media_assets
@@ -453,10 +540,11 @@ const worker = {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
             .bind(media.siteId, objectKey, media.filename, media.contentType, media.size, media.visibility, now, admin.id).run();
           await writeAudit(env.DB, admin.id, CMS_AUDIT_ACTIONS.mediaUpload, `${media.siteId}/${result.meta.last_row_id}`, JSON.stringify({ filename: media.filename, visibility: media.visibility }));
-          const asset = await env.DB.prepare('SELECT * FROM media_assets WHERE id = ?').bind(result.meta.last_row_id).first();
+          const asset = await env.DB.prepare('SELECT * FROM media_assets WHERE id = ?').bind(result.meta.last_row_id).first<MediaDatabaseRow>();
+          if (!asset) throw new Error('업로드한 미디어 메타데이터를 찾을 수 없습니다.');
           return reply({ asset: mediaRecord(asset) }, 201);
         } catch (error) {
-          await env.STORAGE.delete(objectKey);
+          await storage.delete(objectKey);
           throw error;
         }
       }
@@ -466,7 +554,7 @@ const worker = {
         const denied = requirePermission(admin, AUTH_PERMISSIONS.MEDIA_WRITE, reply);
         if (denied) return denied;
         if (!env.STORAGE) return reply({ error: '미디어 저장소가 설정되지 않았습니다.' }, 503);
-        const asset = await env.DB.prepare('SELECT * FROM media_assets WHERE id = ?').bind(Number(mediaDeleteMatch[1])).first();
+        const asset = await env.DB.prepare('SELECT * FROM media_assets WHERE id = ?').bind(Number(mediaDeleteMatch[1])).first<MediaDatabaseRow>();
         if (!asset) return reply({ error: '미디어를 찾을 수 없습니다.' }, 404);
         await env.STORAGE.delete(asset.object_key);
         await env.DB.prepare('DELETE FROM media_assets WHERE id = ?').bind(asset.id).run();
@@ -480,8 +568,8 @@ const worker = {
         const siteId = String(url.searchParams.get('site') || '').toLowerCase();
         if (siteId && !CMS_SITE_IDS.includes(siteId)) return reply({ error: '관리 대상 EKODI 사이트가 아닙니다.' }, 400);
         const result = siteId
-          ? await env.DB.prepare('SELECT * FROM cms_pages WHERE site_id = ? ORDER BY updated_at DESC').bind(siteId).all()
-          : await env.DB.prepare('SELECT * FROM cms_pages ORDER BY site_id, updated_at DESC').all();
+          ? await env.DB.prepare('SELECT * FROM cms_pages WHERE site_id = ? ORDER BY updated_at DESC').bind(siteId).all<CmsDatabaseRow>()
+          : await env.DB.prepare('SELECT * FROM cms_pages ORDER BY site_id, updated_at DESC').all<CmsDatabaseRow>();
         return reply({ pages: result.results.map(cmsPageRecord) });
       }
 
@@ -489,7 +577,7 @@ const worker = {
         const denied = requirePermission(admin, AUTH_PERMISSIONS.CMS_WRITE, reply);
         if (denied) return denied;
         const validated = validateCmsPage(await readBody(request));
-        if (validated.error) return reply({ error: validated.error }, 400);
+        if (!validated.value) return reply({ error: validated.error }, 400);
         const page = validated.value;
         const now = new Date().toISOString();
         try {
@@ -498,11 +586,12 @@ const worker = {
             VALUES (?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?, ?)`)
             .bind(page.siteId, page.slug, page.title, page.summary, page.content, page.classification, now, now, admin.id).run();
           await env.DB.prepare(`INSERT INTO cms_revisions
-            (page_id, version, title, summary, content, event, created_at, created_by)
-            VALUES (?, 1, ?, ?, ?, 'created', ?, ?)`)
-            .bind(result.meta.last_row_id, page.title, page.summary, page.content, now, admin.id).run();
+            (page_id, version, title, summary, content, data_classification, event, created_at, created_by)
+            VALUES (?, 1, ?, ?, ?, ?, 'created', ?, ?)`)
+            .bind(result.meta.last_row_id, page.title, page.summary, page.content, page.classification, now, admin.id).run();
           await writeAudit(env.DB, admin.id, CMS_AUDIT_ACTIONS.create, cmsResource(page.siteId, page.slug));
-          const created = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(result.meta.last_row_id).first();
+          const created = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(result.meta.last_row_id).first<CmsDatabaseRow>();
+          if (!created) throw new Error('생성한 CMS 페이지를 찾을 수 없습니다.');
           return reply({ page: cmsPageRecord(created) }, 201);
         } catch (error) {
           if (isUniqueConstraintError(error)) return reply({ error: '같은 사이트에 동일한 슬러그가 이미 있습니다.' }, 409);
@@ -514,17 +603,18 @@ const worker = {
       if (pageMatch) {
         const pageId = Number(pageMatch[1]);
         const action = pageMatch[2] || null;
-        const existing = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(pageId).first();
+        const existing = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(pageId).first<CmsDatabaseRow>();
         if (!existing) return reply({ error: '콘텐츠를 찾을 수 없습니다.' }, 404);
 
         if (request.method === 'GET' && action === 'revisions') {
           const denied = requirePermission(admin, AUTH_PERMISSIONS.CMS_READ, reply);
           if (denied) return denied;
-          const result = await env.DB.prepare(`SELECT version, title, summary, content, event, created_at, created_by
-            FROM cms_revisions WHERE page_id = ? ORDER BY version DESC, id DESC LIMIT 50`).bind(pageId).all();
+          const result = await env.DB.prepare(`SELECT version, title, summary, content, data_classification, event, created_at, created_by
+            FROM cms_revisions WHERE page_id = ? ORDER BY version DESC, id DESC LIMIT 50`).bind(pageId).all<RevisionRow>();
           return reply({ revisions: result.results.map(row => ({
             version: row.version, title: row.title, summary: row.summary, content: row.content,
-            event: row.event, createdAt: row.created_at, createdBy: row.created_by
+            classification: row.data_classification || 'public', event: row.event,
+            createdAt: row.created_at, createdBy: row.created_by
           })) });
         }
 
@@ -532,7 +622,7 @@ const worker = {
           const denied = requirePermission(admin, AUTH_PERMISSIONS.CMS_WRITE, reply);
           if (denied) return denied;
           const validated = validateCmsPage(await readBody(request), { partial: true });
-          if (validated.error) return reply({ error: validated.error }, 400);
+          if (!validated.value) return reply({ error: validated.error }, 400);
           const update = validated.value;
           if (update.version !== existing.version) return reply({ error: '다른 관리자가 먼저 수정했습니다. 새로고침 후 다시 시도해 주세요.' }, 409);
           const nextVersion = existing.version + 1;
@@ -546,11 +636,12 @@ const worker = {
             .bind(title, summary, content, classification, nextVersion, now, admin.id, pageId, existing.version).run();
           if (!result.meta.changes) return reply({ error: '콘텐츠 버전이 변경되었습니다. 새로고침 후 다시 시도해 주세요.' }, 409);
           await env.DB.prepare(`INSERT INTO cms_revisions
-            (page_id, version, title, summary, content, event, created_at, created_by)
-            VALUES (?, ?, ?, ?, ?, 'saved', ?, ?)`)
-            .bind(pageId, nextVersion, title, summary, content, now, admin.id).run();
+            (page_id, version, title, summary, content, data_classification, event, created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, 'saved', ?, ?)`)
+            .bind(pageId, nextVersion, title, summary, content, classification, now, admin.id).run();
           await writeAudit(env.DB, admin.id, CMS_AUDIT_ACTIONS.save, cmsResource(existing.site_id, existing.slug), `v${nextVersion}`);
-          const saved = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(pageId).first();
+          const saved = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(pageId).first<CmsDatabaseRow>();
+          if (!saved) throw new Error('저장한 CMS 페이지를 찾을 수 없습니다.');
           return reply({ page: cmsPageRecord(saved) });
         }
 
@@ -566,11 +657,13 @@ const worker = {
             version = ?, published_at = ?, updated_at = ?, updated_by = ? WHERE id = ?`)
             .bind(nextVersion, now, now, admin.id, pageId).run();
           await env.DB.prepare(`INSERT INTO cms_revisions
-            (page_id, version, title, summary, content, event, created_at, created_by)
-            VALUES (?, ?, ?, ?, ?, 'published', ?, ?)`)
-            .bind(pageId, nextVersion, existing.title, existing.summary, existing.draft_content, now, admin.id).run();
+            (page_id, version, title, summary, content, data_classification, event, created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?)`)
+            .bind(pageId, nextVersion, existing.title, existing.summary, existing.draft_content,
+              existing.data_classification || 'public', now, admin.id).run();
           await writeAudit(env.DB, admin.id, CMS_AUDIT_ACTIONS.publish, cmsResource(existing.site_id, existing.slug), `v${nextVersion}`);
-          const published = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(pageId).first();
+          const published = await env.DB.prepare('SELECT * FROM cms_pages WHERE id = ?').bind(pageId).first<CmsDatabaseRow>();
+          if (!published) throw new Error('게시한 CMS 페이지를 찾을 수 없습니다.');
           return reply({ page: cmsPageRecord(published) });
         }
       }
@@ -671,7 +764,7 @@ const worker = {
             const denied = requirePermission(admin, AUTH_PERMISSIONS.DNS_WRITE, reply);
             if (denied) return denied;
             const validated = validateDnsRecord(await readBody(request));
-            if (validated.error) return reply({ error: validated.error }, 400);
+            if (!validated.value) return reply({ error: validated.error }, 400);
             const record = await cfApi(env, `/zones/${zoneId}/dns_records`, { method: 'POST', body: JSON.stringify(validated.value) });
             await writeAudit(env.DB, admin.id, 'dns.create', zone.name, JSON.stringify({ type: validated.value.type, name: validated.value.name }));
             return reply({ record }, 201);
@@ -680,7 +773,7 @@ const worker = {
             const denied = requirePermission(admin, AUTH_PERMISSIONS.DNS_WRITE, reply);
             if (denied) return denied;
             const validated = validateDnsRecord(await readBody(request));
-            if (validated.error) return reply({ error: validated.error }, 400);
+            if (!validated.value) return reply({ error: validated.error }, 400);
             const record = await cfApi(env, `/zones/${zoneId}/dns_records/${recordId}`, { method: 'PUT', body: JSON.stringify(validated.value) });
             await writeAudit(env.DB, admin.id, 'dns.update', zone.name, JSON.stringify({ type: validated.value.type, name: validated.value.name }));
             return reply({ record });
@@ -694,7 +787,7 @@ const worker = {
           }
         }
       } catch (error) {
-        return reply({ error: error.message }, 502);
+        return reply({ error: error instanceof Error ? error.message : 'Cloudflare 도메인 요청에 실패했습니다.' }, 502);
       }
     }
 
@@ -716,7 +809,7 @@ const worker = {
   }
 };
 
-export const app = new Hono();
+export const app = new Hono<{ Bindings: WorkerEnv }>();
 app.all('*', context => worker.fetch(context.req.raw, context.env));
 
 export default app;

@@ -10,6 +10,7 @@ const command = process.argv[2] || 'build';
 const appDirectory = resolve(process.cwd());
 const runtimeDirectory = resolve(import.meta.dirname, '../../packages/site-runtime');
 const config = JSON.parse(await readFile(resolve(appDirectory, 'site.config.json'), 'utf8'));
+const headersTemplate = await readFile(resolve(runtimeDirectory, 'public/_headers'), 'utf8');
 const service = EKODI_SERVICES.find(item => item.id === config.siteId);
 
 if (!service) throw new Error(`Unknown EKODI siteId: ${config.siteId}`);
@@ -36,7 +37,7 @@ const robotsPolicy = isPrivate ? 'noindex, nofollow, noarchive' : 'index, follow
 
 await build({
   root: runtimeDirectory,
-  publicDir: resolve(runtimeDirectory, 'public'),
+  publicDir: false,
   plugins: [
     react(),
     tailwindcss(),
@@ -56,6 +57,10 @@ await build({
           .replaceAll('{{CANONICAL_URL}}', canonicalUrl);
       },
       generateBundle() {
+        const headers = isPrivate
+          ? headersTemplate.replace('/*', '/*\n  X-Robots-Tag: noindex, nofollow, noarchive')
+          : headersTemplate;
+        this.emitFile({ type: 'asset', fileName: '_headers', source: headers });
         if (isPrivate) {
           this.emitFile({ type: 'asset', fileName: 'robots.txt', source: 'User-agent: *\nDisallow: /\n' });
           return;

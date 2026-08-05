@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CMS_DATA_CLASSIFICATIONS, CMS_SITE_IDS, validateCmsPage } from '../src/index.js';
+import { CMS_DATA_CLASSIFICATIONS, CMS_SITE_IDS, validateCmsPage } from '../src/index.ts';
 
 test('CMS covers every EKODI service', () => {
   assert.deepEqual(CMS_SITE_IDS, ['platform', 'mall', 'biz', 'publishing', 'church', 'lab', 'mission', 'trade', 'marketing', 'consulting', 'media', 'education', 'solution', 'erp', 'community']);

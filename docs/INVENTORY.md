@@ -1,14 +1,14 @@
 # EKODI application and deployment inventory
 
-Status as of 2026-08-05. A “Worker live” state means the cache-busted `workers.dev` URL returned HTTP 200 after the v3 bootstrap; it does not mean the requested custom domain has been attached.
+Status as of 2026-08-06. A “Worker live” state means the cache-busted `workers.dev` URL returned HTTP 200 after the v3 bootstrap; it does not mean the requested custom domain has been attached.
 
 ## Verified existing deployments
 
 | Component | Verified URL | Cloudflare resource | State |
 |---|---|---|---|
 | Platform control center | `https://shy-thunder-39a4.topmaster-joseph.workers.dev` | Worker `shy-thunder-39a4` | Existing deployment preserved; monorepo version `74f771bb-ba53-491b-a949-1e28ea857abb` uploaded but not promoted |
-| Operations API | `https://ekodi-auth-api.topmaster-joseph.workers.dev` | Worker `ekodi-auth-api` | Existing v3 deployment; Hono/CMS/RBAC update pending |
-| Operations database | n/a | D1 `ekodi-auth` | Migrations 0003–0005 applied successfully |
+| Operations API | `https://ekodi-auth-api.topmaster-joseph.workers.dev` | Worker `ekodi-auth-api` | Existing deployment preserved; hardened Hono/CMS/RBAC version awaits R2 activation |
+| Operations database | n/a | D1 `ekodi-auth` | Migrations 0003–0006 applied successfully; no pending migration |
 | Media storage | n/a | R2 `ekodi-media` | Blocked: account API requires R2 activation (`10042`) |
 | DNS integration secret | n/a | Worker secret `CF_API_TOKEN` | Existing; value is not stored in GitHub |
 

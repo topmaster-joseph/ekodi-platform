@@ -7,6 +7,9 @@ test('production CORS only accepts configured origins', () => {
   assert.equal(isAllowedOrigin('https://console.ekodi.example', env), true);
   assert.equal(isAllowedOrigin('https://attacker.example', env), false);
   assert.equal(isAllowedOrigin('http://localhost:3000', env), false);
+  assert.equal(isAllowedOrigin('https://ekodi-mall.topmaster-joseph.workers.dev', env), true);
+  assert.equal(isAllowedOrigin('https://feature-ekodi-erp.topmaster-joseph.workers.dev', env), true);
+  assert.equal(isAllowedOrigin('https://feature-ekodi-mall.attacker.example', env), false);
   assert.equal(isAllowedOrigin(null, env), true);
 });
 

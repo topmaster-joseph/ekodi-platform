@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "check": "node --check src/monitor.mjs && node --check src/monitor-lib.mjs",
-    "monitor": "node src/monitor.mjs",
-    "test": "node --test"
+    "monitor": "node --experimental-strip-types src/monitor.mjs",
+    "test": "node --experimental-strip-types --test"
   },
   "dependencies": {
     "@ekodi/ecosystem-catalog": "workspace:*"

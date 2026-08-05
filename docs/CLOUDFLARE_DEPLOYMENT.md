@@ -29,6 +29,23 @@ corepack pnpm --filter @ekodi/operations-api migrate:production
 
 Keep `CF_API_TOKEN` in the API Worker's encrypted secrets. Bind `ekodi-media` (and `ekodi-media-preview` for previews) as `STORAGE`; uploads are private unless an administrator explicitly marks them public. Site Workers do not need runtime secrets.
 
+After the account owner enables R2 in the Cloudflare dashboard and accepts any displayed billing terms, create the exact buckets referenced by Wrangler:
+
+```bash
+pnpm exec wrangler r2 bucket create ekodi-media
+pnpm exec wrangler r2 bucket create ekodi-media-preview
+pnpm exec wrangler r2 bucket list
+```
+
+Bucket activation is the prerequisite for uploading the hardened API Worker version. Do not remove the `STORAGE` binding merely to bypass that gate.
+
+For a brand-new D1 database, create a one-time high-entropy `SETUP_TOKEN` Worker secret before opening the platform setup form. The setup endpoint rejects initialization without the matching request header, and becomes permanently unavailable after the first administrator exists. Remove the secret after initialization:
+
+```bash
+pnpm exec wrangler secret put SETUP_TOKEN --config apps/operations-api/wrangler.toml
+pnpm exec wrangler secret delete SETUP_TOKEN --config apps/operations-api/wrangler.toml
+```
+
 ## Domain cutover
 
 After ownership approval, attach each exact hostname as a Cloudflare Worker Custom Domain. Custom Domains create the DNS record and certificate, so check for conflicting CNAME records before attachment. Verify the Worker preview URL first, then attach the hostname and validate HTTPS, CMS content loading, security headers, and mobile rendering.

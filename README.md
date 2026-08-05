@@ -31,7 +31,6 @@ Legacy service URLs remain in the ecosystem catalog and generated sites link bac
 - `packages/auth`: shared authentication, role, and permission policy.
 - `packages/database`: D1 binding and migration contracts.
 - `packages/shared`: cross-runtime normalization and validation helpers.
-- `packages/ui`: accessible EKODI design tokens and theme primitives.
 - `packages/ekcms`: CMS, publication, and R2 media domain rules.
 - `packages/erp`: ERP ledger contracts and validation.
 - `packages/ecosystem-catalog`: application, domain, and legacy-source registry.
@@ -58,7 +57,9 @@ Configure Codex Cloud with Node.js 24 and `corepack pnpm install --frozen-lockfi
 
 ## CMS and operations
 
-The authenticated platform console manages draft and published pages for every application. Published sites fetch read-only content from `apps/operations-api`; page content is rendered as text, not injected HTML. D1 revision history and audit records capture changes. DNS operations remain restricted to the five verified legacy zones and require the server-side `CF_API_TOKEN` secret.
+The authenticated platform console manages draft and published pages for every application. Published sites fetch read-only content from `apps/operations-api`; page content is rendered as text, not injected HTML. D1 revision history and audit records capture changes, including the data classification effective for each revision. DNS operations remain restricted to the five verified legacy zones and require the server-side `CF_API_TOKEN` secret.
+
+API tests execute inside the Cloudflare Workers runtime with isolated D1 and R2 bindings. The suite covers one-time setup, sessions, RBAC, draft/publication rules, revision history, and private-by-default media access.
 
 Apply production migrations before deploying API changes:
 
@@ -72,4 +73,4 @@ corepack pnpm --filter @ekodi/operations-api migrate:production
 
 The GitHub-to-Cloudflare installation and custom-domain attachment are account-owner operations. Do not put Cloudflare credentials in GitHub source or repository variables. Runtime secrets belong in Cloudflare Workers secrets.
 
-See `docs/ARCHITECTURE.md` for system boundaries and `docs/CLOUDFLARE_DEPLOYMENT.md` for the exact connection checklist.
+See `docs/ARCHITECTURE.md` for system boundaries, `docs/CLOUDFLARE_DEPLOYMENT.md` for the exact connection checklist, and `docs/COMPLETION_AUDIT.md` for the verified MVP/owner-action boundary.

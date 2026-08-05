@@ -26,6 +26,11 @@ test('unauthenticated platform gate exposes login only', () => {
   assert.match(gate, /id="adminLoginForm"/);
 });
 
+test('one-time setup credential is collected as a password and never embedded', () => {
+  assert.match(html, /id="setupToken"[^>]*type="password"/);
+  assert.doesNotMatch(html, /integration-test-setup-token/);
+});
+
 test('internal platform is excluded from search indexing', () => {
   assert.match(html, /name="robots" content="noindex, nofollow, noarchive"/);
   assert.match(headers, /X-Robots-Tag: noindex, nofollow, noarchive/i);

@@ -30,6 +30,8 @@ const adminLoginToggle = document.querySelector('#showAdminLogin');
 const adminLoginForm = document.querySelector('#adminLoginForm');
 const adminEmail = document.querySelector('#adminEmail');
 const loginError = document.querySelector('#loginError');
+const setupTokenField = document.querySelector('#setupTokenField');
+const setupToken = document.querySelector('#setupToken');
 
 adminLoginToggle.addEventListener('click', () => {
   const opening = adminLoginForm.hidden;
@@ -46,12 +48,17 @@ async function loadAuthStatus() {
     if (!response.ok) throw new Error('인증 서버 연결 실패');
     const status = await response.json();
     authMode = status.initialized ? 'login' : 'setup';
+    setupTokenField.hidden = authMode !== 'setup';
+    setupToken.required = authMode === 'setup';
     document.querySelector('.form-heading strong').textContent = authMode === 'setup' ? '최고관리자 최초 등록' : '플랫폼 관리자 로그인';
     document.querySelector('#enterConsole').textContent = authMode === 'setup' ? '최고관리자 등록 및 입장' : '관리 콘솔 입장';
     adminEmail.value = status.adminEmail || adminEmail.value;
     adminEmail.readOnly = authMode === 'setup';
     document.querySelector('#securityStatus').textContent = '인증 API 정상';
     document.querySelector('#securityChecked').textContent = 'Cloudflare D1 연결';
+    if (authMode === 'setup' && !status.setupAvailable) {
+      loginError.textContent = 'Cloudflare Worker에 SETUP_TOKEN secret을 먼저 설정해 주세요.';
+    }
   } catch {
     loginError.textContent = '인증 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
     document.querySelector('#securityStatus').textContent = '인증 API 확인 필요';
@@ -110,7 +117,10 @@ adminLoginForm.addEventListener('submit', async event => {
   try {
     const response = await fetch(`${AUTH_API}/api/${authMode === 'setup' ? 'setup' : 'login'}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(authMode === 'setup' ? { 'x-ekodi-setup-token': String(formData.get('setupToken') || '') } : {})
+      },
       body: JSON.stringify({
         email: String(formData.get('email')).trim().toLowerCase(),
         password: String(formData.get('password'))
@@ -142,6 +152,7 @@ async function restoreServerSession() {
   }
 }
 
+void loadAuthStatus();
 restoreServerSession();
 
 document.querySelector('#quickActionBtn').addEventListener('click', openPalette);

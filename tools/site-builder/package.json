@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "bin": {
-    "ekodi-site": "./cli.mjs"
+    "ekodi-site": "./bin.mjs"
   },
   "scripts": {
     "check": "node --check cli.mjs",
-    "test": "node --test"
+    "test": "node --experimental-strip-types --test"
   },
   "dependencies": {
     "@ekodi/ecosystem-catalog": "workspace:*",
