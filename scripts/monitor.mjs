@@ -1,42 +1,21 @@
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { buildPayload, checkSite, shouldPublish, SITE_DEFINITIONS } from './monitor-lib.mjs';
 
-const sites = [
-  ['mall', '에코디몰', 'ekodimall.kr'],
-  ['biz', '에코디비즈', 'ekodibiz.kr'],
-  ['publishing', '에코디출판', 'ekodibook.kr'],
-  ['church', '에코디교회', 'ekodichurch.kr'],
-  ['lab', '에코디연구소', 'ekodilab.kr'],
-  ['mission', '에코디선교회', 'youtube.com/@ekodicommunity', 'https://youtube.com/@ekodicommunity']
-];
+const outputPath = fileURLToPath(new URL('../monitor-status.json', import.meta.url));
+const results = await Promise.all(SITE_DEFINITIONS.map(site => checkSite(site)));
+const payload = buildPayload(results);
+let previous = null;
 
-async function checkSite([id, name, domain, targetUrl]) {
-  const url = targetUrl || `https://${domain}`;
-  const started = performance.now();
-  const checkedAt = new Date().toISOString();
-  try {
-    const response = await fetch(url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(12000),
-      headers: { 'user-agent': 'EKODI-Monitor/1.0' }
-    });
-    await response.body?.cancel();
-    const responseTime = Math.round(performance.now() - started);
-    const reachable = response.status >= 200 && response.status < 400;
-    const status = !reachable ? 'offline' : responseTime > 2000 ? 'degraded' : 'online';
-    return { id, name, domain, url, status, httpStatus: response.status, responseTime, checkedAt, error: null };
-  } catch (error) {
-    return { id, name, domain, url, status: 'offline', httpStatus: null, responseTime: Math.round(performance.now() - started), checkedAt, error: error?.name === 'TimeoutError' ? 'timeout' : String(error?.message || error) };
-  }
+try {
+  previous = JSON.parse(await readFile(outputPath, 'utf8'));
+} catch (error) {
+  if (error.code !== 'ENOENT') console.warn(`Ignoring invalid previous status: ${error.message}`);
 }
 
-const results = await Promise.all(sites.map(checkSite));
-const summary = {
-  total: results.length,
-  online: results.filter(site => site.status === 'online').length,
-  degraded: results.filter(site => site.status === 'degraded').length,
-  offline: results.filter(site => site.status === 'offline').length
-};
-const payload = { generatedAt: new Date().toISOString(), summary, sites: results };
-await writeFile(fileURLToPath(new URL('../monitor-status.json', import.meta.url)), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-console.log(JSON.stringify(summary));
+if (shouldPublish(previous, payload)) {
+  await writeFile(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  console.log(JSON.stringify({ published: true, ...payload.summary }));
+} else {
+  console.log(JSON.stringify({ published: false, reason: 'no operational change', ...payload.summary }));
+}

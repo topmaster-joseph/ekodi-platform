@@ -21,8 +21,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Check five EKODI sites
-        run: node scripts/monitor.mjs
+      - name: Verify monitor
+        run: npm test
+      - name: Check six EKODI services
+        run: npm run monitor
       - name: Publish latest status
         run: |
           git config user.name "github-actions[bot]"

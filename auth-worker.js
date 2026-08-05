@@ -1,23 +1,43 @@
-const ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
-const ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
-const ITERATIONS = 100000;
+const DEFAULT_ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
+const DEFAULT_ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
+const LEGACY_ITERATIONS = 100000;
+const CURRENT_ITERATIONS = 310000;
 
 const encoder = new TextEncoder();
 
-function cors(origin) {
-  return {
-    'Access-Control-Allow-Origin': origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN,
+function configuredOrigins(env = {}) {
+  const configured = String(env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGIN)
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  if (env.ENVIRONMENT !== 'production') configured.push('http://localhost:3000', 'http://localhost:8788');
+  return new Set(configured);
+}
+
+export function isAllowedOrigin(origin, env = {}) {
+  return !origin || configuredOrigins(env).has(origin);
+}
+
+function cors(origin, env = {}) {
+  const headers = {
     'Access-Control-Allow-Headers': 'content-type, authorization',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
   };
+  if (origin && isAllowedOrigin(origin, env)) headers['Access-Control-Allow-Origin'] = origin;
+  return headers;
 }
 
-function json(data, status = 200, origin = ALLOWED_ORIGIN) {
+function json(data, status = 200, origin = null, env = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...cors(origin) }
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+      ...cors(origin, env)
+    }
   });
 }
 
@@ -29,17 +49,17 @@ async function sha256(value) {
   return bytesToHex(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
 }
 
-async function passwordHash(password, saltHex) {
+async function passwordHash(password, saltHex, iterations = CURRENT_ITERATIONS) {
   const salt = Uint8Array.from(saltHex.match(/.{2}/g), byte => parseInt(byte, 16));
   const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
   return bytesToHex(await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ITERATIONS },
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
     material,
     256
   ));
 }
 
-function secureEqual(left, right) {
+export function secureEqual(left, right) {
   if (left.length !== right.length) return false;
   let result = 0;
   for (let index = 0; index < left.length; index += 1) result |= left.charCodeAt(index) ^ right.charCodeAt(index);
@@ -69,6 +89,15 @@ async function ensureSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ip_hash TEXT NOT NULL,
       attempted_at TEXT NOT NULL
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER,
+      action TEXT NOT NULL,
+      resource TEXT NOT NULL,
+      detail TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(admin_id) REFERENCES admins(id)
     )`)
   ]);
   await db.prepare(`CREATE TABLE IF NOT EXISTS domain_registry (
@@ -84,6 +113,10 @@ async function ensureSchema(db) {
     updated_at TEXT NOT NULL,
     updated_by INTEGER
   )`).run();
+  const adminColumns = await db.prepare('PRAGMA table_info(admins)').all();
+  if (!adminColumns.results.some(column => column.name === 'password_iterations')) {
+    await db.prepare(`ALTER TABLE admins ADD COLUMN password_iterations INTEGER NOT NULL DEFAULT ${LEGACY_ITERATIONS}`).run();
+  }
 }
 
 async function readBody(request) {
@@ -125,6 +158,36 @@ const EKODI_DOMAINS = [
   { name: 'ekodilab.kr', service: '에코디연구소' }
 ];
 
+const DNS_RECORD_TYPES = new Set(['A', 'AAAA', 'CNAME', 'TXT', 'MX']);
+const CLOUDFLARE_ID = /^[a-f0-9]{32}$/i;
+
+export function validateDnsRecord(body) {
+  if (!body || typeof body !== 'object') return { error: 'DNS 레코드 형식을 확인해 주세요.' };
+  const type = String(body.type || '').toUpperCase();
+  const name = String(body.name || '').trim().toLowerCase();
+  const content = String(body.content || '').trim();
+  const ttl = Math.trunc(Number(body.ttl) || 3600);
+  if (!DNS_RECORD_TYPES.has(type)) return { error: '지원하지 않는 DNS 레코드 유형입니다.' };
+  if (!name || name.length > 253 || !/^[a-z0-9@*._-]+$/i.test(name)) return { error: 'DNS 호스트 이름을 확인해 주세요.' };
+  if (!content || content.length > 2048) return { error: 'DNS 연결 값을 확인해 주세요.' };
+  if (ttl !== 1 && (ttl < 60 || ttl > 86400)) return { error: 'TTL은 자동 또는 60~86400초여야 합니다.' };
+  return {
+    value: {
+      type,
+      name,
+      content,
+      ttl,
+      proxied: Boolean(body.proxied) && ['A', 'AAAA', 'CNAME'].includes(type),
+      ...(type === 'MX' ? { priority: Math.min(65535, Math.max(0, Math.trunc(Number(body.priority) || 10))) } : {})
+    }
+  };
+}
+
+async function writeAudit(db, adminId, action, resource, detail = '') {
+  await db.prepare('INSERT INTO audit_logs (admin_id, action, resource, detail, created_at) VALUES (?, ?, ?, ?, ?)')
+    .bind(adminId || null, action, resource, String(detail).slice(0, 500), new Date().toISOString()).run();
+}
+
 async function cfApi(env, path, options = {}) {
   if (!env.CF_API_TOKEN) throw new Error('도메인 관리 권한이 설정되지 않았습니다.');
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
@@ -142,26 +205,37 @@ async function cfApi(env, path, options = {}) {
   return data.result;
 }
 
+async function requireManagedZone(env, zoneId) {
+  if (!CLOUDFLARE_ID.test(zoneId)) throw new Error('유효하지 않은 Cloudflare Zone ID입니다.');
+  const zone = await cfApi(env, `/zones/${zoneId}`);
+  if (!EKODI_DOMAINS.some(domain => domain.name === zone?.name)) throw new Error('관리 대상 도메인이 아닙니다.');
+  return zone;
+}
+
 export default {
   async fetch(request, env) {
-    const origin = request.headers.get('origin') || ALLOWED_ORIGIN;
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-    if (origin !== ALLOWED_ORIGIN && !origin.startsWith('http://localhost')) return json({ error: '허용되지 않은 요청입니다.' }, 403, origin);
+    const origin = request.headers.get('origin');
+    const reply = (data, status = 200) => json(data, status, origin, env);
+    if (!isAllowedOrigin(origin, env)) return reply({ error: '허용되지 않은 요청입니다.' }, 403);
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
+    const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname === '/health') return reply({ ok: true, service: 'ekodi-auth-api', version: 3 });
+    if (!env.DB) return reply({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
 
     await ensureSchema(env.DB);
-    const url = new URL(request.url);
+    const adminEmail = String(env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).toLowerCase();
 
     if (request.method === 'GET' && url.pathname === '/api/status') {
       const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first();
-      return json({ initialized: Number(count.count) > 0, adminEmail: ADMIN_EMAIL }, 200, origin);
+      return reply({ initialized: Number(count.count) > 0, adminEmail });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/setup') {
       const data = await readBody(request);
-      if (!data || String(data.email).toLowerCase() !== ADMIN_EMAIL) return json({ error: '지정된 최고관리자 이메일만 등록할 수 있습니다.' }, 403, origin);
-      if (typeof data.password !== 'string' || data.password.length < 12) return json({ error: '비밀번호는 12자 이상이어야 합니다.' }, 400, origin);
+      if (!data || String(data.email).toLowerCase() !== adminEmail) return reply({ error: '지정된 최고관리자 이메일만 등록할 수 있습니다.' }, 403);
+      if (typeof data.password !== 'string' || data.password.length < 12) return reply({ error: '비밀번호는 12자 이상이어야 합니다.' }, 400);
       const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first();
-      if (Number(count.count) > 0) return json({ error: '최고관리자 등록이 이미 완료되었습니다.' }, 409, origin);
+      if (Number(count.count) > 0) return reply({ error: '최고관리자 등록이 이미 완료되었습니다.' }, 409);
 
       const passwordSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
       const birthSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
@@ -169,55 +243,68 @@ export default {
       const birthDigest = await sha256(`${birthSalt}:not-required`);
       const createdAt = new Date().toISOString();
       const result = await env.DB.prepare(`INSERT INTO admins
-        (email, password_hash, password_salt, birth_hash, birth_salt, role, created_at)
-        VALUES (?, ?, ?, ?, ?, 'super_admin', ?)`)
-        .bind(ADMIN_EMAIL, passwordDigest, passwordSalt, birthDigest, birthSalt, createdAt).run();
+        (email, password_hash, password_salt, password_iterations, birth_hash, birth_salt, role, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'super_admin', ?)`)
+        .bind(adminEmail, passwordDigest, passwordSalt, CURRENT_ITERATIONS, birthDigest, birthSalt, createdAt).run();
       const session = await issueSession(env.DB, result.meta.last_row_id);
-      return json({ ok: true, email: ADMIN_EMAIL, role: 'super_admin', ...session }, 201, origin);
+      await writeAudit(env.DB, result.meta.last_row_id, 'admin.setup', 'platform', adminEmail);
+      return reply({ ok: true, email: adminEmail, role: 'super_admin', ...session }, 201);
     }
 
     if (request.method === 'POST' && url.pathname === '/api/login') {
       const ipHash = await sha256(request.headers.get('cf-connecting-ip') || 'unknown');
       const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      await env.DB.prepare('DELETE FROM login_attempts WHERE attempted_at <= ?').bind(cutoff).run();
       const attempts = await env.DB.prepare('SELECT COUNT(*) AS count FROM login_attempts WHERE ip_hash = ? AND attempted_at > ?').bind(ipHash, cutoff).first();
-      if (Number(attempts.count) >= 8) return json({ error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도하세요.' }, 429, origin);
-      await env.DB.prepare('INSERT INTO login_attempts (ip_hash, attempted_at) VALUES (?, ?)').bind(ipHash, new Date().toISOString()).run();
+      if (Number(attempts.count) >= 8) return reply({ error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도하세요.' }, 429);
 
       const data = await readBody(request);
       const email = String(data?.email || '').toLowerCase();
       const admin = await env.DB.prepare('SELECT * FROM admins WHERE email = ?').bind(email).first();
-      if (!admin || typeof data?.password !== 'string') return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
-      const passwordDigest = await passwordHash(data.password, admin.password_salt);
-      if (!secureEqual(passwordDigest, admin.password_hash)) return json({ error: '관리자 정보를 확인해 주세요.' }, 401, origin);
+      const passwordDigest = admin && typeof data?.password === 'string'
+        ? await passwordHash(data.password, admin.password_salt, Number(admin.password_iterations) || LEGACY_ITERATIONS)
+        : null;
+      if (!admin || !passwordDigest || !secureEqual(passwordDigest, admin.password_hash)) {
+        await env.DB.prepare('INSERT INTO login_attempts (ip_hash, attempted_at) VALUES (?, ?)').bind(ipHash, new Date().toISOString()).run();
+        return reply({ error: '관리자 정보를 확인해 주세요.' }, 401);
+      }
+      if (Number(admin.password_iterations) < CURRENT_ITERATIONS) {
+        const upgradedSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+        const upgradedHash = await passwordHash(data.password, upgradedSalt, CURRENT_ITERATIONS);
+        await env.DB.prepare('UPDATE admins SET password_hash = ?, password_salt = ?, password_iterations = ? WHERE id = ?')
+          .bind(upgradedHash, upgradedSalt, CURRENT_ITERATIONS, admin.id).run();
+      }
+      await env.DB.prepare('DELETE FROM login_attempts WHERE ip_hash = ?').bind(ipHash).run();
       const session = await issueSession(env.DB, admin.id);
-      return json({ ok: true, email: admin.email, role: admin.role, ...session }, 200, origin);
+      await writeAudit(env.DB, admin.id, 'session.login', 'platform');
+      return reply({ ok: true, email: admin.email, role: admin.role, ...session });
     }
 
 
 
     if (url.pathname.startsWith('/api/registry')) {
       const admin = await authenticate(request, env.DB);
-      if (!admin) return json({ error: '관리자 인증이 필요합니다.' }, 401, origin);
+      if (!admin) return reply({ error: '관리자 인증이 필요합니다.' }, 401);
       const seed = env.DB.prepare(`INSERT OR IGNORE INTO domain_registry
         (domain, registrar, auto_renew, transfer_lock, whois_privacy, reminder_days, memo, updated_at)
         VALUES (?, '도메인클럽', 0, 1, 1, 60, '', ?)`);
       await env.DB.batch(EKODI_DOMAINS.map(item => seed.bind(item.name, new Date().toISOString())));
       if (request.method === 'GET' && url.pathname === '/api/registry') {
         const result = await env.DB.prepare('SELECT * FROM domain_registry ORDER BY domain').all();
-        return json({ records: result.results.map(row => ({
+        return reply({ records: result.results.map(row => ({
           domain: row.domain, registrar: row.registrar, registeredAt: row.registered_at || '',
           expiresAt: row.expires_at || '', autoRenew: Boolean(row.auto_renew),
           transferLock: Boolean(row.transfer_lock), whoisPrivacy: Boolean(row.whois_privacy),
           reminderDays: row.reminder_days, memo: row.memo || '', updatedAt: row.updated_at
-        })) }, 200, origin);
+        })) });
       }
       const match = url.pathname.match(/^\/api\/registry\/([^/]+)$/);
       if (request.method === 'PUT' && match) {
         const domain = decodeURIComponent(match[1]).toLowerCase();
-        if (!EKODI_DOMAINS.some(item => item.name === domain)) return json({ error: '관리 대상 도메인이 아닙니다.' }, 400, origin);
+        if (!EKODI_DOMAINS.some(item => item.name === domain)) return reply({ error: '관리 대상 도메인이 아닙니다.' }, 400);
         const body = await readBody(request);
         const datePattern = /^$|^\d{4}-\d{2}-\d{2}$/;
-        if (!body || !datePattern.test(String(body.registeredAt || '')) || !datePattern.test(String(body.expiresAt || ''))) return json({ error: '날짜 형식을 확인해 주세요.' }, 400, origin);
+        if (!body || !datePattern.test(String(body.registeredAt || '')) || !datePattern.test(String(body.expiresAt || ''))) return reply({ error: '날짜 형식을 확인해 주세요.' }, 400);
         const reminderDays = Math.min(365, Math.max(7, Number(body.reminderDays) || 60));
         const memo = String(body.memo || '').trim().slice(0, 240);
         await env.DB.prepare(`UPDATE domain_registry SET registered_at=?, expires_at=?, auto_renew=?,
@@ -225,13 +312,37 @@ export default {
           .bind(body.registeredAt || null, body.expiresAt || null, body.autoRenew ? 1 : 0,
             body.transferLock ? 1 : 0, body.whoisPrivacy ? 1 : 0, reminderDays, memo,
             new Date().toISOString(), admin.id, domain).run();
-        return json({ ok: true }, 200, origin);
+        await writeAudit(env.DB, admin.id, 'registry.update', domain, JSON.stringify({
+          expiresAt: body.expiresAt || null,
+          autoRenew: Boolean(body.autoRenew),
+          transferLock: Boolean(body.transferLock),
+          whoisPrivacy: Boolean(body.whoisPrivacy)
+        }));
+        return reply({ ok: true });
       }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/audit') {
+      const admin = await authenticate(request, env.DB);
+      if (!admin) return reply({ error: '관리자 인증이 필요합니다.' }, 401);
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 20));
+      const result = await env.DB.prepare(`SELECT audit_logs.id, audit_logs.action, audit_logs.resource,
+        audit_logs.detail, audit_logs.created_at, admins.email
+        FROM audit_logs LEFT JOIN admins ON admins.id = audit_logs.admin_id
+        ORDER BY audit_logs.id DESC LIMIT ?`).bind(limit).all();
+      return reply({ events: result.results.map(row => ({
+        id: row.id,
+        action: row.action,
+        resource: row.resource,
+        detail: row.detail,
+        createdAt: row.created_at,
+        actor: row.email || 'system'
+      })) });
     }
 
     if (url.pathname.startsWith('/api/domains')) {
       const admin = await authenticate(request, env.DB);
-      if (!admin) return json({ error: '관리자 인증이 필요합니다.' }, 401, origin);
+      if (!admin) return reply({ error: '관리자 인증이 필요합니다.' }, 401);
       try {
         if (request.method === 'GET' && url.pathname === '/api/domains') {
           const zones = await cfApi(env, '/zones?per_page=50');
@@ -239,49 +350,58 @@ export default {
             const zone = zones.find(item => item.name === domain.name);
             return { ...domain, connected: Boolean(zone), zoneId: zone?.id || null, status: zone?.status || 'not_connected', nameServers: zone?.name_servers || [] };
           });
-          return json({ domains }, 200, origin);
+          return reply({ domains });
         }
 
         const match = url.pathname.match(/^\/api\/domains\/([^/]+)\/dns(?:\/([^/]+))?$/);
         if (match) {
           const zoneId = match[1];
           const recordId = match[2];
+          const zone = await requireManagedZone(env, zoneId);
+          if (recordId && !CLOUDFLARE_ID.test(recordId)) return reply({ error: '유효하지 않은 DNS 레코드 ID입니다.' }, 400);
           if (request.method === 'GET' && !recordId) {
             const records = await cfApi(env, `/zones/${zoneId}/dns_records?per_page=100`);
-            return json({ records }, 200, origin);
+            return reply({ records });
           }
           if (request.method === 'POST' && !recordId) {
-            const body = await readBody(request);
-            const record = await cfApi(env, `/zones/${zoneId}/dns_records`, { method: 'POST', body: JSON.stringify(body) });
-            return json({ record }, 201, origin);
+            const validated = validateDnsRecord(await readBody(request));
+            if (validated.error) return reply({ error: validated.error }, 400);
+            const record = await cfApi(env, `/zones/${zoneId}/dns_records`, { method: 'POST', body: JSON.stringify(validated.value) });
+            await writeAudit(env.DB, admin.id, 'dns.create', zone.name, JSON.stringify({ type: validated.value.type, name: validated.value.name }));
+            return reply({ record }, 201);
           }
           if (request.method === 'PUT' && recordId) {
-            const body = await readBody(request);
-            const record = await cfApi(env, `/zones/${zoneId}/dns_records/${recordId}`, { method: 'PUT', body: JSON.stringify(body) });
-            return json({ record }, 200, origin);
+            const validated = validateDnsRecord(await readBody(request));
+            if (validated.error) return reply({ error: validated.error }, 400);
+            const record = await cfApi(env, `/zones/${zoneId}/dns_records/${recordId}`, { method: 'PUT', body: JSON.stringify(validated.value) });
+            await writeAudit(env.DB, admin.id, 'dns.update', zone.name, JSON.stringify({ type: validated.value.type, name: validated.value.name }));
+            return reply({ record });
           }
           if (request.method === 'DELETE' && recordId) {
             await cfApi(env, `/zones/${zoneId}/dns_records/${recordId}`, { method: 'DELETE' });
-            return json({ ok: true }, 200, origin);
+            await writeAudit(env.DB, admin.id, 'dns.delete', zone.name, recordId);
+            return reply({ ok: true });
           }
         }
       } catch (error) {
-        return json({ error: error.message }, 502, origin);
+        return reply({ error: error.message }, 502);
       }
     }
 
     if (request.method === 'GET' && url.pathname === '/api/session') {
       const admin = await authenticate(request, env.DB);
-      return admin ? json({ authenticated: true, email: admin.email, role: admin.role, expiresAt: admin.expires_at }, 200, origin)
-        : json({ authenticated: false }, 401, origin);
+      return admin ? reply({ authenticated: true, email: admin.email, role: admin.role, expiresAt: admin.expires_at })
+        : reply({ authenticated: false }, 401);
     }
 
     if (request.method === 'POST' && url.pathname === '/api/logout') {
       const authorization = request.headers.get('authorization') || '';
+      const admin = await authenticate(request, env.DB);
       if (authorization.startsWith('Bearer ')) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(authorization.slice(7))).run();
-      return json({ ok: true }, 200, origin);
+      if (admin) await writeAudit(env.DB, admin.id, 'session.logout', 'platform');
+      return reply({ ok: true });
     }
 
-    return json({ error: 'Not found' }, 404, origin);
+    return reply({ error: 'Not found' }, 404);
   }
 };

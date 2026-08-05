@@ -49,8 +49,12 @@ async function loadAuthStatus() {
     document.querySelector('#enterConsole').textContent = authMode === 'setup' ? '최고관리자 등록 및 입장' : '관리 콘솔 입장';
     adminEmail.value = status.adminEmail || adminEmail.value;
     adminEmail.readOnly = authMode === 'setup';
+    document.querySelector('#securityStatus').textContent = '인증 API 정상';
+    document.querySelector('#securityChecked').textContent = 'Cloudflare D1 연결';
   } catch {
     loginError.textContent = '인증 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+    document.querySelector('#securityStatus').textContent = '인증 API 확인 필요';
+    document.querySelector('#securityChecked').textContent = '연결 실패';
   }
 }
 
@@ -59,9 +63,34 @@ function enterAuthenticatedConsole(email, token) {
   shell.setAttribute('aria-hidden', 'false');
   sessionStorage.setItem('ekodi-auth-token', token);
   sessionStorage.setItem('ekodi-admin-email', email);
+  const profile = document.querySelector('#profileBtn');
+  profile.querySelector('.avatar').textContent = email.slice(0, 1).toUpperCase();
+  profile.querySelector('strong').textContent = email.split('@')[0];
   notify('관리자 인증이 완료되었습니다.');
   loadDomains();
   loadRegistry();
+  loadAudit();
+}
+
+async function logout() {
+  const token = sessionStorage.getItem('ekodi-auth-token');
+  try {
+    if (token) {
+      await fetch(`${AUTH_API}/api/logout`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}` }
+      });
+    }
+  } finally {
+    sessionStorage.removeItem('ekodi-auth-token');
+    sessionStorage.removeItem('ekodi-admin-email');
+    shell.setAttribute('aria-hidden', 'true');
+    gate.classList.remove('hidden');
+    adminLoginForm.hidden = true;
+    adminLoginToggle.setAttribute('aria-expanded', 'false');
+    adminLoginToggle.textContent = '관리자 로그인 →';
+    notify('안전하게 로그아웃했습니다.');
+  }
 }
 
 adminLoginForm.addEventListener('submit', async event => {
@@ -136,10 +165,10 @@ commandInput.addEventListener('input', event => {
   });
 });
 
-document.querySelectorAll('[data-command]').forEach(button => {
+document.querySelectorAll('[data-view-command]').forEach(button => {
   button.addEventListener('click', () => {
-    notify(button.dataset.command);
     closePalette();
+    activateView(button.dataset.viewCommand, { focus: true });
   });
 });
 
@@ -149,24 +178,6 @@ document.querySelectorAll('[data-action]').forEach(button => {
 
 document.querySelectorAll('[data-scroll]').forEach(button => {
   button.addEventListener('click', () => document.querySelector(`#${button.dataset.scroll}`).scrollIntoView({ behavior: 'smooth' }));
-});
-
-function updatePending() {
-  const count = document.querySelectorAll('.approval-row').length;
-  document.querySelector('#pendingCount').textContent = count;
-  document.querySelector('#navApprovalCount').textContent = count;
-  if (!count) document.querySelector('#approvalList').innerHTML = '<div style="padding:28px;text-align:center;color:#657084">모든 가입 요청을 처리했습니다.</div>';
-}
-
-document.querySelector('#approvalList').addEventListener('click', event => {
-  const action = event.target.closest('.approve, .reject');
-  if (!action) return;
-  const row = action.closest('.approval-row');
-  const name = row.querySelector('.requester strong').textContent;
-  const approved = action.classList.contains('approve');
-  row.remove();
-  updatePending();
-  notify(`${name}님의 요청을 ${approved ? '승인' : '거절'}했습니다.`);
 });
 
 document.querySelector('#refreshBtn').addEventListener('click', async event => {
@@ -182,17 +193,22 @@ document.querySelector('#globalSearch').addEventListener('input', event => {
   });
 });
 
-document.querySelector('#exportBtn').addEventListener('click', () => notify('통합 운영 보고서 생성을 시작했습니다.'));
-document.querySelector('#settingsBtn').addEventListener('click', () => notify('환경 설정 패널을 준비 중입니다.'));
-document.querySelector('#notificationBtn').addEventListener('click', () => notify('새로운 보안 알림이 없습니다.'));
-document.querySelector('#profileBtn').addEventListener('click', () => notify('현재 최고 관리자 권한으로 접속 중입니다.'));
+document.querySelector('#exportBtn').addEventListener('click', exportOperationsReport);
+document.querySelector('#notificationBtn').addEventListener('click', () => {
+  const offline = latestMonitorStatus?.summary?.offline || 0;
+  const degraded = latestMonitorStatus?.summary?.degraded || 0;
+  notify(offline || degraded ? `운영 알림: 장애 ${offline}, 지연 ${degraded}` : '현재 감지된 서비스 장애가 없습니다.');
+});
+document.querySelector('#profileBtn').addEventListener('click', () => notify(`${sessionStorage.getItem('ekodi-admin-email') || '관리자'} 계정으로 접속 중입니다.`));
+document.querySelector('#logoutBtn').addEventListener('click', logout);
+document.querySelectorAll('[data-view-link]').forEach(button => {
+  button.addEventListener('click', () => activateView(button.dataset.viewLink, { focus: true }));
+});
 
 const viewMeta = {
-  dashboard: ['통합 현황', 'EKODI 전체 서비스와 승인 업무를 한곳에서 관리하세요.'],
+  dashboard: ['통합 현황', '서비스 상태, 도메인, DNS와 운영 변경 이력을 한곳에서 관리합니다.'],
   services: ['서비스 관리', '연결된 EKODI 서비스의 상태와 바로가기를 관리합니다.'],
   domains: ['도메인 관리', '도메인클럽 등록·갱신 정보와 Cloudflare DNS를 함께 관리합니다.'],
-  members: ['사용자·권한', '관리자 인증과 사용자 승인 요청을 검토합니다.'],
-  recommend: ['추천 센터', '운영 데이터와 만료 일정을 바탕으로 우선 작업을 제안합니다.'],
   activity: ['활동 기록', '관리자 작업과 주요 변경 이력을 확인합니다.']
 };
 
@@ -201,10 +217,9 @@ function activateView(view, options = {}) {
   const isDashboard = view === 'dashboard';
   const map = {
     services: document.querySelector('.services-panel'),
-    recommend: document.querySelector('.recommendation-panel'),
+    dashboard: document.querySelector('.recommendation-panel'),
     domains: document.querySelector('.domain-panel'),
     registrar: document.querySelector('.registrar-panel'),
-    members: document.querySelector('.approval-panel'),
     activity: document.querySelector('.activity-panel')
   };
   Object.entries(map).forEach(([key, element]) => {
@@ -212,8 +227,8 @@ function activateView(view, options = {}) {
     element?.classList.toggle('view-hidden', !visible);
   });
   document.querySelector('.stats-grid')?.classList.toggle('view-hidden', !isDashboard);
-  document.querySelector('.workspace-grid')?.classList.toggle('view-hidden', !isDashboard && !['services','recommend'].includes(view));
-  document.querySelector('.bottom-grid')?.classList.toggle('view-hidden', !isDashboard && !['members','activity'].includes(view));
+  document.querySelector('.workspace-grid')?.classList.toggle('view-hidden', !isDashboard && view !== 'services');
+  document.querySelector('.bottom-grid')?.classList.toggle('view-hidden', !isDashboard && view !== 'activity');
   document.querySelector('.workspace-grid')?.classList.toggle('single-column', !isDashboard);
   document.querySelector('.bottom-grid')?.classList.toggle('single-column', !isDashboard);
   document.querySelectorAll('.nav-item[data-view]').forEach(item => {
@@ -224,7 +239,7 @@ function activateView(view, options = {}) {
   const [title, description] = viewMeta[view];
   document.querySelector('#viewTitle').textContent = title;
   document.querySelector('#viewDescription').textContent = description;
-  document.querySelector('#viewEyebrow').textContent = view === 'dashboard' ? 'EKODI 운영 콘솔' : 'EKODI · ' + title;
+  document.querySelector('#viewEyebrow').textContent = view === 'dashboard' ? 'EKODI PLATFORM v3' : 'EKODI · ' + title;
   if (options.updateHash !== false && location.hash !== '#' + view) history.pushState({ view }, '', '#' + view);
   document.querySelector('.content')?.scrollTo({ top: 0, behavior: options.instant ? 'auto' : 'smooth' });
   document.querySelector('.sidebar')?.classList.remove('open');
@@ -270,6 +285,7 @@ function renderRegistry(records) {
   const expiring = records.filter(item => { const d = daysUntil(item.expiresAt); return d !== null && d <= 60; }).length;
   const autoRenew = records.filter(item => item.autoRenew).length;
   document.querySelector('#registryExpiring').textContent = String(expiring);
+  document.querySelector('#dashboardExpiring').textContent = String(expiring);
   document.querySelector('#registryAutoRenew').textContent = autoRenew + ' / ' + records.length;
   records.forEach(record => {
     const row = document.createElement('article'); row.className = 'registry-row searchable';
@@ -318,7 +334,7 @@ registryForm?.addEventListener('submit', async event => {
   try {
     const response = await fetch(AUTH_API + '/api/registry/' + encodeURIComponent(domain), { method:'PUT', headers:authHeaders(true), body:JSON.stringify(payload) });
     const data = await response.json(); if(!response.ok) throw new Error(data.error || '저장하지 못했습니다.');
-    registryForm.hidden=true; await loadRegistry(); notify(domain + ' 등록 관리정보를 저장했습니다.');
+    registryForm.hidden=true; await Promise.all([loadRegistry(), loadAudit()]); notify(domain + ' 등록 관리정보를 저장했습니다.');
   } catch(error) { notify(error.message); } finally { submit.disabled=false; }
 });
 document.querySelector('#closeRegistryForm')?.addEventListener('click', () => { registryForm.hidden=true; });
@@ -326,6 +342,7 @@ document.querySelector('#refreshRegistry')?.addEventListener('click', loadRegist
 
 const MONITOR_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/monitor-status.json';
 let monitorRecommendation;
+let latestMonitorStatus = null;
 
 function setHealth(row, site) {
   const health = row.querySelector('.health');
@@ -334,7 +351,7 @@ function setHealth(row, site) {
   row.dataset.status = site.status;
   health.classList.remove('online', 'degraded', 'offline');
   health.classList.add(site.status);
-  health.innerHTML = `<i></i>${labels[site.status] || '확인 불가'}`;
+  health.replaceChildren(document.createElement('i'), document.createTextNode(labels[site.status] || '확인 불가'));
   metrics[0].textContent = Number.isFinite(site.responseTime) ? `${site.responseTime}ms` : '—';
   metrics[1].textContent = site.httpStatus || '실패';
   row.title = `${new Date(site.checkedAt).toLocaleString('ko-KR')} 점검`;
@@ -343,11 +360,28 @@ function setHealth(row, site) {
 function updateMonitorRecommendation(data) {
   monitorRecommendation?.remove();
   const issue = data.sites.find(site => site.status === 'offline') || data.sites.find(site => site.status === 'degraded');
-  if (!issue) return;
+  const empty = document.querySelector('#monitorEmpty');
+  empty.hidden = Boolean(issue);
+  if (!issue) {
+    empty.querySelector('.priority').textContent = '정상';
+    empty.querySelector('strong').textContent = '모든 서비스가 정상 범위입니다.';
+    empty.querySelector('p').textContent = `마지막 게시: ${new Date(data.generatedAt).toLocaleString('ko-KR')}`;
+    return;
+  }
   monitorRecommendation = document.createElement('div');
   monitorRecommendation.className = 'recommend-item high searchable monitor-recommendation';
-  monitorRecommendation.innerHTML = `<span class="priority">실시간</span><strong>${issue.name} ${issue.status === 'offline' ? '장애 확인' : '응답 지연'}</strong><p>${issue.domain} · HTTP ${issue.httpStatus || '실패'} · ${issue.responseTime}ms</p><button type="button">사이트 확인</button>`;
-  monitorRecommendation.querySelector('button').addEventListener('click', () => window.open(issue.url, '_blank', 'noopener'));
+  const priority = document.createElement('span');
+  priority.className = 'priority';
+  priority.textContent = '실시간';
+  const title = document.createElement('strong');
+  title.textContent = `${issue.name} ${issue.status === 'offline' ? '장애 확인' : '응답 지연'}`;
+  const detail = document.createElement('p');
+  detail.textContent = `${issue.domain} · HTTP ${issue.httpStatus || '실패'} · ${issue.responseTime}ms`;
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.textContent = '사이트 확인';
+  open.addEventListener('click', () => window.open(issue.url, '_blank', 'noopener'));
+  monitorRecommendation.append(priority, title, detail, open);
   document.querySelector('#recommendList').prepend(monitorRecommendation);
 }
 
@@ -357,13 +391,17 @@ async function loadMonitorStatus(announce = false) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (!Array.isArray(data.sites) || !data.sites.length) throw new Error('점검 결과 대기 중');
+    latestMonitorStatus = data;
     data.sites.forEach(site => {
       const row = document.querySelector(`.service-row[data-domain="${site.domain}"]`);
       if (row) setHealth(row, site);
     });
     updateMonitorRecommendation(data);
     const statusCard = document.querySelector('.stats-grid .stat-card:first-child');
-    statusCard.querySelector('strong').innerHTML = `${data.summary.online} <small>/ ${data.summary.total}</small>`;
+    const statusValue = statusCard.querySelector('strong');
+    const total = document.createElement('small');
+    total.textContent = `/ ${data.summary.total}`;
+    statusValue.replaceChildren(document.createTextNode(`${data.summary.online} `), total);
     statusCard.querySelector('p').textContent = data.summary.offline ? `${data.summary.offline}개 서비스 장애` : data.summary.degraded ? `${data.summary.degraded}개 서비스 지연` : '모든 서비스 정상';
     if (announce) notify(`실측 완료: 정상 ${data.summary.online}, 지연 ${data.summary.degraded}, 장애 ${data.summary.offline}`);
   } catch (error) {
@@ -488,8 +526,90 @@ async function loadDnsRecords() {
     });
     if (!data.records.length) dnsRecordList.innerHTML = '<p class="domain-loading">등록된 DNS 레코드가 없습니다.</p>';
   } catch (error) {
-    dnsRecordList.innerHTML = `<p class="domain-error">${error.message}</p>`;
+    dnsRecordList.innerHTML = '';
+    const message = document.createElement('p');
+    message.className = 'domain-error';
+    message.textContent = error.message;
+    dnsRecordList.append(message);
   }
+}
+
+let auditEvents = [];
+
+const auditLabels = {
+  'admin.setup': '최고관리자 등록',
+  'session.login': '관리자 로그인',
+  'session.logout': '관리자 로그아웃',
+  'registry.update': '도메인 등록대장 변경',
+  'dns.create': 'DNS 레코드 생성',
+  'dns.update': 'DNS 레코드 변경',
+  'dns.delete': 'DNS 레코드 삭제'
+};
+
+function renderAudit(events) {
+  auditEvents = events;
+  const list = document.querySelector('#activityList');
+  list.innerHTML = '';
+  document.querySelector('#auditCount').textContent = String(events.length);
+  if (!events.length) {
+    const item = document.createElement('li');
+    const icon = document.createElement('span');
+    icon.className = 'activity-icon info';
+    icon.textContent = '✓';
+    const body = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = '아직 기록된 운영 변경이 없습니다.';
+    body.append(title);
+    item.append(icon, body);
+    list.append(item);
+    return;
+  }
+  events.forEach(event => {
+    const item = document.createElement('li');
+    const icon = document.createElement('span');
+    icon.className = `activity-icon ${event.action.startsWith('dns.') ? 'warn' : 'info'}`;
+    icon.textContent = event.action.startsWith('dns.') ? '◎' : '✓';
+    const body = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = auditLabels[event.action] || event.action;
+    const detail = document.createElement('p');
+    detail.textContent = `${event.actor} · ${event.resource}`;
+    const time = document.createElement('small');
+    time.textContent = new Date(event.createdAt).toLocaleString('ko-KR');
+    body.append(title, detail, time);
+    item.append(icon, body);
+    list.append(item);
+  });
+}
+
+async function loadAudit() {
+  if (!sessionStorage.getItem('ekodi-auth-token')) return;
+  try {
+    const response = await fetch(`${AUTH_API}/api/audit?limit=20`, { headers: authHeaders() });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || '감사 로그를 불러오지 못했습니다.');
+    renderAudit(data.events || []);
+  } catch (error) {
+    notify(error.message);
+  }
+}
+
+function exportOperationsReport() {
+  const report = {
+    schemaVersion: 3,
+    generatedAt: new Date().toISOString(),
+    monitoring: latestMonitorStatus,
+    domainRegistry: registryRecords,
+    audit: auditEvents
+  };
+  const blob = new Blob([`${JSON.stringify(report, null, 2)}\n`], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ekodi-operations-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  notify('운영 보고서를 내려받았습니다.');
 }
 
 async function deleteDnsRecord(recordId) {
@@ -502,7 +622,7 @@ async function deleteDnsRecord(recordId) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'DNS 레코드를 삭제하지 못했습니다.');
     notify('DNS 레코드를 삭제했습니다.');
-    await loadDnsRecords();
+    await Promise.all([loadDnsRecords(), loadAudit()]);
   } catch (error) {
     notify(error.message);
   }
@@ -531,13 +651,14 @@ dnsRecordForm?.addEventListener('submit', async event => {
     dnsRecordForm.reset();
     dnsRecordForm.elements.ttl.value = 3600;
     notify('DNS 레코드를 추가했습니다.');
-    await loadDnsRecords();
+    await Promise.all([loadDnsRecords(), loadAudit()]);
   } catch (error) {
     notify(error.message);
   }
 });
 
 document.querySelector('#refreshDomains')?.addEventListener('click', loadDomains);
+document.querySelector('#refreshAudit')?.addEventListener('click', loadAudit);
 document.querySelector('#closeDnsManager')?.addEventListener('click', () => {
   dnsManager.hidden = true;
   activeZoneId = null;

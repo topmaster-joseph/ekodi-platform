@@ -6,9 +6,6 @@
   <meta name="description" content="EKODI 서비스 통합 운영·권한·추천 관리 콘솔">
   <meta name="theme-color" content="#0b1220">
   <title>EKODI Control Center</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -47,13 +44,10 @@
         <button class="nav-item active" data-view="dashboard"><span>⌂</span>통합 현황</button>
         <button class="nav-item" data-view="services"><span>◫</span>서비스 관리</button>
         <button class="nav-item" data-view="domains"><span>◎</span>도메인 관리</button>
-        <button class="nav-item" data-view="members"><span>♙</span>사용자·권한 <b class="nav-count" id="navApprovalCount">3</b></button>
-        <button class="nav-item" data-view="recommend"><span>✦</span>추천 센터 <b class="new-dot">NEW</b></button>
         <button class="nav-item" data-view="activity"><span>≡</span>활동 기록</button>
       </nav>
       <div class="sidebar-bottom">
-        <div class="security-state"><span></span><div><strong>접근 정책 정상</strong><small>마지막 확인 2분 전</small></div></div>
-        <button class="nav-item" id="settingsBtn"><span>⚙</span>환경 설정</button>
+        <div class="security-state"><span></span><div><strong id="securityStatus">인증 API 확인 중</strong><small id="securityChecked">관리자 접속 후 확인</small></div></div>
       </div>
     </aside>
 
@@ -67,21 +61,22 @@
         </label>
         <div class="top-actions">
           <button class="icon-button" id="notificationBtn" aria-label="알림"><span class="alert-dot"></span>♢</button>
+          <button class="ghost" id="logoutBtn" type="button">로그아웃</button>
           <button class="profile-button" id="profileBtn"><span class="avatar">김</span><span><strong>김관리</strong><small>최고 관리자</small></span><b>⌄</b></button>
         </div>
       </header>
 
       <div class="content">
         <section class="page-heading" id="pageHeading">
-          <div><p class="eyebrow" id="viewEyebrow">EKODI 운영 콘솔</p><h1 id="viewTitle" tabindex="-1">통합 현황</h1><p id="viewDescription">EKODI 전체 서비스와 승인 업무를 한곳에서 관리하세요.</p></div>
+          <div><p class="eyebrow" id="viewEyebrow">EKODI PLATFORM v3</p><h1 id="viewTitle" tabindex="-1">통합 현황</h1><p id="viewDescription">서비스 상태, 도메인, DNS와 운영 변경 이력을 한곳에서 관리합니다.</p></div>
           <div class="heading-actions"><button class="secondary" id="exportBtn">보고서 내보내기</button><button class="primary" id="quickActionBtn">+ 빠른 작업</button></div>
         </section>
 
         <section class="stats-grid" aria-label="핵심 지표">
           <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>6 <small>/ 6</small></strong><p class="positive">상태 확인 중</p></div></article>
-          <article class="stat-card"><div class="stat-icon blue">♙</div><div><span>승인된 사용자</span><strong>42</strong><p>관리자 5 · 운영자 37</p></div></article>
-          <article class="stat-card attention"><div class="stat-icon amber">!</div><div><span>승인 대기</span><strong id="pendingCount">3</strong><p class="warning">확인이 필요합니다</p></div><button class="text-action" data-scroll="approval">검토 →</button></article>
-          <article class="stat-card"><div class="stat-icon violet">✦</div><div><span>오늘의 추천</span><strong id="recommendCount">4</strong><p>업무 최적화 제안</p></div><button class="text-action" data-scroll="recommendations">보기 →</button></article>
+          <article class="stat-card"><div class="stat-icon blue">◎</div><div><span>관리 도메인</span><strong>5</strong><p>Cloudflare 연결 관리</p></div></article>
+          <article class="stat-card attention"><div class="stat-icon amber">!</div><div><span>60일 이내 만료</span><strong id="dashboardExpiring">—</strong><p class="warning">등록대장 기준</p></div><button class="text-action" data-view-link="domains">검토 →</button></article>
+          <article class="stat-card"><div class="stat-icon violet">≡</div><div><span>최근 운영 변경</span><strong id="auditCount">—</strong><p>감사 로그 기록</p></div><button class="text-action" data-view-link="activity">보기 →</button></article>
         </section>
 
         <section class="workspace-grid">
@@ -98,12 +93,9 @@
           </article>
 
           <aside class="panel recommendation-panel" id="recommendations">
-            <div class="panel-head"><div><span class="ai-label">✦ SMART RECOMMEND</span><h2>추천 작업</h2><p>운영 데이터 기반 우선순위 제안</p></div></div>
+            <div class="panel-head"><div><span class="ai-label">LIVE OPERATIONS</span><h2>운영 알림</h2><p>실측 상태 기반 우선 확인 항목</p></div></div>
             <div class="recommend-list" id="recommendList">
-              <div class="recommend-item high searchable"><span class="priority">높음</span><strong>에코디출판 검수 8건 처리</strong><p>평균 대기시간이 2일을 초과했습니다.</p><button data-action="검수 화면을 열었습니다">검수 시작</button></div>
-              <div class="recommend-item searchable"><span class="priority">추천</span><strong>몰·북 교차 캠페인 생성</strong><p>독서 상품 구매 전환율이 18% 높습니다.</p><button data-action="캠페인 초안을 생성했습니다">초안 만들기</button></div>
-              <div class="recommend-item searchable"><span class="priority">보안</span><strong>장기 미접속 계정 4개 점검</strong><p>90일 이상 활동이 없는 운영 계정입니다.</p><button data-action="계정 점검 목록을 열었습니다">계정 검토</button></div>
-              <div class="recommend-item searchable"><span class="priority">자동화</span><strong>주간 현황 보고 자동화</strong><p>매주 월요일 오전 9시 보고서를 제안합니다.</p><button data-action="주간 보고 자동화가 설정되었습니다">설정</button></div>
+              <div class="recommend-item" id="monitorEmpty"><span class="priority">확인 중</span><strong>서비스 상태를 불러오고 있습니다.</strong><p>상태 변화가 감지되면 이곳에 표시됩니다.</p></div>
             </div>
           </aside>
         </section>
@@ -156,22 +148,11 @@
           </form>
         </section>
 
-        <section class="bottom-grid">
-          <article class="panel approval-panel" id="approval">
-            <div class="panel-head"><div><h2>사용자 승인 대기</h2><p>요청 정보와 권한 범위를 확인한 후 승인하세요.</p></div><button class="ghost">전체 보기</button></div>
-            <div class="approval-list" id="approvalList">
-              <div class="approval-row searchable"><span class="avatar pink">이</span><div class="requester"><strong>이서연</strong><small>seoyeon.lee@example.com</small></div><span class="request-role">에코디몰 · 운영자</span><span class="requested">10분 전</span><div class="approval-actions"><button class="reject">거절</button><button class="approve">승인</button></div></div>
-              <div class="approval-row searchable"><span class="avatar sky">박</span><div class="requester"><strong>박준호</strong><small>junho.park@example.com</small></div><span class="request-role">에코디비즈 · 편집자</span><span class="requested">1시간 전</span><div class="approval-actions"><button class="reject">거절</button><button class="approve">승인</button></div></div>
-              <div class="approval-row searchable"><span class="avatar tan">최</span><div class="requester"><strong>최민지</strong><small>minji.choi@example.com</small></div><span class="request-role">에코디연구소 · 열람자</span><span class="requested">어제</span><div class="approval-actions"><button class="reject">거절</button><button class="approve">승인</button></div></div>
-            </div>
-          </article>
-
+        <section class="bottom-grid single-column">
           <aside class="panel activity-panel">
-            <div class="panel-head"><div><h2>최근 활동</h2><p>관리자 작업 감사 로그</p></div><button class="ghost">전체 로그</button></div>
+            <div class="panel-head"><div><h2>최근 활동</h2><p>서버에 기록된 관리자 작업 감사 로그</p></div><button class="ghost" id="refreshAudit" type="button">↻ 새로고침</button></div>
             <ol class="activity-list" id="activityList">
-              <li><span class="activity-icon success">✓</span><div><strong>사용자 권한 변경</strong><p>김관리 · 정수빈을 에코디몰 운영자로 변경</p><small>18분 전</small></div></li>
-              <li><span class="activity-icon info">↻</span><div><strong>콘텐츠 동기화 완료</strong><p>에코디출판 · 도서 12건 업데이트</p><small>42분 전</small></div></li>
-              <li><span class="activity-icon warn">!</span><div><strong>보안 정책 업데이트</strong><p>최고 관리자 · 세션 만료 8시간 적용</p><small>2시간 전</small></div></li>
+              <li><span class="activity-icon info">↻</span><div><strong>감사 로그를 불러오는 중입니다.</strong><p>인증 후 최근 운영 변경을 표시합니다.</p></div></li>
             </ol>
           </aside>
         </section>
@@ -183,64 +164,13 @@
     <div class="command-box">
       <div class="command-search"><span>⌕</span><input id="commandInput" placeholder="실행할 작업을 입력하세요"><kbd>ESC</kbd></div>
       <div class="command-options">
-        <button data-command="신규 사용자 초대 링크를 만들었습니다"><span>＋</span><div><strong>사용자 초대</strong><small>승인 대상자에게 초대 링크 보내기</small></div></button>
-        <button data-command="권한 정책 편집기를 열었습니다"><span>♙</span><div><strong>권한 정책 편집</strong><small>서비스별 역할과 접근 범위 설정</small></div></button>
-        <button data-command="통합 보고서를 생성했습니다"><span>▤</span><div><strong>통합 보고서 생성</strong><small>6개 서비스 운영 현황 내보내기</small></div></button>
+        <button data-view-command="services"><span>◫</span><div><strong>서비스 상태 확인</strong><small>6개 EKODI 서비스 실측 현황</small></div></button>
+        <button data-view-command="domains"><span>◎</span><div><strong>도메인 및 DNS 관리</strong><small>등록대장과 Cloudflare DNS 열기</small></div></button>
+        <button data-view-command="activity"><span>≡</span><div><strong>감사 로그 확인</strong><small>최근 관리자 변경 이력 조회</small></div></button>
       </div>
     </div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <style>
-    .service-row[data-status="degraded"] .health{color:#b7791f}
-    .service-row[data-status="offline"]{background:rgba(254,226,226,.5)}
-    .service-row[data-status="offline"] .health{color:#c53030}
-  </style>
-  <script>
-    (() => {
-      const source = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/monitor-status.json';
-      let issueCard;
-      const labels = { online: '정상', degraded: '지연', offline: '장애' };
-
-      async function refreshMonitoring(showNotice = false) {
-        try {
-          const response = await fetch(`${source}?t=${Date.now()}`, { cache: 'no-store' });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const data = await response.json();
-          if (!data.sites?.length) throw new Error('점검 결과 대기 중');
-          data.sites.forEach(site => {
-            const row = document.querySelector(`[data-domain="${site.domain}"]`);
-            if (!row) return;
-            row.dataset.status = site.status;
-            row.querySelector('.health').innerHTML = `<i></i>${labels[site.status] || '확인 불가'}`;
-            const metrics = row.querySelectorAll('.mini-metric strong');
-            metrics[0].textContent = `${site.responseTime}ms`;
-            metrics[1].textContent = site.httpStatus || '실패';
-            row.title = `${new Date(site.checkedAt).toLocaleString('ko-KR')} 점검`;
-          });
-          const card = document.querySelector('.stats-grid .stat-card:first-child');
-          card.querySelector('strong').innerHTML = `${data.summary.online} <small>/ ${data.summary.total}</small>`;
-          card.querySelector('p').textContent = data.summary.offline ? `${data.summary.offline}개 서비스 장애` : data.summary.degraded ? `${data.summary.degraded}개 서비스 지연` : '모든 서비스 정상';
-          issueCard?.remove();
-          const issue = data.sites.find(site => site.status === 'offline') || data.sites.find(site => site.status === 'degraded');
-          if (issue) {
-            issueCard = document.createElement('div');
-            issueCard.className = 'recommend-item high searchable';
-            issueCard.innerHTML = `<span class="priority">실시간</span><strong>${issue.name} ${issue.status === 'offline' ? '장애 확인' : '응답 지연'}</strong><p>${issue.domain} · HTTP ${issue.httpStatus || '실패'} · ${issue.responseTime}ms</p><button type="button">사이트 확인</button>`;
-            issueCard.querySelector('button').onclick = () => window.open(issue.url, '_blank', 'noopener');
-            document.querySelector('#recommendList').prepend(issueCard);
-          }
-          if (showNotice && window.notify) notify(`실측 완료: 정상 ${data.summary.online}, 지연 ${data.summary.degraded}, 장애 ${data.summary.offline}`);
-        } catch (error) {
-          if (showNotice && window.notify) notify(`모니터링 연결 실패: ${error.message}`);
-        }
-      }
-      window.addEventListener('DOMContentLoaded', () => {
-        refreshMonitoring();
-        setInterval(refreshMonitoring, 60000);
-        document.querySelector('#refreshBtn').addEventListener('click', () => setTimeout(() => refreshMonitoring(true), 20));
-      });
-    })();
-  </script>
   <script src="script.js"></script>
 </body>
 </html>

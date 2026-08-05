@@ -1,0 +1,1 @@
+ALTER TABLE admins ADD COLUMN password_iterations INTEGER NOT NULL DEFAULT 100000;
