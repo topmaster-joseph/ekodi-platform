@@ -1,0 +1,23 @@
+{
+  "name": "@ekodi/operations-api",
+  "version": "3.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "deploy": "wrangler deploy --config wrangler.toml",
+    "migrate:production": "wrangler d1 migrations apply ekodi-auth --remote --config wrangler.toml",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@ekodi/auth": "workspace:*",
+    "@ekodi/database": "workspace:*",
+    "@ekodi/ekcms": "workspace:*",
+    "@ekodi/ecosystem-catalog": "workspace:*",
+    "hono": "4.13.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260804.1",
+    "typescript": "6.0.3"
+  }
+}

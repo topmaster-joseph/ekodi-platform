@@ -1,0 +1,1 @@
+{"name":"@ekodi/trade","version":"1.0.0","private":true,"type":"module","scripts":{"build":"ekodi-site build","check":"ekodi-site check","deploy":"pnpm build && wrangler deploy --config wrangler.toml"},"dependencies":{"@ekodi/site-builder":"workspace:*"}}

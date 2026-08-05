@@ -21,15 +21,18 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+      - run: corepack enable
+      - name: Install workspaces
+        run: pnpm install --frozen-lockfile
       - name: Verify monitor
-        run: npm test
-      - name: Check six EKODI services
-        run: npm run monitor
+        run: pnpm --filter @ekodi/site-monitor test
+      - name: Check configured EKODI services
+        run: pnpm monitor
       - name: Publish latest status
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add monitor-status.json
+          git add apps/platform/public/monitor-status.json
           git diff --cached --quiet && exit 0
           git commit -m "chore: update EKODI monitoring status"
           git push

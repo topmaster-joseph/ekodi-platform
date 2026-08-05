@@ -1,0 +1,30 @@
+:root {
+  color-scheme: light;
+  --ekodi-color-canvas: #f4f6f9;
+  --ekodi-color-surface: #ffffff;
+  --ekodi-color-ink: #182230;
+  --ekodi-color-muted: #657084;
+  --ekodi-color-border: #e5e9f0;
+  --ekodi-color-brand: #2563eb;
+  --ekodi-color-brand-dark: #174dbd;
+  --ekodi-color-success: #16a36a;
+  --ekodi-color-warning: #e69719;
+  --ekodi-color-navigation: #0b1220;
+  --ekodi-radius-sm: 7px;
+  --ekodi-radius-md: 11px;
+  --ekodi-shadow-panel: 0 5px 18px rgba(22, 34, 52, 0.06);
+  --ekodi-font-sans: Inter, "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ekodi-color-canvas: #070b14;
+    --ekodi-color-surface: #111827;
+    --ekodi-color-ink: #eef2ff;
+    --ekodi-color-muted: #a7b0c0;
+    --ekodi-color-border: #334155;
+    --ekodi-color-navigation: #030712;
+    --ekodi-shadow-panel: 0 8px 26px rgba(0, 0, 0, 0.28);
+  }
+}

@@ -1,6 +1,7 @@
 .wrangler/
 .dev.vars
 node_modules/
+.npm-cache/
 dist/
 .DS_Store
 Thumbs.db

@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "../../ui/tokens.css";
+
+html { font-family: var(--ekodi-font-sans); }
+button, a { transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease; }
+@media (prefers-reduced-motion: reduce) { button, a { transition: none; } }

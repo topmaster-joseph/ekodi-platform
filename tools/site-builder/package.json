@@ -1,0 +1,20 @@
+{
+  "name": "@ekodi/site-builder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ekodi-site": "./cli.mjs"
+  },
+  "scripts": {
+    "check": "node --check cli.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@ekodi/ecosystem-catalog": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-react": "6.0.5",
+    "tailwindcss": "4.3.3",
+    "vite": "8.2.0"
+  }
+}

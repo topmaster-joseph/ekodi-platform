@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "../../../packages/ui/tokens.css";
+@import "./legacy.css";
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ekodi-color-brand);
+  outline-offset: 2px;
+}
