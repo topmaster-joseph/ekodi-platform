@@ -44,6 +44,11 @@ The existing single-site Worker and authentication API have been converted into 
 - Workspace validation: all application/domain/Worker mappings passed.
 - Tests: authentication, RBAC, D1 contracts, CMS validation, media rules, ERP validation, platform access gate, CSP, private SEO, deployment manifest, and monitoring passed.
 - Builds: platform plus all 14 generated application bundles passed; private ERP generated crawl blocking and no sitemap.
+- GitHub Actions CI run `31018685949`: passed in 32 seconds.
+- D1 migrations 0003–0005: applied to production database `ekodi-auth`.
+- Cloudflare bootstrap: all 14 new application Workers returned HTTP 200 with cache-busting requests; public SEO and ERP `noindex`/`Disallow: /` behavior were verified.
+- Platform monorepo version `74f771bb-ba53-491b-a949-1e28ea857abb`: uploaded without promotion, preserving current production traffic.
+- R2 discovery: Cloudflare returned `10042` and requires account-level R2 activation before the API Worker can be promoted.
 
 ## Remaining owner-controlled cutover
 

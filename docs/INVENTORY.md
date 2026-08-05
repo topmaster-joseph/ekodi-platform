@@ -1,37 +1,38 @@
 # EKODI application and deployment inventory
 
-Status as of 2026-08-05. “Configured” means the code and Wrangler project exist in this repository; it does not mean the Worker or custom domain is live.
+Status as of 2026-08-05. A “Worker live” state means the cache-busted `workers.dev` URL returned HTTP 200 after the v3 bootstrap; it does not mean the requested custom domain has been attached.
 
 ## Verified existing deployments
 
 | Component | Verified URL | Cloudflare resource | State |
 |---|---|---|---|
-| Platform control center | `https://shy-thunder-39a4.topmaster-joseph.workers.dev` | Worker `shy-thunder-39a4` | Existing v3 deployment; monorepo update pending |
+| Platform control center | `https://shy-thunder-39a4.topmaster-joseph.workers.dev` | Worker `shy-thunder-39a4` | Existing deployment preserved; monorepo version `74f771bb-ba53-491b-a949-1e28ea857abb` uploaded but not promoted |
 | Operations API | `https://ekodi-auth-api.topmaster-joseph.workers.dev` | Worker `ekodi-auth-api` | Existing v3 deployment; Hono/CMS/RBAC update pending |
-| Operations database | n/a | D1 `ekodi-auth` | Existing production database; migrations 0003–0004 pending |
+| Operations database | n/a | D1 `ekodi-auth` | Migrations 0003–0005 applied successfully |
+| Media storage | n/a | R2 `ekodi-media` | Blocked: account API requires R2 activation (`10042`) |
 | DNS integration secret | n/a | Worker secret `CF_API_TOKEN` | Existing; value is not stored in GitHub |
 
 ## Application matrix
 
 | App | Target domain | Worker | Legacy/source link | Access | Repository state |
 |---|---|---|---|---|---|
-| `platform` | `ekodi.kr` | `shy-thunder-39a4` | Existing control center | Login required, noindex | Configured |
-| `church` | `church.ekodi.kr` | `ekodi-church` | `https://ekodichurch.kr` | Public | Configured |
-| `mission` | `mission.ekodi.kr` | `ekodi-mission` | `https://youtube.com/@ekodicommunity` | Public | Configured |
-| `biz` | `biz.ekodi.kr` | `ekodi-biz` | `https://ekodibiz.kr` | Public | Configured |
-| `mall` | `mall.ekodi.kr` | `ekodi-mall` | `https://ekodimall.kr` | Public | Configured |
-| `trade` | `trade.ekodi.kr` | `ekodi-trade` | No verified legacy site | Public | Configured |
-| `marketing` | `marketing.ekodi.kr` | `ekodi-marketing` | No verified legacy site | Public | Configured |
-| `consulting` | `consulting.ekodi.kr` | `ekodi-consulting` | No verified legacy site | Public | Configured |
-| `media` | `media.ekodi.kr` | `ekodi-media` | No verified legacy site | Public | Configured |
-| `education` | `education.ekodi.kr` | `ekodi-education` | No verified legacy site | Public | Configured |
-| `publishing` | `publishing.ekodi.kr` | `ekodi-publishing` | `https://ekodibook.kr` | Public | Configured |
-| `solution` | `solution.ekodi.kr` | `ekodi-solution` | No verified legacy site | Public | Configured |
-| `erp` | `erp.ekodi.kr` | `ekodi-erp` | No verified legacy site | Login required | Configured |
-| `lab` | `lab.ekodi.kr` | `ekodi-lab` | `https://ekodilab.kr` | Public | Configured |
-| `community` | `community.ekodi.kr` | `ekodi-community` | `https://youtube.com/@ekodicommunity` | Public | Configured |
+| `platform` | `ekodi.kr` | `shy-thunder-39a4` | Existing control center | Login required, noindex | Version uploaded; promotion pending R2/API |
+| `church` | `church.ekodi.kr` | `ekodi-church` | `https://ekodichurch.kr` | Public | Worker live; domain pending |
+| `mission` | `mission.ekodi.kr` | `ekodi-mission` | `https://youtube.com/@ekodicommunity` | Public | Worker live; domain pending |
+| `biz` | `biz.ekodi.kr` | `ekodi-biz` | `https://ekodibiz.kr` | Public | Worker live; domain pending |
+| `mall` | `mall.ekodi.kr` | `ekodi-mall` | `https://ekodimall.kr` | Public | Worker live; domain pending |
+| `trade` | `trade.ekodi.kr` | `ekodi-trade` | No verified legacy site | Public | Worker live; domain pending |
+| `marketing` | `marketing.ekodi.kr` | `ekodi-marketing` | No verified legacy site | Public | Worker live; domain pending |
+| `consulting` | `consulting.ekodi.kr` | `ekodi-consulting` | No verified legacy site | Public | Worker live; domain pending |
+| `media` | `media.ekodi.kr` | `ekodi-media` | No verified legacy site | Public | Worker live; domain pending |
+| `education` | `education.ekodi.kr` | `ekodi-education` | No verified legacy site | Public | Worker live; domain pending |
+| `publishing` | `publishing.ekodi.kr` | `ekodi-publishing` | `https://ekodibook.kr` | Public | Worker live; domain pending |
+| `solution` | `solution.ekodi.kr` | `ekodi-solution` | No verified legacy site | Public | Worker live; domain pending |
+| `erp` | `erp.ekodi.kr` | `ekodi-erp` | No verified legacy site | Login required, noindex | Worker live; API/domain pending |
+| `lab` | `lab.ekodi.kr` | `ekodi-lab` | `https://ekodilab.kr` | Public | Worker live; domain pending |
+| `community` | `community.ekodi.kr` | `ekodi-community` | `https://youtube.com/@ekodicommunity` | Public | Worker live; domain pending |
 
-All public applications use the shared React/TypeScript/Vite/Tailwind runtime and anonymously readable published EKCMS content. Drafts, revisions, media administration, and internal records are authenticated. Worker creation, Workers Builds Git connections, R2 bucket creation, and custom-domain attachment remain deployment steps.
+All public applications use the shared React/TypeScript/Vite/Tailwind runtime and anonymously readable published EKCMS content. Drafts, revisions, media administration, and internal records are authenticated. All 14 new application Workers were created and verified with cache-busting requests; Workers Builds Git connections, R2 activation/bucket creation, API promotion, and custom-domain attachment remain deployment steps.
 
 ## Git branches
 
