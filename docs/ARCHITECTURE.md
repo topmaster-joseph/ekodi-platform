@@ -1,70 +1,69 @@
 # EKODI Platform v3 architecture
 
-## Scope
+## System shape
 
-Version 3 is an operations MVP, not a multi-tenant business suite. Its production contract is intentionally narrow:
+```text
+GitHub repository
+  ├─ Codex Cloud / Codespaces development
+  ├─ GitHub Actions validation and service monitoring
+  └─ Cloudflare Workers Builds
+       ├─ 15 independently deployed web applications
+       └─ operations API
+            ├─ D1: admins, sessions, CMS, revisions, registry, audit
+            ├─ R2: private-by-default managed media
+            └─ Cloudflare API: allow-listed DNS management
+```
 
-1. Route visitors to the six EKODI services.
-2. Authenticate one platform administrator.
-3. Show measured service health.
-4. Maintain non-secret domain registration metadata.
-5. Manage DNS only for the five explicitly allow-listed EKODI zones.
-6. Record and export security-relevant operational activity.
+The monorepo keeps independent deployment boundaries under `apps/*`. Shared, side-effect-free contracts live under `packages/*`; build and monitoring programs live under `tools/*`. `infra/cloudflare/projects.json` is the deployment inventory.
 
-User provisioning, content workflows, marketing recommendations, billing, and cross-service identity are out of scope until their source systems and authorization models are defined.
+## Content architecture
 
-## Components
+Each managed public site is a small static Worker built from a shared runtime. It requests only published pages for its own catalog `siteId`. The authenticated admin console creates drafts, uses optimistic version checks when saving, publishes explicit revisions, and records audit events. Public pages never expose drafts and render content using `textContent` to prevent stored script execution.
 
-### Static control center
+Existing service URLs are retained as legacy sources. The generated application shell links to the corresponding legacy site until content migration has been verified. Custom-domain cutover is therefore separate from application creation.
 
-`index.html`, `styles.css`, and `script.js` form a dependency-free browser application. It stores the opaque session token in `sessionStorage`, so closing the tab removes the browser copy. A restrictive Content Security Policy disallows inline scripts.
+## Security boundaries
 
-### Authentication and operations API
-
-`auth-worker.js` is a Cloudflare Worker using D1. It owns administrator setup, login throttling, sessions, the domain registry, audit events, and the Cloudflare API proxy. Every protected endpoint verifies the bearer session. DNS routes additionally resolve the supplied zone ID and reject zones outside the EKODI allow-list.
-
-### Monitoring
-
-`.github/workflows/monitor.yml` probes all six services every ten minutes. It publishes a new snapshot only when an operational state changes or the current snapshot is older than six hours. Response-time jitter therefore does not flood the `main` branch.
-
-## Security model
-
-- Production browser origins must be explicitly listed in `ALLOWED_ORIGINS`.
-- Passwords use salted PBKDF2 hashes with versioned work factors and upgrade after a successful legacy login; session tokens are random and only their SHA-256 hashes are stored.
-- Failed logins are throttled per hashed client IP, and successful logins clear the failure counter.
-- D1 queries use prepared statements.
-- DNS types, names, content lengths, TTL, zone IDs, and record IDs are validated server-side.
-- Cloudflare tokens stay in Worker secrets and should use least-privilege zone scoping.
-- Registry notes are limited to 240 characters and must never contain credentials.
-- Security-sensitive mutations write an audit event.
+- Production CORS origins are explicit: the requested `ekodi.kr` hosts plus narrowly matched EKODI `workers.dev` preview aliases. Unknown origins receive no CORS grant.
+- First-administrator setup requires a short-lived `SETUP_TOKEN` Worker secret and becomes unavailable after initialization.
+- Administrator passwords use salted PBKDF2 hashes with versioned work factors; legacy hashes upgrade after successful login.
+- Opaque session tokens are stored only as SHA-256 hashes in D1 and expire after eight hours.
+- Login attempts are throttled per hashed client IP.
+- CMS and operational mutations require an authenticated administrator and produce audit records.
+- Role-based permissions separate content, media, operational, and read-only access.
+- CMS data classification blocks internal, confidential, and restricted content from anonymous publication.
+- D1 queries use bound parameters; CMS updates use an optimistic version check.
+- DNS types, names, values, TTLs, zone IDs, and record IDs are validated server-side.
+- Cloudflare API tokens remain Worker secrets with least-privilege zone scope.
+- Domain registration, payments, OAuth installation, custom-domain attachment, and billing remain account-owner actions.
 
 ## Data ownership
 
-| Data | System of record | Notes |
-|---|---|---|
-| Service availability | GitHub Actions snapshot | Operational signal, not an SLA record |
-| Admin identity and sessions | Cloudflare D1 | Single administrator in v3 |
-| DNS records | Cloudflare | D1 stores audit metadata only |
-| Registration dates and controls | Cloudflare D1 registry | Registrar remains authoritative |
-| Audit history | Cloudflare D1 | Append-only through the API |
+| Data | System of record |
+|---|---|
+| Source and deployment configuration | GitHub |
+| Published and draft content | Cloudflare D1 |
+| Content revisions and audit history | Cloudflare D1 |
+| Admin identities and sessions | Cloudflare D1 |
+| DNS records and Worker routes | Cloudflare |
+| Registration dates and renewal metadata | Cloudflare D1 registry |
+| Legacy site content | Existing verified service URLs until migrated |
+| Availability snapshot | GitHub Actions monitor artifact committed to the platform app |
 
-## Production acceptance checklist
+## Acceptance gates
 
-- CI syntax checks and tests pass.
-- D1 migrations apply successfully.
-- Worker `/health` returns version 3.
-- Production CORS allows only the deployed dashboard origins.
-- `CF_API_TOKEN` can read zones and mutate DNS only for the five managed zones.
-- Initial administrator setup succeeds exactly once.
-- Wrong-password throttling returns HTTP 429 after eight failures in 15 minutes.
-- Login, session restoration, logout, registry update, DNS create/delete, audit load, and report export work.
-- Static host applies `_headers` and serves UTF-8 assets.
-- GitHub Actions monitoring has `contents: write` only in the monitor workflow.
+1. `corepack pnpm install --frozen-lockfile` succeeds from a fresh clone on Node.js 24.
+2. `corepack pnpm verify` validates every workspace, Cloudflare runtime integration test, generated site, and deployment mapping.
+3. D1 migrations apply without drift.
+4. API health, production CORS, login, CMS draft/save/publish, registry, DNS, logout, and audit paths pass against the deployed Worker.
+5. Cloudflare Workers Builds is connected for every project, with `main` production and branch previews enabled.
+6. Custom domains are attached only after zone ownership and cutover approval.
+7. Public URLs are verified with cache-busting requests after deployment.
 
-## Next architecture increments
+## Deferred beyond MVP
 
-- Replace single-admin credentials with Cloudflare Access or an OIDC identity provider.
-- Move schema creation entirely to migrations after all environments are upgraded.
-- Add durable alert delivery and incident acknowledgement.
-- Add pagination and retention policy for audit history.
-- Introduce role-based authorization only when multi-user workflows are implemented.
+- OIDC or Cloudflare Access federation.
+- Rich-text HTML rendering and automated media transformations.
+- Commerce, ERP, or other app-specific business workflows.
+- Automated import of unverified legacy content.
+- Billing or registrar automation.

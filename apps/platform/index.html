@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EKODI 서비스 통합 운영·권한·추천 관리 콘솔">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="theme-color" content="#0b1220">
+  <title>EKODI Control Center</title>
+</head>
+<body>
+  <div id="react-runtime"></div>
+  <div class="access-gate" id="accessGate" aria-labelledby="gateTitle">
+    <div class="gate-card">
+      <div class="gate-brand"><span class="logo-mark">E</span><strong>EKODI</strong></div>
+      <span class="security-badge">EKODI PLATFORM</span>
+      <h1 id="gateTitle">EKODI 플랫폼 로그인</h1>
+      <p>승인된 관리자만 플랫폼, CMS, 도메인 및 운영 데이터에 접근할 수 있습니다.</p>
+      <div class="admin-entry">
+        <button class="admin-login-link" id="showAdminLogin" type="button" aria-expanded="true" hidden>관리자 로그인 →</button>
+        <form class="admin-login-form" id="adminLoginForm">
+          <div class="form-heading"><strong>플랫폼 관리자 로그인</strong><small>관리자 정보를 정확하게 입력하세요.</small></div>
+          <label>관리자 이메일<input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="admin@ekodi.kr" required></label>
+          <label>비밀번호<input id="adminPassword" name="password" type="password" autocomplete="current-password" minlength="12" placeholder="12자 이상 입력" required></label>
+          <label id="setupTokenField" hidden>최초 등록 토큰<input id="setupToken" name="setupToken" type="password" autocomplete="off" placeholder="Cloudflare Worker secret과 동일한 토큰"></label>
+          <p class="login-error" id="loginError" role="alert"></p>
+          <button class="primary full" id="enterConsole" type="submit">관리 콘솔 입장</button>
+        </form>
+      </div>
+      <p class="gate-note">관리 콘솔은 승인된 플랫폼 관리자 전용입니다.</p>
+    </div>
+  </div>
+
+  <div class="app-shell" id="appShell" aria-hidden="true">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo-mark">E</span><strong>EKODI</strong><small>CONTROL CENTER</small></div>
+      <nav aria-label="운영 메뉴">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span>통합 현황</button>
+        <button class="nav-item" data-view="services"><span>◫</span>서비스 관리</button>
+        <button class="nav-item" data-view="cms"><span>✎</span>콘텐츠 CMS</button>
+        <button class="nav-item" data-view="domains"><span>◎</span>도메인 관리</button>
+        <button class="nav-item" data-view="activity"><span>≡</span>활동 기록</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="security-state"><span></span><div><strong id="securityStatus">인증 API 확인 중</strong><small id="securityChecked">관리자 접속 후 확인</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="메뉴 열기" aria-expanded="false">☰</button>
+        <label class="global-search">
+          <span>⌕</span>
+          <input id="globalSearch" type="search" placeholder="서비스, 사용자, 작업 검색" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </label>
+        <div class="top-actions">
+          <button class="icon-button" id="notificationBtn" aria-label="알림"><span class="alert-dot"></span>♢</button>
+          <button class="ghost" id="logoutBtn" type="button">로그아웃</button>
+          <button class="profile-button" id="profileBtn"><span class="avatar">김</span><span><strong>김관리</strong><small>최고 관리자</small></span><b>⌄</b></button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="page-heading" id="pageHeading">
+          <div><p class="eyebrow" id="viewEyebrow">EKODI PLATFORM v3</p><h1 id="viewTitle" tabindex="-1">통합 현황</h1><p id="viewDescription">서비스 상태, 도메인, DNS와 운영 변경 이력을 한곳에서 관리합니다.</p></div>
+          <div class="heading-actions"><button class="secondary" id="exportBtn">보고서 내보내기</button><button class="primary" id="quickActionBtn">+ 빠른 작업</button></div>
+        </section>
+
+        <section class="stats-grid" aria-label="핵심 지표">
+          <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>6 <small>/ 6</small></strong><p class="positive">상태 확인 중</p></div></article>
+          <article class="stat-card"><div class="stat-icon blue">◎</div><div><span>관리 도메인</span><strong>5</strong><p>Cloudflare 연결 관리</p></div></article>
+          <article class="stat-card attention"><div class="stat-icon amber">!</div><div><span>60일 이내 만료</span><strong id="dashboardExpiring">—</strong><p class="warning">등록대장 기준</p></div><button class="text-action" data-view-link="domains">검토 →</button></article>
+          <article class="stat-card"><div class="stat-icon violet">≡</div><div><span>최근 운영 변경</span><strong id="auditCount">—</strong><p>감사 로그 기록</p></div><button class="text-action" data-view-link="activity">보기 →</button></article>
+        </section>
+
+        <section class="workspace-grid">
+          <article class="panel services-panel">
+            <div class="panel-head"><div><h2>서비스 운영 현황</h2><p>연결된 EKODI 서비스의 실시간 상태</p></div><button class="ghost" id="refreshBtn">↻ 새로고침</button></div>
+            <div class="service-table" id="serviceTable">
+              <a class="service-row searchable" data-domain="ekodimall.kr" href="https://ekodimall.kr" target="_blank" rel="noopener"><span class="service-logo mall">M</span><div class="service-name"><strong>에코디몰</strong><small>ekodimall.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="ekodibiz.kr" href="https://ekodibiz.kr" target="_blank" rel="noopener"><span class="service-logo biz">B</span><div class="service-name"><strong>에코디비즈</strong><small>ekodibiz.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="ekodibook.kr" href="https://ekodibook.kr" target="_blank" rel="noopener"><span class="service-logo book">P</span><div class="service-name"><strong>에코디출판</strong><small>ekodibook.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="ekodichurch.kr" href="https://ekodichurch.kr" target="_blank" rel="noopener"><span class="service-logo church">C</span><div class="service-name"><strong>에코디교회</strong><small>ekodichurch.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="ekodilab.kr" href="https://ekodilab.kr" target="_blank" rel="noopener"><span class="service-logo lab">L</span><div class="service-name"><strong>에코디연구소</strong><small>ekodilab.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+              <a class="service-row searchable" data-domain="youtube.com/@ekodicommunity" href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener"><span class="service-logo mission">S</span><div class="service-name"><strong>에코디선교회</strong><small>youtube.com/@ekodicommunity</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>
+            </div>
+          </article>
+
+          <aside class="panel recommendation-panel" id="recommendations">
+            <div class="panel-head"><div><span class="ai-label">LIVE OPERATIONS</span><h2>운영 알림</h2><p>실측 상태 기반 우선 확인 항목</p></div></div>
+            <div class="recommend-list" id="recommendList">
+              <div class="recommend-item" id="monitorEmpty"><span class="priority">확인 중</span><strong>서비스 상태를 불러오고 있습니다.</strong><p>상태 변화가 감지되면 이곳에 표시됩니다.</p></div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="panel cms-panel view-hidden" id="cmsManagement">
+          <div class="panel-head cms-heading">
+            <div><span class="ai-label">MULTI-SITE CMS</span><h2>EKODI 콘텐츠 관리</h2><p>모든 EKODI 사이트의 페이지를 초안으로 저장하고 검토 후 게시합니다.</p></div>
+            <div class="cms-head-actions">
+              <label>사이트
+                <select id="cmsSiteFilter" aria-label="CMS 사이트 필터">
+                  <option value="">전체</option>
+                  <option value="mall">에코디몰</option>
+                  <option value="biz">에코디비즈</option>
+                  <option value="publishing">에코디출판</option>
+                  <option value="church">에코디교회</option>
+                  <option value="lab">에코디연구소</option>
+                  <option value="mission">에코디선교회</option>
+                  <option value="platform">EKODI 플랫폼</option>
+                  <option value="trade">에코디트레이드</option>
+                  <option value="marketing">에코디마케팅</option>
+                  <option value="consulting">에코디컨설팅</option>
+                  <option value="media">에코디미디어</option>
+                  <option value="education">에코디교육</option>
+                  <option value="solution">에코디솔루션</option>
+                  <option value="erp">에코디ERP</option>
+                  <option value="community">에코디커뮤니티</option>
+                </select>
+              </label>
+              <button class="secondary" id="newCmsPage" type="button">+ 새 페이지</button>
+              <button class="ghost" id="refreshCms" type="button">↻ 새로고침</button>
+            </div>
+          </div>
+          <div class="cms-workspace">
+            <div class="cms-page-list" id="cmsPageList"><p class="domain-loading">콘텐츠를 불러오는 중입니다.</p></div>
+            <form class="cms-editor" id="cmsEditor">
+              <input type="hidden" name="id">
+              <input type="hidden" name="version">
+              <div class="cms-editor-row">
+                <label>사이트<select name="siteId" required>
+                  <option value="mall">에코디몰</option><option value="biz">에코디비즈</option>
+                  <option value="publishing">에코디출판</option><option value="church">에코디교회</option>
+                  <option value="lab">에코디연구소</option><option value="mission">에코디선교회</option>
+                  <option value="platform">EKODI 플랫폼</option><option value="trade">에코디트레이드</option>
+                  <option value="marketing">에코디마케팅</option><option value="consulting">에코디컨설팅</option>
+                  <option value="media">에코디미디어</option>
+                  <option value="education">에코디교육</option>
+                  <option value="solution">에코디솔루션</option>
+                  <option value="erp">에코디ERP</option>
+                  <option value="community">에코디커뮤니티</option>
+                </select></label>
+                <label>슬러그<input name="slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxlength="80" placeholder="about-us" required></label>
+              </div>
+              <label>제목<input name="title" maxlength="120" required></label>
+              <label>데이터 등급<select name="classification" required>
+                <option value="internal" selected>내부</option><option value="public">공개</option>
+                <option value="confidential">기밀</option><option value="restricted">제한</option>
+              </select></label>
+              <label>요약<textarea name="summary" maxlength="300" rows="2"></textarea></label>
+              <label>본문<textarea name="content" maxlength="100000" rows="14" placeholder="Markdown 또는 일반 텍스트"></textarea></label>
+              <p class="cms-editor-status" id="cmsEditorStatus">새 초안</p>
+              <div class="cms-editor-actions">
+                <button class="secondary" id="saveCmsDraft" type="submit">초안 저장</button>
+                <button class="primary" id="publishCmsPage" type="button" disabled>게시</button>
+              </div>
+            </form>
+          </div>
+          <section class="cms-media" aria-labelledby="cmsMediaTitle">
+            <div><h3 id="cmsMediaTitle">미디어 보관함</h3><p>R2 파일은 비공개로 저장되며, 공개를 선택한 파일만 익명 콘텐츠 URL로 제공됩니다.</p></div>
+            <form id="mediaUploadForm">
+              <label>사이트<select name="siteId" required>
+                <option value="platform">EKODI 플랫폼</option><option value="mall">에코디몰</option><option value="biz">에코디비즈</option>
+                <option value="publishing">에코디출판</option><option value="church">에코디교회</option><option value="lab">에코디연구소</option>
+                <option value="mission">에코디선교회</option><option value="trade">에코디트레이드</option><option value="marketing">에코디마케팅</option>
+                <option value="consulting">에코디컨설팅</option><option value="media">에코디미디어</option><option value="education">에코디교육</option>
+                <option value="solution">에코디솔루션</option><option value="erp">에코디ERP</option><option value="community">에코디커뮤니티</option>
+              </select></label>
+              <label>파일<input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" required></label>
+              <label class="toggle-label"><input name="visibility" type="checkbox" value="public"> 공개 파일</label>
+              <button class="secondary" type="submit">업로드</button>
+            </form>
+            <div class="cms-media-list" id="cmsMediaList"><p class="domain-loading">미디어를 불러오는 중입니다.</p></div>
+          </section>
+        </section>
+
+        <section class="panel domain-panel" id="domainManagement">
+          <div class="panel-head"><div><h2>도메인 관리</h2><p>EKODI 도메인의 Cloudflare 연결 상태와 DNS 레코드를 관리합니다.</p></div><button class="ghost" id="refreshDomains">↻ 새로고침</button></div>
+          <div class="domain-grid" id="domainGrid"><p class="domain-loading">도메인 정보를 불러오는 중입니다.</p></div>
+          <div class="dns-manager" id="dnsManager" hidden>
+            <div class="dns-manager-head"><div><strong id="dnsZoneTitle">DNS 레코드</strong><small>변경 사항은 Cloudflare에 즉시 반영됩니다.</small></div><button class="ghost" id="closeDnsManager" type="button">닫기</button></div>
+            <form class="dns-form" id="dnsRecordForm">
+              <select name="type" aria-label="DNS 유형"><option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option><option>MX</option></select>
+              <input name="name" aria-label="호스트 이름" placeholder="호스트 이름 또는 @" required>
+              <input name="content" aria-label="연결 값" placeholder="IP 주소 또는 대상 주소" required>
+              <input name="ttl" aria-label="TTL" type="number" min="60" value="3600">
+              <label class="proxy-check"><input name="proxied" type="checkbox"> 프록시</label>
+              <button class="primary" type="submit">레코드 추가</button>
+            </form>
+            <div class="dns-record-list" id="dnsRecordList"></div>
+          </div>
+        </section>
+
+
+        <section class="panel registrar-panel" id="registrarManagement">
+          <div class="panel-head registrar-heading">
+            <div><span class="ai-label">✦ DOMAIN CONTROL</span><h2>도메인 등록기관 관리</h2><p>도메인클럽 등록 정보와 갱신 일정을 관리하고 Cloudflare 연결 업무를 이어서 처리합니다.</p></div>
+            <div class="registrar-head-actions"><a class="secondary" href="https://www.domainclub.kr" target="_blank" rel="noopener">도메인클럽 관리 열기 ↗</a><button class="ghost" id="refreshRegistry" type="button">↻ 등록정보 새로고침</button></div>
+          </div>
+          <div class="registry-summary" id="registrySummary" aria-live="polite">
+            <article><small>등록기관</small><strong>도메인클럽</strong></article>
+            <article><small>관리 도메인</small><strong id="registryTotal">5</strong></article>
+            <article><small>60일 이내 만료</small><strong id="registryExpiring">—</strong></article>
+            <article><small>자동 연장</small><strong id="registryAutoRenew">—</strong></article>
+          </div>
+          <div class="registry-toolbar">
+            <div><strong>등록·연장 관리대장</strong><small>결제 비밀번호는 저장하지 않습니다. 실제 등록·결제는 도메인클럽 보안 화면에서 완료됩니다.</small></div>
+            <a class="primary" href="https://www.domainclub.kr" target="_blank" rel="noopener">+ 신규 도메인 등록</a>
+          </div>
+          <div class="registry-list" id="registryList"><p class="domain-loading">등록 정보를 불러오는 중입니다.</p></div>
+          <form class="registry-form" id="registryForm" hidden>
+            <div class="registry-form-head"><div><strong id="registryFormTitle">등록정보 편집</strong><small>만료일을 입력하면 갱신 권고를 자동으로 표시합니다.</small></div><button class="ghost" id="closeRegistryForm" type="button">닫기</button></div>
+            <input type="hidden" name="domain">
+            <label>등록일<input type="date" name="registeredAt"></label>
+            <label>만료일<input type="date" name="expiresAt"></label>
+            <label>갱신 알림<input type="number" name="reminderDays" min="7" max="365" value="60"><span>일 전</span></label>
+            <label class="toggle-label"><input type="checkbox" name="autoRenew"> 자동 연장 사용</label>
+            <label class="toggle-label"><input type="checkbox" name="transferLock" checked> 이전 잠금</label>
+            <label class="toggle-label"><input type="checkbox" name="whoisPrivacy" checked> 등록정보 보호</label>
+            <label class="registry-memo">관리 메모<input name="memo" maxlength="240" placeholder="계정명·비밀번호를 제외한 운영 메모"></label>
+            <div class="registry-form-actions"><a href="https://www.domainclub.kr" target="_blank" rel="noopener" class="secondary">도메인클럽에서 변경 ↗</a><button class="primary" type="submit">관리대장 저장</button></div>
+          </form>
+        </section>
+
+        <section class="bottom-grid single-column">
+          <aside class="panel activity-panel">
+            <div class="panel-head"><div><h2>최근 활동</h2><p>서버에 기록된 관리자 작업 감사 로그</p></div><button class="ghost" id="refreshAudit" type="button">↻ 새로고침</button></div>
+            <ol class="activity-list" id="activityList">
+              <li><span class="activity-icon info">↻</span><div><strong>감사 로그를 불러오는 중입니다.</strong><p>인증 후 최근 운영 변경을 표시합니다.</p></div></li>
+            </ol>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="command-palette" id="commandPalette" role="dialog" aria-modal="true" aria-label="빠른 작업">
+    <div class="command-box">
+      <div class="command-search"><span>⌕</span><input id="commandInput" placeholder="실행할 작업을 입력하세요"><kbd>ESC</kbd></div>
+      <div class="command-options">
+        <button data-view-command="services"><span>◫</span><div><strong>서비스 상태 확인</strong><small>운영 중인 EKODI 서비스 실측 현황</small></div></button>
+        <button data-view-command="cms"><span>✎</span><div><strong>콘텐츠 CMS</strong><small>사이트별 페이지 초안 및 게시 관리</small></div></button>
+        <button data-view-command="domains"><span>◎</span><div><strong>도메인 및 DNS 관리</strong><small>등록대장과 Cloudflare DNS 열기</small></div></button>
+        <button data-view-command="activity"><span>≡</span><div><strong>감사 로그 확인</strong><small>최근 관리자 변경 이력 조회</small></div></button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

@@ -1,18 +1,33 @@
 {
-  "name": "ekodi-platform",
-  "version": "3.0.0",
+  "name": "ekodi-ecosystem",
+  "version": "3.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "check": "node --check auth-worker.js && node --check script.js && node --check scripts/monitor.mjs",
-    "deploy:api": "npx --yes wrangler@4.119.0 deploy --config wrangler.api.toml",
-    "deploy:site": "npm run build && npx --yes wrangler@4.119.0 deploy --config wrangler.site.toml",
-    "dev": "node scripts/serve.mjs",
-    "monitor": "node scripts/monitor.mjs",
-    "test": "node --test"
+    "bootstrap": "corepack pnpm install --frozen-lockfile",
+    "build": "corepack pnpm -r --if-present run build",
+    "check": "corepack pnpm -r --if-present run check",
+    "deploy:api": "corepack pnpm --filter @ekodi/operations-api deploy",
+    "deploy:site": "corepack pnpm --filter @ekodi/platform deploy",
+    "dev": "corepack pnpm --filter @ekodi/platform dev",
+    "monitor": "corepack pnpm --filter @ekodi/site-monitor monitor",
+    "test": "corepack pnpm -r --if-present run test",
+    "lint": "eslint . --max-warnings=0",
+    "verify": "corepack pnpm lint && corepack pnpm check && corepack pnpm test && corepack pnpm build"
   },
   "engines": {
-    "node": ">=20"
-  }
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.9.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.66.0",
+    "wrangler": "4.119.0"
+  },
+  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
 }

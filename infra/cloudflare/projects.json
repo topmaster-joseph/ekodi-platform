@@ -1,0 +1,29 @@
+{
+  "repository": "topmaster-joseph/ekodi-platform",
+  "productionBranch": "main",
+  "rootDirectory": ".",
+  "projects": [
+    { "workspace": "@ekodi/operations-api", "worker": "ekodi-auth-api", "config": "apps/operations-api/wrangler.toml", "domain": null, "build": "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ekodi/operations-api check", "watch": ["apps/operations-api/**", "packages/auth/**", "packages/cms-contracts/**", "packages/database/**", "packages/ekcms/**", "packages/ecosystem-catalog/**", "pnpm-workspace.yaml", "package.json", "pnpm-lock.yaml"] },
+    { "workspace": "@ekodi/platform", "worker": "shy-thunder-39a4", "config": "apps/platform/wrangler.toml", "domain": "ekodi.kr", "build": "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ekodi/platform build", "watch": ["apps/platform/**", "packages/ui/**", "pnpm-workspace.yaml", "package.json", "pnpm-lock.yaml"] },
+    { "workspace": "@ekodi/church", "worker": "ekodi-church", "config": "apps/church/wrangler.toml", "domain": "church.ekodi.kr" },
+    { "workspace": "@ekodi/mission", "worker": "ekodi-mission", "config": "apps/mission/wrangler.toml", "domain": "mission.ekodi.kr" },
+    { "workspace": "@ekodi/biz", "worker": "ekodi-biz", "config": "apps/biz/wrangler.toml", "domain": "biz.ekodi.kr" },
+    { "workspace": "@ekodi/mall", "worker": "ekodi-mall", "config": "apps/mall/wrangler.toml", "domain": "mall.ekodi.kr" },
+    { "workspace": "@ekodi/trade", "worker": "ekodi-trade", "config": "apps/trade/wrangler.toml", "domain": "trade.ekodi.kr" },
+    { "workspace": "@ekodi/marketing", "worker": "ekodi-marketing", "config": "apps/marketing/wrangler.toml", "domain": "marketing.ekodi.kr" },
+    { "workspace": "@ekodi/consulting", "worker": "ekodi-consulting", "config": "apps/consulting/wrangler.toml", "domain": "consulting.ekodi.kr" },
+    { "workspace": "@ekodi/media", "worker": "ekodi-media", "config": "apps/media/wrangler.toml", "domain": "media.ekodi.kr" },
+    { "workspace": "@ekodi/education", "worker": "ekodi-education", "config": "apps/education/wrangler.toml", "domain": "education.ekodi.kr" },
+    { "workspace": "@ekodi/publishing", "worker": "ekodi-publishing", "config": "apps/publishing/wrangler.toml", "domain": "publishing.ekodi.kr" },
+    { "workspace": "@ekodi/solution", "worker": "ekodi-solution", "config": "apps/solution/wrangler.toml", "domain": "solution.ekodi.kr" },
+    { "workspace": "@ekodi/erp-app", "worker": "ekodi-erp", "config": "apps/erp/wrangler.toml", "domain": "erp.ekodi.kr" },
+    { "workspace": "@ekodi/lab", "worker": "ekodi-lab", "config": "apps/lab/wrangler.toml", "domain": "lab.ekodi.kr" },
+    { "workspace": "@ekodi/community", "worker": "ekodi-community", "config": "apps/community/wrangler.toml", "domain": "community.ekodi.kr" }
+  ],
+  "siteDefaults": {
+    "build": "corepack enable && pnpm install --frozen-lockfile && pnpm --filter {{workspace}} build",
+    "watch": ["{{appPath}}/**", "packages/ecosystem-catalog/**", "packages/site-runtime/**", "packages/ui/**", "tools/site-builder/**", "pnpm-workspace.yaml", "package.json", "pnpm-lock.yaml"]
+  },
+  "deploy": "pnpm exec wrangler deploy --config {{config}}",
+  "previewDeploy": "pnpm exec wrangler versions upload --config {{config}}"
+}

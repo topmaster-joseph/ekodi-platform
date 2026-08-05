@@ -1,0 +1,14 @@
+{
+  "name": "@ekodi/site-monitor",
+  "version": "3.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/monitor.mjs && node --check src/monitor-lib.mjs",
+    "monitor": "node --experimental-strip-types src/monitor.mjs",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@ekodi/ecosystem-catalog": "workspace:*"
+  }
+}

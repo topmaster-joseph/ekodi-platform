@@ -1,0 +1,12 @@
+{
+  "name": "EKODI Platform",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-24-bookworm",
+  "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "forwardPorts": [4173],
+  "portsAttributes": {
+    "4173": {
+      "label": "EKODI Platform",
+      "onAutoForward": "openPreview"
+    }
+  }
+}

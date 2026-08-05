@@ -1,0 +1,27 @@
+name = "ekodi-auth-api"
+account_id = "6986fd633f4e33bf804c921697b2d797"
+main = "src/worker.ts"
+compatibility_date = "2026-08-01"
+workers_dev = true
+preview_urls = true
+
+[vars]
+ENVIRONMENT = "production"
+ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+ALLOWED_ORIGINS = "https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi.kr"
+PUBLIC_CONTENT_ORIGINS = "https://mall.ekodi.kr,https://biz.ekodi.kr,https://publishing.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://mission.ekodi.kr,https://trade.ekodi.kr,https://marketing.ekodi.kr,https://consulting.ekodi.kr,https://media.ekodi.kr,https://education.ekodi.kr,https://solution.ekodi.kr,https://erp.ekodi.kr,https://community.ekodi.kr,https://ekodimall.kr,https://ekodibiz.kr,https://ekodibook.kr,https://ekodichurch.kr,https://ekodilab.kr,https://youtube.com"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "ekodi-media"
+preview_bucket_name = "ekodi-media-preview"
