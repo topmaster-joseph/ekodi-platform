@@ -1,0 +1,14 @@
+{
+  "name": "ekodi-mall-pages",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/validate.mjs",
+    "build": "npm run check && node scripts/build.mjs",
+    "doctor": "npm run check && npm run build"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
