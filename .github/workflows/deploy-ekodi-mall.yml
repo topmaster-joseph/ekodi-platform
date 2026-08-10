@@ -38,8 +38,10 @@ jobs:
       - name: Load deployment manifest
         id: manifest
         run: |
-          echo "project=$(node -e \"const c=require('./deployment.json'); process.stdout.write(c.projectName)\")" >> "$GITHUB_OUTPUT"
-          echo "url=$(node -e \"const c=require('./deployment.json'); process.stdout.write(c.publicUrl)\")" >> "$GITHUB_OUTPUT"
+          PROJECT=$(node -p "JSON.parse(require('fs').readFileSync('deployment.json','utf8')).projectName")
+          PUBLIC_URL=$(node -p "JSON.parse(require('fs').readFileSync('deployment.json','utf8')).publicUrl")
+          echo "project=$PROJECT" >> "$GITHUB_OUTPUT"
+          echo "url=$PUBLIC_URL" >> "$GITHUB_OUTPUT"
 
       - name: Validate content
         run: npm run check
