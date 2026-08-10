@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "brand": {
+    "name": "EKODI MALL",
+    "shortName": "EKODI",
+    "tagline": "사람과 지역과 환경을 거래로 잇는 상생 커머스"
+  },
+  "seo": {
+    "title": "EKODI MALL | 사람과 지역을 잇는 상생 커머스",
+    "description": "오늘의 작은 선택이 지역과 사람의 내일로 이어지는 에코디몰. 지역상생·생활·책·선물 상품을 이유와 함께 큐레이션합니다.",
+    "baseUrl": "https://ekodi-mall.pages.dev"
+  },
+  "notice": "베타 운영 중 · 판매주체와 외부 이동 여부를 상품마다 분명히 표시합니다.",
+  "hero": {
+    "eyebrow": "CONNECTED COMMERCE FOR GOOD",
+    "title": "오늘의 선택이|함께 사는 내일|이 되도록",
+    "description": "환경만 생각하는 쇼핑을 넘어 지역의 가게와 사람의 이야기를 거래로 잇습니다. 에코디가 직접 살피고 이유를 설명할 수 있는 상품부터 소개합니다.",
+    "primaryLabel": "상품 둘러보기",
+    "primaryHref": "#shop",
+    "secondaryLabel": "선정 기준 보기",
+    "secondaryHref": "#story"
+  },
+  "categories": [
+    {"id": "all", "label": "전체"},
+    {"id": "living", "label": "생활"},
+    {"id": "local", "label": "로컬"},
+    {"id": "book", "label": "책·배움"},
+    {"id": "gift", "label": "선물"}
+  ],
+  "standards": [
+    {"number": "01", "title": "필요한가", "body": "유행보다 실제 쓰임과 지속성을 먼저 봅니다."},
+    {"number": "02", "title": "설명 가능한가", "body": "추천하는 이유와 판매방식을 숨기지 않습니다."},
+    {"number": "03", "title": "연결되는가", "body": "구매가 지역과 사람의 관계를 살리는 방향인지 살핍니다."},
+    {"number": "04", "title": "오래 가는가", "body": "일회성 판매보다 반복 가능한 협력과 품질을 지향합니다."}
+  ],
+  "local": {
+    "eyebrow": "LOCAL COMMONS",
+    "title": "지역의 가게가|하나의 시장이 되도록",
+    "description": "청계와 목포대 후문을 비롯한 지역 상권의 좋은 상품과 이야기를 발견하고, 온라인 콘텐츠와 실제 방문을 연결하는 상생관을 준비합니다."
+  },
+  "business": {
+    "name": "에코디비즈",
+    "representative": "정찬균",
+    "registrationNumber": "",
+    "commerceRegistrationNumber": "",
+    "address": "",
+    "customerService": "",
+    "email": ""
+  },
+  "links": {
+    "inquiry": "https://ekodibiz.kr",
+    "biz": "https://ekodibiz.kr"
+  },
+  "commerce": {
+    "paymentsEnabled": false,
+    "betaMessage": "현재 페이지는 상품 큐레이션·입점 준비 단계이며 온라인 결제를 받지 않습니다."
+  }
+}
