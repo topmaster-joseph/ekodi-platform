@@ -1,0 +1,11 @@
+name = "ekodi-books"
+compatibility_date = "2026-08-10"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "books.ekodi.kr"
+custom_domain = true
+
+[assets]
+directory = "./books"
