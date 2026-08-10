@@ -1,0 +1,46 @@
+name: Deploy EKODI Mall to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sites/ekodi-mall/**"
+      - ".github/workflows/deploy-ekodi-mall.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: ekodi-mall-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate static site
+        run: |
+          test -f sites/ekodi-mall/index.html
+          test -f sites/ekodi-mall/_headers
+          grep -q "EKODI MALL" sites/ekodi-mall/index.html
+
+      - name: Deploy to Cloudflare Pages
+        id: cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: pages deploy sites/ekodi-mall --project-name=ekodi-mall --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deployment URL
+        env:
+          DEPLOYMENT_URL: ${{ steps.cloudflare.outputs.deployment-url }}
+        run: echo "EKODI Mall deployed to ${DEPLOYMENT_URL}"
