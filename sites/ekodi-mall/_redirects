@@ -1,5 +1,9 @@
-/shipping /#policy 302
-/returns /#policy 302
-/privacy /#policy 302
-/terms /#policy 302
-/contact https://ekodibiz.kr 302
+/shop /#shop 302
+/local /#local 302
+/story /#story 302
+/journal /#journal 302
+/shipping /pages/shipping/ 301
+/returns /pages/returns/ 301
+/privacy /pages/privacy/ 301
+/terms /pages/terms/ 301
+/contact /pages/contact/ 301
