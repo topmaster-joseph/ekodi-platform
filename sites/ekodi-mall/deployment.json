@@ -1,0 +1,20 @@
+{
+  "provider": "cloudflare-pages",
+  "projectName": "ekodi-mall",
+  "publicUrl": "https://ekodi-mall.pages.dev/",
+  "productionBranch": "main",
+  "sourceDirectory": "sites/ekodi-mall",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "deploymentMode": "direct-upload-ci",
+  "workflow": ".github/workflows/deploy-ekodi-mall.yml",
+  "requiredSecrets": [
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_ID"
+  ],
+  "healthChecks": [
+    "/",
+    "/products/reusable-daily-bottle/",
+    "/pages/privacy/"
+  ]
+}
