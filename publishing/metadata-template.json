@@ -1,0 +1,32 @@
+{
+  "bookId": "ekodi-books-001",
+  "version": "1.0.0",
+  "title": "",
+  "subtitle": "",
+  "author": "",
+  "publisher": "EKODI BOOKS",
+  "language": "ko",
+  "publicationDate": "",
+  "descriptionShort": "",
+  "descriptionLong": "",
+  "keywords": [],
+  "categories": [],
+  "isbnEbook": "",
+  "priceKRW": 0,
+  "priceUSD": 0,
+  "aiDisclosure": {
+    "generatedText": false,
+    "generatedImages": false,
+    "generatedTranslation": false,
+    "notes": ""
+  },
+  "files": {
+    "epub": "book.epub",
+    "cover": "cover.jpg"
+  },
+  "retailers": {
+    "amazon": "",
+    "googlePlayBooks": "",
+    "korea": ""
+  }
+}

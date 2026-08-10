@@ -1,0 +1,22 @@
+{
+  "publisher": "EKODI BOOKS",
+  "updated": "2026-08-10",
+  "books": [
+    {
+      "id": "ekodi-books-001",
+      "series": "EKODI ORIGINAL 001",
+      "status": "첫 출간 준비 중",
+      "coverTitle": "FIRST\nEDITION",
+      "title": "에코디북스 첫 번째 책",
+      "subtitle": "원고가 확정되면 이 한 항목의 제목, 부제, 저자, 판매 링크만 바꾸면 사이트 전체에 반영됩니다.",
+      "author": "",
+      "language": "ko",
+      "format": ["EPUB 3"],
+      "links": {
+        "amazon": "",
+        "google": "",
+        "korea": ""
+      }
+    }
+  ]
+}
