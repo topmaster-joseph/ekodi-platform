@@ -3,43 +3,190 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="EKODI 서비스 통합 운영·권한·추천 관리 콘솔">
-  <meta name="theme-color" content="#0b1220">
-  <title>EKODI Control Center</title>
+  <meta name="description" content="에코디 생태계의 여섯 서비스를 잇는 통합 플랫폼입니다. 서비스 현황, 도메인, 운영 기록을 한곳에서 관리합니다.">
+  <meta name="theme-color" content="#173c35">
+  <meta property="og:title" content="에코디플랫폼 | EKODI Platform">
+  <meta property="og:description" content="부르심에서 교제로, 교제에서 일터로 — 에코디 생태계 통합 플랫폼">
+  <meta property="og:type" content="website">
+  <title>에코디플랫폼 | EKODI Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=Noto+Serif+KR:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="access-gate" id="accessGate" aria-labelledby="gateTitle">
-    <div class="gate-card">
-      <div class="gate-brand"><span class="logo-mark">E</span><strong>EKODI</strong></div>
-      <span class="security-badge">EKODI PLATFORM</span>
-      <h1 id="gateTitle">에코디 서비스 바로가기</h1>
-      <p>원하는 서비스를 선택하면 해당 사이트로 바로 이동합니다.</p>
-      <nav class="portal-grid" aria-label="에코디 관련 사이트">
-        <a href="https://ekodimall.kr" target="_blank" rel="noopener"><span class="service-logo mall">M</span><strong>에코디몰</strong><small>ekodimall.kr</small><b>↗</b></a>
-        <a href="https://ekodibiz.kr" target="_blank" rel="noopener"><span class="service-logo biz">B</span><strong>에코디비즈</strong><small>ekodibiz.kr</small><b>↗</b></a>
-        <a href="https://ekodibook.kr" target="_blank" rel="noopener"><span class="service-logo book">P</span><strong>에코디출판</strong><small>ekodibook.kr</small><b>↗</b></a>
-        <a href="https://ekodichurch.kr" target="_blank" rel="noopener"><span class="service-logo church">C</span><strong>에코디교회</strong><small>ekodichurch.kr</small><b>↗</b></a>
-        <a href="https://ekodilab.kr" target="_blank" rel="noopener"><span class="service-logo lab">L</span><strong>에코디연구소</strong><small>ekodilab.kr</small><b>↗</b></a>
-        <a href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener"><span class="service-logo mission">S</span><strong>에코디선교회</strong><small>YouTube 채널</small><b>↗</b></a>
-      </nav>
-      <div class="admin-entry">
-        <button class="admin-login-link" id="showAdminLogin" type="button" aria-expanded="false">관리자 로그인 →</button>
-        <form class="admin-login-form" id="adminLoginForm" hidden>
-          <div class="form-heading"><strong>플랫폼 관리자 로그인</strong><small>관리자 정보를 정확하게 입력하세요.</small></div>
-          <label>관리자 이메일<input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="admin@ekodi.kr" required></label>
-          <label>비밀번호<input id="adminPassword" name="password" type="password" autocomplete="current-password" minlength="12" placeholder="12자 이상 입력" required></label>
-          <p class="login-error" id="loginError" role="alert"></p>
-          <button class="primary full" id="enterConsole" type="submit">관리 콘솔 입장</button>
-        </form>
+  <a class="skip-link" href="#main">본문으로 바로가기</a>
+
+  <div class="portal" id="portal">
+    <header class="site-header" id="top">
+      <div class="header-inner">
+        <a class="brand" href="#top" aria-label="에코디플랫폼 홈">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <span><strong>에코디플랫폼</strong><small>EKODI PLATFORM</small></span>
+        </a>
+        <button class="menu-toggle" id="menuToggle" type="button" aria-controls="mainNav" aria-expanded="false">메뉴</button>
+        <nav class="main-nav" id="mainNav" aria-label="주요 메뉴">
+          <a href="#about"><b>01</b>생태계 소개</a>
+          <a href="#services"><b>02</b>서비스</a>
+          <a href="#status"><b>03</b>운영 현황</a>
+          <a href="#connect"><b>04</b>함께하기</a>
+          <button class="button ghost dark nav-admin" id="showAdminLogin" type="button">관리자 로그인</button>
+        </nav>
       </div>
-      <p class="gate-note">관리 콘솔은 승인된 플랫폼 관리자 전용입니다.</p>
-    </div>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-content">
+          <p class="eyebrow">AN ECOSYSTEM CALLED, GATHERED AND SENT</p>
+          <h1>부르심에서 교제로,<br><em>교제에서 일터로</em></h1>
+          <p class="hero-copy">에코디플랫폼은 교회에서 시작한 네 가지 움직임을 몰·비즈·출판·교회·연구소·선교회 여섯 서비스로 이어가는 통합 기반입니다.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="#services">서비스 둘러보기</a>
+            <a class="button ghost" href="https://ekodi-church-live.topmaster-joseph.workers.dev/" target="_blank" rel="noopener">에코디교회 라이브 ↗</a>
+          </div>
+          <div class="hero-status" aria-live="polite"><span id="heroStatusDot"></span><strong id="heroStatus">서비스 상태를 확인하고 있습니다.</strong></div>
+        </div>
+        <aside class="hero-verse">
+          <span>OUR CONFESSION</span>
+          <blockquote>“너희는 세상의 빛이라<br>산 위에 있는 동네가 숨겨지지 못할 것이요”</blockquote>
+          <cite>마태복음 5:14</cite>
+        </aside>
+      </section>
+
+      <section class="section about" id="about">
+        <div class="section-heading">
+          <p>01 · ABOUT EKODI</p>
+          <h2>네 가지 움직임이 여섯 서비스의 기반입니다</h2>
+          <span>에코디교회가 고백해 온 네 움직임을 플랫폼의 운영 원칙으로 삼습니다.</span>
+        </div>
+        <div class="value-grid">
+          <article><b>01</b><span>Ἐκκλησία</span><h3>에클레시아</h3><p>세상으로부터 불러내어 하나님의 백성으로 세우시는 부르심</p></article>
+          <article><b>02</b><span>Κοινωνία</span><h3>코이노니아</h3><p>복음 안에서 서로 환대하고 짐을 나누는 깊은 교제</p></article>
+          <article><b>03</b><span>Διασπορά</span><h3>디아스포라</h3><p>일상과 지역과 열방으로 흩어져 복음의 증인이 되는 삶</p></article>
+          <article><b>04</b><span>Ἰωβηλαῖον</span><h3>희년</h3><p>빚을 풀고 땅을 돌려주며 사람과 공동체를 다시 살리는 회복</p></article>
+        </div>
+      </section>
+
+      <section class="section services" id="services">
+        <div class="section-heading light">
+          <p>02 · EKODI SERVICES</p>
+          <h2>여섯 서비스를 한 자리에서 엽니다</h2>
+          <span>각 카드의 상태는 10분 주기 자동 점검 결과를 그대로 표시합니다.</span>
+        </div>
+        <div class="portal-grid" id="portalGrid">
+          <a class="portal-card" data-portal-domain="ekodimall.kr" href="https://ekodimall.kr" target="_blank" rel="noopener">
+            <span class="portal-mark mall" aria-hidden="true">M</span>
+            <div class="portal-body"><small>MALL</small><strong>에코디몰</strong><p>ekodimall.kr</p></div>
+            <span class="portal-state"><i></i>확인 중</span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="portal-card" data-portal-domain="ekodibiz.kr" href="https://ekodibiz.kr" target="_blank" rel="noopener">
+            <span class="portal-mark biz" aria-hidden="true">B</span>
+            <div class="portal-body"><small>BUSINESS</small><strong>에코디비즈</strong><p>ekodibiz.kr</p></div>
+            <span class="portal-state"><i></i>확인 중</span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="portal-card" data-portal-domain="ekodibook.kr" href="https://ekodibook.kr" target="_blank" rel="noopener">
+            <span class="portal-mark book" aria-hidden="true">P</span>
+            <div class="portal-body"><small>PUBLISHING</small><strong>에코디출판</strong><p>ekodibook.kr</p></div>
+            <span class="portal-state"><i></i>확인 중</span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="portal-card" data-portal-domain="ekodichurch.kr" href="https://ekodichurch.kr" target="_blank" rel="noopener">
+            <span class="portal-mark church" aria-hidden="true">C</span>
+            <div class="portal-body"><small>CHURCH</small><strong>에코디교회</strong><p>ekodichurch.kr</p></div>
+            <span class="portal-state"><i></i>확인 중</span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="portal-card" data-portal-domain="ekodilab.kr" href="https://ekodilab.kr" target="_blank" rel="noopener">
+            <span class="portal-mark lab" aria-hidden="true">L</span>
+            <div class="portal-body"><small>LAB</small><strong>에코디연구소</strong><p>ekodilab.kr</p></div>
+            <span class="portal-state"><i></i>확인 중</span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="portal-card" data-portal-domain="youtube.com/@ekodicommunity" href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener">
+            <span class="portal-mark mission" aria-hidden="true">S</span>
+            <div class="portal-body"><small>MISSION</small><strong>에코디선교회</strong><p>youtube.com/@ekodicommunity</p></div>
+            <span class="portal-state"><i></i>확인 중</span>
+            <b aria-hidden="true">↗</b>
+          </a>
+        </div>
+      </section>
+
+      <section class="section status" id="status">
+        <div class="section-heading">
+          <p>03 · OPERATIONS</p>
+          <h2>지금 이 순간의 서비스 상태</h2>
+          <span>GitHub Actions가 열 분마다 여섯 서비스를 실제로 호출하고, 상태가 바뀔 때 결과를 갱신합니다.</span>
+        </div>
+        <div class="status-grid">
+          <article class="status-tile online"><small>정상</small><strong id="statusOnline">—</strong><p>응답이 확인된 서비스</p></article>
+          <article class="status-tile degraded"><small>지연</small><strong id="statusDegraded">—</strong><p>응답이 느린 서비스</p></article>
+          <article class="status-tile offline"><small>연결 대기</small><strong id="statusOffline">—</strong><p>아직 응답하지 않는 서비스</p></article>
+          <article class="status-tile"><small>점검 주기</small><strong>10분</strong><p>자동 상태 점검 간격</p></article>
+        </div>
+        <div class="status-note">
+          <p id="statusChecked">최근 점검 시각을 불러오는 중입니다.</p>
+          <p class="status-guide">연결 대기 상태는 도메인이 아직 서비스에 연결되지 않았음을 뜻합니다. 관리 콘솔의 도메인·DNS 화면에서 연결 작업을 이어서 진행합니다.</p>
+        </div>
+      </section>
+
+      <section class="section connect" id="connect">
+        <div class="section-heading">
+          <p>04 · CONNECT</p>
+          <h2>먼저 열린 자리에서 함께합니다</h2>
+          <span>에코디교회 사이트에서 주보, 말씀나눔 영상, 화상모임을 바로 이용할 수 있습니다.</span>
+        </div>
+        <div class="connect-grid">
+          <article class="connect-card">
+            <div>
+              <small>LIVE SITE</small>
+              <h3>에코디교회 홈페이지</h3>
+              <p>주일 말씀나눔과 매일묵상, 이번 주 주보와 예배 PPT, 무료 화상모임을 한 화면에서 제공합니다.</p>
+            </div>
+            <a class="button ghost dark" href="https://ekodi-church-live.topmaster-joseph.workers.dev/" target="_blank" rel="noopener">사이트 열기 ↗</a>
+          </article>
+          <article class="connect-card">
+            <div>
+              <small>CONTACT</small>
+              <h3>연락처</h3>
+              <p>전남 무안군 청계면 백련동1길 17-4</p>
+            </div>
+            <div class="connect-links">
+              <a href="tel:01035018542">010-3501-8542</a>
+              <a href="mailto:ekodichurch@gmail.com">ekodichurch@gmail.com</a>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand"><span aria-hidden="true">✦</span><div><strong>에코디플랫폼</strong><small>EKODI PLATFORM</small></div></div>
+      <p class="footer-note">관리 콘솔은 승인된 플랫폼 관리자 전용입니다.</p>
+      <div class="footer-meta"><span>EKODI PLATFORM v3</span><span>© 2026 EKODI</span></div>
+    </footer>
   </div>
+
+  <dialog class="admin-dialog" id="adminDialog" aria-labelledby="adminDialogTitle">
+    <div class="dialog-head">
+      <div><span class="auth-label">ADMIN ACCESS</span><h3 id="adminDialogTitle">관리 콘솔 로그인</h3></div>
+      <button class="dialog-close" id="closeAdminDialog" type="button" aria-label="닫기">×</button>
+    </div>
+    <form class="admin-login-form" id="adminLoginForm">
+      <div class="form-heading"><strong>플랫폼 관리자 로그인</strong><small>관리자 정보를 정확하게 입력하세요.</small></div>
+      <label>관리자 이메일<input id="adminEmail" name="email" type="email" autocomplete="username" placeholder="admin@ekodi.kr" required></label>
+      <label>비밀번호<input id="adminPassword" name="password" type="password" autocomplete="current-password" minlength="12" placeholder="12자 이상 입력" required></label>
+      <p class="login-error" id="loginError" role="alert"></p>
+      <button class="button primary full" id="enterConsole" type="submit">관리 콘솔 입장</button>
+    </form>
+  </dialog>
 
   <div class="app-shell" id="appShell" aria-hidden="true">
     <aside class="sidebar">
-      <div class="brand"><span class="logo-mark">E</span><strong>EKODI</strong><small>CONTROL CENTER</small></div>
+      <div class="brand console-brand"><span class="brand-mark">✦</span><span><strong>EKODI</strong><small>CONTROL CENTER</small></span></div>
       <nav aria-label="운영 메뉴">
         <button class="nav-item active" data-view="dashboard"><span>⌂</span>통합 현황</button>
         <button class="nav-item" data-view="services"><span>◫</span>서비스 관리</button>
@@ -56,13 +203,13 @@
         <button class="mobile-menu" id="mobileMenu" aria-label="메뉴 열기" aria-expanded="false">☰</button>
         <label class="global-search">
           <span>⌕</span>
-          <input id="globalSearch" type="search" placeholder="서비스, 사용자, 작업 검색" autocomplete="off">
+          <input id="globalSearch" type="search" placeholder="서비스, 도메인, 작업 검색" autocomplete="off">
           <kbd>⌘ K</kbd>
         </label>
         <div class="top-actions">
           <button class="icon-button" id="notificationBtn" aria-label="알림"><span class="alert-dot"></span>♢</button>
           <button class="ghost" id="logoutBtn" type="button">로그아웃</button>
-          <button class="profile-button" id="profileBtn"><span class="avatar">김</span><span><strong>김관리</strong><small>최고 관리자</small></span><b>⌄</b></button>
+          <button class="profile-button" id="profileBtn"><span class="avatar">E</span><span><strong>관리자</strong><small>플랫폼 운영</small></span><b>⌄</b></button>
         </div>
       </header>
 
@@ -73,7 +220,7 @@
         </section>
 
         <section class="stats-grid" aria-label="핵심 지표">
-          <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>6 <small>/ 6</small></strong><p class="positive">상태 확인 중</p></div></article>
+          <article class="stat-card"><div class="stat-icon green">◉</div><div><span>운영 서비스</span><strong>— <small>/ 6</small></strong><p class="positive">상태 확인 중</p></div></article>
           <article class="stat-card"><div class="stat-icon blue">◎</div><div><span>관리 도메인</span><strong>5</strong><p>Cloudflare 연결 관리</p></div></article>
           <article class="stat-card attention"><div class="stat-icon amber">!</div><div><span>60일 이내 만료</span><strong id="dashboardExpiring">—</strong><p class="warning">등록대장 기준</p></div><button class="text-action" data-view-link="domains">검토 →</button></article>
           <article class="stat-card"><div class="stat-icon violet">≡</div><div><span>최근 운영 변경</span><strong id="auditCount">—</strong><p>감사 로그 기록</p></div><button class="text-action" data-view-link="activity">보기 →</button></article>
@@ -116,7 +263,6 @@
             <div class="dns-record-list" id="dnsRecordList"></div>
           </div>
         </section>
-
 
         <section class="panel registrar-panel" id="registrarManagement">
           <div class="panel-head registrar-heading">
