@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "production"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
-ALLOWED_ORIGINS = "https://shy-thunder-39a4.topmaster-joseph.workers.dev"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
 
 [observability.logs]
 enabled = true
