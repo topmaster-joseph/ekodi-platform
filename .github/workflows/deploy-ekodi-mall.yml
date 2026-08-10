@@ -1,6 +1,10 @@
-name: Deploy EKODI Mall to Cloudflare Pages
+name: EKODI Mall · Build and Deploy
 
 on:
+  pull_request:
+    paths:
+      - "sites/ekodi-mall/**"
+      - ".github/workflows/deploy-ekodi-mall.yml"
   push:
     branches: [main]
     paths:
@@ -10,37 +14,70 @@ on:
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
-  group: ekodi-mall-production
+  group: ekodi-mall-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: sites/ekodi-mall
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate static site
-        run: |
-          test -f sites/ekodi-mall/index.html
-          test -f sites/ekodi-mall/_headers
-          grep -q "EKODI MALL" sites/ekodi-mall/index.html
-
-      - name: Deploy to Cloudflare Pages
-        id: cloudflare
-        uses: cloudflare/wrangler-action@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4"
-          command: pages deploy sites/ekodi-mall --project-name=ekodi-mall --branch=main
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          node-version: "24"
 
-      - name: Deployment URL
+      - name: Validate content
+        run: npm run check
+
+      - name: Build static site
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html
+          test -f dist/assets/styles.css
+          test -f dist/assets/app.js
+          test -f dist/sitemap.xml
+          test -f dist/_headers
+          test -f dist/_redirects
+          grep -q "EKODI MALL" dist/index.html
+          PRODUCT_COUNT=$(find dist/products -name index.html | wc -l)
+          test "$PRODUCT_COUNT" -gt 0
+          echo "Verified $PRODUCT_COUNT product pages"
+
+      - name: Check Cloudflare credentials
+        id: cloudflare_credentials
         env:
-          DEPLOYMENT_URL: ${{ steps.cloudflare.outputs.deployment-url }}
-        run: echo "EKODI Mall deployed to ${DEPLOYMENT_URL}"
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials are configured."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials are not configured; build remains green and deployment will be skipped."
+          fi
+
+      - name: Deploy production to Cloudflare Pages
+        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name=ekodi-mall --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
+
+      - name: Deployment configuration notice
+        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available != 'true'
+        run: |
+          echo "### EKODI Mall build completed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cloudflare deployment was skipped because repository secrets are not configured." >> "$GITHUB_STEP_SUMMARY"
+          echo "Required secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID" >> "$GITHUB_STEP_SUMMARY"
