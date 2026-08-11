@@ -1,66 +1,66 @@
 {
-  "generatedAt": "2026-08-11T14:23:13.061Z",
+  "generatedAt": "2026-08-11T15:27:06.747Z",
   "summary": {
     "total": 6,
-    "online": 1,
+    "online": 5,
     "degraded": 0,
-    "offline": 5
+    "offline": 1
   },
   "sites": [
     {
       "id": "mall",
       "name": "에코디몰",
-      "domain": "ekodimall.kr",
-      "url": "https://ekodimall.kr",
-      "status": "offline",
-      "httpStatus": null,
-      "responseTime": 209,
-      "checkedAt": "2026-08-11T14:23:11.850Z",
-      "error": "fetch failed"
+      "domain": "mall.ekodi.kr",
+      "url": "https://mall.ekodi.kr",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 832,
+      "checkedAt": "2026-08-11T15:27:04.871Z",
+      "error": null
     },
     {
       "id": "biz",
       "name": "에코디비즈",
-      "domain": "ekodibiz.kr",
-      "url": "https://ekodibiz.kr",
+      "domain": "biz.ekodi.kr",
+      "url": "https://biz.ekodi.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 675,
-      "checkedAt": "2026-08-11T14:23:11.878Z",
+      "responseTime": 1120,
+      "checkedAt": "2026-08-11T15:27:04.913Z",
       "error": "fetch failed"
     },
     {
       "id": "publishing",
       "name": "에코디출판",
-      "domain": "ekodibook.kr",
-      "url": "https://ekodibook.kr",
-      "status": "offline",
-      "httpStatus": null,
-      "responseTime": 359,
-      "checkedAt": "2026-08-11T14:23:11.879Z",
-      "error": "fetch failed"
+      "domain": "books.ekodi.kr",
+      "url": "https://books.ekodi.kr",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 321,
+      "checkedAt": "2026-08-11T15:27:04.914Z",
+      "error": null
     },
     {
       "id": "church",
       "name": "에코디교회",
-      "domain": "ekodichurch.kr",
-      "url": "https://ekodichurch.kr",
-      "status": "offline",
-      "httpStatus": null,
-      "responseTime": 1045,
-      "checkedAt": "2026-08-11T14:23:11.880Z",
-      "error": "fetch failed"
+      "domain": "church.ekodi.kr",
+      "url": "https://church.ekodi.kr",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 1831,
+      "checkedAt": "2026-08-11T15:27:04.915Z",
+      "error": null
     },
     {
       "id": "lab",
       "name": "에코디연구소",
-      "domain": "ekodilab.kr",
-      "url": "https://ekodilab.kr",
-      "status": "offline",
-      "httpStatus": null,
-      "responseTime": 1181,
-      "checkedAt": "2026-08-11T14:23:11.880Z",
-      "error": "fetch failed"
+      "domain": "lab.ekodi.kr",
+      "url": "https://lab.ekodi.kr",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 638,
+      "checkedAt": "2026-08-11T15:27:04.916Z",
+      "error": null
     },
     {
       "id": "mission",
@@ -69,8 +69,8 @@
       "url": "https://youtube.com/@ekodicommunity",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1178,
-      "checkedAt": "2026-08-11T14:23:11.881Z",
+      "responseTime": 791,
+      "checkedAt": "2026-08-11T15:27:04.917Z",
       "error": null
     }
   ]
