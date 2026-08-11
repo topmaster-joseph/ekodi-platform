@@ -1,4 +1,5 @@
 const ORIGINS = Object.freeze({
+  'biz.ekodi.kr': 'ekodibiz.kr',
   'church.ekodi.kr': 'ekodi-church.pages.dev',
   'lab.ekodi.kr': 'ekodilab.pages.dev',
   'mall.ekodi.kr': 'ekodi-mall.pages.dev'
