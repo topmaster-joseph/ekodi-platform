@@ -1,0 +1,64 @@
+name: Enable EKODI Root Zone
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/enable-ekodi-root-zone.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Add ekodi.kr to managed Cloudflare zones
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('auth-worker.js')
+          text = path.read_text(encoding='utf-8')
+          marker = "const EKODI_DOMAINS = [\n"
+          entry = "  { name: 'ekodi.kr', service: '에코디 통합 루트' },\n"
+          if entry not in text:
+              if marker not in text:
+                  raise SystemExit('EKODI_DOMAINS marker not found')
+              text = text.replace(marker, marker + entry, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify code
+        run: |
+          npm run check
+          npm test
+
+      - name: Commit root-zone policy
+        run: |
+          if git diff --quiet; then
+            echo 'No source change required.'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add auth-worker.js
+            git commit -m 'Manage ekodi.kr as the ecosystem root zone'
+            git push
+          fi
+
+      - name: Deploy updated DNS management API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          npm run deploy:api
