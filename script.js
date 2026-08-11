@@ -91,22 +91,22 @@ function enterAuthenticatedConsole(email, token) {
   loadAudit();
 }
 
-async function logout() {
+function logout() {
   const token = sessionStorage.getItem('ekodi-auth-token');
-  try {
-    if (token) {
-      await fetch(`${AUTH_API}/api/logout`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${token}` }
-      });
-    }
-  } finally {
-    sessionStorage.removeItem('ekodi-auth-token');
-    sessionStorage.removeItem('ekodi-admin-email');
-    shell.setAttribute('aria-hidden', 'true');
-    portal.classList.remove('hidden');
-    adminLoginForm.reset();
-    notify('안전하게 로그아웃했습니다.');
+  // Drop the browser copy of the session first: an unreachable or slow auth API
+  // must never leave the console on screen while the request hangs.
+  sessionStorage.removeItem('ekodi-auth-token');
+  sessionStorage.removeItem('ekodi-admin-email');
+  shell.setAttribute('aria-hidden', 'true');
+  portal.classList.remove('hidden');
+  adminLoginForm.reset();
+  notify('안전하게 로그아웃했습니다.');
+  if (token) {
+    fetch(`${AUTH_API}/api/logout`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      keepalive: true
+    }).catch(() => {});
   }
 }
 
