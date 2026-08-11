@@ -4,9 +4,17 @@ const ORIGINS = Object.freeze({
   'mall.ekodi.kr': 'ekodi-mall.pages.dev'
 });
 
+const REDIRECTS = Object.freeze({
+  'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live'
+});
+
 export default {
   async fetch(request) {
     const incoming = new URL(request.url);
+
+    const redirectTarget = REDIRECTS[incoming.hostname];
+    if (redirectTarget) return Response.redirect(redirectTarget, 302);
+
     const originHost = ORIGINS[incoming.hostname];
     if (!originHost) return new Response('Not found', { status: 404 });
 
