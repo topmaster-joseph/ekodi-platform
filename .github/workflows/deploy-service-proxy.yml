@@ -57,7 +57,7 @@ jobs:
         run: |
           set -u
           failed=0
-          for domain in church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr; do
+          for domain in biz.ekodi.kr church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr; do
             code=000
             for attempt in $(seq 1 12); do
               code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 "https://$domain/" || true)
