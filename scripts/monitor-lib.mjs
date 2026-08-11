@@ -1,9 +1,9 @@
 export const SITE_DEFINITIONS = Object.freeze([
-  ['mall', '에코디몰', 'mall.ekodi.kr'],
+  ['mall', '에코디몰', 'ekodimall.kr'],
   ['biz', '에코디비즈', 'ekodibiz.kr'],
-  ['publishing', '에코디출판', 'books.ekodi.kr'],
-  ['church', '에코디교회', 'church.ekodi.kr'],
-  ['lab', '에코디연구소', 'lab.ekodi.kr'],
+  ['publishing', '에코디출판', 'ekodibook.kr'],
+  ['church', '에코디교회', 'ekodichurch.kr'],
+  ['lab', '에코디연구소', 'ekodilab.kr'],
   ['mission', '에코디선교회', 'youtube.com/@ekodicommunity', 'https://youtube.com/@ekodicommunity']
 ]);
 
