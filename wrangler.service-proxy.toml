@@ -5,6 +5,11 @@ workers_dev = false
 preview_urls = false
 
 [[routes]]
+pattern = "biz.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "church.ekodi.kr"
 zone_name = "ekodi.kr"
 custom_domain = true
