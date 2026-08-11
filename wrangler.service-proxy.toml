@@ -28,3 +28,33 @@ custom_domain = true
 pattern = "mall.ekodi.kr"
 zone_name = "ekodi.kr"
 custom_domain = true
+
+[[routes]]
+pattern = "mail.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.biz.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.church.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.lab.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.books.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.trade.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
