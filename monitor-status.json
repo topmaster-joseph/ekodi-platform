@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-11T05:17:10.993Z",
+  "generatedAt": "2026-08-11T11:58:25.400Z",
   "summary": {
     "total": 6,
     "online": 1,
@@ -14,8 +14,8 @@
       "url": "https://ekodimall.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 217,
-      "checkedAt": "2026-08-11T05:17:09.813Z",
+      "responseTime": 183,
+      "checkedAt": "2026-08-11T11:58:24.430Z",
       "error": "fetch failed"
     },
     {
@@ -25,8 +25,8 @@
       "url": "https://ekodibiz.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 574,
-      "checkedAt": "2026-08-11T05:17:09.900Z",
+      "responseTime": 548,
+      "checkedAt": "2026-08-11T11:58:24.473Z",
       "error": "fetch failed"
     },
     {
@@ -36,8 +36,8 @@
       "url": "https://ekodibook.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 254,
-      "checkedAt": "2026-08-11T05:17:09.902Z",
+      "responseTime": 273,
+      "checkedAt": "2026-08-11T11:58:24.475Z",
       "error": "fetch failed"
     },
     {
@@ -47,8 +47,8 @@
       "url": "https://ekodichurch.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 734,
-      "checkedAt": "2026-08-11T05:17:09.903Z",
+      "responseTime": 821,
+      "checkedAt": "2026-08-11T11:58:24.476Z",
       "error": "fetch failed"
     },
     {
@@ -58,8 +58,8 @@
       "url": "https://ekodilab.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 1089,
-      "checkedAt": "2026-08-11T05:17:09.904Z",
+      "responseTime": 842,
+      "checkedAt": "2026-08-11T11:58:24.477Z",
       "error": "fetch failed"
     },
     {
@@ -69,8 +69,8 @@
       "url": "https://youtube.com/@ekodicommunity",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 969,
-      "checkedAt": "2026-08-11T05:17:09.905Z",
+      "responseTime": 922,
+      "checkedAt": "2026-08-11T11:58:24.478Z",
       "error": null
     }
   ]
