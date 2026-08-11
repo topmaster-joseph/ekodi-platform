@@ -1,11 +1,11 @@
 {
   "publisher": "EKODI BOOKS",
-  "updated": "2026-08-11",
+  "updated": "2026-08-12",
   "books": [
     {
       "id": "ekodi-books-001",
       "series": "EKODI ORIGINAL 001",
-      "status": "전자책 RC1 완성 · 출간 준비",
+      "status": "FINAL v1.3 완성 · Google Play 등록 준비",
       "coverTitle": "에코디언을\n찾아서",
       "title": "에코디언을 찾아서",
       "subtitle": "성경 속 숨겨진 하나님 백성의 진짜 모습",
