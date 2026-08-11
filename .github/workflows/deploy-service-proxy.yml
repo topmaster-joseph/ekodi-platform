@@ -70,7 +70,7 @@ jobs:
             mail.books.ekodi.kr \
             mail.trade.ekodi.kr; do
             code=000
-            for attempt in $(seq 1 12); do
+            for attempt in $(seq 1 20); do
               code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$domain/" || true)
               case "$code" in
                 2*|3*) break ;;
