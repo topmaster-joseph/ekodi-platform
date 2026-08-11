@@ -4,9 +4,17 @@ const ORIGINS = Object.freeze({
   'mall.ekodi.kr': 'ekodi-mall.pages.dev'
 });
 
+const GMAIL = 'https://mail.google.com/';
+
 const REDIRECTS = Object.freeze({
   'biz.ekodi.kr': 'https://ekodibiz.kr',
-  'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live'
+  'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live',
+  'mail.ekodi.kr': GMAIL,
+  'mail.biz.ekodi.kr': GMAIL,
+  'mail.church.ekodi.kr': GMAIL,
+  'mail.lab.ekodi.kr': GMAIL,
+  'mail.books.ekodi.kr': GMAIL,
+  'mail.trade.ekodi.kr': GMAIL
 });
 
 export default {
