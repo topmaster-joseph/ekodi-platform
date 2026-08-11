@@ -1,0 +1,20 @@
+name = "ekodi-service-proxy"
+main = "service-proxy.js"
+compatibility_date = "2026-08-11"
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "church.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "lab.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mall.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
