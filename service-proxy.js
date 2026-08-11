@@ -1,11 +1,11 @@
 const ORIGINS = Object.freeze({
-  'biz.ekodi.kr': 'ekodibiz.kr',
   'church.ekodi.kr': 'ekodi-church.pages.dev',
   'lab.ekodi.kr': 'ekodilab.pages.dev',
   'mall.ekodi.kr': 'ekodi-mall.pages.dev'
 });
 
 const REDIRECTS = Object.freeze({
+  'biz.ekodi.kr': 'https://ekodibiz.kr',
   'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live'
 });
 
@@ -14,7 +14,14 @@ export default {
     const incoming = new URL(request.url);
 
     const redirectTarget = REDIRECTS[incoming.hostname];
-    if (redirectTarget) return Response.redirect(redirectTarget, 302);
+    if (redirectTarget) {
+      const target = new URL(redirectTarget);
+      if (incoming.hostname === 'biz.ekodi.kr') {
+        target.pathname = incoming.pathname;
+        target.search = incoming.search;
+      }
+      return Response.redirect(target.toString(), 302);
+    }
 
     const originHost = ORIGINS[incoming.hostname];
     if (!originHost) return new Response('Not found', { status: 404 });
