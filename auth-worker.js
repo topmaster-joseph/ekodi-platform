@@ -151,6 +151,7 @@ async function authenticate(request, db) {
 
 
 const EKODI_DOMAINS = [
+  { name: 'ekodi.kr', service: '에코디 통합 루트' },
   { name: 'ekodimall.kr', service: '에코디몰' },
   { name: 'ekodibiz.kr', service: '에코디비즈' },
   { name: 'ekodibook.kr', service: '에코디출판' },
