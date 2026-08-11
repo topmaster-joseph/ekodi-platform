@@ -1,4 +1,5 @@
-const gate = document.querySelector('#accessGate');
+const portal = document.querySelector('#portal');
+const adminDialog = document.querySelector('#adminDialog');
 const shell = document.querySelector('#appShell');
 const toast = document.querySelector('#toast');
 const palette = document.querySelector('#commandPalette');
@@ -29,15 +30,32 @@ const adminLoginToggle = document.querySelector('#showAdminLogin');
 const adminLoginForm = document.querySelector('#adminLoginForm');
 const adminEmail = document.querySelector('#adminEmail');
 const loginError = document.querySelector('#loginError');
+const menuToggle = document.querySelector('#menuToggle');
+const mainNav = document.querySelector('#mainNav');
+
+function closeMainNav() {
+  mainNav.classList.remove('open');
+  menuToggle.setAttribute('aria-expanded', 'false');
+}
+
+menuToggle.addEventListener('click', () => {
+  const open = mainNav.classList.toggle('open');
+  menuToggle.setAttribute('aria-expanded', String(open));
+});
+
+mainNav.addEventListener('click', event => {
+  if (event.target.closest('a')) closeMainNav();
+});
 
 adminLoginToggle.addEventListener('click', () => {
-  const opening = adminLoginForm.hidden;
-  adminLoginForm.hidden = !opening;
-  adminLoginToggle.setAttribute('aria-expanded', String(opening));
-  adminLoginToggle.textContent = opening ? '관리자 로그인 닫기 ↑' : '관리자 로그인 →';
-  if (opening) setTimeout(() => adminEmail.focus(), 30);
-  if (opening) loadAuthStatus();
+  closeMainNav();
+  loginError.textContent = '';
+  adminDialog.showModal();
+  setTimeout(() => adminEmail.focus(), 30);
+  loadAuthStatus();
 });
+
+document.querySelector('#closeAdminDialog').addEventListener('click', () => adminDialog.close());
 
 async function loadAuthStatus() {
   try {
@@ -59,7 +77,8 @@ async function loadAuthStatus() {
 }
 
 function enterAuthenticatedConsole(email, token) {
-  gate.classList.add('hidden');
+  if (adminDialog.open) adminDialog.close();
+  portal.classList.add('hidden');
   shell.setAttribute('aria-hidden', 'false');
   sessionStorage.setItem('ekodi-auth-token', token);
   sessionStorage.setItem('ekodi-admin-email', email);
@@ -72,24 +91,22 @@ function enterAuthenticatedConsole(email, token) {
   loadAudit();
 }
 
-async function logout() {
+function logout() {
   const token = sessionStorage.getItem('ekodi-auth-token');
-  try {
-    if (token) {
-      await fetch(`${AUTH_API}/api/logout`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${token}` }
-      });
-    }
-  } finally {
-    sessionStorage.removeItem('ekodi-auth-token');
-    sessionStorage.removeItem('ekodi-admin-email');
-    shell.setAttribute('aria-hidden', 'true');
-    gate.classList.remove('hidden');
-    adminLoginForm.hidden = true;
-    adminLoginToggle.setAttribute('aria-expanded', 'false');
-    adminLoginToggle.textContent = '관리자 로그인 →';
-    notify('안전하게 로그아웃했습니다.');
+  // Drop the browser copy of the session first: an unreachable or slow auth API
+  // must never leave the console on screen while the request hangs.
+  sessionStorage.removeItem('ekodi-auth-token');
+  sessionStorage.removeItem('ekodi-admin-email');
+  shell.setAttribute('aria-hidden', 'true');
+  portal.classList.remove('hidden');
+  adminLoginForm.reset();
+  notify('안전하게 로그아웃했습니다.');
+  if (token) {
+    fetch(`${AUTH_API}/api/logout`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      keepalive: true
+    }).catch(() => {});
   }
 }
 
@@ -385,13 +402,58 @@ function updateMonitorRecommendation(data) {
   document.querySelector('#recommendList').prepend(monitorRecommendation);
 }
 
+const portalStateLabels = { online: '정상 운영', degraded: '응답 지연', offline: '연결 대기' };
+
+function renderPortalStatus(data) {
+  data.sites.forEach(site => {
+    const card = document.querySelector(`[data-portal-domain="${site.domain}"]`);
+    if (!card) return;
+    const state = card.querySelector('.portal-state');
+    state.classList.remove('online', 'degraded', 'offline');
+    state.classList.add(site.status);
+    state.replaceChildren(document.createElement('i'), document.createTextNode(portalStateLabels[site.status] || '확인 불가'));
+  });
+
+  const { online = 0, degraded = 0, offline = 0 } = data.summary || {};
+  document.querySelector('#statusOnline').textContent = String(online);
+  document.querySelector('#statusDegraded').textContent = String(degraded);
+  document.querySelector('#statusOffline').textContent = String(offline);
+
+  const heroStatus = document.querySelector('#heroStatus');
+  const heroDot = document.querySelector('#heroStatusDot');
+  heroDot.classList.remove('degraded', 'offline');
+  if (offline) heroDot.classList.add('offline');
+  else if (degraded) heroDot.classList.add('degraded');
+  heroStatus.textContent = offline || degraded
+    ? `여섯 서비스 중 ${online}개 정상 · 지연 ${degraded} · 연결 대기 ${offline}`
+    : `여섯 서비스가 모두 정상 운영 중입니다.`;
+
+  document.querySelector('#statusChecked').textContent =
+    `마지막 자동 점검 ${new Date(data.generatedAt).toLocaleString('ko-KR')}`;
+}
+
+async function fetchMonitorSnapshot() {
+  const sources = [`${MONITOR_URL}?t=${Date.now()}`, `monitor-status.json?t=${Date.now()}`];
+  let lastError;
+  for (const source of sources) {
+    try {
+      const response = await fetch(source, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data.sites) || !data.sites.length) throw new Error('점검 결과 대기 중');
+      return data;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 async function loadMonitorStatus(announce = false) {
   try {
-    const response = await fetch(`${MONITOR_URL}?t=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (!Array.isArray(data.sites) || !data.sites.length) throw new Error('점검 결과 대기 중');
+    const data = await fetchMonitorSnapshot();
     latestMonitorStatus = data;
+    renderPortalStatus(data);
     data.sites.forEach(site => {
       const row = document.querySelector(`.service-row[data-domain="${site.domain}"]`);
       if (row) setHealth(row, site);

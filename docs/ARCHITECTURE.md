@@ -4,7 +4,7 @@
 
 Version 3 is an operations MVP, not a multi-tenant business suite. Its production contract is intentionally narrow:
 
-1. Route visitors to the six EKODI services.
+1. Introduce the EKODI ecosystem and route visitors to its six services.
 2. Authenticate one platform administrator.
 3. Show measured service health.
 4. Maintain non-secret domain registration metadata.
@@ -15,9 +15,13 @@ User provisioning, content workflows, marketing recommendations, billing, and cr
 
 ## Components
 
-### Static control center
+### Static portal and control center
 
-`index.html`, `styles.css`, and `script.js` form a dependency-free browser application. It stores the opaque session token in `sessionStorage`, so closing the tab removes the browser copy. A restrictive Content Security Policy disallows inline scripts.
+`index.html`, `styles.css`, and `script.js` form a dependency-free browser application with two faces in one document: the public portal and the authenticated control center. The portal is always rendered; a successful login hides it and reveals the console shell in the same tab. The opaque session token lives in `sessionStorage`, so closing the tab removes the browser copy. A restrictive Content Security Policy disallows inline scripts.
+
+The visual system is inherited from the deployed EKODI Church site so the ecosystem reads as one product: the forest/cream/gold palette, Noto Serif KR headings, and the section rhythm are shared. Web fonts are the only third-party assets, and `style-src` and `font-src` name the two Google Fonts hosts explicitly rather than relaxing the policy.
+
+The portal renders service state from the monitoring snapshot with a two-step source order: the published file on `main` first, then the copy bundled into the deployed site. The bundled copy is a floor, not a source of truth — it is only as fresh as the last deployment, and its timestamp is always shown next to the counts.
 
 ### Authentication and operations API
 

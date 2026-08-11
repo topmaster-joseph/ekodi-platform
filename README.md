@@ -4,6 +4,7 @@ Production-oriented MVP for operating the EKODI ecosystem. The platform combines
 
 ## MVP capabilities
 
+- Public EKODI portal built on the EKODI Church live-site design system
 - Public gateway for six EKODI services
 - Scheduled health checks with online, degraded, and offline states
 - Single-admin authentication backed by Cloudflare D1
@@ -16,6 +17,24 @@ Production-oriented MVP for operating the EKODI ecosystem. The platform combines
 - Node test suite and GitHub Actions CI
 
 The UI intentionally excludes simulated approvals, fabricated recommendations, and placeholder business metrics. Features shown in the control center are backed by real data or clearly marked as configuration work.
+
+## Public portal
+
+The landing page inherits the design system of the deployed EKODI Church site
+(<https://ekodi-church-live.topmaster-joseph.workers.dev/>): forest, cream and gold palette,
+Noto Serif KR headings, and the same section rhythm. It presents the ecosystem in four parts.
+
+| Section | Content |
+|---|---|
+| `#about` | The four movements — 에클레시아, 코이노니아, 디아스포라, 희년 |
+| `#services` | The six services with their measured status |
+| `#status` | Online, degraded and pending counts plus the last probe timestamp |
+| `#connect` | Church live site and contact details |
+
+Service states come from `monitor-status.json`. The page reads the published snapshot on `main`
+and falls back to the copy bundled with the deployed site when that request fails, so the portal
+never shows an empty status. Administrator sign-in opens a modal dialog and, on success, replaces
+the portal with the control center in the same tab.
 
 ## Architecture
 
