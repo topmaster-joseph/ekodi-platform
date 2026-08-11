@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: ekodi-service-proxy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -53,20 +53,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4.119.0 deploy --config wrangler.service-proxy.toml
-      - name: Verify HTTPS service endpoints
+      - name: Verify HTTPS edge endpoints
         run: |
           set -u
           failed=0
           for domain in biz.ekodi.kr church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr; do
             code=000
             for attempt in $(seq 1 12); do
-              code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 "https://$domain/" || true)
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$domain/" || true)
               case "$code" in
                 2*|3*) break ;;
               esac
-              sleep 5
+              sleep 3
             done
-            echo "$domain http=$code"
+            echo "$domain edge_http=$code"
             case "$code" in 2*|3*) ;; *) failed=1 ;; esac
           done
           exit "$failed"
