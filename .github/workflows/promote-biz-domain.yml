@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: ekodi-biz-domain-promotion
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   promote:
@@ -20,22 +20,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Require healthy biz.ekodi.kr before promotion
+      - name: Require healthy biz.ekodi.kr edge
         run: |
-          set -u
-          code=000
-          for attempt in $(seq 1 12); do
-            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 "https://biz.ekodi.kr/" || true)
-            case "$code" in 2*|3*) break ;; esac
-            sleep 5
-          done
-          echo "biz.ekodi.kr http=$code"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://biz.ekodi.kr/" || true)
+          echo "biz.ekodi.kr edge_http=$code"
           case "$code" in 2*|3*) ;; *) exit 1 ;; esac
-      - name: Promote business service URL
+      - name: Sync latest main and promote business URL
         run: |
+          git pull --rebase origin main
           python - <<'PY'
           from pathlib import Path
           for name in ['index.html', 'scripts/monitor-lib.mjs']:
@@ -47,13 +44,16 @@ jobs:
         run: |
           npm run check
           npm test
-      - name: Commit business-domain promotion
+      - name: Commit and push business-domain promotion
         run: |
           git config user.name "EKODI Automation"
           git config user.email "automation@ekodi.kr"
           git add index.html scripts/monitor-lib.mjs
-          git diff --cached --quiet || git commit -m "Use biz.ekodi.kr as business service URL"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "Use biz.ekodi.kr as business service URL"
+            git pull --rebase origin main
+            git push
+          fi
       - name: Deploy updated platform site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
