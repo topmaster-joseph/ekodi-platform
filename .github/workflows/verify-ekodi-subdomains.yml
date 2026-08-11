@@ -1,0 +1,48 @@
+name: Verify EKODI Subdomains
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-ekodi-subdomains.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Verify Pages custom domain status
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4"
+          for spec in "ekodi-church:church.ekodi.kr" "ekodilab:lab.ekodi.kr" "ekodi-mall:mall.ekodi.kr"; do
+            project="${spec%%:*}"
+            domain="${spec#*:}"
+            result=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" \
+              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain")
+            status=$(printf '%s' "$result" | python -c "import sys,json; print(json.load(sys.stdin)['result']['status'])")
+            echo "$domain pages_status=$status"
+          done
+
+      - name: Verify HTTPS endpoints
+        shell: bash
+        run: |
+          set -u
+          failed=0
+          for domain in church.ekodi.kr lab.ekodi.kr mall.ekodi.kr books.ekodi.kr; do
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 "https://$domain/" || true)
+            echo "$domain http=$code"
+            case "$code" in
+              2*|3*) ;;
+              *) failed=1 ;;
+            esac
+          done
+          exit "$failed"
