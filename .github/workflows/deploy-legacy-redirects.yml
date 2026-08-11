@@ -1,0 +1,75 @@
+name: Deploy EKODI Legacy Redirects
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - legacy-redirect.js
+      - wrangler.legacy-redirect.toml
+      - .github/workflows/deploy-legacy-redirects.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-legacy-redirects
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Verify Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo "Missing CLOUDFLARE_ACCOUNT_ID" && exit 1)
+      - name: Detach legacy Pages domain associations
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -u
+          api="https://api.cloudflare.com/client/v4"
+          for spec in "ekodi-church:ekodichurch.kr" "ekodilab:ekodilab.kr" "ekodi-mall:ekodimall.kr"; do
+            project="${spec%%:*}"
+            domain="${spec#*:}"
+            code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
+            echo "$domain detach_http=$code"
+            if [ "$code" != "200" ] && [ "$code" != "204" ] && [ "$code" != "404" ]; then cat /tmp/delete.json || true; fi
+          done
+      - name: Deploy permanent redirect Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.legacy-redirect.toml
+      - name: Verify permanent redirects
+        run: |
+          set -u
+          failed=0
+          for spec in "ekodichurch.kr:church.ekodi.kr" "ekodilab.kr:lab.ekodi.kr" "ekodimall.kr:mall.ekodi.kr"; do
+            old="${spec%%:*}"
+            new="${spec#*:}"
+            code=000
+            location=""
+            for attempt in $(seq 1 12); do
+              curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old/domain-check?source=legacy" || true
+              code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/headers 2>/dev/null || echo 0)
+              location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
+              if [ "$code" = "301" ] && printf '%s' "$location" | grep -q "https://$new/domain-check?source=legacy"; then break; fi
+              sleep 5
+            done
+            echo "$old http=$code location=$location"
+            if [ "$code" != "301" ] || ! printf '%s' "$location" | grep -q "https://$new/domain-check?source=legacy"; then failed=1; fi
+          done
+          exit "$failed"
