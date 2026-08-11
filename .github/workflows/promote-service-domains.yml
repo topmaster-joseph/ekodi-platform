@@ -1,0 +1,56 @@
+name: Promote EKODI Service Domains
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/promote-service-domains.yml
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Switch gateway and monitor to canonical service domains
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'ekodimall.kr': 'mall.ekodi.kr',
+              'ekodibook.kr': 'books.ekodi.kr',
+              'ekodichurch.kr': 'church.ekodi.kr',
+              'ekodilab.kr': 'lab.ekodi.kr',
+          }
+
+          for name in ['index.html', 'scripts/monitor-lib.mjs']:
+              p = Path(name)
+              s = p.read_text(encoding='utf-8')
+              for old, new in replacements.items():
+                  s = s.replace(old, new)
+              p.write_text(s, encoding='utf-8')
+          PY
+      - name: Verify application
+        run: |
+          npm run check
+          npm test
+      - name: Commit service-domain promotion
+        run: |
+          git config user.name "EKODI Automation"
+          git config user.email "automation@ekodi.kr"
+          git add index.html scripts/monitor-lib.mjs
+          git diff --cached --quiet || git commit -m "Use live ekodi.kr service domains"
+          git push
+      - name: Deploy updated platform site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy:site
