@@ -1,4 +1,4 @@
-name: Enable EKODI Root Zone
+name: Repair EKODI Auth and Root Domain
 
 on:
   workflow_dispatch:
@@ -10,10 +10,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ekodi-auth-root-repair
+  cancel-in-progress: false
+
 jobs:
-  migrate:
+  repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
@@ -22,43 +26,145 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Add ekodi.kr to managed Cloudflare zones
+      - name: Patch authentication resilience and root routing
+        shell: bash
         run: |
+          set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+
+          # 1) Auth API: ensure unexpected D1/runtime errors still return JSON + CORS.
           path = Path('auth-worker.js')
           text = path.read_text(encoding='utf-8')
-          marker = "const EKODI_DOMAINS = [\n"
-          entry = "  { name: 'ekodi.kr', service: '에코디 통합 루트' },\n"
-          if entry not in text:
+          if "    try {\n      await ensureSchema(env.DB);" not in text:
+              old = "    await ensureSchema(env.DB);"
+              if old not in text:
+                  raise SystemExit('auth-worker ensureSchema marker not found')
+              text = text.replace(old, "    try {\n      await ensureSchema(env.DB);", 1)
+
+              tail = "    return reply({ error: 'Not found' }, 404);\n  }\n};"
+              replacement = """    return reply({ error: 'Not found' }, 404);\n    } catch (error) {\n      console.error('Unhandled auth API error', error);\n      return reply({\n        error: '인증 서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',\n        code: 'AUTH_API_ERROR'\n      }, 500);\n    }\n  }\n};"""
+              if tail not in text:
+                  raise SystemExit('auth-worker tail marker not found')
+              text = text.replace(tail, replacement, 1)
+          path.write_text(text, encoding='utf-8')
+
+          # 2) Frontend: translate browser-level fetch failures into a useful message.
+          path = Path('script.js')
+          text = path.read_text(encoding='utf-8')
+          old = """  } catch (error) {\n    loginError.textContent = error.message;\n  } finally {"""
+          new = """  } catch (error) {\n    const networkFailure = error instanceof TypeError || error?.message === 'Failed to fetch';\n    loginError.textContent = networkFailure\n      ? '인증 서버 연결 오류입니다. 서버 상태를 확인한 뒤 다시 시도해 주세요.'\n      : error.message;\n  } finally {"""
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif "const networkFailure = error instanceof TypeError" not in text:
+              raise SystemExit('script.js login catch marker not found')
+          path.write_text(text, encoding='utf-8')
+
+          # 3) Make ekodi.kr and www.ekodi.kr canonical custom domains of the platform Worker.
+          path = Path('wrangler.site.toml')
+          text = path.read_text(encoding='utf-8')
+          if 'pattern = "ekodi.kr"' not in text:
+              routes = """\n[[routes]]\npattern = \"ekodi.kr\"\nzone_name = \"ekodi.kr\"\ncustom_domain = true\n\n[[routes]]\npattern = \"www.ekodi.kr\"\nzone_name = \"ekodi.kr\"\ncustom_domain = true\n\n"""
+              marker = '[assets]\n'
               if marker not in text:
-                  raise SystemExit('EKODI_DOMAINS marker not found')
-              text = text.replace(marker, marker + entry, 1)
-              path.write_text(text, encoding='utf-8')
+                  raise SystemExit('wrangler.site.toml assets marker not found')
+              text = text.replace(marker, routes + marker, 1)
+          path.write_text(text, encoding='utf-8')
+
+          # 4) Normalize EKODI Books links to the canonical root URL.
+          path = Path('books/index.html')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('href="https://ekodi.kr"', 'href="https://ekodi.kr/"')
+          path.write_text(text, encoding='utf-8')
+
+          # 5) Future production deploys must verify API, D1/CORS, root portal and Books.
+          path = Path('.github/workflows/deploy.yml')
+          text = path.read_text(encoding='utf-8')
+          if 'Verify deployed auth API and D1' not in text:
+              api_marker = """      - name: Deploy platform site\n        env:\n          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\n          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n        run: npm run deploy:site\n"""
+              api_check = """      - name: Verify deployed auth API and D1\n        shell: bash\n        run: |\n          set -euo pipefail\n          api='https://ekodi-auth-api.topmaster-joseph.workers.dev'\n          origin='https://shy-thunder-39a4.topmaster-joseph.workers.dev'\n          for attempt in $(seq 1 12); do\n            health=$(curl -fsS --connect-timeout 5 --max-time 12 \"$api/health\" || true)\n            status=$(curl -fsS --connect-timeout 5 --max-time 12 -H \"Origin: $origin\" \"$api/api/status\" || true)\n            if printf '%s' \"$health\" | grep -q '\"ok\":true' && printf '%s' \"$status\" | grep -q '\"initialized\"'; then\n              echo \"Auth API ready: $status\"\n              break\n            fi\n            if [ \"$attempt\" -eq 12 ]; then\n              echo \"Auth API/D1 verification failed\"\n              echo \"health=$health\"\n              echo \"status=$status\"\n              exit 1\n            fi\n            sleep 5\n          done\n\n"""
+              if api_marker not in text:
+                  raise SystemExit('deploy.yml platform deploy marker not found')
+              text = text.replace(api_marker, api_check + api_marker, 1)
+
+          if 'Verify EKODI root and Books navigation' not in text:
+              books_marker = """      - name: Deploy EKODI Books\n        env:\n          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\n          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n        run: npm run deploy:books\n"""
+              final_check = """      - name: Verify EKODI root and Books navigation\n        shell: bash\n        run: |\n          set -euo pipefail\n          for attempt in $(seq 1 12); do\n            all_ok=1\n            for url in 'https://ekodi.kr/' 'https://www.ekodi.kr/' 'https://books.ekodi.kr/'; do\n              code=$(curl -L -sS -o /tmp/ekodi-check -w '%{http_code}' --connect-timeout 5 --max-time 15 \"$url\" || true)\n              echo \"$url -> $code\"\n              case \"$code\" in 2*|3*) ;; *) all_ok=0 ;; esac\n            done\n            if [ \"$all_ok\" -eq 1 ]; then\n              curl -fsS --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' | grep -q 'href=\"https://ekodi.kr/\"'\n              exit 0\n            fi\n            sleep 5\n          done\n          exit 1\n\n"""
+              if books_marker not in text:
+                  raise SystemExit('deploy.yml Books marker not found')
+              text = text.replace(books_marker, books_marker + final_check, 1)
+          path.write_text(text, encoding='utf-8')
           PY
 
-      - name: Verify code
+      - name: Verify patched code
         run: |
           npm run check
           npm test
+          npm run validate:books
 
-      - name: Commit root-zone policy
+      - name: Commit durable fixes
+        shell: bash
         run: |
+          set -euo pipefail
           if git diff --quiet; then
-            echo 'No source change required.'
+            echo 'No source changes required.'
           else
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add auth-worker.js
-            git commit -m 'Manage ekodi.kr as the ecosystem root zone'
+            git add auth-worker.js script.js wrangler.site.toml books/index.html .github/workflows/deploy.yml
+            git commit -m 'fix: harden auth API and connect EKODI root domain'
             git push
           fi
 
-      - name: Deploy updated DNS management API
+      - name: Deploy repaired auth API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy:api
+
+      - name: Verify auth API, D1 and CORS
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://ekodi-auth-api.topmaster-joseph.workers.dev'
+          origin='https://shy-thunder-39a4.topmaster-joseph.workers.dev'
+          for attempt in $(seq 1 12); do
+            body=$(mktemp)
+            headers=$(mktemp)
+            code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 12 -H "Origin: $origin" "$api/api/status" || true)
+            echo "status attempt=$attempt http=$code body=$(cat "$body" 2>/dev/null || true)"
+            if [ "$code" = '200' ] && grep -q '"initialized"' "$body" && grep -qi "^access-control-allow-origin: $origin" "$headers"; then
+              echo 'Auth API, D1 and CORS are healthy.'
+              rm -f "$body" "$headers"
+              break
+            fi
+            rm -f "$body" "$headers"
+            if [ "$attempt" -eq 12 ]; then exit 1; fi
+            sleep 5
+          done
+
+      - name: Deploy root platform and Books
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-          npm run deploy:api
+          npm run deploy:site
+          npm run deploy:books
+
+      - name: Verify root portal and Books link
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
+            www_code=$(curl -L -sS -o /tmp/www.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://www.ekodi.kr/' || true)
+            books_code=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
+            echo "attempt=$attempt root=$root_code www=$www_code books=$books_code"
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$www_code" =~ ^[23] ]] && [[ "$books_code" =~ ^[23] ]] && grep -q 'href="https://ekodi.kr/"' /tmp/books.html; then
+              echo 'EKODI root portal and Books navigation are connected.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Root/Books verification did not become healthy in time.'
+          exit 1
