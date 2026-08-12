@@ -48,12 +48,12 @@ jobs:
         run: |
           npm run build
           test -f dist/marketing-ai/index.html
-          test -f dist/marketing-ai/jadam-mokpo-univ/index.html
-          test -f dist/marketing-ai/pizzamaru-mokpo-univ/index.html
-          test -f dist/marketing-ai/yogurtpurple-mokpo-univ/index.html
-          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/jadam-mokpo-univ/index.html
-          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/pizzamaru-mokpo-univ/index.html
-          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/yogurtpurple-mokpo-univ/index.html
+          test -f dist/marketing-ai/jadam/index.html
+          test -f dist/marketing-ai/pizzamaru/index.html
+          test -f dist/marketing-ai/yogurtpurple/index.html
+          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/jadam/index.html
+          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/pizzamaru/index.html
+          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/yogurtpurple/index.html
 
       - name: Ensure standalone Pages project
         shell: bash
@@ -109,12 +109,15 @@ jobs:
           pages_host=$(printf '%s' "$project" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result']['subdomain'])")
           echo "Pages host: $pages_host"
           for attempt in $(seq 1 12); do
-            code=$(curl -L -sS -o /tmp/pages.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$pages_host/" || true)
-            echo "attempt=$attempt pages=$code"
-            if [ "$code" = '200' ] && grep -Fq '마케팅AI' /tmp/pages.html; then
-              echo 'Marketing AI standalone Pages deployment verified.'
-              exit 0
-            fi
+            ok=1
+            for spec in '/:마케팅AI' '/jadam/:자담치킨 목포대점' '/pizzamaru/:피자마루 목포대점' '/yogurtpurple/:요거트퍼플 목포대점'; do
+              path="${spec%%:*}"
+              needle="${spec#*:}"
+              code=$(curl -L -sS -o /tmp/pages.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$pages_host$path" || true)
+              echo "$path -> $code"
+              if [ "$code" != '200' ] || ! grep -Fq "$needle" /tmp/pages.html; then ok=0; fi
+            done
+            [ "$ok" -eq 1 ] && { echo 'Marketing AI standalone Pages deployment verified.'; exit 0; }
             sleep 5
           done
           exit 1
