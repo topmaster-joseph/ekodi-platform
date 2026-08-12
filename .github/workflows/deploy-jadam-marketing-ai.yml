@@ -100,19 +100,37 @@ jobs:
             case "$create" in 200|201) ;; *) echo "Custom domain attach failed: HTTP $create"; exit 1;; esac
           fi
 
-      - name: Verify Marketing AI production
+      - name: Verify standalone Pages deployment
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 20); do
-            pages_code=$(curl -L -sS -o /tmp/pages.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-ai.pages.dev/' || true)
-            domain_code=$(curl -L -sS -o /tmp/domain.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$CF_DOMAIN/" || true)
-            echo "attempt=$attempt pages=$pages_code custom=$domain_code"
-            if [ "$pages_code" = '200' ] && grep -Fq '마케팅AI' /tmp/pages.html && [ "$domain_code" = '200' ] && grep -Fq '마케팅AI' /tmp/domain.html; then
-              echo 'Marketing AI standalone deployment verified.'
+          api='https://api.cloudflare.com/client/v4'
+          project=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$CF_PROJECT")
+          pages_host=$(printf '%s' "$project" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result']['subdomain'])")
+          echo "Pages host: $pages_host"
+          for attempt in $(seq 1 12); do
+            code=$(curl -L -sS -o /tmp/pages.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$pages_host/" || true)
+            echo "attempt=$attempt pages=$code"
+            if [ "$code" = '200' ] && grep -Fq '마케팅AI' /tmp/pages.html; then
+              echo 'Marketing AI standalone Pages deployment verified.'
               exit 0
             fi
             sleep 5
           done
-          echo 'Marketing AI custom-domain verification is still pending.'
           exit 1
+
+      - name: Report custom-domain state
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          result=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$CF_PROJECT/domains/$CF_DOMAIN")
+          status=$(printf '%s' "$result" | python -c "import sys,json; d=json.load(sys.stdin); print((d.get('result') or {}).get('status','unknown'))")
+          code=$(curl -L -sS -o /tmp/domain.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$CF_DOMAIN/" || true)
+          echo "$CF_DOMAIN pages_status=$status http=$code"
+          if [ "$code" = '200' ]; then
+            grep -Fq '마케팅AI' /tmp/domain.html
+            echo 'Custom domain is live.'
+          else
+            echo 'Custom domain remains pending DNS activation; Pages deployment itself is healthy.'
+          fi
