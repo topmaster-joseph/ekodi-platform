@@ -1,0 +1,70 @@
+name: Production Revenue Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'site-worker.js'
+      - 'api-worker.js'
+      - 'control-center.html'
+      - 'control-center.js'
+      - 'test/**'
+      - '.github/workflows/production-gate.yml'
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-revenue-gate
+  cancel-in-progress: true
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Run business contract tests
+        run: npm test
+      - name: Verify revenue-critical production endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_html() {
+            url="$1"
+            needle="$2"
+            label="$3"
+            code=$(curl -sS --max-redirs 3 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
+            echo "$label | $url | HTTP $code"
+            [ "$code" = '200' ]
+            grep -Fq "$needle" /tmp/body
+          }
+
+          verify_no_redirect() {
+            url="$1"
+            code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
+            echo "ADMIN | $url | HTTP $code"
+            [ "$code" = '200' ]
+            grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/headers
+            ! grep -Fiq '^location:' /tmp/headers
+            grep -Fq 'EKODI Control Center' /tmp/body
+          }
+
+          verify_no_redirect 'https://admin.ekodi.kr/'
+          verify_no_redirect 'https://admin.ekodi.kr/control-center.html'
+          verify_html 'https://cgma.ekodi.kr/' '청계면상인회' 'CLIENT cgma'
+          verify_html 'https://jadam.ekodi.kr/' '자담치킨 목포대점' 'CLIENT jadam'
+          verify_html 'https://pizzamaru.ekodi.kr/' '피자마루 목포대점' 'CLIENT pizzamaru'
+          verify_html 'https://yogurt.ekodi.kr/' '요거트퍼플 목포대점' 'CLIENT yogurt'
+          verify_html 'https://marketing.ekodi.kr/' '마케팅AI' 'PLATFORM marketing'
+
+          api_code=$(curl -sS -o /tmp/api -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/health')
+          echo "CONTROL API | https://api.ekodi.kr/health | HTTP $api_code"
+          [ "$api_code" = '200' ]
