@@ -33,7 +33,6 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          # 1) Auth API: ensure unexpected D1/runtime errors still return JSON + CORS.
           path = Path('auth-worker.js')
           text = path.read_text(encoding='utf-8')
           if "    try {\n      await ensureSchema(env.DB);" not in text:
@@ -41,7 +40,6 @@ jobs:
               if old not in text:
                   raise SystemExit('auth-worker ensureSchema marker not found')
               text = text.replace(old, "    try {\n      await ensureSchema(env.DB);", 1)
-
               tail = "    return reply({ error: 'Not found' }, 404);\n  }\n};"
               replacement = """    return reply({ error: 'Not found' }, 404);\n    } catch (error) {\n      console.error('Unhandled auth API error', error);\n      return reply({\n        error: '인증 서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',\n        code: 'AUTH_API_ERROR'\n      }, 500);\n    }\n  }\n};"""
               if tail not in text:
@@ -49,7 +47,6 @@ jobs:
               text = text.replace(tail, replacement, 1)
           path.write_text(text, encoding='utf-8')
 
-          # 2) Frontend: translate browser-level fetch failures into a useful message.
           path = Path('script.js')
           text = path.read_text(encoding='utf-8')
           old = """  } catch (error) {\n    loginError.textContent = error.message;\n  } finally {"""
@@ -60,7 +57,6 @@ jobs:
               raise SystemExit('script.js login catch marker not found')
           path.write_text(text, encoding='utf-8')
 
-          # 3) Make ekodi.kr and www.ekodi.kr canonical custom domains of the platform Worker.
           path = Path('wrangler.site.toml')
           text = path.read_text(encoding='utf-8')
           if 'pattern = "ekodi.kr"' not in text:
@@ -71,28 +67,23 @@ jobs:
               text = text.replace(marker, routes + marker, 1)
           path.write_text(text, encoding='utf-8')
 
-          # 4) Normalize EKODI Books links to the canonical root URL.
           path = Path('books/index.html')
           text = path.read_text(encoding='utf-8')
           text = text.replace('href="https://ekodi.kr"', 'href="https://ekodi.kr/"')
           path.write_text(text, encoding='utf-8')
 
-          # 5) Future production deploys must verify API, D1/CORS, root portal and Books.
           path = Path('.github/workflows/deploy.yml')
           text = path.read_text(encoding='utf-8')
           if 'Verify deployed auth API and D1' not in text:
-              api_marker = """      - name: Deploy platform site\n        env:\n          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\n          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n        run: npm run deploy:site\n"""
-              api_check = """      - name: Verify deployed auth API and D1\n        shell: bash\n        run: |\n          set -euo pipefail\n          api='https://ekodi-auth-api.topmaster-joseph.workers.dev'\n          origin='https://shy-thunder-39a4.topmaster-joseph.workers.dev'\n          for attempt in $(seq 1 12); do\n            health=$(curl -fsS --connect-timeout 5 --max-time 12 \"$api/health\" || true)\n            status=$(curl -fsS --connect-timeout 5 --max-time 12 -H \"Origin: $origin\" \"$api/api/status\" || true)\n            if printf '%s' \"$health\" | grep -q '\"ok\":true' && printf '%s' \"$status\" | grep -q '\"initialized\"'; then\n              echo \"Auth API ready: $status\"\n              break\n            fi\n            if [ \"$attempt\" -eq 12 ]; then\n              echo \"Auth API/D1 verification failed\"\n              echo \"health=$health\"\n              echo \"status=$status\"\n              exit 1\n            fi\n            sleep 5\n          done\n\n"""
-              if api_marker not in text:
+              marker = '      - name: Deploy platform site\n'
+              check = """      - name: Verify deployed auth API and D1\n        shell: bash\n        run: |\n          set -euo pipefail\n          api='https://ekodi-auth-api.topmaster-joseph.workers.dev'\n          origin='https://shy-thunder-39a4.topmaster-joseph.workers.dev'\n          for attempt in $(seq 1 12); do\n            health=$(curl -fsS --connect-timeout 5 --max-time 12 \"$api/health\" || true)\n            status=$(curl -fsS --connect-timeout 5 --max-time 12 -H \"Origin: $origin\" \"$api/api/status\" || true)\n            if printf '%s' \"$health\" | grep -q '\"ok\":true' && printf '%s' \"$status\" | grep -q '\"initialized\"'; then\n              echo \"Auth API ready: $status\"\n              break\n            fi\n            if [ \"$attempt\" -eq 12 ]; then\n              echo \"Auth API/D1 verification failed\"\n              echo \"health=$health\"\n              echo \"status=$status\"\n              exit 1\n            fi\n            sleep 5\n          done\n\n"""
+              if marker not in text:
                   raise SystemExit('deploy.yml platform deploy marker not found')
-              text = text.replace(api_marker, api_check + api_marker, 1)
+              text = text.replace(marker, check + marker, 1)
 
           if 'Verify EKODI root and Books navigation' not in text:
-              books_marker = """      - name: Deploy EKODI Books\n        env:\n          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\n          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n        run: npm run deploy:books\n"""
-              final_check = """      - name: Verify EKODI root and Books navigation\n        shell: bash\n        run: |\n          set -euo pipefail\n          for attempt in $(seq 1 12); do\n            all_ok=1\n            for url in 'https://ekodi.kr/' 'https://www.ekodi.kr/' 'https://books.ekodi.kr/'; do\n              code=$(curl -L -sS -o /tmp/ekodi-check -w '%{http_code}' --connect-timeout 5 --max-time 15 \"$url\" || true)\n              echo \"$url -> $code\"\n              case \"$code\" in 2*|3*) ;; *) all_ok=0 ;; esac\n            done\n            if [ \"$all_ok\" -eq 1 ]; then\n              curl -fsS --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' | grep -q 'href=\"https://ekodi.kr/\"'\n              exit 0\n            fi\n            sleep 5\n          done\n          exit 1\n\n"""
-              if books_marker not in text:
-                  raise SystemExit('deploy.yml Books marker not found')
-              text = text.replace(books_marker, books_marker + final_check, 1)
+              final_check = """\n      - name: Verify EKODI root and Books navigation\n        shell: bash\n        run: |\n          set -euo pipefail\n          for attempt in $(seq 1 12); do\n            all_ok=1\n            for url in 'https://ekodi.kr/' 'https://www.ekodi.kr/' 'https://books.ekodi.kr/'; do\n              code=$(curl -L -sS -o /tmp/ekodi-check -w '%{http_code}' --connect-timeout 5 --max-time 15 \"$url\" || true)\n              echo \"$url -> $code\"\n              case \"$code\" in 2*|3*) ;; *) all_ok=0 ;; esac\n            done\n            if [ \"$all_ok\" -eq 1 ]; then\n              curl -fsS --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' | grep -q 'href=\"https://ekodi.kr/\"'\n              exit 0\n            fi\n            sleep 5\n          done\n          exit 1\n"""
+              text = text.rstrip() + '\n' + final_check
           path.write_text(text, encoding='utf-8')
           PY
 
