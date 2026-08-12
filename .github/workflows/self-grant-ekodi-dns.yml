@@ -1,0 +1,171 @@
+name: Direct Cloudflare DNS Permission Repair
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/self-grant-ekodi-dns.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_ACCOUNT_ID: 6986fd633f4e33bf804c921697b2d797
+      CF_TOKEN_ID: 70e86092b1fa0d0a191afe31b83cca56
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Grant DNS Write to the existing EKODI deploy token
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request, urllib.error
+
+          api = 'https://api.cloudflare.com/client/v4'
+          account = os.environ['CF_ACCOUNT_ID']
+          token_id = os.environ['CF_TOKEN_ID']
+          bearer = os.environ['CF_API_TOKEN']
+
+          def request(path, method='GET', body=None):
+              data = None if body is None else json.dumps(body).encode()
+              req = urllib.request.Request(api + path, data=data, method=method)
+              req.add_header('Authorization', 'Bearer ' + bearer)
+              req.add_header('Content-Type', 'application/json')
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      return r.status, json.load(r)
+              except urllib.error.HTTPError as e:
+                  try:
+                      payload = json.load(e)
+                  except Exception:
+                      payload = {'errors': [{'message': str(e)}]}
+                  return e.code, payload
+
+          status, token = request(f'/accounts/{account}/tokens/{token_id}')
+          if status != 200 or not token.get('success'):
+              print(f'Account token self-management unavailable: HTTP {status}')
+              print(json.dumps(token.get('errors', []), ensure_ascii=False))
+              raise SystemExit(42)
+
+          status, groups = request(f'/accounts/{account}/tokens/permission_groups')
+          if status != 200 or not groups.get('success'):
+              print(f'Permission-group lookup failed: HTTP {status}')
+              print(json.dumps(groups.get('errors', []), ensure_ascii=False))
+              raise SystemExit(43)
+
+          group_rows = groups.get('result') or []
+          by_id = {g.get('id'): g for g in group_rows}
+          dns = next((g for g in group_rows if g.get('name') in ('DNS Write', 'DNS Edit') and 'com.cloudflare.api.account.zone' in (g.get('scopes') or [])), None)
+          if not dns:
+              dns = next((g for g in group_rows if g.get('name') in ('DNS Write', 'DNS Edit')), None)
+          if not dns:
+              print('Could not locate DNS Write/Edit permission group.')
+              raise SystemExit(44)
+
+          current = token.get('result') or {}
+          policies = current.get('policies') or []
+          if any(dns['id'] == pg.get('id') for p in policies for pg in (p.get('permission_groups') or [])):
+              print('DNS Write is already present in the token policy.')
+          else:
+              target = None
+              for policy in policies:
+                  names = {by_id.get(pg.get('id'), {}).get('name') for pg in (policy.get('permission_groups') or [])}
+                  if 'Workers Routes Write' in names or 'Workers Routes Edit' in names:
+                      target = policy
+                      break
+              if target is None:
+                  print('Could not safely identify the existing zone-wide Workers Routes policy.')
+                  raise SystemExit(45)
+              target.setdefault('permission_groups', []).append({'id': dns['id']})
+
+              update = {
+                  'name': current.get('name') or 'EKODI GitHub Deploy',
+                  'policies': policies,
+                  'status': current.get('status') or 'active'
+              }
+              for key in ('condition', 'expires_on', 'not_before'):
+                  if current.get(key) is not None:
+                      update[key] = current[key]
+              status, result = request(f'/accounts/{account}/tokens/{token_id}', 'PUT', update)
+              if status != 200 or not result.get('success'):
+                  print(f'Token update failed: HTTP {status}')
+                  print(json.dumps(result.get('errors', []), ensure_ascii=False))
+                  raise SystemExit(46)
+              print('DNS Write permission added to EKODI GitHub Deploy.')
+          PY
+
+      - name: Verify DNS API access
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          code=$(curl -sS -o /tmp/records.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            "$api/zones/e39707f426b195d12c67a86f62b52ba7/dns_records?per_page=5")
+          echo "DNS records API HTTP $code"
+          test "$code" = '200'
+
+      - name: Proxy root DNS records
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          zone='e39707f426b195d12c67a86f62b52ba7'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          proxy_name() {
+            name="$1"
+            curl -fsS "${auth[@]}" "$api/zones/$zone/dns_records?name=$name&per_page=100" > /tmp/records.json
+            mapfile -t ids < <(python - <<'PY'
+          import json
+          d=json.load(open('/tmp/records.json'))
+          for r in d.get('result') or []:
+              if r.get('type') in {'A','AAAA','CNAME'}:
+                  print(r['id'])
+          PY
+            )
+            if [ "${#ids[@]}" -eq 0 ]; then
+              payload=$(python -c "import json; print(json.dumps({'type':'A','name':'$name','content':'192.0.2.0','ttl':1,'proxied':True}))")
+              curl -fsS -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone/dns_records" >/dev/null
+              echo "Created proxied DNS record: $name"
+            else
+              for id in "${ids[@]}"; do
+                curl -fsS -X PATCH "${auth[@]}" --data '{"proxied":true,"ttl":1}' "$api/zones/$zone/dns_records/$id" >/dev/null
+              done
+              echo "Proxied existing DNS record(s): $name"
+            fi
+          }
+          proxy_name 'ekodi.kr'
+          proxy_name 'www.ekodi.kr'
+
+      - name: Deploy root Worker and Books
+        run: |
+          npm run deploy:site
+          npm run deploy:books
+
+      - name: Verify end-to-end
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
+            books=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
+            echo "attempt=$attempt root=$root books=$books"
+            if [[ "$root" =~ ^[23] ]] && [[ "$books" =~ ^[23] ]] && grep -q 'href="https://ekodi.kr/"' /tmp/books.html; then
+              echo 'EKODI root and Books navigation are healthy.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
