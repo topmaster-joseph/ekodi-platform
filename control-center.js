@@ -22,6 +22,220 @@ function authHeaders(json = false) {
   return headers;
 }
 
+function installPasswordResetUI() {
+  const card = loginForm.closest('.login-card');
+  if (!card || document.querySelector('#passwordResetForm')) return;
+
+  const resetToggle = document.createElement('button');
+  resetToggle.type = 'button';
+  resetToggle.id = 'passwordResetToggle';
+  resetToggle.className = 'ghost full';
+  resetToggle.textContent = '비밀번호를 잊으셨나요? 재설정';
+  resetToggle.style.marginTop = '10px';
+
+  const resetForm = document.createElement('form');
+  resetForm.id = 'passwordResetForm';
+  resetForm.hidden = true;
+  resetForm.setAttribute('aria-label', '관리자 비밀번호 재설정');
+
+  const heading = document.createElement('div');
+  heading.style.margin = '18px 0 14px';
+  const title = document.createElement('strong');
+  title.textContent = '관리자 비밀번호 재설정';
+  title.style.display = 'block';
+  title.style.marginBottom = '6px';
+  const copy = document.createElement('small');
+  copy.textContent = '관리자 복구 코드와 새 비밀번호를 입력합니다. 성공하면 기존 로그인 세션은 모두 종료됩니다.';
+  copy.style.display = 'block';
+  copy.style.lineHeight = '1.55';
+  copy.style.opacity = '.75';
+  heading.append(title, copy);
+
+  const emailLabel = document.createElement('label');
+  emailLabel.textContent = '관리자 이메일';
+  const email = document.createElement('input');
+  email.name = 'email';
+  email.type = 'email';
+  email.autocomplete = 'username';
+  email.readOnly = true;
+  email.required = true;
+  emailLabel.append(email);
+
+  const codeLabel = document.createElement('label');
+  codeLabel.textContent = '관리자 복구 코드';
+  const code = document.createElement('input');
+  code.name = 'recoveryCode';
+  code.type = 'text';
+  code.autocomplete = 'off';
+  code.spellcheck = false;
+  code.placeholder = 'EKODI-...';
+  code.required = true;
+  codeLabel.append(code);
+
+  const passwordLabel = document.createElement('label');
+  passwordLabel.textContent = '새 비밀번호';
+  const password = document.createElement('input');
+  password.name = 'password';
+  password.type = 'password';
+  password.minLength = 12;
+  password.autocomplete = 'new-password';
+  password.placeholder = '12자 이상';
+  password.required = true;
+  passwordLabel.append(password);
+
+  const confirmLabel = document.createElement('label');
+  confirmLabel.textContent = '새 비밀번호 확인';
+  const confirm = document.createElement('input');
+  confirm.name = 'confirmPassword';
+  confirm.type = 'password';
+  confirm.minLength = 12;
+  confirm.autocomplete = 'new-password';
+  confirm.required = true;
+  confirmLabel.append(confirm);
+
+  const error = document.createElement('p');
+  error.id = 'passwordResetError';
+  error.className = 'error';
+  error.setAttribute('role', 'alert');
+
+  const submit = document.createElement('button');
+  submit.className = 'primary full';
+  submit.type = 'submit';
+  submit.textContent = '새 비밀번호로 재설정';
+
+  const cancel = document.createElement('button');
+  cancel.className = 'ghost full';
+  cancel.type = 'button';
+  cancel.textContent = '로그인으로 돌아가기';
+  cancel.style.marginTop = '8px';
+
+  const recoveryResult = document.createElement('div');
+  recoveryResult.id = 'passwordResetResult';
+  recoveryResult.hidden = true;
+  recoveryResult.style.marginTop = '16px';
+  recoveryResult.style.padding = '14px';
+  recoveryResult.style.border = '1px solid rgba(125, 211, 252, .35)';
+  recoveryResult.style.borderRadius = '10px';
+  recoveryResult.style.background = 'rgba(30, 64, 175, .12)';
+
+  resetForm.append(heading, emailLabel, codeLabel, passwordLabel, confirmLabel, error, submit, cancel, recoveryResult);
+  loginForm.insertAdjacentElement('afterend', resetToggle);
+  resetToggle.insertAdjacentElement('afterend', resetForm);
+
+  function resetRecoveryView() {
+    resetForm.querySelectorAll('label, #passwordResetError, button').forEach(element => { element.hidden = false; });
+    title.textContent = '관리자 비밀번호 재설정';
+    copy.textContent = '관리자 복구 코드와 새 비밀번호를 입력합니다. 성공하면 기존 로그인 세션은 모두 종료됩니다.';
+    heading.hidden = false;
+    recoveryResult.hidden = true;
+    recoveryResult.textContent = '';
+  }
+
+  function showLogin() {
+    resetRecoveryView();
+    resetForm.hidden = true;
+    resetToggle.hidden = authMode === 'setup';
+    loginForm.hidden = false;
+    loginError.textContent = '';
+    resetForm.reset();
+  }
+
+  resetToggle.addEventListener('click', () => {
+    resetRecoveryView();
+    loginForm.hidden = true;
+    resetToggle.hidden = true;
+    resetForm.hidden = false;
+    email.value = loginForm.elements.email.value;
+    error.textContent = '';
+    code.focus();
+  });
+
+  cancel.addEventListener('click', showLogin);
+
+  resetForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    error.textContent = '';
+    recoveryResult.hidden = true;
+    if (!resetForm.checkValidity()) return resetForm.reportValidity();
+    if (password.value !== confirm.value) {
+      error.textContent = '새 비밀번호와 확인 값이 일치하지 않습니다.';
+      confirm.focus();
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = '안전하게 재설정 중…';
+    try {
+      const response = await fetch(`${API}/api/password/reset`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          email: email.value.trim().toLowerCase(),
+          recoveryCode: code.value.trim(),
+          password: password.value
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '비밀번호 재설정에 실패했습니다.');
+
+      sessionStorage.setItem('ekodi-auth-token', result.token);
+      sessionStorage.setItem('ekodi-admin-email', result.email);
+      resetForm.querySelectorAll('label, #passwordResetError, button').forEach(element => { element.hidden = true; });
+      heading.hidden = false;
+      title.textContent = '비밀번호 재설정 완료';
+      copy.textContent = '아래 새 복구 코드는 다음 비밀번호 재설정에 필요합니다. 안전한 곳에 보관해 주세요.';
+      recoveryResult.hidden = false;
+
+      const codeTitle = document.createElement('small');
+      codeTitle.textContent = '새 관리자 복구 코드';
+      codeTitle.style.display = 'block';
+      codeTitle.style.marginBottom = '7px';
+      const codeValue = document.createElement('code');
+      codeValue.textContent = result.recoveryCode;
+      codeValue.style.display = 'block';
+      codeValue.style.wordBreak = 'break-all';
+      codeValue.style.fontSize = '13px';
+      codeValue.style.padding = '10px';
+      codeValue.style.background = 'rgba(2, 6, 23, .35)';
+      codeValue.style.borderRadius = '7px';
+      const copyButton = document.createElement('button');
+      copyButton.type = 'button';
+      copyButton.className = 'ghost full';
+      copyButton.textContent = '복구 코드 복사';
+      copyButton.style.marginTop = '8px';
+      const enterButton = document.createElement('button');
+      enterButton.type = 'button';
+      enterButton.className = 'primary full';
+      enterButton.textContent = '복구 코드 확인 후 콘솔 입장';
+      enterButton.style.marginTop = '8px';
+      recoveryResult.replaceChildren(codeTitle, codeValue, copyButton, enterButton);
+
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(result.recoveryCode);
+          copyButton.textContent = '복사했습니다';
+        } catch {
+          copyButton.textContent = '코드를 선택해 복사해 주세요';
+        }
+      });
+      enterButton.addEventListener('click', () => {
+        showApp(result.email);
+        apiState.textContent = '비밀번호 재설정 · 인증 세션 정상';
+      });
+    } catch (resetError) {
+      error.textContent = resetError.message || '비밀번호 재설정에 실패했습니다.';
+    } finally {
+      submit.disabled = false;
+      submit.textContent = '새 비밀번호로 재설정';
+    }
+  });
+
+  window.addEventListener('ekodi-auth-mode', () => {
+    resetToggle.hidden = authMode === 'setup';
+  });
+}
+
 function hostScope() {
   const host = location.hostname.toLowerCase();
   if (host.startsWith('admin.biz.')) return 'BIZ';
@@ -59,6 +273,7 @@ async function loadStatus() {
     if (status.adminEmail) email.value = status.adminEmail;
     email.readOnly = authMode === 'setup';
     apiState.textContent = 'api.ekodi.kr 정상';
+    window.dispatchEvent(new Event('ekodi-auth-mode'));
   } catch {
     apiState.textContent = '인증 API 확인 필요';
     loginError.textContent = '인증 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
@@ -343,6 +558,7 @@ runHealthCheckButton.addEventListener('click', async () => {
   }
 });
 
+installPasswordResetUI();
 applyScope();
 activate('overview');
 restoreSession();

@@ -2,6 +2,7 @@ const DEFAULT_ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
 const DEFAULT_ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
 const LEGACY_ITERATIONS = 100000;
 const CURRENT_ITERATIONS = 310000;
+const BOOTSTRAP_RECOVERY_HASH = 'a3a3f6c2f64ee7f1595741906bf19a14d2a5d1184c8255d9a330719491d3a21b';
 
 const encoder = new TextEncoder();
 
@@ -49,8 +50,15 @@ async function sha256(value) {
   return bytesToHex(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
 }
 
+function saltBytes(saltHex) {
+  const normalized = String(saltHex || '').trim();
+  if (!/^(?:[a-f0-9]{2}){16,64}$/i.test(normalized)) return null;
+  return Uint8Array.from(normalized.match(/.{2}/g), byte => parseInt(byte, 16));
+}
+
 async function passwordHash(password, saltHex, iterations = CURRENT_ITERATIONS) {
-  const salt = Uint8Array.from(saltHex.match(/.{2}/g), byte => parseInt(byte, 16));
+  const salt = saltBytes(saltHex);
+  if (!salt || typeof password !== 'string') return null;
   const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
   return bytesToHex(await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
@@ -60,10 +68,17 @@ async function passwordHash(password, saltHex, iterations = CURRENT_ITERATIONS) 
 }
 
 export function secureEqual(left, right) {
+  left = String(left || '');
+  right = String(right || '');
   if (left.length !== right.length) return false;
   let result = 0;
   for (let index = 0; index < left.length; index += 1) result |= left.charCodeAt(index) ^ right.charCodeAt(index);
   return result === 0;
+}
+
+function newRecoveryCode() {
+  const hex = bytesToHex(crypto.getRandomValues(new Uint8Array(12))).toUpperCase();
+  return `EKODI-${hex.match(/.{1,4}/g).join('-')}`;
 }
 
 async function ensureSchema(db) {
@@ -89,6 +104,16 @@ async function ensureSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ip_hash TEXT NOT NULL,
       attempted_at TEXT NOT NULL
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS recovery_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ip_hash TEXT NOT NULL,
+      attempted_at TEXT NOT NULL
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS password_recovery (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      recovery_hash TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -220,7 +245,7 @@ export default {
     if (!isAllowedOrigin(origin, env)) return reply({ error: '허용되지 않은 요청입니다.' }, 403);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
     const url = new URL(request.url);
-    if (request.method === 'GET' && url.pathname === '/health') return reply({ ok: true, service: 'ekodi-auth-api', version: 3 });
+    if (request.method === 'GET' && url.pathname === '/health') return reply({ ok: true, service: 'ekodi-auth-api', version: 4 });
     if (!env.DB) return reply({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
 
     try {
@@ -229,7 +254,7 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/api/status') {
       const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM admins').first();
-      return reply({ initialized: Number(count.count) > 0, adminEmail });
+      return reply({ initialized: Number(count.count) > 0, adminEmail, passwordReset: true });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/setup') {
@@ -283,6 +308,71 @@ export default {
     }
 
 
+
+    if (request.method === 'POST' && url.pathname === '/api/password/reset') {
+      const ipHash = await sha256(request.headers.get('cf-connecting-ip') || 'unknown');
+      const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      await env.DB.prepare('DELETE FROM recovery_attempts WHERE attempted_at <= ?').bind(cutoff).run();
+      const attempts = await env.DB.prepare('SELECT COUNT(*) AS count FROM recovery_attempts WHERE ip_hash = ? AND attempted_at > ?').bind(ipHash, cutoff).first();
+      if (Number(attempts.count) >= 5) return reply({ error: '재설정 시도가 너무 많습니다. 30분 후 다시 시도하세요.' }, 429);
+
+      const data = await readBody(request);
+      const email = String(data?.email || '').trim().toLowerCase();
+      const recoveryCode = String(data?.recoveryCode || '').trim().toUpperCase();
+      const nextPassword = typeof data?.password === 'string' ? data.password : '';
+      if (email !== adminEmail) return reply({ error: '최고관리자 계정을 확인해 주세요.' }, 403);
+      if (!recoveryCode) return reply({ error: '관리자 복구 코드를 입력해 주세요.' }, 400);
+      if (nextPassword.length < 12) return reply({ error: '새 비밀번호는 12자 이상이어야 합니다.' }, 400);
+
+      const admin = await env.DB.prepare('SELECT * FROM admins WHERE email = ?').bind(adminEmail).first();
+      if (!admin) return reply({ error: '최고관리자 계정이 아직 등록되지 않았습니다.' }, 409);
+      const recovery = await env.DB.prepare('SELECT recovery_hash FROM password_recovery WHERE id = 1').first();
+      const suppliedHash = await sha256(recoveryCode);
+      const expectedHash = recovery?.recovery_hash || BOOTSTRAP_RECOVERY_HASH;
+      if (!secureEqual(suppliedHash, expectedHash)) {
+        await env.DB.prepare('INSERT INTO recovery_attempts (ip_hash, attempted_at) VALUES (?, ?)').bind(ipHash, new Date().toISOString()).run();
+        return reply({ error: '관리자 복구 코드를 확인해 주세요.' }, 401);
+      }
+
+      const passwordSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+      const passwordDigest = await passwordHash(nextPassword, passwordSalt, CURRENT_ITERATIONS);
+      const changedAt = new Date().toISOString();
+      await env.DB.prepare('UPDATE admins SET password_hash = ?, password_salt = ?, password_iterations = ? WHERE id = ?')
+        .bind(passwordDigest, passwordSalt, CURRENT_ITERATIONS, admin.id).run();
+      await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(admin.id).run();
+      await env.DB.prepare('DELETE FROM login_attempts').run();
+      await env.DB.prepare('DELETE FROM recovery_attempts WHERE ip_hash = ?').bind(ipHash).run();
+
+      const rotatedRecoveryCode = newRecoveryCode();
+      const rotatedRecoveryHash = await sha256(rotatedRecoveryCode);
+      await env.DB.prepare(`INSERT INTO password_recovery (id, recovery_hash, updated_at)
+        VALUES (1, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET recovery_hash = excluded.recovery_hash, updated_at = excluded.updated_at`)
+        .bind(rotatedRecoveryHash, changedAt).run();
+      await writeAudit(env.DB, admin.id, 'admin.password.reset', 'platform', 'recovery-code reset; sessions revoked');
+      const session = await issueSession(env.DB, admin.id);
+      return reply({ ok: true, email: admin.email, role: admin.role, recoveryCode: rotatedRecoveryCode, ...session });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/password/change') {
+      const adminSession = await authenticate(request, env.DB);
+      if (!adminSession) return reply({ error: '관리자 인증이 필요합니다.' }, 401);
+      const data = await readBody(request);
+      const currentPassword = typeof data?.currentPassword === 'string' ? data.currentPassword : '';
+      const nextPassword = typeof data?.password === 'string' ? data.password : '';
+      if (nextPassword.length < 12) return reply({ error: '새 비밀번호는 12자 이상이어야 합니다.' }, 400);
+      const admin = await env.DB.prepare('SELECT * FROM admins WHERE id = ?').bind(adminSession.id).first();
+      const currentDigest = await passwordHash(currentPassword, admin?.password_salt, Number(admin?.password_iterations) || LEGACY_ITERATIONS);
+      if (!admin || !currentDigest || !secureEqual(currentDigest, admin.password_hash)) return reply({ error: '현재 비밀번호를 확인해 주세요.' }, 401);
+      const passwordSalt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+      const passwordDigest = await passwordHash(nextPassword, passwordSalt, CURRENT_ITERATIONS);
+      await env.DB.prepare('UPDATE admins SET password_hash = ?, password_salt = ?, password_iterations = ? WHERE id = ?')
+        .bind(passwordDigest, passwordSalt, CURRENT_ITERATIONS, admin.id).run();
+      await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(admin.id).run();
+      await writeAudit(env.DB, admin.id, 'admin.password.change', 'platform', 'all sessions revoked');
+      const session = await issueSession(env.DB, admin.id);
+      return reply({ ok: true, email: admin.email, role: admin.role, ...session });
+    }
 
     if (url.pathname.startsWith('/api/registry')) {
       const admin = await authenticate(request, env.DB);
