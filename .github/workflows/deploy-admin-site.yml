@@ -39,6 +39,18 @@ jobs:
           node --check site-worker.js
           node --check control-center.js
 
+      - name: Validate authentication visibility contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '[hidden]{display:none!important}' control-center.css
+          grep -Fq 'id="loginScreen"' control-center.html
+          grep -Fq 'id="app" hidden' control-center.html
+          grep -Fq 'loginScreen.hidden = true' control-center.js
+          grep -Fq 'app.hidden = false' control-center.js
+          grep -Fq 'app.hidden = true' control-center.js
+          grep -Fq 'loginScreen.hidden = false' control-center.js
+
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
