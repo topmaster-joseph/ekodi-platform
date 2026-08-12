@@ -7,6 +7,7 @@ on:
     paths:
       - 'api-worker.js'
       - 'auth-worker.js'
+      - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'migrations/**'
@@ -32,8 +33,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate control and customer API source
-        run: node --check api-worker.js && node --check auth-worker.js && node --check customer-auth.js && node --check customer-entry-worker.js
+      - name: Validate control, Google admin and customer API source
+        run: node --check api-worker.js && node --check auth-worker.js && node --check admin-google-auth.js && node --check customer-auth.js && node --check customer-entry-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -42,20 +43,24 @@ jobs:
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
       - name: Deploy API worker
         run: npm run deploy:api
-      - name: Verify API and customer tenant boundary
+      - name: Verify API, Google admin boundary and customer tenant boundary
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 12); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
             status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
+            google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/google/config' || true)
             tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
-            unauthorized=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
+            unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
+            unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$status" | grep -q '"initialized"' \
+              && printf '%s' "$google" | grep -q '"enabled"' \
               && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
-              && [ "$unauthorized" = '401' ]; then
-              echo 'Control API and customer authentication boundary verified.'
+              && [ "$unauthorized_customer" = '401' ] \
+              && [ "$unauthorized_admin" = '401' ]; then
+              echo 'Control API, Google administrator boundary and customer authentication boundary verified.'
               exit 0
             fi
             sleep 5
