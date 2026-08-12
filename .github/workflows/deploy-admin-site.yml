@@ -13,6 +13,8 @@ on:
       - 'control-center-finance.css'
       - 'client-access.js'
       - 'client-access.css'
+      - 'google-admin-auth.js'
+      - 'google-admin-auth.css'
       - 'scripts/build.mjs'
       - 'wrangler.site.toml'
       - '.github/workflows/deploy-admin-site.yml'
@@ -37,11 +39,12 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate admin router and client module
+      - name: Validate admin router and access modules
         run: |
           node --check site-worker.js
           node --check control-center.js
           node --check client-access.js
+          node --check google-admin-auth.js
 
       - name: Validate authentication visibility contract
         shell: bash
@@ -52,8 +55,11 @@ jobs:
           grep -Fq 'id="app" hidden' control-center.html
           grep -Fq 'loginScreen.hidden = true' control-center.js
           grep -Fq 'app.hidden = false' control-center.js
-          grep -Fq 'app.hidden = true' control-center.js
-          grep -Fq 'loginScreen.hidden = false' control-center.js
+          grep -Fq 'google-auth-enabled #loginForm' google-admin-auth.css
+          grep -Fq '/api/google/config' google-admin-auth.js
+          grep -Fq '/api/google/challenge' google-admin-auth.js
+          grep -Fq '/api/google/login' google-admin-auth.js
+          grep -Fq '/api/admin-access/google-accounts' google-admin-auth.js
 
       - name: Verify Cloudflare credentials
         run: |
@@ -63,7 +69,7 @@ jobs:
       - name: Deploy EKODI site worker
         run: npm run deploy:site
 
-      - name: Verify admin routes and customer access assets
+      - name: Verify admin routes, Google auth and customer access assets
         shell: bash
         run: |
           set -euo pipefail
@@ -73,9 +79,13 @@ jobs:
             echo "$url -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
+            grep -Fiq 'cross-origin-opener-policy: same-origin-allow-popups' /tmp/admin-headers || return 1
+            grep -Fiq 'accounts.google.com/gsi/client' /tmp/admin-headers || return 1
             grep -Fq 'EKODI Control Center' /tmp/admin-body || return 1
             grep -Fq 'client-access.js' /tmp/admin-body || return 1
             grep -Fq 'client-access.css' /tmp/admin-body || return 1
+            grep -Fq 'google-admin-auth.js' /tmp/admin-body || return 1
+            grep -Fq 'google-admin-auth.css' /tmp/admin-body || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then
               echo 'Unexpected redirect header'
               return 1
@@ -97,8 +107,10 @@ jobs:
               && verify_admin 'https://admin.ekodi.kr/admin' \
               && verify_admin 'https://admin.ekodi.kr/legacy' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
-              && verify_asset 'client-access.css' '.client-access-layout'; then
-              echo 'admin.ekodi.kr and Clients access module verified.'
+              && verify_asset 'client-access.css' '.client-access-layout' \
+              && verify_asset 'google-admin-auth.js' '/api/google/login' \
+              && verify_asset 'google-admin-auth.css' '.google-auth-panel'; then
+              echo 'admin.ekodi.kr, Google administrator login and Clients access module verified.'
               exit 0
             fi
             sleep 4

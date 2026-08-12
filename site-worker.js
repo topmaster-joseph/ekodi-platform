@@ -39,10 +39,11 @@ const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 
 const ADMIN_CSP = [
   "default-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+  "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://ekodi-auth-api.topmaster-joseph.workers.dev",
+  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -70,6 +71,8 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   const secured = new Response(response.body, response);
   secured.headers.set('Content-Security-Policy', csp);
   secured.headers.set('Cache-Control', cacheControl);
+  secured.headers.set('Referrer-Policy', 'no-referrer');
+  if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
 }
