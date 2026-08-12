@@ -65,8 +65,18 @@ jobs:
           payload="{\"type\":\"CNAME\",\"name\":\"$DOMAIN\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"Managed by EKODI Platform\"}"
           if [ -n "$record_id" ]; then method=PUT; endpoint="$api/zones/$zone_id/dns_records/$record_id"; else method=POST; endpoint="$api/zones/$zone_id/dns_records"; fi
           code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X "$method" "${auth[@]}" --data "$payload" "$endpoint")
-          case "$code" in 200|201) ;; *) cat /tmp/dns.json; echo "DNS update failed HTTP $code"; exit 1;; esac
-          echo "$DOMAIN -> $target"
+          if [ "$code" = '200' ] || [ "$code" = '201' ]; then
+            echo "$DOMAIN -> $target"
+          else
+            managed_code=$(python -c "import json; d=json.load(open('/tmp/dns.json')); print((d.get('errors') or [{}])[0].get('code',''))" 2>/dev/null || true)
+            if [ "$managed_code" = '81062' ]; then
+              echo "$DOMAIN DNS is already managed by Cloudflare Workers/Pages; preserving managed record."
+            else
+              cat /tmp/dns.json
+              echo "DNS update failed HTTP $code"
+              exit 1
+            fi
+          fi
       - name: Verify auth hub
         shell: bash
         run: |
