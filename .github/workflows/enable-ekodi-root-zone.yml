@@ -71,20 +71,6 @@ jobs:
           text = path.read_text(encoding='utf-8')
           text = text.replace('href="https://ekodi.kr"', 'href="https://ekodi.kr/"')
           path.write_text(text, encoding='utf-8')
-
-          path = Path('.github/workflows/deploy.yml')
-          text = path.read_text(encoding='utf-8')
-          if 'Verify deployed auth API and D1' not in text:
-              marker = '      - name: Deploy platform site\n'
-              check = """      - name: Verify deployed auth API and D1\n        shell: bash\n        run: |\n          set -euo pipefail\n          api='https://ekodi-auth-api.topmaster-joseph.workers.dev'\n          origin='https://shy-thunder-39a4.topmaster-joseph.workers.dev'\n          for attempt in $(seq 1 12); do\n            health=$(curl -fsS --connect-timeout 5 --max-time 12 \"$api/health\" || true)\n            status=$(curl -fsS --connect-timeout 5 --max-time 12 -H \"Origin: $origin\" \"$api/api/status\" || true)\n            if printf '%s' \"$health\" | grep -q '\"ok\":true' && printf '%s' \"$status\" | grep -q '\"initialized\"'; then\n              echo \"Auth API ready: $status\"\n              break\n            fi\n            if [ \"$attempt\" -eq 12 ]; then\n              echo \"Auth API/D1 verification failed\"\n              echo \"health=$health\"\n              echo \"status=$status\"\n              exit 1\n            fi\n            sleep 5\n          done\n\n"""
-              if marker not in text:
-                  raise SystemExit('deploy.yml platform deploy marker not found')
-              text = text.replace(marker, check + marker, 1)
-
-          if 'Verify EKODI root and Books navigation' not in text:
-              final_check = """\n      - name: Verify EKODI root and Books navigation\n        shell: bash\n        run: |\n          set -euo pipefail\n          for attempt in $(seq 1 12); do\n            all_ok=1\n            for url in 'https://ekodi.kr/' 'https://www.ekodi.kr/' 'https://books.ekodi.kr/'; do\n              code=$(curl -L -sS -o /tmp/ekodi-check -w '%{http_code}' --connect-timeout 5 --max-time 15 \"$url\" || true)\n              echo \"$url -> $code\"\n              case \"$code\" in 2*|3*) ;; *) all_ok=0 ;; esac\n            done\n            if [ \"$all_ok\" -eq 1 ]; then\n              curl -fsS --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' | grep -q 'href=\"https://ekodi.kr/\"'\n              exit 0\n            fi\n            sleep 5\n          done\n          exit 1\n"""
-              text = text.rstrip() + '\n' + final_check
-          path.write_text(text, encoding='utf-8')
           PY
 
       - name: Verify patched code
@@ -93,7 +79,7 @@ jobs:
           npm test
           npm run validate:books
 
-      - name: Commit durable fixes
+      - name: Commit durable source fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -102,7 +88,7 @@ jobs:
           else
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add auth-worker.js script.js wrangler.site.toml books/index.html .github/workflows/deploy.yml
+            git add auth-worker.js script.js wrangler.site.toml books/index.html
             git commit -m 'fix: harden auth API and connect EKODI root domain'
             git push
           fi
