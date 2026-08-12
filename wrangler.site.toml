@@ -1,4 +1,5 @@
 name = "shy-thunder-39a4"
+main = "site-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = false
 preview_urls = false
@@ -11,5 +12,63 @@ custom_domain = true
 pattern = "www.ekodi.kr"
 custom_domain = true
 
+[[routes]]
+pattern = "admin.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.biz.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.church.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.lab.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.trade.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.biz.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "mail.church.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "live.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "live.biz.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "live.church.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "live.lab.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "cloud.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "auth.ekodi.kr"
+custom_domain = true
+
 [assets]
 directory = "./dist"
+binding = "ASSETS"
+run_worker_first = true
