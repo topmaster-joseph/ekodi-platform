@@ -25,7 +25,18 @@
       root: card('E','EKODI Portal','전체 서비스 정문','https://ekodi.kr'),
     };
     let model;
-    if (host.startsWith('mail.')) {
+    if (host === 'pay.ekodi.kr') {
+      model = {
+        eyebrow:'PAYMENT GATE', title:'EKODI Pay', context:host,
+        description:'에코디의 상품·교육·무역·서비스 결제를 한 주소 체계에서 연결하고, 실제 결제 귀속은 조직과 사업부별로 분리합니다.',
+        note:'현재 결제 사업주체는 각 서비스의 실제 계약 주체를 따릅니다. 에코디비즈 결제는 기존 Toss Payments 계약과 연결하며, 교회·비영리 회계는 사업 회계와 섞지 않습니다.',
+        cards:[
+          card('₩','결제 서비스','서비스별 결제 화면으로 연결','https://biz.ekodi.kr'),
+          card('▦','결제 · 회계 관제','Toss 상태와 사업부별 원장','https://admin.ekodi.kr/#finance'),
+          common.admin, common.root
+        ]
+      };
+    } else if (host.startsWith('mail.')) {
       const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
       model = {
         eyebrow:'MAIL LOBBY', title:'EKODI Mail', context:`${host} · ${org}`,
@@ -64,7 +75,7 @@
       model = {
         eyebrow:'AUTH GATE', title:'EKODI Auth', context:host,
         description:'EKODI 서비스의 인증과 관리자 접속을 모으는 통합 로그인 관문입니다.',
-        note:'1단계에서는 EKODI Admin 인증과 Google 계정 인증을 연결합니다. 서비스별 SSO는 실제 서비스 연동에 맞춰 순차 적용합니다.',
+        note:'관리자 인증은 별도 API에서 처리하고, 운영·결제 관제 API와 분리해 장애 범위를 줄입니다.',
         cards:[
           card('🔐','EKODI Admin Login','EKODI 관리 콘솔 인증','https://admin.ekodi.kr'),
           card('G','Google Account','Google 계정 로그인','https://accounts.google.com'),
