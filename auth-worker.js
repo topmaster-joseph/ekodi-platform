@@ -223,7 +223,8 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') return reply({ ok: true, service: 'ekodi-auth-api', version: 3 });
     if (!env.DB) return reply({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
 
-    await ensureSchema(env.DB);
+    try {
+      await ensureSchema(env.DB);
     const adminEmail = String(env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).toLowerCase();
 
     if (request.method === 'GET' && url.pathname === '/api/status') {
@@ -404,5 +405,12 @@ export default {
     }
 
     return reply({ error: 'Not found' }, 404);
+    } catch (error) {
+      console.error('Unhandled auth API error', error);
+      return reply({
+        error: '인증 서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+        code: 'AUTH_API_ERROR'
+      }, 500);
+    }
   }
 };

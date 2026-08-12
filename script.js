@@ -118,7 +118,10 @@ adminLoginForm.addEventListener('submit', async event => {
     adminLoginForm.reset();
     enterAuthenticatedConsole(result.email, result.token);
   } catch (error) {
-    loginError.textContent = error.message;
+    const networkFailure = error instanceof TypeError || error?.message === 'Failed to fetch';
+    loginError.textContent = networkFailure
+      ? '인증 서버 연결 오류입니다. 서버 상태를 확인한 뒤 다시 시도해 주세요.'
+      : error.message;
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = authMode === 'setup' ? '최고관리자 등록 및 입장' : '관리 콘솔 입장';

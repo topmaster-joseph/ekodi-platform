@@ -3,5 +3,16 @@ compatibility_date = "2026-08-01"
 workers_dev = true
 preview_urls = false
 
+
+[[routes]]
+pattern = "ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "www.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
 [assets]
 directory = "./dist"
