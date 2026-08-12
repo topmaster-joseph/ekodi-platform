@@ -1,12 +1,15 @@
 name = "ekodi-auth-api"
-main = "auth-worker.js"
-compatibility_date = "2026-08-01"
+main = "api-worker.js"
+compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
 
 [[routes]]
 pattern = "api.ekodi.kr"
 custom_domain = true
+
+[triggers]
+crons = ["*/10 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"
