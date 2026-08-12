@@ -24,6 +24,22 @@ jobs:
       - run: npm run check
       - run: npm test
 
+  migrate-db:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Apply D1 migrations
+        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
+
   deploy-root:
     needs: validate
     runs-on: ubuntu-latest
@@ -70,34 +86,35 @@ jobs:
               curl -fsS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$id" >/dev/null
             done < /tmp/delete_ids
           done
-      - name: Deploy zero-JS root portal
+      - name: Deploy EKODI root and gateway Worker
         run: npm run deploy:site
-      - name: Verify root and trading custom domains
+      - name: Verify root, admin, pay and trading domains
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
-            www_code=$(curl -L -sS -o /tmp/www.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://www.ekodi.kr/' || true)
-            trade_code=$(curl -L -sS -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.biz.ekodi.kr/' || true)
-            legacy_trade_code=$(curl -L -sS -o /tmp/legacy-trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
-            echo "attempt=$attempt root=$root_code www=$www_code trade=$trade_code legacy_trade=$legacy_trade_code"
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$www_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_trade_code" =~ ^[23] ]] \
+            admin_code=$(curl -L -sS -o /tmp/admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            pay_code=$(curl -L -sS -o /tmp/pay.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://pay.ekodi.kr/' || true)
+            trade_code=$(curl -L -sS -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
+            legacy_trade_code=$(curl -L -sS -o /tmp/legacy-trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.biz.ekodi.kr/' || true)
+            echo "attempt=$attempt root=$root_code admin=$admin_code pay=$pay_code trade=$trade_code legacy_trade=$legacy_trade_code"
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^[23] ]] && [[ "$pay_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_trade_code" =~ ^[23] ]] \
               && grep -Fq 'CONNECTED ECOSYSTEM' /tmp/root.html \
+              && grep -Fq 'CONTROL CENTER · V4' /tmp/admin.html \
+              && grep -Fq 'EKODI Pay' /tmp/pay.html \
               && grep -Fq 'EKODI GLOBAL TRADING' /tmp/trade.html \
-              && grep -Fq 'EKODI GLOBAL TRADING' /tmp/legacy-trade.html \
-              && ! grep -Fq '<script' /tmp/root.html \
-              && ! grep -Fq '<script' /tmp/trade.html; then
-              echo 'EKODI root and trading custom domains are healthy.'
+              && grep -Fq 'EKODI GLOBAL TRADING' /tmp/legacy-trade.html; then
+              echo 'EKODI root, admin, pay and trading custom domains are healthy.'
               exit 0
             fi
             sleep 5
           done
-          echo 'EKODI root/trading custom-domain verification failed.'
+          echo 'EKODI root/gateway custom-domain verification failed.'
           exit 1
 
   deploy-api:
-    needs: validate
+    needs: migrate-db
     runs-on: ubuntu-latest
     timeout-minutes: 12
     if: github.ref == 'refs/heads/main'
@@ -114,12 +131,56 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          api='https://ekodi-auth-api.topmaster-joseph.workers.dev'
           for attempt in $(seq 1 12); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 "$api/health" || true)
-            status=$(curl -fsS --connect-timeout 5 --max-time 12 "$api/api/status" || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
+            status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
             if printf '%s' "$health" | grep -q '"ok":true' && printf '%s' "$status" | grep -q '"initialized"'; then
               echo 'Auth API ready.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  deploy-ops:
+    needs: migrate-db
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    if: github.ref == 'refs/heads/main'
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TOSS_PAYMENTS_SECRET_KEY: ${{ secrets.TOSS_PAYMENTS_SECRET_KEY }}
+      TOSS_PAYMENTS_MID: ${{ secrets.TOSS_PAYMENTS_MID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Deploy operations API
+        run: npm run deploy:ops
+      - name: Connect Toss server secret when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${TOSS_PAYMENTS_SECRET_KEY:-}" ]; then
+            printf '%s' "$TOSS_PAYMENTS_SECRET_KEY" | npx --yes wrangler@4.119.0 secret put TOSS_SECRET_KEY --config wrangler.ops.toml >/dev/null
+            echo 'Toss Payments server secret connected.'
+          else
+            echo 'TOSS_PAYMENTS_SECRET_KEY is not configured yet; payment sync remains safely disabled.'
+          fi
+          if [ -n "${TOSS_PAYMENTS_MID:-}" ]; then
+            printf '%s' "$TOSS_PAYMENTS_MID" | npx --yes wrangler@4.119.0 secret put TOSS_MID --config wrangler.ops.toml >/dev/null
+            echo 'Toss Payments MID connected.'
+          fi
+      - name: Verify operations API
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ops-api.ekodi.kr/health' || true)
+            if printf '%s' "$health" | grep -q '"ok":true'; then
+              echo 'Operations API ready.'
               exit 0
             fi
             sleep 5
