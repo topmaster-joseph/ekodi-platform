@@ -41,7 +41,8 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo "Missing CLOUDFLARE_ACCOUNT_ID" && exit 1)
-      - name: Remove legacy origin DNS before first custom-domain deploy
+      - name: Best-effort legacy DNS cleanup
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
