@@ -1,5 +1,5 @@
 name = "ekodi-auth-api"
-main = "api-worker.js"
+main = "customer-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
@@ -14,7 +14,7 @@ crons = ["*/10 * * * *"]
 [vars]
 ENVIRONMENT = "production"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
-ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://marketing.ekodi.kr,https://auth.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://yogurtpurple.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
 
 [observability.logs]
 enabled = true
