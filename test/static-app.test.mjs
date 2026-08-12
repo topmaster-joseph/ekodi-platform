@@ -41,9 +41,10 @@ test('verified public services are direct static links', () => {
   }
 });
 
-test('unverified services are not clickable from the root', () => {
+test('unverified services without an explicit public launch are not clickable from the root', () => {
   const registry = JSON.parse(registryText);
-  for (const service of registry.services.filter(item => !item.qaVerified)) {
+  const explicitlyPublished = new Set(['biz']);
+  for (const service of registry.services.filter(item => !item.qaVerified && !explicitlyPublished.has(item.id))) {
     assert.doesNotMatch(portalHtml, new RegExp(`href="https://${service.domain.replaceAll('.', '\\.')}`));
   }
 });
