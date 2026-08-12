@@ -1,11 +1,11 @@
 {
   "name": "ekodi-platform",
-  "version": "3.3.0",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node --check site-worker.js && node --check auth-worker.js && node --check script.js && node --check books/app.js && node --check scripts/monitor.mjs && node --check scripts/validate-books.mjs && npm run validate:books",
+    "check": "node --check site-worker.js && node --check auth-worker.js && node --check api-worker.js && node --check control-center-bootstrap.js && node --check script.js && node --check books/app.js && node --check scripts/monitor.mjs && node --check scripts/validate-books.mjs && npm run validate:books",
     "validate:books": "node scripts/validate-books.mjs",
     "deploy:api": "npx --yes wrangler@4.119.0 deploy --config wrangler.api.toml",
     "deploy:site": "npm run build && npx --yes wrangler@4.119.0 deploy --config wrangler.site.toml",
