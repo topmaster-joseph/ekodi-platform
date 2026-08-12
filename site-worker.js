@@ -18,6 +18,13 @@ const HUB_HOSTS = new Set([
   'auth.ekodi.kr',
 ]);
 
+const ADMIN_ALIASES = new Set([
+  '/admin',
+  '/admin/',
+  '/admin.html',
+  '/index.html',
+]);
+
 const ADMIN_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
@@ -54,14 +61,26 @@ function withHostSecurity(response, csp, cacheControl) {
   return secured;
 }
 
+function redirectToAdminRoot(url) {
+  const canonical = new URL(url);
+  canonical.pathname = '/';
+  return Response.redirect(canonical.toString(), 308);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
 
-    if (ADMIN_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
-      const response = await env.ASSETS.fetch(assetRequest(request, '/admin.html'));
-      return withHostSecurity(response, ADMIN_CSP, 'no-store');
+    if (ADMIN_HOSTS.has(host)) {
+      if (ADMIN_ALIASES.has(url.pathname)) {
+        if (url.pathname !== '/') return redirectToAdminRoot(url);
+      }
+
+      if (url.pathname === '/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admin.html'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store');
+      }
     }
 
     if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
