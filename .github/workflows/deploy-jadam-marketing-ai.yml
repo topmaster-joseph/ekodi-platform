@@ -46,9 +46,11 @@ jobs:
         run: |
           npm run build
           test -f dist/marketing-ai/index.html
+          test -f dist/marketing-ai/qa/index.html
           test -f dist/marketing-ai/jadam/index.html
           test -f dist/marketing-ai/pizzamaru/index.html
           test -f dist/marketing-ai/yogurtpurple/index.html
+          grep -Fq '마케팅AI 검수센터' dist/marketing-ai/qa/index.html
           grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/jadam/index.html
           grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/pizzamaru/index.html
           grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/yogurtpurple/index.html
@@ -188,8 +190,9 @@ jobs:
               needle="${spec#*:}"
               verify_url "https://$domain/" "$needle" || ok=0
             done
+            verify_url 'https://marketing.ekodi.kr/qa/' '마케팅AI 검수센터' || ok=0
             if [ "$ok" -eq 1 ]; then
-              echo 'Marketing AI custom domains verified.'
+              echo 'Marketing AI custom domains and QA center verified.'
               exit 0
             fi
             sleep 5
