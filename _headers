@@ -4,5 +4,5 @@
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'; connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
   Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
