@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>EKODI Hub</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e8eef8;background:#07101d;color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 0%,#17345c 0,transparent 38%),linear-gradient(180deg,#07101d,#0b1220);padding:28px}a{color:inherit;text-decoration:none}.shell{max-width:1100px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:56px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.04em}.mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#fff;color:#07101d}.home{font-size:14px;color:#b8c6da;padding:10px 14px;border:1px solid #30435f;border-radius:999px}.eyebrow{color:#84b9ff;font-weight:800;letter-spacing:.16em;font-size:12px;text-transform:uppercase}.hero h1{font-size:clamp(34px,6vw,68px);line-height:1.02;margin:10px 0 18px;letter-spacing:-.05em}.hero p{max-width:720px;color:#afbed2;font-size:17px;line-height:1.7;margin:0}.context{display:inline-flex;margin-top:18px;padding:7px 10px;border-radius:999px;background:#13233a;color:#cfe2ff;font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:42px}.card{min-height:180px;padding:22px;border:1px solid #253853;border-radius:22px;background:linear-gradient(180deg,rgba(22,38,61,.86),rgba(11,18,32,.86));display:flex;flex-direction:column;justify-content:space-between;transition:.18s transform,.18s border-color}.card:hover{transform:translateY(-3px);border-color:#638dcc}.icon{font-size:28px}.card strong{display:block;font-size:19px;margin-top:18px}.card small{display:block;color:#96a8c2;margin-top:7px;line-height:1.5}.arrow{align-self:flex-end;color:#8fbcff}.note{margin-top:22px;padding:16px 18px;border-left:3px solid #568ee8;background:#101d30;color:#a9bad0;border-radius:0 14px 14px 0;font-size:13px;line-height:1.6}.footer{margin-top:42px;color:#6f829d;font-size:12px}@media(max-width:760px){body{padding:20px}.top{margin-bottom:38px}.grid{grid-template-columns:1fr}.hero p{font-size:15px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top"><a class="brand" href="https://ekodi.kr"><span class="mark">E</span><span>EKODI</span></a><a class="home" href="https://ekodi.kr">ekodi.kr ↗</a></header>
+    <section class="hero"><div class="eyebrow" id="eyebrow">EKODI HUB</div><h1 id="title">EKODI 서비스 허브</h1><p id="description">관련 서비스를 한곳에서 연결하는 EKODI 디지털 로비입니다.</p><span class="context" id="context"></span></section>
+    <section class="grid" id="cards" aria-label="서비스 바로가기"></section>
+    <div class="note" id="note"></div>
+    <footer class="footer">EKODI Digital Campus · One root, many doors.</footer>
+  </main>
+  <script>
+    const host = location.hostname.toLowerCase();
+    const card = (icon,title,detail,href) => ({icon,title,detail,href});
+    const common = {
+      admin: card('⌘','EKODI Admin','통합 관리 콘솔','https://admin.ekodi.kr'),
+      root: card('E','EKODI Portal','전체 서비스 정문','https://ekodi.kr'),
+    };
+    let model;
+    if (host.startsWith('mail.')) {
+      const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
+      model = {
+        eyebrow:'MAIL LOBBY', title:'EKODI Mail', context:`${host} · ${org}`,
+        description:'메일은 한 문으로 들어오고, 조직별 계정과 관리 기능으로 갈라집니다.',
+        note:'현재 Google Workspace의 운영 도메인은 ekodibiz.kr입니다. 조직별 메일 주소는 실제 계정과 도메인이 준비되는 순서대로 이 로비에 연결합니다.',
+        cards:[
+          card('✉','Google Workspace Mail','ekodibiz.kr 메일 접속','https://mail.google.com/a/ekodibiz.kr'),
+          card('⚙','Workspace Admin','Google Workspace 관리자','https://admin.google.com'),
+          common.admin, common.root
+        ]
+      };
+    } else if (host.startsWith('live.')) {
+      const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
+      model = {
+        eyebrow:'LIVE LOBBY', title:'EKODI Live', context:`${host} · ${org}`,
+        description:'예배, 선교, 비즈니스, 연구의 생방송 입구를 하나의 방송 로비로 묶습니다.',
+        note:'교회·선교 채널은 바로 연결되어 있습니다. 비즈니스·연구 라이브는 채널이 확정되는 즉시 같은 주소 체계 안에서 확장합니다.',
+        cards:[
+          card('▶','에코디교회 라이브','YouTube @ekodichurch','https://www.youtube.com/@ekodichurch/live'),
+          card('◉','에코디선교회 라이브','YouTube @ekodicommunity','https://www.youtube.com/@ekodicommunity/live'),
+          common.admin, common.root
+        ]
+      };
+    } else if (host === 'cloud.ekodi.kr') {
+      model = {
+        eyebrow:'CLOUD LOBBY', title:'EKODI Cloud', context:host,
+        description:'문서와 자료가 흩어지지 않도록 EKODI의 업무 도구로 들어가는 자료 로비입니다.',
+        note:'현재 기본 저장소는 Google Drive입니다. 향후 조직별 공유드라이브와 자료실을 이 허브에서 분기합니다.',
+        cards:[
+          card('▣','Google Drive','EKODI 문서·자료 저장소','https://drive.google.com'),
+          card('▤','Google Docs','문서 작성과 협업','https://docs.google.com'),
+          common.admin, common.root
+        ]
+      };
+    } else {
+      model = {
+        eyebrow:'AUTH GATE', title:'EKODI Auth', context:host,
+        description:'EKODI 서비스의 인증과 관리자 접속을 모으는 통합 로그인 관문입니다.',
+        note:'1단계에서는 EKODI Admin 인증과 Google 계정 인증을 연결합니다. 서비스별 SSO는 실제 서비스 연동에 맞춰 순차 적용합니다.',
+        cards:[
+          card('🔐','EKODI Admin Login','EKODI 관리 콘솔 인증','https://admin.ekodi.kr'),
+          card('G','Google Account','Google 계정 로그인','https://accounts.google.com'),
+          common.root
+        ]
+      };
+    }
+    document.title = `${model.title} · EKODI`;
+    document.querySelector('#eyebrow').textContent = model.eyebrow;
+    document.querySelector('#title').textContent = model.title;
+    document.querySelector('#description').textContent = model.description;
+    document.querySelector('#context').textContent = model.context;
+    document.querySelector('#note').textContent = model.note;
+    document.querySelector('#cards').innerHTML = model.cards.map(x => `<a class="card" href="${x.href}" target="_blank" rel="noopener"><div><span class="icon">${x.icon}</span><strong>${x.title}</strong><small>${x.detail}</small></div><span class="arrow">↗</span></a>`).join('');
+  </script>
+</body>
+</html>
