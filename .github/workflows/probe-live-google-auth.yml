@@ -1,0 +1,29 @@
+name: Probe Live Google Auth
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/probe-live-google-auth.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check public readiness without exposing client id
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS 'https://api.ekodi.kr/api/google/config' -o /tmp/google.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/google.json'))
+          print('admin_google_enabled=' + str(bool(d.get('enabled'))).lower())
+          print('admin_google_client_id_present=' + str(bool(d.get('clientId'))).lower())
+          PY
+          code=$(curl -sS -o /tmp/auth.html -w '%{http_code}' --max-time 15 'https://auth.ekodi.kr/')
+          echo "central_auth_http=$code"
+          grep -Fq 'EKODI 인증센터' /tmp/auth.html && echo 'central_auth_ui=true' || echo 'central_auth_ui=false'
+          code=$(curl -sS -o /tmp/member.html -w '%{http_code}' --max-time 15 'https://cgma.ekodi.kr/member')
+          echo "cgma_member_http=$code"
+          grep -Fq 'Google 계정으로 로그인' /tmp/member.html && echo 'cgma_google_first_ui=true' || echo 'cgma_google_first_ui=false'
