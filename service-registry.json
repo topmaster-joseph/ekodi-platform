@@ -1,0 +1,17 @@
+{
+  "updatedAt": "2026-08-12T18:42:00+09:00",
+  "services": [
+    {"id":"biz","name":"에코디비즈","label":"Business","domain":"biz.ekodi.kr","href":"https://biz.ekodi.kr","icon":"B","qaVerified":false,"healthCheck":true},
+    {"id":"trade","name":"글로벌 무역","label":"Trading","domain":"trade.ekodi.kr","href":"https://trade.ekodi.kr","icon":"T","qaVerified":false,"healthCheck":true},
+    {"id":"mall","name":"에코디몰","label":"Mall","domain":"mall.ekodi.kr","href":"https://mall.ekodi.kr","icon":"M","qaVerified":true,"healthCheck":true},
+    {"id":"pay","name":"에코디결제","label":"Payments","domain":"pay.ekodi.kr","href":"https://pay.ekodi.kr","icon":"P","qaVerified":false,"healthCheck":true},
+    {"id":"books","name":"에코디북스","label":"Books","domain":"books.ekodi.kr","href":"https://books.ekodi.kr","icon":"K","qaVerified":true,"healthCheck":true},
+    {"id":"church","name":"에코디교회","label":"Church","domain":"church.ekodi.kr","href":"https://church.ekodi.kr","icon":"C","qaVerified":true,"healthCheck":true},
+    {"id":"lab","name":"에코디연구소","label":"Lab","domain":"lab.ekodi.kr","href":"https://lab.ekodi.kr","icon":"L","qaVerified":true,"healthCheck":true},
+    {"id":"mission","name":"에코디선교회","label":"Mission","domain":"mission.ekodi.kr","href":"https://mission.ekodi.kr","icon":"S","qaVerified":false,"healthCheck":true},
+    {"id":"community","name":"에코디커뮤니티","label":"Community","domain":"community.ekodi.kr","href":"https://community.ekodi.kr","icon":"N","qaVerified":false,"healthCheck":true},
+    {"id":"edu","name":"에코디교육","label":"Education","domain":"edu.ekodi.kr","href":"https://edu.ekodi.kr","icon":"E","qaVerified":false,"healthCheck":true},
+    {"id":"media","name":"에코디미디어","label":"Media","domain":"media.ekodi.kr","href":"https://media.ekodi.kr","icon":"V","qaVerified":false,"healthCheck":true},
+    {"id":"admin","name":"관리자","label":"Control Center","domain":"admin.ekodi.kr","href":"https://admin.ekodi.kr","icon":"A","qaVerified":false,"healthCheck":true,"admin":true}
+  ]
+}
