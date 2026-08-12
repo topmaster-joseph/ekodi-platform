@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import worker from '../finance-worker.js';
+import { namespaceFinanceSql } from '../finance-entry-worker.js';
+
+test('finance SQL is isolated from pre-existing application tables', () => {
+  const input = 'SELECT * FROM projects JOIN payments ON payments.project_id = projects.id; INSERT INTO accounting_entries(amount) VALUES (1)';
+  const output = namespaceFinanceSql(input);
+  assert.match(output, /finance_projects/);
+  assert.match(output, /finance_payments/);
+  assert.match(output, /finance_accounting_entries/);
+  assert.doesNotMatch(output, /\bFROM projects\b/);
+});
 
 test('finance API health is public and does not require D1', async () => {
   const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/health'), {});
