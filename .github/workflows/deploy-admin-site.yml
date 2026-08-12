@@ -11,6 +11,9 @@ on:
       - 'control-center.css'
       - 'control-center-ops.css'
       - 'control-center-finance.css'
+      - 'client-access.js'
+      - 'client-access.css'
+      - 'scripts/build.mjs'
       - 'wrangler.site.toml'
       - '.github/workflows/deploy-admin-site.yml'
 
@@ -34,10 +37,11 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate admin router
+      - name: Validate admin router and client module
         run: |
           node --check site-worker.js
           node --check control-center.js
+          node --check client-access.js
 
       - name: Verify Cloudflare credentials
         run: |
@@ -47,7 +51,7 @@ jobs:
       - name: Deploy EKODI site worker
         run: npm run deploy:site
 
-      - name: Verify admin has no redirect loop or blank legacy route
+      - name: Verify admin routes and customer access assets
         shell: bash
         run: |
           set -euo pipefail
@@ -55,22 +59,34 @@ jobs:
             url="$1"
             code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
             echo "$url -> $code"
-            cat /tmp/admin-headers
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
             grep -Fq 'EKODI Control Center' /tmp/admin-body || return 1
+            grep -Fq 'client-access.js' /tmp/admin-body || return 1
+            grep -Fq 'client-access.css' /tmp/admin-body || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then
               echo 'Unexpected redirect header'
               return 1
             fi
           }
 
+          verify_asset() {
+            path="$1"
+            expected="$2"
+            code=$(curl -sS -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
+            echo "$path -> $code"
+            [ "$code" = '200' ] || return 1
+            grep -Fq "$expected" /tmp/admin-asset || return 1
+          }
+
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
               && verify_admin 'https://admin.ekodi.kr/admin' \
-              && verify_admin 'https://admin.ekodi.kr/legacy'; then
-              echo 'admin.ekodi.kr canonical and legacy routes verified.'
+              && verify_admin 'https://admin.ekodi.kr/legacy' \
+              && verify_asset 'client-access.js' '/api/customers/tenants' \
+              && verify_asset 'client-access.css' '.client-access-layout'; then
+              echo 'admin.ekodi.kr and Clients access module verified.'
               exit 0
             fi
             sleep 4
