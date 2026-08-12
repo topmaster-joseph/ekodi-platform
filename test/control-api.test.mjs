@@ -3,12 +3,13 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import apiWorker from '../api-worker.js';
 
-const [apiSource, controlHtml, controlJs, buildScript, wranglerApi] = await Promise.all([
+const [apiSource, controlHtml, controlJs, buildScript, wranglerApi, entrySource] = await Promise.all([
   readFile(new URL('../api-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../control-center.html', import.meta.url), 'utf8'),
   readFile(new URL('../control-center.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
-  readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8')
+  readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
+  readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8')
 ]);
 
 test('shared API preserves the existing health endpoint', async () => {
@@ -17,7 +18,7 @@ test('shared API preserves the existing health endpoint', async () => {
     ALLOWED_ORIGINS: 'https://admin.ekodi.kr'
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, service: 'ekodi-auth-api', version: 3 });
+  assert.deepEqual(await response.json(), { ok: true, service: 'ekodi-auth-api', version: 4 });
 });
 
 test('control endpoints require the D1 operations store', async () => {
@@ -58,8 +59,10 @@ test('production build includes operations styling', () => {
   assert.match(buildScript, /'control-center-ops\.css'/);
 });
 
-test('Cloudflare API worker owns the ten-minute monitoring schedule', () => {
-  assert.match(wranglerApi, /main = "api-worker\.js"/);
+test('Cloudflare API entry layer preserves the ten-minute monitoring schedule', () => {
+  assert.match(wranglerApi, /main = "customer-entry-worker\.js"/);
   assert.match(wranglerApi, /pattern = "api\.ekodi\.kr"/);
   assert.match(wranglerApi, /crons = \["\*\/10 \* \* \* \*"\]/);
+  assert.match(entrySource, /return apiWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(entrySource, /return apiWorker\.fetch\(request, env, ctx\)/);
 });

@@ -48,7 +48,7 @@ test('health endpoint works without database credentials', async () => {
     ALLOWED_ORIGINS: 'https://console.ekodi.example'
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, service: 'ekodi-auth-api', version: 3 });
+  assert.deepEqual(await response.json(), { ok: true, service: 'ekodi-auth-api', version: 4 });
   assert.equal(response.headers.get('access-control-allow-origin'), 'https://console.ekodi.example');
 });
 
