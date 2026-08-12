@@ -1,3 +1,4 @@
+# Control API rollout: administrator password recovery
 name = "ekodi-auth-api"
 main = "api-worker.js"
 compatibility_date = "2026-08-12"
