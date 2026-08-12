@@ -101,9 +101,11 @@ export default {
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
 
+      // Keep old bookmarks working, but never render the obsolete legacy shell.
+      // All legacy aliases are served from the canonical Control Center asset.
       if (LEGACY_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/admin'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-legacy');
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
     }
 
