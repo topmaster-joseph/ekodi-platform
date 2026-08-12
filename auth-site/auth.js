@@ -4,15 +4,15 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
 const services={
-  cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',requestable:true},
-  marketing:{name:'마케팅AI',tenant:'ekodibiz',role:'store_owner',returnTo:'https://marketing.ekodi.kr',requestable:true},
-  admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://admin.ekodi.kr',requestable:false},
-  portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',requestable:false}
+  cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',origins:['https://cgma.ekodi.kr'],requestable:true},
+  marketing:{name:'마케팅AI',tenant:'ekodibiz',role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
+  admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://admin.ekodi.kr',origins:['https://admin.ekodi.kr'],requestable:false},
+  portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr'],requestable:false}
 };
 const params=new URLSearchParams(location.search);
 const site=Object.hasOwn(services,params.get('site'))?params.get('site'):'portal';
 const config=services[site];
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);const allowed=new URL(config.returnTo);return target.protocol==='https:'&&target.origin===allowed.origin?target.href:config.returnTo}catch{return config.returnTo}};
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);return target.protocol==='https:'&&config.origins.includes(target.origin)?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const callbackUrl=`${location.origin}/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`;
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true}});
