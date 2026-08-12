@@ -4,13 +4,13 @@ Production-oriented MVP for operating the EKODI ecosystem. The platform combines
 
 ## Domain policy
 
-`ekodi.kr` is the primary digital root for the EKODI ecosystem. New services should use service subdomains by default instead of purchasing additional standalone domains.
+`ekodi.kr` is the primary digital root for the EKODI ecosystem. New services should use hierarchical service subdomains by default instead of purchasing additional standalone domains.
 
 Primary service addresses:
 
 - Root portal: https://ekodi.kr
 - Business: https://biz.ekodi.kr
-- Trading: https://trade.ekodi.kr
+- Trading: https://trade.biz.ekodi.kr
 - Mall: https://mall.ekodi.kr
 - Payments: https://pay.ekodi.kr
 - Books: https://books.ekodi.kr
@@ -26,7 +26,11 @@ Primary service addresses:
 - Admin: https://admin.ekodi.kr
 - API: https://api.ekodi.kr
 
-Existing standalone EKODI domains remain as brand-protection and transition domains. Where appropriate they should redirect permanently to the canonical `*.ekodi.kr` service address.
+The preferred hierarchy for organization-specific functions is `[service].[organization].ekodi.kr`, for example `mail.biz.ekodi.kr`, `live.church.ekodi.kr`, and `trade.biz.ekodi.kr`. Global services may remain directly under `ekodi.kr` when they serve the whole ecosystem.
+
+`trade.ekodi.kr` is retained only as a transition alias and permanently redirects to the canonical `trade.biz.ekodi.kr` address.
+
+Existing standalone EKODI domains remain as brand-protection and transition domains. Where appropriate they should redirect permanently to the canonical EKODI service address.
 
 ## MVP capabilities
 
@@ -58,7 +62,7 @@ Browser (static control center)
    Ministry/Community    Business/Commerce     Knowledge
         │                   │                   │
  church.ekodi.kr        biz.ekodi.kr        books.ekodi.kr
- mission.ekodi.kr       trade.ekodi.kr      lab.ekodi.kr
+ mission.ekodi.kr       trade.biz.ekodi.kr  lab.ekodi.kr
  community.ekodi.kr     mall.ekodi.kr       edu.ekodi.kr
                         pay.ekodi.kr
                         ins.ekodi.kr
@@ -96,7 +100,7 @@ Canonical EKODI addresses:
 
 - 에코디 통합: https://ekodi.kr
 - 에코디비즈: https://biz.ekodi.kr
-- EKODI Global Trading: https://trade.ekodi.kr
+- EKODI Global Trading: https://trade.biz.ekodi.kr
 - 에코디몰: https://mall.ekodi.kr
 - 에코디결제: https://pay.ekodi.kr
 - 에코디북스: https://books.ekodi.kr

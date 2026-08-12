@@ -10,6 +10,7 @@ const assets = [
   'control-center.css',
   'control-center.js',
   'hub.html',
+  'trade.html',
   'styles.css',
   'script.js',
   'monitor-status.json',
@@ -19,4 +20,4 @@ const assets = [
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
-console.log(`Built EKODI root, Control Center and hub assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root, Control Center, hub and trade assets: ${assets.join(', ')}`);

@@ -13,6 +13,14 @@ pattern = "www.ekodi.kr"
 custom_domain = true
 
 [[routes]]
+pattern = "trade.biz.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "trade.ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "admin.ekodi.kr"
 custom_domain = true
 

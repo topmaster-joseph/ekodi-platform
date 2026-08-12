@@ -18,6 +18,9 @@ const HUB_HOSTS = new Set([
   'auth.ekodi.kr',
 ]);
 
+const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
+const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
+
 const ADMIN_ALIASES = new Set(['/admin','/admin/','/admin.html','/index.html']);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 
@@ -63,10 +66,26 @@ function redirect(url, pathname) {
   return Response.redirect(next.toString(), 308);
 }
 
+function redirectToTradeCanonical(url) {
+  const next = new URL(url);
+  next.protocol = 'https:';
+  next.hostname = TRADE_CANONICAL_HOST;
+  return Response.redirect(next.toString(), 308);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
+
+    if (TRADE_LEGACY_HOSTS.has(host)) {
+      return redirectToTradeCanonical(url);
+    }
+
+    if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
+      const response = await env.ASSETS.fetch(assetRequest(request, '/trade.html'));
+      return withHostSecurity(response, HUB_CSP, 'public, max-age=300');
+    }
 
     if (ADMIN_HOSTS.has(host)) {
       if (ADMIN_ALIASES.has(url.pathname) && url.pathname !== '/') return redirect(url, '/');

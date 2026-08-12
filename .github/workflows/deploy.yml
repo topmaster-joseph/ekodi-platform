@@ -72,23 +72,28 @@ jobs:
           done
       - name: Deploy zero-JS root portal
         run: npm run deploy:site
-      - name: Verify root custom domains
+      - name: Verify root and trading custom domains
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
             www_code=$(curl -L -sS -o /tmp/www.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://www.ekodi.kr/' || true)
-            echo "attempt=$attempt root=$root_code www=$www_code"
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$www_code" =~ ^[23] ]] \
+            trade_code=$(curl -L -sS -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.biz.ekodi.kr/' || true)
+            legacy_trade_code=$(curl -L -sS -o /tmp/legacy-trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
+            echo "attempt=$attempt root=$root_code www=$www_code trade=$trade_code legacy_trade=$legacy_trade_code"
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$www_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_trade_code" =~ ^[23] ]] \
               && grep -Fq 'CONNECTED ECOSYSTEM' /tmp/root.html \
-              && ! grep -Fq '<script' /tmp/root.html; then
-              echo 'EKODI zero-JS root portal is healthy.'
+              && grep -Fq 'EKODI GLOBAL TRADING' /tmp/trade.html \
+              && grep -Fq 'EKODI GLOBAL TRADING' /tmp/legacy-trade.html \
+              && ! grep -Fq '<script' /tmp/root.html \
+              && ! grep -Fq '<script' /tmp/trade.html; then
+              echo 'EKODI root and trading custom domains are healthy.'
               exit 0
             fi
             sleep 5
           done
-          echo 'EKODI root custom-domain verification failed.'
+          echo 'EKODI root/trading custom-domain verification failed.'
           exit 1
 
   deploy-api:
