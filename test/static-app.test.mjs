@@ -66,6 +66,14 @@ test('site Worker routes primary EKODI hubs by hostname', () => {
   assert.match(wranglerSite, /run_worker_first = true/);
 });
 
+test('admin aliases redirect to the canonical root before loading the console', () => {
+  for (const alias of ['/admin', '/admin/', '/admin.html', '/index.html']) {
+    assert.match(siteWorker, new RegExp(`'${alias.replaceAll('/', '\\/').replaceAll('.', '\\.')}'`));
+  }
+  assert.match(siteWorker, /redirectToAdminRoot/);
+  assert.match(siteWorker, /Response\.redirect\(canonical\.toString\(\), 308\)/);
+});
+
 test('admin and lobby hosts override the root CSP safely', () => {
   assert.match(siteWorker, /ADMIN_CSP/);
   assert.match(siteWorker, /HUB_CSP/);
