@@ -1,0 +1,47 @@
+name: Verify Marketing Customer Auth
+
+on:
+  workflow_run:
+    workflows: ['Deploy Marketing AI']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify customer login markers on production domains
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify() {
+            domain="$1"
+            store="$2"
+            tenant="$3"
+            code=$(curl -sS -L -o /tmp/customer.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
+            echo "$domain -> $code"
+            [ "$code" = '200' ]
+            grep -Fq "$store" /tmp/customer.html
+            grep -Fq 'id="customerAuthOpen"' /tmp/customer.html
+            grep -Fq '고객 로그인' /tmp/customer.html
+            grep -Fq '/api/customer/login' /tmp/customer.html
+            grep -Fq '/api/customer/accept-invite' /tmp/customer.html
+            grep -Fq "const TENANT=\"$tenant\"" /tmp/customer.html
+            grep -Fq 'Content-Security-Policy' /tmp/customer.html
+          }
+
+          for attempt in $(seq 1 12); do
+            if verify 'jadam.ekodi.kr' '자담치킨 목포대점' 'jadam' \
+              && verify 'pizzamaru.ekodi.kr' '피자마루 목포대점' 'pizzamaru' \
+              && verify 'yogurt.ekodi.kr' '요거트퍼플 목포대점' 'yogurt'; then
+              echo 'Production customer authentication UI verified on all Marketing AI tenants.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
