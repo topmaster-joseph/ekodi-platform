@@ -7,6 +7,7 @@ const ADMIN_HOSTS = new Set([
 ]);
 
 const HUB_HOSTS = new Set([
+  'pay.ekodi.kr',
   'mail.ekodi.kr',
   'mail.biz.ekodi.kr',
   'mail.church.ekodi.kr',
@@ -18,8 +19,8 @@ const HUB_HOSTS = new Set([
   'auth.ekodi.kr',
 ]);
 
-const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
-const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
+const TRADE_CANONICAL_HOST = 'trade.ekodi.kr';
+const TRADE_LEGACY_HOSTS = new Set(['trade.biz.ekodi.kr']);
 
 const ADMIN_ALIASES = new Set(['/admin','/admin/','/admin.html','/index.html']);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
@@ -29,7 +30,7 @@ const ADMIN_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://ekodi-auth-api.topmaster-joseph.workers.dev",
+  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://ekodi-auth-api.topmaster-joseph.workers.dev",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

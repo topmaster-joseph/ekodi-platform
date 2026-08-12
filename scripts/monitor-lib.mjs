@@ -1,6 +1,15 @@
 export const SITE_DEFINITIONS = Object.freeze([
+  ['root', 'EKODI Root', 'ekodi.kr'],
+  ['admin', 'EKODI Admin', 'admin.ekodi.kr'],
+  ['api', 'EKODI API', 'api.ekodi.kr', 'https://api.ekodi.kr/health'],
+  ['finance', 'EKODI Finance API', 'finance-api.ekodi.kr', 'https://finance-api.ekodi.kr/health'],
+  ['pay', 'EKODI Pay', 'pay.ekodi.kr'],
+  ['mail', 'EKODI Mail', 'mail.ekodi.kr'],
+  ['live', 'EKODI Live', 'live.ekodi.kr'],
+  ['cloud', 'EKODI Cloud', 'cloud.ekodi.kr'],
   ['mall', '에코디몰', 'mall.ekodi.kr'],
   ['biz', '에코디비즈', 'biz.ekodi.kr'],
+  ['trade', 'EKODI Trading', 'trade.ekodi.kr'],
   ['marketing', '마케팅AI', 'marketing.ekodi.kr'],
   ['cgma', '청계상권', 'cgma.ekodi.kr'],
   ['publishing', '에코디출판', 'books.ekodi.kr'],
@@ -26,7 +35,7 @@ export async function checkSite(
     const response = await fetchImpl(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(12000),
-      headers: { 'user-agent': 'EKODI-Monitor/1.0' }
+      headers: { 'user-agent': 'EKODI-Monitor/2.0' }
     });
     await response.body?.cancel();
     const responseTime = Math.round(clock() - started);

@@ -3,36 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="EKODI 통합 운영 허브: 서비스 상태, 통계, 메일, 라이브, 클라우드, 도메인, 사업과 사역을 한곳에서 관리합니다.">
+  <meta name="description" content="EKODI 통합 운영 허브: 서비스 상태, 결제, 회계, 조직, 메일, 라이브, 클라우드, 도메인을 한곳에서 관리합니다.">
   <meta name="theme-color" content="#07111f">
   <title>EKODI Control Center</title>
   <link rel="stylesheet" href="control-center.css">
   <link rel="stylesheet" href="control-center-ops.css">
+  <link rel="stylesheet" href="control-center-finance.css">
 </head>
 <body>
   <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
     <div class="login-card">
       <a class="brand" href="https://ekodi.kr"><span>E</span><strong>EKODI</strong></a>
       <p class="kicker">CONTROL CENTER</p>
-      <h1 id="loginTitle">하나의 문에서 모든 운영으로</h1>
-      <p class="login-copy">서비스 상태와 통계부터 메일, 방송, 자료, 도메인, 사업, 사역까지 한 화면에서 연결하는 EKODI 운영 관제실입니다.</p>
+      <h1 id="loginTitle">한곳에서 모든 운영을 봅니다.</h1>
+      <p class="login-copy">서비스 상태와 통계, 결제·회계, 조직, 메일, 방송, 자료, 도메인을 한 화면에서 연결하는 EKODI 중앙 관제실입니다.</p>
       <form id="loginForm">
         <label>관리자 이메일<input name="email" type="email" autocomplete="username" required></label>
         <label>비밀번호<input name="password" type="password" minlength="12" autocomplete="current-password" required></label>
         <p class="error" id="loginError" role="alert"></p>
         <button class="primary full" id="loginButton" type="submit">관리 콘솔 입장</button>
       </form>
-      <a class="legacy-link" href="/legacy">기존 관리 콘솔 열기 →</a>
+      <a class="legacy-link" href="/legacy">DNS · 도메인 · 감사로그 고급관리 →</a>
     </div>
   </section>
 
   <div class="app" id="app" hidden>
     <aside class="sidebar">
       <a class="brand side-brand" href="https://ekodi.kr"><span>E</span><strong>EKODI</strong></a>
-      <small class="side-caption">CONTROL CENTER</small>
+      <small class="side-caption">CONTROL CENTER V4.1</small>
       <nav>
         <button class="nav active" data-section="overview">⌂ <span>통합 운영</span></button>
         <button class="nav" data-section="services">◉ <span>서비스 · 통계</span></button>
+        <button class="nav" data-section="finance">₩ <span>결제 · 회계</span></button>
         <button class="nav" data-section="communication">✦ <span>메일 · 라이브</span></button>
         <button class="nav" data-section="workspace">▣ <span>클라우드 · 자료</span></button>
         <button class="nav" data-section="organization">◫ <span>조직 · 사업</span></button>
@@ -55,9 +57,9 @@
       <div class="content">
         <section class="hero" data-panel="overview">
           <div>
-            <p class="kicker">ONE ROOT · MANY DOORS</p>
-            <h2>운영의 주소와 신호를 한곳에 모았습니다.</h2>
-            <p>각 서비스는 독립적으로 움직이고, 운영 상태와 통계는 api.ekodi.kr을 통해 이 관제센터에 모입니다. 한 서비스의 장애가 다른 서비스를 끌어내리지 않도록 경계를 유지합니다.</p>
+            <p class="kicker">ONE ROOT · MANY SERVICES · ONE VIEW</p>
+            <h2>EKODI의 맥박을 admin.ekodi.kr에 모았습니다.</h2>
+            <p>공개 서비스는 독립적으로 움직이고, 상태·통계는 api.ekodi.kr, 결제·회계는 finance-api.ekodi.kr에서 관리합니다. 서로 분리된 엔진을 이 화면에서 하나의 운영 지도로 봅니다.</p>
           </div>
           <div class="hero-actions"><a class="primary" href="https://ekodi.kr" target="_blank" rel="noopener">EKODI 정문 ↗</a><a class="secondary" href="/legacy">고급 관리 ↗</a></div>
         </section>
@@ -74,51 +76,57 @@
             <div><p class="kicker">LIVE OPERATIONS</p><h2 id="operationsTitle">서비스 운영 현황</h2><p class="operations-copy" id="operationsGenerated">api.ekodi.kr에서 운영정보를 불러오는 중입니다.</p></div>
             <button class="secondary" id="runHealthCheck" type="button">↻ 전체 즉시 점검</button>
           </div>
-          <div class="service-control-grid" id="serviceControlGrid" aria-live="polite">
-            <p class="operations-loading">서비스 상태와 통계를 불러오는 중입니다.</p>
-          </div>
+          <div class="service-control-grid" id="serviceControlGrid" aria-live="polite"><p class="operations-loading">서비스 상태와 통계를 불러오는 중입니다.</p></div>
         </section>
 
-        <section class="section" data-panel="communication">
-          <div class="section-head"><div><p class="kicker">COMMUNICATION</p><h2>메일 · 라이브</h2></div><p>소통과 방송을 조직별로 분기하되 첫 진입은 하나의 로비로 통일합니다.</p></div>
-          <div class="cards">
-            <a class="module featured" href="https://mail.ekodi.kr" target="_blank" rel="noopener"><span class="icon">✉</span><div><small>MAIL LOBBY</small><strong>EKODI Mail</strong><p>Google Workspace 메일과 조직별 메일 입구</p></div><b>↗</b></a>
-            <a class="module featured" href="https://live.ekodi.kr" target="_blank" rel="noopener"><span class="icon">▶</span><div><small>LIVE LOBBY</small><strong>EKODI Live</strong><p>교회·선교·사업·연구 방송의 공통 입구</p></div><b>↗</b></a>
-            <a class="module" href="https://mail.biz.ekodi.kr" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BIZ MAIL</small><strong>비즈 메일</strong><p>사업 조직 메일 로비</p></div><b>↗</b></a>
-            <a class="module" href="https://live.church.ekodi.kr" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH LIVE</small><strong>교회 라이브</strong><p>예배·모임 방송 입구</p></div><b>↗</b></a>
+        <section class="section" data-panel="overview finance" aria-labelledby="financeTitle">
+          <div class="section-head">
+            <div><p class="kicker">PAYMENT · ACCOUNTING</p><h2 id="financeTitle">결제 · 회계 관제</h2><p class="operations-copy" id="financeGenerated">finance-api.ekodi.kr에서 결제·회계 상태를 불러오는 중입니다.</p></div>
+            <button class="secondary" id="refreshFinance" type="button">↻ 결제 · 회계 새로고침</button>
           </div>
+          <div class="finance-status">
+            <article><small>이번 달 Toss 결제</small><strong id="financeMonthGross">₩0</strong><span id="financePaymentCount">동기화 0건</span></article>
+            <article><small>이번 달 회계 손익</small><strong id="financeProfit">₩0</strong><span id="financeProfitDetail">수익 ₩0 · 비용 ₩0</span></article>
+            <article><small>결제 연동</small><strong id="financeTossState">확인 중</strong><span id="financeWebhook">finance-api.ekodi.kr/webhooks/toss</span></article>
+            <article><small>최근 7일 연동 실패</small><strong id="financeFailures">0</strong><span>결제 웹훅 · 외부 연동</span></article>
+          </div>
+          <div class="finance-note" id="financeNotice">결제·회계 준비 상태를 점검하고 있습니다.</div>
+          <h3 class="finance-subtitle">최근 결제</h3>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>승인일</th><th>주문</th><th>조직</th><th>사업부</th><th>결제수단</th><th>상태</th><th class="right">금액</th></tr></thead><tbody id="financePaymentRows"><tr><td colspan="7" class="finance-empty">결제 원장을 불러오는 중입니다.</td></tr></tbody></table></div>
+          <h3 class="finance-subtitle">이번 달 사업부별 회계</h3>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>조직</th><th>사업부</th><th class="right">수익</th><th class="right">비용</th><th class="right">손익</th><th class="right">전표</th></tr></thead><tbody id="financeAccountingRows"><tr><td colspan="6" class="finance-empty">회계 원장을 불러오는 중입니다.</td></tr></tbody></table></div>
+          <h3 class="finance-subtitle">조직 → 사업부 → 프로젝트</h3>
+          <div class="finance-structure" id="financeStructure"><p class="finance-empty">회계 구조를 불러오는 중입니다.</p></div>
         </section>
 
-        <section class="section" data-panel="workspace">
-          <div class="section-head"><div><p class="kicker">WORKSPACE</p><h2>클라우드 · 운영 도구</h2></div><p>자료와 실행도구를 같은 지도 위에 배치합니다.</p></div>
-          <div class="cards">
-            <a class="module featured" href="https://cloud.ekodi.kr" target="_blank" rel="noopener"><span class="icon">▣</span><div><small>CLOUD LOBBY</small><strong>EKODI Cloud</strong><p>Google Drive·Docs 기반 자료 로비</p></div><b>↗</b></a>
-            <a class="module" href="https://marketing.ekodi.kr" target="_blank" rel="noopener"><span class="icon">AI</span><div><small>MARKETING</small><strong>마케팅AI</strong><p>콘텐츠·마케팅 운영 도구</p></div><b>↗</b></a>
-            <a class="module" href="https://cgma.ekodi.kr" target="_blank" rel="noopener"><span class="icon">청</span><div><small>LOCAL</small><strong>청계상권</strong><p>지역 상권 운영 공간</p></div><b>↗</b></a>
-            <a class="module" href="/legacy#domains"><span class="icon">◎</span><div><small>DOMAIN CONTROL</small><strong>도메인 · DNS</strong><p>Cloudflare DNS와 등록대장 관리</p></div><b>→</b></a>
-          </div>
-        </section>
+        <section class="section" data-panel="communication"><div class="section-head"><div><p class="kicker">COMMUNICATION</p><h2>메일 · 라이브</h2></div><p>소통과 방송을 조직별로 분기하되 첫 진입은 하나의 로비로 통일합니다.</p></div><div class="cards">
+          <a class="module featured" href="https://mail.ekodi.kr" target="_blank" rel="noopener"><span class="icon">✉</span><div><small>MAIL LOBBY</small><strong>EKODI Mail</strong><p>Google Workspace 메일과 조직별 메일 입구</p></div><b>↗</b></a>
+          <a class="module featured" href="https://live.ekodi.kr" target="_blank" rel="noopener"><span class="icon">▶</span><div><small>LIVE LOBBY</small><strong>EKODI Live</strong><p>교회·선교·사업·연구 방송의 공통 입구</p></div><b>↗</b></a>
+          <a class="module" href="https://mail.biz.ekodi.kr" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BIZ MAIL</small><strong>비즈 메일</strong><p>사업 조직 메일 로비</p></div><b>↗</b></a>
+          <a class="module" href="https://live.church.ekodi.kr" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH LIVE</small><strong>교회 라이브</strong><p>예배·모임 방송 입구</p></div><b>↗</b></a>
+        </div></section>
 
-        <section class="section" data-panel="organization">
-          <div class="section-head"><div><p class="kicker">ORGANIZATIONS</p><h2>조직 · 사업 운영</h2></div><p>법인·사업·사역은 분리하고, 운영 경험은 하나로 유지합니다.</p></div>
-          <div class="cards">
-            <a class="module" href="https://biz.ekodi.kr" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BUSINESS</small><strong>에코디비즈</strong><p>사업·마케팅·상거래 허브</p></div><b>↗</b></a>
-            <a class="module" href="https://church.ekodi.kr" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH</small><strong>에코디교회</strong><p>예배·공동체·사역 허브</p></div><b>↗</b></a>
-            <a class="module" href="https://lab.ekodi.kr" target="_blank" rel="noopener"><span class="icon">L</span><div><small>LAB</small><strong>에코디연구소</strong><p>연구·교육·프로젝트 허브</p></div><b>↗</b></a>
-            <article class="module planned"><span class="icon">T</span><div><small>TRADING</small><strong>무역 운영</strong><p>견적·계약·공급사·바이어 통합관리 연결 준비</p></div><em>확장</em></article>
-            <article class="module planned"><span class="icon">₩</span><div><small>ACCOUNTING</small><strong>통합 회계</strong><p>교회·상인회·비즈 분리회계 대시보드 연결 준비</p></div><em>확장</em></article>
-            <a class="module" href="/legacy"><span class="icon">⌘</span><div><small>ADVANCED</small><strong>기존 관리 콘솔</strong><p>DNS·등록기관·감사로그 등 고급 운영</p></div><b>→</b></a>
-          </div>
-        </section>
+        <section class="section" data-panel="workspace"><div class="section-head"><div><p class="kicker">WORKSPACE</p><h2>클라우드 · 운영 도구</h2></div><p>자료와 실행도구를 같은 지도 위에 배치합니다.</p></div><div class="cards">
+          <a class="module featured" href="https://cloud.ekodi.kr" target="_blank" rel="noopener"><span class="icon">▣</span><div><small>CLOUD LOBBY</small><strong>EKODI Cloud</strong><p>Google Drive·Docs 기반 자료 로비</p></div><b>↗</b></a>
+          <a class="module" href="https://marketing.ekodi.kr" target="_blank" rel="noopener"><span class="icon">AI</span><div><small>MARKETING</small><strong>마케팅AI</strong><p>콘텐츠·마케팅 운영 도구</p></div><b>↗</b></a>
+          <a class="module" href="https://cgma.ekodi.kr" target="_blank" rel="noopener"><span class="icon">청</span><div><small>LOCAL</small><strong>청계상권</strong><p>지역 상권 운영 공간</p></div><b>↗</b></a>
+          <a class="module" href="/legacy#domains"><span class="icon">◎</span><div><small>DOMAIN CONTROL</small><strong>도메인 · DNS</strong><p>Cloudflare DNS와 등록대장 관리</p></div><b>→</b></a>
+        </div></section>
 
-        <section class="architecture" data-panel="overview">
-          <p class="kicker">BALANCED ARCHITECTURE</p>
-          <h2>분리 우선 · 필요할 때 연결 · 관리는 통합</h2>
-          <div class="flow"><span>ekodi.kr<br><small>초경량 정문</small></span><b>→</b><span>독립 *.ekodi.kr<br><small>서비스별 운영</small></span><b>→</b><span>api.ekodi.kr<br><small>상태 · 통계 · 연결</small></span><b>→</b><span>admin.ekodi.kr<br><small>통합 점검 · 관리</small></span></div>
-        </section>
+        <section class="section" data-panel="organization"><div class="section-head"><div><p class="kicker">ORGANIZATIONS</p><h2>조직 · 사업 운영</h2></div><p>법적 주체와 사역은 분리하고, 운영 경험과 모니터링은 하나로 유지합니다.</p></div><div class="cards">
+          <a class="module" href="https://biz.ekodi.kr" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BUSINESS</small><strong>에코디비즈</strong><p>사업·마케팅·상거래 허브</p></div><b>↗</b></a>
+          <a class="module" href="https://trade.ekodi.kr" target="_blank" rel="noopener"><span class="icon">T</span><div><small>TRADING</small><strong>EKODI Trading</strong><p>무역 운영 정식 주소</p></div><b>↗</b></a>
+          <a class="module" href="https://pay.ekodi.kr" target="_blank" rel="noopener"><span class="icon">₩</span><div><small>PAYMENT</small><strong>EKODI Pay</strong><p>결제 게이트와 사업부별 귀속</p></div><b>↗</b></a>
+          <a class="module" href="https://church.ekodi.kr" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH</small><strong>에코디교회</strong><p>예배·공동체·사역 허브</p></div><b>↗</b></a>
+          <a class="module" href="https://lab.ekodi.kr" target="_blank" rel="noopener"><span class="icon">L</span><div><small>LAB</small><strong>에코디연구소</strong><p>연구·교육·프로젝트 허브</p></div><b>↗</b></a>
+          <a class="module" href="/legacy"><span class="icon">⌘</span><div><small>ADVANCED</small><strong>고급 관리 콘솔</strong><p>DNS·등록기관·감사로그 등 고급 운영</p></div><b>→</b></a>
+        </div></section>
+
+        <section class="architecture" data-panel="overview"><p class="kicker">CONTROL ARCHITECTURE</p><h2>분리는 안전하게, 관제는 하나로</h2><div class="flow"><span>ekodi.kr<br><small>생태계 정문</small></span><b>→</b><span>*.ekodi.kr<br><small>독립 서비스</small></span><b>→</b><span>api · finance-api<br><small>상태 · 결제 · 회계</small></span><b>→</b><span>admin.ekodi.kr<br><small>통합 모니터링</small></span></div></section>
       </div>
     </main>
   </div>
   <script src="control-center.js"></script>
+  <script src="finance-monitor.js"></script>
 </body>
 </html>
