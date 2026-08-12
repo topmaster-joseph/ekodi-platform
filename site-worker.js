@@ -18,10 +18,40 @@ const HUB_HOSTS = new Set([
   'auth.ekodi.kr',
 ]);
 
+const ADMIN_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self'",
+  "img-src 'self' data:",
+  "connect-src 'self' https://api.ekodi.kr https://ekodi-auth-api.topmaster-joseph.workers.dev",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ');
+
+const HUB_CSP = [
+  "default-src 'none'",
+  "style-src 'unsafe-inline'",
+  "script-src 'unsafe-inline'",
+  "img-src data:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+  "object-src 'none'",
+].join('; ');
+
 function assetRequest(request, pathname) {
   const url = new URL(request.url);
   url.pathname = pathname;
   return new Request(url, request);
+}
+
+function withHostSecurity(response, csp, cacheControl) {
+  const secured = new Response(response.body, response);
+  secured.headers.set('Content-Security-Policy', csp);
+  secured.headers.set('Cache-Control', cacheControl);
+  return secured;
 }
 
 export default {
@@ -30,11 +60,13 @@ export default {
     const host = url.hostname.toLowerCase();
 
     if (ADMIN_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
-      return env.ASSETS.fetch(assetRequest(request, '/admin.html'));
+      const response = await env.ASSETS.fetch(assetRequest(request, '/admin.html'));
+      return withHostSecurity(response, ADMIN_CSP, 'no-store');
     }
 
     if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
-      return env.ASSETS.fetch(assetRequest(request, '/hub.html'));
+      const response = await env.ASSETS.fetch(assetRequest(request, '/hub.html'));
+      return withHostSecurity(response, HUB_CSP, 'public, max-age=300');
     }
 
     return env.ASSETS.fetch(request);
