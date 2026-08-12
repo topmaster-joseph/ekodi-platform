@@ -30,9 +30,9 @@ test('control endpoints require the D1 operations store', async () => {
 });
 
 test('control API exposes monitoring, service settings and history boundaries', () => {
-  for (const route of ['/overview', '/check', '/services']) {
-    assert.match(apiSource, new RegExp(`CONTROL_PREFIX}\\${route.replace('/', '\\/')}`));
-  }
+  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/overview`"));
+  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/check`"));
+  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/services`"));
   assert.match(apiSource, /service_checks/);
   assert.match(apiSource, /service_controls/);
   assert.match(apiSource, /VALID_STATES/);
