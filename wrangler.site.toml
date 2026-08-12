@@ -5,14 +5,12 @@ preview_urls = false
 
 
 [[routes]]
-pattern = "ekodi.kr"
+pattern = "ekodi.kr/*"
 zone_name = "ekodi.kr"
-custom_domain = true
 
 [[routes]]
-pattern = "www.ekodi.kr"
+pattern = "www.ekodi.kr/*"
 zone_name = "ekodi.kr"
-custom_domain = true
 
 [assets]
 directory = "./dist"
