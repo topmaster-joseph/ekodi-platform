@@ -23,6 +23,7 @@ const TRADE_CANONICAL_HOST = 'trade.ekodi.kr';
 const TRADE_LEGACY_HOSTS = new Set(['trade.biz.ekodi.kr']);
 
 const ADMIN_ALIASES = new Set([
+  '/',
   '/admin',
   '/admin/',
   '/admin.html',
@@ -62,17 +63,12 @@ function assetRequest(request, pathname) {
   return new Request(url, request);
 }
 
-function withHostSecurity(response, csp, cacheControl) {
+function withHostSecurity(response, csp, cacheControl, routeName = '') {
   const secured = new Response(response.body, response);
   secured.headers.set('Content-Security-Policy', csp);
   secured.headers.set('Cache-Control', cacheControl);
+  if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
-}
-
-function redirect(url, pathname) {
-  const next = new URL(url);
-  next.pathname = pathname;
-  return Response.redirect(next.toString(), 308);
 }
 
 function redirectToTradeCanonical(url) {
@@ -93,26 +89,24 @@ export default {
 
     if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/trade.html'));
-      return withHostSecurity(response, HUB_CSP, 'public, max-age=300');
+      return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'trade');
     }
 
     if (ADMIN_HOSTS.has(host)) {
-      if (ADMIN_ALIASES.has(url.pathname) && url.pathname !== '/') return redirect(url, '/');
-
-      if (url.pathname === '/') {
+      if (ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center.html'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store');
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
 
       if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin.html'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store');
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-legacy');
       }
     }
 
     if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/hub.html'));
-      return withHostSecurity(response, HUB_CSP, 'public, max-age=300');
+      return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'hub');
     }
 
     return env.ASSETS.fetch(request);
