@@ -1,0 +1,77 @@
+name: Repair CGMA Auth Redirect
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repair-cgma-auth.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      PROJECT_REF: renzehysxirjilvdxacv
+    steps:
+      - name: Select Supabase management credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase management credential is configured in ekodi-platform.'
+            exit 2
+          fi
+          echo "SUPABASE_MGMT_TOKEN=$token" >> "$GITHUB_ENV"
+          echo 'Supabase management credential found.'
+
+      - name: Update Auth production URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          payload='{"site_url":"https://cgma.ekodi.kr","uri_allow_list":"https://cgma.ekodi.kr/member,https://cgma.ekodi.kr/member/**,https://cheonggye-market.pages.dev/member,https://cheonggye-market.pages.dev/member/**"}'
+          code=$(curl -sS -o /tmp/auth.json -w '%{http_code}' -X PATCH "$api" \
+            -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$payload")
+          if [ "$code" != '200' ]; then
+            echo "Supabase Auth update failed with HTTP $code"
+            python - <<'PY'
+          import json
+          try:
+              d=json.load(open('/tmp/auth.json'))
+              print({'message': d.get('message'), 'error': d.get('error')})
+          except Exception:
+              pass
+          PY
+            exit 1
+          fi
+          echo 'Supabase Auth URLs updated.'
+
+      - name: Verify Auth configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          curl -fsS "$api" -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" -o /tmp/auth-check.json
+          python - <<'PY'
+          import json, sys
+          d=json.load(open('/tmp/auth-check.json'))
+          site=d.get('site_url')
+          allow=d.get('uri_allow_list') or ''
+          print('site_url=', site)
+          print('cgma_member_allowed=', 'https://cgma.ekodi.kr/member' in allow)
+          if site != 'https://cgma.ekodi.kr' or 'https://cgma.ekodi.kr/member' not in allow:
+              sys.exit(1)
+          PY
