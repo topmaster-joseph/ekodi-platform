@@ -15,8 +15,12 @@ nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
   menuButton?.setAttribute('aria-expanded','false');
 }));
 
-function linkFor(label,url){
-  if(!url)return Object.assign(document.createElement('span'),{textContent:`${label} · 준비 중`});
+function linkFor(label,url,status){
+  if(!url){
+    const span=document.createElement('span');
+    span.textContent=status?`${label} · ${status}`:`${label} · 준비 중`;
+    return span;
+  }
   const a=document.createElement('a');
   a.href=url;
   a.textContent=`${label} ↗`;
@@ -57,12 +61,14 @@ async function loadBooks(){
       node.querySelector('.book-format').textContent=joinFormat(book.format);
       node.querySelector('.book-edition').textContent=book.edition||'';
       node.querySelector('.book-series-record').textContent=book.series||'';
-      node.querySelector('.book-citation').textContent=book.citation||`${book.author}. 『${book.title}』. EKODI BOOKS.`;
+      const identifier=book.identifiers?.googleBooks||book.identifiers?.isbnEbook||'';
+      const citationBase=book.citation||`${book.author}. 『${book.title}』. EKODI BOOKS.`;
+      node.querySelector('.book-citation').textContent=identifier?`${citationBase} · Identifier: ${identifier}`:citationBase;
       const links=node.querySelector('.book-links');
       links.append(
-        linkFor('Google Play Books',book.links?.google),
-        linkFor('Amazon',book.links?.amazon),
-        linkFor('국내 서점',book.links?.korea)
+        linkFor('Google Play Books',book.links?.google,book.distribution?.google),
+        linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),
+        linkFor('국내 서점',book.links?.korea,book.distribution?.korea)
       );
       grid.append(node);
     }
