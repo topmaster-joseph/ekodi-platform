@@ -22,7 +22,15 @@ const HUB_HOSTS = new Set([
 const TRADE_CANONICAL_HOST = 'trade.ekodi.kr';
 const TRADE_LEGACY_HOSTS = new Set(['trade.biz.ekodi.kr']);
 
-const ADMIN_ALIASES = new Set(['/admin','/admin/','/admin.html','/index.html']);
+const ADMIN_ALIASES = new Set([
+  '/admin',
+  '/admin/',
+  '/admin.html',
+  '/index.html',
+  '/control-center',
+  '/control-center/',
+  '/control-center.html',
+]);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 
 const ADMIN_CSP = [
