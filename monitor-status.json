@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-12T09:44:25.771Z",
+  "generatedAt": "2026-08-12T13:31:27.570Z",
   "summary": {
-    "total": 6,
-    "online": 5,
+    "total": 8,
+    "online": 7,
     "degraded": 0,
     "offline": 1
   },
@@ -14,8 +14,8 @@
       "url": "https://mall.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 302,
-      "checkedAt": "2026-08-12T09:44:23.924Z",
+      "responseTime": 372,
+      "checkedAt": "2026-08-12T13:31:25.785Z",
       "error": null
     },
     {
@@ -25,9 +25,31 @@
       "url": "https://biz.ekodi.kr",
       "status": "offline",
       "httpStatus": null,
-      "responseTime": 906,
-      "checkedAt": "2026-08-12T09:44:23.959Z",
+      "responseTime": 1218,
+      "checkedAt": "2026-08-12T13:31:25.828Z",
       "error": "fetch failed"
+    },
+    {
+      "id": "marketing",
+      "name": "마케팅AI",
+      "domain": "marketing.ekodi.kr",
+      "url": "https://marketing.ekodi.kr",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 444,
+      "checkedAt": "2026-08-12T13:31:25.829Z",
+      "error": null
+    },
+    {
+      "id": "cgma",
+      "name": "청계상권",
+      "domain": "cgma.ekodi.kr",
+      "url": "https://cgma.ekodi.kr",
+      "status": "online",
+      "httpStatus": 200,
+      "responseTime": 469,
+      "checkedAt": "2026-08-12T13:31:25.830Z",
+      "error": null
     },
     {
       "id": "publishing",
@@ -36,8 +58,8 @@
       "url": "https://books.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 375,
-      "checkedAt": "2026-08-12T09:44:23.960Z",
+      "responseTime": 612,
+      "checkedAt": "2026-08-12T13:31:25.831Z",
       "error": null
     },
     {
@@ -47,8 +69,8 @@
       "url": "https://church.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1810,
-      "checkedAt": "2026-08-12T09:44:23.961Z",
+      "responseTime": 1737,
+      "checkedAt": "2026-08-12T13:31:25.832Z",
       "error": null
     },
     {
@@ -58,8 +80,8 @@
       "url": "https://lab.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 461,
-      "checkedAt": "2026-08-12T09:44:23.962Z",
+      "responseTime": 792,
+      "checkedAt": "2026-08-12T13:31:25.833Z",
       "error": null
     },
     {
@@ -69,8 +91,8 @@
       "url": "https://youtube.com/@ekodicommunity",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 589,
-      "checkedAt": "2026-08-12T09:44:23.963Z",
+      "responseTime": 823,
+      "checkedAt": "2026-08-12T13:31:25.834Z",
       "error": null
     }
   ]
