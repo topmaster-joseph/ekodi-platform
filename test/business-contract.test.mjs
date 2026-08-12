@@ -41,9 +41,9 @@ test('short canonical client domains are preserved', () => {
 
 test('admin worker never reintroduces the static-assets redirect loop', () => {
   assert.ok(siteWorker.includes("assetRequest(request, '/control-center')"));
-  assert.ok(siteWorker.includes("assetRequest(request, '/admin')"));
   assert.ok(!siteWorker.includes("assetRequest(request, '/control-center.html')"));
   assert.ok(!siteWorker.includes("assetRequest(request, '/admin.html')"));
+  assert.match(siteWorker, /LEGACY_ALIASES[\s\S]*assetRequest\(request, '\/control-center'\)/);
   assert.ok(siteWorker.includes("'X-EKODI-Route', routeName"));
 });
 
