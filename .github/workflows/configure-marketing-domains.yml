@@ -23,7 +23,7 @@ jobs:
           test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Attach managed custom domains
+      - name: Attach Pages custom domains
         shell: bash
         run: |
           set -euo pipefail
@@ -49,28 +49,75 @@ jobs:
           }
 
           add_domain 'cheonggye-market' 'cgma.ekodi.kr'
-          # marketing-ai is created/deployed by Deploy Marketing AI; attach when available.
-          if curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/marketing-ai" >/dev/null 2>&1; then
-            add_domain 'marketing-ai' 'marketing.ekodi.kr'
-          else
-            echo 'marketing-ai Pages project not created yet; deploy workflow will attach marketing.ekodi.kr.'
-          fi
+          add_domain 'marketing-ai' 'marketing.ekodi.kr'
 
-      - name: Verify cgma.ekodi.kr
+      - name: Create EKODI CNAME records
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          test -n "$zone_id" || { echo 'ekodi.kr zone not found'; exit 1; }
+
+          pages_target() {
+            project="$1"
+            curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project" | \
+              python -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])"
+          }
+
+          upsert_cname() {
+            name="$1"
+            target="$2"
+            existing_code=$(curl -sS -o /tmp/existing.json -w '%{http_code}' "${auth[@]}" "$api/zones/$zone_id/dns_records?type=CNAME&name=$name")
+            if [ "$existing_code" = '403' ]; then
+              echo 'Cloudflare token needs Zone > DNS > Edit permission for ekodi.kr.'
+              exit 77
+            fi
+            [ "$existing_code" = '200' ] || { cat /tmp/existing.json; echo "DNS lookup failed: HTTP $existing_code"; exit 1; }
+            record_id=$(python -c "import json; d=json.load(open('/tmp/existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
+            payload="{\"type\":\"CNAME\",\"name\":\"$name\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"Managed by EKODI Platform\"}"
+            if [ -n "$record_id" ]; then
+              code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X PUT "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records/$record_id")
+            else
+              code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records")
+            fi
+            if [ "$code" = '403' ]; then
+              echo 'Cloudflare token needs Zone > DNS > Edit permission for ekodi.kr.'
+              exit 77
+            fi
+            case "$code" in 200|201) ;; *) cat /tmp/dns.json; echo "DNS upsert failed: HTTP $code"; exit 1;; esac
+            python -c "import json; d=json.load(open('/tmp/dns.json')); print(d['result']['name'], '->', d['result']['content'])"
+          }
+
+          cgma_target=$(pages_target 'cheonggye-market')
+          marketing_target=$(pages_target 'marketing-ai')
+          echo "cgma target=$cgma_target"
+          echo "marketing target=$marketing_target"
+          upsert_cname 'cgma.ekodi.kr' "$cgma_target"
+          upsert_cname 'marketing.ekodi.kr' "$marketing_target"
+
+      - name: Verify custom domains
         shell: bash
         run: |
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           for attempt in $(seq 1 20); do
-            result=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/cheonggye-market/domains/cgma.ekodi.kr" || true)
-            status=$(printf '%s' "$result" | python -c "import sys,json; s=sys.stdin.read(); d=json.loads(s) if s else {}; print((d.get('result') or {}).get('status','unknown'))" 2>/dev/null || echo unknown)
-            code=$(curl -L -sS -o /tmp/cgma.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://cgma.ekodi.kr/' || true)
-            echo "attempt=$attempt status=$status http=$code"
-            if [ "$code" = '200' ] && grep -Fq '청계면상인회' /tmp/cgma.html; then
-              echo 'CGMA custom domain verified.'
-              exit 0
-            fi
+            ok=1
+            for spec in 'cheonggye-market:cgma.ekodi.kr:청계면상인회' 'marketing-ai:marketing.ekodi.kr:마케팅AI'; do
+              project="${spec%%:*}"
+              rest="${spec#*:}"
+              domain="${rest%%:*}"
+              needle="${rest#*:}"
+              result=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
+              status=$(printf '%s' "$result" | python -c "import sys,json; s=sys.stdin.read(); d=json.loads(s) if s else {}; print((d.get('result') or {}).get('status','unknown'))" 2>/dev/null || echo unknown)
+              code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
+              echo "$domain status=$status http=$code"
+              if [ "$code" != '200' ] || ! grep -Fq "$needle" /tmp/site.html; then ok=0; fi
+            done
+            [ "$ok" -eq 1 ] && { echo 'Marketing domains verified.'; exit 0; }
             sleep 5
           done
-          echo 'CGMA custom-domain verification is still pending.'
           exit 1
