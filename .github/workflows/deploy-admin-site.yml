@@ -15,6 +15,7 @@ on:
       - 'client-access.css'
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
+      - 'auth-site/**'
       - 'scripts/build.mjs'
       - 'wrangler.site.toml'
       - '.github/workflows/deploy-admin-site.yml'
@@ -45,6 +46,7 @@ jobs:
           node --check control-center.js
           node --check client-access.js
           node --check google-admin-auth.js
+          node --check auth-site/auth.js
 
       - name: Validate authentication visibility contract
         shell: bash
@@ -60,6 +62,10 @@ jobs:
           grep -Fq '/api/google/challenge' google-admin-auth.js
           grep -Fq '/api/google/login' google-admin-auth.js
           grep -Fq '/api/admin-access/google-accounts' google-admin-auth.js
+          grep -Fq 'EKODI 인증센터' auth-site/index.html
+          grep -Fq 'functions/v1/access-api' auth-site/auth.js
+          grep -Fq 'AUTH_HOST' site-worker.js
+          grep -Fq '/auth-center' site-worker.js
 
       - name: Verify Cloudflare credentials
         run: |
@@ -69,7 +75,7 @@ jobs:
       - name: Deploy EKODI site worker
         run: npm run deploy:site
 
-      - name: Verify admin routes, Google auth and customer access assets
+      - name: Verify admin routes, central auth and customer access assets
         shell: bash
         run: |
           set -euo pipefail
@@ -101,6 +107,15 @@ jobs:
             grep -Fq "$expected" /tmp/admin-asset || return 1
           }
 
+          verify_auth() {
+            code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true)
+            echo "https://auth.ekodi.kr/ -> $code"
+            [ "$code" = '200' ] || return 1
+            grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers || return 1
+            grep -Fq 'EKODI 인증센터' /tmp/auth-body || return 1
+            curl -fsSL --max-time 15 'https://auth.ekodi.kr/auth.js' | grep -Fq 'functions/v1/access-api' || return 1
+          }
+
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
@@ -109,8 +124,9 @@ jobs:
               && verify_asset 'client-access.js' '/api/customers/tenants' \
               && verify_asset 'client-access.css' '.client-access-layout' \
               && verify_asset 'google-admin-auth.js' '/api/google/login' \
-              && verify_asset 'google-admin-auth.css' '.google-auth-panel'; then
-              echo 'admin.ekodi.kr, Google administrator login and Clients access module verified.'
+              && verify_asset 'google-admin-auth.css' '.google-auth-panel' \
+              && verify_auth; then
+              echo 'admin.ekodi.kr and auth.ekodi.kr verified with Google-first access modules.'
               exit 0
             fi
             sleep 4
