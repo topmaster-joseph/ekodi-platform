@@ -120,6 +120,7 @@ jobs:
           add_domain 'marketing-ai' 'marketing.ekodi.kr'
           add_domain 'marketing-ai-jadam' 'jadam.ekodi.kr'
           add_domain 'marketing-ai-pizzamaru' 'pizzamaru.ekodi.kr'
+          add_domain 'marketing-ai-yogurtpurple' 'yogurt.ekodi.kr'
           add_domain 'marketing-ai-yogurtpurple' 'yogurtpurple.ekodi.kr'
 
       - name: Configure EKODI DNS
@@ -158,13 +159,14 @@ jobs:
           upsert_cname 'marketing.ekodi.kr' "$(pages_target 'marketing-ai')"
           upsert_cname 'jadam.ekodi.kr' "$(pages_target 'marketing-ai-jadam')"
           upsert_cname 'pizzamaru.ekodi.kr' "$(pages_target 'marketing-ai-pizzamaru')"
-          upsert_cname 'yogurtpurple.ekodi.kr' "$(pages_target 'marketing-ai-yogurtpurple')"
+          yogurt_target="$(pages_target 'marketing-ai-yogurtpurple')"
+          upsert_cname 'yogurt.ekodi.kr' "$yogurt_target"
+          upsert_cname 'yogurtpurple.ekodi.kr' "$yogurt_target"
 
       - name: Verify Pages and custom domains
         shell: bash
         run: |
           set -euo pipefail
-          api='https://api.cloudflare.com/client/v4'
 
           verify_url() {
             url="$1"
@@ -180,6 +182,7 @@ jobs:
               'marketing.ekodi.kr:마케팅AI' \
               'jadam.ekodi.kr:자담치킨 목포대점' \
               'pizzamaru.ekodi.kr:피자마루 목포대점' \
+              'yogurt.ekodi.kr:요거트퍼플 목포대점' \
               'yogurtpurple.ekodi.kr:요거트퍼플 목포대점'; do
               domain="${spec%%:*}"
               needle="${spec#*:}"
