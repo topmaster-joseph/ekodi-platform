@@ -43,7 +43,7 @@ test('verified public services are direct static links', () => {
 
 test('unverified services without an explicit public launch are not clickable from the root', () => {
   const registry = JSON.parse(registryText);
-  const explicitlyPublished = new Set(['biz']);
+  const explicitlyPublished = new Set(['biz', 'admin']);
   for (const service of registry.services.filter(item => !item.qaVerified && !explicitlyPublished.has(item.id))) {
     assert.doesNotMatch(portalHtml, new RegExp(`href="https://${service.domain.replaceAll('.', '\\.')}`));
   }
@@ -62,6 +62,14 @@ test('site Worker routes primary EKODI hubs by hostname', () => {
   }
   assert.match(wranglerSite, /binding = "ASSETS"/);
   assert.match(wranglerSite, /run_worker_first = true/);
+});
+
+test('admin and lobby hosts override the root CSP safely', () => {
+  assert.match(siteWorker, /ADMIN_CSP/);
+  assert.match(siteWorker, /HUB_CSP/);
+  assert.match(siteWorker, /connect-src 'self' https:\/\/api\.ekodi\.kr https:\/\/ekodi-auth-api\.topmaster-joseph\.workers\.dev/);
+  assert.match(siteWorker, /script-src 'unsafe-inline'/);
+  assert.match(siteWorker, /headers\.set\('Content-Security-Policy'/);
 });
 
 test('root Worker uses direct Cloudflare custom domains', () => {
