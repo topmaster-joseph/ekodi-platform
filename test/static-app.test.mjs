@@ -31,11 +31,14 @@ test('verified public services are direct static links', () => {
   }
 });
 
-test('unverified services are not clickable from the root', () => {
+test('unverified services stay non-clickable unless they are explicit gateway entry points', () => {
   const registry = JSON.parse(registryText);
-  for (const service of registry.services.filter(item => !item.qaVerified)) {
+  const explicitGateways = new Set(['biz', 'admin']);
+  for (const service of registry.services.filter(item => !item.qaVerified && !explicitGateways.has(item.id))) {
     assert.doesNotMatch(portalHtml, new RegExp(`href="https://${service.domain.replaceAll('.', '\\.')}`));
   }
+  assert.match(portalHtml, /href="https:\/\/biz\.ekodi\.kr/);
+  assert.match(portalHtml, /href="https:\/\/admin\.ekodi\.kr/);
 });
 
 test('admin console keeps its existing external script', () => {
