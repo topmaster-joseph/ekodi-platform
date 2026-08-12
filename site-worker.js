@@ -1,5 +1,5 @@
-// Admin aliases intentionally return the control center directly with HTTP 200.
-// Do not canonicalize these paths with redirects: Cloudflare edge rules may also normalize paths.
+// Static Assets canonicalizes *.html URLs to extensionless paths.
+// Always request canonical asset paths internally so edge redirects never escape the Worker.
 const ADMIN_HOSTS = new Set([
   'admin.ekodi.kr',
   'admin.biz.ekodi.kr',
@@ -90,24 +90,24 @@ export default {
     }
 
     if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
-      const response = await env.ASSETS.fetch(assetRequest(request, '/trade.html'));
+      const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
       return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'trade');
     }
 
     if (ADMIN_HOSTS.has(host)) {
       if (ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center.html'));
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
 
       if (LEGACY_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/admin.html'));
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admin'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-legacy');
       }
     }
 
     if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
-      const response = await env.ASSETS.fetch(assetRequest(request, '/hub.html'));
+      const response = await env.ASSETS.fetch(assetRequest(request, '/hub'));
       return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'hub');
     }
 
