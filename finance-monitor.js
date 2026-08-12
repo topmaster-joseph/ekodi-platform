@@ -22,6 +22,12 @@ async function financeRequest(path) {
   return data;
 }
 
+async function ecosystemRequest() {
+  const response = await fetch('/monitor-status.json', { cache: 'no-store' });
+  if (!response.ok) throw new Error(`전체 생태계 모니터 조회 실패 (${response.status})`);
+  return response.json();
+}
+
 function financeEmpty(tbody, columns, text) {
   tbody.textContent = '';
   const row = document.createElement('tr');
@@ -111,27 +117,79 @@ function renderFinanceStructure(data) {
   }
 }
 
+function ensureEcosystemPanel() {
+  let tbody = document.querySelector('#ecosystemRows');
+  if (tbody) return tbody;
+  const financeSection = document.querySelector('#financeTitle')?.closest('section');
+  if (!financeSection) return null;
+  const heading = document.createElement('h3');
+  heading.className = 'finance-subtitle';
+  heading.textContent = 'EKODI 전체 생태계 · 10분 외부 점검';
+  const meta = document.createElement('p');
+  meta.className = 'operations-copy';
+  meta.id = 'ecosystemGenerated';
+  meta.textContent = '전 생태계 상태를 불러오는 중입니다.';
+  const wrap = document.createElement('div');
+  wrap.className = 'finance-table-wrap';
+  const table = document.createElement('table');
+  table.className = 'finance-table';
+  table.innerHTML = '<thead><tr><th>서비스</th><th>주소</th><th>상태</th><th>HTTP</th><th class="right">응답</th><th>점검시각</th></tr></thead><tbody id="ecosystemRows"></tbody>';
+  wrap.append(table);
+  financeSection.append(heading, meta, wrap);
+  tbody = table.querySelector('#ecosystemRows');
+  financeEmpty(tbody, 6, '전체 생태계 상태를 불러오는 중입니다.');
+  return tbody;
+}
+
+function renderEcosystem(data) {
+  const tbody = ensureEcosystemPanel();
+  if (!tbody) return;
+  const sites = Array.isArray(data?.sites) ? data.sites : [];
+  if (!sites.length) return financeEmpty(tbody, 6, '아직 전체 생태계 점검 데이터가 없습니다.');
+  tbody.textContent = '';
+  for (const site of sites) {
+    const row = document.createElement('tr');
+    const name = document.createElement('td'); name.textContent = site.name || site.id;
+    const domain = document.createElement('td'); domain.textContent = site.domain || '—';
+    const status = document.createElement('td'); status.textContent = site.status === 'online' ? '정상' : site.status === 'degraded' ? '지연' : '장애';
+    status.className = site.status === 'online' ? 'finance-ready' : 'finance-warn';
+    const http = document.createElement('td'); http.textContent = site.httpStatus ?? '—';
+    const response = document.createElement('td'); response.className = 'right'; response.textContent = Number.isFinite(site.responseTime) ? `${site.responseTime}ms` : '—';
+    const checked = document.createElement('td'); checked.textContent = financeDate(site.checkedAt);
+    row.append(name, domain, status, http, response, checked);
+    tbody.append(row);
+  }
+  const meta = document.querySelector('#ecosystemGenerated');
+  const age = data.generatedAt ? Date.now() - new Date(data.generatedAt).getTime() : Infinity;
+  const stale = !Number.isFinite(age) || age > 30 * 60 * 1000;
+  const summary = data.summary || {};
+  meta.textContent = `${financeDate(data.generatedAt)} · 정상 ${summary.online ?? 0} · 지연 ${summary.degraded ?? 0} · 장애 ${summary.offline ?? 0}${stale ? ' · 데이터 갱신 확인 필요' : ''}`;
+  if (stale) meta.classList.add('finance-warn'); else meta.classList.remove('finance-warn');
+}
+
 async function loadFinance() {
   if (!financeToken() || financeLoading) return;
   financeLoading = true;
   financeRefresh.disabled = true;
   financeRefresh.textContent = '↻ 확인 중…';
   try {
-    const [overview, payments, accounting, structure] = await Promise.all([
+    const [overview, payments, accounting, structure, ecosystem] = await Promise.all([
       financeRequest('/api/finance/overview'),
       financeRequest('/api/finance/payments?limit=30'),
       financeRequest('/api/finance/accounting'),
-      financeRequest('/api/finance/structure')
+      financeRequest('/api/finance/structure'),
+      ecosystemRequest()
     ]);
     renderFinanceOverview(overview);
     renderFinancePayments(payments.payments || []);
     renderFinanceAccounting(accounting.rows || []);
     renderFinanceStructure(structure);
+    renderEcosystem(ecosystem);
   } catch (error) {
     document.querySelector('#financeGenerated').textContent = error.message;
     const notice = document.querySelector('#financeNotice');
     notice.className = 'finance-note';
-    notice.textContent = `결제·회계 관제 연결을 확인해야 합니다: ${error.message}`;
+    notice.textContent = `결제·회계 또는 생태계 관제 연결을 확인해야 합니다: ${error.message}`;
   } finally {
     financeLoading = false;
     financeRefresh.disabled = false;
