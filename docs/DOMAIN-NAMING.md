@@ -152,3 +152,19 @@ Reserved for future service deployment:
 - `mission.ekodi.kr`
 - `community.ekodi.kr`
 - `live.biz.ekodi.kr`
+
+## 8. Google Drive mirror rule
+
+The Google Drive information architecture must mirror the EKODI domain architecture.
+
+- The canonical Drive root folder is `ekodi.kr`.
+- Every first-level service domain gets a same-named folder directly under the `ekodi.kr` Drive root.
+- Every nested functional domain gets a same-named folder inside its owning service folder.
+- Examples: `church.ekodi.kr/live.church.ekodi.kr`, `church.ekodi.kr/mail.church.ekodi.kr`, `biz.ekodi.kr/mail.biz.ekodi.kr`.
+- When a new EKODI subdomain is activated, its matching Drive folder is created in the same change set.
+- Documents, reports, schedules, media, accounting files, and project outputs should be stored by resolving the canonical service domain first and then saving under the matching Drive branch.
+- Existing shared folders are not force-moved when that could break inherited access or collaborator workflows. They remain in place and are referenced from the canonical Drive structure until a safe migration is possible.
+- User-owned folders with no collaboration dependency may be moved into the canonical branch while preserving their Drive file/folder IDs.
+- Domain aliases and legacy standalone domains do not create separate primary Drive trees. Their content belongs under the canonical `*.ekodi.kr` folder.
+
+This keeps DNS, web services, mail entry points, Google Drive, and operational naming aligned as one EKODI information architecture.
