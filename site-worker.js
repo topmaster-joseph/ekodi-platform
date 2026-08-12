@@ -1,3 +1,5 @@
+// Admin aliases intentionally return the control center directly with HTTP 200.
+// Do not canonicalize these paths with redirects: Cloudflare edge rules may also normalize paths.
 const ADMIN_HOSTS = new Set([
   'admin.ekodi.kr',
   'admin.biz.ekodi.kr',
