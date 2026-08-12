@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [portalHtml, adminHtml, registryText, headers] = await Promise.all([
+const [portalHtml, adminHtml, registryText, headers, buildScript, wranglerSite] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../admin.html', import.meta.url), 'utf8'),
   readFile(new URL('../service-registry.json', import.meta.url), 'utf8'),
-  readFile(new URL('../_headers', import.meta.url), 'utf8')
+  readFile(new URL('../_headers', import.meta.url), 'utf8'),
+  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8')
 ]);
 
 function assertUniqueIds(html, label) {
@@ -14,37 +16,42 @@ function assertUniqueIds(html, label) {
   assert.equal(new Set(ids).size, ids.length, `duplicate HTML id found in ${label}`);
 }
 
-test('public portal and admin console keep one external script each', () => {
+test('root portal is a zero-JavaScript single-request shell', () => {
   assertUniqueIds(portalHtml, 'public portal');
-  assertUniqueIds(adminHtml, 'admin console');
-  assert.equal((portalHtml.match(/<script\b/g) || []).length, 1);
-  assert.equal((adminHtml.match(/<script\b/g) || []).length, 1);
-  assert.match(portalHtml, /<script src="portal\.js" defer><\/script>/);
-  assert.match(adminHtml, /<script src="script\.js"><\/script>/);
+  assert.doesNotMatch(portalHtml, /<script\b/i);
+  assert.doesNotMatch(portalHtml, /<link[^>]+stylesheet/i);
+  assert.doesNotMatch(portalHtml, /\bfetch\s*\(/i);
+  assert.match(portalHtml, /<style>/);
+  assert.match(buildScript, /\['index\.html', '_headers'\]/);
 });
 
-test('public portal does not hard-code clickable service URLs', () => {
-  assert.doesNotMatch(portalHtml, /href="https:\/\/(?:biz|mall|books|church|lab|admin)\.ekodi\.kr/);
-});
-
-test('unverified services remain explicitly QA-gated', () => {
-  const registry = JSON.parse(registryText);
-  const requiredLocked = ['biz', 'trade', 'pay', 'mission', 'community', 'edu', 'media', 'admin'];
-  for (const id of requiredLocked) {
-    const service = registry.services.find(item => item.id === id);
-    assert.ok(service, `missing registry service: ${id}`);
-    assert.equal(service.qaVerified, false, `${id} must stay locked until QA approval`);
+test('verified public services are direct static links', () => {
+  for (const domain of ['church.ekodi.kr', 'mall.ekodi.kr', 'lab.ekodi.kr', 'books.ekodi.kr']) {
+    assert.match(portalHtml, new RegExp(`href="https://${domain.replaceAll('.', '\\.')}`));
   }
 });
 
-test('production UI does not expose removed simulated workflows', () => {
-  assert.doesNotMatch(adminHtml, /seoyeon\.lee|junho\.park|minji\.choi/);
-  assert.doesNotMatch(adminHtml, /승인된 사용자|가입 요청/);
+test('unverified services are not clickable from the root', () => {
+  const registry = JSON.parse(registryText);
+  for (const service of registry.services.filter(item => !item.qaVerified)) {
+    assert.doesNotMatch(portalHtml, new RegExp(`href="https://${service.domain.replaceAll('.', '\\.')}`));
+  }
 });
 
-test('CSP disallows inline scripts', () => {
+test('admin console keeps its existing external script', () => {
+  assertUniqueIds(adminHtml, 'admin console');
+  assert.equal((adminHtml.match(/<script\b/g) || []).length, 1);
+  assert.match(adminHtml, /<script src="script\.js"><\/script>/);
+});
+
+test('root Worker uses direct Cloudflare custom domains', () => {
+  assert.match(wranglerSite, /pattern = "ekodi\.kr"\s+custom_domain = true/s);
+  assert.match(wranglerSite, /pattern = "www\.ekodi\.kr"\s+custom_domain = true/s);
+  assert.match(wranglerSite, /workers_dev = false/);
+});
+
+test('root CSP forbids JavaScript and external runtime connections', () => {
   const policy = headers.split('\n').find(line => line.includes('Content-Security-Policy')) || '';
-  const scriptDirective = policy.split(';').find(part => part.trim().startsWith('script-src')) || '';
-  assert.match(scriptDirective, /script-src 'self'/);
-  assert.doesNotMatch(scriptDirective, /unsafe-inline/);
+  assert.match(policy, /script-src 'none'/);
+  assert.doesNotMatch(policy, /connect-src/);
 });
