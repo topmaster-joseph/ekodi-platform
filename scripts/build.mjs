@@ -28,8 +28,14 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// auth.ekodi.kr is served by the existing site Worker, so flatten its dedicated
+// assets into dist rather than creating a competing Pages custom-domain route.
+await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
+await cp(`${root}auth-site/auth.css`, `${output}auth.css`);
+await cp(`${root}auth-site/auth.js`, `${output}auth.js`);
+
 const responsiveCss = await readFile(`${root}responsive.css`, 'utf8');
-const htmlAssets = assets.filter(asset => asset.endsWith('.html'));
+const htmlAssets = [...assets.filter(asset => asset.endsWith('.html')), 'auth-center.html'];
 for (const asset of htmlAssets) {
   const path = `${output}${asset}`;
   let html = await readFile(path, 'utf8');
@@ -46,4 +52,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root, Control Center, hub and trade assets with responsive typography: ${assets.join(', ')}`);
+console.log(`Built EKODI root, Control Center, auth hub, service hubs and trade assets with responsive typography: ${assets.join(', ')}`);
