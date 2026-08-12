@@ -6,6 +6,9 @@ const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
   'index.html',
   'admin.html',
+  'control-center.html',
+  'control-center.css',
+  'control-center.js',
   'hub.html',
   'styles.css',
   'script.js',
@@ -16,4 +19,4 @@ const assets = [
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
-console.log(`Built EKODI root and hub assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root, Control Center and hub assets: ${assets.join(', ')}`);
