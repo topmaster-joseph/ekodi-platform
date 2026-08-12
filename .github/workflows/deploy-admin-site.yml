@@ -47,7 +47,7 @@ jobs:
       - name: Deploy EKODI site worker
         run: npm run deploy:site
 
-      - name: Verify admin has no redirect loop
+      - name: Verify admin has no redirect loop or blank legacy route
         shell: bash
         run: |
           set -euo pipefail
@@ -68,8 +68,9 @@ jobs:
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
-              && verify_admin 'https://admin.ekodi.kr/admin'; then
-              echo 'admin.ekodi.kr redirect loop fixed and verified.'
+              && verify_admin 'https://admin.ekodi.kr/admin' \
+              && verify_admin 'https://admin.ekodi.kr/legacy'; then
+              echo 'admin.ekodi.kr canonical and legacy routes verified.'
               exit 0
             fi
             sleep 4
