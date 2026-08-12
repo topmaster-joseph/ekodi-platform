@@ -13,7 +13,7 @@ permissions:
 jobs:
   configure:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     env:
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -50,6 +50,9 @@ jobs:
 
           add_domain 'cheonggye-market' 'cgma.ekodi.kr'
           add_domain 'marketing-ai' 'marketing.ekodi.kr'
+          add_domain 'marketing-ai-jadam' 'jadam.ekodi.kr'
+          add_domain 'marketing-ai-pizzamaru' 'pizzamaru.ekodi.kr'
+          add_domain 'marketing-ai-yogurtpurple' 'yogurtpurple.ekodi.kr'
 
       - name: Create EKODI CNAME records
         shell: bash
@@ -72,10 +75,6 @@ jobs:
             name="$1"
             target="$2"
             existing_code=$(curl -sS -o /tmp/existing.json -w '%{http_code}' "${auth[@]}" "$api/zones/$zone_id/dns_records?type=CNAME&name=$name")
-            if [ "$existing_code" = '403' ]; then
-              echo 'Cloudflare token needs Zone > DNS > Edit permission for ekodi.kr.'
-              exit 77
-            fi
             [ "$existing_code" = '200' ] || { cat /tmp/existing.json; echo "DNS lookup failed: HTTP $existing_code"; exit 1; }
             record_id=$(python -c "import json; d=json.load(open('/tmp/existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
             payload="{\"type\":\"CNAME\",\"name\":\"$name\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"Managed by EKODI Platform\"}"
@@ -84,37 +83,32 @@ jobs:
             else
               code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records")
             fi
-            if [ "$code" = '403' ]; then
-              echo 'Cloudflare token needs Zone > DNS > Edit permission for ekodi.kr.'
-              exit 77
-            fi
             case "$code" in 200|201) ;; *) cat /tmp/dns.json; echo "DNS upsert failed: HTTP $code"; exit 1;; esac
             python -c "import json; d=json.load(open('/tmp/dns.json')); print(d['result']['name'], '->', d['result']['content'])"
           }
 
-          cgma_target=$(pages_target 'cheonggye-market')
-          marketing_target=$(pages_target 'marketing-ai')
-          echo "cgma target=$cgma_target"
-          echo "marketing target=$marketing_target"
-          upsert_cname 'cgma.ekodi.kr' "$cgma_target"
-          upsert_cname 'marketing.ekodi.kr' "$marketing_target"
+          upsert_cname 'cgma.ekodi.kr' "$(pages_target 'cheonggye-market')"
+          upsert_cname 'marketing.ekodi.kr' "$(pages_target 'marketing-ai')"
+          upsert_cname 'jadam.ekodi.kr' "$(pages_target 'marketing-ai-jadam')"
+          upsert_cname 'pizzamaru.ekodi.kr' "$(pages_target 'marketing-ai-pizzamaru')"
+          upsert_cname 'yogurtpurple.ekodi.kr' "$(pages_target 'marketing-ai-yogurtpurple')"
 
       - name: Verify custom domains
         shell: bash
         run: |
           set -euo pipefail
-          api='https://api.cloudflare.com/client/v4'
           for attempt in $(seq 1 20); do
             ok=1
-            for spec in 'cheonggye-market:cgma.ekodi.kr:청계면상인회' 'marketing-ai:marketing.ekodi.kr:마케팅AI'; do
-              project="${spec%%:*}"
-              rest="${spec#*:}"
-              domain="${rest%%:*}"
-              needle="${rest#*:}"
-              result=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
-              status=$(printf '%s' "$result" | python -c "import sys,json; s=sys.stdin.read(); d=json.loads(s) if s else {}; print((d.get('result') or {}).get('status','unknown'))" 2>/dev/null || echo unknown)
+            for spec in \
+              'cgma.ekodi.kr:청계면상인회' \
+              'marketing.ekodi.kr:마케팅AI' \
+              'jadam.ekodi.kr:자담치킨 목포대점' \
+              'pizzamaru.ekodi.kr:피자마루 목포대점' \
+              'yogurtpurple.ekodi.kr:요거트퍼플 목포대점'; do
+              domain="${spec%%:*}"
+              needle="${spec#*:}"
               code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
-              echo "$domain status=$status http=$code"
+              echo "$domain http=$code"
               if [ "$code" != '200' ] || ! grep -Fq "$needle" /tmp/site.html; then ok=0; fi
             done
             [ "$ok" -eq 1 ] && { echo 'Marketing domains verified.'; exit 0; }
