@@ -18,7 +18,10 @@ function hasDomain(text, domain) {
   assert.match(text, new RegExp(domain.replaceAll('.', '\\.')));
 }
 function hasRoute(toml, domain) {
-  assert.match(toml, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"\\s+custom_domain = true`, 's'));
+  const expected = `pattern = "${domain}"`;
+  const block = toml.split('[[routes]]').find(part => part.includes(expected));
+  assert.ok(block, `missing custom-domain route for ${domain}`);
+  assert.match(block, /custom_domain = true/, `${domain} route must be a custom domain`);
 }
 
 test('root portal stays zero-JavaScript and direct verified links remain', () => {
