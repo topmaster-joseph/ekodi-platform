@@ -8,6 +8,7 @@ const assets = [
   'admin.html',
   'control-center.html',
   'control-center.css',
+  'control-center-ops.css',
   'control-center.js',
   'hub.html',
   'styles.css',
