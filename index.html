@@ -3,55 +3,90 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="교회·선교·연구·교육·출판·비즈니스를 연결하는 EKODI 생태계 루트 포털">
-<meta name="theme-color" content="#050a10">
+<meta name="description" content="사람과 말씀, 공동체와 사역을 가깝게 잇는 EKODI 연결 생태계 플랫폼">
+<meta name="theme-color" content="#06142a">
 <link rel="canonical" href="https://ekodi.kr/">
-<title>EKODI | 에코디 생태계</title>
+<title>EKODI | 연결의 생태계</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#050a10;color:#eefcff;font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif}body{min-height:100dvh;display:grid;place-items:center;padding:26px 16px;background-image:radial-gradient(circle at 50% 22%,#12304b 0,transparent 32%),linear-gradient(#07111cbb 1px,transparent 1px),linear-gradient(90deg,#07111cbb 1px,transparent 1px);background-size:auto,32px 32px,32px 32px}main{width:min(980px,100%);text-align:center}.brand{display:flex;justify-content:center;align-items:center;gap:9px;font-weight:900;letter-spacing:.12em}.mark{display:grid;place-items:center;width:30px;height:30px;border:1px solid #88f7cb;border-radius:9px;color:#88f7cb;box-shadow:0 0 18px #65dfff22}.eyebrow{display:inline-block;margin-top:12px;color:#88f7cb;font-size:9px;font-weight:800;letter-spacing:.18em}.title{margin:10px 0 7px;font-size:clamp(28px,5vw,46px);line-height:1.08;letter-spacing:-.05em}.lead{max-width:620px;margin:auto;color:#8fa7b8;font-size:13px;line-height:1.65}.network{position:relative;margin:38px auto 0}.hub{position:relative;z-index:2;width:104px;height:104px;margin:auto;border:1px solid #88f7cb88;border-radius:50%;display:grid;place-content:center;background:#07111eee;box-shadow:0 0 0 12px #88f7cb08,0 0 36px #57aaff18}.hub strong{font-size:15px;letter-spacing:.14em}.hub small{margin-top:3px;color:#88f7cb;font-size:7px;letter-spacing:.2em}.hub:after{content:"";position:absolute;left:50%;top:100%;height:34px;border-left:1px solid #6cd5ff55}.clusters{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}.clusters:before{content:"";position:absolute;left:16.7%;right:16.7%;top:-1px;border-top:1px solid #6cd5ff55}.cluster{position:relative;padding:22px 12px 12px;border:1px solid #ffffff12;border-radius:14px;background:#08131fdd;text-align:left}.cluster:before{content:"";position:absolute;left:50%;top:-22px;height:22px;border-left:1px solid #6cd5ff55}.cluster h2{margin:0 0 10px;color:#9bb0c2;font-size:9px;letter-spacing:.14em}.nodes{display:flex;flex-wrap:wrap;gap:7px}.node{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:6px 9px;border:1px solid #ffffff16;border-radius:9px;background:#0b1927;color:#dff9ff;font-size:10px;font-weight:800;text-decoration:none}.node:before{content:"";width:5px;height:5px;border-radius:50%;background:#88f7cb;box-shadow:0 0 8px #88f7cb}.node:hover,.node:focus-visible{border-color:#88f7cb88;background:#0e2232;outline:0}.node.pending{color:#657b8d;cursor:default}.node.pending:before{background:#526272;box-shadow:none}.node small{color:#6f8798;font-size:8px;font-weight:600}.foot{margin:16px 0 0;color:#607789;font-size:9px}.admin{display:block;margin-top:12px;color:#586c7d;font-size:8px}@media(max-width:680px){body{place-items:start center}.lead{font-size:12px}.network{margin-top:28px}.hub{width:88px;height:88px}.hub:after,.clusters:before,.cluster:before{display:none}.clusters{grid-template-columns:1fr;margin-top:18px;gap:8px}.cluster{padding:13px}.node{flex:1 1 calc(50% - 7px);justify-content:center}}@media(max-width:390px){.node{flex-basis:100%}}
+:root{color-scheme:dark;--bg:#06142a;--bg2:#031024;--panel:#0b1a34cc;--line:#5ba8ff44;--line-strong:#66b8ff;--text:#f4f8ff;--muted:#aabbd0;--blue:#5caeff;--blue2:#278cff;--border:#8fbdf02e;--glow:0 0 30px #278cff2b}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100dvh;background:radial-gradient(circle at 52% 26%,#123c7426 0,transparent 28%),radial-gradient(circle at 18% 70%,#0c5cb016 0,transparent 30%),linear-gradient(180deg,var(--bg2),var(--bg));color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;overflow-x:hidden}
+a{color:inherit}
+.shell{width:min(1280px,calc(100% - 48px));margin:auto}
+.site-header{height:86px;display:flex;align-items:center;border-bottom:1px solid #ffffff0b}
+.navbar{display:flex;align-items:center;justify-content:space-between;gap:28px}
+.brand{display:inline-flex;flex-direction:column;text-decoration:none;line-height:1}.brand strong{font-size:25px;letter-spacing:.04em}.brand small{margin-top:7px;color:#8297b2;font-size:11px;letter-spacing:.2em}
+.nav{display:flex;align-items:center;gap:38px}.nav a{text-decoration:none;color:#dce8f7;font-size:14px;font-weight:650}.nav a:hover,.nav a:focus-visible{color:#7fc0ff;outline:0}.login{display:inline-flex!important;align-items:center;gap:8px;padding:10px 18px;border:1px solid #b9d6f664;border-radius:999px;color:#f6faff!important}.login svg{width:16px;height:16px}
+main{padding:64px 0 72px}
+.hero{text-align:center;margin-bottom:52px}.eyebrow{margin:0 0 14px;color:#58aaff;font-size:14px;font-weight:800;letter-spacing:.34em}.hero h1{margin:0;font-size:clamp(38px,5vw,68px);line-height:1.06;letter-spacing:-.055em}.lead{margin:18px auto 0;color:#c4d1e1;font-size:clamp(15px,1.7vw,21px);line-height:1.6}
+.ecosystem{display:grid;grid-template-columns:minmax(360px,.92fr) minmax(520px,1.08fr);align-items:center;gap:72px}
+.diagram-wrap{display:flex;justify-content:center;min-width:0}.diagram{position:relative;width:min(100%,430px);aspect-ratio:1;border-radius:50%;isolation:isolate;background:radial-gradient(circle at 50% 50%,#168dff20 0 8%,transparent 35%),radial-gradient(circle at 50% 50%,#0c66c91c 0,transparent 67%)}
+.diagram:before{content:"";position:absolute;inset:9%;border-radius:50%;background-image:radial-gradient(#4f9eff3d 1px,transparent 1.5px);background-size:13px 13px;mask-image:radial-gradient(circle,#000 0 48%,transparent 73%);opacity:.42;z-index:-2}
+.lines{position:absolute;inset:0;width:100%;height:100%;z-index:-1;overflow:visible}.lines path,.lines line{stroke:#62b1ff80;stroke-width:1.15;fill:none}.lines .orbit{stroke:#62b1ff4a}.lines circle{fill:#8bc8ff;filter:drop-shadow(0 0 7px #47a6ff)}
+.orbit-node{--size:72px;position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);width:var(--size);height:var(--size);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #83c4ffb3;border-radius:50%;background:linear-gradient(180deg,#1251a1dd,#0a2e65e8);box-shadow:0 0 0 6px #3b9eff0b,0 0 26px #2c9bff74;text-decoration:none;transition:.22s ease}.orbit-node:hover,.orbit-node:focus-visible{transform:translate(-50%,-50%) scale(1.08);border-color:#d8efff;box-shadow:0 0 0 8px #3b9eff10,0 0 34px #38a2ff9c;outline:0}.orbit-node svg{width:30px;height:30px;stroke:#f0f7ff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.orbit-node span{font-size:9px;color:#cfe6ff;font-weight:700}.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;background:#dff6ff;box-shadow:0 0 20px #2f9cff,0 0 42px #2f9cff}
+.services{min-width:0}.service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.service-card{min-height:126px;display:grid;grid-template-columns:58px minmax(0,1fr) 26px;align-items:center;gap:16px;padding:22px 24px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(145deg,#0d203dcc,#091932d9);box-shadow:inset 0 1px 0 #ffffff08;text-decoration:none;transition:.22s ease}.service-card:hover,.service-card:focus-visible{transform:translateY(-3px);border-color:#70b9ff78;background:linear-gradient(145deg,#102a4d,#0b203c);box-shadow:var(--glow);outline:0}.service-icon{width:52px;height:52px;display:grid;place-items:center;color:#cfe8ff}.service-icon svg{width:38px;height:38px;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.service-card strong{display:block;font-size:17px;letter-spacing:-.02em}.service-card small{display:block;margin-top:7px;color:#8ea5be;font-size:12px}.arrow{color:#cfe7ff;font-size:24px;font-weight:300;transition:transform .2s}.service-card:hover .arrow{transform:translateX(4px)}
+.footer-note{margin:48px 0 0;text-align:center;color:#6f87a2;font-size:11px;letter-spacing:.08em}
+@media(max-width:940px){.shell{width:min(100% - 36px,760px)}.site-header{height:76px}.nav{gap:20px}.nav a:not(.login){font-size:13px}.ecosystem{grid-template-columns:1fr;gap:34px}.diagram{width:min(100%,420px)}.services{width:100%}.service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding-top:48px}.hero{margin-bottom:36px}}
+@media(max-width:640px){.shell{width:min(100% - 28px,520px)}.site-header{height:auto;padding:17px 0}.navbar{align-items:flex-start}.brand strong{font-size:20px}.brand small{font-size:9px;margin-top:5px}.nav{gap:11px;flex-wrap:wrap;justify-content:flex-end}.nav a:not(.login){display:none}.login{padding:8px 13px;font-size:12px!important}main{padding:38px 0 50px}.hero{margin-bottom:28px}.eyebrow{font-size:10px;letter-spacing:.28em}.hero h1{font-size:clamp(34px,11vw,48px)}.lead{font-size:15px;margin-top:14px}.ecosystem{display:flex;flex-direction:column;gap:28px}.diagram-wrap{width:100%;order:1}.diagram{width:min(90vw,380px)}.services{order:2;width:100%}.service-grid{grid-template-columns:1fr;gap:10px}.service-card{min-height:92px;grid-template-columns:46px minmax(0,1fr) 22px;padding:15px 17px;border-radius:14px}.service-icon{width:42px;height:42px}.service-icon svg{width:31px;height:31px}.service-card strong{font-size:15px}.service-card small{font-size:11px;margin-top:4px}.arrow{font-size:20px}.orbit-node{--size:64px}.orbit-node svg{width:27px;height:27px}.footer-note{margin-top:32px}}
+@media(max-width:390px){.orbit-node{--size:58px}.orbit-node span{font-size:8px}.diagram{width:min(94vw,340px)}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
-<main>
-  <div class="brand"><span class="mark">E</span><span>EKODI</span></div>
-  <span class="eyebrow">CONNECTED ECOSYSTEM</span>
-  <h1 class="title">하나의 뿌리,<br>서로 연결된 생태계</h1>
-  <p class="lead">사역과 사업, 연구와 교육, 출판과 커뮤니티를 작은 링크 노드로 연결합니다. 첫 화면은 가볍게 열리고 각 서비스는 독립적으로 움직입니다.</p>
-
-  <div class="network">
-    <div class="hub" aria-hidden="true"><strong>EKODI</strong><small>ROOT</small></div>
-    <div class="clusters">
-      <section class="cluster">
-        <h2>MINISTRY · COMMUNITY</h2>
-        <div class="nodes">
-          <a class="node" href="https://church.ekodi.kr">교회 <small>church</small></a>
-          <span class="node pending">선교회 <small>mission</small></span>
-          <span class="node pending">커뮤니티 <small>community</small></span>
-        </div>
-      </section>
-      <section class="cluster">
-        <h2>BUSINESS · COMMERCE</h2>
-        <div class="nodes">
-          <span class="node pending">비즈 <small>biz</small></span>
-          <span class="node pending">무역 <small>trade</small></span>
-          <a class="node" href="https://mall.ekodi.kr">몰 <small>mall</small></a>
-          <span class="node pending">결제 <small>pay</small></span>
-          <span class="node pending">보험 <small>ins</small></span>
-        </div>
-      </section>
-      <section class="cluster">
-        <h2>KNOWLEDGE · MEDIA</h2>
-        <div class="nodes">
-          <a class="node" href="https://lab.ekodi.kr">연구소 <small>lab</small></a>
-          <a class="node" href="https://books.ekodi.kr">북스 <small>books</small></a>
-          <span class="node pending">교육 <small>edu</small></span>
-          <span class="node pending">미디어 <small>media</small></span>
-        </div>
-      </section>
-    </div>
+<header class="site-header">
+  <div class="shell navbar">
+    <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈"><strong>EKODI</strong><small>ekodi.kr</small></a>
+    <nav class="nav" aria-label="주요 메뉴">
+      <a href="#platform">소개</a>
+      <a href="#services">서비스</a>
+      <a href="#ecosystem">연결</a>
+      <a href="#services">문의</a>
+      <a class="login" href="https://admin.ekodi.kr" aria-label="관리자 로그인">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.7-4.3 3.4-6.5 8-6.5S19.3 16.7 20 21"></path></svg>로그인
+      </a>
+    </nav>
   </div>
-  <p class="foot">초록 점은 현재 연결 · 회색 점은 준비 중</p>
-  <span class="admin">ADMIN · 준비 중</span>
+</header>
+<main id="platform" class="shell" data-build="CONNECTED ECOSYSTEM">
+  <section class="hero">
+    <p class="eyebrow">EKODI PLATFORM</p>
+    <h1>에코디, 연결의 생태계</h1>
+    <p class="lead">사람과 말씀, 공동체와 사역을 가깝게 잇습니다</p>
+  </section>
+
+  <section id="ecosystem" class="ecosystem" aria-label="에코디 서비스 연결 생태계">
+    <div class="diagram-wrap">
+      <div class="diagram" aria-label="모든 서비스가 서로 연결된 링크 지도">
+        <svg class="lines" viewBox="0 0 360 360" aria-hidden="true">
+          <circle class="orbit" cx="180" cy="180" r="127"></circle>
+          <path d="M180 53 Q210 105 287 123"></path><path d="M287 123 Q252 177 289 235"></path><path d="M289 235 Q225 250 224 302"></path><path d="M224 302 Q164 260 105 285"></path><path d="M105 285 Q115 218 52 177"></path><path d="M52 177 Q119 142 180 53"></path>
+          <path d="M180 53 Q175 145 180 180"></path><path d="M287 123 Q225 150 180 180"></path><path d="M289 235 Q228 210 180 180"></path><path d="M224 302 Q205 235 180 180"></path><path d="M105 285 Q130 224 180 180"></path><path d="M52 177 Q118 177 180 180"></path>
+          <circle cx="180" cy="180" r="4"></circle><circle cx="213" cy="146" r="3"></circle><circle cx="138" cy="213" r="3"></circle>
+        </svg>
+        <span class="core" aria-hidden="true"></span>
+
+        <a class="orbit-node" style="--x:50%;--y:14%" href="https://church.ekodi.kr" aria-label="에코디교회로 이동"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v8M16 9h8M10 35V18l10-7 10 7v17M16 35v-9h8v9M7 35h26"></path></svg><span>교회</span></a>
+        <a class="orbit-node" style="--x:82%;--y:34%" href="https://books.ekodi.kr" aria-label="에코디출판으로 이동"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9c6-2 11 0 15 4v21c-4-4-9-6-15-4V9ZM35 9c-6-2-11 0-15 4v21c4-4 9-6 15-4V9Z"></path></svg><span>출판</span></a>
+        <a class="orbit-node" style="--x:82%;--y:70%" href="https://mall.ekodi.kr" aria-label="에코디몰로 이동"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 15h22l-2 20H11L9 15ZM15 15c0-6 2-9 5-9s5 3 5 9"></path></svg><span>몰</span></a>
+        <a class="orbit-node" style="--x:63%;--y:88%" href="https://youtube.com/@ekodicommunity" aria-label="에코디선교회 유튜브로 이동"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14"></circle><path d="M6 20h28M20 6c5 5 7 10 7 14s-2 9-7 14M20 6c-5 5-7 10-7 14s2 9 7 14"></path></svg><span>선교회</span></a>
+        <a class="orbit-node" style="--x:25%;--y:82%" href="https://lab.ekodi.kr" aria-label="에코디연구소로 이동"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M15 5h10M18 5v11L9 33c-1 2 0 3 3 3h16c3 0 4-1 3-3l-9-17V5M13 28h14"></path></svg><span>연구소</span></a>
+        <a class="orbit-node" style="--x:15%;--y:43%" href="https://biz.ekodi.kr" aria-label="에코디비즈로 이동"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 35V9h15v26M23 16h9v19M13 15h4M13 21h4M13 27h4M27 22h2M27 28h2M5 35h30"></path></svg><span>비즈</span></a>
+      </div>
+    </div>
+
+    <div id="services" class="services">
+      <div class="service-grid">
+        <a class="service-card" href="https://church.ekodi.kr"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v8M16 9h8M10 35V18l10-7 10 7v17M16 35v-9h8v9M7 35h26"></path></svg></span><span><strong>에코디교회</strong><small>church.ekodi.kr</small></span><span class="arrow">→</span></a>
+        <a class="service-card" href="https://biz.ekodi.kr"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 35V9h15v26M23 16h9v19M13 15h4M13 21h4M13 27h4M27 22h2M27 28h2M5 35h30"></path></svg></span><span><strong>에코디비즈</strong><small>biz.ekodi.kr</small></span><span class="arrow">→</span></a>
+        <a class="service-card" href="https://books.ekodi.kr"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9c6-2 11 0 15 4v21c-4-4-9-6-15-4V9ZM35 9c-6-2-11 0-15 4v21c4-4 9-6 15-4V9Z"></path></svg></span><span><strong>에코디출판</strong><small>books.ekodi.kr</small></span><span class="arrow">→</span></a>
+        <a class="service-card" href="https://lab.ekodi.kr"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M15 5h10M18 5v11L9 33c-1 2 0 3 3 3h16c3 0 4-1 3-3l-9-17V5M13 28h14"></path></svg></span><span><strong>에코디연구소</strong><small>lab.ekodi.kr</small></span><span class="arrow">→</span></a>
+        <a class="service-card" href="https://youtube.com/@ekodicommunity"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14"></circle><path d="M6 20h28M20 6c5 5 7 10 7 14s-2 9-7 14M20 6c-5 5-7 10-7 14s2 9 7 14"></path></svg></span><span><strong>에코디선교회</strong><small>mission / YouTube</small></span><span class="arrow">→</span></a>
+        <a class="service-card" href="https://mall.ekodi.kr"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 15h22l-2 20H11L9 15ZM15 15c0-6 2-9 5-9s5 3 5 9"></path></svg></span><span><strong>에코디몰</strong><small>mall.ekodi.kr</small></span><span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+  <p class="footer-note">하나의 뿌리에서 서로 가까이 연결되는 EKODI 생태계</p>
 </main>
 </body>
 </html>
