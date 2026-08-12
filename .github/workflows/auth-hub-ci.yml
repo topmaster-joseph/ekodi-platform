@@ -1,0 +1,33 @@
+name: Auth Hub CI
+on:
+  pull_request:
+    paths:
+      - 'auth-site/**'
+      - '.github/workflows/auth-hub-ci.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate hub script
+        run: node --check auth-site/auth.js
+      - name: Verify central auth contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'EKODI 인증센터' auth-site/index.html
+          grep -Fq 'Google 계정으로 계속' auth-site/index.html
+          grep -Fq 'functions/v1/access-api' auth-site/auth.js
+          grep -Fq "provider:'google'" auth-site/auth.js
+          grep -Fq "api('/handoff'" auth-site/auth.js
+          grep -Fq 'site:SITE' member.js 2>/dev/null || true
+          if grep -Eq 'localStorage.*access_token|innerHTML.*access_token' auth-site/auth.js; then
+            echo 'Token exposure pattern detected'
+            exit 1
+          fi

@@ -1,0 +1,84 @@
+name: Deploy EKODI Auth Hub
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auth-site/**'
+      - '.github/workflows/deploy-auth-hub.yml'
+permissions:
+  contents: read
+  deployments: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT: ekodi-auth-hub
+      DOMAIN: auth.ekodi.kr
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Ensure Pages project
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          code=$(curl -sS -o /tmp/project.json -w '%{http_code}' -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$PROJECT")
+          if [ "$code" = '200' ]; then echo "$PROJECT exists"; exit 0; fi
+          code=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' --data "{\"name\":\"$PROJECT\",\"production_branch\":\"main\"}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects")
+          cat /tmp/create.json
+          case "$code" in 200|201) ;; *) echo "Pages project create failed HTTP $code"; exit 1;; esac
+      - name: Deploy auth hub
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.90.0'
+          command: pages deploy auth-site --project-name=ekodi-auth-hub --branch=main --commit-hash=${{ github.sha }} --commit-dirty=true
+      - name: Attach custom domain and DNS
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          dcode=$(curl -sS -o /tmp/domain.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$PROJECT/domains/$DOMAIN")
+          if [ "$dcode" != '200' ]; then
+            ccode=$(curl -sS -o /tmp/domain-create.json -w '%{http_code}' -X POST "${auth[@]}" --data "{\"name\":\"$DOMAIN\"}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$PROJECT/domains")
+            case "$ccode" in 200|201) ;; *) cat /tmp/domain-create.json; echo "Domain attach failed HTTP $ccode"; exit 1;; esac
+          fi
+          project_json=$(curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$PROJECT")
+          target=$(printf '%s' "$project_json" | python -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])")
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          test -n "$zone_id" || { echo 'ekodi.kr zone not found'; exit 1; }
+          curl -fsS "${auth[@]}" "$api/zones/$zone_id/dns_records?type=CNAME&name=$DOMAIN" -o /tmp/dns-existing.json
+          record_id=$(python -c "import json; d=json.load(open('/tmp/dns-existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
+          payload="{\"type\":\"CNAME\",\"name\":\"$DOMAIN\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"Managed by EKODI Platform\"}"
+          if [ -n "$record_id" ]; then method=PUT; endpoint="$api/zones/$zone_id/dns_records/$record_id"; else method=POST; endpoint="$api/zones/$zone_id/dns_records"; fi
+          code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X "$method" "${auth[@]}" --data "$payload" "$endpoint")
+          case "$code" in 200|201) ;; *) cat /tmp/dns.json; echo "DNS update failed HTTP $code"; exit 1;; esac
+          echo "$DOMAIN -> $target"
+      - name: Verify auth hub
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -L -sS -o /tmp/auth.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$DOMAIN/" || true)
+            echo "$DOMAIN http=$code attempt=$attempt"
+            if [ "$code" = '200' ] && grep -Fq 'EKODI 인증센터' /tmp/auth.html; then
+              curl -fsSL --max-time 15 "https://$DOMAIN/auth.js" | grep -Fq 'functions/v1/access-api'
+              echo 'EKODI auth hub verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
