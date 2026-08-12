@@ -7,14 +7,14 @@
       "catalogNo": "EB-MONO-001",
       "series": "EKODI ORIGINAL 001",
       "publicationType": "MONOGRAPH · PUBLIC THEOLOGY",
-      "status": "Google Play 등록 진행 중 · Forthcoming 2026",
+      "status": "Google Play 등록 진행 · Amazon English RC1 · 국내 통합유통 준비",
       "coverTitle": "에코디언을\n찾아서",
       "title": "에코디언을 찾아서",
       "subtitle": "성경 속 숨겨진 하나님 백성의 진짜 모습",
       "author": "정찬균",
       "discipline": "Ecclesiology · Public Theology · Community Studies",
       "language": "ko-en",
-      "languageLabel": "한국어 · 영어 병기",
+      "languageLabel": "한국어 · 영어 병기 / Amazon 영어 단독판 별도",
       "format": ["EPUB 3", "Reflowable Digital Edition"],
       "edition": "Digital First Edition · v1.3",
       "abstract": "교회를 건물과 제도의 언어에 가두지 않고, 성경의 큰 이야기 안에서 부름받은 백성의 삶으로 다시 읽는다. 에클레시아, 코이노니아, 디아스포라, 희년이라는 네 개의 오래된 언어를 오늘의 공동체와 일상으로 연결하며, 주일의 고백이 월요일의 선택으로 이어지는 신앙의 구조를 탐구한다.",
@@ -24,10 +24,31 @@
         "isbnEbook": "",
         "amazonAsin": ""
       },
+      "editions": {
+        "googleKoreanBilingual": {
+          "title": "에코디언을 찾아서",
+          "version": "v1.3",
+          "price": "KRW 8,900",
+          "status": "등록 진행 중"
+        },
+        "amazonEnglish": {
+          "title": "In Search of the EKODIan",
+          "subtitle": "The Hidden Biblical Portrait of God’s People",
+          "author": "Jeong Chan Gyun",
+          "version": "RC1",
+          "price": "USD 5.99",
+          "status": "영문 EPUB·마스터·메타데이터 패키지 완성 / 영문 표지·Preview 대기"
+        },
+        "domesticAggregator": {
+          "provider": "Upaper",
+          "version": "v1.3",
+          "status": "유통 패키지 완성 / 판매자·정산정보 등록 대기"
+        }
+      },
       "distribution": {
         "google": "등록 진행 중",
-        "amazon": "영문판 준비",
-        "korea": "통합 유통 준비"
+        "amazon": "영문판 RC1 완성 · 표지/Preview 준비",
+        "korea": "유페이퍼 패키지 완성 · 계정등록 대기"
       },
       "links": {
         "amazon": "",
