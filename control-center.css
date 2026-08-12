@@ -1,0 +1,24 @@
+.control-manager{margin-top:22px;padding-top:20px;border-top:1px solid rgba(148,163,184,.18)}
+.control-manager-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.control-manager-head h3{margin:0 0 4px;font-size:1rem}
+.control-manager-head p{margin:0;color:#94a3b8;font-size:.82rem}
+.control-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.control-service-card{border:1px solid rgba(148,163,184,.16);border-radius:14px;padding:14px;background:rgba(15,23,42,.42)}
+.control-service-card[data-state="planned"]{opacity:.78}
+.control-service-card[data-state="paused"]{opacity:.66}
+.control-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.control-card-head strong{display:block;font-size:.92rem}.control-card-head small{display:block;color:#94a3b8;margin-top:2px}
+.control-health{font-size:.72rem;padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.2)}
+.control-health.online{color:#86efac;border-color:rgba(74,222,128,.28)}
+.control-health.degraded{color:#fcd34d;border-color:rgba(251,191,36,.28)}
+.control-health.offline{color:#fca5a5;border-color:rgba(248,113,113,.28)}
+.control-health.pending{color:#cbd5e1}
+.control-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.control-metrics div{padding:9px;border-radius:10px;background:rgba(2,6,23,.38)}
+.control-metrics small{display:block;color:#94a3b8;font-size:.68rem}.control-metrics strong{display:block;margin-top:3px;font-size:.84rem}
+.control-settings{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr);gap:8px;align-items:end}
+.control-settings label{font-size:.7rem;color:#94a3b8}.control-settings select,.control-settings input[type="text"]{width:100%;margin-top:5px;padding:9px 10px;border:1px solid rgba(148,163,184,.18);border-radius:9px;background:rgba(2,6,23,.6);color:inherit}
+.control-monitor-toggle{display:flex;align-items:center;gap:7px;padding:8px 0;color:#cbd5e1!important}
+.control-note{grid-column:1/-1}.control-actions{grid-column:1/-1;display:flex;justify-content:flex-end}
+.control-empty{color:#94a3b8;padding:14px 0}
+@media(max-width:900px){.control-service-grid{grid-template-columns:1fr}.control-settings{grid-template-columns:1fr}.control-manager-head{flex-direction:column}}
