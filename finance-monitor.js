@@ -167,29 +167,39 @@ function renderEcosystem(data) {
   if (stale) meta.classList.add('finance-warn'); else meta.classList.remove('finance-warn');
 }
 
+async function loadEcosystem() {
+  const tbody = ensureEcosystemPanel();
+  try {
+    renderEcosystem(await ecosystemRequest());
+  } catch (error) {
+    if (tbody) financeEmpty(tbody, 6, error.message);
+    const meta = document.querySelector('#ecosystemGenerated');
+    if (meta) { meta.textContent = '외부 점검 데이터 연결을 확인해야 합니다.'; meta.classList.add('finance-warn'); }
+  }
+}
+
 async function loadFinance() {
   if (!financeToken() || financeLoading) return;
   financeLoading = true;
   financeRefresh.disabled = true;
   financeRefresh.textContent = '↻ 확인 중…';
+  loadEcosystem();
   try {
-    const [overview, payments, accounting, structure, ecosystem] = await Promise.all([
+    const [overview, payments, accounting, structure] = await Promise.all([
       financeRequest('/api/finance/overview'),
       financeRequest('/api/finance/payments?limit=30'),
       financeRequest('/api/finance/accounting'),
-      financeRequest('/api/finance/structure'),
-      ecosystemRequest()
+      financeRequest('/api/finance/structure')
     ]);
     renderFinanceOverview(overview);
     renderFinancePayments(payments.payments || []);
     renderFinanceAccounting(accounting.rows || []);
     renderFinanceStructure(structure);
-    renderEcosystem(ecosystem);
   } catch (error) {
     document.querySelector('#financeGenerated').textContent = error.message;
     const notice = document.querySelector('#financeNotice');
     notice.className = 'finance-note';
-    notice.textContent = `결제·회계 또는 생태계 관제 연결을 확인해야 합니다: ${error.message}`;
+    notice.textContent = `결제·회계 관제 연결을 확인해야 합니다: ${error.message}`;
   } finally {
     financeLoading = false;
     financeRefresh.disabled = false;
