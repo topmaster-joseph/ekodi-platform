@@ -7,6 +7,9 @@ on:
     paths:
       - 'api-worker.js'
       - 'auth-worker.js'
+      - 'customer-auth.js'
+      - 'customer-entry-worker.js'
+      - 'migrations/**'
       - 'wrangler.api.toml'
       - '.github/workflows/deploy-control-api.yml'
 
@@ -29,23 +32,30 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate control API source
-        run: node --check api-worker.js && node --check auth-worker.js
+      - name: Validate control and customer API source
+        run: node --check api-worker.js && node --check auth-worker.js && node --check customer-auth.js && node --check customer-entry-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Apply D1 migrations
+        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
       - name: Deploy API worker
         run: npm run deploy:api
-      - name: Verify API
+      - name: Verify API and customer tenant boundary
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 12); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
             status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
-            if printf '%s' "$health" | grep -q '"ok":true' && printf '%s' "$status" | grep -q '"initialized"'; then
-              echo 'Control API verified.'
+            tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
+            forbidden=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$status" | grep -q '"initialized"' \
+              && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
+              && [ "$forbidden" = '401' ]; then
+              echo 'Control API and customer authentication boundary verified.'
               exit 0
             fi
             sleep 5
