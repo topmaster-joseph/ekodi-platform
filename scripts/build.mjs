@@ -10,6 +10,7 @@ const assets = [
   'styles.css',
   'script.js',
   'control-center-bootstrap.js',
+  'control-center.css',
   'monitor-status.json',
   '_headers',
 ];
