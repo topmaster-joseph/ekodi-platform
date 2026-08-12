@@ -14,7 +14,11 @@ const SERVICE_CATALOG = [
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'mission', name: '에코디선교회', domain: 'mission.ekodi.kr', url: 'https://mission.ekodi.kr', group: 'ministry', defaultState: 'planned', defaultMonitor: false },
-  { id: 'community', name: '에코디커뮤니티', domain: 'community.ekodi.kr', url: 'https://community.ekodi.kr', group: 'ministry', defaultState: 'planned', defaultMonitor: false }
+  { id: 'community', name: '에코디커뮤니티', domain: 'community.ekodi.kr', url: 'https://community.ekodi.kr', group: 'ministry', defaultState: 'planned', defaultMonitor: false },
+  { id: 'client-cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://cgma.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
+  { id: 'client-jadam', name: '자담치킨 목포대점 Marketing AI', domain: 'jadam.ekodi.kr', url: 'https://jadam.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
+  { id: 'client-pizzamaru', name: '피자마루 목포대점 Marketing AI', domain: 'pizzamaru.ekodi.kr', url: 'https://pizzamaru.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
+  { id: 'client-yogurt', name: '요거트퍼플 목포대점 Marketing AI', domain: 'yogurt.ekodi.kr', url: 'https://yogurt.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true }
 ];
 
 const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
@@ -269,7 +273,7 @@ async function overview(env) {
     averageResponse24h: service.stats24h.averageResponseTime
   }));
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     generatedAt: new Date().toISOString(),
     summary,
     states: stateSummary,
