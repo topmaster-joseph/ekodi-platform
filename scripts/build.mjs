@@ -12,6 +12,8 @@ const assets = [
   'control-center-finance.css',
   'control-center.js',
   'finance-monitor.js',
+  'client-access.css',
+  'client-access.js',
   'hub.html',
   'trade.html',
   'styles.css',
@@ -28,11 +30,16 @@ const responsiveCss = await readFile(`${root}responsive.css`, 'utf8');
 const htmlAssets = assets.filter(asset => asset.endsWith('.html'));
 for (const asset of htmlAssets) {
   const path = `${output}${asset}`;
-  const html = await readFile(path, 'utf8');
+  let html = await readFile(path, 'utf8');
   if (!html.includes('data-ekodi-responsive')) {
     const responsiveStyle = `<style data-ekodi-responsive>\n${responsiveCss}\n</style>\n`;
-    await writeFile(path, html.replace('</head>', `${responsiveStyle}</head>`));
+    html = html.replace('</head>', `${responsiveStyle}</head>`);
   }
+  if (asset === 'control-center.html') {
+    if (!html.includes('client-access.css')) html = html.replace('</head>', '<link rel="stylesheet" href="client-access.css">\n</head>');
+    if (!html.includes('client-access.js')) html = html.replace('</body>', '<script src="client-access.js" defer></script>\n</body>');
+  }
+  await writeFile(path, html);
 }
 
 console.log(`Built EKODI root, Control Center, hub and trade assets with responsive typography: ${assets.join(', ')}`);
