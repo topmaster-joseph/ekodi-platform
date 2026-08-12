@@ -30,6 +30,11 @@ zone_name = "ekodi.kr"
 custom_domain = true
 
 [[routes]]
+pattern = "mall.biz.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "mail.ekodi.kr"
 zone_name = "ekodi.kr"
 custom_domain = true

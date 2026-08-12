@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [portalHtml, adminHtml, controlHtml, controlJs, financeJs, hubHtml, registryText, headers, buildScript, wranglerSite, siteWorker, wranglerFinance] = await Promise.all([
+const [portalHtml, adminHtml, controlHtml, controlJs, financeJs, hubHtml, registryText, headers, buildScript, wranglerSite, siteWorker, wranglerFinance, serviceProxy, wranglerProxy, legacyRedirect, wranglerLegacy] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../admin.html', import.meta.url), 'utf8'),
   readFile(new URL('../control-center.html', import.meta.url), 'utf8'),
@@ -14,7 +14,11 @@ const [portalHtml, adminHtml, controlHtml, controlJs, financeJs, hubHtml, regist
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
-  readFile(new URL('../wrangler.finance.toml', import.meta.url), 'utf8')
+  readFile(new URL('../wrangler.finance.toml', import.meta.url), 'utf8'),
+  readFile(new URL('../service-proxy.js', import.meta.url), 'utf8'),
+  readFile(new URL('../wrangler.service-proxy.toml', import.meta.url), 'utf8'),
+  readFile(new URL('../legacy-redirect.js', import.meta.url), 'utf8'),
+  readFile(new URL('../wrangler.legacy-redirect.toml', import.meta.url), 'utf8')
 ]);
 
 function assertUniqueIds(html, label) {
@@ -79,32 +83,50 @@ test('admin hosts route the canonical root to Control Center', () => {
     assert.match(siteWorker, new RegExp(domain.replaceAll('.', '\\.')));
     assert.match(wranglerSite, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"\\s+custom_domain = true`, 's'));
   }
-  assert.match(siteWorker, /'\/control-center\.html'/);
+  assert.match(siteWorker, /assetRequest\(request, '\/control-center'\)/);
 });
 
 test('site Worker routes pay and functional EKODI hubs by hostname', () => {
-  for (const domain of ['pay.ekodi.kr','mail.ekodi.kr','live.ekodi.kr','cloud.ekodi.kr','auth.ekodi.kr']) {
+  for (const domain of ['pay.ekodi.kr','pay.biz.ekodi.kr','mail.ekodi.kr','live.ekodi.kr','cloud.ekodi.kr','auth.ekodi.kr']) {
     assert.match(siteWorker, new RegExp(domain.replaceAll('.', '\\.')));
     assert.match(wranglerSite, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"\\s+custom_domain = true`, 's'));
   }
-  assert.match(hubHtml, /host === 'pay\.ekodi\.kr'/);
+  assert.match(hubHtml, /host === 'pay\.ekodi\.kr' \|\| host === 'pay\.biz\.ekodi\.kr'/);
   assert.match(hubHtml, /EKODI Pay/);
   assert.match(wranglerSite, /binding = "ASSETS"/);
   assert.match(wranglerSite, /run_worker_first = true/);
 });
 
-test('trade.ekodi.kr is canonical and the old nested address redirects', () => {
-  assert.match(siteWorker, /TRADE_CANONICAL_HOST = 'trade\.ekodi\.kr'/);
-  assert.match(siteWorker, /TRADE_LEGACY_HOSTS = new Set\(\['trade\.biz\.ekodi\.kr'\]\)/);
+test('trade.biz.ekodi.kr is canonical and trade.ekodi.kr redirects', () => {
+  assert.match(siteWorker, /TRADE_CANONICAL_HOST = 'trade\.biz\.ekodi\.kr'/);
+  assert.match(siteWorker, /TRADE_LEGACY_HOSTS = new Set\(\['trade\.ekodi\.kr'\]\)/);
   for (const domain of ['trade.ekodi.kr','trade.biz.ekodi.kr']) {
     assert.match(wranglerSite, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"\\s+custom_domain = true`, 's'));
+  }
+});
+
+test('biz.ekodi.kr is an independent business lobby with nested service links', () => {
+  assert.match(wranglerProxy, /pattern = "biz\.ekodi\.kr"/);
+  assert.match(serviceProxy, /incoming\.hostname === 'biz\.ekodi\.kr'/);
+  for (const domain of ['trade.biz.ekodi.kr','mall.biz.ekodi.kr','pay.biz.ekodi.kr','mail.biz.ekodi.kr','live.biz.ekodi.kr']) {
+    assert.match(serviceProxy, new RegExp(`https://${domain.replaceAll('.', '\\.')}`));
+  }
+  assert.match(wranglerProxy, /pattern = "mall\.biz\.ekodi\.kr"/);
+});
+
+test('ekodibiz.kr permanently redirects to the canonical EKODI BIZ lobby', () => {
+  assert.match(legacyRedirect, /'ekodibiz\.kr': 'https:\/\/biz\.ekodi\.kr'/);
+  assert.match(legacyRedirect, /'www\.ekodibiz\.kr': 'https:\/\/biz\.ekodi\.kr'/);
+  assert.match(legacyRedirect, /Response\.redirect\(target\.toString\(\), 301\)/);
+  for (const domain of ['ekodibiz.kr','www.ekodibiz.kr']) {
+    assert.match(wranglerLegacy, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"`, 's'));
   }
 });
 
 test('admin CSP allows separated service and finance APIs', () => {
   assert.match(siteWorker, /ADMIN_CSP/);
   assert.match(siteWorker, /connect-src 'self' https:\/\/api\.ekodi\.kr https:\/\/finance-api\.ekodi\.kr https:\/\/ekodi-auth-api\.topmaster-joseph\.workers\.dev/);
-  assert.match(siteWorker, /script-src 'unsafe-inline'/);
+  assert.match(siteWorker, /script-src 'self'/);
   assert.match(siteWorker, /headers\.set\('Content-Security-Policy'/);
 });
 

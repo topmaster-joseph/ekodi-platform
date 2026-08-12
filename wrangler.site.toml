@@ -25,6 +25,10 @@ pattern = "pay.ekodi.kr"
 custom_domain = true
 
 [[routes]]
+pattern = "pay.biz.ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "admin.ekodi.kr"
 custom_domain = true
 

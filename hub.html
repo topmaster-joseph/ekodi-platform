@@ -25,7 +25,7 @@
       root: card('E','EKODI Portal','전체 서비스 정문','https://ekodi.kr'),
     };
     let model;
-    if (host === 'pay.ekodi.kr') {
+    if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
       model = {
         eyebrow:'PAYMENT GATE', title:'EKODI Pay', context:host,
         description:'상품, 교육, 무역, 서비스 결제는 하나의 주소 체계에서 연결하고 실제 회계 귀속은 조직과 사업부별로 분리합니다.',

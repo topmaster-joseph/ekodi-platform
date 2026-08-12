@@ -10,6 +10,7 @@ const ADMIN_HOSTS = new Set([
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
+  'pay.biz.ekodi.kr',
   'mail.ekodi.kr',
   'mail.biz.ekodi.kr',
   'mail.church.ekodi.kr',
@@ -21,8 +22,8 @@ const HUB_HOSTS = new Set([
   'auth.ekodi.kr',
 ]);
 
-const TRADE_CANONICAL_HOST = 'trade.ekodi.kr';
-const TRADE_LEGACY_HOSTS = new Set(['trade.biz.ekodi.kr']);
+const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
+const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
 
 const ADMIN_ALIASES = new Set([
   '/',
