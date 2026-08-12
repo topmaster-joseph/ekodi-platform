@@ -8,6 +8,8 @@ const ADMIN_HOSTS = new Set([
   'admin.trade.ekodi.kr',
 ]);
 
+const AUTH_HOST = 'auth.ekodi.kr';
+
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
   'pay.biz.ekodi.kr',
@@ -19,7 +21,6 @@ const HUB_HOSTS = new Set([
   'live.church.ekodi.kr',
   'live.lab.ekodi.kr',
   'cloud.ekodi.kr',
-  'auth.ekodi.kr',
 ]);
 
 const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
@@ -50,6 +51,18 @@ const ADMIN_CSP = [
   "object-src 'none'",
 ].join('; ');
 
+const AUTH_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' https://cdn.jsdelivr.net",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net",
+  "img-src 'self' data:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co",
+  "object-src 'none'",
+].join('; ');
+
 const HUB_CSP = [
   "default-src 'none'",
   "style-src 'unsafe-inline'",
@@ -72,6 +85,7 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   secured.headers.set('Content-Security-Policy', csp);
   secured.headers.set('Cache-Control', cacheControl);
   secured.headers.set('Referrer-Policy', 'no-referrer');
+  secured.headers.set('X-Content-Type-Options', 'nosniff');
   if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
@@ -109,6 +123,17 @@ export default {
       if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+      }
+    }
+
+    if (host === AUTH_HOST) {
+      if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
+        return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
+      }
+      if (url.pathname === '/auth.js' || url.pathname === '/auth.css') {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, AUTH_CSP, 'public, max-age=300', 'central-auth-asset');
       }
     }
 
