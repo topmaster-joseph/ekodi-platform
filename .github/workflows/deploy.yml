@@ -77,21 +77,27 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run deploy:books
-      - name: Verify EKODI root and Books navigation
+      - name: Verify EKODI public portal and Books navigation
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 12); do
-            all_ok=1
-            for url in 'https://ekodi.kr/' 'https://www.ekodi.kr/' 'https://books.ekodi.kr/'; do
-              code=$(curl -L -sS -o /tmp/ekodi-check -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
-              echo "$url -> $code"
-              case "$code" in 2*|3*) ;; *) all_ok=0 ;; esac
-            done
-            if [ "$all_ok" -eq 1 ]; then
-              curl -fsS --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' | grep -q 'href="https://ekodi.kr/"'
+            root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
+            www_code=$(curl -L -sS -o /tmp/www.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://www.ekodi.kr/' || true)
+            books_code=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
+            echo "attempt=$attempt root=$root_code www=$www_code books=$books_code"
+
+            if [[ "$root_code" =~ ^[23] ]] \
+              && [[ "$www_code" =~ ^[23] ]] \
+              && [[ "$books_code" =~ ^[23] ]] \
+              && grep -Fq '<title>EKODI | 에코디 생태계</title>' /tmp/root.html \
+              && grep -Fq 'portal.js' /tmp/root.html \
+              && grep -Fq '<title>EKODI | 에코디 생태계</title>' /tmp/www.html \
+              && grep -Fq 'href="https://ekodi.kr/"' /tmp/books.html; then
+              echo 'EKODI public portal content and Books navigation are verified.'
               exit 0
             fi
             sleep 5
           done
+          echo 'EKODI public portal verification did not become healthy in time.'
           exit 1
