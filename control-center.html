@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="EKODI 통합 운영 허브: 메일, 라이브, 클라우드, 도메인, 비즈니스, 교회, 연구소를 한곳에서 관리합니다.">
+  <meta name="theme-color" content="#07111f">
+  <title>EKODI Control Center</title>
+  <link rel="stylesheet" href="control-center.css">
+</head>
+<body>
+  <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
+    <div class="login-card">
+      <a class="brand" href="https://ekodi.kr"><span>E</span><strong>EKODI</strong></a>
+      <p class="kicker">CONTROL CENTER</p>
+      <h1 id="loginTitle">하나의 문에서 모든 운영으로</h1>
+      <p class="login-copy">메일, 방송, 자료, 도메인, 사업, 사역을 한 화면에서 연결하는 EKODI 운영 관제실입니다.</p>
+      <form id="loginForm">
+        <label>관리자 이메일<input name="email" type="email" autocomplete="username" required></label>
+        <label>비밀번호<input name="password" type="password" minlength="12" autocomplete="current-password" required></label>
+        <p class="error" id="loginError" role="alert"></p>
+        <button class="primary full" id="loginButton" type="submit">관리 콘솔 입장</button>
+      </form>
+      <a class="legacy-link" href="/legacy">기존 관리 콘솔 열기 →</a>
+    </div>
+  </section>
+
+  <div class="app" id="app" hidden>
+    <aside class="sidebar">
+      <a class="brand side-brand" href="https://ekodi.kr"><span>E</span><strong>EKODI</strong></a>
+      <small class="side-caption">CONTROL CENTER</small>
+      <nav>
+        <button class="nav active" data-section="overview">⌂ <span>통합 운영</span></button>
+        <button class="nav" data-section="communication">✦ <span>메일 · 라이브</span></button>
+        <button class="nav" data-section="workspace">▣ <span>클라우드 · 자료</span></button>
+        <button class="nav" data-section="organization">◫ <span>조직 · 사업</span></button>
+        <a class="nav" href="/legacy#domains">◎ <span>도메인 · DNS</span></a>
+        <a class="nav" href="/legacy#activity">≡ <span>운영 기록</span></a>
+      </nav>
+      <div class="side-bottom">
+        <div><span class="dot"></span><strong>EKODI Platform</strong><small id="apiState">인증 연결 확인 중</small></div>
+        <button id="logoutButton" class="ghost">로그아웃</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="menu" id="menuButton" aria-label="메뉴 열기">☰</button>
+        <div><p class="kicker">EKODI DIGITAL CAMPUS</p><h1 id="pageTitle">통합 운영</h1></div>
+        <div class="profile"><span id="scopeBadge">ALL</span><div><strong id="profileName">관리자</strong><small id="profileEmail"></small></div></div>
+      </header>
+
+      <div class="content">
+        <section class="hero" data-panel="overview">
+          <div>
+            <p class="kicker">ONE ROOT · MANY DOORS</p>
+            <h2>운영의 주소를 한곳에 모았습니다.</h2>
+            <p>각 서비스를 새로 외울 필요 없이 이 화면에서 메일, 방송, 자료, 조직별 운영 공간으로 이동합니다. 복잡한 배선은 뒤로 숨기고, 앞에는 문만 남겼습니다.</p>
+          </div>
+          <div class="hero-actions"><a class="primary" href="https://ekodi.kr" target="_blank" rel="noopener">EKODI 정문 ↗</a><a class="secondary" href="/legacy">고급 관리 ↗</a></div>
+        </section>
+
+        <section class="metrics" data-panel="overview">
+          <article><small>기능 허브</small><strong>5</strong><span>Admin · Mail · Live · Cloud · Auth</span></article>
+          <article><small>조직별 관리 입구</small><strong>4</strong><span>Biz · Church · Lab · Trade</span></article>
+          <article><small>관리 API</small><strong class="good">연결</strong><span>api.ekodi.kr</span></article>
+          <article><small>운영 방식</small><strong>Hub</strong><span>한 문, 여러 서비스</span></article>
+        </section>
+
+        <section class="section" data-panel="communication">
+          <div class="section-head"><div><p class="kicker">COMMUNICATION</p><h2>메일 · 라이브</h2></div><p>소통과 방송을 조직별로 분기하되 첫 진입은 하나의 로비로 통일합니다.</p></div>
+          <div class="cards">
+            <a class="module featured" href="https://mail.ekodi.kr" target="_blank" rel="noopener"><span class="icon">✉</span><div><small>MAIL LOBBY</small><strong>EKODI Mail</strong><p>Google Workspace 메일과 조직별 메일 입구</p></div><b>↗</b></a>
+            <a class="module featured" href="https://live.ekodi.kr" target="_blank" rel="noopener"><span class="icon">▶</span><div><small>LIVE LOBBY</small><strong>EKODI Live</strong><p>교회·선교·사업·연구 방송의 공통 입구</p></div><b>↗</b></a>
+            <a class="module" href="https://mail.biz.ekodi.kr" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BIZ MAIL</small><strong>비즈 메일</strong><p>사업 조직 메일 로비</p></div><b>↗</b></a>
+            <a class="module" href="https://live.church.ekodi.kr" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH LIVE</small><strong>교회 라이브</strong><p>예배·모임 방송 입구</p></div><b>↗</b></a>
+          </div>
+        </section>
+
+        <section class="section" data-panel="workspace">
+          <div class="section-head"><div><p class="kicker">WORKSPACE</p><h2>클라우드 · 운영 도구</h2></div><p>자료와 실행도구를 같은 지도 위에 배치합니다.</p></div>
+          <div class="cards">
+            <a class="module featured" href="https://cloud.ekodi.kr" target="_blank" rel="noopener"><span class="icon">▣</span><div><small>CLOUD LOBBY</small><strong>EKODI Cloud</strong><p>Google Drive·Docs 기반 자료 로비</p></div><b>↗</b></a>
+            <a class="module" href="https://marketing.ekodi.kr" target="_blank" rel="noopener"><span class="icon">AI</span><div><small>MARKETING</small><strong>마케팅AI</strong><p>콘텐츠·마케팅 운영 도구</p></div><b>↗</b></a>
+            <a class="module" href="https://cgma.ekodi.kr" target="_blank" rel="noopener"><span class="icon">청</span><div><small>LOCAL</small><strong>청계상권</strong><p>지역 상권 운영 공간</p></div><b>↗</b></a>
+            <a class="module" href="/legacy#domains"><span class="icon">◎</span><div><small>DOMAIN CONTROL</small><strong>도메인 · DNS</strong><p>Cloudflare DNS와 등록대장 관리</p></div><b>→</b></a>
+          </div>
+        </section>
+
+        <section class="section" data-panel="organization">
+          <div class="section-head"><div><p class="kicker">ORGANIZATIONS</p><h2>조직 · 사업 운영</h2></div><p>법인·사업·사역은 분리하고, 운영 경험은 하나로 유지합니다.</p></div>
+          <div class="cards">
+            <a class="module" href="https://biz.ekodi.kr" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BUSINESS</small><strong>에코디비즈</strong><p>사업·마케팅·상거래 허브</p></div><b>↗</b></a>
+            <a class="module" href="https://church.ekodi.kr" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH</small><strong>에코디교회</strong><p>예배·공동체·사역 허브</p></div><b>↗</b></a>
+            <a class="module" href="https://lab.ekodi.kr" target="_blank" rel="noopener"><span class="icon">L</span><div><small>LAB</small><strong>에코디연구소</strong><p>연구·교육·프로젝트 허브</p></div><b>↗</b></a>
+            <article class="module planned"><span class="icon">T</span><div><small>TRADING</small><strong>무역 운영</strong><p>견적·계약·공급사·바이어 통합관리 연결 준비</p></div><em>확장</em></article>
+            <article class="module planned"><span class="icon">₩</span><div><small>ACCOUNTING</small><strong>통합 회계</strong><p>교회·상인회·비즈 분리회계 대시보드 연결 준비</p></div><em>확장</em></article>
+            <a class="module" href="/legacy"><span class="icon">⌘</span><div><small>ADVANCED</small><strong>기존 관리 콘솔</strong><p>DNS·등록기관·감사로그 등 고급 운영</p></div><b>→</b></a>
+          </div>
+        </section>
+
+        <section class="architecture" data-panel="overview">
+          <p class="kicker">ADDRESS ARCHITECTURE</p>
+          <h2>EKODI 주소 체계</h2>
+          <div class="flow"><span>ekodi.kr<br><small>정문</small></span><b>→</b><span>admin · mail · live · cloud · auth<br><small>기능별 로비</small></span><b>→</b><span>biz · church · lab · trade<br><small>조직별 공간</small></span><b>→</b><span>실제 서비스<br><small>업무 실행</small></span></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="control-center.js"></script>
+</body>
+</html>

@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [portalHtml, adminHtml, hubHtml, registryText, headers, buildScript, wranglerSite, siteWorker] = await Promise.all([
+const [portalHtml, adminHtml, controlHtml, controlJs, hubHtml, registryText, headers, buildScript, wranglerSite, siteWorker] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../admin.html', import.meta.url), 'utf8'),
+  readFile(new URL('../control-center.html', import.meta.url), 'utf8'),
+  readFile(new URL('../control-center.js', import.meta.url), 'utf8'),
   readFile(new URL('../hub.html', import.meta.url), 'utf8'),
   readFile(new URL('../service-registry.json', import.meta.url), 'utf8'),
   readFile(new URL('../_headers', import.meta.url), 'utf8'),
@@ -24,15 +26,24 @@ test('root portal remains a zero-JavaScript shell', () => {
   assert.doesNotMatch(portalHtml, /<link[^>]+stylesheet/i);
   assert.doesNotMatch(portalHtml, /\bfetch\s*\(/i);
   assert.match(portalHtml, /<style>/);
-  assert.match(buildScript, /'index\.html'/);
-  assert.match(buildScript, /'_headers'/);
 });
 
-test('hub and admin assets are included in the production build', () => {
-  for (const asset of ['admin.html', 'hub.html', 'styles.css', 'script.js', 'monitor-status.json']) {
+test('Control Center and hub assets are included in production build', () => {
+  for (const asset of ['admin.html','control-center.html','control-center.css','control-center.js','hub.html','styles.css','script.js','monitor-status.json']) {
     assert.match(buildScript, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
   }
+  assertUniqueIds(controlHtml, 'Control Center');
   assertUniqueIds(hubHtml, 'service hub');
+  assert.match(controlHtml, /<script src="control-center\.js"><\/script>/);
+  assert.match(controlJs, /https:\/\/api\.ekodi\.kr/);
+});
+
+test('Control Center exposes the primary functional hubs', () => {
+  for (const domain of ['mail.ekodi.kr','live.ekodi.kr','cloud.ekodi.kr','biz.ekodi.kr','church.ekodi.kr','lab.ekodi.kr']) {
+    assert.match(controlHtml, new RegExp(`https://${domain.replaceAll('.', '\\.')}`));
+  }
+  assert.match(controlHtml, /통합 회계/);
+  assert.match(controlHtml, /무역 운영/);
 });
 
 test('verified public services are direct static links', () => {
@@ -47,31 +58,33 @@ test('unverified services stay non-clickable unless they are explicit gateway en
   for (const service of registry.services.filter(item => !item.qaVerified && !explicitGateways.has(item.id))) {
     assert.doesNotMatch(portalHtml, new RegExp(`href="https://${service.domain.replaceAll('.', '\\.')}`));
   }
-  assert.match(portalHtml, /href="https:\/\/biz\.ekodi\.kr/);
-  assert.match(portalHtml, /href="https:\/\/admin\.ekodi\.kr/);
 });
 
-test('admin console keeps its existing external script', () => {
-  assertUniqueIds(adminHtml, 'admin console');
+test('legacy admin console remains available with its existing external script', () => {
+  assertUniqueIds(adminHtml, 'legacy admin console');
   assert.equal((adminHtml.match(/<script\b/g) || []).length, 1);
   assert.match(adminHtml, /<script src="script\.js"><\/script>/);
+  assert.match(siteWorker, /LEGACY_ALIASES/);
+  assert.match(siteWorker, /'\/legacy'/);
+  assert.match(siteWorker, /'\/admin\.html'/);
+});
+
+test('admin hosts route the canonical root to Control Center', () => {
+  for (const domain of ['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']) {
+    assert.match(siteWorker, new RegExp(domain.replaceAll('.', '\\.')));
+    assert.match(wranglerSite, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"\\s+custom_domain = true`, 's'));
+  }
+  assert.match(siteWorker, /'\/control-center\.html'/);
+  assert.match(siteWorker, /Response\.redirect\(next\.toString\(\), 308\)/);
 });
 
 test('site Worker routes primary EKODI hubs by hostname', () => {
-  for (const domain of ['admin.ekodi.kr', 'mail.ekodi.kr', 'live.ekodi.kr', 'cloud.ekodi.kr', 'auth.ekodi.kr']) {
+  for (const domain of ['mail.ekodi.kr', 'live.ekodi.kr', 'cloud.ekodi.kr', 'auth.ekodi.kr']) {
     assert.match(siteWorker, new RegExp(domain.replaceAll('.', '\\.')));
     assert.match(wranglerSite, new RegExp(`pattern = "${domain.replaceAll('.', '\\.')}"\\s+custom_domain = true`, 's'));
   }
   assert.match(wranglerSite, /binding = "ASSETS"/);
   assert.match(wranglerSite, /run_worker_first = true/);
-});
-
-test('admin aliases redirect to the canonical root before loading the console', () => {
-  for (const alias of ['/admin', '/admin/', '/admin.html', '/index.html']) {
-    assert.match(siteWorker, new RegExp(`'${alias.replaceAll('/', '\\/').replaceAll('.', '\\.')}'`));
-  }
-  assert.match(siteWorker, /redirectToAdminRoot/);
-  assert.match(siteWorker, /Response\.redirect\(canonical\.toString\(\), 308\)/);
 });
 
 test('admin and lobby hosts override the root CSP safely', () => {

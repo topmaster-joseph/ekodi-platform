@@ -18,12 +18,8 @@ const HUB_HOSTS = new Set([
   'auth.ekodi.kr',
 ]);
 
-const ADMIN_ALIASES = new Set([
-  '/admin',
-  '/admin/',
-  '/admin.html',
-  '/index.html',
-]);
+const ADMIN_ALIASES = new Set(['/admin','/admin/','/admin.html','/index.html']);
+const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 
 const ADMIN_CSP = [
   "default-src 'self'",
@@ -61,10 +57,10 @@ function withHostSecurity(response, csp, cacheControl) {
   return secured;
 }
 
-function redirectToAdminRoot(url) {
-  const canonical = new URL(url);
-  canonical.pathname = '/';
-  return Response.redirect(canonical.toString(), 308);
+function redirect(url, pathname) {
+  const next = new URL(url);
+  next.pathname = pathname;
+  return Response.redirect(next.toString(), 308);
 }
 
 export default {
@@ -73,11 +69,14 @@ export default {
     const host = url.hostname.toLowerCase();
 
     if (ADMIN_HOSTS.has(host)) {
-      if (ADMIN_ALIASES.has(url.pathname)) {
-        if (url.pathname !== '/') return redirectToAdminRoot(url);
-      }
+      if (ADMIN_ALIASES.has(url.pathname) && url.pathname !== '/') return redirect(url, '/');
 
       if (url.pathname === '/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center.html'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store');
+      }
+
+      if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin.html'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store');
       }
