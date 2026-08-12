@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/monitor.mjs'
+      - 'scripts/monitor-lib.mjs'
+      - 'admin.html'
+      - 'script.js'
+      - '.github/workflows/monitor.yml'
 
 permissions:
   contents: write
@@ -23,7 +31,7 @@ jobs:
           node-version: "24"
       - name: Verify monitor
         run: npm test
-      - name: Check six EKODI services
+      - name: Check EKODI services
         run: npm run monitor
       - name: Publish latest status
         run: |
