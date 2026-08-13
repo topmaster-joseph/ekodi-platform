@@ -39,23 +39,36 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Build and validate tenant customer auth
+      - name: Build and validate free-to-Pro central auth
         run: |
           set -euo pipefail
           npm run build
-          for spec in \
-            'jadam:const TENANT="jadam"' \
-            'pizzamaru:const TENANT="pizzamaru"' \
-            'yogurtpurple:const TENANT="yogurt"'; do
-            dir="${spec%%:*}"
-            tenant="${spec#*:}"
+          hub='dist/marketing-ai/index.html'
+          test -f "$hub"
+          grep -Fq 'FREE → PRO' "$hub"
+          grep -Fq 'Marketing AI Pro 사용신청' "$hub"
+          grep -Fq 'Google로 무료 시작' "$hub"
+          grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$hub"
+
+          for dir in jadam pizzamaru yogurtpurple; do
             file="dist/marketing-ai/$dir/index.html"
             test -f "$file"
-            grep -Fq 'id="customerAuthOpen"' "$file"
-            grep -Fq '/api/customer/login' "$file"
-            grep -Fq '/api/customer/accept-invite' "$file"
-            grep -Fq "$tenant" "$file"
+            grep -Fq 'id="googleCustomerAuth"' "$file"
+            grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
+            grep -Fq 'Google로 무료 시작' "$file"
+            if grep -Fq 'id="customerAuthOpen"' "$file" \
+              || grep -Fq '/api/customer/login' "$file" \
+              || grep -Fq '/api/customer/accept-invite' "$file"; then
+              echo "Legacy direct customer auth detected in $file"
+              exit 1
+            fi
           done
+
+          if grep -R -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai; then
+            echo 'Legacy yogurt domain detected in generated site'
+            exit 1
+          fi
+          grep -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai/qa/index.html
 
       - name: Deploy current source to existing Pages projects
         run: |
@@ -65,30 +78,40 @@ jobs:
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/pizzamaru --project-name=marketing-ai-pizzamaru --branch=main
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/yogurtpurple --project-name=marketing-ai-yogurtpurple --branch=main
 
-      - name: Verify production customer authentication UI
+      - name: Verify production free membership and central authentication
         shell: bash
         run: |
           set -euo pipefail
-          verify() {
+          verify_hub() {
+            code=$(curl -sS -L -o /tmp/hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' || true)
+            echo "marketing.ekodi.kr -> $code"
+            [ "$code" = '200' ]
+            grep -Fq 'FREE → PRO' /tmp/hub.html
+            grep -Fq 'Marketing AI Pro 사용신청' /tmp/hub.html
+            grep -Fq 'Google로 무료 시작' /tmp/hub.html
+            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/hub.html
+          }
+          verify_customer() {
             domain="$1"
             store="$2"
-            tenant="$3"
             code=$(curl -sS -L -o /tmp/customer.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
             echo "$domain -> $code"
             [ "$code" = '200' ]
             grep -Fq "$store" /tmp/customer.html
-            grep -Fq 'id="customerAuthOpen"' /tmp/customer.html
-            grep -Fq '고객 로그인' /tmp/customer.html
-            grep -Fq '/api/customer/login' /tmp/customer.html
-            grep -Fq '/api/customer/accept-invite' /tmp/customer.html
-            grep -Fq "const TENANT=\"$tenant\"" /tmp/customer.html
+            grep -Fq 'id="googleCustomerAuth"' /tmp/customer.html
+            grep -Fq 'Google로 무료 시작' /tmp/customer.html
+            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/customer.html
+            ! grep -Fq 'id="customerAuthOpen"' /tmp/customer.html
+            ! grep -Fq '/api/customer/login' /tmp/customer.html
+            ! grep -Fq '/api/customer/accept-invite' /tmp/customer.html
           }
 
-          for attempt in $(seq 1 18); do
-            if verify 'jadam.ekodi.kr' '자담치킨 목포대점' 'jadam' \
-              && verify 'pizzamaru.ekodi.kr' '피자마루 목포대점' 'pizzamaru' \
-              && verify 'yogurt.ekodi.kr' '요거트퍼플 목포대점' 'yogurt'; then
-              echo 'Marketing AI source sync and customer auth verification succeeded.'
+          for attempt in $(seq 1 24); do
+            if verify_hub \
+              && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
+              && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
+              && verify_customer 'yogurtpurple.ekodi.kr' '요거트퍼플 목포대점'; then
+              echo 'Marketing AI free-member to Pro funnel verified in production.'
               exit 0
             fi
             sleep 5
