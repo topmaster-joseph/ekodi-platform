@@ -6,7 +6,7 @@ const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const services={
   cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',origins:['https://cgma.ekodi.kr'],requestable:true},
-  marketing:{name:'마케팅AI',tenant:'ekodibiz',role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
+  marketing:{name:'마케팅AI',tenant:null,role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
   biz:{name:'에코디비즈',tenant:'ekodibiz',role:'member',returnTo:'https://biz.ekodi.kr',origins:['https://biz.ekodi.kr'],requestable:true},
   trade:{name:'EKODI Global Trading',tenant:'ekodibiz',role:'member',returnTo:'https://trade.ekodi.kr',origins:['https://trade.ekodi.kr'],requestable:true},
   mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://mall.ekodi.kr',origins:['https://mall.ekodi.kr'],requestable:true},
@@ -24,19 +24,30 @@ const services={
 const params=new URLSearchParams(location.search);
 const site=Object.hasOwn(services,params.get('site'))?params.get('site'):'portal';
 const config=services[site];
+const marketing=site==='marketing';
+const reviewMode=marketing&&params.get('review')==='1';
 const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);return target.protocol==='https:'&&config.origins.includes(target.origin)?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
 
 $('serviceName').textContent=config.name;
+if(marketing){
+  $('signedOutCopy').textContent='Google 계정으로 무료회원이 됩니다. 기본 기능은 무료로 이용하고, Pro는 필요할 때 신청하세요.';
+  $('requestAccess').textContent='Marketing AI Pro 사용신청';
+  $('requestNote').placeholder='운영 중인 채널, 필요한 자동화 기능, 요청사항 등을 적어 주세요.';
+  $('requestNoteLabel').firstChild.textContent='신청 메모 ';
+  show('marketingApplication',true);
+}
 
 async function session(){const {data}=await sb.auth.getSession();return data.session}
 async function api(path,options={}){const s=await session();if(!s)throw new Error('login_required');const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${s.access_token}`,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${ACCESS}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
 async function identity(path,options={}){const headers={apikey:PUBLISHABLE_KEY,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${IDENTITY}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
 function show(id,on=true){$(id)?.classList.toggle('hide',!on)}
 function notice(id,text,type=''){const el=$(id);if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
-function cleanUrl(){history.replaceState({},document.title,`/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`)}
+function cleanUrl(){const q=new URLSearchParams({site,return_to:returnTo});if(reviewMode)q.set('review','1');history.replaceState({},document.title,`/?${q.toString()}`)}
+function fmtDate(value){const d=new Date(value);return Number.isNaN(d.getTime())?'확인 필요':d.toLocaleString('ko-KR')}
+function escText(value){return String(value??'')}
 
 function loadGoogleLibrary(){
   if(window.google?.accounts?.id)return Promise.resolve();
@@ -67,50 +78,103 @@ async function handleGoogleCredential(response,challenge){
 }
 
 async function prepareGoogle(){
-  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice('authStatus','Google 인증을 준비하고 있습니다.');
+  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice('authStatus',marketing?'Google 계정으로 무료회원 가입을 준비하고 있습니다.':'Google 인증을 준비하고 있습니다.');
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:r=>handleGoogleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
-    notice('authStatus','Google 계정으로 본인을 확인해 주세요. 서비스별 권한은 인증 후 별도로 확인합니다.');
+    notice('authStatus',marketing?'Google 계정으로 무료회원이 되면 기본 기능을 계속 이용할 수 있습니다.':'Google 계정으로 본인을 확인해 주세요. 서비스별 권한은 인증 후 별도로 확인합니다.');
   }catch(e){
     console.error('prepare google identity',e);
     notice('authStatus','Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true);
   }
 }
 
+async function loadReviewConsole(){
+  if(!reviewMode)return;
+  show('reviewConsole',true);
+  notice('reviewStatus','Marketing AI Pro 사용신청을 불러오는 중입니다.');
+  const list=$('reviewList');list.replaceChildren();
+  try{
+    const data=await api('/pending?site=marketing');
+    const requests=data.requests||[];
+    if(!requests.length){notice('reviewStatus','현재 승인 대기 중인 Marketing AI Pro 신청이 없습니다.');return;}
+    notice('reviewStatus',`승인 대기 ${requests.length}건입니다. 승인하면 독립 고객 테넌트와 기본 매장공간이 자동 생성됩니다.`);
+    for(const item of requests){
+      const card=document.createElement('article');card.className='review-item';
+      const info=document.createElement('div');
+      const title=document.createElement('h3');title.textContent=item.business_name||item.email||'신규 신청';
+      const meta=document.createElement('div');meta.className='review-meta';
+      for(const value of [item.email,`요금제 ${(item.requested_plan||'pro').toUpperCase()}`,item.contact_phone||'',item.business_number?`사업자 ${item.business_number}`:'',fmtDate(item.requested_at)]){
+        if(!value)continue;const span=document.createElement('span');span.textContent=value;meta.append(span);
+      }
+      info.append(title,meta);
+      if(item.applicant_note){const note=document.createElement('p');note.className='review-note';note.textContent=item.applicant_note;info.append(note);}
+      const actions=document.createElement('div');actions.className='review-actions';
+      const approve=document.createElement('button');approve.type='button';approve.textContent='승인';
+      const reject=document.createElement('button');reject.type='button';reject.textContent='거절';reject.className='reject';
+      const decide=async decision=>{
+        approve.disabled=true;reject.disabled=true;
+        try{
+          const result=await api('/review',{method:'POST',body:JSON.stringify({request_id:item.id,decision})});
+          if(decision==='approve'&&result.tenant){notice('reviewStatus',`${escText(result.tenant.name)} 승인 완료. 고객 테넌트 ${escText(result.tenant.slug)}가 연결되었습니다.`);}
+          else notice('reviewStatus',decision==='approve'?'승인이 완료되었습니다.':'신청을 거절 처리했습니다.');
+          await loadReviewConsole();
+        }catch(e){notice('reviewStatus',e.message==='reviewer_required'?'플랫폼 관리자 권한이 필요합니다.':`검수 처리 실패: ${e.message}`,'error');approve.disabled=false;reject.disabled=false;}
+      };
+      approve.addEventListener('click',()=>decide('approve'));reject.addEventListener('click',()=>decide('reject'));
+      actions.append(approve,reject);card.append(info,actions);list.append(card);
+    }
+  }catch(e){
+    notice('reviewStatus',e.message==='reviewer_required'?'이 화면은 EKODI 플랫폼 관리자만 사용할 수 있습니다.':'사용신청 목록을 불러오지 못했습니다.','error');
+  }
+}
+
 async function renderAccess(s){
   show('signedOut',false);show('signedIn',true);$('accountEmail').textContent=s.user.email||'인증 계정';
-  show('approvedActions',false);show('requestActions',false);
+  show('approvedActions',false);show('freeActions',false);show('requestActions',false);
   try{
     const access=await api(`/me?site=${encodeURIComponent(site)}`);
     if(access.status==='active'||access.status==='pre_registered'){
-      $('serviceBadge').textContent='접근 승인';
-      notice('accessStatus',`${config.name} 접근권한이 확인되었습니다. 일회용 연결 토큰으로 안전하게 이동할 수 있습니다.`);
+      $('serviceBadge').textContent=marketing?`${String(access.plan||'pro').toUpperCase()} 이용중`:'접근 승인';
+      notice('accessStatus',marketing?`Marketing AI ${String(access.plan||'pro').toUpperCase()} 권한이 확인되었습니다. 고급 기능을 이용할 수 있습니다.`:`${config.name} 접근권한이 확인되었습니다. 일회용 연결 토큰으로 안전하게 이동할 수 있습니다.`);
       show('approvedActions',true);
-      return;
-    }
-    $('serviceBadge').textContent='미등록 계정';
-    if(config.requestable){
-      notice('accessStatus','Google 계정은 확인됐지만 이 서비스의 사전등록 권한이 없습니다. 인증 신청 후 관리자가 승인하면 같은 계정에 권한이 자동 연결됩니다.','warn');
-      show('requestActions',true);
+    }else if(marketing){
+      $('serviceBadge').textContent='무료회원';
+      notice('accessStatus','무료회원 등록이 완료되었습니다. 기본 기능은 계속 무료로 이용할 수 있고, 자동화·채널연동·분석 등 고급 기능은 Pro 사용신청 후 이용합니다.');
+      show('freeActions',true);show('requestActions',true);show('marketingApplication',true);
     }else{
-      notice('accessStatus','이 서비스는 사전등록된 계정만 접근할 수 있습니다. 관리자에게 계정 등록을 요청해 주세요.','warn');
+      $('serviceBadge').textContent='미등록 계정';
+      if(config.requestable){
+        notice('accessStatus','Google 계정은 확인됐지만 이 서비스의 사전등록 권한이 없습니다. 인증 신청 후 관리자가 승인하면 같은 계정에 권한이 자동 연결됩니다.','warn');
+        show('requestActions',true);
+      }else{
+        notice('accessStatus','이 서비스는 사전등록된 계정만 접근할 수 있습니다. 관리자에게 계정 등록을 요청해 주세요.','warn');
+      }
     }
+    await loadReviewConsole();
   }catch{notice('accessStatus','중앙 접근권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.','error')}
 }
 
 $('googleRetry').addEventListener('click',prepareGoogle);
-$('logout').addEventListener('click',async()=>{await sb.auth.signOut();cleanUrl();show('signedIn',false);show('signedOut',true);$('serviceBadge').textContent='권한 확인';await prepareGoogle()});
+$('logout').addEventListener('click',async()=>{await sb.auth.signOut();cleanUrl();show('signedIn',false);show('signedOut',true);show('reviewConsole',false);$('serviceBadge').textContent='권한 확인';await prepareGoogle()});
+$('continueFree').addEventListener('click',()=>location.assign(returnTo));
+$('refreshReviews').addEventListener('click',loadReviewConsole);
 
 $('requestAccess').addEventListener('click',async()=>{
   const btn=$('requestAccess');btn.disabled=true;
   try{
     const payload={site,tenant:config.tenant,role:config.role,note:$('requestNote').value.trim()};
+    if(marketing){
+      payload.plan='pro';
+      payload.business_name=$('businessName').value.trim();
+      payload.contact_phone=$('contactPhone').value.trim();
+      payload.business_number=$('businessNumber').value.trim();
+    }
     const d=await api('/request',{method:'POST',body:JSON.stringify(payload)});
-    if(d.already_authorized){notice('requestStatus','이미 접근권한이 확인되었습니다. 새로고침합니다.');setTimeout(()=>location.reload(),500);return;}
-    notice('requestStatus',d.already_pending?'이미 검수 중인 신청입니다.':'접근권한 신청이 접수되었습니다. 승인 후 같은 Google 계정으로 바로 이용할 수 있습니다.');
-  }catch{notice('requestStatus','접근권한 신청을 처리하지 못했습니다.','error')}
+    if(d.already_authorized){notice('requestStatus','이미 Pro 접근권한이 확인되었습니다. 새로고침합니다.');setTimeout(()=>location.reload(),500);return;}
+    notice('requestStatus',d.already_pending?'이미 검수 중인 신청입니다. 승인되면 같은 Google 계정에 Pro 권한이 연결됩니다.':marketing?'Marketing AI Pro 사용신청이 접수되었습니다. 승인 후 같은 Google 계정으로 고급 기능을 바로 이용할 수 있습니다.':'접근권한 신청이 접수되었습니다. 승인 후 같은 Google 계정으로 바로 이용할 수 있습니다.');
+  }catch(e){notice('requestStatus',e.message==='tenant_not_found'?'신청 대상 조직을 확인하지 못했습니다.':marketing?'Pro 사용신청을 처리하지 못했습니다.':'접근권한 신청을 처리하지 못했습니다.','error')}
   finally{btn.disabled=false}
 });
 
@@ -129,4 +193,4 @@ $('continueService').addEventListener('click',async()=>{
 
 const {data:{session:initial}}=await sb.auth.getSession();
 if(initial){cleanUrl();await renderAccess(initial)}else await prepareGoogle();
-sb.auth.onAuthStateChange(async(event,s)=>{if(event==='SIGNED_IN'&&s){cleanUrl();await renderAccess(s)}if(event==='SIGNED_OUT'){show('signedIn',false);show('signedOut',true)}});
+sb.auth.onAuthStateChange(async(event,s)=>{if(event==='SIGNED_IN'&&s){cleanUrl();await renderAccess(s)}if(event==='SIGNED_OUT'){show('signedIn',false);show('signedOut',true);show('reviewConsole',false)}});
