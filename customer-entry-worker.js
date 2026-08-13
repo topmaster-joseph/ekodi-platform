@@ -3,6 +3,7 @@ import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
+import { handleBooksRequest } from './books-control.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
   '/api/setup',
@@ -42,6 +43,27 @@ export default {
     }
     if (request.method === 'POST' && LEGACY_CUSTOMER_PASSWORD_PATHS.has(path)) {
       return disabledPasswordResponse('customer');
+    }
+
+    if (path.startsWith('/api/books') && request.method !== 'OPTIONS') {
+      try {
+        const response = await handleBooksRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Books publishing API error', error);
+        return new Response(JSON.stringify({
+          error: '출판 운영 API 처리 중 오류가 발생했습니다.',
+          code: 'BOOKS_API_ERROR',
+        }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+            ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin': request.headers.get('origin'), vary: 'Origin' } : {}),
+          },
+        });
+      }
     }
 
     if (path.startsWith('/api/google/') || path.startsWith('/api/admin-access/')) {

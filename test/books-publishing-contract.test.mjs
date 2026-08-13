@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+
+const [api, admin, build, siteWorker, booksWorker, publishingHtml, publishingApp, migration] = await Promise.all([
+  readFile(new URL('../books-control.js', import.meta.url), 'utf8'),
+  readFile(new URL('../books-admin.js', import.meta.url), 'utf8'),
+  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../books-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../books/publishing/index.html', import.meta.url), 'utf8'),
+  readFile(new URL('../books/publishing/app.js', import.meta.url), 'utf8'),
+  readFile(new URL('../migrations/0009_books_operations.sql', import.meta.url), 'utf8'),
+]);
+
+test('Books control plane exposes publications, services, features and inquiries', () => {
+  assert.match(api, /const PUBLIC_PREFIX = '\/api\/books\/public'/);
+  assert.match(api, /const ADMIN_PREFIX = '\/api\/books\/admin'/);
+  assert.match(api, /\$\{PUBLIC_PREFIX\}\/config/);
+  assert.match(api, /\$\{PUBLIC_PREFIX\}\/publications/);
+  assert.match(api, /'\/api\/books\/inquiries'/);
+  assert.match(api, /\$\{ADMIN_PREFIX\}\/overview/);
+  for (const table of ['books_service_catalog', 'books_feature_flags', 'books_inquiries', 'books_publications']) {
+    assert.match(migration, new RegExp(table));
+  }
+});
+
+test('Books admin module is injected into the central Control Center', () => {
+  assert.match(build, /'books-admin\.css'/);
+  assert.match(build, /'books-admin\.js'/);
+  assert.match(build, /<link rel="stylesheet" href="books-admin\.css">/);
+  assert.match(build, /<script src="books-admin\.js" defer><\/script>/);
+  assert.match(admin, /Books Control/);
+  assert.match(admin, /Pricing & Services/);
+  assert.match(admin, /Consultations/);
+  assert.match(siteWorker, /'\/books'/);
+  assert.match(siteWorker, /'\/books-admin\.js'/);
+});
+
+test('Public publishing page has transparent pricing and consultation submission', () => {
+  assert.match(publishingHtml, /출판상담 · 출판대행/);
+  assert.match(publishingHtml, /id="consultationForm"/);
+  assert.match(publishingHtml, /id="pricing"/);
+  assert.match(publishingApp, /digital-start/);
+  assert.match(publishingApp, /publish-pro/);
+  assert.match(publishingApp, /\/api\/books\/inquiries/);
+  assert.match(booksWorker, /admin\.ekodi\.kr\/books#books/);
+});

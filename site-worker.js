@@ -35,6 +35,8 @@ const ADMIN_ALIASES = new Set([
   '/control-center',
   '/control-center/',
   '/control-center.html',
+  '/books',
+  '/books/',
 ]);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 const ADMIN_ASSETS = new Set([
@@ -51,6 +53,8 @@ const ADMIN_ASSETS = new Set([
   '/marketing-funnel-admin.js',
   '/google-admin-auth.css',
   '/google-admin-auth.js',
+  '/books-admin.css',
+  '/books-admin.js',
 ]);
 
 const ADMIN_CSP = [
