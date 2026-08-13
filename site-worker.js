@@ -53,10 +53,11 @@ const ADMIN_CSP = [
 
 const AUTH_CSP = [
   "default-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' https://cdn.jsdelivr.net",
-  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net",
-  "img-src 'self' data:",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+  "script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com/gsi/client",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/",
+  "img-src 'self' data: https://lh3.googleusercontent.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self' https://renzehysxirjilvdxacv.supabase.co",
@@ -131,7 +132,7 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
       }
-      if (url.pathname === '/auth.js' || url.pathname === '/auth.css') {
+      if (['/auth.js','/auth.css','/auth-router.js','/admin-auth.js','/client-auth.js'].includes(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, AUTH_CSP, 'public, max-age=300', 'central-auth-asset');
       }
