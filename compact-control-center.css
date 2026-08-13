@@ -1,0 +1,63 @@
+body.compact-control-center .app{grid-template-columns:220px minmax(0,1fr)}
+body.compact-control-center .sidebar{padding:18px 14px;display:flex;flex-direction:column}
+body.compact-control-center .side-brand{padding-left:6px}
+body.compact-control-center .side-caption{margin:6px 0 18px 52px;font-size:8px}
+body.compact-control-center .sidebar nav{display:grid;gap:3px;overflow:auto;max-height:calc(100vh - 190px);padding-right:2px}
+body.compact-control-center .nav{gap:10px;padding:9px 11px;border-radius:10px;min-height:38px}
+body.compact-control-center .nav span{font-size:12px}
+body.compact-control-center .side-bottom{position:static;left:auto;right:auto;bottom:auto;margin-top:auto;padding-top:12px}
+body.compact-control-center .side-bottom .ghost{margin-top:10px;padding:7px}
+body.compact-control-center .topbar{height:70px;padding:0 22px}
+body.compact-control-center .topbar h1{font-size:20px;margin-top:2px}
+body.compact-control-center .topbar .kicker{font-size:9px}
+body.compact-control-center .profile{gap:8px}
+body.compact-control-center .profile>span{padding:5px 8px}
+body.compact-control-center .content{max-width:none;padding:18px 22px 34px}
+body.compact-control-center .hero{padding:14px 16px;border-radius:16px;gap:16px;align-items:center}
+body.compact-control-center .hero h2{font-size:20px;margin:4px 0 3px}
+body.compact-control-center .hero p:not(.kicker){margin:0;color:#8195ae;font-size:11px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px}
+body.compact-control-center .hero-actions{gap:6px}
+body.compact-control-center .primary,body.compact-control-center .secondary,body.compact-control-center .ghost{border-radius:9px;padding:8px 11px;font-size:11px}
+body.compact-control-center .metrics{gap:10px;margin-top:10px}
+body.compact-control-center .metrics article{padding:13px 15px;border-radius:14px;min-height:96px}
+body.compact-control-center .metrics small{font-size:10px}
+body.compact-control-center .metrics strong{font-size:21px;margin:5px 0}
+body.compact-control-center .metrics span{font-size:9px}
+body.compact-control-center .section,body.compact-control-center .architecture{margin-top:12px;padding:15px;border-radius:16px}
+body.compact-control-center .section-head{gap:14px;margin-bottom:11px;align-items:center}
+body.compact-control-center .section-head h2,body.compact-control-center .architecture h2{font-size:20px;margin:4px 0 0}
+body.compact-control-center .section-head>p,body.compact-control-center .operations-copy{font-size:10px;line-height:1.35;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.compact-control-center .cards{gap:9px}
+body.compact-control-center .module{min-height:104px;padding:13px;border-radius:14px;grid-template-columns:36px 1fr auto;gap:10px}
+body.compact-control-center .icon{width:34px;height:34px;border-radius:10px;font-size:11px}
+body.compact-control-center .module strong{font-size:14px;margin:3px 0 4px}
+body.compact-control-center .module p{font-size:10px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+body.compact-control-center .service-control-grid{gap:10px}
+body.compact-control-center .service-control-card{padding:12px;border-radius:14px}
+body.compact-control-center .service-control-head strong{font-size:13px}
+body.compact-control-center .service-control-head small{font-size:10px;margin-top:2px}
+body.compact-control-center .health-badge{padding:4px 7px;font-size:9px}
+body.compact-control-center .service-stats{gap:6px;margin:9px 0}
+body.compact-control-center .service-stats div{padding:8px;border-radius:9px}
+body.compact-control-center .service-stats small{font-size:8px}
+body.compact-control-center .service-stats strong{font-size:12px;margin-top:2px}
+body.compact-control-center .service-settings{gap:7px}
+body.compact-control-center .service-settings select,body.compact-control-center .service-settings input[type="text"]{margin-top:3px;padding:7px 8px;border-radius:8px;font-size:11px}
+body.compact-control-center .monitor-toggle{min-height:42px;padding-top:14px}
+body.compact-control-center .service-actions{gap:5px}
+body.compact-control-center .finance-status{gap:9px}
+body.compact-control-center .finance-status article{padding:12px!important;border-radius:12px!important}
+body.compact-control-center .finance-subtitle{margin:14px 0 7px;font-size:13px}
+body.compact-control-center .policies-panel{background:linear-gradient(160deg,#0c1a2d,#091522)}
+body.compact-control-center .policy-head{margin-bottom:12px}
+body.compact-control-center .policy-version{font-size:10px;color:#7f95ae;border:1px solid #29415d;border-radius:999px;padding:5px 8px;white-space:nowrap}
+body.compact-control-center .policy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+body.compact-control-center .policy-card{padding:13px;border:1px solid #213a56;border-radius:13px;background:#0b192b;min-height:126px}
+body.compact-control-center .policy-card h3{margin:0 0 8px;color:#77b5ff;font-size:10px;text-transform:uppercase;letter-spacing:.12em}
+body.compact-control-center .policy-card strong{display:block;font-size:13px;margin-bottom:6px}
+body.compact-control-center .policy-card p{margin:0;color:#8297b2;font-size:10px;line-height:1.5}
+body.compact-control-center .policy-footer{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:10px;padding:10px 12px;border:1px solid #294563;border-radius:11px;background:#081522}
+body.compact-control-center .policy-footer strong{font-size:11px;color:#8fc2ff}
+body.compact-control-center .policy-footer span{font-size:10px;color:#9cafc6;text-align:right}
+@media(max-width:1100px){body.compact-control-center .policy-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){body.compact-control-center .app{display:block}body.compact-control-center .sidebar{width:230px}body.compact-control-center .topbar{height:64px;padding:0 14px}body.compact-control-center .content{padding:14px 12px 28px}body.compact-control-center .hero{align-items:flex-start}body.compact-control-center .hero p:not(.kicker){white-space:normal}body.compact-control-center .section-head>p,body.compact-control-center .operations-copy{white-space:normal}body.compact-control-center .policy-grid{grid-template-columns:1fr}body.compact-control-center .policy-footer{align-items:flex-start;flex-direction:column}body.compact-control-center .policy-footer span{text-align:left}}
