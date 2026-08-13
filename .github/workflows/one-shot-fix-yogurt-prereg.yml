@@ -28,12 +28,11 @@ jobs:
           ROOT = Path('.')
           OLD = 'yogurtpurple.ekodi.kr'
           NEW = 'yogurt.ekodi.kr'
-          SELF = Path('.github/workflows/one-shot-fix-yogurt-prereg.yml')
-          TEXT_EXTS = {'.js','.mjs','.html','.md','.toml','.yml','.yaml','.json','.sql','.css','.txt'}
+          TEXT_EXTS = {'.js','.mjs','.html','.md','.toml','.json','.sql','.css','.txt'}
 
           changed = []
           for path in ROOT.rglob('*'):
-              if not path.is_file() or '.git' in path.parts or path == SELF:
+              if not path.is_file() or '.git' in path.parts or '.github/workflows' in path.as_posix():
                   continue
               if path.suffix.lower() not in TEXT_EXTS:
                   continue
@@ -68,20 +67,9 @@ jobs:
               entry.write_text(text, encoding='utf-8')
               changed.append(str(entry))
 
-          ci = Path('.github/workflows/auth-hub-ci.yml')
-          text = ci.read_text(encoding='utf-8')
-          bad_after_global = """          if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then\n            echo 'Legacy yogurt domain detected'\n            exit 1\n          fi\n"""
-          corrected = """          if grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js; then\n            echo 'Legacy yogurtpurple domain detected'\n            exit 1\n          fi\n"""
-          if bad_after_global in text:
-              text = text.replace(bad_after_global, corrected, 1)
-              ci.write_text(text, encoding='utf-8')
-              changed.append(str(ci))
-
           migration = Path('migrations/0008_fix_yogurt_domain_and_customer_prereg.sql')
           migration.write_text("""-- Canonicalize the Yogurt Purple customer domain and make preregistration schema resilient.\nCREATE TABLE IF NOT EXISTS customer_invites (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  tenant_id INTEGER NOT NULL,\n  email TEXT NOT NULL,\n  role TEXT NOT NULL,\n  token_hash TEXT NOT NULL UNIQUE,\n  expires_at TEXT NOT NULL,\n  accepted_at TEXT,\n  revoked_at TEXT,\n  created_by INTEGER,\n  created_at TEXT NOT NULL,\n  FOREIGN KEY(tenant_id) REFERENCES customer_tenants(id)\n);\n\nUPDATE customer_tenants\nSET domain = 'yogurt.ekodi.kr'\nWHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr';\n\nCREATE INDEX IF NOT EXISTS idx_customer_invites_tenant\nON customer_invites(tenant_id, created_at DESC);\n""", encoding='utf-8')
           changed.append(str(migration))
-
-          SELF.unlink()
 
           print('Changed files:')
           for item in sorted(set(changed)):
@@ -97,8 +85,8 @@ jobs:
           node --check api-worker.js
           node --check auth-site/auth.js
           node --check auth-site/client-auth.js
-          if grep -R -F --exclude-dir=.git --exclude='one-shot-fix-yogurt-prereg.yml' --exclude='auth-hub-ci.yml' 'yogurtpurple.ekodi.kr' .; then
-            echo 'Legacy yogurtpurple domain remains outside compatibility checks'
+          if grep -R -F --exclude-dir=.git --exclude-dir=workflows 'yogurtpurple.ekodi.kr' .; then
+            echo 'Legacy yogurtpurple domain remains in application sources'
             exit 1
           fi
           grep -Fq "domain: 'yogurt.ekodi.kr'" api-worker.js
@@ -113,7 +101,7 @@ jobs:
           set -euo pipefail
           git config user.name 'EKODI Repair Bot'
           git config user.email 'topmaster.joseph@gmail.com'
-          git add -A
+          git add -A -- ':!/.github/workflows/**'
           git diff --cached --quiet && exit 0
           git commit -m 'Fix yogurt domain and customer Google preregistration'
           git push origin HEAD:main
