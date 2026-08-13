@@ -65,9 +65,9 @@ jobs:
           grep -Fq 'jadam-client' dist/marketing-ai/jadam/index.html
           grep -Fq 'pizzamaru-client' dist/marketing-ai/pizzamaru/index.html
           grep -Fq 'yogurt-client' dist/marketing-ai/yogurtpurple/index.html
-          grep -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai/qa/index.html
-          if grep -R -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai; then
-            echo 'Legacy yogurt domain detected in generated site'
+          grep -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai/qa/index.html
+          if grep -R -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai; then
+            echo 'Legacy yogurtpurple domain detected in generated site'
             exit 1
           fi
 
@@ -117,7 +117,7 @@ jobs:
           add_domain 'marketing-ai' 'marketing.ekodi.kr'
           add_domain 'marketing-ai-jadam' 'jadam.ekodi.kr'
           add_domain 'marketing-ai-pizzamaru' 'pizzamaru.ekodi.kr'
-          add_domain 'marketing-ai-yogurtpurple' 'yogurtpurple.ekodi.kr'
+          add_domain 'marketing-ai-yogurtpurple' 'yogurt.ekodi.kr'
 
       - name: Configure EKODI DNS
         shell: bash
@@ -141,7 +141,7 @@ jobs:
           upsert_cname 'marketing.ekodi.kr' "$(pages_target 'marketing-ai')"
           upsert_cname 'jadam.ekodi.kr' "$(pages_target 'marketing-ai-jadam')"
           upsert_cname 'pizzamaru.ekodi.kr' "$(pages_target 'marketing-ai-pizzamaru')"
-          upsert_cname 'yogurtpurple.ekodi.kr' "$(pages_target 'marketing-ai-yogurtpurple')"
+          upsert_cname 'yogurt.ekodi.kr' "$(pages_target 'marketing-ai-yogurtpurple')"
 
       - name: Verify Pages and custom domains
         shell: bash
@@ -164,14 +164,14 @@ jobs:
           }
           for attempt in $(seq 1 24); do
             ok=1
-            for spec in 'marketing.ekodi.kr:마케팅AI' 'jadam.ekodi.kr:자담치킨 목포대점' 'pizzamaru.ekodi.kr:피자마루 목포대점' 'yogurtpurple.ekodi.kr:요거트퍼플 목포대점'; do
+            for spec in 'marketing.ekodi.kr:마케팅AI' 'jadam.ekodi.kr:자담치킨 목포대점' 'pizzamaru.ekodi.kr:피자마루 목포대점' 'yogurt.ekodi.kr:요거트퍼플 목포대점'; do
               domain="${spec%%:*}"; needle="${spec#*:}"
               verify_url "https://$domain/" "$needle" || ok=0
             done
             verify_url 'https://marketing.ekodi.kr/qa/' '마케팅AI 검수센터' || ok=0
             verify_customer_auth 'https://jadam.ekodi.kr/' 'jadam-client' || ok=0
             verify_customer_auth 'https://pizzamaru.ekodi.kr/' 'pizzamaru-client' || ok=0
-            verify_customer_auth 'https://yogurtpurple.ekodi.kr/' 'yogurt-client' || ok=0
+            verify_customer_auth 'https://yogurt.ekodi.kr/' 'yogurt-client' || ok=0
             if [ "$ok" -eq 1 ]; then echo 'Marketing AI domains and Google customer preregistration verified.'; exit 0; fi
             sleep 5
           done
