@@ -43,10 +43,11 @@ jobs:
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
       - name: Deploy API worker
         run: npm run deploy:api
-      - name: Verify API, Google admin boundary and customer tenant boundary
+      - name: Verify Google-only admin and customer tenant boundaries
         shell: bash
         run: |
           set -euo pipefail
+          expected_client='483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com'
           for attempt in $(seq 1 12); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
             status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
@@ -54,13 +55,20 @@ jobs:
             tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
             unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
+            legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
+              -H 'content-type: application/json' \
+              -d '{"email":"topmaster.joseph@gmail.com","password":"not-used"}' \
+              'https://api.ekodi.kr/api/login' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$status" | grep -q '"initialized"' \
-              && printf '%s' "$google" | grep -q '"enabled"' \
+              && printf '%s' "$google" | grep -q '"enabled":true' \
+              && printf '%s' "$google" | grep -Fq "$expected_client" \
               && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
               && [ "$unauthorized_customer" = '401' ] \
-              && [ "$unauthorized_admin" = '401' ]; then
-              echo 'Control API, Google administrator boundary and customer authentication boundary verified.'
+              && [ "$unauthorized_admin" = '401' ] \
+              && [ "$legacy_login" = '410' ] \
+              && grep -Fq 'GOOGLE_ADMIN_LOGIN_REQUIRED' /tmp/legacy-login.json; then
+              echo 'Google-only administrator authentication and customer boundaries verified.'
               exit 0
             fi
             sleep 5
