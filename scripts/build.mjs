@@ -18,6 +18,8 @@ const assets = [
   'marketing-funnel-admin.js',
   'google-admin-auth.css',
   'google-admin-auth.js',
+  'books-admin.css',
+  'books-admin.js',
   'compact-control-center.css',
   'compact-control-center.js',
   'hub.html',
@@ -52,10 +54,12 @@ for (const asset of htmlAssets) {
     if (!html.includes('client-access.css')) html = html.replace('</head>', '<link rel="stylesheet" href="client-access.css">\n</head>');
     if (!html.includes('marketing-funnel-admin.css')) html = html.replace('</head>', '<link rel="stylesheet" href="marketing-funnel-admin.css">\n</head>');
     if (!html.includes('google-admin-auth.css')) html = html.replace('</head>', '<link rel="stylesheet" href="google-admin-auth.css">\n</head>');
+    if (!html.includes('books-admin.css')) html = html.replace('</head>', '<link rel="stylesheet" href="books-admin.css">\n</head>');
     if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
     if (!html.includes('client-access.js')) html = html.replace('</body>', '<script src="client-access.js" defer></script>\n</body>');
     if (!html.includes('marketing-funnel-admin.js')) html = html.replace('</body>', '<script src="marketing-funnel-admin.js" defer></script>\n</body>');
     if (!html.includes('google-admin-auth.js')) html = html.replace('</body>', '<script src="google-admin-auth.js" defer></script>\n</body>');
+    if (!html.includes('books-admin.js')) html = html.replace('</body>', '<script src="books-admin.js" defer></script>\n</body>');
     if (!html.includes('compact-control-center.js')) html = html.replace('</body>', '<script src="compact-control-center.js" defer></script>\n</body>');
   }
   await writeFile(path, html);
