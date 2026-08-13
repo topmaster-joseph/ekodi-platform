@@ -24,6 +24,9 @@ const assets = [
   'compact-control-center.css',
   'compact-control-center.js',
   'hub.html',
+  'pay.html',
+  'pay.css',
+  'pay.js',
   'trade.html',
   'styles.css',
   'script.js',
@@ -66,4 +69,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root, Control Center, auth hub, service hubs and trade assets with responsive typography: ${assets.join(', ')}`);
+console.log(`Built EKODI root, Control Center, auth hub, service hubs, Pay checkout and trade assets with responsive typography: ${assets.join(', ')}`);
