@@ -11,6 +11,7 @@ const assets = [
   'control-center-ops.css',
   'control-center-finance.css',
   'control-center.js',
+  'admin-central-handoff.js',
   'finance-monitor.js',
   'client-access.css',
   'client-access.js',
