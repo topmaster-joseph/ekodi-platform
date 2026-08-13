@@ -1,0 +1,38 @@
+name: EKODIBIZ Domain Probe 20260813
+
+on:
+  push:
+    branches: [diagnose-ekodibiz-20260813]
+    paths:
+      - '.github/workflows/domain-probe-20260813.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: DNS and HTTP probe
+        shell: bash
+        run: |
+          set +e
+          echo '=== UTC NOW ==='
+          date -u
+          echo '=== DNS (Google DoH) ==='
+          for spec in 'ekodibiz.kr:A' 'ekodibiz.kr:NS' 'www.ekodibiz.kr:A' 'www.ekodibiz.kr:CNAME' 'biz.ekodi.kr:A' 'biz.ekodi.kr:CNAME'; do
+            name="${spec%%:*}"; type="${spec#*:}"
+            echo "--- $name $type"
+            curl -fsS "https://dns.google/resolve?name=$name&type=$type" | python -c "import json,sys; d=json.load(sys.stdin); print('status',d.get('Status')); [print(x.get('name'),x.get('type'),x.get('TTL'),x.get('data')) for x in (d.get('Answer') or [])]" || true
+          done
+          echo '=== CURL, no follow ==='
+          for u in 'http://ekodibiz.kr/' 'https://ekodibiz.kr/' 'http://www.ekodibiz.kr/' 'https://www.ekodibiz.kr/' 'http://biz.ekodi.kr/' 'https://biz.ekodi.kr/'; do
+            echo "--- $u"
+            curl -k -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 "$u" | sed -n '1,15p' || echo 'curl_failed'
+          done
+          echo '=== CURL, follow redirects ==='
+          for u in 'http://ekodibiz.kr/' 'https://ekodibiz.kr/' 'http://www.ekodibiz.kr/' 'https://www.ekodibiz.kr/'; do
+            echo "--- $u"
+            curl -k -sS -L -o /dev/null -D - --max-redirs 8 --connect-timeout 5 --max-time 30 "$u" | sed -n '1,60p' || echo 'curl_failed'
+          done
