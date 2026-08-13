@@ -11,6 +11,8 @@ on:
       - 'control-center.css'
       - 'control-center-ops.css'
       - 'control-center-finance.css'
+      - 'compact-control-center.js'
+      - 'compact-control-center.css'
       - 'client-access.js'
       - 'client-access.css'
       - 'google-admin-auth.js'
@@ -44,11 +46,12 @@ jobs:
         run: |
           node --check site-worker.js
           node --check control-center.js
+          node --check compact-control-center.js
           node --check client-access.js
           node --check google-admin-auth.js
           node --check auth-site/auth.js
 
-      - name: Validate authentication visibility contract
+      - name: Validate authentication and compact UI contract
         shell: bash
         run: |
           set -euo pipefail
@@ -62,6 +65,12 @@ jobs:
           grep -Fq '/api/google/challenge' google-admin-auth.js
           grep -Fq '/api/google/login' google-admin-auth.js
           grep -Fq '/api/admin-access/google-accounts' google-admin-auth.js
+          grep -Fq 'Policies' compact-control-center.js
+          grep -Fq 'Domains & DNS' compact-control-center.js
+          grep -Fq 'Activity Logs' compact-control-center.js
+          grep -Fq '.policy-grid' compact-control-center.css
+          grep -Fq 'compact-control-center.css' scripts/build.mjs
+          grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
           grep -Fq 'AUTH_HOST' site-worker.js
@@ -75,7 +84,7 @@ jobs:
       - name: Deploy EKODI site worker
         run: npm run deploy:site
 
-      - name: Verify admin routes, central auth and customer access assets
+      - name: Verify admin routes, compact UI, central auth and customer access assets
         shell: bash
         run: |
           set -euo pipefail
@@ -92,6 +101,8 @@ jobs:
             grep -Fq 'client-access.css' /tmp/admin-body || return 1
             grep -Fq 'google-admin-auth.js' /tmp/admin-body || return 1
             grep -Fq 'google-admin-auth.css' /tmp/admin-body || return 1
+            grep -Fq 'compact-control-center.js' /tmp/admin-body || return 1
+            grep -Fq 'compact-control-center.css' /tmp/admin-body || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then
               echo 'Unexpected redirect header'
               return 1
@@ -121,12 +132,14 @@ jobs:
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
               && verify_admin 'https://admin.ekodi.kr/admin' \
               && verify_admin 'https://admin.ekodi.kr/legacy' \
+              && verify_asset 'compact-control-center.js' 'Operating Policies' \
+              && verify_asset 'compact-control-center.css' '.policy-grid' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
               && verify_asset 'client-access.css' '.client-access-layout' \
               && verify_asset 'google-admin-auth.js' '/api/google/login' \
               && verify_asset 'google-admin-auth.css' '.google-auth-panel' \
               && verify_auth; then
-              echo 'admin.ekodi.kr and auth.ekodi.kr verified with Google-first access modules.'
+              echo 'admin.ekodi.kr verified with compact English navigation, Policies and Google-first access.'
               exit 0
             fi
             sleep 4

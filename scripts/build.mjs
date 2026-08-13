@@ -16,6 +16,8 @@ const assets = [
   'client-access.js',
   'google-admin-auth.css',
   'google-admin-auth.js',
+  'compact-control-center.css',
+  'compact-control-center.js',
   'hub.html',
   'trade.html',
   'styles.css',
@@ -46,8 +48,10 @@ for (const asset of htmlAssets) {
   if (asset === 'control-center.html') {
     if (!html.includes('client-access.css')) html = html.replace('</head>', '<link rel="stylesheet" href="client-access.css">\n</head>');
     if (!html.includes('google-admin-auth.css')) html = html.replace('</head>', '<link rel="stylesheet" href="google-admin-auth.css">\n</head>');
+    if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
     if (!html.includes('client-access.js')) html = html.replace('</body>', '<script src="client-access.js" defer></script>\n</body>');
     if (!html.includes('google-admin-auth.js')) html = html.replace('</body>', '<script src="google-admin-auth.js" defer></script>\n</body>');
+    if (!html.includes('compact-control-center.js')) html = html.replace('</body>', '<script src="compact-control-center.js" defer></script>\n</body>');
   }
   await writeFile(path, html);
 }
