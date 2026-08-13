@@ -17,7 +17,7 @@
 - `portal` → `ekodi.kr`
 - `admin` → `admin.ekodi.kr`
 - `cgma` → `cgma.ekodi.kr/member`
-- `marketing` → `marketing.ekodi.kr`, `jadam.ekodi.kr`, `pizzamaru.ekodi.kr`, `yogurtpurple.ekodi.kr`
+- `marketing` → `marketing.ekodi.kr`, `jadam.ekodi.kr`, `pizzamaru.ekodi.kr`, `yogurt.ekodi.kr`
 - `biz` → `biz.ekodi.kr`
 - `trade` → `trade.ekodi.kr`
 - `mall` → `mall.ekodi.kr`

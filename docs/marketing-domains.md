@@ -5,7 +5,7 @@ EKODI Platform manages these production service domains.
 - `marketing.ekodi.kr` → Cloudflare Pages project `marketing-ai`
 - `jadam.ekodi.kr` → Cloudflare Pages project `marketing-ai-jadam`
 - `pizzamaru.ekodi.kr` → Cloudflare Pages project `marketing-ai-pizzamaru`
-- `yogurtpurple.ekodi.kr` → Cloudflare Pages project `marketing-ai-yogurtpurple`
+- `yogurt.ekodi.kr` → Cloudflare Pages project `marketing-ai-yogurtpurple`
 - `cgma.ekodi.kr` → Cloudflare Pages project `cheonggye-market`
 
 Public canonical routes:
@@ -13,7 +13,7 @@ Public canonical routes:
 - `https://marketing.ekodi.kr/`
 - `https://jadam.ekodi.kr/`
 - `https://pizzamaru.ekodi.kr/`
-- `https://yogurtpurple.ekodi.kr/`
+- `https://yogurt.ekodi.kr/`
 - `https://cgma.ekodi.kr/ai`
 - `https://cgma.ekodi.kr/member`
 - `https://cgma.ekodi.kr/store`

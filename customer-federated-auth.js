@@ -117,7 +117,7 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL
     )`),
   ]);
-  await db.prepare("UPDATE customer_tenants SET domain = 'yogurtpurple.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurtpurple.ekodi.kr'").run();
+  await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
 }
 
 async function issueSession(db, userId, tenantId) {

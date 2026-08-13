@@ -58,6 +58,7 @@ export default {
             'content-type': 'application/json; charset=utf-8',
             'cache-control': 'no-store',
             'x-content-type-options': 'nosniff',
+          ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin': request.headers.get('origin'), vary: 'Origin' } : {}),
           },
         });
       }
@@ -80,6 +81,7 @@ export default {
             'content-type': 'application/json; charset=utf-8',
             'cache-control': 'no-store',
             'x-content-type-options': 'nosniff',
+          ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin': request.headers.get('origin'), vary: 'Origin' } : {}),
           },
         });
       }

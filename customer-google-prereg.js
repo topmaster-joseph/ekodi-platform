@@ -116,6 +116,18 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL,
       PRIMARY KEY (tenant_id, user_id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS customer_invites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      accepted_at TEXT,
+      revoked_at TEXT,
+      created_by INTEGER,
+      created_at TEXT NOT NULL
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_sessions (
       token_hash TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
@@ -134,7 +146,7 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL
     )`),
   ]);
-  await db.prepare("UPDATE customer_tenants SET domain = 'yogurtpurple.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurtpurple.ekodi.kr'").run();
+  await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
 }
 
 async function adminSession(request, env) {
