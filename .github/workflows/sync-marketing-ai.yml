@@ -45,6 +45,9 @@ jobs:
           npm run build
           hub='dist/marketing-ai/index.html'
           test -f "$hub"
+          grep -Fq 'id="freeTrialForm"' "$hub"
+          grep -Fq '30초 마케팅 문구 무료체험' "$hub"
+          grep -Fq 'Marketing AI basic trial engine' "$hub"
           grep -Fq 'FREE → PRO' "$hub"
           grep -Fq 'Pro 사용신청' "$hub"
           grep -Fq 'Google로 무료 시작' "$hub"
@@ -78,7 +81,7 @@ jobs:
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/pizzamaru --project-name=marketing-ai-pizzamaru --branch=main
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/yogurtpurple --project-name=marketing-ai-yogurtpurple --branch=main
 
-      - name: Verify production free membership and central authentication
+      - name: Verify production free trial, membership and central authentication
         shell: bash
         run: |
           set -euo pipefail
@@ -86,6 +89,9 @@ jobs:
             code=$(curl -sS -L -o /tmp/hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' || true)
             echo "marketing.ekodi.kr -> $code"
             [ "$code" = '200' ]
+            grep -Fq 'id="freeTrialForm"' /tmp/hub.html
+            grep -Fq '30초 마케팅 문구 무료체험' /tmp/hub.html
+            grep -Fq 'Marketing AI basic trial engine' /tmp/hub.html
             grep -Fq 'FREE → PRO' /tmp/hub.html
             grep -Fq 'Pro 사용신청' /tmp/hub.html
             grep -Fq 'Google로 무료 시작' /tmp/hub.html
@@ -111,7 +117,7 @@ jobs:
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
               && verify_customer 'yogurtpurple.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI free-member to Pro funnel verified in production.'
+              echo 'Marketing AI anonymous trial and free-member to Pro funnel verified in production.'
               exit 0
             fi
             sleep 5
