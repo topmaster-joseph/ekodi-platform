@@ -1,0 +1,126 @@
+name: One-shot Yogurt Domain and Preregistration Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-shot-fix-yogurt-prereg.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Normalize yogurt domain and harden customer preregistration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          ROOT = Path('.')
+          OLD = 'yogurtpurple.ekodi.kr'
+          NEW = 'yogurt.ekodi.kr'
+          SELF = Path('.github/workflows/one-shot-fix-yogurt-prereg.yml')
+          TEXT_EXTS = {'.js','.mjs','.html','.md','.toml','.yml','.yaml','.json','.sql','.css','.txt'}
+
+          changed = []
+          for path in ROOT.rglob('*'):
+              if not path.is_file() or '.git' in path.parts or path == SELF:
+                  continue
+              if path.suffix.lower() not in TEXT_EXTS:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              if OLD in text:
+                  path.write_text(text.replace(OLD, NEW), encoding='utf-8')
+                  changed.append(str(path))
+
+          # Runtime schema self-healing: preregistration uses customer_invites,
+          # so guarantee the table even if a prior migration was partially missed.
+          prereg = Path('customer-google-prereg.js')
+          text = prereg.read_text(encoding='utf-8')
+          if 'CREATE TABLE IF NOT EXISTS customer_invites' not in text:
+              marker = "    db.prepare(`CREATE TABLE IF NOT EXISTS customer_sessions ("
+              invite_block = """    db.prepare(`CREATE TABLE IF NOT EXISTS customer_invites (\n      id INTEGER PRIMARY KEY AUTOINCREMENT,\n      tenant_id INTEGER NOT NULL,\n      email TEXT NOT NULL,\n      role TEXT NOT NULL,\n      token_hash TEXT NOT NULL UNIQUE,\n      expires_at TEXT NOT NULL,\n      accepted_at TEXT,\n      revoked_at TEXT,\n      created_by INTEGER,\n      created_at TEXT NOT NULL\n    )`),\n"""
+              if marker not in text:
+                  raise SystemExit('customer-google-prereg.js schema marker not found')
+              text = text.replace(marker, invite_block + marker, 1)
+              prereg.write_text(text, encoding='utf-8')
+              changed.append(str(prereg))
+
+          # Browser fetch() hides server errors as TypeError when the exceptional
+          # customer API response omits CORS. Preserve the allowed admin origin.
+          entry = Path('customer-entry-worker.js')
+          text = entry.read_text(encoding='utf-8')
+          cors_line = "          ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin': request.headers.get('origin'), vary: 'Origin' } : {}),\n"
+          header_marker = "          'x-content-type-options': 'nosniff',\n"
+          if cors_line.strip() not in text:
+              count = text.count(header_marker)
+              if count < 2:
+                  raise SystemExit(f'customer-entry-worker.js expected error header blocks, found {count}')
+              text = text.replace(header_marker, header_marker + cors_line)
+              entry.write_text(text, encoding='utf-8')
+              changed.append(str(entry))
+
+          # The auth-hub contract must now reject the former yogurtpurple host,
+          # not the new canonical yogurt host.
+          ci = Path('.github/workflows/auth-hub-ci.yml')
+          text = ci.read_text(encoding='utf-8')
+          bad_after_global = """          if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then\n            echo 'Legacy yogurt domain detected'\n            exit 1\n          fi\n"""
+          corrected = """          if grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js; then\n            echo 'Legacy yogurtpurple domain detected'\n            exit 1\n          fi\n"""
+          if bad_after_global in text:
+              text = text.replace(bad_after_global, corrected, 1)
+              ci.write_text(text, encoding='utf-8')
+              changed.append(str(ci))
+
+          migration = Path('migrations/0008_fix_yogurt_domain_and_customer_prereg.sql')
+          migration.write_text("""-- Canonicalize the Yogurt Purple customer domain and make preregistration schema resilient.\nCREATE TABLE IF NOT EXISTS customer_invites (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  tenant_id INTEGER NOT NULL,\n  email TEXT NOT NULL,\n  role TEXT NOT NULL,\n  token_hash TEXT NOT NULL UNIQUE,\n  expires_at TEXT NOT NULL,\n  accepted_at TEXT,\n  revoked_at TEXT,\n  created_by INTEGER,\n  created_at TEXT NOT NULL,\n  FOREIGN KEY(tenant_id) REFERENCES customer_tenants(id)\n);\n\nUPDATE customer_tenants\nSET domain = 'yogurt.ekodi.kr'\nWHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr';\n\nCREATE INDEX IF NOT EXISTS idx_customer_invites_tenant\nON customer_invites(tenant_id, created_at DESC);\n""", encoding='utf-8')
+          changed.append(str(migration))
+
+          # This workflow is intentionally disposable.
+          SELF.unlink()
+
+          print('Changed files:')
+          for item in sorted(set(changed)):
+              print(' -', item)
+          PY
+
+      - name: Validate repaired sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check customer-google-prereg.js
+          node --check customer-entry-worker.js
+          node --check api-worker.js
+          node --check auth-site/auth.js
+          node --check auth-site/client-auth.js
+          if grep -R -F --exclude-dir=.git --exclude='one-shot-fix-yogurt-prereg.yml' 'yogurtpurple.ekodi.kr' .; then
+            echo 'Legacy yogurtpurple domain remains'
+            exit 1
+          fi
+          grep -Fq "domain: 'yogurt.ekodi.kr'" api-worker.js
+          grep -Fq "returnTo:'https://yogurt.ekodi.kr/'" auth-site/client-auth.js
+          grep -Fq "UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr'" customer-google-prereg.js
+          grep -Fq 'CREATE TABLE IF NOT EXISTS customer_invites' customer-google-prereg.js
+          grep -Fq "access-control-allow-origin" customer-entry-worker.js
+
+      - name: Commit repaired production sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'EKODI Repair Bot'
+          git config user.email 'topmaster.joseph@gmail.com'
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix yogurt domain and customer Google preregistration'
+          git push origin HEAD:main
