@@ -26,10 +26,17 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'EKODI 인증센터' auth-site/index.html
-          grep -Fq 'Google 계정으로 계속' auth-site/index.html
+          grep -Fq 'id="googleButtonHost"' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
-          grep -Fq "provider:'google'" auth-site/auth.js
+          grep -Fq 'functions/v1/identity-api' auth-site/auth.js
+          grep -Fq 'accounts.google.com/gsi/client' auth-site/auth.js
+          grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/auth.js
           grep -Fq "api('/handoff'" auth-site/auth.js
+          grep -Fq 'ekodi_token:d.tokenHash' auth-site/auth.js
+          if grep -Fq 'signInWithOAuth' auth-site/auth.js || grep -Fq 'action_link' auth-site/auth.js; then
+            echo 'Redirect-based central auth detected'
+            exit 1
+          fi
           for site in cgma marketing biz trade mall pay books church lab mission community edu media admin portal; do
             grep -Fq "${site}:{" auth-site/auth.js || { echo "Missing central auth service: $site"; exit 1; }
           done
