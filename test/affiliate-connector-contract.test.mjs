@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { handleAffiliateRequest } from '../affiliate-control.js';
 
 const [apiSource, entrySource, adminSource, buildSource, migrationSource] = await Promise.all([
   readFile(new URL('../affiliate-control.js', import.meta.url), 'utf8'),
@@ -9,6 +10,11 @@ const [apiSource, entrySource, adminSource, buildSource, migrationSource] = awai
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0010_affiliate_connector.sql', import.meta.url), 'utf8'),
 ]);
+
+test('affiliate modules compile and export the authenticated request handler', () => {
+  assert.equal(typeof handleAffiliateRequest, 'function');
+  assert.doesNotThrow(() => new Function(adminSource));
+});
 
 test('affiliate connector uses a reusable provider/account/link/performance schema', () => {
   assert.match(migrationSource, /affiliate_providers/);
