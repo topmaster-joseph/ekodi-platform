@@ -29,15 +29,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Verify monitor
-        run: npm test
+      - name: Verify monitor logic only
+        run: node --test test/monitor.test.mjs
       - name: Check EKODI services
         run: npm run monitor
-      - name: Publish latest status
+      - name: Publish latest status without deployment cascade
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add monitor-status.json
           git diff --cached --quiet && exit 0
-          git commit -m "chore: update EKODI monitoring status"
+          git commit -m "chore: update EKODI monitoring status [skip ci]"
           git push
