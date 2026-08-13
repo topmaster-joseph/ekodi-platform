@@ -67,11 +67,11 @@ jobs:
             fi
           done
 
-          if grep -R -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai; then
-            echo 'Legacy yogurt domain detected in generated site'
+          if grep -R -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai; then
+            echo 'Legacy yogurtpurple domain detected in generated site'
             exit 1
           fi
-          grep -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai/qa/index.html
+          grep -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai/qa/index.html
 
       - name: Deploy current source to existing Pages projects
         run: |
@@ -116,7 +116,7 @@ jobs:
             if verify_hub \
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
-              && verify_customer 'yogurtpurple.ekodi.kr' '요거트퍼플 목포대점'; then
+              && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
               echo 'Marketing AI anonymous trial and free-member to Pro funnel verified in production.'
               exit 0
             fi
