@@ -28,11 +28,12 @@
       </a>
       <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button>
       <nav id="site-nav" class="nav" aria-label="주요 메뉴">
-        <a href="#main">Home</a>
-        <a href="#catalog">Books</a>
-        <a href="#fields">Fields</a>
-        <a href="#method">Method</a>
-        <a href="#about">About</a>
+        <a href="/">Home</a>
+        <a href="/#catalog">Books</a>
+        <a href="/series/">Series</a>
+        <a href="/research/">Research</a>
+        <a href="/notes/">Notes</a>
+        <a href="/#about">About</a>
         <a href="https://ekodi.kr/">EKODI ↗</a>
       </nav>
     </div>
@@ -129,11 +130,11 @@
 
   <template id="book-template">
     <article class="publication">
-      <div class="publication-cover" aria-hidden="true">
+      <a class="publication-cover" href="" aria-label="도서 상세 보기">
         <span class="book-series"></span>
         <strong class="book-cover-title"></strong>
         <div><small class="book-cover-type"></small><small>EKODI BOOKS</small></div>
-      </div>
+      </a>
       <div class="publication-record">
         <div class="record-topline"><span class="book-catalog"></span><span class="book-status"></span></div>
         <p class="book-type"></p>
@@ -149,6 +150,7 @@
           <div><dt>Series</dt><dd class="book-series-record"></dd></div>
         </dl>
         <div class="citation"><span>SUGGESTED CITATION</span><p class="book-citation"></p></div>
+        <a class="detail-link" href="">도서 상세 보기 ↗</a>
       </div>
       <aside class="distribution-desk" aria-label="유통 현황">
         <div class="desk-head"><span>DISTRIBUTION</span><b>유통 현황</b></div>
