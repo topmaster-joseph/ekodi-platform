@@ -3,6 +3,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
+const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const services={
   cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',origins:['https://cgma.ekodi.kr'],requestable:true},
   marketing:{name:'마케팅AI',tenant:'ekodibiz',role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
@@ -25,24 +26,57 @@ const site=Object.hasOwn(services,params.get('site'))?params.get('site'):'portal
 const config=services[site];
 const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);return target.protocol==='https:'&&config.origins.includes(target.origin)?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
-const callbackUrl=`${location.origin}/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`;
-const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true}});
+const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
 
 $('serviceName').textContent=config.name;
 
 async function session(){const {data}=await sb.auth.getSession();return data.session}
 async function api(path,options={}){const s=await session();if(!s)throw new Error('login_required');const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${s.access_token}`,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${ACCESS}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
+async function identity(path,options={}){const headers={apikey:PUBLISHABLE_KEY,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${IDENTITY}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
 function show(id,on=true){$(id)?.classList.toggle('hide',!on)}
 function notice(id,text,type=''){const el=$(id);if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
+function cleanUrl(){history.replaceState({},document.title,`/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`)}
 
-async function probeGoogle(){
-  let enabled=false;
-  try{const r=await fetch(`${SUPABASE_URL}/auth/v1/settings`,{headers:{apikey:PUBLISHABLE_KEY},cache:'no-store'});const d=await r.json();enabled=d?.external?.google===true}catch{}
-  $('googleLogin').disabled=!enabled;
-  $('googleText').textContent=enabled?'Google 계정으로 계속':'Google 로그인 연결 준비 중';
-  if(!enabled)notice('authStatus','중앙 권한 시스템은 준비되었습니다. Google OAuth 자격정보가 연결되면 이 버튼이 자동 활성화됩니다.','warn');
-  return enabled;
+function loadGoogleLibrary(){
+  if(window.google?.accounts?.id)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const existing=document.querySelector('script[data-ekodi-google-identity]');
+    if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
+    const script=document.createElement('script');
+    script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.ekodiGoogleIdentity='true';
+    script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(script);
+  });
+}
+
+async function handleGoogleCredential(response,challenge){
+  notice('authStatus','Google 계정을 확인하고 EKODI 세션을 만드는 중입니다.');
+  try{
+    const proof=await identity('/google/exchange',{method:'POST',body:JSON.stringify({credential:response.credential,nonce:challenge.nonce})});
+    const {error}=await sb.auth.verifyOtp({token_hash:proof.tokenHash,type:'email'});
+    if(error)throw error;
+    const s=await session();
+    if(!s)throw new Error('session_not_created');
+    cleanUrl();
+    await renderAccess(s);
+  }catch(e){
+    console.error('central google identity',e);
+    notice('authStatus',e.message==='challenge_expired_or_used'?'Google 인증 시간이 만료되었습니다. 다시 준비해 주세요.':'Google 본인확인을 완료하지 못했습니다. 다시 시도해 주세요.','error');
+    show('googleRetry',true);
+  }
+}
+
+async function prepareGoogle(){
+  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice('authStatus','Google 인증을 준비하고 있습니다.');
+  try{
+    const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
+    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:r=>handleGoogleCredential(r,challenge)});
+    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
+    notice('authStatus','Google 계정으로 본인을 확인해 주세요. 서비스별 권한은 인증 후 별도로 확인합니다.');
+  }catch(e){
+    console.error('prepare google identity',e);
+    notice('authStatus','Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true);
+  }
 }
 
 async function renderAccess(s){
@@ -52,7 +86,7 @@ async function renderAccess(s){
     const access=await api(`/me?site=${encodeURIComponent(site)}`);
     if(access.status==='active'||access.status==='pre_registered'){
       $('serviceBadge').textContent='접근 승인';
-      notice('accessStatus',`${config.name} 접근권한이 확인되었습니다. 안전한 일회용 연결을 통해 서비스로 이동할 수 있습니다.`);
+      notice('accessStatus',`${config.name} 접근권한이 확인되었습니다. 일회용 연결 토큰으로 안전하게 이동할 수 있습니다.`);
       show('approvedActions',true);
       return;
     }
@@ -66,14 +100,8 @@ async function renderAccess(s){
   }catch{notice('accessStatus','중앙 접근권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.','error')}
 }
 
-$('googleLogin').addEventListener('click',async()=>{
-  if($('googleLogin').disabled)return;
-  notice('authStatus','Google 인증 화면으로 이동합니다.');
-  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:callbackUrl}});
-  if(error)notice('authStatus','Google 로그인 연결을 확인해 주세요.','error');
-});
-
-$('logout').addEventListener('click',async()=>{await sb.auth.signOut();history.replaceState({},document.title,`/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`);show('signedIn',false);show('signedOut',true);$('serviceBadge').textContent='권한 확인';await probeGoogle()});
+$('googleRetry').addEventListener('click',prepareGoogle);
+$('logout').addEventListener('click',async()=>{await sb.auth.signOut();cleanUrl();show('signedIn',false);show('signedOut',true);$('serviceBadge').textContent='권한 확인';await prepareGoogle()});
 
 $('requestAccess').addEventListener('click',async()=>{
   const btn=$('requestAccess');btn.disabled=true;
@@ -90,15 +118,15 @@ $('continueService').addEventListener('click',async()=>{
   const btn=$('continueService');btn.disabled=true;btn.textContent='안전한 연결 준비 중…';
   try{
     const d=await api('/handoff',{method:'POST',body:JSON.stringify({site,return_to:returnTo})});
-    if(!d.action_link)throw new Error('handoff_unavailable');
-    location.assign(d.action_link);
+    if(!d.tokenHash||!d.returnTo)throw new Error('handoff_unavailable');
+    const target=new URL(d.returnTo);target.hash=new URLSearchParams({ekodi_token:d.tokenHash,ekodi_type:d.type||'email'}).toString();
+    location.assign(target.href);
   }catch(e){
-    notice('accessStatus',e.message==='auth_redirect_not_ready'?'서비스 이동용 인증 Redirect 설정이 아직 준비되지 않았습니다. Google 인증 설정과 함께 자동 활성화됩니다.':'안전한 서비스 연결을 만들지 못했습니다.','error');
+    notice('accessStatus','서비스용 일회용 연결을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.','error');
     btn.disabled=false;btn.textContent='서비스로 안전하게 이동';
   }
 });
 
-await probeGoogle();
 const {data:{session:initial}}=await sb.auth.getSession();
-if(initial){history.replaceState({},document.title,`/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`);await renderAccess(initial)}
-sb.auth.onAuthStateChange(async(event,s)=>{if(event==='SIGNED_IN'&&s){history.replaceState({},document.title,`/?site=${encodeURIComponent(site)}&return_to=${encodeURIComponent(returnTo)}`);await renderAccess(s)}if(event==='SIGNED_OUT'){show('signedIn',false);show('signedOut',true)}});
+if(initial){cleanUrl();await renderAccess(initial)}else await prepareGoogle();
+sb.auth.onAuthStateChange(async(event,s)=>{if(event==='SIGNED_IN'&&s){cleanUrl();await renderAccess(s)}if(event==='SIGNED_OUT'){show('signedIn',false);show('signedOut',true)}});
