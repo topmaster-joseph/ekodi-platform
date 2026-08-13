@@ -37,6 +37,20 @@ const ADMIN_ALIASES = new Set([
   '/control-center.html',
 ]);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
+const ADMIN_ASSETS = new Set([
+  '/control-center.css',
+  '/control-center-ops.css',
+  '/control-center-finance.css',
+  '/control-center.js',
+  '/compact-control-center.css',
+  '/compact-control-center.js',
+  '/client-access.css',
+  '/client-access.js',
+  '/marketing-funnel-admin.css',
+  '/marketing-funnel-admin.js',
+  '/google-admin-auth.css',
+  '/google-admin-auth.js',
+]);
 
 const ADMIN_CSP = [
   "default-src 'self'",
@@ -124,6 +138,13 @@ export default {
       if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+      }
+
+      // Admin UI assets must never be allowed to lag behind the shell. A stale CSS
+      // file can visually regress navigation even when the new HTML/JS is live.
+      if (ADMIN_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-asset');
       }
     }
 
