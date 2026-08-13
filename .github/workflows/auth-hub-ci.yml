@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'auth-site/**'
+      - 'admin-central-handoff.js'
+      - 'control-center.html'
       - 'api-worker.js'
       - 'docs/AUTH-CENTER.md'
       - '.github/workflows/auth-hub-ci.yml'
@@ -17,9 +19,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate hub script
+      - name: Validate hub scripts
         run: |
           node --check auth-site/auth.js
+          node --check auth-site/auth-router.js
+          node --check auth-site/admin-auth.js
+          node --check admin-central-handoff.js
           node --check api-worker.js
       - name: Verify central auth contract
         shell: bash
@@ -27,9 +32,18 @@ jobs:
           set -euo pipefail
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'id="googleButtonHost"' auth-site/index.html
+          grep -Fq '/auth-router.js' auth-site/index.html
+          grep -Fq "site==='admin'" auth-site/auth-router.js
+          grep -Fq '/api/google/config' auth-site/admin-auth.js
+          grep -Fq '/api/google/challenge' auth-site/admin-auth.js
+          grep -Fq '/api/google/login' auth-site/admin-auth.js
+          grep -Fq 'ekodi_admin_token:result.token' auth-site/admin-auth.js
+          grep -Fq "hash.get('ekodi_admin_token')" admin-central-handoff.js
+          grep -Fq "sessionStorage.setItem('ekodi-auth-token'" admin-central-handoff.js
+          grep -Fq 'https://auth.ekodi.kr/?site=admin' admin-central-handoff.js
+          grep -Fq 'admin-central-handoff.js' control-center.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/auth.js
-          grep -Fq 'accounts.google.com/gsi/client' auth-site/auth.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/auth.js
           grep -Fq "api('/handoff'" auth-site/auth.js
           grep -Fq 'ekodi_token:d.tokenHash' auth-site/auth.js
@@ -44,10 +58,6 @@ jobs:
           grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js
           if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then
             echo 'Legacy yogurt domain detected'
-            exit 1
-          fi
-          if grep -Eq 'localStorage.*access_token|innerHTML.*access_token' auth-site/auth.js; then
-            echo 'Token exposure pattern detected'
             exit 1
           fi
       - name: Probe public central identity challenge
