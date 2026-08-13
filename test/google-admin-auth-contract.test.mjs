@@ -31,7 +31,7 @@ test('Google ID tokens are verified beyond the email claim', () => {
     'payload.exp',
     'payload.email_verified !== true',
     'payload.nonce !== expectedNonce',
-    "crypto.subtle.verify",
+    'crypto.subtle.verify',
   ]) assert.ok(backend.includes(contract), `missing Google token verification contract: ${contract}`);
 });
 
@@ -52,6 +52,15 @@ test('Google auth routes are isolated at the API entry layer', () => {
   assert.match(entry, /path\.startsWith\('\/api\/google\/'\)/);
   assert.match(entry, /path\.startsWith\('\/api\/admin-access\/'\)/);
   assert.match(entry, /handleAdminGoogleAuth/);
+});
+
+test('legacy administrator password routes close when Google auth is active', () => {
+  assert.match(entry, /LEGACY_ADMIN_PASSWORD_PATHS/);
+  for (const route of ['/api/setup', '/api/login', '/api/password/reset', '/api/password/change']) {
+    assert.ok(entry.includes(`'${route}'`), `missing legacy password route gate: ${route}`);
+  }
+  assert.match(entry, /GOOGLE_ADMIN_LOGIN_REQUIRED/);
+  assert.match(entry, /status: 410/);
 });
 
 test('Control Center switches to Google UI only when Google is configured', () => {
@@ -78,8 +87,9 @@ test('production build and CSP allow only required Google Identity Services reso
   assert.match(site, /Cross-Origin-Opener-Policy/);
 });
 
-test('Workspace super administrator is bootstrapped as an exact account', () => {
-  assert.match(wrangler, /ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "joseph@ekodibiz\.kr"/);
+test('personal Gmail super administrator and production OAuth client are exact contracts', () => {
+  assert.match(wrangler, /ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster\.joseph@gmail\.com"/);
+  assert.match(wrangler, /GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5\.apps\.googleusercontent\.com"/);
   assert.match(wrangler, /ADMIN_WORKSPACE_DOMAIN = "ekodibiz\.kr"/);
   assert.match(migration, /admin_google_accounts/);
   assert.match(migration, /google_login_challenges/);

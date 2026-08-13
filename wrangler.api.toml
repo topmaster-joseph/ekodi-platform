@@ -17,6 +17,7 @@ ENVIRONMENT = "production"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
 ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
+GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://marketing.ekodi.kr,https://auth.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://yogurtpurple.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
 
 [observability.logs]
