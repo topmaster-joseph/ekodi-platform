@@ -10,6 +10,8 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'customer-google-prereg.js'
+      - 'customer-federated-auth.js'
       - 'migrations/**'
       - 'wrangler.api.toml'
       - '.github/workflows/deploy-control-api.yml'
@@ -34,7 +36,7 @@ jobs:
         with:
           node-version: '24'
       - name: Validate control, Google admin and customer API source
-        run: node --check api-worker.js && node --check auth-worker.js && node --check admin-google-auth.js && node --check customer-auth.js && node --check customer-entry-worker.js
+        run: node --check api-worker.js && node --check auth-worker.js && node --check admin-google-auth.js && node --check customer-auth.js && node --check customer-federated-auth.js && node --check customer-google-prereg.js && node --check customer-entry-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -54,6 +56,9 @@ jobs:
             google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/google/config' || true)
             tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
             unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
+            unauthorized_preregister=$(curl -sS -o /tmp/customer-preregister.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
+              -H 'content-type: application/json' -d '{"email":"nobody@example.com","role":"store_owner"}' \
+              'https://api.ekodi.kr/api/customers/tenants/jadam/pre-register' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
               -H 'content-type: application/json' \
@@ -65,10 +70,11 @@ jobs:
               && printf '%s' "$google" | grep -Fq "$expected_client" \
               && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
               && [ "$unauthorized_customer" = '401' ] \
+              && [ "$unauthorized_preregister" = '401' ] \
               && [ "$unauthorized_admin" = '401' ] \
               && [ "$legacy_login" = '410' ] \
               && grep -Fq 'GOOGLE_ADMIN_LOGIN_REQUIRED' /tmp/legacy-login.json; then
-              echo 'Google-only administrator authentication and customer boundaries verified.'
+              echo 'Google-only administrator authentication and Google customer preregistration boundaries verified.'
               exit 0
             fi
             sleep 5
