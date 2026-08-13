@@ -19,14 +19,17 @@ test('Control Center ships customer access assets only in the admin build', () =
 test('customer access UI uses only authenticated customer-admin endpoints', () => {
   assert.match(source, /\/api\/customers\/tenants/);
   assert.match(source, /\/users/);
-  assert.match(source, /\/invites/);
+  assert.match(source, /\/pre-register/);
   assert.match(source, /authorization/);
   assert.match(source, /ekodi-auth-token/);
-  assert.doesNotMatch(source, /\/api\/customer\/(signup|register)/);
+  assert.doesNotMatch(source, /\/api\/customer\/(signup|register|login|accept-invite)/);
 });
 
-test('customer invitations expose only server-issued invite URLs', () => {
-  assert.match(source, /invite\.inviteUrl/);
+test('customer onboarding is Google preregistration without invite URLs or local secrets', () => {
+  assert.match(source, /Google 고객 사전등록/);
+  assert.match(source, /pre_registered/);
+  assert.doesNotMatch(source, /invite\.inviteUrl/);
+  assert.doesNotMatch(source, /\/invites/);
   assert.doesNotMatch(source, /crypto\.getRandomValues/);
   assert.doesNotMatch(source, /Math\.random/);
 });
