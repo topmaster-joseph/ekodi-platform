@@ -14,16 +14,15 @@ const [api, admin, build, siteWorker, booksWorker, publishingHtml, publishingApp
 ]);
 
 test('Books control plane exposes publications, services, features and inquiries', () => {
-  for (const marker of [
-    '/api/books/public/config',
-    '/api/books/public/publications',
-    '/api/books/inquiries',
-    '/api/books/admin/overview',
-    'books_service_catalog',
-    'books_feature_flags',
-    'books_inquiries',
-    'books_publications',
-  ]) assert.match(api + migration, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(api, /const PUBLIC_PREFIX = '\/api\/books\/public'/);
+  assert.match(api, /const ADMIN_PREFIX = '\/api\/books\/admin'/);
+  assert.match(api, /\$\{PUBLIC_PREFIX\}\/config/);
+  assert.match(api, /\$\{PUBLIC_PREFIX\}\/publications/);
+  assert.match(api, /'\/api\/books\/inquiries'/);
+  assert.match(api, /\$\{ADMIN_PREFIX\}\/overview/);
+  for (const table of ['books_service_catalog', 'books_feature_flags', 'books_inquiries', 'books_publications']) {
+    assert.match(migration, new RegExp(table));
+  }
 });
 
 test('Books admin module is injected into the central Control Center', () => {
