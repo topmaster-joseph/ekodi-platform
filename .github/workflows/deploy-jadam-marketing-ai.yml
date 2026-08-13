@@ -44,6 +44,7 @@ jobs:
       - name: Build Marketing AI
         working-directory: managed/marketing-ai-source
         run: |
+          set -euo pipefail
           npm run build
           test -f dist/marketing-ai/index.html
           test -f dist/marketing-ai/qa/index.html
@@ -51,9 +52,20 @@ jobs:
           test -f dist/marketing-ai/pizzamaru/index.html
           test -f dist/marketing-ai/yogurtpurple/index.html
           grep -Fq '마케팅AI 검수센터' dist/marketing-ai/qa/index.html
-          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/jadam/index.html
-          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/pizzamaru/index.html
-          grep -Fq 'Powered by <span>EKODIBIZ</span>' dist/marketing-ai/yogurtpurple/index.html
+          for file in dist/marketing-ai/jadam/index.html dist/marketing-ai/pizzamaru/index.html dist/marketing-ai/yogurtpurple/index.html; do
+            grep -Fq 'Powered by <span>EKODIBIZ</span>' "$file"
+            grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
+            grep -Fq '통합 로그인' "$file"
+            if grep -Fq '/api/customer/login' "$file" || grep -Fq '/api/customer/accept-invite' "$file"; then
+              echo "Legacy direct login detected in $file"
+              exit 1
+            fi
+          done
+          grep -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai/qa/index.html
+          if grep -R -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai; then
+            echo 'Legacy yogurt domain detected in generated site'
+            exit 1
+          fi
 
       - name: Ensure Pages projects
         shell: bash
@@ -61,26 +73,14 @@ jobs:
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
-
           ensure_project() {
             project="$1"
             code=$(curl -sS -o /tmp/project.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project")
-            if [ "$code" = '200' ]; then
-              echo "$project already exists"
-              return 0
-            fi
-            if [ "$code" != '404' ]; then
-              cat /tmp/project.json
-              echo "Pages project lookup failed: $project HTTP $code"
-              return 1
-            fi
-            create=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "${auth[@]}" \
-              --data "{\"name\":\"$project\",\"production_branch\":\"main\"}" \
-              "$api/accounts/$CF_ACCOUNT_ID/pages/projects")
-            cat /tmp/create.json
-            case "$create" in 200|201) ;; *) echo "Pages project creation failed: $project HTTP $create"; return 1;; esac
+            if [ "$code" = '200' ]; then echo "$project already exists"; return 0; fi
+            if [ "$code" != '404' ]; then cat /tmp/project.json; echo "Pages project lookup failed: $project HTTP $code"; return 1; fi
+            create=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "${auth[@]}" --data "{\"name\":\"$project\",\"production_branch\":\"main\"}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects")
+            case "$create" in 200|201) ;; *) cat /tmp/create.json; echo "Pages project creation failed: $project HTTP $create"; return 1;; esac
           }
-
           ensure_project 'marketing-ai'
           ensure_project 'marketing-ai-jadam'
           ensure_project 'marketing-ai-pizzamaru'
@@ -103,26 +103,16 @@ jobs:
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
-
           add_domain() {
-            project="$1"
-            domain="$2"
+            project="$1"; domain="$2"
             code=$(curl -sS -o /tmp/domain.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain")
-            if [ "$code" = '200' ]; then
-              echo "$domain already attached to $project"
-              return 0
-            fi
-            create=$(curl -sS -o /tmp/domain-create.json -w '%{http_code}' -X POST "${auth[@]}" \
-              --data "{\"name\":\"$domain\"}" \
-              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains")
-            cat /tmp/domain-create.json
-            case "$create" in 200|201) ;; *) echo "Custom domain attach failed: $domain -> $project HTTP $create"; return 1;; esac
+            if [ "$code" = '200' ]; then echo "$domain already attached to $project"; return 0; fi
+            create=$(curl -sS -o /tmp/domain-create.json -w '%{http_code}' -X POST "${auth[@]}" --data "{\"name\":\"$domain\"}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains")
+            case "$create" in 200|201) ;; *) cat /tmp/domain-create.json; echo "Custom domain attach failed: $domain -> $project HTTP $create"; return 1;; esac
           }
-
           add_domain 'marketing-ai' 'marketing.ekodi.kr'
           add_domain 'marketing-ai-jadam' 'jadam.ekodi.kr'
           add_domain 'marketing-ai-pizzamaru' 'pizzamaru.ekodi.kr'
-          add_domain 'marketing-ai-yogurtpurple' 'yogurt.ekodi.kr'
           add_domain 'marketing-ai-yogurtpurple' 'yogurtpurple.ekodi.kr'
 
       - name: Configure EKODI DNS
@@ -131,70 +121,52 @@ jobs:
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
-
           zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr&account.id=$CF_ACCOUNT_ID")
           zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
           test -n "$zone_id" || { echo 'ekodi.kr zone not found'; exit 1; }
-
-          pages_target() {
-            project="$1"
-            curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project" | \
-              python -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])"
-          }
-
+          pages_target() { curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$1" | python -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])"; }
           upsert_cname() {
-            name="$1"
-            target="$2"
+            name="$1"; target="$2"
             code=$(curl -sS -o /tmp/existing.json -w '%{http_code}' "${auth[@]}" "$api/zones/$zone_id/dns_records?type=CNAME&name=$name")
             [ "$code" = '200' ] || { cat /tmp/existing.json; echo "DNS lookup failed: $name HTTP $code"; exit 1; }
             record_id=$(python -c "import json; d=json.load(open('/tmp/existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
             payload="{\"type\":\"CNAME\",\"name\":\"$name\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"Managed by EKODI Platform\"}"
-            if [ -n "$record_id" ]; then
-              write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X PUT "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records/$record_id")
-            else
-              write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records")
-            fi
+            if [ -n "$record_id" ]; then write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X PUT "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records/$record_id"); else write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records"); fi
             case "$write_code" in 200|201) ;; *) cat /tmp/dns.json; echo "DNS upsert failed: $name HTTP $write_code"; exit 1;; esac
-            python -c "import json; d=json.load(open('/tmp/dns.json')); print(d['result']['name'], '->', d['result']['content'])"
           }
-
           upsert_cname 'marketing.ekodi.kr' "$(pages_target 'marketing-ai')"
           upsert_cname 'jadam.ekodi.kr' "$(pages_target 'marketing-ai-jadam')"
           upsert_cname 'pizzamaru.ekodi.kr' "$(pages_target 'marketing-ai-pizzamaru')"
-          yogurt_target="$(pages_target 'marketing-ai-yogurtpurple')"
-          upsert_cname 'yogurt.ekodi.kr' "$yogurt_target"
-          upsert_cname 'yogurtpurple.ekodi.kr' "$yogurt_target"
+          upsert_cname 'yogurtpurple.ekodi.kr' "$(pages_target 'marketing-ai-yogurtpurple')"
 
       - name: Verify Pages and custom domains
         shell: bash
         run: |
           set -euo pipefail
-
           verify_url() {
-            url="$1"
-            needle="$2"
+            url="$1"; needle="$2"
             code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
             echo "$url -> $code"
             [ "$code" = '200' ] && grep -Fq "$needle" /tmp/site.html
           }
-
+          verify_central_auth() {
+            url="$1"
+            code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            [ "$code" = '200' ] || return 1
+            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/site.html
+            ! grep -Fq '/api/customer/login' /tmp/site.html
+          }
           for attempt in $(seq 1 24); do
             ok=1
-            for spec in \
-              'marketing.ekodi.kr:마케팅AI' \
-              'jadam.ekodi.kr:자담치킨 목포대점' \
-              'pizzamaru.ekodi.kr:피자마루 목포대점' \
-              'yogurt.ekodi.kr:요거트퍼플 목포대점' \
-              'yogurtpurple.ekodi.kr:요거트퍼플 목포대점'; do
-              domain="${spec%%:*}"
-              needle="${spec#*:}"
+            for spec in 'marketing.ekodi.kr:마케팅AI' 'jadam.ekodi.kr:자담치킨 목포대점' 'pizzamaru.ekodi.kr:피자마루 목포대점' 'yogurtpurple.ekodi.kr:요거트퍼플 목포대점'; do
+              domain="${spec%%:*}"; needle="${spec#*:}"
               verify_url "https://$domain/" "$needle" || ok=0
             done
             verify_url 'https://marketing.ekodi.kr/qa/' '마케팅AI 검수센터' || ok=0
-            if [ "$ok" -eq 1 ]; then
-              echo 'Marketing AI custom domains and QA center verified.'
-              exit 0
-            fi
+            verify_central_auth 'https://jadam.ekodi.kr/' || ok=0
+            verify_central_auth 'https://pizzamaru.ekodi.kr/' || ok=0
+            verify_central_auth 'https://yogurtpurple.ekodi.kr/' || ok=0
+            if [ "$ok" -eq 1 ]; then echo 'Marketing AI domains and central authentication verified.'; exit 0; fi
             sleep 5
           done
           exit 1
