@@ -4,6 +4,7 @@ import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { handleBooksRequest } from './books-control.js';
+import { handleBooksFinanceRequest } from './books-finance-control.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
   '/api/setup',
@@ -47,6 +48,10 @@ export default {
 
     if (path.startsWith('/api/books') && request.method !== 'OPTIONS') {
       try {
+        if (path.startsWith('/api/books/admin/finance')) {
+          const financeResponse = await handleBooksFinanceRequest(request, env);
+          if (financeResponse) return financeResponse;
+        }
         const response = await handleBooksRequest(request, env);
         if (response) return response;
       } catch (error) {
