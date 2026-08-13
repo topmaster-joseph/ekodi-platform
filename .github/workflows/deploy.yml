@@ -89,19 +89,23 @@ jobs:
           done
       - name: Deploy EKODI root and gateways
         run: npm run deploy:site
-      - name: Verify root, admin, pay and trading domains
+      - name: Verify root, admin, Books admin, pay and trading domains
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
             admin_code=$(curl -L -sS -o /tmp/admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            books_admin_code=$(curl -L -sS -o /tmp/books-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/books' || true)
+            books_admin_asset=$(curl -sS -o /tmp/books-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/books-admin.js' || true)
             pay_code=$(curl -L -sS -o /tmp/pay.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://pay.ekodi.kr/' || true)
             trade_code=$(curl -L -sS -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
             legacy_code=$(curl -L -sS -o /tmp/legacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.biz.ekodi.kr/' || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^[23] ]] && [[ "$pay_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_code" =~ ^[23] ]] \
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^[23] ]] && [[ "$books_admin_code" =~ ^[23] ]] && [[ "$books_admin_asset" = '200' ]] && [[ "$pay_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_code" =~ ^[23] ]] \
               && grep -Fq 'CONNECTED ECOSYSTEM' /tmp/root.html \
               && grep -Fq '결제 · 회계 관제' /tmp/admin.html \
+              && grep -Fq 'books-admin.js' /tmp/books-admin.html \
+              && grep -Fq 'Books Control' /tmp/books-admin.js \
               && grep -Fq 'EKODI Pay' /tmp/pay.html \
               && grep -Fq 'EKODI GLOBAL TRADING' /tmp/trade.html \
               && grep -Fq 'EKODI GLOBAL TRADING' /tmp/legacy.html; then
@@ -125,14 +129,19 @@ jobs:
         with:
           node-version: "24"
       - run: npm run deploy:api
-      - name: Verify API and control plane
+      - name: Verify API, control plane and Books public config
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 12); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
             status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
-            if printf '%s' "$health" | grep -q '"ok":true' && printf '%s' "$status" | grep -q '"initialized"'; then exit 0; fi
+            books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/config' || true)
+            publications=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/publications' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$status" | grep -q '"initialized"' \
+              && printf '%s' "$books" | grep -q '"digital-start"' \
+              && printf '%s' "$publications" | grep -q '"ekodi-books-001"'; then exit 0; fi
             sleep 5
           done
           exit 1
@@ -188,8 +197,21 @@ jobs:
         with:
           node-version: "24"
       - run: npm run deploy:books
-      - name: Verify Books navigation
+      - name: Verify Books catalog, publishing service and admin handoff
         shell: bash
         run: |
-          code=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
-          [[ "$code" =~ ^[23] ]] && grep -Fq 'href="https://ekodi.kr/"' /tmp/books.html
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            root_code=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
+            publishing_code=$(curl -L -sS -o /tmp/publishing.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/publishing/' || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/books-admin-headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/admin' || true)
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$publishing_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
+              && grep -Fq 'href="https://ekodi.kr/"' /tmp/books.html \
+              && grep -Fq 'id="consultationForm"' /tmp/publishing.html \
+              && grep -Fq '/publishing/app.js' /tmp/publishing.html \
+              && grep -Fiq 'location: https://admin.ekodi.kr/books#books' /tmp/books-admin-headers; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
