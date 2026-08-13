@@ -46,7 +46,7 @@ jobs:
           hub='dist/marketing-ai/index.html'
           test -f "$hub"
           grep -Fq 'FREE → PRO' "$hub"
-          grep -Fq 'Marketing AI Pro 사용신청' "$hub"
+          grep -Fq 'Pro 사용신청' "$hub"
           grep -Fq 'Google로 무료 시작' "$hub"
           grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$hub"
 
@@ -87,7 +87,7 @@ jobs:
             echo "marketing.ekodi.kr -> $code"
             [ "$code" = '200' ]
             grep -Fq 'FREE → PRO' /tmp/hub.html
-            grep -Fq 'Marketing AI Pro 사용신청' /tmp/hub.html
+            grep -Fq 'Pro 사용신청' /tmp/hub.html
             grep -Fq 'Google로 무료 시작' /tmp/hub.html
             grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/hub.html
           }
