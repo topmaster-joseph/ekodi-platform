@@ -1,13 +1,14 @@
 {
   "publisher": "EKODI BOOKS",
-  "updated": "2026-08-12",
+  "updated": "2026-08-13",
   "books": [
     {
       "id": "ekodi-books-001",
       "catalogNo": "EB-MONO-001",
-      "series": "EKODI ORIGINAL 001",
+      "series": "EKODI ORIGINAL",
+      "seriesNumber": 1,
       "publicationType": "MONOGRAPH · PUBLIC THEOLOGY",
-      "status": "Google Play 등록 진행 · Amazon English RC1 · 국내 통합유통 준비",
+      "status": "Forthcoming · 2026",
       "coverTitle": "에코디언을\n찾아서",
       "title": "에코디언을 찾아서",
       "subtitle": "성경 속 숨겨진 하나님 백성의 진짜 모습",
@@ -46,9 +47,9 @@
         }
       },
       "distribution": {
-        "google": "등록 진행 중",
-        "amazon": "영문판 RC1 완성 · 표지/Preview 준비",
-        "korea": "유페이퍼 패키지 완성 · 계정등록 대기"
+        "google": "출간 준비 중",
+        "amazon": "영문판 준비 중",
+        "korea": "국내 유통 준비 중"
       },
       "links": {
         "amazon": "",
