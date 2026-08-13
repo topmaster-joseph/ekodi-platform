@@ -54,13 +54,17 @@ jobs:
           grep -Fq '마케팅AI 검수센터' dist/marketing-ai/qa/index.html
           for file in dist/marketing-ai/jadam/index.html dist/marketing-ai/pizzamaru/index.html dist/marketing-ai/yogurtpurple/index.html; do
             grep -Fq 'Powered by <span>EKODIBIZ</span>' "$file"
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
-            grep -Fq '통합 로그인' "$file"
+            grep -Fq 'data-ekodi-customer-prereg' "$file"
+            grep -Fq '/api/customer/federated-login' "$file"
+            grep -Fq 'ekodi-customer-token' "$file"
             if grep -Fq '/api/customer/login' "$file" || grep -Fq '/api/customer/accept-invite' "$file"; then
               echo "Legacy direct login detected in $file"
               exit 1
             fi
           done
+          grep -Fq 'jadam-client' dist/marketing-ai/jadam/index.html
+          grep -Fq 'pizzamaru-client' dist/marketing-ai/pizzamaru/index.html
+          grep -Fq 'yogurt-client' dist/marketing-ai/yogurtpurple/index.html
           grep -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai/qa/index.html
           if grep -R -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai; then
             echo 'Legacy yogurt domain detected in generated site'
@@ -149,11 +153,13 @@ jobs:
             echo "$url -> $code"
             [ "$code" = '200' ] && grep -Fq "$needle" /tmp/site.html
           }
-          verify_central_auth() {
-            url="$1"
+          verify_customer_auth() {
+            url="$1"; realm="$2"
             code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
             [ "$code" = '200' ] || return 1
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/site.html
+            grep -Fq "$realm" /tmp/site.html
+            grep -Fq '/api/customer/federated-login' /tmp/site.html
+            grep -Fq 'data-ekodi-customer-prereg' /tmp/site.html
             ! grep -Fq '/api/customer/login' /tmp/site.html
           }
           for attempt in $(seq 1 24); do
@@ -163,10 +169,10 @@ jobs:
               verify_url "https://$domain/" "$needle" || ok=0
             done
             verify_url 'https://marketing.ekodi.kr/qa/' '마케팅AI 검수센터' || ok=0
-            verify_central_auth 'https://jadam.ekodi.kr/' || ok=0
-            verify_central_auth 'https://pizzamaru.ekodi.kr/' || ok=0
-            verify_central_auth 'https://yogurtpurple.ekodi.kr/' || ok=0
-            if [ "$ok" -eq 1 ]; then echo 'Marketing AI domains and central authentication verified.'; exit 0; fi
+            verify_customer_auth 'https://jadam.ekodi.kr/' 'jadam-client' || ok=0
+            verify_customer_auth 'https://pizzamaru.ekodi.kr/' 'pizzamaru-client' || ok=0
+            verify_customer_auth 'https://yogurtpurple.ekodi.kr/' 'yogurt-client' || ok=0
+            if [ "$ok" -eq 1 ]; then echo 'Marketing AI domains and Google customer preregistration verified.'; exit 0; fi
             sleep 5
           done
           exit 1
