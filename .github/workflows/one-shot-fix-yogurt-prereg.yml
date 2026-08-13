@@ -45,8 +45,6 @@ jobs:
                   path.write_text(text.replace(OLD, NEW), encoding='utf-8')
                   changed.append(str(path))
 
-          # Runtime schema self-healing: preregistration uses customer_invites,
-          # so guarantee the table even if a prior migration was partially missed.
           prereg = Path('customer-google-prereg.js')
           text = prereg.read_text(encoding='utf-8')
           if 'CREATE TABLE IF NOT EXISTS customer_invites' not in text:
@@ -58,8 +56,6 @@ jobs:
               prereg.write_text(text, encoding='utf-8')
               changed.append(str(prereg))
 
-          # Browser fetch() hides server errors as TypeError when the exceptional
-          # customer API response omits CORS. Preserve the allowed admin origin.
           entry = Path('customer-entry-worker.js')
           text = entry.read_text(encoding='utf-8')
           cors_line = "          ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin': request.headers.get('origin'), vary: 'Origin' } : {}),\n"
@@ -72,8 +68,6 @@ jobs:
               entry.write_text(text, encoding='utf-8')
               changed.append(str(entry))
 
-          # The auth-hub contract must now reject the former yogurtpurple host,
-          # not the new canonical yogurt host.
           ci = Path('.github/workflows/auth-hub-ci.yml')
           text = ci.read_text(encoding='utf-8')
           bad_after_global = """          if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then\n            echo 'Legacy yogurt domain detected'\n            exit 1\n          fi\n"""
@@ -87,7 +81,6 @@ jobs:
           migration.write_text("""-- Canonicalize the Yogurt Purple customer domain and make preregistration schema resilient.\nCREATE TABLE IF NOT EXISTS customer_invites (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  tenant_id INTEGER NOT NULL,\n  email TEXT NOT NULL,\n  role TEXT NOT NULL,\n  token_hash TEXT NOT NULL UNIQUE,\n  expires_at TEXT NOT NULL,\n  accepted_at TEXT,\n  revoked_at TEXT,\n  created_by INTEGER,\n  created_at TEXT NOT NULL,\n  FOREIGN KEY(tenant_id) REFERENCES customer_tenants(id)\n);\n\nUPDATE customer_tenants\nSET domain = 'yogurt.ekodi.kr'\nWHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr';\n\nCREATE INDEX IF NOT EXISTS idx_customer_invites_tenant\nON customer_invites(tenant_id, created_at DESC);\n""", encoding='utf-8')
           changed.append(str(migration))
 
-          # This workflow is intentionally disposable.
           SELF.unlink()
 
           print('Changed files:')
@@ -104,8 +97,8 @@ jobs:
           node --check api-worker.js
           node --check auth-site/auth.js
           node --check auth-site/client-auth.js
-          if grep -R -F --exclude-dir=.git --exclude='one-shot-fix-yogurt-prereg.yml' 'yogurtpurple.ekodi.kr' .; then
-            echo 'Legacy yogurtpurple domain remains'
+          if grep -R -F --exclude-dir=.git --exclude='one-shot-fix-yogurt-prereg.yml' --exclude='auth-hub-ci.yml' 'yogurtpurple.ekodi.kr' .; then
+            echo 'Legacy yogurtpurple domain remains outside compatibility checks'
             exit 1
           fi
           grep -Fq "domain: 'yogurt.ekodi.kr'" api-worker.js
