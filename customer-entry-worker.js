@@ -1,6 +1,7 @@
 import apiWorker from './api-worker.js';
 import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
+import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
@@ -63,6 +64,8 @@ export default {
     }
     if (path.startsWith('/api/customer/') || path.startsWith('/api/customers/')) {
       try {
+        const googlePreregistration = await handleGoogleCustomerPreregistration(request, env);
+        if (googlePreregistration) return googlePreregistration;
         const federated = await handleFederatedCustomerAuth(request, env);
         if (federated) return federated;
         return await handleCustomerAuth(request, env);
