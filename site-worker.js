@@ -42,6 +42,7 @@ const ADMIN_ASSETS = new Set([
   '/control-center-ops.css',
   '/control-center-finance.css',
   '/control-center.js',
+  '/admin-central-handoff.js',
   '/compact-control-center.css',
   '/compact-control-center.js',
   '/client-access.css',
