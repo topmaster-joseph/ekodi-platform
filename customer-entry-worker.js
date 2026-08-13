@@ -1,5 +1,6 @@
 import apiWorker from './api-worker.js';
 import { handleCustomerAuth } from './customer-auth.js';
+import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
@@ -8,15 +9,19 @@ const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
   '/api/password/reset',
   '/api/password/change',
 ]);
+const LEGACY_CUSTOMER_PASSWORD_PATHS = new Set(['/api/customer/login']);
 
 function googleAdminEnabled(env = {}) {
   return String(env.GOOGLE_CLIENT_ID || '').trim().endsWith('.apps.googleusercontent.com');
 }
 
-function googleOnlyResponse() {
+function disabledPasswordResponse(kind = 'admin') {
+  const admin = kind === 'admin';
   return new Response(JSON.stringify({
-    error: '관리자 비밀번호 로그인은 비활성화되었습니다. 사전 등록된 Google 계정으로 로그인해 주세요.',
-    code: 'GOOGLE_ADMIN_LOGIN_REQUIRED',
+    error: admin
+      ? '관리자 비밀번호 로그인은 비활성화되었습니다. EKODI 통합인증센터의 사전 등록된 Google 계정으로 로그인해 주세요.'
+      : '고객 비밀번호 로그인은 비활성화되었습니다. EKODI 통합인증센터의 Google 계정으로 로그인해 주세요.',
+    code: admin ? 'GOOGLE_ADMIN_LOGIN_REQUIRED' : 'CENTRAL_CUSTOMER_LOGIN_REQUIRED',
   }), {
     status: 410,
     headers: {
@@ -32,7 +37,10 @@ export default {
     const path = new URL(request.url).pathname;
 
     if (googleAdminEnabled(env) && request.method === 'POST' && LEGACY_ADMIN_PASSWORD_PATHS.has(path)) {
-      return googleOnlyResponse();
+      return disabledPasswordResponse('admin');
+    }
+    if (request.method === 'POST' && LEGACY_CUSTOMER_PASSWORD_PATHS.has(path)) {
+      return disabledPasswordResponse('customer');
     }
 
     if (path.startsWith('/api/google/') || path.startsWith('/api/admin-access/')) {
@@ -55,6 +63,8 @@ export default {
     }
     if (path.startsWith('/api/customer/') || path.startsWith('/api/customers/')) {
       try {
+        const federated = await handleFederatedCustomerAuth(request, env);
+        if (federated) return federated;
         return await handleCustomerAuth(request, env);
       } catch (error) {
         console.error('Customer authentication API error', error);
