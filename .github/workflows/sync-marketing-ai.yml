@@ -39,7 +39,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Build and validate free-to-Pro central auth
+      - name: Build and validate merchant-first Marketing AI
         run: |
           set -euo pipefail
           npm run build
@@ -48,10 +48,25 @@ jobs:
           grep -Fq 'id="freeTrialForm"' "$hub"
           grep -Fq '30초 마케팅 문구 무료체험' "$hub"
           grep -Fq 'Marketing AI basic trial engine' "$hub"
-          grep -Fq 'FREE → PRO' "$hub"
-          grep -Fq 'Pro 사용신청' "$hub"
+          grep -Fq 'id="pricing"' "$hub"
+          grep -Fq 'id="usageEstimator"' "$hub"
+          grep -Fq 'BEST PLAN AI' "$hub"
+          grep -Fq '1회 결제' "$hub"
+          grep -Fq '종량제' "$hub"
+          grep -Fq '자동화 플랜' "$hub"
           grep -Fq 'Google로 무료 시작' "$hub"
           grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$hub"
+          for plan in free flex plus pro auto; do
+            grep -Fq "data-plan=\"$plan\"" "$hub"
+          done
+          if grep -Fq 'APPLICATION CASES' "$hub" || grep -Fq 'class="case-list"' "$hub"; then
+            echo 'Public Marketing AI hub regressed to application-case directory'
+            exit 1
+          fi
+          if grep -Fq 'href="https://pay.ekodi.kr' "$hub"; then
+            echo 'Live checkout must remain disabled during beta pricing QA'
+            exit 1
+          fi
 
           for dir in jadam pizzamaru yogurtpurple; do
             file="dist/marketing-ai/$dir/index.html"
@@ -81,7 +96,7 @@ jobs:
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/pizzamaru --project-name=marketing-ai-pizzamaru --branch=main
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/yogurtpurple --project-name=marketing-ai-yogurtpurple --branch=main
 
-      - name: Verify production free trial, membership and central authentication
+      - name: Verify production trial, pricing and central authentication
         shell: bash
         run: |
           set -euo pipefail
@@ -92,10 +107,17 @@ jobs:
             grep -Fq 'id="freeTrialForm"' /tmp/hub.html
             grep -Fq '30초 마케팅 문구 무료체험' /tmp/hub.html
             grep -Fq 'Marketing AI basic trial engine' /tmp/hub.html
-            grep -Fq 'FREE → PRO' /tmp/hub.html
-            grep -Fq 'Pro 사용신청' /tmp/hub.html
+            grep -Fq 'id="pricing"' /tmp/hub.html
+            grep -Fq 'id="usageEstimator"' /tmp/hub.html
+            grep -Fq 'BEST PLAN AI' /tmp/hub.html
+            grep -Fq '1회 결제' /tmp/hub.html
+            grep -Fq '종량제' /tmp/hub.html
+            grep -Fq '자동화 플랜' /tmp/hub.html
             grep -Fq 'Google로 무료 시작' /tmp/hub.html
             grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/hub.html
+            ! grep -Fq 'APPLICATION CASES' /tmp/hub.html
+            ! grep -Fq 'class="case-list"' /tmp/hub.html
+            ! grep -Fq 'href="https://pay.ekodi.kr' /tmp/hub.html
           }
           verify_customer() {
             domain="$1"
@@ -117,7 +139,7 @@ jobs:
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
               && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI anonymous trial and free-member to Pro funnel verified in production.'
+              echo 'Marketing AI trial, flexible pricing and managed customer auth verified in production.'
               exit 0
             fi
             sleep 5
