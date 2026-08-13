@@ -5,7 +5,7 @@ const realms={
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ekodi.kr/'},
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ekodi.kr/'},
-  'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurtpurple.ekodi.kr/'},
+  'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ekodi.kr/'},
 };
 const site=new URLSearchParams(location.search).get('site');
 const config=realms[site]||realms['cgma-client'];
