@@ -23,7 +23,7 @@ jobs:
           test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Attach Pages custom domains
+      - name: Attach canonical Pages custom domains and retire legacy Yogurt alias
         shell: bash
         run: |
           set -euo pipefail
@@ -48,14 +48,25 @@ jobs:
             case "$ccode" in 200|201) ;; *) echo "Attach failed: $domain HTTP $ccode"; return 1;; esac
           }
 
+          remove_domain() {
+            project="$1"
+            domain="$2"
+            code=$(curl -sS -o /tmp/domain-remove.json -w '%{http_code}' -X DELETE "${auth[@]}" \
+              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain")
+            case "$code" in
+              200|204|404) echo "$domain legacy Pages alias retired or already absent" ;;
+              *) cat /tmp/domain-remove.json; echo "Legacy domain removal failed: $domain HTTP $code"; return 1 ;;
+            esac
+          }
+
           add_domain 'cheonggye-market' 'cgma.ekodi.kr'
           add_domain 'marketing-ai' 'marketing.ekodi.kr'
           add_domain 'marketing-ai-jadam' 'jadam.ekodi.kr'
           add_domain 'marketing-ai-pizzamaru' 'pizzamaru.ekodi.kr'
           add_domain 'marketing-ai-yogurtpurple' 'yogurt.ekodi.kr'
-          add_domain 'marketing-ai-yogurtpurple' 'yogurtpurple.ekodi.kr'
+          remove_domain 'marketing-ai-yogurtpurple' 'yogurtpurple.ekodi.kr'
 
-      - name: Create EKODI CNAME records
+      - name: Create canonical EKODI CNAME records and remove legacy Yogurt DNS
         shell: bash
         run: |
           set -euo pipefail
@@ -88,15 +99,32 @@ jobs:
             python -c "import json; d=json.load(open('/tmp/dns.json')); print(d['result']['name'], '->', d['result']['content'])"
           }
 
+          delete_dns_records() {
+            name="$1"
+            lookup=$(curl -sS -o /tmp/legacy-dns.json -w '%{http_code}' "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$name&per_page=100")
+            [ "$lookup" = '200' ] || { cat /tmp/legacy-dns.json; echo "Legacy DNS lookup failed: $name HTTP $lookup"; exit 1; }
+            python - <<'PY' > /tmp/legacy-dns-ids
+          import json
+          for row in json.load(open('/tmp/legacy-dns.json')).get('result') or []:
+              print(row['id'])
+          PY
+            while read -r record_id; do
+              [ -n "$record_id" ] || continue
+              code=$(curl -sS -o /tmp/legacy-delete.json -w '%{http_code}' -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id")
+              case "$code" in 200|204) ;; *) cat /tmp/legacy-delete.json; echo "Legacy DNS delete failed: $name HTTP $code"; exit 1;; esac
+            done < /tmp/legacy-dns-ids
+            echo "$name legacy DNS retired"
+          }
+
           upsert_cname 'cgma.ekodi.kr' "$(pages_target 'cheonggye-market')"
           upsert_cname 'marketing.ekodi.kr' "$(pages_target 'marketing-ai')"
           upsert_cname 'jadam.ekodi.kr' "$(pages_target 'marketing-ai-jadam')"
           upsert_cname 'pizzamaru.ekodi.kr' "$(pages_target 'marketing-ai-pizzamaru')"
           yogurt_target="$(pages_target 'marketing-ai-yogurtpurple')"
           upsert_cname 'yogurt.ekodi.kr' "$yogurt_target"
-          upsert_cname 'yogurtpurple.ekodi.kr' "$yogurt_target"
+          delete_dns_records 'yogurtpurple.ekodi.kr'
 
-      - name: Verify custom domains
+      - name: Verify canonical custom domains
         shell: bash
         run: |
           set -euo pipefail
@@ -107,15 +135,14 @@ jobs:
               'marketing.ekodi.kr:마케팅AI' \
               'jadam.ekodi.kr:자담치킨 목포대점' \
               'pizzamaru.ekodi.kr:피자마루 목포대점' \
-              'yogurt.ekodi.kr:요거트퍼플 목포대점' \
-              'yogurtpurple.ekodi.kr:요거트퍼플 목포대점'; do
+              'yogurt.ekodi.kr:요거트퍼플 목포대점'; do
               domain="${spec%%:*}"
               needle="${spec#*:}"
               code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
               echo "$domain http=$code"
               if [ "$code" != '200' ] || ! grep -Fq "$needle" /tmp/site.html; then ok=0; fi
             done
-            [ "$ok" -eq 1 ] && { echo 'Marketing domains verified.'; exit 0; }
+            [ "$ok" -eq 1 ] && { echo 'Canonical Marketing domains verified.'; exit 0; }
             sleep 5
           done
           exit 1
