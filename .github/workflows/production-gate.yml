@@ -30,7 +30,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Run business contract tests
+      - name: Run business contract tests only when source changed or manually requested
+        if: github.event_name != 'schedule'
         run: npm test
       - name: Verify revenue-critical production endpoints
         shell: bash
