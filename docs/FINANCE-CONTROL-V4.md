@@ -45,6 +45,13 @@ A payment outage therefore does not disable administrator authentication or the 
 - A Toss webhook is treated as a notification. Before changing the internal payment ledger, the finance Worker re-queries Toss using the payment key or order ID.
 - If the production server secret is not configured, payment synchronization fails closed and `admin.ekodi.kr` explicitly shows the integration as not ready.
 
+### Test credential rollout
+
+- The GitHub Actions secret slots `TOSS_PAYMENTS_SECRET_KEY` and `TOSS_PAYMENTS_MID` are provisioned for the current Toss test-integration phase.
+- Secret values are not stored in this repository and are copied to the finance Worker only by the deployment workflow.
+- The current test phase must remain non-live until the Toss merchant contract is completed and live processing is explicitly enabled.
+- Moving from test to live requires replacing the server secret in protected secret storage and re-verifying the real payment domain, approval flow, webhook processing, and admin observability.
+
 ## 4. Accounting hierarchy
 
 Every financial record uses an explicit scope:
