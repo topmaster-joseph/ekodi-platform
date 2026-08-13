@@ -5,6 +5,8 @@ on:
       - 'auth-site/**'
       - 'admin-central-handoff.js'
       - 'control-center.html'
+      - 'customer-entry-worker.js'
+      - 'customer-federated-auth.js'
       - 'api-worker.js'
       - 'docs/AUTH-CENTER.md'
       - '.github/workflows/auth-hub-ci.yml'
@@ -24,7 +26,10 @@ jobs:
           node --check auth-site/auth.js
           node --check auth-site/auth-router.js
           node --check auth-site/admin-auth.js
+          node --check auth-site/client-auth.js
           node --check admin-central-handoff.js
+          node --check customer-entry-worker.js
+          node --check customer-federated-auth.js
           node --check api-worker.js
       - name: Verify central auth contract
         shell: bash
@@ -34,6 +39,13 @@ jobs:
           grep -Fq 'id="googleButtonHost"' auth-site/index.html
           grep -Fq '/auth-router.js' auth-site/index.html
           grep -Fq "site==='admin'" auth-site/auth-router.js
+          grep -Fq "site==='cgma-client'" auth-site/auth-router.js
+          grep -Fq '청계상권 고객관리' auth-site/client-auth.js
+          grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
+          grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
+          grep -Fq '/api/customer/federated-login' customer-federated-auth.js
+          grep -Fq '/api/customer/accept-central-invite' customer-federated-auth.js
+          grep -Fq 'CENTRAL_CUSTOMER_LOGIN_REQUIRED' customer-entry-worker.js
           grep -Fq '/api/google/config' auth-site/admin-auth.js
           grep -Fq '/api/google/challenge' auth-site/admin-auth.js
           grep -Fq '/api/google/login' auth-site/admin-auth.js
