@@ -18,7 +18,7 @@ const SERVICE_CATALOG = [
   { id: 'client-cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://cgma.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
   { id: 'client-jadam', name: '자담치킨 목포대점 Marketing AI', domain: 'jadam.ekodi.kr', url: 'https://jadam.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
   { id: 'client-pizzamaru', name: '피자마루 목포대점 Marketing AI', domain: 'pizzamaru.ekodi.kr', url: 'https://pizzamaru.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
-  { id: 'client-yogurt', name: '요거트퍼플 목포대점 Marketing AI', domain: 'yogurt.ekodi.kr', url: 'https://yogurt.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true }
+  { id: 'client-yogurt', name: '요거트퍼플 목포대점 Marketing AI', domain: 'yogurtpurple.ekodi.kr', url: 'https://yogurtpurple.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true }
 ];
 
 const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
