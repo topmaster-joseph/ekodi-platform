@@ -33,6 +33,22 @@ function joinFormat(format){
   return Array.isArray(format)?format.join(' · '):(format||'');
 }
 
+function distributionRow(label,detail,state){
+  const row=document.createElement('div');
+  row.className='distribution-row';
+  const copy=document.createElement('div');
+  const strong=document.createElement('strong');
+  const small=document.createElement('small');
+  strong.textContent=label;
+  small.textContent=detail||'';
+  copy.append(strong,small);
+  const status=document.createElement('span');
+  status.className='distribution-state';
+  status.textContent=state||'준비 중';
+  row.append(copy,status);
+  return row;
+}
+
 async function loadBooks(){
   try{
     const res=await fetch('/books.json',{cache:'no-store'});
@@ -61,12 +77,34 @@ async function loadBooks(){
       node.querySelector('.book-format').textContent=joinFormat(book.format);
       node.querySelector('.book-edition').textContent=book.edition||'';
       node.querySelector('.book-series-record').textContent=book.series||'';
+
       const identifier=book.identifiers?.googleBooks||book.identifiers?.isbnEbook||'';
       const citationBase=book.citation||`${book.author}. 『${book.title}』. EKODI BOOKS.`;
       node.querySelector('.book-citation').textContent=identifier?`${citationBase} · Identifier: ${identifier}`:citationBase;
+
+      const editions=book.editions||{};
+      const dist=node.querySelector('.distribution-list');
+      dist.append(
+        distributionRow(
+          'Google Play Books',
+          identifier||editions.googleKoreanBilingual?.price||'',
+          book.distribution?.google
+        ),
+        distributionRow(
+          'Amazon KDP',
+          [editions.amazonEnglish?.version,editions.amazonEnglish?.price].filter(Boolean).join(' · '),
+          book.distribution?.amazon
+        ),
+        distributionRow(
+          '국내 통합유통',
+          editions.domesticAggregator?.provider?`${editions.domesticAggregator.provider} · 국내 주요 서점 연동`:'',
+          book.distribution?.korea
+        )
+      );
+
       const links=node.querySelector('.book-links');
       links.append(
-        linkFor('Google Play Books',book.links?.google,book.distribution?.google),
+        linkFor('Google Play',book.links?.google,book.distribution?.google),
         linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),
         linkFor('국내 서점',book.links?.korea,book.distribution?.korea)
       );
