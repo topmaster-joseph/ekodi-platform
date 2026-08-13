@@ -9,7 +9,7 @@ const criticalClients = [
   ['client-cgma', 'cgma.ekodi.kr', '청계면상인회'],
   ['client-jadam', 'jadam.ekodi.kr', '자담치킨 목포대점'],
   ['client-pizzamaru', 'pizzamaru.ekodi.kr', '피자마루 목포대점'],
-  ['client-yogurt', 'yogurt.ekodi.kr', '요거트퍼플 목포대점'],
+  ['client-yogurt', 'yogurtpurple.ekodi.kr', '요거트퍼플 목포대점'],
 ];
 
 test('revenue-critical external clients stay active and monitored', () => {
