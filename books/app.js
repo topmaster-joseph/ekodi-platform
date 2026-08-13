@@ -33,6 +33,11 @@ function joinFormat(format){
   return Array.isArray(format)?format.join(' · '):(format||'');
 }
 
+function seriesLabel(book){
+  if(!book.series)return 'EKODI ORIGINAL';
+  return book.seriesNumber?`${book.series} · ${book.seriesNumber}`:book.series;
+}
+
 function distributionRow(label,detail,state){
   const row=document.createElement('div');
   row.className='distribution-row';
@@ -49,6 +54,50 @@ function distributionRow(label,detail,state){
   return row;
 }
 
+function injectStructuredData(data,books){
+  const graph=[
+    {
+      '@type':'Organization',
+      '@id':'https://books.ekodi.kr/#publisher',
+      name:data.publisher||'EKODI BOOKS',
+      url:'https://books.ekodi.kr/'
+    },
+    {
+      '@type':'WebSite',
+      '@id':'https://books.ekodi.kr/#website',
+      name:'EKODI BOOKS',
+      url:'https://books.ekodi.kr/',
+      publisher:{'@id':'https://books.ekodi.kr/#publisher'},
+      inLanguage:'ko-KR'
+    }
+  ];
+
+  books.forEach(book=>{
+    graph.push({
+      '@type':'Book',
+      name:book.title,
+      alternateName:book.editions?.amazonEnglish?.title||undefined,
+      description:book.abstract||book.subtitle||undefined,
+      author:{'@type':'Person',name:book.author},
+      publisher:{'@id':'https://books.ekodi.kr/#publisher'},
+      bookFormat:'https://schema.org/EBook',
+      inLanguage:Array.isArray(book.language)?book.language:[book.language||'ko'],
+      identifier:book.identifiers?.googleBooks||undefined,
+      isPartOf:book.series?{
+        '@type':'BookSeries',
+        name:book.series,
+        position:book.seriesNumber||undefined
+      }:undefined,
+      url:'https://books.ekodi.kr/#catalog'
+    });
+  });
+
+  const script=document.createElement('script');
+  script.type='application/ld+json';
+  script.textContent=JSON.stringify({'@context':'https://schema.org','@graph':graph});
+  document.head.append(script);
+}
+
 async function loadBooks(){
   try{
     const res=await fetch('/books.json',{cache:'no-store'});
@@ -60,9 +109,12 @@ async function loadBooks(){
       return;
     }
 
+    injectStructuredData(data,books);
+
     for(const book of books){
       const node=template.content.cloneNode(true);
-      node.querySelector('.book-series').textContent=book.series||'EKODI ORIGINAL';
+      const series=seriesLabel(book);
+      node.querySelector('.book-series').textContent=series;
       node.querySelector('.book-cover-title').textContent=book.coverTitle||book.title;
       node.querySelector('.book-cover-type').textContent=book.publicationType||'MONOGRAPH';
       node.querySelector('.book-catalog').textContent=book.catalogNo||book.id;
@@ -76,7 +128,7 @@ async function loadBooks(){
       node.querySelector('.book-language').textContent=book.languageLabel||book.language||'';
       node.querySelector('.book-format').textContent=joinFormat(book.format);
       node.querySelector('.book-edition').textContent=book.edition||'';
-      node.querySelector('.book-series-record').textContent=book.series||'';
+      node.querySelector('.book-series-record').textContent=series;
 
       const identifier=book.identifiers?.googleBooks||book.identifiers?.isbnEbook||'';
       const citationBase=book.citation||`${book.author}. 『${book.title}』. EKODI BOOKS.`;
@@ -92,12 +144,12 @@ async function loadBooks(){
         ),
         distributionRow(
           'Amazon KDP',
-          [editions.amazonEnglish?.version,editions.amazonEnglish?.price].filter(Boolean).join(' · '),
+          ['English Edition',editions.amazonEnglish?.price].filter(Boolean).join(' · '),
           book.distribution?.amazon
         ),
         distributionRow(
           '국내 통합유통',
-          editions.domesticAggregator?.provider?`${editions.domesticAggregator.provider} · 국내 주요 서점 연동`:'',
+          editions.domesticAggregator?.provider?`${editions.domesticAggregator.provider} · 주요 서점 통합유통`:'',
           book.distribution?.korea
         )
       );
