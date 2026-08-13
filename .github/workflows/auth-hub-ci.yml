@@ -66,10 +66,10 @@ jobs:
           for site in cgma marketing biz trade mall pay books church lab mission community edu media admin portal; do
             grep -Fq "${site}:{" auth-site/auth.js || { echo "Missing central auth service: $site"; exit 1; }
           done
-          grep -Fq 'yogurtpurple.ekodi.kr' auth-site/auth.js
-          grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js
-          if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then
-            echo 'Legacy yogurt domain detected'
+          grep -Fq 'yogurt.ekodi.kr' auth-site/auth.js
+          grep -Fq 'yogurt.ekodi.kr' api-worker.js
+          if grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js; then
+            echo 'Legacy yogurtpurple domain detected'
             exit 1
           fi
       - name: Probe public central identity challenge
