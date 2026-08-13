@@ -4,17 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <meta name="description" content="EKODI 서비스 공통 Google 계정 인증센터" />
+  <meta name="description" content="EKODI 서비스 공통 Google 계정 인증 및 Marketing AI 회원 전환센터" />
   <title>EKODI 인증센터</title>
-  <link rel="stylesheet" href="/auth.css?v=20260813-2" />
+  <link rel="stylesheet" href="/auth.css?v=20260813-3" />
 </head>
 <body>
   <header class="topbar"><a href="https://ekodi.kr" class="brand">EKODI</a><span>통합 인증센터</span></header>
   <main class="shell">
     <section class="intro">
       <span class="eyebrow">EKODI IDENTITY</span>
-      <h1>한 계정으로,<br>필요한 곳만 안전하게.</h1>
-      <p>Google 계정으로 본인을 확인하고, 사전등록된 이메일·조직·역할을 중앙에서 확인합니다.</p>
+      <h1>먼저 써보고,<br>필요할 때 더 깊게.</h1>
+      <p>Google 계정으로 본인을 확인합니다. Marketing AI는 무료 기능부터 시작하고, 고급 기능이 필요할 때 Pro 사용을 신청할 수 있습니다.</p>
     </section>
 
     <section class="auth-card">
@@ -23,7 +23,7 @@
       <div id="signedOut">
         <div id="googleButtonHost" class="google-button-host" aria-label="Google 계정 인증"></div>
         <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>Google 인증 다시 준비</span></button>
-        <p class="micro">Google 계정은 본인확인에만 사용하고, 서비스 권한은 EKODI에서 별도로 확인합니다.</p>
+        <p class="micro" id="signedOutCopy">Google 계정은 본인확인에만 사용하고, 서비스 권한은 EKODI에서 별도로 확인합니다.</p>
         <div id="authStatus" class="notice">Google 인증을 준비하고 있습니다.</div>
       </div>
 
@@ -35,8 +35,25 @@
           <button id="continueService" type="button">서비스로 안전하게 이동</button>
         </div>
 
+        <div id="freeActions" class="hide actions split-actions">
+          <button id="continueFree" type="button">무료 기능 계속 이용</button>
+        </div>
+
         <div id="requestActions" class="hide request-box">
-          <label for="requestNote">확인 메모 <span>선택</span></label>
+          <div id="marketingApplication" class="hide application-fields">
+            <div class="plan-card">
+              <small>신청 요금제</small>
+              <strong>Marketing AI Pro</strong>
+              <span>자동화·채널연동·분석 등 고급 기능 사용을 위한 승인 신청입니다.</span>
+            </div>
+            <label for="businessName">상호·사업체명 <span>권장</span></label>
+            <input id="businessName" maxlength="160" autocomplete="organization" placeholder="예: ABC카페 목포대점" />
+            <div class="field-grid">
+              <div><label for="contactPhone">연락처 <span>선택</span></label><input id="contactPhone" maxlength="40" autocomplete="tel" placeholder="010-0000-0000" /></div>
+              <div><label for="businessNumber">사업자번호 <span>선택</span></label><input id="businessNumber" maxlength="40" inputmode="numeric" placeholder="000-00-00000" /></div>
+            </div>
+          </div>
+          <label for="requestNote" id="requestNoteLabel">확인 메모 <span>선택</span></label>
           <textarea id="requestNote" placeholder="소속·점포·담당업무 등 확인에 도움이 되는 내용을 적어 주세요."></textarea>
           <button id="requestAccess" type="button">접근권한 신청</button>
           <div id="requestStatus" class="notice hide"></div>
@@ -44,13 +61,22 @@
       </div>
     </section>
 
+    <section id="reviewConsole" class="review-card hide" aria-label="Marketing AI 사용신청 검수">
+      <div class="review-head">
+        <div><span class="eyebrow">MARKETING AI · REVIEW</span><h2>Pro 사용신청 검수</h2><p>승인하면 고객 테넌트와 기본 매장공간을 만들고 Pro 권한을 연결합니다.</p></div>
+        <button id="refreshReviews" class="quiet" type="button">새로고침</button>
+      </div>
+      <div id="reviewStatus" class="notice">신청 목록을 불러오는 중입니다.</div>
+      <div id="reviewList" class="review-list"></div>
+    </section>
+
     <section class="principles" aria-label="인증 원칙">
-      <div><b>Google</b><span>1차 신원인증</span></div>
-      <div><b>사전등록</b><span>이메일·조직 확인</span></div>
-      <div><b>Role</b><span>서비스별 최소권한</span></div>
+      <div><b>Trial</b><span>비회원 무료체험</span></div>
+      <div><b>Google</b><span>무료회원 본인인증</span></div>
+      <div><b>Pro</b><span>신청·승인 후 고급기능</span></div>
     </section>
   </main>
-  <footer>EKODI Platform · 계정정보와 서비스권한을 분리해 관리합니다.</footer>
-  <script type="module" src="/auth.js?v=20260813-token-hash"></script>
+  <footer>EKODI Platform · 무료체험과 고객권한을 분리하고, 승인된 조직은 독립 테넌트로 운영합니다.</footer>
+  <script type="module" src="/auth.js?v=20260813-marketing-funnel"></script>
 </body>
 </html>
