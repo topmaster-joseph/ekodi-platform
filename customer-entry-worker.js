@@ -2,9 +2,39 @@ import apiWorker from './api-worker.js';
 import { handleCustomerAuth } from './customer-auth.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 
+const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
+  '/api/setup',
+  '/api/login',
+  '/api/password/reset',
+  '/api/password/change',
+]);
+
+function googleAdminEnabled(env = {}) {
+  return String(env.GOOGLE_CLIENT_ID || '').trim().endsWith('.apps.googleusercontent.com');
+}
+
+function googleOnlyResponse() {
+  return new Response(JSON.stringify({
+    error: '관리자 비밀번호 로그인은 비활성화되었습니다. 사전 등록된 Google 계정으로 로그인해 주세요.',
+    code: 'GOOGLE_ADMIN_LOGIN_REQUIRED',
+  }), {
+    status: 410,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (googleAdminEnabled(env) && request.method === 'POST' && LEGACY_ADMIN_PASSWORD_PATHS.has(path)) {
+      return googleOnlyResponse();
+    }
+
     if (path.startsWith('/api/google/') || path.startsWith('/api/admin-access/')) {
       try {
         return await handleAdminGoogleAuth(request, env);
