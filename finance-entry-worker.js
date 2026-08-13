@@ -1,4 +1,5 @@
 import financeWorker from './finance-worker.js';
+import paymentWorker from './payment-worker.js';
 
 const FINANCE_TABLES = Object.freeze({
   organizations: 'finance_organizations',
@@ -33,6 +34,10 @@ export default {
   fetch(request, env, ctx) {
     const financeEnv = Object.create(env || null);
     if (env?.DB) financeEnv.DB = namespacedDatabase(env.DB);
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/payments/')) {
+      return paymentWorker.fetch(request, financeEnv, ctx);
+    }
     return financeWorker.fetch(request, financeEnv, ctx);
   }
 };

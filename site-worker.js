@@ -10,9 +10,12 @@ const ADMIN_HOSTS = new Set([
 
 const AUTH_HOST = 'auth.ekodi.kr';
 
-const HUB_HOSTS = new Set([
+const PAY_HOSTS = new Set([
   'pay.ekodi.kr',
   'pay.biz.ekodi.kr',
+]);
+
+const HUB_HOSTS = new Set([
   'mail.ekodi.kr',
   'mail.biz.ekodi.kr',
   'mail.church.ekodi.kr',
@@ -56,6 +59,7 @@ const ADMIN_ASSETS = new Set([
   '/books-admin.css',
   '/books-admin.js',
 ]);
+const PAY_ASSETS = new Set(['/pay.css', '/pay.js']);
 
 const ADMIN_CSP = [
   "default-src 'self'",
@@ -83,6 +87,20 @@ const AUTH_CSP = [
   "object-src 'none'",
 ].join('; ');
 
+const PAYMENT_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' https://js.tosspayments.com",
+  "connect-src 'self' https://finance-api.ekodi.kr https://*.tosspayments.com",
+  "frame-src https://*.tosspayments.com https://*.toss.im",
+  "img-src 'self' data: https://*.tosspayments.com https://*.toss.im",
+  "font-src 'self' data: https://*.tosspayments.com https://*.toss.im",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://*.tosspayments.com https://*.toss.im",
+  "object-src 'none'",
+].join('; ');
+
 const HUB_CSP = [
   "default-src 'none'",
   "style-src 'unsafe-inline'",
@@ -106,7 +124,9 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   secured.headers.set('Cache-Control', cacheControl);
   secured.headers.set('Referrer-Policy', 'no-referrer');
   secured.headers.set('X-Content-Type-Options', 'nosniff');
-  if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  if (routeName.startsWith('admin-') || routeName.startsWith('pay-')) {
+    secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  }
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
 }
@@ -161,6 +181,17 @@ export default {
       if (['/auth.js','/auth.css','/auth-router.js','/admin-auth.js','/client-auth.js'].includes(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, AUTH_CSP, 'public, max-age=300', 'central-auth-asset');
+      }
+    }
+
+    if (PAY_HOSTS.has(host)) {
+      if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/pay' || url.pathname === '/pay/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/pay'));
+        return withHostSecurity(response, PAYMENT_CSP, 'no-store', 'pay-checkout');
+      }
+      if (PAY_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, PAYMENT_CSP, 'no-store', 'pay-asset');
       }
     }
 

@@ -10,7 +10,7 @@ custom_domain = true
 
 [vars]
 ENVIRONMENT = "production"
-ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr"
+ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://pay.ekodi.kr,https://pay.biz.ekodi.kr"
 
 [observability.logs]
 enabled = true
