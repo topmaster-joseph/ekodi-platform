@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'monitor-status.json'
   pull_request:
 
 permissions:
