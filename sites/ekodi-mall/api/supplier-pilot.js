@@ -24,6 +24,10 @@ const percent = (value) => {
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : 0;
 };
 const priority = (value) => Math.max(1, Math.min(999, Math.trunc(Number(value) || 100)));
+const httpsUrl = (value) => {
+  const text = clean(value, 1000);
+  try { const url = new URL(text); return url.protocol === 'https:' ? url.toString() : ''; } catch { return ''; }
+};
 
 async function readJson(request) { try { return await request.json(); } catch { return null; } }
 
@@ -44,9 +48,7 @@ function allowedOpsEmails(env) {
 
 async function authorizeOperations(request, env) {
   const supplied = request.headers.get('x-ekodi-mall-ops-token') || '';
-  if (env.MALL_OPERATIONS_TOKEN && supplied && supplied === env.MALL_OPERATIONS_TOKEN) {
-    return { ok: true, actor: 'mall-ops:service-token' };
-  }
+  if (env.MALL_OPERATIONS_TOKEN && supplied && supplied === env.MALL_OPERATIONS_TOKEN) return { ok: true, actor: 'mall-ops:service-token' };
   const user = await authenticate(request, env);
   if (!user) return { ok: false, status: 401, error: 'Mall 운영자 Google 로그인이 필요합니다.' };
   const email = clean(user.email, 240).toLowerCase();
@@ -87,9 +89,8 @@ async function audit(env, actor, action, { partnerId = null, sourceId = null, sk
 function partnerView(row) {
   if (!row) return null;
   return {
-    id: row.id, partnerCode: row.partner_code, displayName: row.display_name, legalName: row.legal_name || '',
-    providerType: row.provider_type, onboardingStatus: row.onboarding_status,
-    businessVerificationRef: row.business_verification_ref || '', masterContractRef: row.master_contract_ref || '',
+    id: row.id, partnerCode: row.partner_code, displayName: row.display_name, legalName: row.legal_name || '', providerType: row.provider_type,
+    onboardingStatus: row.onboarding_status, businessVerificationRef: row.business_verification_ref || '', masterContractRef: row.master_contract_ref || '',
     piiProcessorRef: row.pii_processor_ref || '', returnsPolicyRef: row.returns_policy_ref || '', csPolicyRef: row.cs_policy_ref || '',
     pilotEvidenceRef: row.pilot_evidence_ref || '', statusNote: row.status_note || '', autoOrderAllowed: Boolean(row.auto_order_allowed),
     contractReady: supplierPartnerContractReady(row), sourceCount: Number(row.source_count || 0), verifiedSourceCount: Number(row.verified_source_count || 0),
@@ -104,15 +105,17 @@ const PARTNER_SELECT = `SELECT sp.*,
   (SELECT COUNT(*) FROM supplier_skus ss WHERE ss.partner_id=sp.id AND ss.active=1) AS sku_count,
   (SELECT COUNT(*) FROM supplier_sku_product_links spl JOIN supplier_skus ss ON ss.id=spl.supplier_sku_id WHERE ss.partner_id=sp.id AND spl.mapping_status IN ('pilot','active')) AS product_mapping_count
   FROM supplier_partners sp`;
-
 async function getPartner(env, id) { return env.DB.prepare(`${PARTNER_SELECT} WHERE sp.id=?`).bind(id).first(); }
 
 async function listContext(env) {
   const partners = await env.DB.prepare(`${PARTNER_SELECT} ORDER BY sp.updated_at DESC LIMIT 100`).all();
-  const sources = await env.DB.prepare(`SELECT ss.id,ss.seller_id AS sellerId,ss.provider_id AS providerId,ss.source_ref AS sourceRef,ss.internal_label AS internalLabel,
-    ss.cost_amount AS costAmount,ss.shipping_amount AS shippingAmount,ss.stock_state AS stockState,ss.rights_status AS rightsStatus,
-    ss.order_permission AS orderPermission,ss.pii_permission AS piiPermission,ss.active,sp.display_name AS providerName,sp.provider_type AS providerType,
-    seller.email AS sellerEmail,seller.display_name AS sellerDisplayName,sps.partner_id AS partnerId,sps.mapping_status AS partnerMappingStatus
+  const sellers = await env.DB.prepare(`SELECT user_id AS sellerId,email,display_name AS displayName,seller_type AS sellerType,direct_sale_status AS directSaleStatus
+    FROM seller_profiles ORDER BY updated_at DESC LIMIT 250`).all();
+  const sources = await env.DB.prepare(`SELECT ss.id,ss.seller_id AS sellerId,ss.provider_id AS providerId,ss.source_url AS sourceUrl,ss.source_ref AS sourceRef,
+    ss.internal_label AS internalLabel,ss.cost_amount AS costAmount,ss.shipping_amount AS shippingAmount,ss.stock_state AS stockState,
+    ss.rights_status AS rightsStatus,ss.order_permission AS orderPermission,ss.pii_permission AS piiPermission,ss.active,
+    sp.display_name AS providerName,sp.provider_type AS providerType,seller.email AS sellerEmail,seller.display_name AS sellerDisplayName,
+    sps.partner_id AS partnerId,sps.mapping_status AS partnerMappingStatus
     FROM sourcing_sources ss JOIN sourcing_providers sp ON sp.id=ss.provider_id JOIN seller_profiles seller ON seller.user_id=ss.seller_id
     LEFT JOIN supplier_partner_sources sps ON sps.source_id=ss.id
     WHERE sp.provider_type IN ('contract_supplier','supplier_api') ORDER BY ss.updated_at DESC LIMIT 250`).all();
@@ -127,14 +130,14 @@ async function listContext(env) {
     spl.mapping_status AS mappingStatus,spl.priority,spl.min_margin_amount AS minMarginAmount,spl.min_margin_percent AS minMarginPercent,p.name AS productName
     FROM supplier_sku_product_links spl JOIN products p ON p.id=spl.product_id ORDER BY spl.updated_at DESC LIMIT 500`).all();
   return {
-    partners: (partners.results || []).map(partnerView), sources: sources.results || [], products: products.results || [], skus: skus.results || [], mappings: mappings.results || [],
+    partners: (partners.results || []).map(partnerView), sellers: sellers.results || [], sources: sources.results || [], products: products.results || [],
+    skus: skus.results || [], mappings: mappings.results || [],
     gates: { paymentsEnabled: false, buyerPiiReleaseEnabled: false, supplierForwardEnabled: false, autoOrderEnabled: false, supplierPayoutExecutionEnabled: false }
   };
 }
 
 async function createPartner(env, actor, body = {}) {
-  const displayName = clean(body.displayName, 160);
-  const partnerCode = clean(body.partnerCode, 80).toLowerCase();
+  const displayName = clean(body.displayName, 160); const partnerCode = clean(body.partnerCode, 80).toLowerCase();
   const providerType = VALID_PROVIDER_TYPES.has(body.providerType) ? body.providerType : 'contract_supplier';
   if (!displayName) return { status: 400, body: { error: '공급자 표시명이 필요합니다.' } };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(partnerCode)) return { status: 400, body: { error: 'partnerCode는 영문 소문자·숫자·하이픈 형식이어야 합니다.' } };
@@ -157,10 +160,9 @@ async function savePartnerDetails(env, actor, id, body = {}) {
   const now = nowIso();
   await env.DB.prepare(`UPDATE supplier_partners SET display_name=?,legal_name=?,business_verification_ref=?,master_contract_ref=?,
     pii_processor_ref=?,returns_policy_ref=?,cs_policy_ref=?,pilot_evidence_ref=?,status_note=?,updated_at=? WHERE id=?`)
-    .bind(clean(body.displayName,160) || current.display_name, clean(body.legalName,200), clean(body.businessVerificationRef,240),
-      clean(body.masterContractRef,240), clean(body.piiProcessorRef,240), clean(body.returnsPolicyRef,240), clean(body.csPolicyRef,240),
-      clean(body.pilotEvidenceRef,240), clean(body.statusNote,1200), now, id).run();
-  await audit(env, actor, 'supplier_partner.details_updated', { partnerId: id, metadata: { contractReady: supplierPartnerContractReady(body) } });
+    .bind(clean(body.displayName,160) || current.display_name, clean(body.legalName,200), clean(body.businessVerificationRef,240), clean(body.masterContractRef,240),
+      clean(body.piiProcessorRef,240), clean(body.returnsPolicyRef,240), clean(body.csPolicyRef,240), clean(body.pilotEvidenceRef,240), clean(body.statusNote,1200), now, id).run();
+  await audit(env, actor, 'supplier_partner.details_updated', { partnerId: id, metadata: { refsUpdated: true } });
   return { status: 200, body: { partner: partnerView(await getPartner(env, id)) } };
 }
 
@@ -169,15 +171,10 @@ async function transitionPartner(env, actor, id, body = {}) {
   if (!partner) return { status: 404, body: { error: '공급자 Partner를 찾을 수 없습니다.' } };
   const next = clean(body.status, 40);
   if (!supplierPartnerTransitionAllowed(partner.onboarding_status, next)) return { status: 409, body: { error: `허용되지 않은 공급자 상태전이입니다: ${partner.onboarding_status} -> ${next}` } };
-  if (['contracted','pilot_ready','pilot_active','active'].includes(next) && !supplierPartnerContractReady(partner)) {
-    return { status: 409, body: { error: '사업자 검증·계약·개인정보 처리·반품·CS 정책 참조가 모두 있어야 계약단계 이상으로 전환할 수 있습니다.' } };
-  }
-  if (next === 'pilot_active' && (Number(partner.verified_source_count || 0) < 1 || Number(partner.product_mapping_count || 0) < 1)) {
-    return { status: 409, body: { error: '파일럿 활성화 전에 검증된 source 1개 이상과 SKU→상품 매핑 1개 이상이 필요합니다.' } };
-  }
+  if (['contracted','pilot_ready','pilot_active','active'].includes(next) && !supplierPartnerContractReady(partner)) return { status: 409, body: { error: '사업자 검증·계약·개인정보 처리·반품·CS 정책 참조가 모두 있어야 계약단계 이상으로 전환할 수 있습니다.' } };
+  if (next === 'pilot_active' && (Number(partner.verified_source_count || 0) < 1 || Number(partner.product_mapping_count || 0) < 1)) return { status: 409, body: { error: '파일럿 활성화 전에 검증된 source 1개 이상과 SKU→상품 매핑 1개 이상이 필요합니다.' } };
   if (next === 'active' && !clean(partner.pilot_evidence_ref, 240)) return { status: 409, body: { error: '정식 활성화에는 파일럿 완료 근거 참조값이 필요합니다.' } };
-  const now = nowIso();
-  const verifiedAt = ['contracted','pilot_ready','pilot_active','active'].includes(next) ? partner.verified_at || now : partner.verified_at;
+  const now = nowIso(); const verifiedAt = ['contracted','pilot_ready','pilot_active','active'].includes(next) ? partner.verified_at || now : partner.verified_at;
   const activatedAt = next === 'active' ? now : partner.activated_at;
   await env.DB.prepare(`UPDATE supplier_partners SET onboarding_status=?,status_note=?,verified_at=?,activated_at=?,auto_order_allowed=0,updated_at=? WHERE id=?`)
     .bind(next, clean(body.note,1200) || partner.status_note || '', verifiedAt, activatedAt, now, id).run();
@@ -201,20 +198,37 @@ async function attachSource(env, actor, partnerId, body = {}) {
   return { status: 200, body: { partner: partnerView(await getPartner(env, partnerId)), sourceId } };
 }
 
+async function createPartnerSource(env, actor, partnerId, body = {}) {
+  const partner = await getPartner(env, partnerId);
+  if (!partner) return { status: 404, body: { error: '공급자 Partner를 찾을 수 없습니다.' } };
+  const sellerId = clean(body.sellerId, 80); const sourceUrl = httpsUrl(body.sourceUrl); const internalLabel = clean(body.internalLabel, 160);
+  if (!sellerId || !sourceUrl || !internalLabel) return { status: 400, body: { error: '판매자, HTTPS 공급처 URL, 내부 관리명이 필요합니다.' } };
+  const seller = await env.DB.prepare('SELECT user_id FROM seller_profiles WHERE user_id=?').bind(sellerId).first();
+  if (!seller) return { status: 404, body: { error: '판매자를 찾을 수 없습니다.' } };
+  const providerId = partner.provider_type === 'supplier_api' ? 'supplier-api' : 'contract-supplier';
+  const id = randomId('src'); const now = nowIso();
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO sourcing_sources
+      (id,seller_id,provider_id,source_url,source_ref,internal_label,cost_amount,shipping_amount,stock_state,fulfillment_mode,rights_status,order_permission,pii_permission,active,checked_at,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,NULL,0,'unknown','supplier_dropship','contract_pending','none','none',1,NULL,?,?)`)
+      .bind(id, sellerId, providerId, sourceUrl, clean(body.sourceRef,160), internalLabel, now, now),
+    env.DB.prepare(`INSERT INTO supplier_partner_sources (partner_id,source_id,seller_id,mapping_status,created_at,updated_at) VALUES (?,?,?,'mapped',?,?)`)
+      .bind(partnerId, id, sellerId, now, now)
+  ]);
+  await audit(env, actor, 'supplier_partner.source_created', { partnerId, sourceId: id, metadata: { sellerId, providerId } });
+  return { status: 201, body: { source: { id, partnerId, sellerId, providerId, sourceUrl, internalLabel, rightsStatus: 'contract_pending' } } };
+}
+
 async function verifySourceContract(env, actor, partnerId, sourceId, body = {}) {
   const partner = await getPartner(env, partnerId);
-  if (!partner || !['contracted','pilot_ready','pilot_active','active'].includes(partner.onboarding_status) || !supplierPartnerContractReady(partner)) {
-    return { status: 409, body: { error: '계약 준비가 완료된 Supplier Partner가 필요합니다.' } };
-  }
+  if (!partner || !['contracted','pilot_ready','pilot_active','active'].includes(partner.onboarding_status) || !supplierPartnerContractReady(partner)) return { status: 409, body: { error: '계약 준비가 완료된 Supplier Partner가 필요합니다.' } };
   const mapped = await env.DB.prepare(`SELECT sps.*,ss.provider_id,sp.provider_type FROM supplier_partner_sources sps
-    JOIN sourcing_sources ss ON ss.id=sps.source_id JOIN sourcing_providers sp ON sp.id=ss.provider_id
-    WHERE sps.partner_id=? AND sps.source_id=?`).bind(partnerId, sourceId).first();
+    JOIN sourcing_sources ss ON ss.id=sps.source_id JOIN sourcing_providers sp ON sp.id=ss.provider_id WHERE sps.partner_id=? AND sps.source_id=?`).bind(partnerId, sourceId).first();
   if (!mapped) return { status: 404, body: { error: 'Partner에 연결된 source를 찾을 수 없습니다.' } };
   const csOwner = VALID_CS_OWNER.has(body.csOwner) ? body.csOwner : 'shared';
   const shippingSlaDays = body.shippingSlaDays === '' || body.shippingSlaDays == null ? null : Math.max(0, Math.min(30, Math.trunc(Number(body.shippingSlaDays) || 0)));
   const now = nowIso(); const existing = await env.DB.prepare('SELECT id FROM supplier_contracts WHERE source_id=?').bind(sourceId).first();
-  const contractId = existing?.id || randomId('ctr');
-  const orderPermission = mapped.provider_type === 'supplier_api' ? 'api_approved' : 'manual_contract';
+  const contractId = existing?.id || randomId('ctr'); const orderPermission = mapped.provider_type === 'supplier_api' ? 'api_approved' : 'manual_contract';
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO supplier_contracts
       (id,source_id,seller_id,status,contract_ref,pii_processor_ref,returns_policy_ref,cs_owner,shipping_sla_days,effective_at,expires_at,approved_at,created_at,updated_at)
@@ -222,10 +236,9 @@ async function verifySourceContract(env, actor, partnerId, sourceId, body = {}) 
       ON CONFLICT(source_id) DO UPDATE SET status='verified',contract_ref=excluded.contract_ref,pii_processor_ref=excluded.pii_processor_ref,
       returns_policy_ref=excluded.returns_policy_ref,cs_owner=excluded.cs_owner,shipping_sla_days=excluded.shipping_sla_days,effective_at=excluded.effective_at,
       expires_at=excluded.expires_at,approved_at=excluded.approved_at,updated_at=excluded.updated_at`)
-      .bind(contractId, sourceId, mapped.seller_id, partner.master_contract_ref, partner.pii_processor_ref, partner.returns_policy_ref, csOwner,
-        shippingSlaDays, clean(body.effectiveAt,40) || now, clean(body.expiresAt,40) || null, now, now, now),
-    env.DB.prepare(`UPDATE sourcing_sources SET rights_status='contract_verified',order_permission=?,pii_permission='contracted_processor',updated_at=? WHERE id=?`)
-      .bind(orderPermission, now, sourceId),
+      .bind(contractId, sourceId, mapped.seller_id, partner.master_contract_ref, partner.pii_processor_ref, partner.returns_policy_ref, csOwner, shippingSlaDays,
+        clean(body.effectiveAt,40) || now, clean(body.expiresAt,40) || null, now, now, now),
+    env.DB.prepare(`UPDATE sourcing_sources SET rights_status='contract_verified',order_permission=?,pii_permission='contracted_processor',updated_at=? WHERE id=?`).bind(orderPermission, now, sourceId),
     env.DB.prepare(`UPDATE supplier_partner_sources SET mapping_status='contract_verified',updated_at=? WHERE partner_id=? AND source_id=?`).bind(now, partnerId, sourceId)
   ]);
   await audit(env, actor, 'supplier_partner.source_contract_verified', { partnerId, sourceId, metadata: { contractId, orderPermission, globalPiiReleaseEnabled: false, autoOrderEnabled: false } });
@@ -263,23 +276,23 @@ async function mapSkuProduct(env, actor, skuId, body = {}) {
   const productId = clean(body.productId,80); const product = await env.DB.prepare('SELECT id,seller_id,sale_type,status FROM products WHERE id=?').bind(productId).first();
   if (!product || product.seller_id !== sku.seller_id) return { status: 409, body: { error: 'SKU source와 동일 판매자 소유의 상품만 매핑할 수 있습니다.' } };
   if (product.sale_type !== 'direct') return { status: 409, body: { error: 'Supplier SKU는 EKODI 직접판매 상품에만 매핑합니다.' } };
-  const p = priority(body.priority); const minMarginAmount = amount(body.minMarginAmount ?? 0); const minMarginPercent = percent(body.minMarginPercent); const now = nowIso();
+  const p = priority(body.priority); const minMarginAmount = amount(body.minMarginAmount ?? 0) ?? 0; const minMarginPercent = percent(body.minMarginPercent); const now = nowIso();
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO supplier_sku_product_links
       (supplier_sku_id,product_id,seller_id,source_id,mapping_status,priority,min_margin_amount,min_margin_percent,created_at,updated_at)
       VALUES (?,?,?,?,'pilot',?,?,?,?,?)
       ON CONFLICT(supplier_sku_id,product_id) DO UPDATE SET mapping_status='pilot',priority=excluded.priority,min_margin_amount=excluded.min_margin_amount,
       min_margin_percent=excluded.min_margin_percent,updated_at=excluded.updated_at`)
-      .bind(skuId, productId, sku.seller_id, sku.source_id, p, minMarginAmount ?? 0, minMarginPercent, now, now),
+      .bind(skuId, productId, sku.seller_id, sku.source_id, p, minMarginAmount, minMarginPercent, now, now),
     env.DB.prepare(`INSERT INTO product_source_links (product_id,source_id,priority,min_margin_amount,min_margin_percent,active,created_at,updated_at)
       VALUES (?,?,?,?,?,1,?,?) ON CONFLICT(product_id,source_id) DO UPDATE SET priority=excluded.priority,min_margin_amount=excluded.min_margin_amount,
       min_margin_percent=excluded.min_margin_percent,active=1,updated_at=excluded.updated_at`)
-      .bind(productId, sku.source_id, p, minMarginAmount ?? 0, minMarginPercent, now, now),
+      .bind(productId, sku.source_id, p, minMarginAmount, minMarginPercent, now, now),
     env.DB.prepare(`UPDATE supplier_partner_sources SET mapping_status=CASE WHEN mapping_status='contract_verified' THEN 'pilot' ELSE mapping_status END,updated_at=? WHERE partner_id=? AND source_id=?`)
       .bind(now, sku.partner_id, sku.source_id)
   ]);
-  await audit(env, actor, 'supplier_partner.sku_product_mapped', { partnerId: sku.partner_id, sourceId: sku.source_id, skuId, productId, metadata: { priority: p, minMarginAmount: minMarginAmount ?? 0, minMarginPercent } });
-  return { status: 200, body: { mapping: { supplierSkuId: skuId, productId, sourceId: sku.source_id, status: 'pilot', priority: p, minMarginAmount: minMarginAmount ?? 0, minMarginPercent }, autoOrderEnabled: false } };
+  await audit(env, actor, 'supplier_partner.sku_product_mapped', { partnerId: sku.partner_id, sourceId: sku.source_id, skuId, productId, metadata: { priority: p, minMarginAmount, minMarginPercent } });
+  return { status: 200, body: { mapping: { supplierSkuId: skuId, productId, sourceId: sku.source_id, status: 'pilot', priority: p, minMarginAmount, minMarginPercent }, autoOrderEnabled: false } };
 }
 
 export async function handleSupplierPilotRequest(request, env) {
@@ -288,17 +301,16 @@ export async function handleSupplierPilotRequest(request, env) {
   if (!env.DB) return { status: 503, body: { error: 'Mall 전용 데이터베이스 연결이 없습니다.' } };
   const auth = await authorizeOperations(request, env);
   if (!auth.ok) return { status: auth.status, body: { error: auth.error } };
-
   if (request.method === 'GET' && path === '/api/internal/supplier-pilot/context') return { status: 200, body: { context: await listContext(env), actor: auth.actor } };
-  if (request.method === 'POST' && path === '/api/internal/supplier-partners') {
-    const body = await readJson(request); return body ? createPartner(env, auth.actor, body) : { status: 400, body: { error: 'Invalid JSON' } };
-  }
+  if (request.method === 'POST' && path === '/api/internal/supplier-partners') { const body = await readJson(request); return body ? createPartner(env, auth.actor, body) : { status: 400, body: { error: 'Invalid JSON' } }; }
   const details = path.match(/^\/api\/internal\/supplier-partners\/(sup_[a-f0-9]{32})\/details$/i);
   if (request.method === 'POST' && details) { const body = await readJson(request); return body ? savePartnerDetails(env, auth.actor, details[1], body) : { status: 400, body: { error: 'Invalid JSON' } }; }
   const transition = path.match(/^\/api\/internal\/supplier-partners\/(sup_[a-f0-9]{32})\/transition$/i);
   if (request.method === 'POST' && transition) { const body = await readJson(request); return body ? transitionPartner(env, auth.actor, transition[1], body) : { status: 400, body: { error: 'Invalid JSON' } }; }
   const sourceAttach = path.match(/^\/api\/internal\/supplier-partners\/(sup_[a-f0-9]{32})\/sources$/i);
   if (request.method === 'POST' && sourceAttach) { const body = await readJson(request); return body ? attachSource(env, auth.actor, sourceAttach[1], body) : { status: 400, body: { error: 'Invalid JSON' } }; }
+  const sourceCreate = path.match(/^\/api\/internal\/supplier-partners\/(sup_[a-f0-9]{32})\/create-source$/i);
+  if (request.method === 'POST' && sourceCreate) { const body = await readJson(request); return body ? createPartnerSource(env, auth.actor, sourceCreate[1], body) : { status: 400, body: { error: 'Invalid JSON' } }; }
   const contract = path.match(/^\/api\/internal\/supplier-partners\/(sup_[a-f0-9]{32})\/sources\/(src_[a-f0-9]{32})\/verify-contract$/i);
   if (request.method === 'POST' && contract) { const body = await readJson(request); return verifySourceContract(env, auth.actor, contract[1], contract[2], body || {}); }
   const sku = path.match(/^\/api\/internal\/supplier-partners\/(sup_[a-f0-9]{32})\/skus$/i);
