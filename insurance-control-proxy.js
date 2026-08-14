@@ -39,7 +39,7 @@ export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
   const internalToken=String(env.INSURANCE_INTERNAL_TOKEN||'');
   if(!base||!internalToken)return json({error:'insurance_admin_proxy_not_configured'},503,auth.response.headers);
   if(!['https://insurance-api-staging.ekodi.kr','https://insurance-api.ekodi.kr'].includes(base))return json({error:'unapproved_insurance_backend'},503,auth.response.headers);
-  const headers=new Headers({'content-type':'application/json','x-ekodi-insurance-internal-token':internalToken,'x-ekodi-actor':String(auth.session.email).toLowerCase(),'origin':'https://api.ekodi.kr'});
+  const headers=new Headers({'content-type':'application/json','x-ekodi-insurance-internal-token':internalToken,'x-ekodi-actor':String(auth.session.email).toLowerCase()});
   let body;
   if(request.method==='PATCH'){
     const input=await request.json().catch(()=>({}));
