@@ -34,7 +34,7 @@ export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
   if(base.includes('renzehysxirjilvdxacv'))return json({error:'production_insurance_backend_blocked'},503,auth.response.headers);
   const headers=new Headers({'content-type':'application/json','apikey':publishableKey,'x-ekodi-internal-token':internalToken,'x-ekodi-actor':String(auth.session.email).toLowerCase(),'x-ekodi-role':'admin','origin':'https://api.ekodi.kr'});
   let body; if(request.method==='PATCH')body=await request.text();
-  const upstream=await fetch(`${base}/functions/v1/insurance-api${upstreamPath}`,{method:request.method,headers,body,cache:'no-store'});
+  const upstream=await fetch(`${base}/functions/v1/insurance-admin-internal${upstreamPath}`,{method:request.method,headers,body,cache:'no-store'});
   const text=await upstream.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:'insurance_backend_invalid_response'}};
   return json(data,upstream.status,auth.response.headers);
 }
