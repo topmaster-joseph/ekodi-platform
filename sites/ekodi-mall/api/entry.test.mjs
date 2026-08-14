@@ -43,7 +43,7 @@ test('entry composes verification and fulfillment before delegating core API', a
   assert.match(source,/fulfillmentSchemaReady/);
   assert.match(source,/verificationSchemaReady/);
   assert.match(source,/return core\.fetch\(request, env\)/);
-  assert.match(source,/version:4/);
+  assert.match(source,/version:3/);
 });
 
 test('legacy MallCatalog Durable Object remains non-destructive', async () => {
