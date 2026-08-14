@@ -8,7 +8,6 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 function enhanceHtml(response){
   if(!response.headers.get('content-type')?.includes('text/html'))return response;
   return new HTMLRewriter()
-    .on('footer .muted',{element(el){el.setInnerContent('EKODI Community · community.ekodi.kr')}})
     .on('body',{element(el){el.append('<script src="/social-links.js" defer></script>',{html:true})}})
     .transform(response);
 }
