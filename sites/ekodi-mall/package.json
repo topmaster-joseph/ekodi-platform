@@ -1,10 +1,10 @@
 {
   "name": "ekodi-mall-pages",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check assets/seller.js && node --check assets/seller-server.js && node --check assets/public-product.js && node --check assets/marketplace-live.js && node --check assets/sourcing-lab.js && node --check assets/app.js && node --check assets/commerce.js && node --check api/worker.js && node --check api/entry.js && node --check api/sourcing.js && node --check api/sourcing-plan.js && node --test api/worker.test.mjs api/entry.test.mjs api/sourcing.test.mjs && node scripts/validate.mjs",
+    "check": "node --check assets/seller.js && node --check assets/seller-server.js && node --check assets/public-product.js && node --check assets/marketplace-live.js && node --check assets/sourcing-lab.js && node --check assets/fulfillment-lab.js && node --check assets/app.js && node --check assets/commerce.js && node --check api/worker.js && node --check api/entry.js && node --check api/sourcing.js && node --check api/sourcing-plan.js && node --check api/fulfillment.js && node --test api/worker.test.mjs api/entry.test.mjs api/sourcing.test.mjs api/fulfillment.test.mjs && node scripts/validate.mjs",
     "build": "npm run check && node scripts/build.mjs && node scripts/verify-build.mjs",
     "verify": "node scripts/verify-build.mjs",
     "doctor": "npm run build"
