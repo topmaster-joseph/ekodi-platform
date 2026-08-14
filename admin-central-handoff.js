@@ -20,21 +20,23 @@
     const copy=document.createElement('p');copy.className='login-copy';copy.textContent='관리자 계정은 통합인증센터에서 Google 관리자 허용목록을 별도로 확인합니다.';
     form?.insertAdjacentElement('beforebegin',copy);copy.insertAdjacentElement('afterend',link);
   }
-  const observer=new MutationObserver(()=>{
+
+  function hideLegacyReset(){
     const reset=document.querySelector('#passwordResetToggle');if(reset)reset.hidden=true;
     const resetForm=document.querySelector('#passwordResetForm');if(resetForm)resetForm.hidden=true;
     if(form)form.hidden=true;
-  });
-  if(card)observer.observe(card,{childList:true,subtree:true});
+    return Boolean(reset||resetForm);
+  }
+  if(card&&!hideLegacyReset()){
+    const observer=new MutationObserver(()=>{if(hideLegacyReset())observer.disconnect();});
+    observer.observe(card,{childList:true,subtree:true});
+    setTimeout(()=>observer.disconnect(),3000);
+  }
 
-  const FINANCE_API='https://finance-api.ekodi.kr';
-  let keyStatusLoading=false;
-
-  function adminToken(){return sessionStorage.getItem('ekodi-auth-token')||'';}
   function keyStatusCell(label,id){
     const item=document.createElement('div');item.className='payment-key-item';
     const small=document.createElement('small');small.textContent=label;
-    const strong=document.createElement('strong');strong.id=id;strong.textContent='확인 중';
+    const strong=document.createElement('strong');strong.id=id;strong.textContent='Finance 대기';
     item.append(small,strong);return item;
   }
   function ensurePaymentKeyPanel(){
@@ -54,9 +56,9 @@
     const titleBox=document.createElement('div');
     const kicker=document.createElement('p');kicker.className='kicker';kicker.textContent='PAYMENT KEY READINESS';
     const title=document.createElement('h3');title.id='paymentKeyStatusTitle';title.textContent='결제 키 연결 상태';
-    const subtitle=document.createElement('p');subtitle.textContent='키 원문은 표시하지 않고 연결 여부, 운영 모드, MID와 웹훅만 확인합니다.';
+    const subtitle=document.createElement('p');subtitle.textContent='키 원문은 표시하지 않고 Finance가 이미 가져온 준비 상태를 재사용합니다.';
     titleBox.append(kicker,title,subtitle);
-    const overall=document.createElement('span');overall.id='paymentKeyOverall';overall.className='payment-key-badge';overall.textContent='확인 중';
+    const overall=document.createElement('span');overall.id='paymentKeyOverall';overall.className='payment-key-badge';overall.textContent='Finance 대기';
     head.append(titleBox,overall);
 
     const grid=document.createElement('div');grid.className='payment-key-grid';
@@ -69,7 +71,7 @@
       keyStatusCell('보안 경계','paymentKeySecurity')
     );
 
-    const note=document.createElement('p');note.id='paymentKeyStatusNote';note.className='payment-key-note';note.textContent='Finance 화면을 열면 결제 키 상태를 확인합니다.';
+    const note=document.createElement('p');note.id='paymentKeyStatusNote';note.className='payment-key-note';note.textContent='Finance 화면을 열면 같은 응답으로 결제 키 상태를 표시합니다.';
     const checked=document.createElement('small');checked.id='paymentKeyChecked';checked.className='payment-key-checked';checked.textContent='';
     panel.append(head,grid,note,checked);
     status.insertAdjacentElement('afterend',panel);
@@ -81,64 +83,45 @@
     element.classList.remove('finance-ready','finance-warn');
     if(state)element.classList.add(state);
   }
-  async function loadPaymentKeyStatus(){
-    const auth=adminToken();
-    if(!auth||keyStatusLoading)return;
+  function renderPaymentKeyStatus(data){
     const panel=ensurePaymentKeyPanel();
-    if(!panel)return;
-    keyStatusLoading=true;
-    try{
-      const response=await fetch(`${FINANCE_API}/api/finance/overview`,{
-        cache:'no-store',headers:{authorization:`Bearer ${auth}`}
-      });
-      let data={};try{data=await response.json();}catch{}
-      if(!response.ok)throw new Error(data.error||`Finance API ${response.status}`);
-      const readiness=data.readiness||{};
-      const secret=Boolean(readiness.tossSecretConfigured);
-      const live=Boolean(readiness.tossLiveKey);
-      const mid=Boolean(readiness.tossMidConfigured);
-      const overall=document.querySelector('#paymentKeyOverall');
-      overall?.classList.remove('ready','warn');
+    if(!panel||!data)return;
+    const readiness=data.readiness||{};
+    const secret=Boolean(readiness.tossSecretConfigured);
+    const live=Boolean(readiness.tossLiveKey);
+    const mid=Boolean(readiness.tossMidConfigured);
+    const overall=document.querySelector('#paymentKeyOverall');
+    overall?.classList.remove('ready','warn');
 
-      if(!secret){
-        if(overall){overall.textContent='키 연결 필요';overall.classList.add('warn');}
-        setKeyValue('paymentServerKey','미연결','finance-warn');
-        setKeyValue('paymentKeyMode','비활성','finance-warn');
-      }else if(live){
-        if(overall){overall.textContent='라이브 연결';overall.classList.add('ready');}
-        setKeyValue('paymentServerKey','연결됨','finance-ready');
-        setKeyValue('paymentKeyMode','LIVE','finance-ready');
-      }else{
-        if(overall){overall.textContent='서버키 연결 · 모드 확인';overall.classList.add('warn');}
-        setKeyValue('paymentServerKey','연결됨','finance-ready');
-        setKeyValue('paymentKeyMode','TEST / 확인 필요','finance-warn');
-      }
-      setKeyValue('paymentMid',mid?'연결됨':'미연결',mid?'finance-ready':'finance-warn');
-      setKeyValue('paymentDomain',(readiness.paymentDomain||'https://pay.ekodi.kr').replace('https://',''));
-      setKeyValue('paymentWebhook',(readiness.webhookUrl||'https://finance-api.ekodi.kr/webhooks/toss').replace('https://',''));
-      setKeyValue('paymentKeySecurity','원문 비노출 · Worker Secret','finance-ready');
+    if(!secret){
+      if(overall){overall.textContent='키 연결 필요';overall.classList.add('warn');}
+      setKeyValue('paymentServerKey','미연결','finance-warn');
+      setKeyValue('paymentKeyMode','비활성','finance-warn');
+    }else if(live){
+      if(overall){overall.textContent='라이브 연결';overall.classList.add('ready');}
+      setKeyValue('paymentServerKey','연결됨','finance-ready');
+      setKeyValue('paymentKeyMode','LIVE','finance-ready');
+    }else{
+      if(overall){overall.textContent='서버키 연결 · 모드 확인';overall.classList.add('warn');}
+      setKeyValue('paymentServerKey','연결됨','finance-ready');
+      setKeyValue('paymentKeyMode','TEST / 확인 필요','finance-warn');
+    }
+    setKeyValue('paymentMid',mid?'연결됨':'미연결',mid?'finance-ready':'finance-warn');
+    setKeyValue('paymentDomain',(readiness.paymentDomain||'https://pay.ekodi.kr').replace('https://',''));
+    setKeyValue('paymentWebhook',(readiness.webhookUrl||'https://finance-api.ekodi.kr/webhooks/toss').replace('https://',''));
+    setKeyValue('paymentKeySecurity','원문 비노출 · Worker Secret','finance-ready');
 
-      const note=document.querySelector('#paymentKeyStatusNote');
-      if(note){
-        if(!secret)note.textContent='Toss 서버키가 연결되기 전에는 결제 동기화가 자동으로 차단됩니다. 키는 GitHub/Cloudflare 비밀 저장소에서만 관리합니다.';
-        else if(!live)note.textContent='서버키는 연결되어 있습니다. 라이브 키 여부를 확인한 뒤 실결제 운영으로 전환하세요. 키 원문은 관리자 화면에 노출되지 않습니다.';
-        else if(!mid)note.textContent='라이브 서버키는 연결되어 있습니다. MID를 함께 연결하면 결제 계정 식별과 운영 점검이 더 명확해집니다.';
-        else note.textContent='라이브 서버키와 MID가 연결되어 있습니다. 결제 키 원문은 브라우저와 소스코드에 노출되지 않습니다.';
-      }
-      const checked=document.querySelector('#paymentKeyChecked');
-      if(checked)checked.textContent=`마지막 확인 ${new Date().toLocaleString('ko-KR')}`;
-    }catch(error){
-      const overall=document.querySelector('#paymentKeyOverall');
-      if(overall){overall.textContent='상태 확인 실패';overall.classList.remove('ready');overall.classList.add('warn');}
-      const note=document.querySelector('#paymentKeyStatusNote');if(note)note.textContent=`결제 키 상태를 불러오지 못했습니다: ${error.message}`;
-    }finally{keyStatusLoading=false;}
+    const note=document.querySelector('#paymentKeyStatusNote');
+    if(note){
+      if(!secret)note.textContent='Toss 서버키가 연결되기 전에는 결제 동기화가 자동으로 차단됩니다. 키는 GitHub/Cloudflare 비밀 저장소에서만 관리합니다.';
+      else if(!live)note.textContent='서버키는 연결되어 있습니다. 라이브 키 여부를 확인한 뒤 실결제 운영으로 전환하세요. 키 원문은 관리자 화면에 노출되지 않습니다.';
+      else if(!mid)note.textContent='라이브 서버키는 연결되어 있습니다. MID를 함께 연결하면 결제 계정 식별과 운영 점검이 더 명확해집니다.';
+      else note.textContent='라이브 서버키와 MID가 연결되어 있습니다. 결제 키 원문은 브라우저와 소스코드에 노출되지 않습니다.';
+    }
+    const checked=document.querySelector('#paymentKeyChecked');
+    if(checked)checked.textContent=`마지막 확인 ${new Date().toLocaleString('ko-KR')}`;
   }
 
   ensurePaymentKeyPanel();
-  const financeButton=document.querySelector('button.nav[data-section="finance"]');
-  financeButton?.addEventListener('click',()=>setTimeout(loadPaymentKeyStatus));
-  document.querySelector('#refreshFinance')?.addEventListener('click',()=>setTimeout(loadPaymentKeyStatus,50));
-  setInterval(()=>{
-    if(financeButton?.classList.contains('active')&&adminToken())loadPaymentKeyStatus();
-  },120000);
+  window.addEventListener('ekodi-finance-overview',event=>renderPaymentKeyStatus(event.detail));
 })();
