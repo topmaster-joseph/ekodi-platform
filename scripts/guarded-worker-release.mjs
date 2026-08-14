@@ -130,15 +130,18 @@ function currentSingleVersion() {
 }
 
 function uploadCandidate() {
-  command([
+  const output = command([
     'versions', 'upload', '--config', worker.config,
     '--tag', tag,
     '--message', `EKODI guarded candidate ${tag}`,
   ]);
+  const direct = output.match(/Worker Version ID:\s*([0-9a-f-]{36})/i)?.[1] || '';
+  if (direct) return direct;
+
   const raw = command(['versions', 'list', '--config', worker.config, '--json'], { json: true });
   const versions = parseJson(raw, 'versions list');
   const found = findTaggedVersion(versions, tag);
-  if (!found) throw new Error(`Could not resolve uploaded candidate version tagged ${tag}.`);
+  if (!found) throw new Error(`Could not resolve uploaded candidate version from Wrangler output or tag ${tag}.`);
   return found;
 }
 
