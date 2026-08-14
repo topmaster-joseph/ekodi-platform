@@ -1,20 +1,15 @@
-name: Deploy EKODI Biz Legacy Redirect
+name: Deploy EKODI Biz Legacy Redirect (Manual Topology Change)
+# deployment-guardrail: topology-workflow-manual-only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - biz-legacy-redirect.js
-      - wrangler.biz-legacy.toml
-      - .github/workflows/deploy-biz-legacy.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: ekodi-biz-legacy-redirect
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
