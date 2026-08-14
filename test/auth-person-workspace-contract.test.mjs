@@ -8,6 +8,7 @@ const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const migration=read('supabase/migrations/20260815020000_person_identity_workspaces.sql');
 const mergeMigration=read('supabase/migrations/20260815021000_explicit_identity_merge.sql');
 const personalHandoffMigration=read('supabase/migrations/20260815022000_personal_marketing_handoff.sql');
+const takeoverGuardMigration=read('supabase/migrations/20260815023000_identity_subject_takeover_guard.sql');
 const identityApi=read('supabase/functions/identity-api/index.ts');
 const accessApi=read('supabase/functions/access-api/index.ts');
 const authJs=read('auth-site/auth.js');
@@ -35,6 +36,15 @@ test('personal Marketing AI workspace receives the same verified handoff path',(
   assert.match(personalHandoffMigration,/workspace_kind' = 'personal'/i);
   assert.match(personalHandoffMigration,/'requires_handoff', true/i);
   assert.match(personalHandoffMigration,/'status', 'active'/i);
+});
+
+test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
+  assert.match(takeoverGuardMigration,/identity_subject_conflict/i);
+  assert.match(takeoverGuardMigration,/identity_subject_requires_relink/i);
+  assert.match(takeoverGuardMigration,/target_identity_subject_conflict/i);
+  assert.match(takeoverGuardMigration,/login_identities_one_active_primary_idx/i);
+  assert.match(takeoverGuardMigration,/revoke all on table public\.people, public\.login_identities from anon, authenticated/i);
+  assert.match(takeoverGuardMigration,/comment on function public\.link_person_identity\(uuid,uuid,text,text,text,text\)/i);
 });
 
 test('identity api persists Google subject and supports linked Google accounts',()=>{
