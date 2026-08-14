@@ -64,7 +64,8 @@ test('community report source bridge is read-only, admin-gated and privacy-minim
 test('AI drafting syncs recorded Community evidence and does not infer future plans', async () => {
   const source = await read('community-reports-control.js');
   for (const marker of [
-    '/sources/refresh',
+    'sourcesMatch',
+    "action === 'refresh'",
     'collectCommunitySources',
     'syncSources(request, env, sessionData, id)',
     'recordedSources',
