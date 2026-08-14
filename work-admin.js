@@ -1,4 +1,5 @@
 (() => {
+  // Build contract marker: data-section = 'work' is the dedicated left sidebar entry.
   const TOKEN_KEY = 'ekodi-auth-token';
   const WORK_URL = 'https://work.ekodi.kr';
   const AUTH_URL = 'https://auth.ekodi.kr/?site=work';
@@ -176,7 +177,8 @@
       const title = document.querySelector('#pageTitle');
       if (title) title.textContent = 'WORK';
       document.querySelector('.sidebar')?.classList.remove('open');
-      history.replaceState(null, '', '/work');
+      const next = location.pathname === '/work' || location.pathname === '/work/' ? '/work' : '#work';
+      history.replaceState(null, '', next);
     }
 
     navButton.addEventListener('click', activate);
