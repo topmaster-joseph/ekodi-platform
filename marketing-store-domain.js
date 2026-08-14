@@ -81,8 +81,12 @@ async function subscriptionFor(env, storeId) {
     WHERE subject_type='store' AND subject_key=? AND site='marketing'`).bind(storeId).first();
 }
 async function workspaceFor(env, storeId) {
-  return env.DB.prepare(`SELECT * FROM marketing_workspaces WHERE subject_type='store' AND subject_key=? AND status='active'`)
-    .bind(storeId).first();
+  return env.DB.prepare(`SELECT * FROM marketing_store_workspaces WHERE store_id=? AND status='active'`).bind(storeId).first();
+}
+async function writeAudit(env, storeId, hostname, action, detail='', email='') {
+  await env.DB.prepare(`INSERT INTO marketing_store_domain_audit
+    (store_id,hostname,action,detail,actor_email,created_at) VALUES (?,?,?,?,?,?)`)
+    .bind(storeId,hostname,action,String(detail || '').slice(0,800),email,new Date().toISOString()).run();
 }
 
 async function cfRequest(env, path, { method='GET', body=null, allow404=false } = {}) {
@@ -157,9 +161,9 @@ async function listStoreDomains(request, env, allowed) {
   if (ctx.error) return json(ctx.error.body, ctx.error.status, request, allowed);
   const { store, subscription, workspace } = ctx;
   const eligible = proActive(subscription?.plan_id, subscription?.status);
-  const rows = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_custom_domains d
-    JOIN marketing_workspaces w ON w.id=d.workspace_id
-    WHERE d.subject_type='store' AND d.subject_key=? AND d.status<>'disabled' ORDER BY d.id DESC`).bind(store.id).all();
+  const rows = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_store_custom_domains d
+    JOIN marketing_store_workspaces w ON w.id=d.workspace_id
+    WHERE d.store_id=? AND d.status<>'disabled' ORDER BY d.id DESC`).bind(store.id).all();
   return json({
     eligible, requiredPlan:'pro', planId:subscription?.plan_id || 'basic', planStatus:subscription?.status || 'active',
     workspace:workspace ? { slug:workspace.workspace_slug, canonicalDomain:workspace.canonical_domain, canonicalUrl:`https://${workspace.canonical_domain}` } : null,
@@ -177,30 +181,38 @@ async function createStoreDomain(request, env, allowed) {
   if (!workspace) return json({ error:'점포 전용 Marketing AI Workspace를 먼저 개통해 주세요.', code:'WORKSPACE_NOT_PROVISIONED' }, 409, request, allowed);
   const hostname = normalizeStoreCustomerHostname(body?.hostname);
   if (!hostname) return json({ error:'고객이 소유한 서브도메인을 입력해 주세요. 예: ai.example.com', code:'INVALID_CUSTOM_HOSTNAME' }, 400, request, allowed);
-  const existing = await env.DB.prepare('SELECT subject_type,subject_key,status FROM marketing_custom_domains WHERE hostname=?').bind(hostname).first();
-  if (existing && (existing.subject_type !== 'store' || existing.subject_key !== store.id || existing.status !== 'disabled')) return json({ error:'이미 연결되었거나 연결 진행 중인 도메인입니다.', code:'HOSTNAME_ALREADY_REGISTERED' }, 409, request, allowed);
-  const current = await env.DB.prepare(`SELECT COUNT(*) AS count FROM marketing_custom_domains
-    WHERE subject_type='store' AND subject_key=? AND status IN ('pending_dns','verifying','active','disconnect_pending')`).bind(store.id).first();
+  const existing = await env.DB.prepare('SELECT store_id,status FROM marketing_store_custom_domains WHERE hostname=?').bind(hostname).first();
+  if (existing && (existing.store_id !== store.id || existing.status !== 'disabled')) return json({ error:'이미 연결되었거나 연결 진행 중인 도메인입니다.', code:'HOSTNAME_ALREADY_REGISTERED' }, 409, request, allowed);
+  const current = await env.DB.prepare(`SELECT COUNT(*) AS count FROM marketing_store_custom_domains
+    WHERE store_id=? AND status IN ('pending_dns','verifying','active','disconnect_pending')`).bind(store.id).first();
   if (Number(current?.count || 0) >= mappingLimit(subscription.plan_id)) return json({ error:'현재 플랜에서 연결 가능한 고객 소유 도메인 수를 모두 사용했습니다.', code:'CUSTOM_DOMAIN_LIMIT' }, 409, request, allowed);
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const attempts = await env.DB.prepare(`SELECT COUNT(*) AS count FROM marketing_store_domain_audit
+    WHERE store_id=? AND action='domain.create' AND created_at>?`).bind(store.id,cutoff).first();
+  if (Number(attempts?.count || 0) >= 5) return json({ error:'도메인 연결 변경이 너무 잦습니다. 잠시 후 다시 시도해 주세요.', code:'DOMAIN_RATE_LIMIT' }, 429, request, allowed);
   let provider;
   try { provider = await pagesDomain(env, hostname, true); }
-  catch (error) { return json({ error:error.message, code:error.code || 'DOMAIN_PROVIDER_ERROR' }, error.code === 'DOMAIN_PROVIDER_NOT_READY' ? 503 : 502, request, allowed); }
+  catch (error) {
+    await writeAudit(env,store.id,hostname,'domain.create_failed',error?.message || String(error),store.email);
+    return json({ error:error.message, code:error.code || 'DOMAIN_PROVIDER_ERROR' }, error.code === 'DOMAIN_PROVIDER_NOT_READY' ? 503 : 502, request, allowed);
+  }
   const now = new Date().toISOString();
   const state = localStatus(provider.domain);
   const pStatus = providerStatus(provider.domain);
   const validation = JSON.stringify(validationPayload(provider.domain));
   const verified = state === 'active' ? now : null;
   if (existing?.status === 'disabled') {
-    await env.DB.prepare(`UPDATE marketing_custom_domains SET workspace_id=?,subject_type='store',subject_key=?,status=?,provider_status=?,provider_domain_id=?,
+    await env.DB.prepare(`UPDATE marketing_store_custom_domains SET workspace_id=?,store_id=?,status=?,provider_status=?,provider_domain_id=?,
       dns_type='CNAME',dns_name=?,dns_target=?,validation_json=?,error='',created_by_email=?,created_at=?,verified_at=?,updated_at=?,disabled_at=NULL WHERE hostname=?`)
       .bind(workspace.id,store.id,state,pStatus,String(provider.domain?.id || provider.domain?.name || ''),hostname,provider.target,validation,store.email,now,verified,now,hostname).run();
   } else {
-    await env.DB.prepare(`INSERT INTO marketing_custom_domains
-      (workspace_id,subject_type,subject_key,hostname,status,provider_status,provider_domain_id,dns_type,dns_name,dns_target,validation_json,error,created_by_email,created_at,verified_at,updated_at)
-      VALUES (?,'store',?,?,?,?,?,'CNAME',?,?,?,'',?,?,?,?)`)
+    await env.DB.prepare(`INSERT INTO marketing_store_custom_domains
+      (workspace_id,store_id,hostname,status,provider_status,provider_domain_id,dns_type,dns_name,dns_target,validation_json,error,created_by_email,created_at,verified_at,updated_at)
+      VALUES (?,?,?,?,?,?,'CNAME',?,?,?,'',?,?,?,?)`)
       .bind(workspace.id,store.id,hostname,state,pStatus,String(provider.domain?.id || provider.domain?.name || ''),hostname,provider.target,validation,store.email,now,verified,now).run();
   }
-  const row = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_custom_domains d JOIN marketing_workspaces w ON w.id=d.workspace_id WHERE d.hostname=?`).bind(hostname).first();
+  await writeAudit(env,store.id,hostname,'domain.create',JSON.stringify({state,providerStatus:pStatus,target:provider.target}),store.email);
+  const row = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_store_custom_domains d JOIN marketing_store_workspaces w ON w.id=d.workspace_id WHERE d.hostname=?`).bind(hostname).first();
   return json({ ok:true, message:state === 'active' ? '고객 소유 도메인이 연결되었습니다.' : '아래 CNAME을 고객의 DNS 관리화면에 추가해 주세요.', domain:publicDomain(row) }, state === 'active' ? 200 : 201, request, allowed);
 }
 
@@ -210,20 +222,25 @@ async function verifyStoreDomain(request, env, allowed, domainId) {
   if (ctx.error) return json(ctx.error.body, ctx.error.status, request, allowed);
   const { store, subscription } = ctx;
   if (!proActive(subscription?.plan_id, subscription?.status)) return json({ error:'도메인 검증은 Marketing AI Pro 이상에서 사용할 수 있습니다.', code:'PRO_REQUIRED' }, 403, request, allowed);
-  const row = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_custom_domains d JOIN marketing_workspaces w ON w.id=d.workspace_id
-    WHERE d.id=? AND d.subject_type='store' AND d.subject_key=? AND d.status<>'disabled'`).bind(domainId,store.id).first();
+  const row = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_store_custom_domains d JOIN marketing_store_workspaces w ON w.id=d.workspace_id
+    WHERE d.id=? AND d.store_id=? AND d.status<>'disabled'`).bind(domainId,store.id).first();
   if (!row) return json({ error:'연결 정보를 찾을 수 없습니다.' }, 404, request, allowed);
   let provider;
   try { provider = await pagesDomain(env, row.hostname, false); }
-  catch (error) { return json({ error:error.message, code:error.code || 'DOMAIN_PROVIDER_ERROR' }, 502, request, allowed); }
+  catch (error) {
+    await env.DB.prepare('UPDATE marketing_store_custom_domains SET error=?,updated_at=? WHERE id=?')
+      .bind(String(error.message || error).slice(0,500),new Date().toISOString(),row.id).run();
+    return json({ error:error.message, code:error.code || 'DOMAIN_PROVIDER_ERROR' }, 502, request, allowed);
+  }
   if (!provider.domain) return json({ error:'Cloudflare 연결 정보가 사라졌습니다. 도메인을 다시 연결해 주세요.', code:'PROVIDER_MAPPING_MISSING' }, 409, request, allowed);
   const now = new Date().toISOString();
   const state = localStatus(provider.domain);
   const pStatus = providerStatus(provider.domain);
-  await env.DB.prepare(`UPDATE marketing_custom_domains SET status=?,provider_status=?,dns_target=?,validation_json=?,error='',
+  await env.DB.prepare(`UPDATE marketing_store_custom_domains SET status=?,provider_status=?,dns_target=?,validation_json=?,error='',
     verified_at=CASE WHEN ?='active' THEN COALESCE(verified_at,?) ELSE verified_at END,updated_at=? WHERE id=?`)
     .bind(state,pStatus,provider.target,JSON.stringify(validationPayload(provider.domain)),state,now,now,row.id).run();
-  const updated = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_custom_domains d JOIN marketing_workspaces w ON w.id=d.workspace_id WHERE d.id=?`).bind(row.id).first();
+  await writeAudit(env,store.id,row.hostname,'domain.verify',JSON.stringify({state,providerStatus:pStatus}),store.email);
+  const updated = await env.DB.prepare(`SELECT d.*,w.canonical_domain FROM marketing_store_custom_domains d JOIN marketing_store_workspaces w ON w.id=d.workspace_id WHERE d.id=?`).bind(row.id).first();
   return json({ ok:state === 'active', message:state === 'active' ? 'DNS와 HTTPS 연결이 확인되었습니다.' : '아직 DNS/HTTPS 확인 중입니다.', domain:publicDomain(updated) }, 200, request, allowed);
 }
 
@@ -232,18 +249,20 @@ async function deleteStoreDomain(request, env, allowed, domainId) {
   const ctx = await context(request, env, url.searchParams.get('store'));
   if (ctx.error) return json(ctx.error.body, ctx.error.status, request, allowed);
   const { store } = ctx;
-  const row = await env.DB.prepare(`SELECT * FROM marketing_custom_domains WHERE id=? AND subject_type='store' AND subject_key=? AND status<>'disabled'`)
+  const row = await env.DB.prepare(`SELECT * FROM marketing_store_custom_domains WHERE id=? AND store_id=? AND status<>'disabled'`)
     .bind(domainId,store.id).first();
   if (!row) return json({ error:'연결 정보를 찾을 수 없습니다.' }, 404, request, allowed);
   try { await deletePagesDomain(env, row.hostname); }
   catch (error) {
-    await env.DB.prepare("UPDATE marketing_custom_domains SET status='disconnect_pending',error=?,updated_at=? WHERE id=?")
+    await env.DB.prepare("UPDATE marketing_store_custom_domains SET status='disconnect_pending',error=?,updated_at=? WHERE id=?")
       .bind(String(error.message || error).slice(0,500),new Date().toISOString(),row.id).run();
+    await writeAudit(env,store.id,row.hostname,'domain.disconnect_pending',error?.message || String(error),store.email);
     return json({ error:'Cloudflare 연결 해제를 완료하지 못했습니다. 자동 재시도합니다.', code:'DISCONNECT_PENDING' }, 502, request, allowed);
   }
   const now = new Date().toISOString();
-  await env.DB.prepare("UPDATE marketing_custom_domains SET status='disabled',provider_status='',error='',disabled_at=?,updated_at=? WHERE id=?")
+  await env.DB.prepare("UPDATE marketing_store_custom_domains SET status='disabled',provider_status='',error='',disabled_at=?,updated_at=? WHERE id=?")
     .bind(now,now,row.id).run();
+  await writeAudit(env,store.id,row.hostname,'domain.disconnect','customer requested',store.email);
   return json({ ok:true, hostname:row.hostname, status:'disabled' }, 200, request, allowed);
 }
 
@@ -261,4 +280,51 @@ export async function handleMarketingStoreDomainRequest(request, env) {
   const remove = path.match(/^\/api\/marketing\/store-domains\/(\d+)$/);
   if (request.method === 'DELETE' && remove) return deleteStoreDomain(request, env, allowed, Number(remove[1]));
   return null;
+}
+
+export async function runMarketingStoreDomainSchedule(env) {
+  if (!env.DB) return { checked:0, activated:0, disabled:0, disconnected:0 };
+  const rows = await env.DB.prepare(`SELECT d.*,w.canonical_domain,s.plan_id,s.status AS subscription_status
+    FROM marketing_store_custom_domains d
+    JOIN marketing_store_workspaces w ON w.id=d.workspace_id
+    LEFT JOIN service_subscriptions s ON s.subject_type='store' AND s.subject_key=d.store_id AND s.site='marketing'
+    WHERE d.status IN ('pending_dns','verifying','active','disconnect_pending')
+    ORDER BY d.updated_at ASC LIMIT 30`).all();
+  let checked = 0;
+  let activated = 0;
+  let disabled = 0;
+  let disconnected = 0;
+  for (const row of rows.results || []) {
+    checked += 1;
+    const eligible = proActive(row.plan_id,row.subscription_status);
+    if (!eligible || row.status === 'disconnect_pending') {
+      try {
+        await deletePagesDomain(env,row.hostname);
+        const now = new Date().toISOString();
+        await env.DB.prepare("UPDATE marketing_store_custom_domains SET status='disabled',provider_status='',error='',disabled_at=?,updated_at=? WHERE id=?")
+          .bind(now,now,row.id).run();
+        if (eligible) disconnected += 1; else disabled += 1;
+        await writeAudit(env,row.store_id,row.hostname,eligible ? 'domain.disconnect_retry' : 'domain.plan_disabled','scheduler','');
+      } catch (error) {
+        await env.DB.prepare("UPDATE marketing_store_custom_domains SET error=?,updated_at=? WHERE id=?")
+          .bind(String(error?.message || error).slice(0,500),new Date().toISOString(),row.id).run();
+      }
+      continue;
+    }
+    try {
+      const provider = await pagesDomain(env,row.hostname,false);
+      if (!provider.domain) continue;
+      const now = new Date().toISOString();
+      const state = localStatus(provider.domain);
+      const pStatus = providerStatus(provider.domain);
+      await env.DB.prepare(`UPDATE marketing_store_custom_domains SET status=?,provider_status=?,dns_target=?,validation_json=?,error='',
+        verified_at=CASE WHEN ?='active' THEN COALESCE(verified_at,?) ELSE verified_at END,updated_at=? WHERE id=?`)
+        .bind(state,pStatus,provider.target,JSON.stringify(validationPayload(provider.domain)),state,now,now,row.id).run();
+      if (state === 'active' && row.status !== 'active') activated += 1;
+    } catch (error) {
+      await env.DB.prepare('UPDATE marketing_store_custom_domains SET error=?,updated_at=? WHERE id=?')
+        .bind(String(error?.message || error).slice(0,500),new Date().toISOString(),row.id).run();
+    }
+  }
+  return { checked, activated, disabled, disconnected };
 }
