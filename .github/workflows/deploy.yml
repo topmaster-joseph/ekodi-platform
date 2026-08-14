@@ -1,164 +1,24 @@
-name: Deploy
+name: Full Ecosystem Deploy (Manual)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'monitor-status.json'
-      - 'sites/ekodi-mall/**'
-      - '.github/workflows/deploy-ekodi-mall.yml'
+    inputs:
+      reason:
+        description: 'Reason for coordinated full ecosystem deployment'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-production
+  group: ekodi-full-ecosystem-production
   cancel-in-progress: false
 
 jobs:
-  validate:
+  coordinated-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - run: npm run check
-      - run: npm test
-
-  migrate-db:
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: github.ref == 'refs/heads/main'
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - name: Apply D1 migrations
-        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
-
-  deploy-root:
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    if: github.ref == 'refs/heads/main'
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - name: Verify Cloudflare secrets
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo "Missing CLOUDFLARE_ACCOUNT_ID" && exit 1)
-      - name: Best-effort legacy DNS cleanup
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          api='https://api.cloudflare.com/client/v4'
-          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr" > /tmp/zone.json
-          zone_id=$(python - <<'PY'
-          import json
-          rows=(json.load(open('/tmp/zone.json')).get('result') or [])
-          print(rows[0]['id'] if rows else '')
-          PY
-          )
-          test -n "$zone_id" || (echo 'ekodi.kr zone not found' && exit 1)
-          for name in ekodi.kr www.ekodi.kr; do
-            curl -fsS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$name&per_page=100" > /tmp/records.json
-            python - <<'PY' > /tmp/delete_ids
-          import json
-          for r in json.load(open('/tmp/records.json')).get('result') or []:
-              if r.get('type') in {'A','AAAA','CNAME'}:
-                  print(r['id'])
-          PY
-            while read -r id; do
-              [ -n "$id" ] || continue
-              curl -fsS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$id" >/dev/null
-            done < /tmp/delete_ids
-          done
-      - name: Deploy EKODI root and gateways
-        run: npm run deploy:site
-      - name: Verify root, zero-waste admin shell, click-loaded features, pay and trading domains
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
-            admin_code=$(curl -L -sS -o /tmp/admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
-            books_admin_code=$(curl -L -sS -o /tmp/books-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/books' || true)
-            feature_loader_code=$(curl -sS -D /tmp/feature-loader-headers -o /tmp/control-center-features.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/control-center-features.js' || true)
-            books_admin_asset=$(curl -sS -o /tmp/books-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/books-admin.js' || true)
-            pay_code=$(curl -L -sS -o /tmp/pay.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://pay.ekodi.kr/' || true)
-            trade_code=$(curl -L -sS -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
-            legacy_code=$(curl -L -sS -o /tmp/legacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.biz.ekodi.kr/' || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^[23] ]] && [[ "$books_admin_code" =~ ^[23] ]] && [[ "$feature_loader_code" = '200' ]] && [[ "$books_admin_asset" = '200' ]] && [[ "$pay_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_code" =~ ^[23] ]] \
-              && grep -Fq 'CONNECTED ECOSYSTEM' /tmp/root.html \
-              && grep -Fq '결제 · 회계 관제' /tmp/admin.html \
-              && grep -Fq 'control-center-features.js' /tmp/books-admin.html \
-              && grep -Fq "loadModule('books-admin.js')" /tmp/control-center-features.js \
-              && grep -Fq "loadModule('finance-monitor.js')" /tmp/control-center-features.js \
-              && grep -Fq "placeholder('clients'" /tmp/control-center-features.js \
-              && ! grep -Fq 'requestIdleCallback' /tmp/control-center-features.js \
-              && grep -Fiq 'cache-control: public, max-age=0, must-revalidate' /tmp/feature-loader-headers \
-              && grep -Fq 'Books Control' /tmp/books-admin.js \
-              && grep -Fq 'EKODI Pay' /tmp/pay.html \
-              && grep -Fq 'EKODI GLOBAL TRADING' /tmp/trade.html \
-              && grep -Fq 'EKODI GLOBAL TRADING' /tmp/legacy.html; then
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
-
-  deploy-api:
-    needs: migrate-db
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    if: github.ref == 'refs/heads/main'
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - run: npm run deploy:api
-      - name: Verify API, control plane and Books public config
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 12); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
-            status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
-            books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/config' || true)
-            publications=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/publications' || true)
-            if printf '%s' "$health" | grep -q '"ok":true' \
-              && printf '%s' "$status" | grep -q '"initialized"' \
-              && printf '%s' "$books" | grep -q '"digital-start"' \
-              && printf '%s' "$publications" | grep -q '"ekodi-books-001"'; then exit 0; fi
-            sleep 5
-          done
-          exit 1
-
-  deploy-finance:
-    needs: migrate-db
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 25
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -168,8 +28,35 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
-      - run: npm run deploy:finance
+          node-version: '24'
+
+      - name: Record coordinated release reason
+        run: |
+          echo "Full ecosystem deployment requested: ${{ inputs.reason }}"
+          echo 'This workflow is intentionally manual-only. Normal source changes use platform-specific workflows.'
+
+      - name: Validate all source and platform boundaries
+        run: |
+          npm run check
+          npm test
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Apply shared D1 migrations
+        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
+
+      - name: Deploy shared site runtime
+        run: npm run deploy:site
+
+      - name: Deploy Control API
+        run: npm run deploy:api
+
+      - name: Deploy Finance API
+        run: npm run deploy:finance
+
       - name: Connect Toss credentials when present
         shell: bash
         run: |
@@ -180,44 +67,33 @@ jobs:
           if [ -n "${TOSS_PAYMENTS_MID:-}" ]; then
             printf '%s' "$TOSS_PAYMENTS_MID" | npx --yes wrangler@4.119.0 secret put TOSS_MID --config wrangler.finance.toml >/dev/null
           fi
-      - name: Verify finance API
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 12); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
-            if printf '%s' "$health" | grep -q '"ok":true'; then exit 0; fi
-            sleep 5
-          done
-          exit 1
 
-  deploy-books:
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    if: github.ref == 'refs/heads/main'
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - run: npm run deploy:books
-      - name: Verify Books catalog, publishing service and admin handoff
+      - name: Deploy Books
+        run: npm run deploy:books
+
+      - name: Verify coordinated production release
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 12); do
-            root_code=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
-            publishing_code=$(curl -L -sS -o /tmp/publishing.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/publishing/' || true)
-            admin_code=$(curl -sS --max-redirs 0 -D /tmp/books-admin-headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/admin' || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$publishing_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
-              && grep -Fq 'href="https://ekodi.kr/"' /tmp/books.html \
-              && grep -Fq 'id="consultationForm"' /tmp/publishing.html \
-              && grep -Fq '/publishing/app.js' /tmp/publishing.html \
-              && grep -Fiq 'location: https://admin.ekodi.kr/books#books' /tmp/books-admin-headers; then
+          verify_html() {
+            url="$1"
+            needle="$2"
+            code=$(curl -L -sS -o /tmp/verify-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            echo "$url -> $code"
+            [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/verify-body
+          }
+          for attempt in $(seq 1 18); do
+            api=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
+            finance=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
+            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
+              && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' \
+              && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' \
+              && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' \
+              && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING' \
+              && verify_html 'https://books.ekodi.kr/' 'EKODI' \
+              && printf '%s' "$api" | grep -q '"ok":true' \
+              && printf '%s' "$finance" | grep -q '"ok":true'; then
+              echo 'Coordinated ecosystem release verified.'
               exit 0
             fi
             sleep 5
