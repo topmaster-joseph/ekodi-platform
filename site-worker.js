@@ -74,7 +74,7 @@ const AUTH_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com/gsi/client",
-  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://accounts.google.com/gsi/",
+  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://accounts.google.com/gsi/",
   "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/",
   "img-src 'self' data: https://lh3.googleusercontent.com",
   "frame-ancestors 'none'",
