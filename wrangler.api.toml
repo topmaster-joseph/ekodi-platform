@@ -1,6 +1,6 @@
 # Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations pipeline
 name = "ekodi-auth-api"
-main = "customer-entry-books-pipeline.js"
+main = "customer-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
