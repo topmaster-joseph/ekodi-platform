@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-admin-site.yml'
       - 'admin.html'
       - 'control-center.html'
       - 'control-center.js'
@@ -76,12 +77,15 @@ jobs:
           grep -Fq '/api/google/challenge' google-admin-auth.js
           grep -Fq '/api/google/login' google-admin-auth.js
           grep -Fq '/api/admin-access/google-accounts' google-admin-auth.js
+          grep -Fq 'EKODI Digital Campus' compact-control-center.js
           grep -Fq 'Policies' compact-control-center.js
           grep -Fq 'Domains & DNS' compact-control-center.js
           grep -Fq 'Activity Logs' compact-control-center.js
+          grep -Fq '.campus-layout' compact-control-center.css
           grep -Fq '.policy-grid' compact-control-center.css
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
+          grep -Fq 'control-center-features.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
@@ -93,29 +97,48 @@ jobs:
       - name: Deploy shared site Worker with admin/auth assets
         run: npm run deploy:site
 
-      - name: Verify admin routes, compact UI, central auth and customer access assets
+      - name: Verify admin routes, Campus shell, central auth and lazy feature assets
         shell: bash
         run: |
           set -euo pipefail
+
+          need_header() {
+            pattern="$1"
+            label="$2"
+            grep -Fiq "$pattern" /tmp/admin-headers || { echo "admin verify: missing $label"; return 1; }
+          }
+
+          need_body() {
+            pattern="$1"
+            label="$2"
+            grep -Fq "$pattern" /tmp/admin-body || { echo "admin verify: missing $label"; return 1; }
+          }
+
           verify_admin() {
             url="$1"
             code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
             echo "$url -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
-            grep -Fiq 'cross-origin-opener-policy: same-origin-allow-popups' /tmp/admin-headers || return 1
-            grep -Fq 'EKODI Control Center' /tmp/admin-body || return 1
-            grep -Fq 'client-access.js' /tmp/admin-body || return 1
-            grep -Fq 'google-admin-auth.js' /tmp/admin-body || return 1
-            grep -Fq 'compact-control-center.js' /tmp/admin-body || return 1
-            if grep -Fiq '^location:' /tmp/admin-headers; then return 1; fi
+            [ "$code" = '200' ] || { echo 'admin verify: expected HTTP 200'; return 1; }
+            need_header 'x-ekodi-route: admin-control-center' 'X-EKODI-Route=admin-control-center' || return 1
+            need_header 'cross-origin-opener-policy: same-origin-allow-popups' 'Cross-Origin-Opener-Policy' || return 1
+            need_body 'EKODI Control Center' 'Control Center title' || return 1
+            need_body 'control-center-features.js' 'lazy feature loader' || return 1
+            need_body 'compact-control-center.js' 'Campus UI loader' || return 1
+            if grep -Fiq '^location:' /tmp/admin-headers; then
+              echo 'admin verify: unexpected redirect header'
+              return 1
+            fi
           }
 
           verify_asset() {
             path="$1"
             expected="$2"
             code=$(curl -sS -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
-            [ "$code" = '200' ] && grep -Fq "$expected" /tmp/admin-asset
+            if [ "$code" != '200' ]; then
+              echo "asset verify: $path -> $code"
+              return 1
+            fi
+            grep -Fq "$expected" /tmp/admin-asset || { echo "asset verify: $path missing expected marker"; return 1; }
           }
 
           verify_auth() {
@@ -128,7 +151,8 @@ jobs:
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
-              && verify_asset 'compact-control-center.js' 'Operating Policies' \
+              && verify_asset 'compact-control-center.js' 'EKODI Digital Campus' \
+              && verify_asset 'compact-control-center.css' '.campus-layout' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
               && verify_asset 'google-admin-auth.js' '/api/google/login' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
@@ -136,6 +160,7 @@ jobs:
               echo 'Admin/Auth production boundary verified.'
               exit 0
             fi
+            echo "Production verification pending (attempt $attempt/18)."
             sleep 4
           done
           exit 1
