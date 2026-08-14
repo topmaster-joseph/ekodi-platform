@@ -22,7 +22,8 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type check Edge Function
-        run: deno check supabase/functions/insurance-api/index.ts
+        working-directory: supabase/functions/insurance-api
+        run: deno check --config deno.json index.ts
       - name: Verify privacy-first AI contract
         run: |
           set -euo pipefail
