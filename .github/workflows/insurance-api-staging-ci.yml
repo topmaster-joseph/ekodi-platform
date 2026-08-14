@@ -1,0 +1,50 @@
+name: EKODI Insurance API · Staging CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-api-*'
+    paths:
+      - 'supabase/functions/insurance-api/**'
+      - '.github/workflows/insurance-api-staging-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type check Edge Function
+        working-directory: supabase/functions/insurance-api
+        run: deno check --config deno.json index.ts
+      - name: Verify privacy-first AI contract
+        run: |
+          set -euo pipefail
+          file='supabase/functions/insurance-api/index.ts'
+          grep -Fq 'store:false' "$file"
+          grep -Fq 'INSURANCE_CONTACT_KEY' "$file"
+          grep -Fq 'AES-GCM' "$file"
+          grep -Fq '[고유식별정보 가림]' "$file"
+          grep -Fq '[연락처 가림]' "$file"
+          grep -Fq 'consultation_share_consent_required' "$file"
+          grep -Fq 'share_transcript' "$file"
+          grep -Fq 'insurance_audit_events' "$file"
+          grep -Fq 'admin.consultation.viewed' "$file"
+          grep -Fq 'consultation.revoked' "$file"
+          grep -Fq '/ai/chat' "$file"
+          grep -Fq '/consultations' "$file"
+          grep -Fq '/admin/consultations' "$file"
+          python3 - <<'PY'
+          import pathlib, re, sys
+          text = pathlib.Path('supabase/functions/insurance-api/index.ts').read_text()
+          if re.search(r"OPENAI_API_KEY\s*=\s*['\"][A-Za-z0-9_-]{16,}", text):
+              print('Hardcoded OpenAI API key detected')
+              sys.exit(1)
+          PY
