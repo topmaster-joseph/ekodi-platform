@@ -1,0 +1,79 @@
+name: EKODI Mall API · Validate and Deploy
+
+on:
+  pull_request:
+    paths:
+      - 'mall-api-worker.js'
+      - 'wrangler.mall-api.toml'
+      - 'test/mall-api-contract.test.mjs'
+      - 'package.json'
+      - '.github/workflows/deploy-mall-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'mall-api-worker.js'
+      - 'wrangler.mall-api.toml'
+      - 'test/mall-api-contract.test.mjs'
+      - 'package.json'
+      - '.github/workflows/deploy-mall-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-mall-api-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate worker syntax and contract
+        run: |
+          node --check mall-api-worker.js
+          node --test test/mall-api-contract.test.mjs
+          grep -Fq 'storage = "sqlite"' wrangler.mall-api.toml
+          grep -Fq 'mall-api.ekodi.kr' wrangler.mall-api.toml
+          grep -Fq 'paymentsEnabled: false' mall-api-worker.js
+          grep -Fq 'direct: 7' mall-api-worker.js
+          grep -Fq 'marketplace: 8' mall-api-worker.js
+          grep -Fq 'ai: 9' mall-api-worker.js
+
+  deploy:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Deploy isolated Mall API Worker
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.mall-api.toml
+      - name: Verify Mall API production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://mall-api.ekodi.kr/health' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' && printf '%s' "$health" | grep -q '"paymentsEnabled":false'; then
+              echo 'EKODI Mall API production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
