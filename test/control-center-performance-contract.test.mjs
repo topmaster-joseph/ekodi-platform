@@ -21,16 +21,12 @@ test('heavy Control Center features are click-loaded rather than idle-preloaded'
   assert.match(features, /loadFinance\(\)\.catch/);
 });
 
-test('dynamic navigation stays event-driven while Campus health observation is narrowly scoped', () => {
+test('dynamic navigation stays event-driven and the simple Campus table needs no observer', () => {
   assert.match(compact, /ekodi-feature-installed/);
   assert.match(features, /ekodi-feature-installed/);
-  assert.doesNotMatch(compact, /MutationObserver\(translateDynamicNavigation/);
-  assert.doesNotMatch(compact, /observer\.observe\(nav|observer\.observe\(document\.body/);
-  assert.match(compact, /new MutationObserver\(syncCampusHealth\)/);
-  assert.match(compact, /targets\.forEach\(target => observer\.observe\(target/);
-  for (const selector of ['#metricHealthy', '#metricIssues', '#operationsGenerated']) {
-    assert.ok(compact.includes(selector), `Campus health observer must remain scoped to ${selector}`);
-  }
+  assert.doesNotMatch(compact, /new MutationObserver/);
+  assert.match(compact, /campusServiceRows/);
+  assert.match(compact, /campusServiceRow/);
 });
 
 test('payment readiness reuses the Finance overview response instead of refetching it', () => {
