@@ -7,12 +7,13 @@ const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
 const migration=read('supabase/migrations/20260815020000_person_identity_workspaces.sql');
 const mergeMigration=read('supabase/migrations/20260815021000_explicit_identity_merge.sql');
+const personalHandoffMigration=read('supabase/migrations/20260815022000_personal_marketing_handoff.sql');
 const identityApi=read('supabase/functions/identity-api/index.ts');
 const accessApi=read('supabase/functions/access-api/index.ts');
 const authJs=read('auth-site/auth.js');
 const authHtml=read('auth-site/index.html');
 
- test('person and login identity schema stays separate from organization membership',()=>{
+test('person and login identity schema stays separate from organization membership',()=>{
   assert.match(migration,/create table if not exists public\.people/i);
   assert.match(migration,/create table if not exists public\.login_identities/i);
   assert.match(migration,/unique \(provider, provider_subject\)/i);
@@ -27,6 +28,13 @@ test('explicit dual verification can merge separately initialized people',()=>{
   assert.match(mergeMigration,/status = 'merged'/i);
   assert.match(mergeMigration,/p_initiator_user_id/i);
   assert.match(mergeMigration,/p_provider_subject/i);
+});
+
+test('personal Marketing AI workspace receives the same verified handoff path',()=>{
+  assert.match(personalHandoffMigration,/current_site_workspaces_base/i);
+  assert.match(personalHandoffMigration,/workspace_kind' = 'personal'/i);
+  assert.match(personalHandoffMigration,/'requires_handoff', true/i);
+  assert.match(personalHandoffMigration,/'status', 'active'/i);
 });
 
 test('identity api persists Google subject and supports linked Google accounts',()=>{
