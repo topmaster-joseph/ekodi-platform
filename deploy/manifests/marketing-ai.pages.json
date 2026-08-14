@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "targets": [
     {
       "name": "Marketing AI Hub",
@@ -21,7 +21,7 @@
       "name": "Jadam Marketing AI",
       "project": "marketing-ai-jadam",
       "directory": "dist/marketing-ai/jadam",
-      "productionUrl": "https://jadam.ekodi.kr/",
+      "productionUrl": "https://jadam.ai.ekodi.kr/",
       "expect": [
         "자담치킨 목포대점",
         "id=\"googleCustomerAuth\"",
@@ -37,7 +37,7 @@
       "name": "Pizzamaru Marketing AI",
       "project": "marketing-ai-pizzamaru",
       "directory": "dist/marketing-ai/pizzamaru",
-      "productionUrl": "https://pizzamaru.ekodi.kr/",
+      "productionUrl": "https://pizzamaru.ai.ekodi.kr/",
       "expect": [
         "피자마루 목포대점",
         "id=\"googleCustomerAuth\"",
@@ -53,7 +53,7 @@
       "name": "Yogurt Marketing AI",
       "project": "marketing-ai-yogurtpurple",
       "directory": "dist/marketing-ai/yogurtpurple",
-      "productionUrl": "https://yogurt.ekodi.kr/",
+      "productionUrl": "https://yogurt.ai.ekodi.kr/",
       "expect": [
         "요거트퍼플 목포대점",
         "id=\"googleCustomerAuth\"",
