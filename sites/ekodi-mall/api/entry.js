@@ -85,16 +85,14 @@ async function firstTouch(env, input = {}) {
   if (!row) return { status: 404, body: { error: '공개 상품을 찾을 수 없습니다.' } };
   const now = nowIso();
   const existing = await env.DB.prepare(`SELECT id,attribution_token AS token,source_type AS sourceType,channel,fee_rate_percent AS feeRatePercent,
-    first_seen_at AS firstSeenAt,last_seen_at AS lastSeenAt,expires_at AS expiresAt FROM attribution_visits WHERE product_id=? AND visitor_id=?`)
-    .bind(row.id, visitorId).first();
+    first_seen_at AS firstSeenAt,last_seen_at AS lastSeenAt,expires_at AS expiresAt FROM attribution_visits WHERE product_id=? AND visitor_id=?`).bind(row.id, visitorId).first();
   if (existing && existing.expiresAt > now) {
     await env.DB.prepare('UPDATE attribution_visits SET last_seen_at=? WHERE id=?').bind(now, existing.id).run();
     return { status: 200, body: { attribution: { ...existing, lastSeenAt: now, windowDays: ATTRIBUTION_WINDOW_DAYS, firstTouchPreserved: true } } };
   }
   let sourceType = 'marketplace'; let channel = 'mall'; let shareLinkCode = null;
   if (refCode) {
-    const link = await env.DB.prepare(`SELECT code,source_type AS sourceType,channel FROM share_links WHERE code=? AND product_id=? AND active=1 AND (expires_at IS NULL OR expires_at>?)`)
-      .bind(refCode, row.id, now).first();
+    const link = await env.DB.prepare(`SELECT code,source_type AS sourceType,channel FROM share_links WHERE code=? AND product_id=? AND active=1 AND (expires_at IS NULL OR expires_at>?)`).bind(refCode, row.id, now).first();
     if (link) { sourceType = trustedSource(link.sourceType); channel = clean(link.channel, 30) || 'unknown'; shareLinkCode = link.code; }
   }
   const verifiedBusinessStore = row.seller_type === 'business' && Boolean(row.store_id) && row.store_verification_status === 'verified';
@@ -107,8 +105,7 @@ async function firstTouch(env, input = {}) {
       VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(product_id,visitor_id) DO UPDATE SET attribution_token=excluded.attribution_token,share_link_code=excluded.share_link_code,
       source_type=excluded.source_type,channel=excluded.channel,fee_rate_percent=excluded.fee_rate_percent,first_seen_at=excluded.first_seen_at,
-      last_seen_at=excluded.last_seen_at,expires_at=excluded.expires_at`)
-      .bind(id, row.id, visitorId, token, shareLinkCode, sourceType, channel, feeRatePercent, now, now, expiresAt),
+      last_seen_at=excluded.last_seen_at,expires_at=excluded.expires_at`).bind(id, row.id, visitorId, token, shareLinkCode, sourceType, channel, feeRatePercent, now, now, expiresAt),
     env.DB.prepare("INSERT INTO product_events (product_id,event_type,attribution_type,channel,session_token,occurred_at) VALUES (?,'view',?,?,?,?)").bind(row.id, sourceType, channel, token, now)
   ]);
   return { status: existing ? 200 : 201, body: { attribution: { id, token, sourceType, channel, feeRatePercent, firstSeenAt: now, lastSeenAt: now, expiresAt, windowDays: ATTRIBUTION_WINDOW_DAYS, firstTouchPreserved: false } } };
@@ -143,7 +140,7 @@ export default {
       const verificationReady = Boolean(env.DB) && await verificationSchemaReady(env);
       const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady;
       return reply({
-        ...coreBody, ok, version:4, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
+        ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS, operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
