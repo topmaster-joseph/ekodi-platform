@@ -16,6 +16,8 @@ on:
       - 'responsive.css'
       - '_headers'
       - 'auth-site/**'
+      - 'marketing-ai-admin.js'
+      - 'marketing-ai-admin.css'
       - 'config/ecosystem-services.json'
       - 'scripts/ecosystem-registry.mjs'
       - 'scripts/build.mjs'
@@ -50,12 +52,16 @@ jobs:
           node --check script.js
           node --check homepage-ambient.js
           node --check auth-site/auth-workspace-target.js
+          node --check marketing-ai-admin.js
           node --check scripts/ecosystem-registry.mjs
           node --check scripts/build.mjs
           node --check scripts/guarded-worker-release.mjs
           test -f homepage-ambient.css
+          test -f marketing-ai-admin.css
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' site-worker.js
+          grep -Fq '/marketing-ai-admin.js' site-worker.js
+          grep -Fq 'https://marketing.ekodi.kr' site-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -66,7 +72,13 @@ jobs:
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
           test -f dist/auth-workspace-target.js
+          test -f dist/marketing-ai-admin.js
+          test -f dist/marketing-ai-admin.css
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
+          grep -Fq "button.dataset.section = 'marketing-ai'" dist/marketing-ai-admin.js
+          grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' dist/marketing-ai-admin.js
+          grep -Fq 'marketing-ai-admin.js' dist/control-center.html
+          grep -Fq 'marketing-ai-admin.css' dist/control-center.html
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
       - name: Verify every shared-runtime domain family
@@ -78,9 +90,11 @@ jobs:
           verify_homepage_registry() { code=$(curl -L -sS -o /tmp/homepage -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'data-ekodi-service-registry="v1"' /tmp/homepage && grep -Fq 'data-service-id="community"' /tmp/homepage && grep -Fq 'https://community.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="work"' /tmp/homepage && grep -Fq 'https://work.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="marketing"' /tmp/homepage && grep -Fq 'https://marketing.ekodi.kr' /tmp/homepage && grep -Fq '/homepage-ambient.css' /tmp/homepage && grep -Fq '/homepage-ambient.js' /tmp/homepage; }
           verify_homepage_ambient() { css_code=$(curl -L -sS -o /tmp/homepage-ambient.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.css' || true); js_code=$(curl -L -sS -o /tmp/homepage-ambient.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.js' || true); [[ "$css_code" =~ ^[23] ]] && [[ "$js_code" =~ ^[23] ]] && grep -Fq 'z-index:0' /tmp/homepage-ambient.css && grep -Fq '.site-header,' /tmp/homepage-ambient.css && grep -Fq 'getRandomValues' /tmp/homepage-ambient.js; }
           verify_targeted_auth_asset() { code=$(curl -L -sS -o /tmp/auth-workspace-target.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-workspace-target.js' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'workspace_key:requested' /tmp/auth-workspace-target.js && grep -Fq "site!=='marketing'" /tmp/auth-workspace-target.js; }
+          verify_marketing_admin_asset() { js_code=$(curl -L -sS -o /tmp/marketing-ai-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.js' || true); css_code=$(curl -L -sS -o /tmp/marketing-ai-admin.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.css' || true); [[ "$js_code" =~ ^[23] ]] && [[ "$css_code" =~ ^[23] ]] && grep -Fq "button.dataset.section = 'marketing-ai'" /tmp/marketing-ai-admin.js && grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' /tmp/marketing-ai-admin.js && grep -Fq '.marketing-ai-admin-body' /tmp/marketing-ai-admin.css; }
+          verify_admin_marketing_csp() { code=$(curl -sS -D /tmp/admin-marketing-headers -o /tmp/admin-marketing-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fiq 'frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr https://marketing.ekodi.kr' /tmp/admin-marketing-headers && grep -Fq 'marketing-ai-admin.js' /tmp/admin-marketing-body; }
           for attempt in $(seq 1 18); do
-            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' && verify_targeted_auth_asset && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING' && verify_mail; then
-              echo 'Shared site Worker, targeted auth workspace asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'; exit 0
+            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_admin_marketing_csp && verify_marketing_admin_asset && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' && verify_targeted_auth_asset && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING' && verify_mail; then
+              echo 'Shared site Worker, MarketingAI admin panel, targeted auth workspace asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'; exit 0
             fi
             sleep 5
           done
