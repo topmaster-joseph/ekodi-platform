@@ -35,15 +35,17 @@ test('verification migration follows fulfillment migration and remains additive'
   assert.match(verification,/VERIFIED_SELLER_TYPE_LOCKED/);
 });
 
-test('entry composes discovery before broad supplier pilot routing and delegates core API last', async () => {
+test('entry composes official connector, discovery and supplier pilot before core delegation', async () => {
   const source=await readFile(new URL('./entry.js',import.meta.url),'utf8');
   assert.match(source,/import core from '\.\/worker\.js'/);
-  assert.match(source,/handleFulfillmentRequest/);
-  assert.match(source,/handleVerificationRequest/);
+  assert.match(source,/handleDomemaeRequest/);
+  assert.match(source,/domemaeConnectorReady/);
+  assert.match(source,/domemaeOrderEnabled:false/);
   assert.match(source,/handleSupplierDiscoveryRequest/);
   assert.match(source,/supplierDiscoverySchemaReady/);
-  assert.match(source,/fulfillmentSchemaReady/);
-  assert.match(source,/verificationSchemaReady/);
+  assert.match(source,/handleFulfillmentRequest/);
+  assert.match(source,/handleVerificationRequest/);
+  assert.ok(source.indexOf('handleDomemaeRequest(request, env)') < source.indexOf('handleSupplierPilotRequest(request, env)'));
   assert.ok(source.indexOf('handleSupplierDiscoveryRequest(request, env)') < source.indexOf('handleSupplierPilotRequest(request, env)'));
   assert.match(source,/return core\.fetch\(request, env\)/);
   assert.match(source,/version:3/);

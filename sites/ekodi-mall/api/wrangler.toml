@@ -19,6 +19,10 @@ PAYMENTS_ENABLED = "false"
 SOURCING_AUTO_ORDER_ENABLED = "false"
 BUYER_PII_RELEASE_ENABLED = "false"
 SUPPLIER_FORWARD_ENABLED = "false"
+DOMEMAE_LOOKUP_ENABLED = "false"
+
+# DOMEMAE_API_KEY, DOMEMAE_USER_ID, DOMEMAE_SESSION_ID are Worker secrets only.
+# Do not put provider credentials in this file, browser assets or D1.
 
 # Non-destructive compatibility declaration for the short-lived SQLite Durable
 # Object Mall API. The namespace remains provisioned, but current Mall traffic

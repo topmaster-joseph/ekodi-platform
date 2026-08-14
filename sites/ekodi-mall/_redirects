@@ -10,6 +10,8 @@
 /supplier-ops/ /assets/supplier-ops.html 200
 /supplier-discovery /assets/supplier-discovery.html 200
 /supplier-discovery/ /assets/supplier-discovery.html 200
+/supplier-connectors /assets/supplier-connectors.html 200
+/supplier-connectors/ /assets/supplier-connectors.html 200
 /p/* /assets/shared-product.html 200
 /store/* /assets/shared-store.html 200
 /shipping /pages/shipping/ 301
