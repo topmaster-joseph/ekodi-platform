@@ -15,7 +15,6 @@ on:
       - '_headers'
       - 'scripts/build.mjs'
       - 'wrangler.site.toml'
-      - '.github/workflows/deploy-site-core.yml'
 
 permissions:
   contents: read
