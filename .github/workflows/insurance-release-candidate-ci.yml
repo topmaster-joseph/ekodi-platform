@@ -137,7 +137,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'workers_dev = true' sites/ekodi-insurance/wrangler.toml
-          grep -Fq 'run_worker_first = true' sites/ekodi-insurance/wrangler.toml
+          grep -Fq 'run_worker_first = [ "/", "/health" ]' sites/ekodi-insurance/wrangler.toml
+          grep -Fq 'Content-Security-Policy:' sites/ekodi-insurance/public/_headers
+          grep -Fq 'X-Robots-Tag: noindex, nofollow' sites/ekodi-insurance/public/_headers
           if grep -Eq '^routes?\s*=' sites/ekodi-insurance/wrangler.toml; then
             echo 'Production route detected in customer UI staging config'
             exit 1
