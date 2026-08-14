@@ -49,11 +49,13 @@ test('customer onboarding remains Google preregistration without invite URLs or 
   assert.doesNotMatch(source, /Math\.random/);
 });
 
-test('directory API keeps one global Google identity with tenant-scoped memberships', () => {
-  assert.match(directoryApi, /customer_memberships/);
-  assert.match(directoryApi, /JOIN customer_users/);
+test('directory API is sourced from tenant-scoped Google access grants so preregistered members are visible before first login', () => {
+  assert.match(directoryApi, /customer_access_grants/);
+  assert.match(directoryApi, /LEFT JOIN customer_users/);
   assert.match(directoryApi, /JOIN customer_tenants/);
+  assert.match(directoryApi, /last_verified_at \? 'active' : 'pre_registered'/);
   assert.match(directoryApi, /uniqueGoogleAccounts/);
+  assert.match(directoryApi, /new Set\(allMembers\.map\(member => normalize\(member\.email\)\)/);
   assert.match(directoryApi, /identityProvider: 'google'/);
   assert.match(entryWorker, /handleCustomerMemberDirectory/);
   assert.match(entryWorker, /const directory = await handleCustomerMemberDirectory/);
