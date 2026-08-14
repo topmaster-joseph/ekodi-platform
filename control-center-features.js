@@ -48,6 +48,11 @@
     await loadModule('google-admin-auth.js');
   }
 
+  async function loadDomains() {
+    await loadStyle('domains-hub.css');
+    await loadModule('domains-hub.js');
+  }
+
   async function loadAffiliates() {
     await loadStyle('marketing-funnel-admin.css');
     await loadModule('marketing-funnel-admin.js');
@@ -69,10 +74,44 @@
   const loaders = {
     clients: loadClients,
     admins: loadAdmins,
+    domains: loadDomains,
     affiliates: loadAffiliates,
     books: loadBooks,
     finance: loadFinance,
   };
+
+  function setShortLabel(section, label) {
+    const button = nav?.querySelector(`[data-section="${section}"], [data-lazy-section="${section}"]`);
+    const span = button?.querySelector('span');
+    if (span) span.textContent = label;
+  }
+
+  function openLazySection(section) {
+    const button = nav?.querySelector(`[data-section="${section}"], [data-lazy-section="${section}"]`);
+    button?.click();
+  }
+
+  function normalizeShortLabels() {
+    setShortLabel('admins', 'Admin');
+    setShortLabel('domains', 'Domains');
+
+    document.querySelectorAll('.campus-quick-actions [data-campus-section="admins"]').forEach(button => {
+      button.textContent = 'Admin';
+    });
+
+    document.querySelectorAll('a[href="/legacy#domains"], a[href="#domains"]').forEach(link => {
+      if (link.closest('.sidebar')) return;
+      if (link.closest('.campus-quick-actions')) link.textContent = 'Domains';
+      link.href = '#domains';
+      if (link.dataset.domainsHubBound === 'true') return;
+      link.dataset.domainsHubBound = 'true';
+      link.addEventListener('click', event => {
+        event.preventDefault();
+        openLazySection('domains');
+        if (location.hash !== '#domains') history.replaceState(null, '', '#domains');
+      });
+    });
+  }
 
   function removeResolvedPlaceholders() {
     if (!nav) return;
@@ -87,6 +126,8 @@
   function notifyInstalled(section) {
     removeResolvedPlaceholders();
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail: { section } }));
+    normalizeShortLabels();
+    queueMicrotask(normalizeShortLabels);
   }
 
   async function activateLazy(section, button) {
@@ -126,13 +167,15 @@
     if (!nav) return;
     const services = nav.querySelector('[data-section="services"]');
     const finance = nav.querySelector('[data-section="finance"]');
+    const organization = nav.querySelector('[data-section="organization"]');
     const policies = nav.querySelector('[data-section="policies"]');
-    const domainLink = nav.querySelector('a[href="/legacy#domains"]');
+    const activityLink = nav.querySelector('a[href="/legacy#activity"]');
+    const legacyDomainLink = nav.querySelector('a[href="/legacy#domains"]');
 
     const clients = placeholder('clients', '◎', 'Clients');
     if (clients) services?.insertAdjacentElement('afterend', clients);
 
-    const admins = placeholder('admins', '◈', 'Admin Accounts');
+    const admins = placeholder('admins', '◈', 'Admin');
     if (admins) (clients || nav.querySelector('[data-section="clients"]') || services)?.insertAdjacentElement('afterend', admins);
 
     const books = placeholder('books', '▤', 'Books');
@@ -141,12 +184,23 @@
       else nav.append(books);
     }
 
+    const domains = placeholder('domains', '◎', 'Domains');
+    if (domains) {
+      if (legacyDomainLink) nav.insertBefore(domains, legacyDomainLink);
+      else if (activityLink) nav.insertBefore(domains, activityLink);
+      else if (organization) organization.insertAdjacentElement('afterend', domains);
+      else nav.append(domains);
+    }
+    legacyDomainLink?.remove();
+
     const affiliates = placeholder('affiliates', '↗', 'Affiliates');
     if (affiliates) {
       if (policies) nav.insertBefore(affiliates, policies);
-      else if (domainLink) nav.insertBefore(affiliates, domainLink);
+      else if (activityLink) nav.insertBefore(affiliates, activityLink);
       else nav.append(affiliates);
     }
+
+    normalizeShortLabels();
   }
 
   function activateHash() {
@@ -163,15 +217,20 @@
     loadFinance().catch(error => console.warn('[EKODI finance feature]', error));
   });
 
+  window.addEventListener('ekodi-feature-installed', normalizeShortLabels);
+  window.addEventListener('hashchange', activateHash);
+
   if (app && app.hidden) {
     const observer = new MutationObserver(() => {
       if (!app.hidden && token()) {
         observer.disconnect();
+        normalizeShortLabels();
         activateHash();
       }
     });
     observer.observe(app, { attributes: true, attributeFilter: ['hidden'] });
   } else {
+    normalizeShortLabels();
     activateHash();
   }
 })();

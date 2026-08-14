@@ -55,6 +55,8 @@ const ADMIN_ASSETS = new Set([
   '/marketing-funnel-admin.js',
   '/google-admin-auth.css',
   '/google-admin-auth.js',
+  '/domains-hub.css',
+  '/domains-hub.js',
   '/books-admin.css',
   '/books-admin.js',
   '/books-finance-admin.css',
