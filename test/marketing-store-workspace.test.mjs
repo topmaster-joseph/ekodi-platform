@@ -33,8 +33,9 @@ test('Plus canonical workspace uses the shared Marketing AI Pages project', () =
   assert.equal(normalizeWorkspaceSlug('marketing'), '');
   assert.match(workspaceControl, /PLUS_OR_ABOVE/);
   assert.match(workspaceControl, /\.ai\.ekodi\.kr/);
+  assert.match(workspaceControl, /marketing_store_workspaces/);
   assert.match(workspaceControl, /provider_project.*marketing-ai/s);
-  assert.match(workspaceControl, /subject_type='store'/);
+  assert.match(workspaceControl, /workspace\/resolve/);
   assert.match(worker, /handleMarketingStoreWorkspaceRequest/);
 });
 
@@ -43,12 +44,17 @@ test('Pro store custom domains reject EKODI and provider-owned suffixes', () => 
   assert.equal(normalizeStoreCustomerHostname('shop.ekodi.kr'), '');
   assert.equal(normalizeStoreCustomerHostname('foo.pages.dev'), '');
   assert.match(domainControl, /PRO_OR_ABOVE/);
-  assert.match(domainControl, /store-domains/);
+  assert.match(domainControl, /marketing_store_custom_domains/);
+  assert.match(domainControl, /runMarketingStoreDomainSchedule/);
   assert.match(worker, /handleMarketingStoreDomainRequest/);
+  assert.match(worker, /runMarketingStoreDomainSchedule/);
 });
 
-test('D1 migration permits store subjects without weakening subject uniqueness', () => {
-  assert.match(migration, /subject_type IN \('person','tenant','store'\)/);
-  assert.match(migration, /UNIQUE\(subject_type, subject_key\)/);
-  assert.match(migration, /FOREIGN KEY\(workspace_id\) REFERENCES marketing_workspaces_v2\(id\)/);
+test('D1 rollout is additive and leaves legacy person and tenant domain tables untouched', () => {
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS marketing_store_workspaces/);
+  assert.match(migration, /store_id TEXT NOT NULL UNIQUE/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS marketing_store_custom_domains/);
+  assert.match(migration, /FOREIGN KEY\(workspace_id\) REFERENCES marketing_store_workspaces\(id\)/);
+  assert.doesNotMatch(migration, /DROP TABLE/i);
+  assert.doesNotMatch(migration, /ALTER TABLE[^;]+RENAME/i);
 });
