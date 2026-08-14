@@ -1,15 +1,117 @@
-const els={tabs:document.querySelector('#orgTabs'),summary:document.querySelector('#orgSummary'),channels:document.querySelector('#channelGrid'),filters:document.querySelector('#providerFilters'),status:document.querySelector('#feedStatus'),feed:document.querySelector('#feedGrid')};
+const els={tabs:document.querySelector('#orgTabs'),summary:document.querySelector('#orgSummary'),channels:document.querySelector('#channelGrid'),filters:document.querySelector('#providerFilters'),status:document.querySelector('#feedStatus'),feed:document.querySelector('#feedGrid'),featured:document.querySelector('#featuredSection'),featuredPlayer:document.querySelector('#featuredPlayer'),featuredCopy:document.querySelector('#featuredCopy'),featuredSource:document.querySelector('#featuredSource')};
 let registry=null;
-let activeOrg='community';
+let activeOrg=new URLSearchParams(location.search).get('org')||'community';
 let activeProvider='all';
 let latestPosts=[];
+let activationToken=0;
+const providerLabel={all:'전체',youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'Blog',live:'Live'};
 const iconFor=provider=>({youtube:'▶',instagram:'◎',facebook:'f',blog:'B',live:'●'}[provider]||'↗');
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-const fmtDate=value=>{if(!value)return'';const d=new Date(value);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('ko-KR',{month:'short',day:'numeric'}).format(d)};
-async function init(){const res=await fetch('/channels.json',{cache:'no-store'});if(!res.ok)throw new Error('채널 레지스트리를 불러오지 못했습니다.');registry=await res.json();if(!registry.organizations?.some(org=>org.id===activeOrg))activeOrg=registry.organizations?.[0]?.id||'';renderTabs();await activate(activeOrg)}
-function renderTabs(){els.tabs.innerHTML=registry.organizations.map(org=>`<button type="button" role="tab" aria-selected="${org.id===activeOrg}" class="org-tab ${org.id===activeOrg?'active':''}" data-org="${esc(org.id)}"><strong>${esc(org.name)}</strong><span>${esc(org.shortName)}</span></button>`).join('');els.tabs.querySelectorAll('[data-org]').forEach(btn=>btn.addEventListener('click',()=>activate(btn.dataset.org)))}
-async function activate(orgId){activeOrg=orgId;activeProvider='all';latestPosts=[];renderTabs();const org=registry.organizations.find(item=>item.id===orgId);if(!org)return;els.summary.innerHTML=`<div><p class="eyebrow">${esc(org.shortName)}</p><h2>${esc(org.name)}</h2><p>${esc(org.description)}</p></div><a class="website-link" href="${esc(org.website)}" target="_blank" rel="noopener">공식 홈페이지 ↗</a>`;renderChannels(org);renderFilters(org.channels||[]);els.feed.innerHTML='';els.status.textContent='최신 콘텐츠를 불러오고 있습니다.';els.status.hidden=false;try{const res=await fetch(`/api/feed?org=${encodeURIComponent(orgId)}`,{headers:{accept:'application/json'}});const payload=await res.json().catch(()=>({}));if(!res.ok)throw new Error(payload.error||'콘텐츠를 불러오지 못했습니다.');latestPosts=Array.isArray(payload.posts)?payload.posts:[];renderFeed()}catch(error){els.status.hidden=false;els.status.innerHTML=`<strong>콘텐츠 연동 준비 중</strong><span>${esc(error.message)}</span>`}}
-function renderChannels(org){const channels=org.channels||[];if(!channels.length){els.channels.innerHTML='<div class="empty-card">등록된 공식 소셜채널이 없습니다. 관리자에서 채널을 등록하면 이곳에 자동 표시됩니다.</div>';return}els.channels.innerHTML=channels.map(ch=>`<a class="channel-card" href="${esc(ch.url)}" target="_blank" rel="noopener"><span class="channel-icon">${esc(iconFor(ch.provider))}</span><span><b>${esc(ch.label)}</b><small>${esc(ch.description||'공식 채널')}</small></span><i>↗</i></a>`).join('')}
-function renderFilters(channels){const providers=[...new Set(channels.map(ch=>ch.provider).filter(Boolean))];const items=['all',...providers];els.filters.innerHTML=items.map(provider=>`<button type="button" class="filter ${provider===activeProvider?'active':''}" data-provider="${esc(provider)}">${provider==='all'?'전체':provider}</button>`).join('');els.filters.querySelectorAll('[data-provider]').forEach(btn=>btn.addEventListener('click',()=>{activeProvider=btn.dataset.provider;renderFilters(channels);renderFeed()}))}
-function renderFeed(){const posts=activeProvider==='all'?latestPosts:latestPosts.filter(post=>post.provider===activeProvider);if(!posts.length){els.feed.innerHTML='';els.status.hidden=false;els.status.innerHTML='<strong>표시할 최신 콘텐츠가 없습니다.</strong><span>채널 API가 연결되거나 새 콘텐츠가 확인되면 자동으로 이 영역에 나타납니다.</span>';return}els.status.hidden=true;els.feed.innerHTML=posts.map(post=>`<article class="post-card"><a class="thumb" href="${esc(post.url)}" target="_blank" rel="noopener">${post.thumbnail?`<img src="${esc(post.thumbnail)}" alt="" loading="lazy">`:'<span class="thumb-fallback">EKODI</span>'}<span class="provider-badge">${esc(post.provider)}</span></a><div class="post-body"><div class="post-meta"><span>${esc(post.channelName||'EKODI')}</span><time>${esc(fmtDate(post.publishedAt))}</time></div><h3><a href="${esc(post.url)}" target="_blank" rel="noopener">${esc(post.title)}</a></h3>${post.description?`<p>${esc(post.description).slice(0,180)}</p>`:''}</div></article>`).join('')}
+const fmtDate=value=>{if(!value)return'';const d=new Date(value);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('ko-KR',{year:'numeric',month:'short',day:'numeric'}).format(d)};
+
+async function init(){
+  const res=await fetch('/channels.json',{cache:'no-store'});
+  if(!res.ok)throw new Error('채널 레지스트리를 불러오지 못했습니다.');
+  registry=await res.json();
+  if(!registry.organizations?.some(org=>org.id===activeOrg))activeOrg=registry.organizations?.[0]?.id||'';
+  renderTabs();
+  await activate(activeOrg,false);
+}
+
+function renderTabs(){
+  els.tabs.innerHTML=registry.organizations.map(org=>`<button type="button" role="tab" tabindex="${org.id===activeOrg?'0':'-1'}" aria-selected="${org.id===activeOrg}" class="org-tab ${org.id===activeOrg?'active':''}" data-org="${esc(org.id)}"><strong>${esc(org.name)}</strong><span>${esc(org.shortName)}</span></button>`).join('');
+  const buttons=[...els.tabs.querySelectorAll('[data-org]')];
+  buttons.forEach((btn,index)=>{
+    btn.addEventListener('click',()=>activate(btn.dataset.org));
+    btn.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault();
+      let next=index;
+      if(event.key==='ArrowLeft')next=(index-1+buttons.length)%buttons.length;
+      if(event.key==='ArrowRight')next=(index+1)%buttons.length;
+      if(event.key==='Home')next=0;
+      if(event.key==='End')next=buttons.length-1;
+      buttons[next].focus();
+      activate(buttons[next].dataset.org);
+    });
+  });
+}
+
+function syncUrl(orgId){
+  const url=new URL(location.href);
+  url.searchParams.set('org',orgId);
+  history.replaceState({org:orgId},'',url);
+}
+
+async function activate(orgId,sync=true){
+  const token=++activationToken;
+  const org=registry.organizations.find(item=>item.id===orgId);
+  if(!org)return;
+  activeOrg=orgId;
+  activeProvider='all';
+  latestPosts=[];
+  if(sync)syncUrl(orgId);
+  renderTabs();
+  els.summary.innerHTML=`<div><p class="eyebrow">${esc(org.shortName)}</p><h2>${esc(org.name)}</h2><p>${esc(org.description)}</p></div><a class="website-link" href="${esc(org.website)}" target="_blank" rel="noopener">공식 홈페이지 ↗</a>`;
+  renderChannels(org);
+  renderFilters(org.channels||[]);
+  hideFeatured();
+  els.feed.innerHTML='';
+  els.status.textContent='최신 콘텐츠를 불러오고 있습니다.';
+  els.status.hidden=false;
+  try{
+    const res=await fetch(`/api/feed?org=${encodeURIComponent(orgId)}`,{headers:{accept:'application/json'}});
+    const payload=await res.json().catch(()=>({}));
+    if(token!==activationToken)return;
+    if(!res.ok)throw new Error(payload.error||'콘텐츠를 불러오지 못했습니다.');
+    latestPosts=Array.isArray(payload.posts)?payload.posts:[];
+    renderFeatured(payload);
+    renderFeed();
+  }catch(error){
+    if(token!==activationToken)return;
+    hideFeatured();
+    els.status.hidden=false;
+    els.status.innerHTML=`<strong>콘텐츠 연동 준비 중</strong><span>${esc(error.message)}</span>`;
+  }
+}
+
+function renderChannels(org){
+  const channels=org.channels||[];
+  if(!channels.length){els.channels.innerHTML='<div class="empty-card">등록된 공식 소셜채널이 없습니다. 관리자에서 채널을 등록하면 이곳에 자동 표시됩니다.</div>';return;}
+  els.channels.innerHTML=channels.map(ch=>`<a class="channel-card" href="${esc(ch.url)}" target="_blank" rel="noopener"><span class="channel-icon">${esc(iconFor(ch.provider))}</span><span><b>${esc(ch.label)}</b><small>${esc(ch.description||'공식 채널')}</small></span><i>↗</i></a>`).join('');
+}
+
+function renderFilters(channels){
+  const providers=[...new Set(channels.map(ch=>ch.provider).filter(Boolean))];
+  const items=['all',...providers];
+  els.filters.innerHTML=items.map(provider=>`<button type="button" class="filter ${provider===activeProvider?'active':''}" data-provider="${esc(provider)}">${esc(providerLabel[provider]||provider)}</button>`).join('');
+  els.filters.querySelectorAll('[data-provider]').forEach(btn=>btn.addEventListener('click',()=>{activeProvider=btn.dataset.provider;renderFilters(channels);renderFeed()}));
+}
+
+function hideFeatured(){
+  els.featured.hidden=true;
+  els.featuredPlayer.innerHTML='';
+  els.featuredCopy.innerHTML='';
+  els.featuredSource.textContent='';
+}
+
+function renderFeatured(payload){
+  const post=latestPosts.find(item=>item.provider==='youtube'&&item.videoId);
+  if(!post){hideFeatured();return;}
+  const embed=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(post.videoId)}?rel=0`;
+  els.featuredPlayer.innerHTML=`<iframe src="${esc(embed)}" title="${esc(post.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+  els.featuredCopy.innerHTML=`<span class="featured-badge">최신 YouTube</span><h3>${esc(post.title)}</h3><div class="featured-meta"><span>${esc(post.channelName||'EKODI')}</span><time>${esc(fmtDate(post.publishedAt))}</time></div>${post.description?`<p>${esc(post.description).slice(0,260)}</p>`:''}<a href="${esc(post.url)}" target="_blank" rel="noopener">YouTube에서 보기 ↗</a>`;
+  const source=payload.feedSource?.youtube==='api'?'YouTube API':payload.feedSource?.youtube==='rss'?'YouTube 공개 피드':'YouTube';
+  els.featuredSource.textContent=`${source} · 자동 갱신`;
+  els.featured.hidden=false;
+}
+
+function renderFeed(){
+  const posts=activeProvider==='all'?latestPosts:latestPosts.filter(post=>post.provider===activeProvider);
+  if(!posts.length){els.feed.innerHTML='';els.status.hidden=false;els.status.innerHTML='<strong>표시할 최신 콘텐츠가 없습니다.</strong><span>공식 채널이 연결되거나 새 콘텐츠가 확인되면 자동으로 이 영역에 나타납니다.</span>';return;}
+  els.status.hidden=true;
+  els.feed.innerHTML=posts.map(post=>`<article class="post-card"><a class="thumb" href="${esc(post.url)}" target="_blank" rel="noopener">${post.thumbnail?`<img src="${esc(post.thumbnail)}" alt="" loading="lazy">`:'<span class="thumb-fallback">EKODI</span>'}<span class="provider-badge">${esc(providerLabel[post.provider]||post.provider)}</span></a><div class="post-body"><div class="post-meta"><span>${esc(post.channelName||'EKODI')}</span><time>${esc(fmtDate(post.publishedAt))}</time></div><h3><a href="${esc(post.url)}" target="_blank" rel="noopener">${esc(post.title)}</a></h3>${post.description?`<p>${esc(post.description).slice(0,180)}</p>`:''}</div></article>`).join('');
+}
+
+window.addEventListener('popstate',()=>{const next=new URLSearchParams(location.search).get('org');if(next&&registry?.organizations?.some(org=>org.id===next))activate(next,false)});
 init().catch(error=>{els.status.hidden=false;els.status.textContent=error.message});
