@@ -1,0 +1,260 @@
+name: EKODI Insurance · Production Green
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-insurance-production-green
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main branch and explicit external approval gate
+        env:
+          PRODUCTION_APPROVED: ${{ vars.INSURANCE_PRODUCTION_APPROVED }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'Production Green may run only from main.'; exit 1; }
+          test "$PRODUCTION_APPROVED" = 'true' || { echo 'INSURANCE_PRODUCTION_APPROVED repository variable is not true.'; exit 1; }
+      - name: Require stable production secrets
+        env:
+          DATA_KEY: ${{ secrets.INSURANCE_PROD_DATA_KEY }}
+          INTERNAL_TOKEN: ${{ secrets.INSURANCE_PROD_INTERNAL_TOKEN }}
+          RATE_SALT: ${{ secrets.INSURANCE_PROD_RATE_SALT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$DATA_KEY"
+          test -n "$INTERNAL_TOKEN"
+          test -n "$RATE_SALT"
+          DATA_KEY="$DATA_KEY" node -e "const b=Buffer.from(process.env.DATA_KEY||'', 'base64'); if(b.length!==32) throw new Error('INSURANCE_PROD_DATA_KEY must decode to exactly 32 bytes')"
+          test ${#INTERNAL_TOKEN} -ge 32 || { echo 'INSURANCE_PROD_INTERNAL_TOKEN is too short.'; exit 1; }
+          test ${#RATE_SALT} -ge 32 || { echo 'INSURANCE_PROD_RATE_SALT is too short.'; exit 1; }
+
+  green:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DATA_KEY: ${{ secrets.INSURANCE_PROD_DATA_KEY }}
+      INTERNAL_TOKEN: ${{ secrets.INSURANCE_PROD_INTERNAL_TOKEN }}
+      RATE_SALT: ${{ secrets.INSURANCE_PROD_RATE_SALT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Re-run release safety checks
+        run: |
+          set -euo pipefail
+          cd sites/ekodi-insurance
+          npm run check
+          node --check api/worker.js
+          node --check public/server-bridge.js
+          grep -Fq 'contactConsent' public/server-bridge.js
+          grep -Fq 'transcriptConsent' public/server-bridge.js
+          grep -Fq 'stopImmediatePropagation' public/server-bridge.js
+          grep -Fq 'serverConsultationPanel' public/server-bridge.js
+          grep -Fq 'ekodi-insurance-api-green.topmaster-joseph.workers.dev' public/server-bridge.js
+          grep -Fq 'transcriptDefault' api/worker.js
+          grep -Fq 'cleanupExpired' api/worker.js
+
+      - name: Resolve or create production Green D1
+        id: d1
+        working-directory: sites/ekodi-insurance
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-insurance-green');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            echo 'Creating ekodi-insurance-green D1 in APAC.'
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-insurance-green --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build Green API config
+        working-directory: sites/ekodi-insurance
+        env:
+          DB_ID: ${{ steps.d1.outputs.database_id }}
+        run: |
+          cat > api/wrangler.green.runtime.toml <<EOF
+          name = "ekodi-insurance-api-green"
+          main = "worker.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [vars]
+          ENVIRONMENT = "production-green"
+          ALLOWED_ORIGINS = "https://ekodi-insurance-green.topmaster-joseph.workers.dev,https://ins.ekodi.kr"
+          SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+
+          [triggers]
+          crons = ["17 3 * * *"]
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-insurance-green"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+
+      - name: Apply Green D1 migrations and deploy API
+        working-directory: sites/ekodi-insurance
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.green.runtime.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.green.runtime.toml
+
+      - name: Install stable production secrets on Green API
+        working-directory: sites/ekodi-insurance
+        run: |
+          set -euo pipefail
+          printf '%s' "$DATA_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_DATA_KEY --config api/wrangler.green.runtime.toml >/dev/null
+          printf '%s' "$INTERNAL_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_INTERNAL_TOKEN --config api/wrangler.green.runtime.toml >/dev/null
+          printf '%s' "$RATE_SALT" | npx --yes wrangler@${WRANGLER_VERSION} secret put RATE_LIMIT_SALT --config api/wrangler.green.runtime.toml >/dev/null
+          echo 'Stable production secrets installed without printing values.'
+
+      - name: Verify Green API and synthetic encrypted handoff
+        id: green_test
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://ekodi-insurance-api-green.topmaster-joseph.workers.dev'
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/green-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$api/health" || true)
+            if [ "$code" = 200 ] && grep -Fq '"dbReady":true' /tmp/green-health.json && grep -Fq '"encryptionReady":true' /tmp/green-health.json; then break; fi
+            sleep 4
+          done
+          cat /tmp/green-health.json
+          test "$code" = 200
+          grep -Fq '"environment":"production-green"' /tmp/green-health.json
+          grep -Fq '"transcriptDefault":"not-shared"' /tmp/green-health.json
+          grep -Fq '"consultationRetentionDays":30' /tmp/green-health.json
+
+          create_code=$(curl -sS -o /tmp/green-create.json -w '%{http_code}' -X POST "$api/api/consultations" \
+            -H 'origin: https://ekodi-insurance-green.topmaster-joseph.workers.dev' \
+            -H 'content-type: application/json' \
+            --data '{"name":"GREEN SYNTHETIC","contact":"010-9000-0001","shareConsent":true,"shareTranscript":false,"summaryCode":"GENERAL"}' || true)
+          test "$create_code" = 201
+          ID=$(node -e "const d=require('/tmp/green-create.json');process.stdout.write(d.consultation.id)")
+          ACCESS=$(node -e "const d=require('/tmp/green-create.json');process.stdout.write(d.accessToken)")
+          echo "synthetic_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$ACCESS"
+          grep -Fq '"transcriptShared":false' /tmp/green-create.json
+
+          list_code=$(curl -sS -o /tmp/green-list.json -w '%{http_code}' "$api/api/internal/consultations" \
+            -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: green-ci@ekodi.test' || true)
+          test "$list_code" = 200
+          grep -Fq '***-***-0001' /tmp/green-list.json
+          if grep -Fq '010-9000-0001' /tmp/green-list.json; then echo 'Plain contact exposed in Green list'; exit 1; fi
+
+          detail_code=$(curl -sS -o /tmp/green-detail.json -w '%{http_code}' "$api/api/internal/consultations/$ID" \
+            -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: green-ci@ekodi.test' || true)
+          test "$detail_code" = 200
+          grep -Fq '010-9000-0001' /tmp/green-detail.json
+          grep -Fq '"transcriptShared":false' /tmp/green-detail.json
+
+          revoke_code=$(curl -sS -o /tmp/green-revoke.json -w '%{http_code}' -X POST "$api/api/consultations/$ID/revoke" \
+            -H 'origin: https://ekodi-insurance-green.topmaster-joseph.workers.dev' \
+            -H 'content-type: application/json' --data "{\"accessToken\":\"$ACCESS\"}" || true)
+          test "$revoke_code" = 200
+          grep -Fq '"status":"revoked"' /tmp/green-revoke.json
+          echo 'Production Green API encrypted handoff E2E passed.'
+
+      - name: Remove only this run's synthetic consultation
+        if: always() && steps.d1.outputs.database_id != '' && steps.green_test.outputs.synthetic_id != ''
+        working-directory: sites/ekodi-insurance
+        env:
+          ID: ${{ steps.green_test.outputs.synthetic_id }}
+        run: |
+          set -euo pipefail
+          SAFE_ID=$(printf '%s' "$ID" | tr -cd 'A-Za-z0-9_-')
+          test "$SAFE_ID" = "$ID"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config api/wrangler.green.runtime.toml --command "DELETE FROM consultation_requests WHERE id='$SAFE_ID';" >/dev/null
+
+      - name: Build and deploy isolated Green UI
+        working-directory: sites/ekodi-insurance
+        run: |
+          cat > wrangler.green.runtime.toml <<'EOF'
+          name = "ekodi-insurance-green"
+          main = "worker.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [vars]
+          ENVIRONMENT = "production"
+
+          [assets]
+          directory = "./public"
+          binding = "ASSETS"
+          run_worker_first = [ "/", "/health", "/admin", "/admin/" ]
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+          EOF
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.green.runtime.toml
+
+      - name: Verify Green UI is production-mode but domain-isolated
+        shell: bash
+        run: |
+          set -euo pipefail
+          ui='https://ekodi-insurance-green.topmaster-joseph.workers.dev'
+          health=$(curl -fsS "$ui/health")
+          root=$(curl -fsS "$ui/")
+          bridge=$(curl -fsS "$ui/server-bridge.js")
+          admin_headers=$(curl -sS -D - -o /dev/null "$ui/admin")
+          printf '%s' "$health" | grep -Fq '"environment":"production"'
+          printf '%s' "$health" | grep -Fq '"mode":"production-cloudflare-d1-free"'
+          printf '%s' "$root" | grep -Fq 'EKODI Insurance'
+          if printf '%s' "$root" | grep -Fq 'STAGING'; then echo 'Staging label leaked into production Green HTML'; exit 1; fi
+          printf '%s' "$bridge" | grep -Fq 'ekodi-insurance-api-green.topmaster-joseph.workers.dev'
+          printf '%s' "$bridge" | grep -Fq 'serverConsultationPanel'
+          printf '%s' "$admin_headers" | grep -Eqi '^HTTP/.* 302'
+          printf '%s' "$admin_headers" | grep -Eqi '^location: https://admin\.ekodi\.kr/'
+          echo 'Production Green UI verified. No production custom domain was changed.'
+
+      - name: Green readiness summary
+        run: |
+          {
+            echo '### EKODI Insurance Production Green'
+            echo '- Green API: validated'
+            echo '- Green D1 migrations: validated'
+            echo '- Stable production encryption secret: validated without disclosure'
+            echo '- Synthetic encrypted handoff/list/detail/revoke: validated'
+            echo '- Green UI production mode: validated'
+            echo '- admin route: central Admin redirect validated'
+            echo '- Production custom domains: **NOT CHANGED**'
+            echo '- Next gate: explicit cutover workflow after Green review'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove runtime config files
+        if: always()
+        working-directory: sites/ekodi-insurance
+        run: rm -f api/wrangler.green.runtime.toml wrangler.green.runtime.toml

@@ -1,0 +1,256 @@
+name: EKODI Insurance · Clean RC
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-clean-*'
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - 'insurance-admin.css'
+      - 'insurance-admin.js'
+      - 'insurance-control-entry.js'
+      - 'insurance-control-proxy.js'
+      - 'customer-entry-worker.js'
+      - 'control-center-features.js'
+      - 'scripts/build.mjs'
+      - 'wrangler.api.toml'
+      - '.github/workflows/insurance-clean-ci.yml'
+      - '.github/workflows/deploy-insurance-staging.yml'
+      - '.github/workflows/insurance-production-green.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-insurance-clean-rc
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate-and-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate clean active runtime only
+        run: |
+          set -euo pipefail
+          node --check sites/ekodi-insurance/worker.js
+          node --check sites/ekodi-insurance/public/server-bridge.js
+          node --check sites/ekodi-insurance/api/worker.js
+          node --check insurance-control-proxy.js
+          node --check insurance-control-entry.js
+          node --check customer-entry-worker.js
+          node --check control-center-features.js
+          node --check scripts/build.mjs
+          grep -Fq "path.startsWith('/api/insurance/admin')" customer-entry-worker.js
+          grep -Fq 'handleInsuranceAdminProxy' customer-entry-worker.js
+          grep -Fq 'INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"' wrangler.api.toml
+          grep -Fq 'loadInsurance' control-center-features.js
+          grep -Fq 'insurance-admin.css' scripts/build.mjs
+          grep -Fq 'insurance-admin.js' scripts/build.mjs
+          grep -Fq 'contactConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'transcriptConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'stopImmediatePropagation' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'serverConsultationPanel' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq "transcriptDefault: 'not-shared'" sites/ekodi-insurance/api/worker.js
+          grep -Fq 'cleanupExpired' sites/ekodi-insurance/api/worker.js
+          ! grep -R -E '/functions/v1/insurance|SUPABASE_SERVICE_ROLE_KEY|insurance-admin-internal|insurance-identity-staging' \
+            sites/ekodi-insurance/worker.js sites/ekodi-insurance/public/server-bridge.js sites/ekodi-insurance/api/worker.js insurance-control-proxy.js customer-entry-worker.js
+          test ! -d sites/ekodi-insurance/supabase
+          test ! -d sites/ekodi-insurance/sql
+          test ! -d sites/ekodi-insurance/auth-staging
+
+      - name: Validate app and root build
+        run: |
+          set -euo pipefail
+          (cd sites/ekodi-insurance && npm run check)
+          npm run build
+          test -f dist/insurance-admin.js
+          test -f dist/insurance-admin.css
+
+      - name: Validate D1 migrations and revoke minimization trigger locally
+        run: |
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db=sqlite3.connect(':memory:')
+          for f in sorted(Path('sites/ekodi-insurance/api/migrations').glob('*.sql')):
+              db.executescript(f.read_text(encoding='utf-8'))
+          tables={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
+          required={'consultation_requests','consultation_audit_events','request_rate_limits'}
+          forbidden={'insurance_policies','insurance_claims','insurance_claim_cases','health_profiles','medical_records'}
+          assert required.issubset(tables), required-tables
+          assert not (tables & forbidden), tables & forbidden
+          now='2026-08-15T00:00:00Z'
+          db.execute("""insert into consultation_requests(id,user_id,contact_name,contact_ciphertext,contact_hint,preferred_time,ai_summary,transcript_ciphertext,transcript_shared,status,access_token_hash,created_at,updated_at)
+          values('con_test','user','테스트','cipher','***-0000','오후','요약','transcript',1,'new','hash',?,?)""",(now,now))
+          db.execute("update consultation_requests set status='revoked', revoked_at=? where id='con_test'",(now,))
+          row=db.execute("select user_id,contact_name,contact_ciphertext,contact_hint,preferred_time,ai_summary,transcript_ciphertext,transcript_shared,access_token_hash from consultation_requests where id='con_test'").fetchone()
+          assert row == (None,'','','','','',None,0,''), row
+          print('Minimal D1 schema + revoke minimization trigger verified')
+          PY
+
+      - name: Verify Cloudflare staging credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Resolve isolated Insurance staging D1
+        id: d1
+        working-directory: sites/ekodi-insurance
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-insurance-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-insurance-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and deploy clean staging API
+        id: deploy_api
+        working-directory: sites/ekodi-insurance
+        env:
+          DB_ID: ${{ steps.d1.outputs.database_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > api/wrangler.clean.runtime.toml <<EOF
+          name = "ekodi-insurance-api-staging"
+          main = "worker.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [[routes]]
+          pattern = "insurance-api-staging.ekodi.kr"
+          custom_domain = true
+
+          [vars]
+          ENVIRONMENT = "staging-clean"
+          ALLOWED_ORIGINS = "https://ins.ekodi.kr,https://ekodi-insurance-staging.topmaster-joseph.workers.dev"
+          SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+
+          [triggers]
+          crons = ["17 3 * * *"]
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-insurance-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.clean.runtime.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.clean.runtime.toml
+          DATA_KEY=$(openssl rand -base64 32 | tr -d '\n')
+          INTERNAL_TOKEN=$(openssl rand -hex 32)
+          RATE_SALT=$(openssl rand -hex 32)
+          echo "::add-mask::$INTERNAL_TOKEN"
+          printf '%s' "$DATA_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_DATA_KEY --config api/wrangler.clean.runtime.toml >/dev/null
+          printf '%s' "$INTERNAL_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_INTERNAL_TOKEN --config api/wrangler.clean.runtime.toml >/dev/null
+          printf '%s' "$RATE_SALT" | npx --yes wrangler@${WRANGLER_VERSION} secret put RATE_LIMIT_SALT --config api/wrangler.clean.runtime.toml >/dev/null
+          echo "internal_token=$INTERNAL_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Verify clean API, separate consent, proxy and revoke E2E
+        env:
+          INTERNAL_TOKEN: ${{ steps.deploy_api.outputs.internal_token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://insurance-api-staging.ekodi.kr'
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
+            if [ "$code" = 200 ] && grep -Fq '"dbReady":true' /tmp/health.json && grep -Fq '"encryptionReady":true' /tmp/health.json; then break; fi
+            sleep 4
+          done
+          test "$code" = 200
+          grep -Fq '"environment":"staging-clean"' /tmp/health.json
+          grep -Fq '"transcriptDefault":"not-shared"' /tmp/health.json
+          grep -Fq '"consultationRetentionDays":30' /tmp/health.json
+          grep -Fq '"persistentPolicyLedger":false' /tmp/health.json
+          grep -Fq '"persistentClaimLedger":false' /tmp/health.json
+
+          create_code=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "$base/api/consultations" -H 'content-type: application/json' --data '{"name":"CLEAN RC","contact":"010-7777-8800","shareConsent":true,"shareTranscript":false,"summaryCode":"COVERAGE","messages":[{"role":"user","content":"DO-NOT-PERSIST-ME"}]}' || true)
+          test "$create_code" = 201
+          ID=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.consultation.id)")
+          ACCESS=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.accessToken)")
+          grep -Fq '"transcriptShared":false' /tmp/create.json
+
+          INTERNAL_TOKEN="$INTERNAL_TOKEN" ID="$ID" node --input-type=module <<'JS'
+          import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
+          const base='https://insurance-api-staging.ekodi.kr';
+          const token=process.env.INTERNAL_TOKEN;
+          const id=process.env.ID;
+          const apiWorker={fetch:async()=>new Response(JSON.stringify({email:'clean-ci@ekodi.test'}),{status:200,headers:{'content-type':'application/json'}})};
+          const env={INSURANCE_API_BASE:base,INSURANCE_INTERNAL_TOKEN:token};
+          let response=await handleInsuranceAdminProxy(new Request('https://api.test/api/insurance/admin/consultations',{headers:{authorization:'Bearer synthetic'}}),env,{},apiWorker);
+          if(response.status!==200)throw new Error(`proxy list ${response.status}`);
+          let data=await response.json();
+          const item=data.consultations.find(v=>v.id===id);
+          if(!item||item.contactHint!=='***-***-8800')throw new Error('proxy list masking failed');
+          if(JSON.stringify(data).includes('010-7777-8800')||JSON.stringify(data).includes('DO-NOT-PERSIST-ME'))throw new Error('private data leaked in list');
+          response=await handleInsuranceAdminProxy(new Request(`https://api.test/api/insurance/admin/consultations/${id}`,{headers:{authorization:'Bearer synthetic'}}),env,{},apiWorker);
+          if(response.status!==200)throw new Error(`proxy detail ${response.status}`);
+          data=await response.json();
+          if(data.consultation.contact!=='010-7777-8800'||data.consultation.transcriptShared!==false)throw new Error('proxy detail boundary failed');
+          if(JSON.stringify(data).includes('DO-NOT-PERSIST-ME'))throw new Error('unconsented transcript persisted');
+          response=await handleInsuranceAdminProxy(new Request(`https://api.test/api/insurance/admin/consultations/${id}/status`,{method:'PATCH',headers:{authorization:'Bearer synthetic','content-type':'application/json'},body:JSON.stringify({status:'working'})}),env,{},apiWorker);
+          if(response.status!==200)throw new Error(`proxy status ${response.status}`);
+          data=await response.json();
+          if(data.consultation?.status!=='working'&&data.status!=='working')throw new Error('status mapping failed');
+          JS
+
+          revoke_code=$(curl -sS -o /tmp/revoke.json -w '%{http_code}' -X POST "$base/api/consultations/$ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$ACCESS\"}" || true)
+          test "$revoke_code" = 200
+          grep -Fq '"status":"revoked"' /tmp/revoke.json
+          echo 'Clean Insurance API + proxy + consent + revoke E2E passed.'
+
+      - name: Verify clean UI staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          ui='https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
+          for attempt in $(seq 1 18); do
+            root=$(curl -fsS --connect-timeout 5 --max-time 15 "$ui/" || true)
+            bridge=$(curl -fsS --connect-timeout 5 --max-time 15 "$ui/server-bridge.js" || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 15 "$ui/health" || true)
+            if printf '%s' "$root" | grep -Fq 'EKODI Insurance' \
+              && printf '%s' "$bridge" | grep -Fq 'serverConsultationPanel' \
+              && printf '%s' "$bridge" | grep -Fq 'transcriptConsent' \
+              && printf '%s' "$health" | grep -Fq '"transcriptDefault":"not-shared"'; then
+              echo 'Clean Insurance UI staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+      - name: Cleanup synthetic staging records and runtime config
+        if: always()
+        working-directory: sites/ekodi-insurance
+        run: |
+          if [ -f api/wrangler.clean.runtime.toml ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config api/wrangler.clean.runtime.toml --command "DELETE FROM consultation_audit_events; DELETE FROM consultation_requests; DELETE FROM request_rate_limits;" || true
+          fi
+          rm -f api/wrangler.clean.runtime.toml

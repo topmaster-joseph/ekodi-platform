@@ -13,6 +13,7 @@ import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleSocialRegistry } from './social-registry-api.js';
+import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
   '/api/setup',
@@ -24,6 +25,24 @@ const LEGACY_CUSTOMER_PASSWORD_PATHS = new Set(['/api/customer/login']);
 
 function googleAdminEnabled(env = {}) {
   return String(env.GOOGLE_CLIENT_ID || '').trim().endsWith('.apps.googleusercontent.com');
+}
+
+function insuranceAdminEnabled(env = {}) {
+  return String(env.INSURANCE_ADMIN_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+function disabledInsuranceAdminResponse() {
+  return new Response(JSON.stringify({
+    error: '보험 상담관리 운영경로는 아직 활성화되지 않았습니다.',
+    code: 'INSURANCE_ADMIN_NOT_ENABLED',
+  }), {
+    status: 404,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+    },
+  });
 }
 
 function disabledPasswordResponse(kind = 'admin') {
@@ -46,6 +65,26 @@ function disabledPasswordResponse(kind = 'admin') {
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (path.startsWith('/api/insurance/admin')) {
+      if (!insuranceAdminEnabled(env)) return disabledInsuranceAdminResponse();
+      try {
+        return await handleInsuranceAdminProxy(request, env, ctx, apiWorker);
+      } catch (error) {
+        console.error('Insurance central admin proxy error', error);
+        return new Response(JSON.stringify({
+          error: '보험 상담관리 API 처리 중 오류가 발생했습니다.',
+          code: 'INSURANCE_ADMIN_PROXY_ERROR',
+        }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+          },
+        });
+      }
+    }
 
     if (path.startsWith('/api/membership/')) {
       try {

@@ -19,6 +19,8 @@ ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://auth.ekodi.kr,https://marketing.ekodi.kr,https://biz.ekodi.kr,https://trade.ekodi.kr,https://mall.ekodi.kr,https://pay.ekodi.kr,https://books.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://community.ekodi.kr,https://edu.ekodi.kr,https://media.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
+INSURANCE_ADMIN_ENABLED = "false"
+INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"
 
 [observability.logs]
 enabled = true
@@ -29,3 +31,7 @@ binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
+
+# Insurance secret, never source var:
+# INSURANCE_INTERNAL_TOKEN must match the production Insurance API secret.
+# Keep INSURANCE_ADMIN_ENABLED=false until the explicit production cutover gate passes.

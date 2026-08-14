@@ -44,6 +44,7 @@
   async function loadSocial() { await loadStyle('social-admin.css'); await loadModule('social-admin.js'); }
   async function loadAffiliates() { await loadStyle('marketing-funnel-admin.css'); await loadModule('marketing-funnel-admin.js'); }
   async function loadCommunity() { await loadStyle('community-reports-admin.css'); await loadModule('community-reports-admin.js'); }
+  async function loadInsurance() { await loadStyle('insurance-admin.css'); await loadModule('insurance-admin.js'); }
   async function loadBooks() {
     await Promise.all([loadStyle('books-admin.css'), loadStyle('books-finance-admin.css')]);
     await loadModule('books-admin.js');
@@ -51,7 +52,7 @@
   }
   async function loadFinance() { await loadModule('finance-monitor.js'); }
 
-  const loaders = { clients: loadClients, admins: loadAdmins, domains: loadDomains, social: loadSocial, affiliates: loadAffiliates, community: loadCommunity, books: loadBooks, finance: loadFinance };
+  const loaders = { clients: loadClients, admins: loadAdmins, domains: loadDomains, social: loadSocial, affiliates: loadAffiliates, community: loadCommunity, insurance: loadInsurance, books: loadBooks, finance: loadFinance };
 
   function setShortLabel(section, label) {
     const button = nav?.querySelector(`[data-section="${section}"], [data-lazy-section="${section}"]`);
@@ -60,7 +61,7 @@
   }
   function openLazySection(section) { nav?.querySelector(`[data-section="${section}"], [data-lazy-section="${section}"]`)?.click(); }
   function normalizeShortLabels() {
-    setShortLabel('admins', 'Admin'); setShortLabel('domains', 'Domains'); setShortLabel('social', 'Social');
+    setShortLabel('admins', 'Admin'); setShortLabel('domains', 'Domains'); setShortLabel('social', 'Social'); setShortLabel('insurance', 'Insurance');
     document.querySelectorAll('.campus-quick-actions [data-campus-section="admins"]').forEach(button => { button.textContent = 'Admin'; });
     document.querySelectorAll('a[href="/legacy#domains"], a[href="#domains"]').forEach(link => {
       if (link.closest('.sidebar')) return;
@@ -95,6 +96,7 @@
     const activityLink = nav.querySelector('a[href="/legacy#activity"]'); const legacyDomainLink = nav.querySelector('a[href="/legacy#domains"]');
     const clients = placeholder('clients', '◎', 'Clients'); if (clients) services?.insertAdjacentElement('afterend', clients);
     const admins = placeholder('admins', '◈', 'Admin'); if (admins) (clients || nav.querySelector('[data-section="clients"]') || services)?.insertAdjacentElement('afterend', admins);
+    const insurance = placeholder('insurance', '◇', 'Insurance'); if (insurance) (admins || nav.querySelector('[data-section="admins"]') || clients || services)?.insertAdjacentElement('afterend', insurance);
     const community = placeholder('community', '◌', 'Community');
     const books = placeholder('books', '▤', 'Books');
     if (community) { if (books) nav.insertBefore(community, books); else if (finance) nav.insertBefore(community, finance); else nav.append(community); }
