@@ -43,6 +43,24 @@ test('Books distribution admin provides status matrix and verified channel links
   ]) assert.ok(migration.includes(url), `missing channel link: ${url}`);
 });
 
+test('Books distribution operations surface stale checks, action queue and CSV export', async () => {
+  const ui = await read('books-distribution-admin.js');
+  const css = await read('books-distribution-admin.css');
+  for (const marker of [
+    'STALE_DAYS = 14',
+    'ACTION QUEUE',
+    'Needs Attention',
+    'Stale 14d+',
+    'CSV Export',
+    'markCheckedToday',
+    'openFinance',
+    'exportCsv',
+  ]) assert.ok(ui.includes(marker), `missing distribution operations marker: ${marker}`);
+  for (const marker of ['books-distribution-attention', 'books-attention-item', 'books-dist-stale']) {
+    assert.ok(css.includes(marker), `missing distribution operations style: ${marker}`);
+  }
+});
+
 test('Books build bundles distribution module into secured lazy Books assets', async () => {
   const build = await read('scripts/build.mjs');
   assert.ok(build.includes('books-distribution-admin.css'));
