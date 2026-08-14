@@ -2,6 +2,8 @@
 /local /#local 302
 /story /#story 302
 /journal /#journal 302
+/free-ops /assets/free-ops.html 200
+/free-ops/ /assets/free-ops.html 200
 /sourcing /assets/sourcing-lab.html 200
 /sourcing/ /assets/sourcing-lab.html 200
 /fulfillment /assets/fulfillment-lab.html 200
