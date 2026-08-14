@@ -15,6 +15,12 @@ test('homepage uses a translucent ambient background that changes per visit', ()
   assert.match(js, /--ambient-a/);
 });
 
+test('ambient layer stays visible above the opaque body background and below content', () => {
+  assert.match(css, /body::before,[\s\S]*?z-index:0/);
+  assert.match(css, /\.site-header,[\s\S]*?main\{[\s\S]*?z-index:1/);
+  assert.doesNotMatch(css, /body::before,[\s\S]*?z-index:-1/);
+});
+
 test('ambient assets are shipped and injected into the EKODI homepage build', () => {
   assert.match(build, /'homepage-ambient\.css'/);
   assert.match(build, /'homepage-ambient\.js'/);
