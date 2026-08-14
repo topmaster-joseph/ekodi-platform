@@ -92,18 +92,26 @@ jobs:
           if(missing.status!==503)throw new Error(`missing internal secret must fail closed, got ${missing.status}`);
           JS
 
-      - name: Verify no Insurance Supabase business backend remains
+      - name: Verify active runtime is D1-only for Insurance business data
         run: |
           set -euo pipefail
-          test ! -d supabase/functions/insurance-api
-          test ! -d supabase/functions/insurance-admin-internal
-          test ! -d supabase/functions/insurance-identity-staging
-          test ! -d sites/ekodi-insurance/sql
-          test ! -d sites/ekodi-insurance/auth-staging
-          if grep -R -E 'Supabase development branch|paid Supabase|유료 Supabase' sites/ekodi-insurance/README.md sites/ekodi-insurance/RELEASE_GATES.md; then
-            echo 'obsolete paid Supabase architecture wording detected'
+          active=(
+            sites/ekodi-insurance/worker.js
+            sites/ekodi-insurance/public/server-bridge.js
+            sites/ekodi-insurance/api/worker.js
+            sites/ekodi-insurance/api/wrangler.toml
+            insurance-control-proxy.js
+            insurance-control-entry.js
+          )
+          if grep -E '/functions/v1/insurance|SUPABASE_SERVICE_ROLE_KEY|insurance-admin-internal|insurance-identity-staging' "${active[@]}"; then
+            echo 'legacy Insurance Supabase business backend referenced by active runtime'
             exit 1
           fi
+          grep -Fq 'Cloudflare Worker + D1' sites/ekodi-insurance/README.md
+          grep -Fq '유료 Supabase development branch는 사용하지 않는다.' sites/ekodi-insurance/README.md
+          grep -Fq 'Paid Supabase branch requirement: REMOVED' sites/ekodi-insurance/RELEASE_GATES.md
+          grep -Fq 'Mall-style Cloudflare Worker + D1 architecture: ADOPTED' sites/ekodi-insurance/RELEASE_GATES.md
+          echo 'Legacy Supabase drafts are outside the active Insurance runtime.'
 
       - name: Verify live free staging endpoints
         run: |
@@ -129,6 +137,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'workers_dev = true' sites/ekodi-insurance/wrangler.toml
+          grep -Fq 'run_worker_first = true' sites/ekodi-insurance/wrangler.toml
           if grep -Eq '^routes?\s*=' sites/ekodi-insurance/wrangler.toml; then
             echo 'Production route detected in customer UI staging config'
             exit 1
