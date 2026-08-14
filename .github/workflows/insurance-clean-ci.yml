@@ -192,6 +192,14 @@ jobs:
           grep -Fq '"persistentPolicyLedger":false' /tmp/health.json
           grep -Fq '"persistentClaimLedger":false' /tmp/health.json
 
+          for attempt in $(seq 1 18); do
+            internal_code=$(curl -sS -o /tmp/internal-ready.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/api/internal/consultations" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: clean-readiness@ekodi.test' || true)
+            if [ "$internal_code" = 200 ]; then break; fi
+            sleep 3
+          done
+          echo "internal token readiness HTTP $internal_code"
+          test "$internal_code" = 200
+
           create_code=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "$base/api/consultations" -H 'content-type: application/json' --data '{"name":"CLEAN RC","contact":"010-7777-8800","shareConsent":true,"shareTranscript":false,"summaryCode":"COVERAGE","messages":[{"role":"user","content":"DO-NOT-PERSIST-ME"}]}' || true)
           test "$create_code" = 201
           ID=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.consultation.id)")
