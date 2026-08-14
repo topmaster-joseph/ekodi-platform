@@ -17,10 +17,13 @@ if(!adminHtml.includes('STAGING LOCAL ADMIN')||(!adminJs.includes('HUMAN_HANDOFF
 if(!html.includes('상품 추천 기능이 아닙니다.'))throw new Error('insurance recommendation boundary missing');
 if(!html.includes('민감정보 입력 최소화'))throw new Error('sensitive-data minimization notice missing');
 for(const marker of ["personalPolicyData:'browser-local'","personalClaimData:'browser-local'","aiConversationDefault:'browser-local'","consultationStorage:'encrypted-d1-on-explicit-handoff'","transcriptDefault:'not-shared'","privacyCenter:true",'aiChat:true','humanHandoffQueue:true','adminQueue:true','externalAiProvider:false'])if(!worker.includes(marker))throw new Error(`health signal missing: ${marker}`);
-for(const marker of ['insurance-api-staging.ekodi.kr','contactConsent','transcriptConsent','shareConsent','shareTranscript','AI 상담 대화 공유 (선택)','consultation-access-v1'])if(!bridge.includes(marker))throw new Error(`separate-consent D1 handoff bridge missing: ${marker}`);
+for(const marker of ['insurance-api-staging.ekodi.kr','ekodi-insurance-api-green.topmaster-joseph.workers.dev','contactConsent','transcriptConsent','shareConsent','shareTranscript','AI 상담 대화 공유 (선택)','consultation-access-v1'])if(!bridge.includes(marker))throw new Error(`separate-consent D1 handoff bridge missing: ${marker}`);
 if(!bridge.includes("messages: transcriptConsent ? messages : []"))throw new Error('unconsented AI transcript must not be sent by bridge');
 if(!bridge.includes("topic: transcriptConsent ? topic : ''"))throw new Error('unconsented free-text topic must not be sent by bridge');
 if(!bridge.includes('선택하지 않아도 상담요청은 가능합니다'))throw new Error('optional transcript consent disclosure missing');
+if(!bridge.includes('event.stopImmediatePropagation()'))throw new Error('legacy local handoff submit must be stopped before D1 handoff');
+for(const marker of ['serverConsultationPanel','상담요청 철회','revokeConsultation','/revoke'])if(!bridge.includes(marker))throw new Error(`customer revoke UI missing: ${marker}`);
 if(!worker.includes('실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화'))throw new Error('server-rendered privacy truth copy missing');
+if(!worker.includes('ekodi-insurance-api-green.topmaster-joseph.workers.dev'))throw new Error('Green API CSP allowlist missing');
 if(!worker.includes("frame-ancestors 'none'"))throw new Error('CSP missing');
-console.log('EKODI Insurance free-D1 separate-consent AI consultation checks passed');
+console.log('EKODI Insurance free-D1 single-source separate-consent consultation checks passed');
