@@ -2,6 +2,28 @@ name: Deploy Control API
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'api-worker.js'
+      - 'auth-worker.js'
+      - 'admin-google-auth.js'
+      - 'customer-auth.js'
+      - 'customer-entry-worker.js'
+      - 'customer-google-prereg.js'
+      - 'customer-federated-auth.js'
+      - 'customer-member-directory.js'
+      - 'books-control.js'
+      - 'books-finance-control.js'
+      - 'books-distribution-control.js'
+      - 'books-pipeline-control.js'
+      - 'affiliate-control.js'
+      - 'social-registry-api.js'
+      - 'migrations/**'
+      - 'wrangler.api.toml'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'scripts/validate-additive-migrations.mjs'
+      - 'deploy/manifests/control-api.worker.json'
+      - '.github/workflows/deploy-control-api.yml'
   push:
     branches: [main]
     paths:
@@ -21,29 +43,33 @@ on:
       - 'social-registry-api.js'
       - 'migrations/**'
       - 'wrangler.api.toml'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'scripts/validate-additive-migrations.mjs'
+      - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-control-api-production
+  group: ekodi-control-api-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  WRANGLER_VERSION: '4.119.0'
+
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate control-plane API modules
+      - name: Validate control-plane API modules and migration policy
         run: |
+          set -euo pipefail
           node --check api-worker.js
           node --check auth-worker.js
           node --check admin-google-auth.js
@@ -58,6 +84,10 @@ jobs:
           node --check books-pipeline-control.js
           node --check affiliate-control.js
           node --check social-registry-api.js
+          node --check scripts/guarded-worker-release.mjs
+          node --check scripts/validate-additive-migrations.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          test -f deploy/manifests/control-api.worker.json
           grep -Fq '/api/social/registry' customer-entry-worker.js
           grep -Fq '/api/control/social/' customer-entry-worker.js
           grep -Fq '/api/customers/directory' customer-member-directory.js
@@ -67,15 +97,149 @@ jobs:
           grep -Fq 'books_finance_transactions' books-pipeline-control.js
           grep -Fq 'checklist_json' books-distribution-control.js
           grep -Fq 'main = "customer-entry-worker.js"' wrangler.api.toml
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Apply shared D1 migrations
-        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
-      - name: Deploy API Worker
-        run: npm run deploy:api
-      - name: Verify Google-only admin, Books pipeline and module boundaries
+      - name: Resolve or create isolated Control API staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-auth-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            echo 'Creating isolated ekodi-auth-staging D1 database in APAC'
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-auth-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated staging Worker config
+        shell: bash
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.api.staging.runtime.toml <<EOF
+          name = "ekodi-auth-api-staging"
+          main = "customer-entry-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+
+          [[routes]]
+          pattern = "api-staging.ekodi.kr"
+          custom_domain = true
+
+          [vars]
+          ENVIRONMENT = "staging"
+          ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+          ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
+          GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-auth-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply all migrations to isolated staging D1
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
+      - name: Deploy isolated Control API staging Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
+      - name: Verify staging API behavior and auth boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_client='483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com'
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
+            status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/status' || true)
+            google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/google/config' || true)
+            books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/public/config' || true)
+            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/social/registry' || true)
+            unauthorized_social=$(curl -sS -o /tmp/stage-social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/social/registry' || true)
+            unauthorized_customer=$(curl -sS -o /tmp/stage-customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/customers/tenants' || true)
+            unauthorized_directory=$(curl -sS -o /tmp/stage-customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/customers/directory' || true)
+            unauthorized_admin=$(curl -sS -o /tmp/stage-google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/admin-access/google-accounts' || true)
+            unauthorized_pipeline=$(curl -sS -o /tmp/stage-books-pipeline.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/admin/pipeline' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$status" | grep -q '"initialized"' \
+              && printf '%s' "$google" | grep -q '"enabled":true' \
+              && printf '%s' "$google" | grep -Fq "$expected_client" \
+              && printf '%s' "$books" | grep -q '"digital-start"' \
+              && printf '%s' "$social" | grep -Fq '에코디커뮤니티' \
+              && printf '%s' "$social" | grep -Fq 'community-youtube' \
+              && [ "$unauthorized_social" = '401' ] \
+              && [ "$unauthorized_customer" = '401' ] \
+              && [ "$unauthorized_directory" = '401' ] \
+              && [ "$unauthorized_admin" = '401' ] \
+              && [ "$unauthorized_pipeline" = '401' ]; then
+              echo 'Control API isolated staging verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f wrangler.api.staging.runtime.toml
+
+  production:
+    needs: [validate, staging]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Capture production D1 Time Travel bookmark
+        id: d1_bookmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.api.toml --json > /tmp/d1-bookmark.json
+          BOOKMARK=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/d1-bookmark.json','utf8'));const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          test -n "$BOOKMARK"
+          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
+          echo 'Production D1 recovery bookmark captured.'
+      - name: Apply production D1 migrations only after staging success
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
+      - name: Candidate at 0%, verify, promote and auto-rollback code on failure
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
+      - name: Deep verify Google-only admin, Books pipeline and module boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -92,10 +256,7 @@ jobs:
             unauthorized_directory=$(curl -sS -o /tmp/customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/directory' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             unauthorized_pipeline=$(curl -sS -o /tmp/books-pipeline.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/admin/pipeline' || true)
-            legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
-              -H 'content-type: application/json' \
-              -d '{"email":"topmaster.joseph@gmail.com","password":"not-used"}' \
-              'https://api.ekodi.kr/api/login' || true)
+            legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'content-type: application/json' -d '{"email":"topmaster.joseph@gmail.com","password":"not-used"}' 'https://api.ekodi.kr/api/login' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$status" | grep -q '"initialized"' \
               && printf '%s' "$google" | grep -q '"enabled":true' \
@@ -118,3 +279,14 @@ jobs:
             sleep 5
           done
           exit 1
+      - name: Record D1 recovery point
+        shell: bash
+        env:
+          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+        run: |
+          {
+            echo '## Control API production recovery point'
+            echo
+            echo "- D1 bookmark before production migrations: \`$BOOKMARK\`"
+            echo '- Database restore is intentionally manual because automatic Time Travel restore could discard legitimate writes made after deployment.'
+          } >> "$GITHUB_STEP_SUMMARY"
