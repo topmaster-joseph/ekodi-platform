@@ -11,7 +11,7 @@
 - GitHub Actions 검증 → 독립 staging → 운영 승격
 - 기존 Google/Supabase 인증은 필요할 때 **사용자 확인만** 수행
 - 보험 업무데이터를 Supabase Postgres에 저장하지 않음
-- 유료 Supabase development branch를 요구하지 않음
+- **유료 Supabase development branch는 사용하지 않는다.**
 
 ## 데이터 최소화
 
