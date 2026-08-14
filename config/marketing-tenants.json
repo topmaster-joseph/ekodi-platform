@@ -1,0 +1,37 @@
+{
+  "domainPattern": "marketing.{tenant}.ekodi.kr",
+  "hub": {
+    "domain": "marketing.ekodi.kr",
+    "project": "marketing-ai"
+  },
+  "tenants": [
+    {
+      "tenant": "jadam",
+      "name": "자담치킨 목포대점",
+      "project": "marketing-ai-jadam",
+      "domain": "marketing.jadam.ekodi.kr",
+      "legacyDomains": ["jadam.ekodi.kr"]
+    },
+    {
+      "tenant": "pizzamaru",
+      "name": "피자마루 목포대점",
+      "project": "marketing-ai-pizzamaru",
+      "domain": "marketing.pizzamaru.ekodi.kr",
+      "legacyDomains": ["pizzamaru.ekodi.kr"]
+    },
+    {
+      "tenant": "yogurt",
+      "name": "요거트퍼플 목포대점",
+      "project": "marketing-ai-yogurtpurple",
+      "domain": "marketing.yogurt.ekodi.kr",
+      "legacyDomains": ["yogurt.ekodi.kr"]
+    },
+    {
+      "tenant": "cheonggye",
+      "name": "청계면상인회",
+      "project": "cheonggye-market",
+      "domain": "marketing.cheonggye.ekodi.kr",
+      "legacyDomains": ["cgma.ekodi.kr"]
+    }
+  ]
+}
