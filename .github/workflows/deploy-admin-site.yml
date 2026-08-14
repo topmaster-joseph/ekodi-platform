@@ -190,7 +190,9 @@ jobs:
           grep -Fq 'books-royalty-admin.js' scripts/build.mjs
           grep -Fq 'marketing-auth-hotfix.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' auth-site/index.html
+          grep -Fq "'mall-seller':'mall'" auth-site/auth-router.js
+          grep -Fq 'https://mall.ekodi.kr/seller/' auth-site/auth-router.js
           grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
           grep -Fq "sb.auth.onAuthStateChange((event,s)=>" auth-site/marketing-auth-hotfix.js
           if grep -Fq 'onAuthStateChange(async' auth-site/marketing-auth-hotfix.js; then
@@ -209,7 +211,9 @@ jobs:
           npm run build
           test -f dist/marketing-auth-hotfix.js
           grep -Fq "sb.auth.onAuthStateChange((event,s)=>" dist/marketing-auth-hotfix.js
-          grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' dist/auth-center.html
+          grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' dist/auth-center.html
+          grep -Fq "'mall-seller':'mall'" dist/auth-router.js
+          grep -Fq 'https://mall.ekodi.kr/seller/' dist/auth-router.js
 
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
@@ -246,7 +250,7 @@ jobs:
             [ "$code" = '200' ] \
               && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers \
               && grep -Fq 'EKODI 인증센터' /tmp/auth-body \
-              && grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' /tmp/auth-body
+              && grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' /tmp/auth-body
           }
           verify_auth_asset() {
             path="$1"; expected="$2"
@@ -283,9 +287,10 @@ jobs:
               && verify_asset 'books-finance-admin.css' '.books-royalty-holder' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth \
-              && verify_auth_asset 'auth-router.js' "await import('./marketing-auth-hotfix.js')" \
+              && verify_auth_asset 'auth-router.js' "'mall-seller':'mall'" \
+              && verify_auth_asset 'auth-router.js' 'https://mall.ekodi.kr/seller/' \
               && verify_auth_asset 'marketing-auth-hotfix.js' 'sb.auth.onAuthStateChange((event,s)=>'; then
-              echo 'Admin/Auth production boundary including Marketing loading hotfix verified.'; exit 0
+              echo 'Admin/Auth production boundary including Mall Seller return and Marketing loading hotfix verified.'; exit 0
             fi
             echo "Production verification pending (attempt $attempt/18)."; sleep 4
           done
