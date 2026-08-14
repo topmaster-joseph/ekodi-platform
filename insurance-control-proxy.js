@@ -1,4 +1,5 @@
 const PREFIX='/api/insurance/admin';
+const APPROVED_BACKENDS=new Set(['https://insurance-api-staging.ekodi.kr','https://insurance-api.ekodi.kr']);
 
 function json(data,status=200,sourceHeaders=null){
   const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
@@ -7,6 +8,7 @@ function json(data,status=200,sourceHeaders=null){
   }
   return new Response(JSON.stringify(data),{status,headers});
 }
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function centralSession(request,env,ctx,apiWorker){
   const url=new URL(request.url);url.pathname='/api/session';url.search='';
   const sessionRequest=new Request(url.toString(),{method:'GET',headers:request.headers});
@@ -30,6 +32,17 @@ function normalizeResponse(data){
   if(data?.status)data.status=apiStatusToAdmin(data.status);
   return data;
 }
+async function fetchInternal(base,path,init){
+  const attempts=base==='https://insurance-api-staging.ekodi.kr'?8:1;
+  let response;
+  for(let attempt=1;attempt<=attempts;attempt+=1){
+    response=await fetch(`${base}${path}`,init);
+    if(response.status!==401||attempt===attempts)return response;
+    try{await response.body?.cancel?.();}catch{}
+    await sleep(750*attempt);
+  }
+  return response;
+}
 export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
   if(request.method==='OPTIONS')return apiWorker.fetch(request,env,ctx);
   const auth=await centralSession(request,env,ctx,apiWorker);if(!auth.session)return auth.response;
@@ -38,14 +51,14 @@ export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
   const base=String(env.INSURANCE_API_BASE||'').replace(/\/$/,'');
   const internalToken=String(env.INSURANCE_INTERNAL_TOKEN||'');
   if(!base||!internalToken)return json({error:'insurance_admin_proxy_not_configured'},503,auth.response.headers);
-  if(!['https://insurance-api-staging.ekodi.kr','https://insurance-api.ekodi.kr'].includes(base))return json({error:'unapproved_insurance_backend'},503,auth.response.headers);
+  if(!APPROVED_BACKENDS.has(base))return json({error:'unapproved_insurance_backend'},503,auth.response.headers);
   const headers=new Headers({'content-type':'application/json','x-ekodi-insurance-internal-token':internalToken,'x-ekodi-actor':String(auth.session.email).toLowerCase()});
   let body;
   if(request.method==='PATCH'){
     const input=await request.json().catch(()=>({}));
     body=JSON.stringify({...input,status:adminStatusToApi(input.status)});
   }
-  const upstream=await fetch(`${base}${upstreamPath}`,{method:request.method,headers,body,cache:'no-store'});
+  const upstream=await fetchInternal(base,upstreamPath,{method:request.method,headers,body,cache:'no-store'});
   const text=await upstream.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:'insurance_backend_invalid_response'}};
   return json(normalizeResponse(data),upstream.status,auth.response.headers);
 }
