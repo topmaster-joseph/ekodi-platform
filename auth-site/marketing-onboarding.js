@@ -11,31 +11,42 @@ if(marketing&&!reviewMode&&!explicitPro){
   const continueFree=document.getElementById('continueFree');
   let redirectScheduled=false;
 
-  const safeReturn=()=>{
+  const freeTarget=()=>{
     try{
       const fallback='https://marketing.ekodi.kr/';
       const target=new URL(params.get('return_to')||fallback);
       const allowed=['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr'];
-      return target.protocol==='https:'&&allowed.includes(target.origin)?target.href:fallback;
-    }catch{return 'https://marketing.ekodi.kr/'}
+      const safe=target.protocol==='https:'&&allowed.includes(target.origin)?target:new URL(fallback);
+      if(safe.origin==='https://marketing.ekodi.kr'){
+        safe.searchParams.set('welcome','free');
+        safe.hash='memberTrial';
+      }
+      return safe.href;
+    }catch{return 'https://marketing.ekodi.kr/?welcome=free#memberTrial'}
   };
+
+  const goFree=()=>location.assign(freeTarget());
+
+  if(continueFree){
+    continueFree.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      goFree();
+    },true);
+  }
 
   const applyFreeFirstExperience=()=>{
     if(badge?.textContent.trim()!=='무료회원')return;
     requestActions?.classList.add('hide');
     freeActions?.classList.remove('hide');
-    if(continueFree)continueFree.textContent='마케팅AI 무료로 시작하기';
+    if(continueFree)continueFree.textContent='무료 기능 바로 체험하기';
     if(accessStatus){
-      accessStatus.textContent='무료회원 가입이 완료되었습니다. 먼저 마케팅AI 무료 기능을 편하게 사용해 보세요. 필요한 고급 기능은 실제 사용 과정에서 자연스럽게 안내합니다.';
+      accessStatus.textContent='무료회원 가입이 완료되었습니다. 결제 안내 없이 바로 마케팅AI 무료 체험 화면으로 이동합니다.';
       accessStatus.className='notice';
     }
     if(!redirectScheduled){
       redirectScheduled=true;
-      window.setTimeout(()=>{
-        const target=new URL(safeReturn());
-        target.searchParams.set('welcome','free');
-        location.assign(target.href);
-      },900);
+      window.setTimeout(goFree,700);
     }
   };
 
