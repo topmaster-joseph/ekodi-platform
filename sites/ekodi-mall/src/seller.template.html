@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#173f35">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="EKODI Commerce Platform 판매자용 Store & Product Studio">
+  <meta name="description" content="EKODI Commerce Platform 판매자용 Personal Product & Store Studio">
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/platform.css">
   <title>Seller Studio | EKODI MALL</title>
@@ -20,62 +20,118 @@
   <main class="seller-main">
     <section class="seller-hero seller-hero-v2">
       <div>
-        <p class="eyebrow">OPEN SELLER STUDIO · V2</p>
-        <h1>Google로 가입하고<br>내 가게를 바로 시작</h1>
-        <p class="detail-desc">{{PLATFORM_NAME}}의 판매자 작업공간입니다. Google 인증 회원은 누구나 무료로 스토어와 상품 초안을 만들고 직접판매, 제휴판매, 상담형 상품 흐름을 체험할 수 있습니다.</p>
-        <div class="cta"><a class="btn primary" href="#sellerAuth">무료로 시작</a><a class="btn ghost" href="#plans">플랜 비교</a></div>
-        <p class="studio-local-note">무료회원도 기본 스토어·상품 제작을 사용할 수 있습니다. 유료회원은 플랜에 따라 AI 상세페이지, 자동 마케팅, 제휴상품 소싱, 다중 스토어와 팀 기능을 단계적으로 확장합니다.</p>
+        <p class="eyebrow">OPEN SELLER STUDIO · PERSONAL FIRST</p>
+        <h1>상품 하나부터 시작하고<br>원하면 내 쇼핑몰까지</h1>
+        <p class="detail-desc">{{PLATFORM_NAME}}에서는 Google 회원이 자기 이름으로 상품부터 등록할 수 있습니다. 스토어는 필수가 아니며, 상품이 늘어나거나 브랜드를 만들고 싶을 때 선택해서 개설합니다.</p>
+        <div class="cta"><a class="btn primary" href="#sellerAuth">Google 무료가입</a><a class="btn ghost" href="#fees">수수료 보기</a></div>
+        <p class="studio-local-note">상품마다 고유링크 식별자를 예약합니다. 실제 공유 가능한 공개 링크는 Mall 서버에 상품이 게시된 뒤 활성화하며, 판매경로에 따라 7% · 8% · 9% 수수료를 서버가 판정하도록 설계합니다.</p>
       </div>
       <div class="seller-console" aria-label="판매자 센터 현재 상태">
-        <div class="console-top"><span>EKODI SELLER STUDIO</span><b>V2</b></div>
-        <div class="console-grid"><article><small>GOOGLE MEMBER</small><strong>무료 가입</strong><span>Open</span></article><article><small>STORE + PRODUCT</small><strong>기본 제작</strong><span>Free</span></article><article><small>AI AUTOMATION</small><strong>고급 자동화</strong><span>Paid</span></article><article><small>PAY & SETTLEMENT</small><strong>판매 활성화</strong><span>Verification required</span></article></div>
+        <div class="console-top"><span>EKODI SELLER STUDIO</span><b>V2.1</b></div>
+        <div class="console-grid">
+          <article><small>PERSONAL PRODUCT</small><strong>상품부터 등록</strong><span>Free</span></article>
+          <article><small>OPTIONAL STORE</small><strong>원하면 쇼핑몰</strong><span>Free draft</span></article>
+          <article><small>SHARE ROUTING</small><strong>고유링크 추적</strong><span>Publish required</span></article>
+          <article><small>AI AUTOMATION</small><strong>고급 자동화</strong><span>Paid</span></article>
+        </div>
       </div>
     </section>
 
     <section class="studio-shell" id="sellerAuth">
       <div class="studio-intro">
-        <div><p class="eyebrow">MEMBER ACCESS</p><h2>Google 계정 하나로<br>판매자 공간 시작</h2><p>에코디 통합인증센터에서 Google 본인확인을 마치면 Seller Studio를 사용할 수 있습니다. 직접판매 결제와 정산은 별도의 판매자 확인 절차를 거쳐 활성화합니다.</p></div>
+        <div><p class="eyebrow">MEMBER ACCESS</p><h2>Google 계정 하나로<br>내 이름의 상품부터</h2><p>에코디 통합인증센터에서 Google 본인확인을 마치면 무료 Seller 공간이 시작됩니다. 실제 직접판매 결제와 정산은 별도의 판매자 확인 절차 뒤 활성화합니다.</p></div>
         <div class="readiness-card"><small>회원 상태</small><strong id="memberStatus">로그인 필요</strong><p id="memberEmail">Google 인증 후 무료 플랜이 시작됩니다.</p><div class="cta"><button class="btn primary" type="button" id="sellerLogin">Google로 무료 시작</button><button class="smallbtn" type="button" id="sellerLogout" hidden>로그아웃</button></div></div>
       </div>
     </section>
 
     <section class="studio-shell" id="studio">
       <div class="studio-intro">
-        <div><p class="eyebrow">STORE & PRODUCT STUDIO</p><h2>가게 하나를 만들고<br>상품을 콘텐츠 자산으로</h2><p>무료 플랜에서는 입력한 정보로 구조화된 상세페이지·SNS·쇼츠 초안을 만듭니다. 유료 AI 기능은 서버에서 확인된 회원 권한이 있을 때만 활성화하도록 분리합니다.</p></div>
+        <div><p class="eyebrow">PERSONAL PRODUCT STUDIO</p><h2>스토어 없이 상품부터<br>필요하면 스토어로 묶기</h2><p>개인 상품은 판매자 표시명에 귀속됩니다. 스토어명과 slug는 선택사항이며, 나중에 기존 상품을 만든 스토어에 포함할 수 있도록 분리합니다.</p></div>
         <div class="readiness-card"><small>등록 준비도</small><strong id="readinessText">0%</strong><div class="readiness-track"><span id="readinessBar"></span></div><p id="draftStatus">로그인 후 브라우저 자동 임시저장</p></div>
       </div>
 
       <div class="studio-grid">
         <form id="sellerDraftForm" class="studio-form" autocomplete="off">
-          <fieldset><legend>1 · Seller & Store</legend><label>판매자 유형<select name="sellerType"><option value="business">사업자</option><option value="individual">개인</option></select></label><label>스토어명<input name="storeName" placeholder="예: 청계상회"></label><label>스토어 slug<input name="storeSlug" placeholder="예: cheonggye-store" pattern="[a-z0-9-]+"></label><label>연락·문의 채널<input name="contact" placeholder="이메일, 전화 또는 상담 URL"></label></fieldset>
-          <fieldset><legend>2 · Product & Commerce</legend><label>판매 방식<select name="saleType"><option value="direct">에코디몰 직접판매</option><option value="affiliate">외부 제휴판매</option><option value="inquiry">상담·문의형</option></select></label><label>상품명<input name="productName" placeholder="상품 또는 서비스명"></label><label>카테고리<select name="category"><option value="local">로컬</option><option value="living">생활</option><option value="book">책·배움</option><option value="gift">선물</option></select></label><label>예상 가격<input name="price" type="number" min="0" step="100" inputmode="numeric" placeholder="미확정이면 비워두세요"></label><label data-affiliate-field hidden>외부 제휴링크<input name="affiliateUrl" type="url" placeholder="https://..."></label></fieldset>
-          <fieldset><legend>3 · Product Story</legend><label>누구를 위한 상품인가<textarea name="audience" rows="2" placeholder="예: 목포대 후문을 찾는 학생과 방문객"></textarea></label><label>한 줄 소개<textarea name="oneLine" rows="2" placeholder="고객이 가장 먼저 이해해야 할 한 문장"></textarea></label><label>핵심 장점<textarea name="benefits" rows="4" placeholder="쉼표 또는 줄바꿈으로 최대 5개"></textarea></label><label>상품 이야기<textarea name="story" rows="5" placeholder="왜 만들었는지, 사람·지역·브랜드와 어떤 관계인지"></textarea></label></fieldset>
-          <fieldset><legend>4 · Operations</legend><label>규격·구성<textarea name="specs" rows="3" placeholder="확인된 정보만 입력하세요"></textarea></label><label>배송·픽업·제공 방식<textarea name="fulfillment" rows="3" placeholder="예: 매장 픽업, 택배 협의, 디지털 제공"></textarea></label></fieldset>
+          <input type="hidden" name="productId">
+          <fieldset>
+            <legend>1 · Seller</legend>
+            <label>판매자 유형<select name="sellerType"><option value="individual">개인</option><option value="business">사업자</option></select></label>
+            <label>상품에 표시할 이름<input name="sellerDisplayName" placeholder="Google 이름을 기본으로 사용"></label>
+            <label>연락·문의 채널<input name="contact" placeholder="이메일, 전화 또는 상담 URL"></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>2 · Product</legend>
+            <label>판매 방식<select name="saleType"><option value="direct">에코디몰 직접판매</option><option value="affiliate">외부 제휴판매</option><option value="inquiry">상담·문의형</option></select></label>
+            <label>상품명<input name="productName" placeholder="상품 또는 서비스명"></label>
+            <label>카테고리<select name="category"><option value="local">로컬</option><option value="living">생활</option><option value="book">책·배움</option><option value="gift">선물</option></select></label>
+            <label>예상 가격<input name="price" type="number" min="0" step="100" inputmode="numeric" placeholder="미확정이면 비워두세요"></label>
+            <label data-affiliate-field hidden>외부 제휴링크<input name="affiliateUrl" type="url" placeholder="https://..."></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>3 · Optional Store</legend>
+            <p class="studio-local-note">쇼핑몰은 선택사항입니다. 비워두면 개인 판매자 이름으로 상품을 준비합니다.</p>
+            <label>스토어명 <small>선택</small><input name="storeName" placeholder="예: 청계상회"></label>
+            <label>스토어 slug <small>선택</small><input name="storeSlug" placeholder="예: cheonggye-store" pattern="[a-z0-9-]+"></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>4 · Product Story</legend>
+            <label>누구를 위한 상품인가<textarea name="audience" rows="2" placeholder="예: 목포대 후문을 찾는 학생과 방문객"></textarea></label>
+            <label>한 줄 소개<textarea name="oneLine" rows="2" placeholder="고객이 가장 먼저 이해해야 할 한 문장"></textarea></label>
+            <label>핵심 장점<textarea name="benefits" rows="4" placeholder="쉼표 또는 줄바꿈으로 최대 5개"></textarea></label>
+            <label>상품 이야기<textarea name="story" rows="5" placeholder="왜 만들었는지, 누구에게 어떤 가치가 있는지"></textarea></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>5 · Operations</legend>
+            <label>규격·구성<textarea name="specs" rows="3" placeholder="확인된 정보만 입력하세요"></textarea></label>
+            <label>배송·픽업·제공 방식<textarea name="fulfillment" rows="3" placeholder="예: 매장 픽업, 택배 협의, 디지털 제공"></textarea></label>
+          </fieldset>
+
           <div class="studio-buttons"><button class="btn primary" type="button" data-studio-save>무료 초안 저장</button><button class="btn ghost" type="button" data-studio-export>JSON 내보내기</button><button class="smallbtn" type="button" data-studio-clear>새로 시작</button></div>
         </form>
 
         <aside class="studio-preview-wrap">
-          <div class="studio-preview-head"><div><p class="eyebrow">LIVE DRAFT · FREE</p><h2>상세페이지 초안</h2></div><button class="smallbtn" type="button" data-studio-copy>JSON 복사</button></div>
+          <div class="studio-preview-head"><div><p class="eyebrow">LIVE DRAFT · FREE</p><h2>상품 초안</h2></div><button class="smallbtn" type="button" data-studio-copy>JSON 복사</button></div>
           <div id="productPreview" class="studio-preview"></div>
+          <article class="studio-preview-block">
+            <small>UNIQUE PRODUCT LINK</small>
+            <h3 id="shareLinkStatus">게시 후 고유링크 활성화</h3>
+            <p id="shareLinkPreview">Mall 서버 게시 전에는 외부 공유 링크를 활성화하지 않습니다.</p>
+          </article>
           <details class="studio-json"><summary>플랫폼용 JSON 보기</summary><textarea id="draftJson" readonly rows="18"></textarea></details>
         </aside>
       </div>
     </section>
 
-    <section class="seller-modules" id="plans">
-      <div class="heading"><div><p class="eyebrow">MEMBERSHIP</p><h2>무료로 시작하고<br>필요한 AI만 단계적으로</h2><p>구독을 강제하지 않고 기본 제작은 무료로 열어 둡니다. 더 많은 자동화가 필요한 판매자만 상위 플랜을 선택하는 구조입니다.</p></div></div>
+    <section class="seller-modules" id="fees">
+      <div class="heading"><div><p class="eyebrow">PERSONAL SELLER FEES</p><h2>PG 포함 · VAT 포함<br>최대 9%</h2><p>누가 고객을 데려왔는지에 따라 수수료가 달라집니다. 실제 판매경로 판정과 정산은 브라우저가 아니라 Mall 주문 서버에서 확정합니다.</p></div></div>
       <div class="module-grid">
-        <article><span>FREE</span><h3>Free</h3><p>Google 가입 · 1개 스토어 · 기본 상품 초안 · 상세페이지 구조 · SNS/쇼츠 기본 초안.</p></article>
-        <article><span>STEP 1</span><h3>Starter AI</h3><p>AI 문구 다듬기 · 이미지/상세페이지 보조 · 키워드·SNS 콘텐츠 생성 · 더 많은 상품 관리.</p></article>
-        <article><span>STEP 2</span><h3>Pro AI</h3><p>제휴상품 AI 소싱 · 판매가능성 분석 · 제휴링크 연결 · 캠페인 자동 생성 · 성과 기반 추천.</p></article>
-        <article><span>STEP 3</span><h3>Business AI</h3><p>다중 스토어 · 팀 권한 · 대량 상품 · 자동 마케팅 · CRM · 주문/정산 연동 · 고급 분석.</p></article>
+        <article><span>DIRECT</span><h3>7%</h3><p>판매자가 자기 상품 고유링크 · QR · 직접 공유로 고객을 데려온 판매.</p></article>
+        <article><span>EKODI MALL</span><h3>8%</h3><p>에코디몰 검색 · 카테고리 · 추천을 통해 발견되어 발생한 판매.</p></article>
+        <article><span>AI SALES</span><h3>9%</h3><p>EKODI AI · Marketing AI의 추천·홍보 기여로 발생한 판매.</p></article>
+        <article><span>BUSINESS STORE</span><h3>10%</h3><p>사업자 인증 스토어 직접판매 기본요율. 판매자의 상품매출 세무의무는 판매자에게 귀속합니다.</p></article>
+        <article><span>PRO AI</span><h3>7 · 8 · 9%</h3><p>개인상품 거래수수료는 동일합니다. PRO AI는 월 구독료를 별도로 받고 고급 AI 자동화 기능을 제공합니다.</p></article>
       </div>
-      <p class="studio-local-note">유료 기능은 화면의 잠금 표시만으로 제어하지 않습니다. 향후 결제·회원권한 서버가 플랜을 확인한 뒤 기능별 권한을 내려주는 방식으로 연결합니다.</p>
+      <p class="studio-local-note">현재는 결제 비활성 상태입니다. 최소수수료나 지급대행 원가는 실제 토스페이먼츠 계약조건을 확인한 뒤 별도 승인 없이 임의 적용하지 않습니다.</p>
     </section>
 
-    <section class="seller-modules"><div class="heading"><div><p class="eyebrow">PLATFORM MODULES</p><h2>판매자 기능은<br>독립적으로 연결합니다</h2><p>스토어와 상품은 Mall에서 관리하고 인증·Pay·Finance·Marketing AI는 명시적 API 계약으로만 연결합니다.</p></div></div><div class="module-grid">{{PLATFORM_MODULES}}</div></section>
+    <section class="seller-modules" id="plans">
+      <div class="heading"><div><p class="eyebrow">MEMBERSHIP</p><h2>무료로 시작하고<br>AI는 필요한 만큼</h2><p>거래수수료와 AI 구독을 분리합니다. 구독을 강제하지 않고 개인상품 등록과 기본 콘텐츠 제작은 무료로 열어 둡니다.</p></div></div>
+      <div class="module-grid">
+        <article><span>FREE</span><h3>Free</h3><p>Google 가입 · 개인상품 초안 · 선택형 스토어 · 고유링크 식별자 예약 · 상세페이지 구조 · SNS/쇼츠 기본 초안.</p></article>
+        <article><span>STEP 1</span><h3>Starter AI</h3><p>AI 문구 다듬기 · 이미지/상세페이지 보조 · 키워드 · SNS 콘텐츠 생성.</p></article>
+        <article><span>STEP 2</span><h3>Pro AI</h3><p>월 구독 + 동일 7·8·9 수수료. 제휴상품 소싱 · 판매가능성 분석 · 캠페인 자동화 · 성과 추천.</p></article>
+        <article><span>STEP 3</span><h3>Business AI</h3><p>사업자용 다중 스토어 · 팀 권한 · 대량 상품 · CRM · 주문/정산 · 고급 분석.</p></article>
+      </div>
+      <p class="studio-local-note">유료 기능은 화면 표시만으로 권한을 열지 않습니다. 결제·회원권한 서버가 유효한 플랜을 확인한 뒤 기능별 entitlement를 내려주는 방식으로 연결합니다.</p>
+    </section>
 
-    <section class="seller-safety"><p class="eyebrow">SAFE MARKETPLACE</p><h2>누구나 시작하되<br>실제 판매는 책임을 확인하고</h2><p>Google 회원은 무료로 스토어와 상품 제작을 체험할 수 있습니다. 직접판매를 활성화할 때는 판매자 유형과 신원·사업자 정보를 확인하고, 주문·취소·환불·정산 책임을 스토어별로 명확히 한 뒤 결제를 연결합니다. 외부 제휴상품은 에코디몰이 결제하지 않고 해당 제휴 판매처로 이동합니다.</p></section>
+    <section class="seller-modules"><div class="heading"><div><p class="eyebrow">PLATFORM MODULES</p><h2>상품부터 시작해<br>기능을 독립적으로 연결</h2><p>상품과 스토어는 Mall에서 관리하고 인증 · Pay · Finance · Marketing AI는 명시적 API 계약으로만 연결합니다.</p></div></div><div class="module-grid">{{PLATFORM_MODULES}}</div></section>
+
+    <section class="seller-safety"><p class="eyebrow">SAFE MARKETPLACE</p><h2>누구나 준비하되<br>실제 판매는 책임을 확인하고</h2><p>Google 회원은 개인상품부터 무료로 준비할 수 있습니다. 직접판매를 활성화할 때는 판매자 유형과 신원·사업자 정보를 확인하고, 주문·취소·환불·정산 책임을 명확히 한 뒤 결제를 연결합니다. 외부 제휴상품은 에코디몰이 결제하지 않고 해당 제휴 판매처로 이동합니다.</p></section>
   </main>
 
   <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Seller Studio</span><a href="/">에코디몰 홈</a></div></footer>
