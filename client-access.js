@@ -15,6 +15,12 @@
     client_editor: '마케팅담당자 · 기존',
     client_viewer: '조회·검수자 · 기존',
   };
+  const TAB_LABELS = {
+    members: '전체 회원',
+    sites: '사이트별',
+    pending: '인증 대기',
+    roles: '권한별',
+  };
 
   function adminToken() {
     return sessionStorage.getItem('ekodi-auth-token') || '';
@@ -28,7 +34,10 @@
     const response = await fetch(`${API}${path}`, { ...options, headers, cache: 'no-store' });
     let data = {};
     try { data = await response.json(); } catch {}
-    if (!response.ok) throw new Error(data.error || `고객관리 API 요청 실패 (${response.status})`);
+    if (!response.ok) {
+      const suffix = data.code ? ` · ${data.code}` : '';
+      throw new Error(`${data.error || `고객관리 API 요청 실패 (${response.status})`}${suffix}`);
+    }
     return data;
   }
 
@@ -60,6 +69,25 @@
     return status || '확인 필요';
   }
 
+  function membershipBadge(status) {
+    const badge = text('span', membershipLabel(status), `client-status ${status || 'unknown'}`);
+    return badge;
+  }
+
+  function selectOption(value, label) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    return option;
+  }
+
+  let shell;
+  let directory = { summary: {}, tenants: [], roles: [], members: [] };
+  let selectedSlug = '';
+  let activeTab = 'members';
+  let loaded = false;
+  let loading = false;
+
   function installShell() {
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
@@ -80,8 +108,8 @@
     const head = document.createElement('div');
     head.className = 'section-head client-access-head';
     const heading = document.createElement('div');
-    heading.append(text('p', 'CLIENT ACCESS · GOOGLE PRE-REGISTRATION', 'kicker'), text('h2', '고객 인증 · 권한 관리'));
-    heading.append(text('p', '고객 이메일과 권한만 사전등록합니다. 초대 링크·비밀번호 없이 같은 Google 계정으로 첫 로그인하면 자동 활성화됩니다.', 'operations-copy'));
+    heading.append(text('p', 'CLIENTS · GOOGLE IDENTITY DIRECTORY', 'kicker'), text('h2', '고객 회원관리'));
+    heading.append(text('p', 'Google 계정은 하나로 관리하고, 사이트별 멤버십·권한·인증상태를 분리해 봅니다.', 'operations-copy'));
     const refresh = button('↻ 새로고침', 'secondary');
     refresh.id = 'refreshClients';
     head.append(heading, refresh);
@@ -90,16 +118,49 @@
     summary.className = 'client-access-summary';
     summary.id = 'clientAccessSummary';
 
-    const layout = document.createElement('div');
-    layout.className = 'client-access-layout';
-    const tenantList = document.createElement('div');
-    tenantList.className = 'client-tenant-list';
-    tenantList.id = 'clientTenantList';
-    const detail = document.createElement('div');
-    detail.className = 'client-access-detail';
-    detail.id = 'clientAccessDetail';
-    layout.append(tenantList, detail);
-    section.append(head, summary, layout);
+    const tabs = document.createElement('div');
+    tabs.className = 'client-tabs';
+    tabs.setAttribute('role', 'tablist');
+    for (const [key, label] of Object.entries(TAB_LABELS)) {
+      const tab = button(label, `client-tab${key === activeTab ? ' active' : ''}`);
+      tab.dataset.clientTab = key;
+      tab.setAttribute('role', 'tab');
+      tab.addEventListener('click', () => setTab(key));
+      tabs.append(tab);
+    }
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'client-filterbar';
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = '이름·이메일·사이트 검색';
+    search.setAttribute('aria-label', '고객 회원 검색');
+
+    const site = document.createElement('select');
+    site.setAttribute('aria-label', '사이트 필터');
+    site.append(selectOption('', '모든 사이트'));
+
+    const role = document.createElement('select');
+    role.setAttribute('aria-label', '권한 필터');
+    role.append(selectOption('', '모든 권한'));
+
+    const status = document.createElement('select');
+    status.setAttribute('aria-label', '인증상태 필터');
+    status.append(
+      selectOption('', '모든 상태'),
+      selectOption('active', '활성'),
+      selectOption('pre_registered', '인증 대기'),
+      selectOption('disabled', '중지'),
+    );
+    toolbar.append(search, site, role, status);
+
+    const body = document.createElement('div');
+    body.className = 'client-hub-body';
+    body.id = 'clientHubBody';
+
+    for (const control of [search, site, role, status]) control.addEventListener('input', renderActiveTab);
+
+    section.append(head, summary, tabs, toolbar, body);
     content.append(section);
 
     const activateClients = () => {
@@ -109,98 +170,147 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'clients'));
       const pageTitle = document.querySelector('#pageTitle');
-      if (pageTitle) pageTitle.textContent = 'Clients · Google 고객 인증';
+      if (pageTitle) pageTitle.textContent = 'Clients · 고객 회원관리';
       document.querySelector('.sidebar')?.classList.remove('open');
-      loadTenants();
+      loadDirectory();
     };
 
     navButton.addEventListener('click', activateClients);
-    refresh.addEventListener('click', loadTenants);
-    return { section, tenantList, detail, summary };
+    refresh.addEventListener('click', () => loadDirectory(true));
+    return { section, summary, tabs, toolbar, body, search, site, role, status };
   }
 
-  let shell;
-  let tenants = [];
-  let selectedSlug = '';
+  function setTab(tab) {
+    if (!TAB_LABELS[tab]) return;
+    activeTab = tab;
+    shell?.tabs.querySelectorAll('[data-client-tab]').forEach(node => node.classList.toggle('active', node.dataset.clientTab === tab));
+    if (tab === 'pending') shell.status.value = 'pre_registered';
+    else if (shell.status.value === 'pre_registered' && tab !== 'members') shell.status.value = '';
+    renderActiveTab();
+  }
+
+  function populateFilters() {
+    const siteValue = shell.site.value;
+    const roleValue = shell.role.value;
+    shell.site.replaceChildren(selectOption('', '모든 사이트'));
+    for (const tenant of directory.tenants) shell.site.append(selectOption(tenant.slug, tenant.name));
+    shell.site.value = directory.tenants.some(item => item.slug === siteValue) ? siteValue : '';
+
+    shell.role.replaceChildren(selectOption('', '모든 권한'));
+    for (const item of directory.roles) shell.role.append(selectOption(item.role, item.label));
+    shell.role.value = directory.roles.some(item => item.role === roleValue) ? roleValue : '';
+  }
 
   function renderSummary() {
     if (!shell) return;
+    const summary = directory.summary || {};
     shell.summary.replaceChildren();
-    const activeUsers = tenants.reduce((sum, tenant) => sum + Number(tenant.activeUsers || 0), 0);
-    const pendingUsers = tenants.reduce((sum, tenant) => sum + Number(tenant.googlePending || 0), 0);
-    for (const [label, value, note] of [
-      ['고객 테넌트', tenants.length, '독립 고객 공간'],
-      ['활성 고객계정', activeUsers, 'Google 인증 완료'],
-      ['인증 대기', pendingUsers, '사전등록 후 첫 로그인 대기'],
-    ]) {
+    const cards = [
+      ['Google 계정', summary.uniqueGoogleAccounts || 0, '중복 이메일은 하나로 관리'],
+      ['사이트 멤버십', summary.memberships || 0, `${summary.tenants || 0}개 고객 사이트`],
+      ['활성', summary.active || 0, 'Google 인증 완료'],
+      ['인증 대기', summary.pending || 0, '사전등록 후 첫 로그인 대기'],
+    ];
+    for (const [label, value, note] of cards) {
       const card = document.createElement('article');
       card.append(text('small', label), text('strong', String(value)), text('span', note));
       shell.summary.append(card);
     }
   }
 
-  function renderTenants() {
-    if (!shell) return;
-    shell.tenantList.replaceChildren();
-    if (!tenants.length) {
-      shell.tenantList.append(text('p', '등록된 고객 테넌트가 없습니다.', 'operations-loading'));
-      return;
+  function filteredMembers(forcePending = false) {
+    const q = shell.search.value.trim().toLowerCase();
+    const site = shell.site.value;
+    const role = shell.role.value;
+    const status = forcePending ? 'pre_registered' : shell.status.value;
+    return directory.members.filter(member => {
+      if (site && member.tenant.slug !== site) return false;
+      if (role && member.role !== role) return false;
+      if (status && member.status !== status) return false;
+      if (q) {
+        const haystack = `${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function memberTable(members, { includeSite = true } = {}) {
+    const wrap = document.createElement('div');
+    wrap.className = 'client-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'client-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const labels = includeSite
+      ? ['회원', '사이트', '권한', 'Google 상태', '마지막 로그인']
+      : ['회원', '권한', 'Google 상태', '마지막 로그인'];
+    for (const label of labels) headRow.append(text('th', label));
+    thead.append(headRow);
+    const tbody = document.createElement('tbody');
+
+    if (!members.length) {
+      const row = document.createElement('tr');
+      const cell = text('td', '조건에 맞는 고객 회원이 없습니다.');
+      cell.colSpan = labels.length;
+      row.append(cell);
+      tbody.append(row);
+    } else {
+      for (const member of members) {
+        const row = document.createElement('tr');
+        const identity = document.createElement('td');
+        identity.append(text('strong', member.displayName || member.email), text('small', member.email));
+        row.append(identity);
+        if (includeSite) {
+          const site = document.createElement('td');
+          site.append(text('strong', member.tenant.name), text('small', member.tenant.domain));
+          row.append(site);
+        }
+        row.append(
+          text('td', member.roleLabel || ROLE_LABELS[member.role] || member.role),
+          (() => { const cell = document.createElement('td'); cell.append(membershipBadge(member.status)); return cell; })(),
+          text('td', formatDate(member.lastLoginAt)),
+        );
+        tbody.append(row);
+      }
     }
-    for (const tenant of tenants) {
+    table.append(thead, tbody);
+    wrap.append(table);
+    return wrap;
+  }
+
+  function renderMemberView(forcePending = false) {
+    const members = filteredMembers(forcePending);
+    const section = document.createElement('div');
+    section.className = 'client-directory-view';
+    const head = document.createElement('div');
+    head.className = 'client-view-head';
+    head.append(
+      text('h3', forcePending ? 'Google 인증 대기' : '전체 고객 회원'),
+      text('span', `${members.length}개 멤버십`, 'client-count-chip'),
+    );
+    section.append(head, memberTable(members));
+    shell.body.replaceChildren(section);
+  }
+
+  function renderTenantCards(list) {
+    list.replaceChildren();
+    for (const tenant of directory.tenants) {
       const item = button('', `client-tenant-card${tenant.slug === selectedSlug ? ' active' : ''}`);
       const top = document.createElement('span');
       top.className = 'client-tenant-card-head';
       top.append(text('strong', tenant.name), text('span', tenant.status === 'active' ? '운영' : tenant.status, 'health-badge online'));
-      item.append(top, text('small', tenant.domain), text('small', `활성 ${tenant.activeUsers || 0} · 인증대기 ${tenant.googlePending || 0}`));
-      item.addEventListener('click', () => selectTenant(tenant.slug));
-      shell.tenantList.append(item);
+      item.append(
+        top,
+        text('small', tenant.domain),
+        text('small', `회원 ${tenant.members || 0} · 활성 ${tenant.activeUsers || 0} · 대기 ${tenant.googlePending || 0}`),
+      );
+      item.addEventListener('click', () => {
+        selectedSlug = tenant.slug;
+        renderSitesView();
+      });
+      list.append(item);
     }
-  }
-
-  function showDetailMessage(message, className = 'operations-loading') {
-    shell?.detail.replaceChildren(text('p', message, className));
-  }
-
-  async function tenantUsers(slug) {
-    const data = await request(`/api/customers/tenants/${encodeURIComponent(slug)}/users`);
-    return data.users || [];
-  }
-
-  async function loadTenants() {
-    if (!shell || !adminToken()) {
-      showDetailMessage('관리자 로그인 후 고객 인증을 관리할 수 있습니다.');
-      return;
-    }
-    shell.tenantList.replaceChildren(text('p', '고객 테넌트를 불러오는 중입니다.', 'operations-loading'));
-    try {
-      const data = await request('/api/customers/tenants');
-      const base = data.tenants || [];
-      tenants = await Promise.all(base.map(async tenant => {
-        try {
-          const users = await tenantUsers(tenant.slug);
-          return {
-            ...tenant,
-            activeUsers: users.filter(user => user.status === 'active').length,
-            googlePending: users.filter(user => user.status === 'pre_registered').length,
-          };
-        } catch {
-          return { ...tenant, googlePending: 0 };
-        }
-      }));
-      if (!selectedSlug || !tenants.some(item => item.slug === selectedSlug)) selectedSlug = tenants[0]?.slug || '';
-      renderSummary();
-      renderTenants();
-      if (selectedSlug) await renderTenantDetail(selectedSlug);
-    } catch (error) {
-      shell.tenantList.replaceChildren(text('p', error.message, 'operations-error'));
-      showDetailMessage('고객관리 API 연결을 확인해 주세요.', 'operations-error');
-    }
-  }
-
-  async function selectTenant(slug) {
-    selectedSlug = slug;
-    renderTenants();
-    await renderTenantDetail(slug);
   }
 
   function createPreRegisterForm(tenant) {
@@ -218,18 +328,11 @@
     const roleLabel = text('label', '권한');
     const role = document.createElement('select');
     role.name = 'role';
-    for (const [value, label] of ROLE_OPTIONS) {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = label;
-      role.append(option);
-    }
+    for (const [value, label] of ROLE_OPTIONS) role.append(selectOption(value, label));
     roleLabel.append(role);
 
-    const submit = document.createElement('button');
+    const submit = button('Google 고객 사전등록', 'primary');
     submit.type = 'submit';
-    submit.className = 'primary';
-    submit.textContent = 'Google 고객 사전등록';
     const status = text('p', '', 'client-invite-result');
     form.append(emailLabel, roleLabel, submit, status);
 
@@ -246,11 +349,11 @@
         });
         const account = data.account || {};
         const message = account.status === 'active'
-          ? '이미 활성화된 계정입니다. 권한을 최신 설정으로 반영했습니다.'
-          : '사전등록 완료. 고객이 같은 이메일의 Google 계정으로 로그인하면 자동 활성화됩니다.';
-        status.append(text('strong', message), text('small', '초대 링크·별도 비밀번호·복구코드는 필요하지 않습니다.'));
+          ? '이미 활성화된 계정입니다. 이 사이트의 권한을 최신 설정으로 반영했습니다.'
+          : '사전등록 완료. 같은 이메일의 Google 계정으로 첫 로그인하면 자동 활성화됩니다.';
+        status.append(text('strong', message), text('small', 'Google 계정은 통합 관리되고 사이트별 멤버십만 추가됩니다.'));
         form.reset();
-        await loadTenants();
+        await loadDirectory(true);
       } catch (error) {
         status.append(text('span', error.message, 'operations-error'));
       } finally {
@@ -261,70 +364,95 @@
     return form;
   }
 
-  function userTable(users) {
-    const wrap = document.createElement('div');
-    wrap.className = 'client-table-wrap';
-    const table = document.createElement('table');
-    table.className = 'client-table';
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    for (const label of ['사용자', '권한', 'Google 상태', '마지막 로그인']) headRow.append(text('th', label));
-    thead.append(headRow);
-    const tbody = document.createElement('tbody');
-    if (!users.length) {
-      const row = document.createElement('tr');
-      const cell = text('td', '등록된 고객 사용자가 없습니다. 위에서 Google 이메일을 사전등록해 주세요.');
-      cell.colSpan = 4;
-      row.append(cell);
-      tbody.append(row);
-    } else {
-      for (const user of users) {
-        const row = document.createElement('tr');
-        const identity = document.createElement('td');
-        identity.append(text('strong', user.displayName || user.email), text('small', user.email));
-        row.append(
-          identity,
-          text('td', ROLE_LABELS[user.role] || user.role),
-          text('td', membershipLabel(user.status)),
-          text('td', formatDate(user.lastLoginAt)),
-        );
-        tbody.append(row);
-      }
-    }
-    table.append(thead, tbody);
-    wrap.append(table);
-    return wrap;
+  function renderTenantDetail(detail, tenant) {
+    const members = directory.members.filter(member => member.tenant.slug === tenant.slug);
+    const header = document.createElement('div');
+    header.className = 'client-detail-head';
+    const identity = document.createElement('div');
+    identity.append(text('p', 'CLIENT SITE · GOOGLE MEMBERSHIP', 'kicker'), text('h3', tenant.name), text('small', tenant.domain));
+    const open = document.createElement('a');
+    open.className = 'secondary compact';
+    open.href = `https://${tenant.domain}`;
+    open.target = '_blank';
+    open.rel = 'noopener';
+    open.textContent = '고객 사이트 열기 ↗';
+    header.append(identity, open);
+    detail.append(
+      header,
+      text('h4', 'Google 고객 사전등록'),
+      createPreRegisterForm(tenant),
+      text('h4', `이 사이트 회원 · ${members.length}명`),
+      memberTable(members, { includeSite: false }),
+    );
   }
 
-  async function renderTenantDetail(slug) {
+  function renderSitesView() {
+    if (!selectedSlug || !directory.tenants.some(item => item.slug === selectedSlug)) selectedSlug = directory.tenants[0]?.slug || '';
+    const layout = document.createElement('div');
+    layout.className = 'client-access-layout';
+    const list = document.createElement('div');
+    list.className = 'client-tenant-list';
+    const detail = document.createElement('div');
+    detail.className = 'client-access-detail';
+    renderTenantCards(list);
+    const tenant = directory.tenants.find(item => item.slug === selectedSlug);
+    if (tenant) renderTenantDetail(detail, tenant);
+    else detail.append(text('p', '등록된 고객 사이트가 없습니다.', 'operations-loading'));
+    layout.append(list, detail);
+    shell.body.replaceChildren(layout);
+  }
+
+  function renderRolesView() {
+    const wrap = document.createElement('div');
+    wrap.className = 'client-role-view';
+    const head = document.createElement('div');
+    head.className = 'client-view-head';
+    head.append(text('h3', '권한별 회원'), text('span', `${directory.roles.length}개 권한`, 'client-count-chip'));
+    const grid = document.createElement('div');
+    grid.className = 'client-role-grid';
+    for (const item of directory.roles) {
+      const card = button('', 'client-role-card');
+      card.append(text('small', item.role), text('strong', item.label), text('span', `${item.count}개 멤버십`));
+      card.addEventListener('click', () => {
+        shell.role.value = item.role;
+        activeTab = 'members';
+        shell.tabs.querySelectorAll('[data-client-tab]').forEach(node => node.classList.toggle('active', node.dataset.clientTab === 'members'));
+        renderActiveTab();
+      });
+      grid.append(card);
+    }
+    wrap.append(head, grid);
+    shell.body.replaceChildren(wrap);
+  }
+
+  function renderActiveTab() {
     if (!shell) return;
-    const tenant = tenants.find(item => item.slug === slug);
-    if (!tenant) return showDetailMessage('고객을 선택해 주세요.');
-    showDetailMessage(`${tenant.name}의 Google 인증 정보를 불러오는 중입니다.`);
+    const showFilters = activeTab === 'members' || activeTab === 'pending';
+    shell.toolbar.hidden = !showFilters;
+    if (activeTab === 'sites') return renderSitesView();
+    if (activeTab === 'pending') return renderMemberView(true);
+    if (activeTab === 'roles') return renderRolesView();
+    return renderMemberView(false);
+  }
+
+  async function loadDirectory(force = false) {
+    if (!shell || !adminToken()) {
+      shell?.body.replaceChildren(text('p', '관리자 로그인 후 고객 회원을 관리할 수 있습니다.', 'operations-loading'));
+      return;
+    }
+    if (loading || (loaded && !force)) return renderActiveTab();
+    loading = true;
+    shell.body.replaceChildren(text('p', '사이트별 Google 회원정보를 불러오는 중입니다.', 'operations-loading'));
     try {
-      const users = await tenantUsers(slug);
-      const detail = document.createDocumentFragment();
-      const header = document.createElement('div');
-      header.className = 'client-detail-head';
-      const identity = document.createElement('div');
-      identity.append(text('p', 'CLIENT TENANT · GOOGLE IDENTITY', 'kicker'), text('h3', tenant.name), text('small', tenant.domain));
-      const open = document.createElement('a');
-      open.className = 'secondary compact';
-      open.href = `https://${tenant.domain}`;
-      open.target = '_blank';
-      open.rel = 'noopener';
-      open.textContent = '고객 사이트 열기 ↗';
-      header.append(identity, open);
-      detail.append(
-        header,
-        text('h4', 'Google 고객 사전등록'),
-        createPreRegisterForm(tenant),
-        text('h4', '등록 사용자 · 인증상태'),
-        userTable(users),
-      );
-      shell.detail.replaceChildren(detail);
+      directory = await request('/api/customers/directory');
+      loaded = true;
+      populateFilters();
+      renderSummary();
+      renderActiveTab();
     } catch (error) {
-      showDetailMessage(error.message, 'operations-error');
+      shell.body.replaceChildren(text('p', error.message, 'operations-error'));
+    } finally {
+      loading = false;
     }
   }
 
