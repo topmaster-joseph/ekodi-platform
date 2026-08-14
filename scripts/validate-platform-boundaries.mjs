@@ -27,6 +27,12 @@ if (/^\s*push\s*:/m.test(fullDeploy)) failures.push('Full ecosystem deploy must 
 const mallDeploy = await read('.github/workflows/deploy-ekodi-mall.yml');
 if (!mallDeploy.includes('sites/ekodi-mall/**')) failures.push('Mall workflow must remain path-isolated to sites/ekodi-mall/**');
 
+const mallApiDeploy = await read('.github/workflows/deploy-ekodi-mall-api.yml');
+for (const marker of ['sites/ekodi-mall-api/**', 'api-staging.mall.ekodi.kr', 'api.mall.ekodi.kr', 'ekodi-mall-staging', 'ekodi-mall']) {
+  if (!mallApiDeploy.includes(marker)) failures.push(`Mall API workflow must include ${marker}`);
+}
+if (mallApiDeploy.indexOf('staging:') > mallApiDeploy.indexOf('production:')) failures.push('Mall API staging gate must be declared before production');
+
 const controlDeploy = await read('.github/workflows/deploy-control-api.yml');
 for (const source of ['api-worker.js', 'customer-entry-worker.js', 'books-control.js', 'books-finance-control.js', 'affiliate-control.js', 'migrations/**']) {
   if (!controlDeploy.includes(source)) failures.push(`Control API workflow must watch ${source}`);
