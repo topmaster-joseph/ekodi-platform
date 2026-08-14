@@ -1,0 +1,12 @@
+name = "ekodi-social"
+main = "social-worker.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+
+[assets]
+directory = "./social"
+binding = "ASSETS"
+
+[[routes]]
+pattern = "social.ekodi.kr/*"
+zone_name = "ekodi.kr"
