@@ -14,6 +14,7 @@ MALL_BASE_URL = "https://mall.ekodi.kr"
 ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://ekodi-mall.pages.dev"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+PAYMENTS_ENABLED = "false"
 
 [observability.logs]
 enabled = true

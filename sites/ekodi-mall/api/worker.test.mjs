@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makePublicUrl, normalizeProductInput, resolveFeeRate } from './worker.js';
+import { calculateOrderAmounts, makeAttributedUrl, makePublicUrl, normalizeProductInput, resolveFeeRate } from './worker.js';
 
 test('individual fee policy stays 7/8/9 and business verified store is 10', () => {
   assert.equal(resolveFeeRate({ sellerType: 'individual', attributionType: 'direct' }), 7);
@@ -10,8 +10,24 @@ test('individual fee policy stays 7/8/9 and business verified store is 10', () =
   assert.equal(resolveFeeRate({ sellerType: 'individual', attributionType: 'unknown' }), null);
 });
 
-test('public product URL is stable and opaque', () => {
+test('order fee calculation uses whole-KRW floor and never exceeds gross', () => {
+  assert.deepEqual(calculateOrderAmounts(100000, 7), {
+    grossAmount: 100000,
+    feeRatePercent: 7,
+    platformFeeAmount: 7000,
+    sellerSettlementAmount: 93000
+  });
+  assert.deepEqual(calculateOrderAmounts(9999, 9), {
+    grossAmount: 9999,
+    feeRatePercent: 9,
+    platformFeeAmount: 899,
+    sellerSettlementAmount: 9100
+  });
+});
+
+test('canonical product URL stays marketplace while attributed URLs carry opaque ref codes', () => {
   assert.equal(makePublicUrl('https://mall.ekodi.kr/', 'ABC123'), 'https://mall.ekodi.kr/p/ABC123');
+  assert.equal(makeAttributedUrl('https://mall.ekodi.kr/', 'ABC123', 'sl_OPAQUE'), 'https://mall.ekodi.kr/p/ABC123?ref=sl_OPAQUE');
 });
 
 test('product input keeps Store optional and validates affiliate link', () => {
