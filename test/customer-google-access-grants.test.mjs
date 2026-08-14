@@ -35,7 +35,10 @@ test('Google identity is verified first and runtime customer identity is created
 
 test('admin user listing is sourced from access grants so unverified registrations are visible immediately', () => {
   assert.match(prereg, /listAccessUsers/);
-  assert.match(prereg, /status: Number\(row\.enabled\) !== 1 \? 'disabled' : \(row\.last_verified_at \? 'active' : 'pre_registered'\)/);
+  assert.match(prereg, /function accessStatus\(row\)/);
+  assert.match(prereg, /Number\(row\.enabled\) !== 1/);
+  assert.match(prereg, /row\.last_verified_at \? 'active' : 'pre_registered'/);
+  assert.match(prereg, /status: accessStatus\(row\)/);
   assert.match(prereg, /\/users\$/);
 });
 
