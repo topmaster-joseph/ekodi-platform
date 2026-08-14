@@ -55,6 +55,14 @@ test('hardening migration requires confirmed evidence and immutable conversion',
   assert.match(sql, /SUPPLIER_PREFLIGHT_BLOCKERS_NOT_EMPTY/);
 });
 
+test('supplier mapping hardening rejects cross-seller product/source links', async () => {
+  const sql = await readFile(new URL('./migrations/0011_supplier_mapping_seller_guard.sql', import.meta.url), 'utf8');
+  assert.match(sql, /SUPPLIER_SKU_PRODUCT_SELLER_MISMATCH/);
+  assert.match(sql, /PRODUCT_SOURCE_SELLER_MISMATCH/);
+  assert.match(sql, /p\.seller_id = NEW\.seller_id/);
+  assert.match(sql, /ss\.seller_id = NEW\.seller_id/);
+});
+
 test('discovery implementation creates outreach drafts but has no automatic send or auto-order execution', async () => {
   const source = await readFile(new URL('./supplier-discovery.js', import.meta.url), 'utf8');
   assert.match(source, /autoSent:false/);
