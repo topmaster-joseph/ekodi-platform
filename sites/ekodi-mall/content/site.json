@@ -1,20 +1,20 @@
 {
-  "version": 4,
+  "version": 5,
   "brand": {
     "name": "EKODI MALL",
     "shortName": "EKODI",
-    "tagline": "사람·지역·브랜드가 각자의 가게를 열고 함께 성장하는 커머스 플랫폼"
+    "tagline": "상품 하나부터, 나만의 쇼핑몰까지 함께 성장하는 커머스 플랫폼"
   },
   "seo": {
-    "title": "EKODI MALL | 함께 성장하는 커머스 플랫폼",
-    "description": "상품만 진열하는 쇼핑몰을 넘어 판매자 스토어, 제휴상품, 지역상생관, 상품 콘텐츠와 마케팅 흐름을 연결하는 EKODI Commerce Platform.",
+    "title": "EKODI MALL | 상품 하나부터 시작하는 커머스 플랫폼",
+    "description": "Google 회원이면 자기 이름으로 상품을 등록하고 고유 공유링크를 준비할 수 있으며, 원하면 독립 스토어와 AI 판매 자동화로 확장하는 EKODI Commerce Platform.",
     "baseUrl": "https://mall.ekodi.kr"
   },
-  "notice": "커머스 플랫폼 V2 준비 중 · Google 회원은 누구나 무료로 스토어와 상품 제작을 체험할 수 있으며 실제 직접판매 활성화는 판매자 확인과 결제·정산 연결 후 진행합니다.",
+  "notice": "커머스 플랫폼 V2 · Google 회원은 상품 하나부터 무료로 시작하고, 원하면 자기 쇼핑몰로 확장할 수 있습니다. 실제 결제·정산은 판매자 확인과 서버 주문·정산 연결 후 활성화합니다.",
   "hero": {
     "eyebrow": "EKODI COMMERCE PLATFORM",
-    "title": "가게를 열고|고객을 만나고|함께 성장하도록",
-    "description": "에코디몰은 여러 판매자와 지역·브랜드가 각자의 스토어를 운영하고 직접판매와 제휴판매, 콘텐츠와 마케팅을 하나의 시장에서 연결하는 몰플랫폼입니다.",
+    "title": "상품 하나부터|나만의 쇼핑몰까지|AI와 함께 성장하도록",
+    "description": "에코디몰은 개인이 자기 이름으로 상품을 등록하고 직접 공유할 수 있으며, 필요할 때 독립 스토어와 AI 마케팅·판매 자동화로 확장하는 몰플랫폼입니다.",
     "primaryLabel": "마켓 둘러보기",
     "primaryHref": "#shop",
     "secondaryLabel": "스토어 보기",
@@ -29,8 +29,10 @@
     "sellerStudioHref": "/seller/",
     "basketHref": "/checkout/",
     "modules": [
+      "Personal Product",
       "Store",
       "Product Studio",
+      "Share Tracking",
       "Affiliate Routing",
       "Inquiry Basket",
       "Orders",
@@ -39,12 +41,83 @@
       "Settlement"
     ],
     "sellerPolicy": {
-      "storeCreation": "open",
+      "productRegistration": "seller-direct",
+      "storeCreation": "optional",
+      "storeRequiredForProduct": false,
       "sellingActivation": "verified",
-      "supportedSellerTypes": ["business", "individual"],
-      "supportedSaleTypes": ["direct", "affiliate", "inquiry"],
+      "supportedSellerTypes": [
+        "business",
+        "individual"
+      ],
+      "supportedSaleTypes": [
+        "direct",
+        "affiliate",
+        "inquiry"
+      ],
       "affiliateRouting": "external",
       "sellerIdentityRequiredForDirectSale": true
+    },
+    "sharePolicy": {
+      "productLinkPerProduct": true,
+      "canonicalPattern": "https://mall.ekodi.kr/p/{productId}",
+      "sellerDirectAttribution": true,
+      "supportedChannels": [
+        "copy",
+        "kakao",
+        "sms",
+        "qr",
+        "social"
+      ],
+      "activation": "server-publish-required",
+      "note": "브라우저 초안 단계에서는 링크 식별자만 예약하고 실제 공유 가능한 공개 URL은 Mall 서버에 상품이 게시된 뒤 활성화합니다."
+    },
+    "feePolicy": {
+      "currency": "KRW",
+      "vatIncluded": true,
+      "pgIncluded": true,
+      "maxRatePercent": 9,
+      "minimumFee": {
+        "enabled": false,
+        "amount": null,
+        "note": "소액상품 최소수수료는 실제 토스페이먼츠 계약요율과 지급대행 원가 확인 후 별도 승인하여 적용합니다."
+      },
+      "individual": {
+        "direct": {
+          "ratePercent": 7,
+          "label": "직접 공유 판매",
+          "attribution": "판매자 고유링크·QR·직접 공유 유입"
+        },
+        "marketplace": {
+          "ratePercent": 8,
+          "label": "EKODI Mall 판매",
+          "attribution": "몰 검색·카테고리·추천 유입"
+        },
+        "ai": {
+          "ratePercent": 9,
+          "label": "AI 판매",
+          "attribution": "EKODI AI·Marketing AI 기여 유입"
+        }
+      },
+      "proAi": {
+        "transactionRates": "same-as-individual",
+        "subscriptionSeparate": true,
+        "description": "PRO AI는 월 구독료와 AI 기능 사용권을 거래수수료와 분리하며 개인상품 거래수수료는 동일한 7%·8%·9% 체계를 적용합니다."
+      },
+      "settlement": {
+        "formula": "grossAmount - platformFee - refunds - adjustments",
+        "serverAuthoritative": true,
+        "status": "planned",
+        "note": "실제 정산액은 Mall 주문 서버가 판매경로와 환불·조정액을 검증한 뒤 계산합니다."
+      },
+      "businessStore": {
+        "ratePercent": 10,
+        "label": "사업자 스토어 판매",
+        "vatIncluded": true,
+        "pgIncluded": true,
+        "businessVerificationRequired": true,
+        "sellerTaxResponsibility": true,
+        "description": "사업자 인증 스토어의 직접판매 기본 판매수수료. 판매자의 상품매출 관련 세무의무는 판매자에게 귀속합니다."
+      }
     },
     "membership": {
       "defaultPlan": "free",
@@ -53,38 +126,99 @@
         {
           "id": "free",
           "name": "Free",
-          "features": ["google-signup", "one-store-draft", "product-draft", "detail-structure", "basic-social-draft", "basic-shorts-outline"]
+          "features": [
+            "google-signup",
+            "personal-product-draft",
+            "optional-store-draft",
+            "product-link-reservation",
+            "detail-structure",
+            "basic-social-draft",
+            "basic-shorts-outline"
+          ]
         },
         {
           "id": "starter-ai",
           "name": "Starter AI",
-          "features": ["ai-copy", "ai-detail-assist", "keyword-assist", "social-content", "image-assist"]
+          "features": [
+            "ai-copy",
+            "ai-detail-assist",
+            "keyword-assist",
+            "social-content",
+            "image-assist"
+          ]
         },
         {
           "id": "pro-ai",
           "name": "Pro AI",
-          "features": ["affiliate-ai-sourcing", "sales-score", "affiliate-link-routing", "campaign-automation", "performance-recommendation"]
+          "billing": "monthly-subscription-plus-same-transaction-rates",
+          "features": [
+            "affiliate-ai-sourcing",
+            "sales-score",
+            "affiliate-link-routing",
+            "campaign-automation",
+            "performance-recommendation"
+          ]
         },
         {
           "id": "business-ai",
           "name": "Business AI",
-          "features": ["multi-store", "team-roles", "bulk-products", "marketing-automation", "crm", "orders", "settlement", "advanced-analytics"]
+          "features": [
+            "multi-store",
+            "team-roles",
+            "bulk-products",
+            "marketing-automation",
+            "crm",
+            "orders",
+            "settlement",
+            "advanced-analytics"
+          ]
         }
       ]
     }
   },
   "categories": [
-    {"id": "all", "label": "전체"},
-    {"id": "living", "label": "생활"},
-    {"id": "local", "label": "로컬"},
-    {"id": "book", "label": "책·배움"},
-    {"id": "gift", "label": "선물"}
+    {
+      "id": "all",
+      "label": "전체"
+    },
+    {
+      "id": "living",
+      "label": "생활"
+    },
+    {
+      "id": "local",
+      "label": "로컬"
+    },
+    {
+      "id": "book",
+      "label": "책·배움"
+    },
+    {
+      "id": "gift",
+      "label": "선물"
+    }
   ],
   "standards": [
-    {"number": "01", "title": "필요한가", "body": "유행보다 실제 쓰임과 지속성을 먼저 봅니다."},
-    {"number": "02", "title": "설명 가능한가", "body": "추천하는 이유와 판매방식을 숨기지 않습니다."},
-    {"number": "03", "title": "연결되는가", "body": "구매가 지역과 사람의 관계를 살리는 방향인지 살핍니다."},
-    {"number": "04", "title": "오래 가는가", "body": "일회성 판매보다 반복 가능한 협력과 품질을 지향합니다."}
+    {
+      "number": "01",
+      "title": "필요한가",
+      "body": "유행보다 실제 쓰임과 지속성을 먼저 봅니다."
+    },
+    {
+      "number": "02",
+      "title": "설명 가능한가",
+      "body": "추천하는 이유와 판매방식을 숨기지 않습니다."
+    },
+    {
+      "number": "03",
+      "title": "연결되는가",
+      "body": "구매가 지역과 사람의 관계를 살리는 방향인지 살핍니다."
+    },
+    {
+      "number": "04",
+      "title": "오래 가는가",
+      "body": "일회성 판매보다 반복 가능한 협력과 품질을 지향합니다."
+    }
   ],
   "local": {
     "eyebrow": "LOCAL COMMONS",
@@ -111,6 +245,6 @@
     "orderMode": "inquiry-only",
     "basketLabel": "상담 바구니",
     "checkoutLabel": "상담 요청 준비",
-    "betaMessage": "현재 직접판매 온라인 결제는 활성화하지 않았습니다. 제휴상품은 표시된 외부 제휴 판매처에서 결제하고, 직접판매 상품은 판매자 확인과 주문·정산 시스템 검증 후 에코디몰 결제를 연결합니다."
+    "betaMessage": "현재 직접판매 온라인 결제는 활성화하지 않았습니다. 개인상품 수수료 정책은 PG·VAT 포함 7%·8%·9%로 설계했으며, 실제 결제·정산은 판매자 확인과 주문·지급대행 서버 검증 후 연결합니다."
   }
 }
