@@ -44,11 +44,14 @@ test('Books build bundles pipeline into secured lazy Books assets', async () => 
   }
 });
 
-test('Control API entry routes pipeline while delegating existing behavior', async () => {
-  const entry = await read('customer-entry-books-pipeline.js');
+test('Canonical Control API entry routes Books pipeline before generic Books handling', async () => {
+  const entry = await read('customer-entry-worker.js');
   const wrangler = await read('wrangler.api.toml');
-  assert.ok(entry.includes('handleBooksPipelineRequest'));
-  assert.ok(entry.includes('baseWorker.fetch'));
-  assert.ok(entry.includes('baseWorker.scheduled'));
-  assert.ok(wrangler.includes('main = "customer-entry-books-pipeline.js"'));
+  assert.ok(entry.includes("import { handleBooksPipelineRequest } from './books-pipeline-control.js'"));
+  const pipelineRoute = entry.indexOf("path.startsWith('/api/books/admin/pipeline')");
+  const genericBooks = entry.indexOf('handleBooksRequest(request, env)');
+  assert.ok(pipelineRoute >= 0, 'pipeline route missing');
+  assert.ok(genericBooks > pipelineRoute, 'pipeline route must run before generic Books controller');
+  assert.ok(wrangler.includes('main = "customer-entry-worker.js"'));
+  assert.ok(wrangler.includes('crons = ["*/10 * * * *"]'));
 });
