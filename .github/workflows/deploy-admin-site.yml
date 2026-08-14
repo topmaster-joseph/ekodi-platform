@@ -29,6 +29,10 @@ on:
       - 'google-admin-auth.css'
       - 'domains-hub.js'
       - 'domains-hub.css'
+      - 'social-admin.js'
+      - 'social-admin.css'
+      - 'site-worker.js'
+      - 'scripts/build.mjs'
       - 'auth-site/**'
 
 permissions:
@@ -64,6 +68,8 @@ jobs:
           node --check books-finance-admin.js
           node --check google-admin-auth.js
           node --check domains-hub.js
+          node --check social-admin.js
+          node --check site-worker.js
           node --check auth-site/auth.js
 
       - name: Validate authentication and compact UI contract
@@ -84,6 +90,10 @@ jobs:
           grep -Fq 'google-admin-filters' google-admin-auth.js
           grep -Fq "placeholder('admins', '◈', 'Admin')" control-center-features.js
           grep -Fq "placeholder('domains', '◎', 'Domains')" control-center-features.js
+          grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
+          grep -Fq '/api/control/social/registry' social-admin.js
+          grep -Fq '.social-org-card' social-admin.css
+          grep -Fq "'/social-admin.js'" site-worker.js
           grep -Fq '/api/control/overview' domains-hub.js
           grep -Fq 'Services에서 관리' domains-hub.js
           grep -Fq 'EKODI Digital Campus' compact-control-center.js
@@ -97,6 +107,8 @@ jobs:
           grep -Fq 'control-center-features.js' scripts/build.mjs
           grep -Fq 'domains-hub.css' scripts/build.mjs
           grep -Fq 'domains-hub.js' scripts/build.mjs
+          grep -Fq 'social-admin.css' scripts/build.mjs
+          grep -Fq 'social-admin.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
@@ -144,12 +156,13 @@ jobs:
           verify_asset() {
             path="$1"
             expected="$2"
-            code=$(curl -sS -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
+            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
             if [ "$code" != '200' ]; then
               echo "asset verify: $path -> $code"
               return 1
             fi
             grep -Fq "$expected" /tmp/admin-asset || { echo "asset verify: $path missing expected marker"; return 1; }
+            grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || { echo "asset verify: $path missing admin security route"; return 1; }
           }
 
           verify_auth() {
@@ -168,6 +181,8 @@ jobs:
               && verify_asset 'google-admin-auth.js' 'google-admin-toolbar' \
               && verify_asset 'domains-hub.js' '/api/control/overview' \
               && verify_asset 'domains-hub.css' '.domains-grid' \
+              && verify_asset 'social-admin.js' '/api/control/social/registry' \
+              && verify_asset 'social-admin.css' '.social-org-card' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
               echo 'Admin/Auth production boundary verified.'
