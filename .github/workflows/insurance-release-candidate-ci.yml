@@ -1,0 +1,169 @@
+name: EKODI Insurance · Release Candidate CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-d1-free-*'
+      - 'staging/insurance-release-*'
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - 'insurance-admin.js'
+      - 'insurance-admin.css'
+      - 'insurance-control-proxy.js'
+      - 'insurance-control-entry.js'
+      - 'customer-entry-worker.js'
+      - 'wrangler.api.toml'
+      - 'control-center-features.js'
+      - 'scripts/build.mjs'
+      - '.github/workflows/insurance-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  integrated-free-d1-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate customer Insurance app
+        working-directory: sites/ekodi-insurance
+        run: npm run check
+
+      - name: Validate Insurance Worker + D1 API
+        run: |
+          set -euo pipefail
+          node --check sites/ekodi-insurance/worker.js
+          node --check sites/ekodi-insurance/public/server-bridge.js
+          node --check sites/ekodi-insurance/api/worker.js
+          grep -Fq "architecture: 'cloudflare-worker-d1'" sites/ekodi-insurance/api/worker.js
+          grep -Fq "persistentPolicyLedger: false" sites/ekodi-insurance/api/worker.js
+          grep -Fq "persistentClaimLedger: false" sites/ekodi-insurance/api/worker.js
+          grep -Fq "transcriptDefault: 'not-shared'" sites/ekodi-insurance/api/worker.js
+          grep -Fq 'shareTranscript === true' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'cleanupExpired' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'consultationRetentionDays: 30' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'AES-GCM' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'INSURANCE_DATA_KEY' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'contactConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'transcriptConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'AI 상담 대화 공유 (선택)' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'encrypted-d1-on-explicit-handoff' sites/ekodi-insurance/worker.js
+          grep -Fq 'crons = ["17 3 * * *"]' sites/ekodi-insurance/api/wrangler.toml
+
+      - name: Validate minimal D1 schema
+        run: |
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db=sqlite3.connect(':memory:')
+          for f in sorted(Path('sites/ekodi-insurance/api/migrations').glob('*.sql')):
+              db.executescript(f.read_text(encoding='utf-8'))
+          tables={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
+          required={'consultation_requests','consultation_audit_events','request_rate_limits'}
+          forbidden={'insurance_policies','insurance_claims','insurance_claim_cases','health_profiles','medical_records'}
+          if not required.issubset(tables): raise SystemExit(f'missing: {required-tables}')
+          if tables & forbidden: raise SystemExit(f'forbidden persistent ledgers: {tables & forbidden}')
+          print('Insurance minimal D1 schema OK')
+          PY
+
+      - name: Validate central Admin integration and production entry
+        run: |
+          set -euo pipefail
+          node --check insurance-admin.js
+          node --check insurance-control-proxy.js
+          node --check insurance-control-entry.js
+          node --check customer-entry-worker.js
+          node --check control-center-features.js
+          node --check scripts/build.mjs
+          grep -Fq 'loadInsurance' control-center-features.js
+          grep -Fq '/api/insurance/admin/consultations' insurance-admin.js
+          grep -Fq '/api/internal/consultations' insurance-control-proxy.js
+          grep -Fq '/api/session' insurance-control-proxy.js
+          grep -Fq "path.startsWith('/api/insurance/admin')" customer-entry-worker.js
+          grep -Fq 'handleInsuranceAdminProxy' customer-entry-worker.js
+          grep -Fq 'INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"' wrangler.api.toml
+          ! grep -Fq '/functions/v1/insurance' insurance-control-proxy.js
+          ! grep -Fq "'origin':'https://api.ekodi.kr'" insurance-control-proxy.js
+          npm run build
+          test -f dist/insurance-admin.js
+          test -f dist/insurance-admin.css
+
+      - name: Verify central proxy fail-closed boundaries
+        run: |
+          node --input-type=module <<'JS'
+          import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
+          const apiWorker={fetch:async()=>new Response(JSON.stringify({email:'admin@example.com'}),{status:200,headers:{'content-type':'application/json'}})};
+          const req=new Request('https://api.example/api/insurance/admin/consultations',{headers:{authorization:'Bearer test'}});
+          const bad=await handleInsuranceAdminProxy(req,{INSURANCE_API_BASE:'https://unapproved.example',INSURANCE_INTERNAL_TOKEN:'x'}, {}, apiWorker);
+          if(bad.status!==503)throw new Error(`unapproved backend must fail closed, got ${bad.status}`);
+          const missing=await handleInsuranceAdminProxy(req,{INSURANCE_API_BASE:'https://insurance-api-staging.ekodi.kr'}, {}, apiWorker);
+          if(missing.status!==503)throw new Error(`missing internal secret must fail closed, got ${missing.status}`);
+          JS
+
+      - name: Verify active runtime is D1-only for Insurance business data
+        run: |
+          set -euo pipefail
+          active=(
+            sites/ekodi-insurance/worker.js
+            sites/ekodi-insurance/public/server-bridge.js
+            sites/ekodi-insurance/api/worker.js
+            sites/ekodi-insurance/api/wrangler.toml
+            insurance-control-proxy.js
+            insurance-control-entry.js
+            customer-entry-worker.js
+          )
+          if grep -E '/functions/v1/insurance|SUPABASE_SERVICE_ROLE_KEY|insurance-admin-internal|insurance-identity-staging' "${active[@]}"; then
+            echo 'legacy Insurance Supabase business backend referenced by active runtime'
+            exit 1
+          fi
+          grep -Fq 'Cloudflare Worker + D1' sites/ekodi-insurance/README.md
+          grep -Fq '유료 Supabase development branch는 사용하지 않는다.' sites/ekodi-insurance/README.md
+          grep -Fq 'Paid Supabase branch requirement: REMOVED' sites/ekodi-insurance/RELEASE_GATES.md
+          grep -Fq 'Mall-style Cloudflare Worker + D1 architecture: ADOPTED' sites/ekodi-insurance/RELEASE_GATES.md
+          echo 'Legacy Supabase drafts are outside the active Insurance runtime.'
+
+      - name: Verify live free staging endpoints
+        run: |
+          set -euo pipefail
+          ui='https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
+          api='https://insurance-api-staging.ekodi.kr'
+          ui_health=$(curl -fsS "$ui/health")
+          api_health=$(curl -fsS "$api/health")
+          root=$(curl -L -fsS "$ui/")
+          bridge=$(curl -L -fsS "$ui/server-bridge.js")
+          printf '%s' "$root" | grep -Fq 'EKODI Insurance'
+          printf '%s' "$root" | grep -Fq '/server-bridge.js'
+          printf '%s' "$root" | grep -Fq '실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화'
+          printf '%s' "$bridge" | grep -Fq 'insurance-api-staging.ekodi.kr'
+          printf '%s' "$bridge" | grep -Fq 'contactConsent'
+          printf '%s' "$bridge" | grep -Fq 'transcriptConsent'
+          printf '%s' "$ui_health" | grep -Fq '"mode":"staging-cloudflare-d1-free"'
+          printf '%s' "$ui_health" | grep -Fq '"personalPolicyData":"browser-local"'
+          printf '%s' "$ui_health" | grep -Fq '"transcriptDefault":"not-shared"'
+          printf '%s' "$api_health" | grep -Fq '"architecture":"cloudflare-worker-d1"'
+          printf '%s' "$api_health" | grep -Fq '"dbReady":true'
+          printf '%s' "$api_health" | grep -Fq '"encryptionReady":true'
+          printf '%s' "$api_health" | grep -Fq '"internalAdminReady":true'
+          printf '%s' "$api_health" | grep -Fq '"rateLimitReady":true'
+          printf '%s' "$api_health" | grep -Fq '"transcriptDefault":"not-shared"'
+          printf '%s' "$api_health" | grep -Fq '"consultationRetentionDays":30'
+          printf '%s' "$api_health" | grep -Fq '"persistentPolicyLedger":false'
+          printf '%s' "$api_health" | grep -Fq '"persistentClaimLedger":false'
+
+      - name: Verify staging-only routing
+        run: |
+          set -euo pipefail
+          grep -Fq 'workers_dev = true' sites/ekodi-insurance/wrangler.toml
+          grep -Fq 'run_worker_first = [ "/", "/health" ]' sites/ekodi-insurance/wrangler.toml
+          grep -Fq 'Content-Security-Policy:' sites/ekodi-insurance/public/_headers
+          grep -Fq 'X-Robots-Tag: noindex, nofollow' sites/ekodi-insurance/public/_headers
+          if grep -Eq '^routes?\s*=' sites/ekodi-insurance/wrangler.toml; then
+            echo 'Production route detected in customer UI staging config'
+            exit 1
+          fi

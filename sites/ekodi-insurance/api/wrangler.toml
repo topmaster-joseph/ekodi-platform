@@ -1,0 +1,32 @@
+name = "ekodi-insurance-api"
+main = "worker.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "insurance-api.ekodi.kr"
+custom_domain = true
+
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://ins.ekodi.kr"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+
+[triggers]
+crons = ["17 3 * * *"]
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-insurance"
+migrations_dir = "migrations"
+
+# Secrets, never source vars:
+# INSURANCE_DATA_KEY       32-byte key encoded as base64
+# INSURANCE_INTERNAL_TOKEN central Admin -> Insurance API
+# RATE_LIMIT_SALT          request fingerprint salt
