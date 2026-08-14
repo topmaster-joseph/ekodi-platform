@@ -1,0 +1,145 @@
+name: EKODI Staging Safety Pipeline
+
+on:
+  push:
+    branches:
+      - staging/ecosystem-platform
+    paths-ignore:
+      - 'monitor-status.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-ecosystem-staging
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  STAGING_DB_NAME: ekodi-auth-staging
+  STAGING_API_URL: https://ekodi-auth-api-staging.topmaster-joseph.workers.dev
+  STAGING_SITE_URL: https://ekodi-platform-staging.topmaster-joseph.workers.dev
+
+jobs:
+  verify:
+    name: Verify without production access
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Static checks
+        run: npm run check
+      - name: Unit and boundary tests
+        run: npm test
+      - name: Build production-equivalent assets
+        run: npm run build
+      - name: Render non-routable API config for dry run
+        shell: bash
+        run: sed 's/__STAGING_D1_DATABASE_ID__/00000000-0000-0000-0000-000000000001/' wrangler.api.staging.toml.template > /tmp/wrangler.api.staging.toml
+      - name: Dry-run API bundle
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config /tmp/wrangler.api.staging.toml --outdir /tmp/ekodi-api-bundle
+      - name: Dry-run isolated staging site
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.site.staging.toml --outdir /tmp/ekodi-site-bundle
+      - name: Assert production routes are absent from staging configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq '^\s*\[\[routes\]\]' wrangler.site.staging.toml
+          ! grep -Eq '^\s*\[\[routes\]\]' wrangler.api.staging.toml.template
+          ! grep -Fq 'database_name = "ekodi-auth"' wrangler.api.staging.toml.template
+          grep -Fq 'database_name = "ekodi-auth-staging"' wrangler.api.staging.toml.template
+          grep -Fq 'ENVIRONMENT = "staging"' wrangler.api.staging.toml.template
+          echo 'Staging isolation assertions passed.'
+
+  deploy-staging:
+    name: Deploy isolated staging
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Verify Cloudflare staging credentials
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Ensure isolated staging D1 exists
+        id: d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 list --json > /tmp/d1-before.json
+          db_id=$(node - <<'NODE'
+          const fs=require('fs');
+          const raw=JSON.parse(fs.readFileSync('/tmp/d1-before.json','utf8'));
+          const rows=Array.isArray(raw)?raw:(raw.result||raw.databases||[]);
+          const row=rows.find(x => (x.name||x.database_name) === process.env.STAGING_DB_NAME);
+          process.stdout.write(row ? String(row.uuid||row.id||row.database_id||'') : '');
+          NODE
+          )
+          if [ -z "$db_id" ]; then
+            echo 'Creating isolated staging D1 database.'
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create "$STAGING_DB_NAME" --location apac
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json > /tmp/d1-after.json
+            db_id=$(node - <<'NODE'
+          const fs=require('fs');
+          const raw=JSON.parse(fs.readFileSync('/tmp/d1-after.json','utf8'));
+          const rows=Array.isArray(raw)?raw:(raw.result||raw.databases||[]);
+          const row=rows.find(x => (x.name||x.database_name) === process.env.STAGING_DB_NAME);
+          process.stdout.write(row ? String(row.uuid||row.id||row.database_id||'') : '');
+          NODE
+            )
+          fi
+          test -n "$db_id" || (echo 'Unable to resolve staging D1 id' && exit 1)
+          echo "database_id=$db_id" >> "$GITHUB_OUTPUT"
+      - name: Render staging API config
+        shell: bash
+        env:
+          STAGING_D1_ID: ${{ steps.d1.outputs.database_id }}
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const input=fs.readFileSync('wrangler.api.staging.toml.template','utf8');
+          const id=process.env.STAGING_D1_ID;
+          if(!/^[0-9a-f-]{36}$/i.test(id||'')) throw new Error('Invalid staging D1 id');
+          fs.writeFileSync('/tmp/wrangler.api.staging.toml', input.replace('__STAGING_D1_DATABASE_ID__', id));
+          NODE
+      - name: Apply migrations to staging D1 only
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ${STAGING_DB_NAME} --remote --config /tmp/wrangler.api.staging.toml
+      - name: Deploy staging API Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/wrangler.api.staging.toml
+      - name: Deploy isolated staging site
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site.staging.toml
+      - name: Smoke test staging API and site
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 "$STAGING_API_URL/health" || true)
+            status=$(curl -fsS --connect-timeout 5 --max-time 12 "$STAGING_API_URL/api/status" || true)
+            site=$(curl -fsS --connect-timeout 5 --max-time 12 "$STAGING_SITE_URL/" || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$status" | grep -q '"initialized"' \
+              && printf '%s' "$site" | grep -Fq 'Staging Safety Gate' \
+              && printf '%s' "$site" | grep -Fq 'production write: disabled'; then
+              echo 'Staging smoke tests passed.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Staging smoke tests did not pass.'
+          exit 1
