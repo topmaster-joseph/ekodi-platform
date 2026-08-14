@@ -1,4 +1,5 @@
 import { handleMarketingDomainRequest, runMarketingDomainSchedule } from './marketing-domain-control.js';
+import { handleMarketingStoreWorkspaceRequest, runMarketingStoreWorkspaceSchedule } from './marketing-store-workspace.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -15,7 +16,19 @@ export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (request.method === 'GET' && path === '/health') {
-      return json({ ok: true, service: 'ekodi-marketing-domain-api', version: 1 });
+      return json({ ok: true, service: 'ekodi-marketing-domain-api', version: 2 });
+    }
+    if (path.startsWith('/api/marketing/workspace')) {
+      try {
+        const response = await handleMarketingStoreWorkspaceRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Marketing AI store workspace API error', error);
+        return json({
+          error: 'Marketing AI 점포 Workspace 처리 중 오류가 발생했습니다.',
+          code: 'MARKETING_STORE_WORKSPACE_API_ERROR',
+        }, 500);
+      }
     }
     if (path.startsWith('/api/marketing/domains')) {
       try {
@@ -33,6 +46,9 @@ export default {
   },
 
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(runMarketingDomainSchedule(env).catch(error => console.error('Marketing domain schedule failed', error)));
+    ctx.waitUntil(Promise.all([
+      runMarketingDomainSchedule(env),
+      runMarketingStoreWorkspaceSchedule(env),
+    ]).catch(error => console.error('Marketing domain schedule failed', error)));
   },
 };
