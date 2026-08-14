@@ -1,0 +1,13 @@
+name = "ekodi-insurance-auth-staging"
+main = "worker.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
