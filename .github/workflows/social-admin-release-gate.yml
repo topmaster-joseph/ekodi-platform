@@ -10,7 +10,7 @@ on:
       - 'social-worker.js'
       - 'social-admin.*'
       - 'social-registry-api.js'
-      - 'api-social-entry.js'
+      - 'customer-entry-worker.js'
       - 'control-center-features.js'
       - 'scripts/build.mjs'
       - 'wrangler.api*.toml'
@@ -38,15 +38,17 @@ jobs:
         run: |
           set -euo pipefail
           node --check social-registry-api.js
-          node --check api-social-entry.js
           node --check social-admin.js
           node --check social-worker.js
+          node --check customer-entry-worker.js
           node --check control-center-features.js
           node -e "const r=JSON.parse(require('fs').readFileSync('social/channels.json','utf8')); if(r.version!==3||!r.organizations.some(o=>o.id==='community'&&o.name==='에코디커뮤니티')) process.exit(1)"
           grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
           grep -Fq '/api/control/social/registry' social-admin.js
-          grep -Fq '/api/social/registry' api-social-entry.js
+          grep -Fq '/api/social/registry' customer-entry-worker.js
+          grep -Fq 'handleSocialRegistry' customer-entry-worker.js
           grep -Fq 'social_registry_history' social-registry-api.js
+          grep -Fq 'main = "customer-entry-worker.js"' wrangler.api.toml
           if grep -R -Fq '에코디선교회' social; then echo 'Legacy formal mission label found in published Social data'; exit 1; fi
 
       - name: Run full regression suite and build
