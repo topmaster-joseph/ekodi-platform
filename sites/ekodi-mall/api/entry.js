@@ -189,7 +189,7 @@ export default {
       return reply({
         ...coreBody,
         ok,
-        version: 4,
+        version: 3,
         environment: env.ENVIRONMENT || 'unknown',
         firstTouchSchemaReady: firstTouchReady,
         sourcingSchemaReady: sourcingReady,
