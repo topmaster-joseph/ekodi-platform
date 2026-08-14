@@ -50,7 +50,7 @@ Current dedicated AI workspace targets include:
 - `jadam.ai.ekodi.kr` → Cloudflare Pages project `marketing-ai-jadam`
 - `pizzamaru.ai.ekodi.kr` → Cloudflare Pages project `marketing-ai-pizzamaru`
 - `yogurt.ai.ekodi.kr` → Cloudflare Pages project `marketing-ai-yogurtpurple`
-- `cgma.ai.ekodi.kr` → Cloudflare Pages project `cheonggye-market`, landing at `/ai`
+- `cgma.ai.ekodi.kr` → Cloudflare Pages project `cheonggye-market`, landing at `/market-ai`
 
 Existing production aliases are retained during migration so current links do not break. They are compatibility addresses, not the new naming standard.
 
