@@ -31,20 +31,26 @@ const saleTypeLabels = {
   curation: '큐레이션 준비'
 };
 
-const [site, productsRaw, pages, indexTemplate, productTemplate, pageTemplate] = await Promise.all([
+const [site, productsRaw, pages, storesRaw, indexTemplate, productTemplate, pageTemplate, storeTemplate, sellerTemplate] = await Promise.all([
   readJson('content/site.json'),
   readJson('content/products.json'),
   readJson('content/pages.json'),
+  readJson('content/stores.json'),
   read('src/index.template.html'),
   read('src/product.template.html'),
-  read('src/page.template.html')
+  read('src/page.template.html'),
+  read('src/store.template.html'),
+  read('src/seller.template.html')
 ]);
 
-const products = productsRaw.filter((product) => product.published);
+const stores = storesRaw.filter((store) => store.published);
+const storeMap = new Map(stores.map((store) => [store.id, store]));
+const publishedStoreIds = new Set(stores.map((store) => store.id));
+const products = productsRaw.filter((product) => product.published && publishedStoreIds.has(product.storeId));
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
 const heroParts = site.hero.title.split('|');
 const heroTitle = heroParts.length >= 3
-  ? `${esc(heroParts[0])}<br><em>${esc(heroParts[1])}</em>${esc(heroParts.slice(2).join(''))}`
+  ? `${esc(heroParts[0])}<br><em>${esc(heroParts[1])}</em><br>${esc(heroParts.slice(2).join(''))}`
   : esc(site.hero.title);
 
 const filters = site.categories.map((category, index) =>
@@ -53,8 +59,15 @@ const filters = site.categories.map((category, index) =>
 
 const productCards = products.map((product) => {
   const href = `/products/${product.slug}/`;
-  const searchable = `${product.name} ${product.badge} ${product.description} ${product.status}`.toLowerCase();
-  return `<article class="card" data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"><div class="thumb ${esc(product.category)}"><span class="badge">${esc(product.badge)}</span><button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button></div><div class="card-body"><h3><a href="${href}">${esc(product.name)}</a></h3><p>${esc(product.description)}</p><div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  const store = storeMap.get(product.storeId);
+  const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''}`.toLowerCase();
+  return `<article class="card" data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"><div class="thumb ${esc(product.category)}"><span class="badge">${esc(product.badge)}</span><button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button></div><div class="card-body"><p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p><h3><a href="${href}">${esc(product.name)}</a></h3><p>${esc(product.description)}</p><div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+}).join('');
+
+const storeCards = stores.map((store) => {
+  const href = `/stores/${store.slug}/`;
+  const count = products.filter((product) => product.storeId === store.id).length;
+  return `<a class="store-card" href="${href}"><div class="store-card-mark">${esc(store.name.slice(0, 1))}</div><div><p class="store-badge">${esc(store.badge || store.kind)}</p><h3>${esc(store.name)}</h3><p>${esc(store.description)}</p><span>${count}개 상품 · ${esc(store.status)}</span></div></a>`;
 }).join('');
 
 const standards = site.standards.map((item) =>
@@ -81,6 +94,7 @@ const businessInfo = legalFieldsComplete
   : `${businessCore}<p>정식 결제 오픈 전 사업자등록번호, 통신판매업 신고번호, 사업장 주소와 고객센터 정보를 등록합니다.</p>`;
 
 const localTitle = site.local.title.split('|').map(esc).join('<br>');
+const sellerStudioHref = site.platform?.sellerStudioHref || '/seller/';
 const indexHtml = fill(indexTemplate, {
   SEO_TITLE: esc(site.seo.title),
   SEO_DESCRIPTION: esc(site.seo.description),
@@ -95,6 +109,9 @@ const indexHtml = fill(indexTemplate, {
   HERO_SECONDARY_HREF: esc(site.hero.secondaryHref),
   FILTERS: filters,
   PRODUCTS: productCards,
+  STORES: storeCards,
+  STORE_COUNT: stores.length,
+  SELLER_STUDIO_HREF: esc(sellerStudioHref),
   LOCAL_EYEBROW: esc(site.local.eyebrow),
   LOCAL_TITLE: localTitle,
   LOCAL_DESCRIPTION: esc(site.local.description),
@@ -117,6 +134,7 @@ await cp(path.join(root, '_redirects'), path.join(dist, '_redirects'));
 
 for (const product of products) {
   const productUrl = `${baseUrl}/products/${product.slug}/`;
+  const store = storeMap.get(product.storeId);
   const html = fill(productTemplate, {
     PRODUCT_NAME: esc(product.name),
     PRODUCT_DESCRIPTION: esc(product.description),
@@ -128,10 +146,47 @@ for (const product of products) {
     PRICE_LABEL: esc(formatPrice(product.price)),
     ACTION_LABEL: esc(product.action?.label || '문의하기'),
     ACTION_URL: esc(product.action?.url || site.links.inquiry),
+    STORE_NAME: esc(store.name),
+    STORE_OPERATOR: esc(store.operator),
+    STORE_STATUS: esc(store.status),
+    STORE_URL: `/stores/${esc(store.slug)}/`,
     NOTICE: esc(site.notice)
   });
   await write(`products/${product.slug}/index.html`, html);
 }
+
+for (const store of stores) {
+  const storeUrl = `${baseUrl}/stores/${store.slug}/`;
+  const storeProducts = products.filter((product) => product.storeId === store.id);
+  const cards = storeProducts.map((product) => {
+    const href = `/products/${product.slug}/`;
+    return `<article class="card"><div class="thumb ${esc(product.category)}"><span class="badge">${esc(product.badge)}</span></div><div class="card-body"><h3><a href="${href}">${esc(product.name)}</a></h3><p>${esc(product.description)}</p><div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  }).join('');
+  const html = fill(storeTemplate, {
+    STORE_NAME: esc(store.name),
+    STORE_DESCRIPTION: esc(store.description),
+    STORE_URL: esc(storeUrl),
+    STORE_BADGE: esc(store.badge || store.kind),
+    STORE_STATUS: esc(store.status),
+    STORE_OPERATOR: esc(store.operator),
+    STORE_PRODUCTS: cards || '<p class="empty">현재 공개된 상품이 없습니다.</p>',
+    STORE_PRODUCT_COUNT: storeProducts.length,
+    STORE_CONTACT_URL: esc(store.contactUrl || site.links.inquiry),
+    NOTICE: esc(site.notice)
+  });
+  await write(`stores/${store.slug}/index.html`, html);
+}
+
+const platformModules = (site.platform?.modules || []).map((module, index) =>
+  `<article><span>${String(index + 1).padStart(2, '0')}</span><h3>${esc(module)}</h3><p>${index < 2 ? '플랫폼 기반 구조에 우선 포함합니다.' : '다음 단계에서 안전하게 연결합니다.'}</p></article>`
+).join('');
+const sellerHtml = fill(sellerTemplate, {
+  PLATFORM_NAME: esc(site.platform?.name || 'EKODI Commerce Platform'),
+  PLATFORM_MODULES: platformModules,
+  INQUIRY_URL: esc(site.links.inquiry),
+  NOTICE: esc(site.notice)
+});
+await write('seller/index.html', sellerHtml);
 
 for (const policy of pages.policies || []) {
   const pageUrl = `${baseUrl}/pages/${policy.slug}/`;
@@ -150,12 +205,13 @@ for (const policy of pages.policies || []) {
 
 const urls = [
   `${baseUrl}/`,
+  ...stores.map((store) => `${baseUrl}/stores/${store.slug}/`),
   ...products.map((product) => `${baseUrl}/products/${product.slug}/`),
   ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`)
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${esc(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
 await write('sitemap.xml', sitemap);
 await write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml\n`);
-await write('build-meta.json', JSON.stringify({ version: site.version, products: products.length, policies: (pages.policies || []).length }, null, 2));
+await write('build-meta.json', JSON.stringify({ version: site.version, stores: stores.length, products: products.length, policies: (pages.policies || []).length, platformMode: site.platform?.mode || 'unknown' }, null, 2));
 
-console.log(`EKODI Mall built: ${products.length} products, ${(pages.policies || []).length} policy pages -> dist/`);
+console.log(`EKODI Commerce Platform built: ${stores.length} stores, ${products.length} products, ${(pages.policies || []).length} policy pages -> dist/`);
