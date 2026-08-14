@@ -1,37 +1,102 @@
 {
-  "domainPattern": "marketing.{tenant}.ekodi.kr",
+  "version": 2,
+  "domainPattern": "{tenant}.ai.ekodi.kr",
+  "namespace": {
+    "domain": "ai.ekodi.kr",
+    "purpose": "EKODI customer AI workspace namespace",
+    "productHub": "marketing.ekodi.kr"
+  },
   "hub": {
     "domain": "marketing.ekodi.kr",
     "project": "marketing-ai"
   },
+  "policy": {
+    "organizationWorkspace": {
+      "dedicatedEkodiDomain": true,
+      "pattern": "{organization}.ai.ekodi.kr"
+    },
+    "storeBasic": {
+      "dedicatedEkodiDomain": false,
+      "access": "organization workspace or shared Marketing AI hub"
+    },
+    "storePlus": {
+      "dedicatedEkodiDomain": true,
+      "pattern": "{store}.ai.ekodi.kr",
+      "customDomain": false
+    },
+    "storePro": {
+      "dedicatedEkodiDomain": true,
+      "pattern": "{store}.ai.ekodi.kr",
+      "customDomain": true,
+      "includedCustomDomains": 1
+    },
+    "customDomain": {
+      "ownership": "customer",
+      "registrationIncluded": false,
+      "mappingOnly": true,
+      "examples": [
+        "ai.customer-domain.com",
+        "marketing.customer-domain.com"
+      ],
+      "note": "EKODI maps the customer-owned hostname to the same Pro workspace; domain ownership is not transferred to EKODI."
+    }
+  },
   "tenants": [
     {
       "tenant": "jadam",
+      "tenantType": "store",
       "name": "자담치킨 목포대점",
       "project": "marketing-ai-jadam",
-      "domain": "marketing.jadam.ekodi.kr",
-      "legacyDomains": ["jadam.ekodi.kr"]
+      "domain": "jadam.ai.ekodi.kr",
+      "landingPath": "/",
+      "domainEntitlement": "grandfathered",
+      "legacyDomains": [
+        "jadam.ekodi.kr",
+        "marketing.jadam.ekodi.kr"
+      ],
+      "customDomains": []
     },
     {
       "tenant": "pizzamaru",
+      "tenantType": "store",
       "name": "피자마루 목포대점",
       "project": "marketing-ai-pizzamaru",
-      "domain": "marketing.pizzamaru.ekodi.kr",
-      "legacyDomains": ["pizzamaru.ekodi.kr"]
+      "domain": "pizzamaru.ai.ekodi.kr",
+      "landingPath": "/",
+      "domainEntitlement": "grandfathered",
+      "legacyDomains": [
+        "pizzamaru.ekodi.kr",
+        "marketing.pizzamaru.ekodi.kr"
+      ],
+      "customDomains": []
     },
     {
       "tenant": "yogurt",
+      "tenantType": "store",
       "name": "요거트퍼플 목포대점",
       "project": "marketing-ai-yogurtpurple",
-      "domain": "marketing.yogurt.ekodi.kr",
-      "legacyDomains": ["yogurt.ekodi.kr"]
+      "domain": "yogurt.ai.ekodi.kr",
+      "landingPath": "/",
+      "domainEntitlement": "grandfathered",
+      "legacyDomains": [
+        "yogurt.ekodi.kr",
+        "marketing.yogurt.ekodi.kr"
+      ],
+      "customDomains": []
     },
     {
-      "tenant": "cheonggye",
+      "tenant": "cgma",
+      "tenantType": "organization",
       "name": "청계면상인회",
       "project": "cheonggye-market",
-      "domain": "marketing.cheonggye.ekodi.kr",
-      "legacyDomains": ["cgma.ekodi.kr"]
+      "domain": "cgma.ai.ekodi.kr",
+      "landingPath": "/ai",
+      "domainEntitlement": "organization",
+      "publicSiteDomain": "cgma.ekodi.kr",
+      "legacyDomains": [
+        "marketing.cheonggye.ekodi.kr"
+      ],
+      "customDomains": []
     }
   ]
 }
