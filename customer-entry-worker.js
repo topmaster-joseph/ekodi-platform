@@ -7,6 +7,7 @@ import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { handleBooksRequest } from './books-control.js';
 import { handleBooksFinanceRequest } from './books-finance-control.js';
 import { handleBooksDistributionRequest } from './books-distribution-control.js';
+import { handleBooksPipelineRequest } from './books-pipeline-control.js';
 import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleSocialRegistry } from './social-registry-api.js';
@@ -113,6 +114,10 @@ export default {
 
     if (path.startsWith('/api/books') && request.method !== 'OPTIONS') {
       try {
+        if (path.startsWith('/api/books/admin/pipeline')) {
+          const pipelineResponse = await handleBooksPipelineRequest(request, env);
+          if (pipelineResponse) return pipelineResponse;
+        }
         if (path.startsWith('/api/books/admin/distribution')) {
           const distributionResponse = await handleBooksDistributionRequest(request, env);
           if (distributionResponse) return distributionResponse;
