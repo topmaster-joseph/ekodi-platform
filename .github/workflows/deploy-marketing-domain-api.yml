@@ -6,9 +6,13 @@ on:
     paths:
       - 'marketing-domain-control.js'
       - 'marketing-domain-worker.js'
+      - 'marketing-store-workspace.js'
+      - 'marketing-store-domain.js'
       - 'wrangler.marketing-domains.toml'
       - 'migrations/0017_marketing_custom_domains.sql'
+      - 'migrations/0018_marketing_store_workspaces.sql'
       - 'test/marketing-custom-domain.test.mjs'
+      - 'test/marketing-store-workspace.test.mjs'
       - 'deploy/manifests/marketing-domain-api.worker.json'
       - '.github/workflows/deploy-marketing-domain-api.yml'
       - 'scripts/guarded-worker-release.mjs'
@@ -17,9 +21,13 @@ on:
     paths:
       - 'marketing-domain-control.js'
       - 'marketing-domain-worker.js'
+      - 'marketing-store-workspace.js'
+      - 'marketing-store-domain.js'
       - 'wrangler.marketing-domains.toml'
       - 'migrations/0017_marketing_custom_domains.sql'
+      - 'migrations/0018_marketing_store_workspaces.sql'
       - 'test/marketing-custom-domain.test.mjs'
+      - 'test/marketing-store-workspace.test.mjs'
       - 'deploy/manifests/marketing-domain-api.worker.json'
       - '.github/workflows/deploy-marketing-domain-api.yml'
       - 'scripts/guarded-worker-release.mjs'
@@ -48,14 +56,21 @@ jobs:
         run: |
           set -euo pipefail
           node --check marketing-domain-control.js
+          node --check marketing-store-workspace.js
+          node --check marketing-store-domain.js
           node --check marketing-domain-worker.js
-          node --test test/marketing-custom-domain.test.mjs
+          node --test test/marketing-custom-domain.test.mjs test/marketing-store-workspace.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           test -f deploy/manifests/marketing-domain-api.worker.json
           grep -Fq 'main = "marketing-domain-worker.js"' wrangler.marketing-domains.toml
           grep -Fq "PRO_REQUIRED" marketing-domain-control.js
           grep -Fq "CNAME" marketing-domain-control.js
           grep -Fq "marketing_custom_domains" migrations/0017_marketing_custom_domains.sql
+          grep -Fq "marketing_store_workspaces" migrations/0018_marketing_store_workspaces.sql
+          grep -Fq "marketing_store_custom_domains" migrations/0018_marketing_store_workspaces.sql
+          grep -Fq "/api/marketing/workspace/provision" marketing-store-workspace.js
+          grep -Fq "/api/marketing/workspace/resolve" marketing-store-workspace.js
+          grep -Fq "/api/marketing/store-domains" marketing-store-domain.js
 
   staging:
     needs: validate
@@ -133,8 +148,16 @@ jobs:
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/health' || true)
             unauthorized=$(curl -sS -o /tmp/domain-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/domains' || true)
-            preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://marketing.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/domains' || true)
-            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' && [ "$unauthorized" = '401' ] && [ "$preflight" = '204' ]; then
+            store_workspace=$(curl -sS -o /tmp/store-workspace-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
+            store_domains=$(curl -sS -o /tmp/store-domains-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
+            invalid_resolve=$(curl -sS -o /tmp/store-resolve-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/workspace/resolve?host=invalid.example.com' || true)
+            preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://demo.ai.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/workspace/provision' || true)
+            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' \
+              && [ "$unauthorized" = '401' ] \
+              && [ "$store_workspace" = '403' ] \
+              && [ "$store_domains" = '403' ] \
+              && [ "$invalid_resolve" = '400' ] \
+              && [ "$preflight" = '204' ]; then
               echo 'Marketing domain API isolated staging verified.'
               exit 0
             fi
@@ -188,7 +211,14 @@ jobs:
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/health' || true)
             unauthorized=$(curl -sS -o /tmp/domain-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/domains' || true)
-            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' && [ "$unauthorized" = '401' ]; then
+            store_workspace=$(curl -sS -o /tmp/store-workspace-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
+            store_domains=$(curl -sS -o /tmp/store-domains-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
+            invalid_resolve=$(curl -sS -o /tmp/store-resolve-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace/resolve?host=invalid.example.com' || true)
+            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' \
+              && [ "$unauthorized" = '401' ] \
+              && [ "$store_workspace" = '403' ] \
+              && [ "$store_domains" = '403' ] \
+              && [ "$invalid_resolve" = '400' ]; then
               echo 'Marketing domain API production boundary verified.'
               exit 0
             fi
