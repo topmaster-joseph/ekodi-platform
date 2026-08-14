@@ -1,0 +1,11 @@
+body.compact-control-center .campus-table th:last-child,
+body.compact-control-center .campus-table td:last-child{width:250px;text-align:right}
+body.compact-control-center .campus-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;white-space:nowrap}
+body.compact-control-center .campus-row-action{display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:6px 8px!important;font-size:10px!important;line-height:1.1;text-decoration:none}
+body.compact-control-center .campus-table td{vertical-align:middle}
+body.compact-control-center .campus-table tbody tr:hover{background:#0d2137}
+@media (max-width:900px){
+  body.compact-control-center .campus-table th:last-child,
+  body.compact-control-center .campus-table td:last-child{width:auto}
+  body.compact-control-center .campus-row-actions{justify-content:flex-start;flex-wrap:wrap}
+}
