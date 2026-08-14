@@ -1,35 +1,27 @@
--- Store-scoped Marketing AI subscriptions use the immutable Supabase store UUID as
--- subject_key. Rebuild the two domain tables to extend the existing subject guard
--- without weakening uniqueness or foreign-key boundaries.
+-- Store-scoped Marketing AI lives beside the legacy person/tenant domain tables.
+-- This keeps the rollout strictly additive while using the immutable Supabase store UUID
+-- as the billing and workspace subject key.
 
-CREATE TABLE marketing_workspaces_v2 (
+CREATE TABLE IF NOT EXISTS marketing_store_workspaces (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  subject_type TEXT NOT NULL CHECK(subject_type IN ('person','tenant','store')),
-  subject_key TEXT NOT NULL,
+  store_id TEXT NOT NULL UNIQUE,
   tenant_slug TEXT,
   workspace_slug TEXT NOT NULL UNIQUE,
   canonical_domain TEXT NOT NULL UNIQUE,
   provider TEXT NOT NULL DEFAULT 'cloudflare-pages',
-  provider_project TEXT NOT NULL,
+  provider_project TEXT NOT NULL DEFAULT 'marketing-ai',
   landing_path TEXT NOT NULL DEFAULT '/',
-  status TEXT NOT NULL DEFAULT 'active',
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','suspended')),
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  UNIQUE(subject_type, subject_key)
+  updated_at TEXT NOT NULL
 );
 
-INSERT INTO marketing_workspaces_v2
-  (id,subject_type,subject_key,tenant_slug,workspace_slug,canonical_domain,provider,provider_project,landing_path,status,created_at,updated_at)
-SELECT id,subject_type,subject_key,tenant_slug,workspace_slug,canonical_domain,provider,provider_project,landing_path,status,created_at,updated_at
-  FROM marketing_workspaces;
-
-CREATE TABLE marketing_custom_domains_v2 (
+CREATE TABLE IF NOT EXISTS marketing_store_custom_domains (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   workspace_id INTEGER NOT NULL,
-  subject_type TEXT NOT NULL CHECK(subject_type IN ('person','tenant','store')),
-  subject_key TEXT NOT NULL,
+  store_id TEXT NOT NULL,
   hostname TEXT NOT NULL UNIQUE,
-  status TEXT NOT NULL DEFAULT 'pending_dns',
+  status TEXT NOT NULL DEFAULT 'pending_dns' CHECK(status IN ('pending_dns','verifying','active','disconnect_pending','disabled')),
   provider_status TEXT NOT NULL DEFAULT '',
   provider_domain_id TEXT,
   dns_type TEXT NOT NULL DEFAULT 'CNAME',
@@ -42,22 +34,22 @@ CREATE TABLE marketing_custom_domains_v2 (
   verified_at TEXT,
   updated_at TEXT NOT NULL,
   disabled_at TEXT,
-  FOREIGN KEY(workspace_id) REFERENCES marketing_workspaces_v2(id)
+  FOREIGN KEY(workspace_id) REFERENCES marketing_store_workspaces(id)
 );
 
-INSERT INTO marketing_custom_domains_v2
-  (id,workspace_id,subject_type,subject_key,hostname,status,provider_status,provider_domain_id,dns_type,dns_name,dns_target,
-   validation_json,error,created_by_email,created_at,verified_at,updated_at,disabled_at)
-SELECT id,workspace_id,subject_type,subject_key,hostname,status,provider_status,provider_domain_id,dns_type,dns_name,dns_target,
-       validation_json,error,created_by_email,created_at,verified_at,updated_at,disabled_at
-  FROM marketing_custom_domains;
+CREATE TABLE IF NOT EXISTS marketing_store_domain_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  store_id TEXT NOT NULL,
+  hostname TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT '',
+  actor_email TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
 
-DROP TABLE marketing_custom_domains;
-DROP TABLE marketing_workspaces;
-ALTER TABLE marketing_workspaces_v2 RENAME TO marketing_workspaces;
-ALTER TABLE marketing_custom_domains_v2 RENAME TO marketing_custom_domains;
-
-CREATE INDEX IF NOT EXISTS idx_marketing_custom_domains_subject
-  ON marketing_custom_domains(subject_type, subject_key, status);
-CREATE INDEX IF NOT EXISTS idx_marketing_custom_domains_workspace
-  ON marketing_custom_domains(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_marketing_store_custom_domains_store
+  ON marketing_store_custom_domains(store_id, status);
+CREATE INDEX IF NOT EXISTS idx_marketing_store_custom_domains_workspace
+  ON marketing_store_custom_domains(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_marketing_store_domain_audit_store
+  ON marketing_store_domain_audit(store_id, created_at DESC);
