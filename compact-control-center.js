@@ -11,6 +11,9 @@
     communication: 'Mail & Live',
     workspace: 'Cloud & Files',
     organization: 'Organization',
+    domains: 'Domains',
+    social: 'Social',
+    community: 'Community',
     policies: 'Policies',
   };
 
@@ -26,15 +29,18 @@
     communication: 'Mail & Live',
     workspace: 'Cloud & Files',
     organization: 'Organization',
+    domains: 'Domains',
+    social: 'Social',
+    community: 'Community',
   };
 
   const CAMPUS_SERVICES = [
-    { key: 'church', label: '교회', name: '에코디교회', domain: 'church.ekodi.kr', section: 'services', icon: 'C' },
-    { key: 'books', label: '출판', name: '에코디북스', domain: 'books.ekodi.kr', section: 'books', fallback: 'services', icon: 'B' },
-    { key: 'mall', label: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services', icon: 'M' },
-    { key: 'community', label: '커뮤니티', name: '에코디커뮤니티', domain: 'community.ekodi.kr', section: 'services', icon: 'E' },
-    { key: 'lab', label: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services', icon: 'L' },
-    { key: 'biz', label: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'services', icon: 'B' },
+    { key: 'church', label: '교회', name: '에코디교회', domain: 'church.ekodi.kr', section: 'services' },
+    { key: 'books', label: '출판', name: '에코디북스', domain: 'books.ekodi.kr', section: 'books', fallback: 'services' },
+    { key: 'mall', label: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services' },
+    { key: 'community', label: '커뮤니티', name: '에코디커뮤니티', domain: 'community.ekodi.kr', section: 'services' },
+    { key: 'lab', label: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services' },
+    { key: 'biz', label: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'services' },
   ];
 
   function setText(selector, value) {
@@ -142,81 +148,38 @@
     if (domain) highlightService(domain);
   }
 
-  function campusNode(service, index) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `campus-orbit-node campus-node-${index + 1}`;
-    button.dataset.campusSection = service.section;
-    button.dataset.campusFallback = service.fallback || '';
-    button.dataset.campusService = service.domain;
-    button.setAttribute('aria-label', `${service.name} 관리로 이동`);
-    const icon = document.createElement('strong');
-    icon.textContent = service.icon;
-    const label = document.createElement('span');
-    label.textContent = service.label;
-    button.append(icon, label);
-    return button;
-  }
+  function campusServiceRow(service) {
+    const row = document.createElement('tr');
 
-  function campusServiceCard(service) {
+    const type = document.createElement('td');
+    type.textContent = service.label;
+
+    const name = document.createElement('td');
+    const strong = document.createElement('strong');
+    strong.textContent = service.name;
+    name.append(strong);
+
+    const domain = document.createElement('td');
+    const link = document.createElement('a');
+    link.href = `https://${service.domain}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = service.domain;
+    domain.append(link);
+
+    const action = document.createElement('td');
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'campus-service-card';
+    button.className = 'secondary';
     button.dataset.campusSection = service.section;
     button.dataset.campusFallback = service.fallback || '';
     button.dataset.campusService = service.domain;
     button.setAttribute('aria-label', `${service.name} 관리 메뉴 열기`);
+    button.textContent = 'Manage →';
+    action.append(button);
 
-    const icon = document.createElement('span');
-    icon.className = 'campus-service-icon';
-    icon.textContent = service.icon;
-    const copy = document.createElement('span');
-    copy.className = 'campus-service-copy';
-    const name = document.createElement('strong');
-    name.textContent = service.name;
-    const domain = document.createElement('small');
-    domain.textContent = service.domain;
-    copy.append(name, domain);
-    const action = document.createElement('b');
-    action.textContent = 'Manage →';
-    button.append(icon, copy, action);
-    return button;
-  }
-
-  function syncCampusHealth() {
-    const healthy = document.querySelector('#metricHealthy')?.textContent?.trim() || '—';
-    const issues = document.querySelector('#metricIssues')?.textContent?.trim() || '—';
-    const generated = document.querySelector('#operationsGenerated')?.textContent?.trim() || 'Checking live operations…';
-    const production = document.querySelector('#campusProductionState');
-    setText('#campusHealthy', healthy);
-    setText('#campusIssues', issues);
-    setText('#campusLastCheck', generated);
-
-    if (production) {
-      const issueCount = Number(issues);
-      const healthyCount = Number(healthy);
-      production.classList.remove('good', 'warn', 'pending');
-      if (Number.isFinite(issueCount) && issueCount > 0) {
-        production.textContent = 'Needs attention';
-        production.classList.add('warn');
-      } else if (Number.isFinite(healthyCount) && healthyCount > 0) {
-        production.textContent = 'Healthy';
-        production.classList.add('good');
-      } else {
-        production.textContent = 'Checking';
-        production.classList.add('pending');
-      }
-    }
-  }
-
-  function bindCampusHealth() {
-    const targets = ['#metricHealthy', '#metricIssues', '#operationsGenerated']
-      .map(selector => document.querySelector(selector))
-      .filter(Boolean);
-    if (!targets.length) return;
-    const observer = new MutationObserver(syncCampusHealth);
-    targets.forEach(target => observer.observe(target, { childList: true, subtree: true, characterData: true }));
-    syncCampusHealth();
+    row.append(type, name, domain, action);
+    return row;
   }
 
   function installCampus() {
@@ -246,67 +209,26 @@
       section.innerHTML = `
         <div class="campus-toolbar">
           <div>
-            <p class="kicker">VISUAL CONTROL MAP</p>
+            <p class="kicker">EKODI SITES</p>
             <h2>EKODI Digital Campus</h2>
-            <p>ekodi.kr의 화면 구조를 보면서 필요한 운영 메뉴로 바로 들어갑니다.</p>
+            <p>사이트 목록에서 공개 화면을 열거나 관련 관리 메뉴로 바로 이동합니다.</p>
           </div>
           <div class="campus-toolbar-actions">
             <button type="button" class="secondary" data-campus-section="overview">Operations</button>
             <a class="primary" href="https://ekodi.kr" target="_blank" rel="noopener">Live Site ↗</a>
           </div>
         </div>
-        <div class="campus-layout">
-          <div class="campus-preview-shell" aria-label="EKODI 공개 홈페이지 관리용 미리보기">
-            <div class="campus-browser-bar"><span></span><span></span><span></span><strong>ekodi.kr</strong><small>Management Preview</small></div>
-            <div class="campus-preview-page">
-              <div class="campus-preview-header">
-                <button type="button" class="campus-brand-button" data-campus-section="organization"><strong>EKODI</strong><small>ekodi.kr</small></button>
-                <div class="campus-preview-nav">
-                  <button type="button" data-campus-section="services">Services</button>
-                  <button type="button" data-campus-section="organization">Organization</button>
-                  <button type="button" data-campus-section="communication">Connect</button>
-                </div>
-              </div>
-              <div class="campus-preview-hero">
-                <p>EKODI PLATFORM</p>
-                <h3>에코디, 연결의 생태계</h3>
-                <span>사람과 말씀, 공동체와 사역을 가깝게 잇습니다</span>
-              </div>
-              <div class="campus-preview-ecosystem">
-                <div class="campus-orbit" id="campusOrbit"><i class="campus-core"></i></div>
-                <div class="campus-service-grid" id="campusServiceGrid"></div>
-              </div>
-              <div class="campus-preview-footer">Click a site area to open its management view.</div>
-            </div>
-          </div>
-          <aside class="campus-health-rail" aria-label="EKODI 운영 상태">
-            <div class="campus-health-head"><div><p class="kicker">PLATFORM HEALTH</p><h3>Release Guard</h3></div><span id="campusProductionState" class="pending">Checking</span></div>
-            <div class="campus-health-list">
-              <article><small>Production</small><strong id="campusHealthy">—</strong><span>systems healthy</span></article>
-              <article><small>Actions Required</small><strong id="campusIssues">—</strong><span>live issues</span></article>
-              <article><small>Staging</small><strong>Guarded</strong><span>protected change branch</span></article>
-            </div>
-            <div class="campus-last-check"><small>Last live check</small><p id="campusLastCheck">Checking live operations…</p></div>
-            <div class="campus-quick-actions">
-              <button type="button" data-campus-section="clients">Clients</button>
-              <button type="button" data-campus-section="admins">Admin Accounts</button>
-              <button type="button" data-campus-section="finance">Finance</button>
-              <button type="button" data-campus-section="communication">Mail & Live</button>
-              <button type="button" data-campus-section="policies">Policies</button>
-              <a href="/legacy#domains">Domains & DNS</a>
-            </div>
-            <p class="campus-release-note"><strong>Release path</strong><span>Staging → AI checks → verification → production switch</span></p>
-          </aside>
+        <div class="finance-table-wrap campus-table-wrap">
+          <table class="finance-table campus-table" aria-label="EKODI 사이트 목록">
+            <thead><tr><th>Type</th><th>Service</th><th>Domain</th><th>Manage</th></tr></thead>
+            <tbody id="campusServiceRows"></tbody>
+          </table>
         </div>
       `;
       content.prepend(section);
 
-      const orbit = section.querySelector('#campusOrbit');
-      const grid = section.querySelector('#campusServiceGrid');
-      CAMPUS_SERVICES.forEach((service, index) => {
-        orbit.append(campusNode(service, index));
-        grid.append(campusServiceCard(service));
-      });
+      const rows = section.querySelector('#campusServiceRows');
+      CAMPUS_SERVICES.forEach(service => rows.append(campusServiceRow(service)));
     }
 
     button.addEventListener('click', () => {
@@ -324,8 +246,6 @@
       if (target === 'overview') history.replaceState(null, '', '#operations');
       else if (target !== 'campus') history.replaceState(null, '', location.pathname);
     });
-
-    bindCampusHealth();
   }
 
   function policyCard(title, rule, detail) {
@@ -428,10 +348,7 @@
     }
   }
 
-  window.addEventListener('ekodi-feature-installed', () => {
-    translateDynamicNavigation();
-    syncCampusHealth();
-  });
+  window.addEventListener('ekodi-feature-installed', translateDynamicNavigation);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
