@@ -4,23 +4,26 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Release Control is bundled behind the secured admin runtime', async () => {
+test('Deployments is bundled behind the secured admin runtime without a static menu leak', async () => {
   const [build, worker, admin, css] = await Promise.all([
     read('scripts/build.mjs'), read('site-worker.js'), read('release-control-admin.js'), read('release-control-admin.css'),
   ]);
   assert.match(build, /release-control-admin\.css/);
   assert.match(build, /release-control-admin\.js/);
-  assert.match(build, /data-section=\"release\"/);
-  assert.match(build, /<span>Release<\/span>/);
+  assert.doesNotMatch(build, /data-section=\"release\"/);
+  assert.doesNotMatch(build, /<span>Release<\/span>/);
   assert.match(worker, /'\/release-control-admin\.js'/);
   assert.match(worker, /'\/release-control-admin\.css'/);
   assert.match(worker, /https:\/\/api\.github\.com/);
-  assert.match(admin, /nav\.querySelector\('\[data-section=\"release\"\]'\)/);
-  assert.match(admin, /Release Control/);
+  assert.match(admin, /DEPLOYMENTS_SECTION = 'deployments'/);
+  assert.match(admin, /role === 'super_admin'/);
+  assert.match(admin, /section\.hidden = true/);
+  assert.match(admin, /item\.dataset\.section === DEPLOYMENTS_SECTION/);
+  assert.match(admin, /Deployments/);
   assert.match(css, /\.release-units/);
 });
 
-test('Release Control describes guarded release models without exposing privileged secrets', async () => {
+test('deployment control describes guarded release models without exposing privileged secrets', async () => {
   const admin = await read('release-control-admin.js');
   for (const workflow of ['deploy-admin-site.yml','deploy-control-api.yml','deploy-finance.yml','sync-marketing-ai.yml','deploy-community.yml','deploy-books.yml','deploy-social.yml']) {
     assert.ok(admin.includes(workflow), `missing release unit ${workflow}`);
