@@ -8,9 +8,9 @@
   "seo": {
     "title": "EKODI MALL | 함께 성장하는 커머스 플랫폼",
     "description": "상품만 진열하는 쇼핑몰을 넘어 판매자 스토어, 제휴상품, 지역상생관, 상품 콘텐츠와 마케팅 흐름을 연결하는 EKODI Commerce Platform.",
-    "baseUrl": "https://ekodi-mall.pages.dev"
+    "baseUrl": "https://mall.ekodi.kr"
   },
-  "notice": "커머스 플랫폼 V2 준비 중 · 누구나 스토어와 상품 초안을 만들 수 있으며 실제 직접판매 활성화는 판매자 확인과 결제·정산 연결 후 진행합니다.",
+  "notice": "커머스 플랫폼 V2 준비 중 · Google 회원은 누구나 무료로 스토어와 상품 제작을 체험할 수 있으며 실제 직접판매 활성화는 판매자 확인과 결제·정산 연결 후 진행합니다.",
   "hero": {
     "eyebrow": "EKODI COMMERCE PLATFORM",
     "title": "가게를 열고|고객을 만나고|함께 성장하도록",
@@ -45,6 +45,32 @@
       "supportedSaleTypes": ["direct", "affiliate", "inquiry"],
       "affiliateRouting": "external",
       "sellerIdentityRequiredForDirectSale": true
+    },
+    "membership": {
+      "defaultPlan": "free",
+      "entitlementAuthority": "server",
+      "plans": [
+        {
+          "id": "free",
+          "name": "Free",
+          "features": ["google-signup", "one-store-draft", "product-draft", "detail-structure", "basic-social-draft", "basic-shorts-outline"]
+        },
+        {
+          "id": "starter-ai",
+          "name": "Starter AI",
+          "features": ["ai-copy", "ai-detail-assist", "keyword-assist", "social-content", "image-assist"]
+        },
+        {
+          "id": "pro-ai",
+          "name": "Pro AI",
+          "features": ["affiliate-ai-sourcing", "sales-score", "affiliate-link-routing", "campaign-automation", "performance-recommendation"]
+        },
+        {
+          "id": "business-ai",
+          "name": "Business AI",
+          "features": ["multi-store", "team-roles", "bulk-products", "marketing-automation", "crm", "orders", "settlement", "advanced-analytics"]
+        }
+      ]
     }
   },
   "categories": [
