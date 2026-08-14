@@ -5,6 +5,7 @@ import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.
 import { handleVerificationRequest, verificationSchemaReady } from './verification.js';
 import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
+import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 
@@ -144,11 +145,14 @@ export default {
       const verificationReady = Boolean(env.DB) && await verificationSchemaReady(env);
       const supplierPilotReady = Boolean(env.DB) && await supplierPilotSchemaReady(env);
       const supplierDiscoveryReady = Boolean(env.DB) && await supplierDiscoverySchemaReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady;
+      const domemaeReady = Boolean(env.DB) && await domemaeConnectorReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
-        supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
+        supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
+        domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
+        attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
         supplierForwardEnabled:String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true', supplierPayoutExecutionEnabled:false, refundExecutionEnabled:false
@@ -175,6 +179,9 @@ export default {
 
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
+
+    const domemae = await handleDomemaeRequest(request, env);
+    if (domemae) return reply(domemae.body, domemae.status, origin, env);
 
     const supplierDiscovery = await handleSupplierDiscoveryRequest(request, env);
     if (supplierDiscovery) return reply(supplierDiscovery.body, supplierDiscovery.status, origin, env);
