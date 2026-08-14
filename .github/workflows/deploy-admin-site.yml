@@ -36,7 +36,10 @@ on:
       - 'community-reports-admin.js'
       - 'community-reports-admin.css'
       - 'site-worker.js'
+      - 'wrangler.site.toml'
       - 'scripts/build.mjs'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'auth-site/**'
 
 permissions:
@@ -49,7 +52,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 24
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -77,6 +80,8 @@ jobs:
           node --check community-reports-admin.js
           node --check site-worker.js
           node --check auth-site/auth.js
+          node --check scripts/guarded-worker-release.mjs
+          test -f deploy/manifests/shared-site.worker.json
 
       - name: Validate authentication and compact UI contract
         shell: bash
@@ -136,10 +141,15 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Deploy shared site Worker with admin/auth assets
-        run: npm run deploy:site
+      - name: Build shared site assets
+        run: npm run build
 
-      - name: Verify admin routes, Campus shell, central auth and lazy feature assets
+      - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Deep verify admin routes, Campus shell, central auth and lazy feature assets
         shell: bash
         run: |
           set -euo pipefail
