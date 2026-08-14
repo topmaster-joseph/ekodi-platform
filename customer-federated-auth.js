@@ -6,6 +6,14 @@ const SESSION_HOURS = 12;
 const ITERATIONS = 310000;
 const encoder = new TextEncoder();
 
+const TENANTS = Object.freeze([
+  { slug: 'cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr' },
+  { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr' },
+  { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr' },
+  { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr' },
+]);
+const TENANT_SET = new Set(TENANTS.map(item => item.slug));
+
 function bytesToHex(bytes) {
   return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -28,7 +36,7 @@ function normalizeEmail(value) {
 
 function normalizeTenant(value) {
   const tenant = String(value || '').trim().toLowerCase();
-  return /^[a-z0-9-]{2,40}$/.test(tenant) ? tenant : '';
+  return TENANT_SET.has(tenant) ? tenant : '';
 }
 
 function cors(origin, env) {
@@ -68,6 +76,17 @@ async function ensureSchema(db) {
       status TEXT NOT NULL DEFAULT 'active',
       created_at TEXT NOT NULL
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS customer_access_grants (
+      tenant_id INTEGER NOT NULL,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      created_by INTEGER,
+      last_verified_at TEXT,
+      PRIMARY KEY (tenant_id, email),
+      FOREIGN KEY(tenant_id) REFERENCES customer_tenants(id)
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL UNIQUE,
@@ -87,18 +106,6 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL,
       PRIMARY KEY (tenant_id, user_id)
     )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS customer_invites (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tenant_id INTEGER NOT NULL,
-      email TEXT NOT NULL,
-      role TEXT NOT NULL,
-      token_hash TEXT NOT NULL UNIQUE,
-      expires_at TEXT NOT NULL,
-      accepted_at TEXT,
-      revoked_at TEXT,
-      created_by INTEGER,
-      created_at TEXT NOT NULL
-    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_sessions (
       token_hash TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
@@ -116,7 +123,13 @@ async function ensureSchema(db) {
       detail TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     )`),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_customer_access_grants_email ON customer_access_grants(email)'),
   ]);
+
+  const now = new Date().toISOString();
+  const seed = db.prepare(`INSERT OR IGNORE INTO customer_tenants (slug, name, domain, status, created_at)
+    VALUES (?, ?, ?, 'active', ?)`);
+  await db.batch(TENANTS.map(tenant => seed.bind(tenant.slug, tenant.name, tenant.domain, now)));
   await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
 }
 
@@ -143,7 +156,42 @@ async function supabaseUser(accessToken) {
   const user = await response.json();
   const email = normalizeEmail(user?.email);
   if (!user?.id || !email || !user?.email_confirmed_at) return null;
-  return { id: user.id, email, displayName: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').slice(0, 100) };
+  return {
+    id: user.id,
+    email,
+    displayName: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').slice(0, 100),
+  };
+}
+
+async function ensureRuntimeIdentity(db, tenant, identity, grant) {
+  const now = new Date().toISOString();
+  let user = await db.prepare('SELECT id, email, display_name, status FROM customer_users WHERE email = ?').bind(identity.email).first();
+
+  if (!user) {
+    const credential = await randomPasswordRecord();
+    const result = await db.prepare(`INSERT INTO customer_users
+      (email, display_name, password_hash, password_salt, password_iterations, status, created_at)
+      VALUES (?, ?, ?, ?, ?, 'active', ?)`)
+      .bind(identity.email, identity.displayName, credential.digest, credential.salt, ITERATIONS, now).run();
+    user = { id: result.meta.last_row_id, email: identity.email, display_name: identity.displayName, status: 'active' };
+  }
+
+  if (user.status !== 'active') return null;
+
+  await db.prepare(`INSERT INTO customer_memberships (tenant_id, user_id, role, status, created_at)
+    VALUES (?, ?, ?, 'active', ?)
+    ON CONFLICT(tenant_id, user_id) DO UPDATE SET role = excluded.role, status = 'active'`)
+    .bind(tenant.id, user.id, grant.role, now).run();
+
+  await db.prepare(`UPDATE customer_users
+    SET last_login_at = ?, display_name = CASE WHEN display_name = '' THEN ? ELSE display_name END
+    WHERE id = ?`).bind(now, identity.displayName, user.id).run();
+
+  await db.prepare(`UPDATE customer_access_grants
+    SET last_verified_at = ?
+    WHERE tenant_id = ? AND email = ?`).bind(now, tenant.id, identity.email).run();
+
+  return { ...user, display_name: user.display_name || identity.displayName, verifiedAt: now };
 }
 
 async function federatedLogin(request, env) {
@@ -151,57 +199,34 @@ async function federatedLogin(request, env) {
   const tenantSlug = normalizeTenant(body?.tenant);
   const identity = await supabaseUser(String(body?.accessToken || ''));
   if (!tenantSlug || !identity) return json({ error: '통합인증 세션을 확인해 주세요.' }, 401, request, env);
+
   const tenant = await env.DB.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(tenantSlug).first();
   if (!tenant || tenant.status !== 'active') return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
-  const user = await env.DB.prepare(`SELECT u.id, u.email, u.display_name, u.status AS user_status,
-      m.role, m.status AS membership_status
-    FROM customer_users u JOIN customer_memberships m ON m.user_id = u.id
-    WHERE u.email = ? AND m.tenant_id = ?`).bind(identity.email, tenant.id).first();
-  if (!user || user.user_status !== 'active' || user.membership_status !== 'active') {
+
+  const grant = await env.DB.prepare(`SELECT email, role, enabled, last_verified_at
+    FROM customer_access_grants
+    WHERE tenant_id = ? AND email = ?`).bind(tenant.id, identity.email).first();
+
+  if (!grant || Number(grant.enabled) !== 1) {
     return json({ error: '이 Google 계정은 해당 고객 관리공간에 등록되어 있지 않습니다.' }, 403, request, env);
   }
-  const session = await issueSession(env.DB, user.id, tenant.id);
-  const now = new Date().toISOString();
-  await env.DB.prepare('UPDATE customer_users SET last_login_at = ? WHERE id = ?').bind(now, user.id).run();
-  await env.DB.prepare(`INSERT INTO customer_audit_logs (tenant_id, user_id, action, resource, detail, created_at)
-    VALUES (?, ?, 'session.central_login', 'customer-portal', ?, ?)`).bind(tenant.id, user.id, identity.id, now).run();
-  return json({ ok: true, email: user.email, displayName: user.display_name || identity.displayName, role: user.role,
-    tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain }, ...session }, 200, request, env);
-}
 
-async function acceptCentralInvite(request, env) {
-  const body = await readJson(request);
-  const rawToken = String(body?.token || '').trim();
-  const displayName = String(body?.displayName || '').trim().slice(0, 100);
-  if (!/^[a-f0-9]{64}$/i.test(rawToken) || !displayName) return json({ error: '초대 링크와 이름을 확인해 주세요.' }, 400, request, env);
-  const tokenHash = await sha256(rawToken);
-  const invite = await env.DB.prepare(`SELECT i.*, t.slug, t.name AS tenant_name, t.domain, t.status AS tenant_status
-    FROM customer_invites i JOIN customer_tenants t ON t.id = i.tenant_id
-    WHERE i.token_hash = ?`).bind(tokenHash).first();
-  const now = new Date().toISOString();
-  if (!invite || invite.revoked_at || invite.accepted_at || invite.expires_at <= now || invite.tenant_status !== 'active') {
-    return json({ error: '초대가 만료되었거나 사용할 수 없습니다.' }, 410, request, env);
-  }
-  let user = await env.DB.prepare('SELECT id, email, display_name, status FROM customer_users WHERE email = ?').bind(invite.email).first();
-  if (!user) {
-    const credential = await randomPasswordRecord();
-    const result = await env.DB.prepare(`INSERT INTO customer_users
-      (email, display_name, password_hash, password_salt, password_iterations, status, created_at)
-      VALUES (?, ?, ?, ?, ?, 'active', ?)`).bind(invite.email, displayName, credential.digest, credential.salt, ITERATIONS, now).run();
-    user = { id: result.meta.last_row_id, email: invite.email, display_name: displayName, status: 'active' };
-  } else if (user.status !== 'active') {
-    return json({ error: '비활성화된 고객 계정입니다.' }, 403, request, env);
-  }
-  await env.DB.prepare(`INSERT INTO customer_memberships (tenant_id, user_id, role, status, created_at)
-    VALUES (?, ?, ?, 'active', ?)
-    ON CONFLICT(tenant_id, user_id) DO UPDATE SET role = excluded.role, status = 'active'`)
-    .bind(invite.tenant_id, user.id, invite.role, now).run();
-  await env.DB.prepare('UPDATE customer_invites SET accepted_at = ? WHERE id = ?').bind(now, invite.id).run();
-  const session = await issueSession(env.DB, user.id, invite.tenant_id);
+  const user = await ensureRuntimeIdentity(env.DB, tenant, identity, grant);
+  if (!user) return json({ error: '비활성화된 고객 계정입니다.' }, 403, request, env);
+
+  const session = await issueSession(env.DB, user.id, tenant.id);
   await env.DB.prepare(`INSERT INTO customer_audit_logs (tenant_id, user_id, action, resource, detail, created_at)
-    VALUES (?, ?, 'invite.central_accept', 'customer-portal', ?, ?)`).bind(invite.tenant_id, user.id, invite.role, now).run();
-  return json({ ok: true, email: invite.email, displayName: user.display_name || displayName, role: invite.role,
-    tenant: { slug: invite.slug, name: invite.tenant_name, domain: invite.domain }, ...session }, 201, request, env);
+    VALUES (?, ?, 'session.central_login', 'customer-portal', ?, ?)`)
+    .bind(tenant.id, user.id, identity.id, user.verifiedAt).run();
+
+  return json({
+    ok: true,
+    email: identity.email,
+    displayName: user.display_name || identity.displayName,
+    role: grant.role,
+    tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain },
+    ...session,
+  }, 200, request, env);
 }
 
 export async function handleFederatedCustomerAuth(request, env) {
@@ -212,6 +237,11 @@ export async function handleFederatedCustomerAuth(request, env) {
   await ensureSchema(env.DB);
   const path = new URL(request.url).pathname;
   if (request.method === 'POST' && path === '/api/customer/federated-login') return federatedLogin(request, env);
-  if (request.method === 'POST' && path === '/api/customer/accept-central-invite') return acceptCentralInvite(request, env);
+  if (request.method === 'POST' && path === '/api/customer/accept-central-invite') {
+    return json({
+      error: '초대 링크 방식은 종료되었습니다. 관리자가 고객 Google 이메일과 권한을 등록한 뒤 Google 인증으로 로그인해 주세요.',
+      code: 'GOOGLE_ACCESS_GRANT_REQUIRED',
+    }, 410, request, env);
+  }
   return null;
 }
