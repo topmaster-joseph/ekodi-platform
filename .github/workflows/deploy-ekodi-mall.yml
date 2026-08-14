@@ -58,7 +58,9 @@ jobs:
           test -f dist/seller/index.html
           grep -q "SELLER STUDIO" dist/seller/index.html
           grep -q "/p/\* /assets/shared-product.html 200" dist/_redirects
-          echo "Mall static build and dynamic product shell verified"
+          grep -q "api/public/checkout/quote" dist/assets/public-product.js
+          grep -q "/share-links" dist/assets/seller-server.js
+          echo "Mall static build, attribution split and order quote client verified"
 
       - name: Check Cloudflare credentials
         id: cloudflare_credentials
@@ -117,8 +119,12 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 18); do
             code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/health || true)
-            if [ "$code" = "200" ] && grep -Fq '"schemaReady":true' /tmp/mall-api.json && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json; then
-              echo "Mall API and D1 schema are ready."
+            if [ "$code" = "200" ] \
+              && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
+              && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json; then
+              echo "Mall API, order schema and disabled payment/payout gates are ready."
               exit 0
             fi
             sleep 5
@@ -146,7 +152,15 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/mall-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/" || true)
             seller_code=$(curl -L -sS -o /tmp/mall-seller.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/seller/" || true)
             shared_code=$(curl -L -sS -o /tmp/mall-shared.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/p/not-a-real-product" || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$shared_code" =~ ^[23] ]] && grep -Fq 'EKODI MALL' /tmp/mall-root.html && grep -Fq 'SERVER READY' /tmp/mall-seller.html && grep -Fq 'PUBLIC PRODUCT' /tmp/mall-shared.html; then
+            public_js_code=$(curl -L -sS -o /tmp/mall-public-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/public-product.js" || true)
+            seller_js_code=$(curl -L -sS -o /tmp/mall-seller-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/seller-server.js" || true)
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$shared_code" =~ ^[23] ]] \
+              && [ "$public_js_code" = "200" ] && [ "$seller_js_code" = "200" ] \
+              && grep -Fq 'EKODI MALL' /tmp/mall-root.html \
+              && grep -Fq 'SERVER READY' /tmp/mall-seller.html \
+              && grep -Fq 'PUBLIC PRODUCT' /tmp/mall-shared.html \
+              && grep -Fq 'api/public/checkout/quote' /tmp/mall-public-js \
+              && grep -Fq '/share-links' /tmp/mall-seller-js; then
               echo "EKODI Mall production smoke test passed."
               exit 0
             fi

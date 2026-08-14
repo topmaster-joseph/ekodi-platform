@@ -6,7 +6,7 @@
 
 1. 정적 큐레이션 상품은 `content/products.json`, 브랜드·커머스 정책은 `content/site.json`에서 관리한다.
 2. Google 회원 개인상품은 `api/worker.js` + Mall 전용 D1이 서버 원본이며 Store는 선택사항이다.
-3. 브라우저 `localStorage`는 편집 중 임시저장 안전망일 뿐 서버 원본·회원권한·정산 근거로 사용하지 않는다.
+3. 브라우저 `localStorage`는 편집 중 임시저장 안전망일 뿐 서버 원본·회원권한·수수료·정산 근거로 사용하지 않는다.
 4. 공개 개인상품은 서버 `published` 상태인 경우에만 `/p/{shareCode}` 고유링크에서 노출한다.
 5. 가격, 구매 URL, 사업자등록번호, 통신판매업 신고번호를 확인 없이 추정하거나 만들어 넣지 않는다.
 6. 제휴판매 URL은 HTTPS만 허용하고 에코디 결제로 위장하지 않는다.
@@ -16,11 +16,19 @@
 
 1. Mall 기능 작업은 원칙적으로 `sites/ekodi-mall/**` 안에서 완결한다.
 2. `api.ekodi.kr`, `auth.ekodi.kr`, `pay.ekodi.kr`, `finance-api.ekodi.kr` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
-3. Mall 데이터는 별도 Worker `ekodi-mall-api`와 별도 D1 `ekodi-mall`을 우선 사용한다.
+3. Mall 데이터는 별도 Worker `ekodi-mall-api`와 별도 D1 `ekodi-mall`을 사용한다.
 4. Google/Supabase 사용자 토큰은 Mall API가 Auth 서버에서 재검증한다. 브라우저가 보낸 이메일·회원등급을 신뢰하지 않는다.
-5. 개인상품 판매경로 요율은 direct 7%, marketplace 8%, AI 9%이며 PG·VAT 포함 정책이다. PRO AI 구독은 별도다.
-6. 사업자 인증 Store 직접판매 기본요율은 10%이나 실제 사업자 검증 완료 전 checkout을 활성화하지 않는다.
-7. 수수료·attribution·membership·정산은 서버 권한이 최종 결정한다.
+5. 수수료·attribution·membership·주문금액·정산원장은 서버 권한이 최종 결정한다.
+
+## 판매경로와 수수료
+
+1. 개인상품 요율은 PG 및 플랫폼 수수료 VAT 포함 정책으로 direct 7%, marketplace 8%, AI 9%다. PRO AI 구독은 별도다.
+2. `/p/{shareCode}` canonical 상품 URL 자체는 **marketplace 8% 기본경로**다. URL을 열었다는 이유만으로 direct 7%로 분류하지 않는다.
+3. 판매자 직접공유 7%는 로그인한 판매자가 `/api/products/{id}/share-links`에서 발급한 opaque `ref` 링크를 통해서만 시작한다.
+4. AI 9% 링크는 공개 브라우저가 임의로 만들 수 없고 `INTERNAL_ATTRIBUTION_TOKEN`으로 보호된 내부 API가 발급한다.
+5. 공개페이지 진입 후 발급되는 7일 attribution token을 주문 quote가 서버에서 재검증한다. 없거나 유효하지 않으면 marketplace 8%로 처리한다.
+6. 사업자 인증 Store 직접판매 기본요율은 10%이며 Store 검증 완료 전 checkout을 활성화하지 않는다.
+7. 정산금은 `gross - platform fee - refund/adjustment` 원칙으로 서버 원장에 기록하고 브라우저 계산값을 신뢰하지 않는다.
 
 ## 현재 가능한 것
 
@@ -29,15 +37,21 @@
 - Mall D1 서버 저장 및 수정
 - 상품 게시/비게시 상태
 - 상품별 opaque share code와 `/p/{shareCode}` 공개링크
-- 직접 공유 진입용 7일 attribution token 발급
+- 판매자 직접공유 7% 추적링크 서버발급
+- 일반 Mall 8% 및 내부 AI 9% attribution 분리
+- 서버 주문 quote와 7/8/9·사업자 10% 수수료 계산
+- 주문·결제·정산원장 스키마와 판매자 조회 API
+- Toss 결제 승인 서버검증 코드와 금액 일치 검증
 - 외부 제휴상품 공개링크 라우팅
 
 ## 아직 켜지 않는 것
 
-- 직접판매 온라인 결제
-- 주문 확정/재고 예약
-- 토스 지급대행 판매자 KYC
-- 환불/취소/정산 실행
+- 실제 직접판매 온라인 결제 (`PAYMENTS_ENABLED=false` 유지)
+- 미검증 판매자의 주문 생성
+- 실제 Toss Client 결제창
+- 토스 지급대행 판매자 KYC와 지급 실행
+- 취소·부분취소·환불 원장 자동화
+- 구매자 배송정보/개인정보 수집 checkout
 - PRO AI 실제 결제 및 entitlement unlock
 
 ## 변경 후 필수 확인
@@ -51,15 +65,18 @@ npm run doctor
 
 ## 배포
 
-`main`의 Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 검증한다. Cloudflare 자격증명이 있으면 `ekodi-mall` D1을 존재 여부에 따라 생성/재사용하고 migration을 적용한 뒤 `ekodi-mall-api` Worker를 배포한다. API health/schema 검증이 성공한 경우에만 Pages 운영배포와 smoke test를 진행한다.
+`main`의 Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 검증한다. Cloudflare 자격증명이 있으면 `ekodi-mall` D1을 생성/재사용하고 migration을 적용한 뒤 `ekodi-mall-api` Worker를 배포한다. `/health`에서 base schema와 order schema가 모두 준비되고 `paymentsEnabled=false` 안전게이트가 확인된 경우에만 Pages 운영배포와 smoke test를 진행한다.
 
 ## 결제 기능을 켜기 전
 
-`content/site.json`의 `commerce.paymentsEnabled`를 `true`로 바꾸기 전에 다음을 모두 만족해야 한다.
+`content/site.json`의 결제표시와 `api/wrangler.toml`의 `PAYMENTS_ENABLED`를 모두 활성화하기 전에 다음을 모두 만족해야 한다.
 
 - 실제 사업자·고객센터 정보가 등록되어 있다.
-- Mall 주문 데이터와 주문번호 규칙이 서버에 존재한다.
-- 금액·수수료·attribution 검증을 서버가 수행한다.
-- `pay.ekodi.kr` 또는 Toss와의 API 계약이 문서화되어 있다.
+- 판매자 신원/사업자 검증과 직접판매 활성화 절차가 운영 가능하다.
+- 상품별 checkout gate가 서버 검증을 통과한다.
+- Mall 주문금액·수수료·attribution 검증을 서버가 수행한다.
+- Toss 서버키 및 실제 클라이언트 결제창 계약이 준비되어 있다.
+- 구매자 배송·연락정보 수집 시 개인정보 처리와 보관정책이 반영되어 있다.
 - 결제 성공을 브라우저 반환값만으로 확정하지 않는다.
-- 취소·환불·판매자별 지급대행·정산 책임이 정의되어 있다.
+- 취소·환불·부분취소 원장 처리와 판매자별 지급대행/KYC·정산 책임이 정의되어 있다.
+- 실제 지급 실행은 별도 검수 없이 자동 활성화하지 않는다.
