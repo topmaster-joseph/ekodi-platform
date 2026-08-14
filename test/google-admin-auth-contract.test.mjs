@@ -71,8 +71,9 @@ test('Control Center switches to Google UI only when Google is configured', () =
   assert.match(css, /google-auth-enabled #loginForm/);
 });
 
-test('Control Center includes Google administrator preregistration management', () => {
-  assert.match(frontend, /Google 관리자 사전등록/);
+test('Control Center includes compact Google administrator preregistration management', () => {
+  assert.match(frontend, /element\('h2', 'Admin'\)/);
+  assert.match(frontend, /사전등록/);
   assert.match(frontend, /\/api\/admin-access\/google-accounts/);
   assert.match(frontend, /최고관리자/);
   assert.match(frontend, /운영관리자/);
