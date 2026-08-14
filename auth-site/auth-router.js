@@ -6,6 +6,10 @@ const legacySiteAliases=Object.freeze({
 
 let changed=false;
 const requestedSite=params.get('site');
+if(requestedSite==='mall-seller'&&!params.get('return_to')&&!params.get('returnTo')){
+  params.set('return_to','https://mall.ekodi.kr/seller/');
+  changed=true;
+}
 if(legacySiteAliases[requestedSite]){
   params.set('site',legacySiteAliases[requestedSite]);
   changed=true;

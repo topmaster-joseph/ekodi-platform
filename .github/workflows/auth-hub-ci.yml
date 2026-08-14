@@ -41,7 +41,9 @@ jobs:
           set -euo pipefail
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'id="googleButtonHost"' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' auth-site/index.html
+          grep -Fq "'mall-seller':'mall'" auth-site/auth-router.js
+          grep -Fq "https://mall.ekodi.kr/seller/" auth-site/auth-router.js
           grep -Fq "site==='admin'" auth-site/auth-router.js
           grep -Fq "site==='cgma-client'" auth-site/auth-router.js
           grep -Fq 'targetedWorkspace' auth-site/auth-router.js
