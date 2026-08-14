@@ -7,7 +7,7 @@
 에코디몰과 같은 무료 중심 구조를 사용합니다.
 
 - 정적/경량 UI + Cloudflare Worker
-- 전용 Cloudflare D1
+- **Cloudflare Worker + D1** 중심의 무료 운영 데이터 경로
 - GitHub Actions 검증 → 독립 staging → 운영 승격
 - 기존 Google/Supabase 인증은 필요할 때 **사용자 확인만** 수행
 - 보험 업무데이터를 Supabase Postgres에 저장하지 않음
