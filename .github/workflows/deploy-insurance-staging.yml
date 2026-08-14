@@ -43,8 +43,11 @@ jobs:
           grep -Fq 'personalPolicyData' sites/ekodi-insurance/worker.js
           grep -Fq 'browser-local' sites/ekodi-insurance/worker.js
           grep -Fq 'encrypted-d1-on-explicit-handoff' sites/ekodi-insurance/worker.js
+          grep -Fq "transcriptDefault:'not-shared'" sites/ekodi-insurance/worker.js
           grep -Fq 'insurance-api-staging.ekodi.kr' sites/ekodi-insurance/public/server-bridge.js
-          grep -Fq 'shareConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'contactConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'transcriptConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'AI 상담 대화 공유 (선택)' sites/ekodi-insurance/public/server-bridge.js
           grep -Fq 'consultation-access-v1' sites/ekodi-insurance/public/server-bridge.js
           ! grep -R -E 'SUPABASE_(SERVICE|SECRET)|PRIVATE_KEY' sites/ekodi-insurance/public sites/ekodi-insurance/worker.js
       - name: Verify Cloudflare credentials
@@ -64,25 +67,30 @@ jobs:
             bridge_code=$(curl -L -sS -o /tmp/bridge.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/server-bridge.js" || true)
             admin_code=$(curl -L -sS -o /tmp/admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/admin" || true)
             health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
-            root_title=0; root_bridge=0; bridge_api=0; admin_marker=0; health_mode=0; health_local=0; health_handoff=0
+            root_title=0; root_bridge=0; root_privacy=0; bridge_api=0; contact_consent=0; transcript_consent=0; admin_marker=0; health_mode=0; health_local=0; health_handoff=0; health_transcript=0
             grep -Fq 'EKODI Insurance' /tmp/insurance.html && root_title=1 || true
             grep -Fq '/server-bridge.js' /tmp/insurance.html && root_bridge=1 || true
+            grep -Fq '실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화' /tmp/insurance.html && root_privacy=1 || true
             grep -Fq 'insurance-api-staging.ekodi.kr' /tmp/bridge.js && bridge_api=1 || true
+            grep -Fq 'contactConsent' /tmp/bridge.js && contact_consent=1 || true
+            grep -Fq 'transcriptConsent' /tmp/bridge.js && transcript_consent=1 || true
             grep -Fq 'STAGING LOCAL ADMIN' /tmp/admin.html && admin_marker=1 || true
             grep -Fq '"mode":"staging-cloudflare-d1-free"' /tmp/health.json && health_mode=1 || true
             grep -Fq '"personalPolicyData":"browser-local"' /tmp/health.json && health_local=1 || true
             grep -Fq '"consultationStorage":"encrypted-d1-on-explicit-handoff"' /tmp/health.json && health_handoff=1 || true
-            echo "attempt=$attempt http=[$root_code,$bridge_code,$admin_code,$health_code] markers=[$root_title,$root_bridge,$bridge_api,$admin_marker,$health_mode,$health_local,$health_handoff]"
+            grep -Fq '"transcriptDefault":"not-shared"' /tmp/health.json && health_transcript=1 || true
+            echo "attempt=$attempt http=[$root_code,$bridge_code,$admin_code,$health_code] markers=[$root_title,$root_bridge,$root_privacy,$bridge_api,$contact_consent,$transcript_consent,$admin_marker,$health_mode,$health_local,$health_handoff,$health_transcript]"
             if [[ "$root_code" == 200 && "$bridge_code" == 200 && "$admin_code" == 200 && "$health_code" == 200 \
-              && "$root_title" == 1 && "$root_bridge" == 1 && "$bridge_api" == 1 && "$admin_marker" == 1 \
-              && "$health_mode" == 1 && "$health_local" == 1 && "$health_handoff" == 1 ]]; then
-              echo 'EKODI Insurance free-D1 UI staging verified.'
+              && "$root_title" == 1 && "$root_bridge" == 1 && "$root_privacy" == 1 && "$bridge_api" == 1 \
+              && "$contact_consent" == 1 && "$transcript_consent" == 1 && "$admin_marker" == 1 \
+              && "$health_mode" == 1 && "$health_local" == 1 && "$health_handoff" == 1 && "$health_transcript" == 1 ]]; then
+              echo 'EKODI Insurance separate-consent free-D1 UI staging verified.'
               exit 0
             fi
             sleep 4
           done
-          echo '--- root tail ---'; tail -c 1200 /tmp/insurance.html || true
-          echo; echo '--- bridge head ---'; head -c 800 /tmp/bridge.js || true
+          echo '--- root tail ---'; tail -c 1600 /tmp/insurance.html || true
+          echo; echo '--- bridge head ---'; head -c 1200 /tmp/bridge.js || true
           echo; echo '--- admin head ---'; head -c 800 /tmp/admin.html || true
           echo; echo '--- health ---'; cat /tmp/health.json || true
           exit 1
