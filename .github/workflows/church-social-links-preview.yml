@@ -1,0 +1,65 @@
+name: Preview Church Central Social Links
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/social-links-sites-*'
+    paths:
+      - '.github/workflows/church-social-links-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout Church staging branch
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: staging/social-links-20260815
+          path: church
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Church Social registry integration
+        working-directory: church
+        run: |
+          set -euo pipefail
+          node --check script.js
+          grep -Fq 'https://api.ekodi.kr/api/social/registry' script.js
+          grep -Fq 'https://social.ekodi.kr/?org=church' script.js
+          grep -Fq 'syncChurchSocialLinks' script.js
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || exit 1
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || exit 1
+      - name: Deploy Church Pages preview
+        shell: bash
+        working-directory: church
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 pages deploy . --project-name ekodi-church --branch social-links-preview --commit-dirty=true 2>&1 | tee /tmp/church-social.log
+          url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' /tmp/church-social.log | tail -1 || true)
+          test -n "$url" || exit 1
+          echo "CHURCH_URL=$url" >> "$GITHUB_ENV"
+      - name: Verify Church preview assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' "$CHURCH_URL/" || true)
+            script=$(curl -L -sS -o /tmp/church.js -w '%{http_code}' "$CHURCH_URL/script.js" || true)
+            if [ "$root" = '200' ] && [ "$script" = '200' ] \
+              && grep -Fq 'EKODI교회' /tmp/church.html \
+              && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/church.js \
+              && grep -Fq 'social.ekodi.kr/?org=church' /tmp/church.js; then exit 0; fi
+            sleep 3
+          done
+          exit 1
