@@ -51,6 +51,23 @@ for (const file of ['.github/workflows/deploy-service-proxy.yml','.github/workfl
   if (/\n\s*push\s*:/.test(text)) fail(file, 'domain-topology mutation workflow must not run automatically on push');
 }
 
+const accessFile = 'config/cloudflare-access-profiles.json';
+const access = JSON.parse(read(accessFile));
+if (access.status !== 'prepared-for-split-token') fail(accessFile, 'credential isolation status must remain honest until dedicated tokens are provisioned');
+const profiles = new Map((access.profiles || []).map(profile => [profile.id, profile]));
+for (const id of ['runtime-deploy','stateful-release','topology']) if (!profiles.has(id)) fail(accessFile, `missing access profile: ${id}`);
+const topology = profiles.get('topology') || {};
+if (topology.manualOnly !== true) fail(accessFile, 'topology credential must be manual-only');
+if (!(topology.allow || []).includes('dns-write')) fail(accessFile, 'topology credential must explicitly own DNS mutation');
+for (const id of ['runtime-deploy','stateful-release']) {
+  const profile = profiles.get(id) || {};
+  if (!(profile.deny || []).includes('dns-write')) fail(accessFile, `${id} must deny DNS mutation`);
+}
+const secrets = (access.profiles || []).map(profile => profile.secret).filter(Boolean);
+if (new Set(secrets).size !== secrets.length) fail(accessFile, 'Cloudflare access profiles must use distinct GitHub secret names');
+requireText('release-control-admin.js', ['automaticProductionBypass: false','topologyMutation: \'manual-only\'','prepared-for-split-token']);
+forbidText('release-control-admin.js', ['credentialIsolation: \'enforced\'','CLOUDFLARE_API_TOKEN','CLOUDFLARE_TOPOLOGY_TOKEN']);
+
 const packageJson = JSON.parse(read('package.json'));
 for (const name of ['deploy:api', 'deploy:finance']) {
   const value = String(packageJson.scripts?.[name] || '');
@@ -65,4 +82,4 @@ if (failed) {
   console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: protected production paths cannot bypass guarded release gates.');
+console.log('✅ Deployment policy audit passed: protected production paths and credential roles cannot bypass guarded release gates.');
