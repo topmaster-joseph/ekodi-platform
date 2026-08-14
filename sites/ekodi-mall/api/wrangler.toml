@@ -1,0 +1,25 @@
+name = "ekodi-mall-api"
+main = "worker.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "mall-api.ekodi.kr"
+custom_domain = true
+
+[vars]
+ENVIRONMENT = "production"
+MALL_BASE_URL = "https://mall.ekodi.kr"
+ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://ekodi-mall.pages.dev"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-mall"
+migrations_dir = "migrations"
