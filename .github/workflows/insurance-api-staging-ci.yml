@@ -41,7 +41,10 @@ jobs:
           grep -Fq '/ai/chat' "$file"
           grep -Fq '/consultations' "$file"
           grep -Fq '/admin/consultations' "$file"
-          if grep -Eq 'OPENAI_API_KEY\s*=\s*["'"'][A-Za-z0-9_-]{16,}' "$file"; then
-            echo 'Hardcoded OpenAI API key detected'
-            exit 1
-          fi
+          python3 - <<'PY'
+          import pathlib, re, sys
+          text = pathlib.Path('supabase/functions/insurance-api/index.ts').read_text()
+          if re.search(r"OPENAI_API_KEY\s*=\s*['\"][A-Za-z0-9_-]{16,}", text):
+              print('Hardcoded OpenAI API key detected')
+              sys.exit(1)
+          PY
