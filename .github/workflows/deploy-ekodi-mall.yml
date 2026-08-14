@@ -53,16 +53,24 @@ jobs:
         run: |
           test -f dist/index.html
           test -f dist/assets/styles.css
+          test -f dist/assets/platform.css
           test -f dist/assets/app.js
           test -f dist/sitemap.xml
           test -f dist/_headers
           test -f dist/_redirects
+          test -f dist/stores/ekodi-select/index.html
+          test -f dist/seller/index.html
           grep -q "EKODI MALL" dist/index.html
+          grep -q "MARKETPLACE" dist/index.html
+          grep -q "EKODI Select" dist/stores/ekodi-select/index.html
+          grep -q "SELLER STUDIO" dist/seller/index.html
           PRODUCT_COUNT=$(find dist/products -name index.html | wc -l)
+          STORE_COUNT=$(find dist/stores -name index.html | wc -l)
           POLICY_COUNT=$(find dist/pages -name index.html | wc -l)
           test "$PRODUCT_COUNT" -gt 0
+          test "$STORE_COUNT" -gt 0
           test "$POLICY_COUNT" -gt 0
-          echo "Verified $PRODUCT_COUNT product pages and $POLICY_COUNT policy pages"
+          echo "Verified $STORE_COUNT stores, $PRODUCT_COUNT product pages and $POLICY_COUNT policy pages"
 
       - name: Check Cloudflare credentials
         id: cloudflare_credentials
@@ -90,13 +98,31 @@ jobs:
         if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
         env:
           PUBLIC_URL: ${{ steps.manifest.outputs.url }}
+        shell: bash
         run: |
+          set -euo pipefail
           BASE="${PUBLIC_URL%/}"
-          for PATHNAME in / /products/reusable-daily-bottle/ /pages/privacy/; do
-            echo "Checking ${BASE}${PATHNAME}"
-            curl --fail --silent --show-error --location --retry 5 --retry-delay 3 "${BASE}${PATHNAME}" > /tmp/ekodi-page.html
-            grep -q "EKODI MALL" /tmp/ekodi-page.html
+          for attempt in $(seq 1 18); do
+            echo "Production propagation check ${attempt}/18"
+            root_code=$(curl -L -sS -o /tmp/mall-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/" || true)
+            product_code=$(curl -L -sS -o /tmp/mall-product.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/products/reusable-daily-bottle/" || true)
+            store_code=$(curl -L -sS -o /tmp/mall-store.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/stores/ekodi-select/" || true)
+            seller_code=$(curl -L -sS -o /tmp/mall-seller.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/seller/" || true)
+            privacy_code=$(curl -L -sS -o /tmp/mall-privacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/pages/privacy/" || true)
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$product_code" =~ ^[23] ]] && [[ "$store_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$privacy_code" =~ ^[23] ]] \
+              && grep -Fq 'EKODI MALL' /tmp/mall-root.html \
+              && grep -Fq 'MARKETPLACE' /tmp/mall-root.html \
+              && grep -Fq 'EKODI Select' /tmp/mall-product.html \
+              && grep -Fq 'EKODI Select' /tmp/mall-store.html \
+              && grep -Fq 'SELLER STUDIO' /tmp/mall-seller.html \
+              && grep -Fq 'EKODI MALL' /tmp/mall-privacy.html; then
+              echo "EKODI Mall production smoke test passed."
+              exit 0
+            fi
+            sleep 5
           done
+          echo "EKODI Mall production alias did not converge to the deployed build in time."
+          exit 1
 
       - name: Deployment configuration notice
         if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available != 'true'

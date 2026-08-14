@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths-ignore:
       - 'monitor-status.json'
+      - 'sites/ekodi-mall/**'
+      - '.github/workflows/deploy-ekodi-mall.yml'
 
 permissions:
   contents: read
