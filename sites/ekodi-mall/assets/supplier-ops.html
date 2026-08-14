@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173f35"><meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="EKODI Mall 공급자 파트너 계약·SKU·파일럿 운영 콘솔">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css">
+  <title>Supplier Ops | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice" id="opsStatus">운영자 Google 로그인 후 Supplier Partner를 관리할 수 있습니다.</div>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/seller/">SELLER</a><a href="/sourcing">SOURCING</a><a href="/fulfillment">FULFILLMENT</a></nav></header>
+  <main class="ops-main">
+    <section class="ops-hero">
+      <div><p class="eyebrow">SUPPLIER OPS · FIRST PARTNER PILOT</p><h1>공급자 자체 검증과<br>상품별 발주권한을 분리합니다</h1><p>Supplier Partner → 계약 참조 → 판매자 Source → Supplier SKU → EKODI 상품을 순서대로 연결합니다. 계약된 업체라도 고객 개인정보 Release와 Auto Order는 별도 게이트입니다.</p><div class="cta"><button class="btn primary" id="opsLogin" type="button">운영자 Google 로그인</button><button class="smallbtn" id="opsLogout" type="button" hidden>로그아웃</button><button class="smallbtn" id="opsReload" type="button">새로고침</button></div></div>
+      <div class="ops-gates" id="opsGates"><article><small>PAYMENT</small><strong>OFF</strong></article><article><small>PII RELEASE</small><strong>OFF</strong></article><article><small>FORWARD</small><strong>OFF</strong></article><article><small>AUTO ORDER</small><strong>OFF</strong></article></div>
+    </section>
+
+    <section class="ops-summary" id="opsSummary"><article><small>PARTNERS</small><strong>0</strong></article><article><small>VERIFIED SOURCES</small><strong>0</strong></article><article><small>SKU</small><strong>0</strong></article><article><small>PRODUCT MAP</small><strong>0</strong></article></section>
+
+    <section class="ops-grid">
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">1 · PARTNER</p><h2>공급자 등록</h2></div></div>
+        <form id="partnerCreateForm" class="ops-form"><label>Partner Code<input name="partnerCode" placeholder="muan-farm-01" required></label><label>표시명<input name="displayName" placeholder="예: 무안 로컬푸드 공급자" required></label><label>법인/사업체명<input name="legalName" placeholder="확인된 명칭만 입력"></label><label>방식<select name="providerType"><option value="contract_supplier">수동 계약 직배송</option><option value="supplier_api">공식 Supplier API</option></select></label><label>메모<textarea name="statusNote" rows="2"></textarea></label><button class="btn primary" type="submit">Partner 등록</button></form>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">2 · DUE DILIGENCE</p><h2>계약 검증</h2></div><select id="partnerSelect"><option value="">Partner 선택</option></select></div>
+        <form id="partnerDetailsForm" class="ops-form"><label>표시명<input name="displayName"></label><label>법인/사업체명<input name="legalName"></label><label>사업자 검증 참조<input name="businessVerificationRef" placeholder="문서/검증 ID"></label><label>기본 공급계약 참조<input name="masterContractRef"></label><label>개인정보 처리위탁 참조<input name="piiProcessorRef"></label><label>반품정책 참조<input name="returnsPolicyRef"></label><label>CS 정책 참조<input name="csPolicyRef"></label><label>파일럿 완료 근거<input name="pilotEvidenceRef" placeholder="정식 활성화 때 필요"></label><label>운영 메모<textarea name="statusNote" rows="2"></textarea></label><button class="btn primary" type="submit">검증정보 저장</button></form>
+        <div class="ops-transition"><select id="transitionStatus"><option value="">다음 상태 선택</option></select><button class="smallbtn" id="transitionPartner" type="button">상태 전환</button></div>
+        <p class="ops-hint" id="partnerReadiness">Partner를 선택하세요.</p>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">3 · SELLER SOURCE</p><h2>판매자 공급경로</h2></div></div>
+        <form id="sourceCreateForm" class="ops-form"><label>판매자<select name="sellerId" id="sellerSelect"><option value="">판매자 선택</option></select></label><label>공급처 HTTPS URL<input name="sourceUrl" type="url" placeholder="https://supplier.example.com"></label><label>내부 관리명<input name="internalLabel" placeholder="예: 양파 10kg 공급라인"></label><label>공급처 참조번호<input name="sourceRef"></label><button class="btn primary" type="submit">Partner Source 생성</button></form>
+        <div class="ops-divider">기존 Source 연결</div>
+        <div class="ops-inline"><select id="existingSourceSelect"><option value="">기존 계약 Source 선택</option></select><button class="smallbtn" id="attachSource" type="button">연결</button></div>
+        <div class="ops-divider">Source 계약 스냅샷</div>
+        <form id="contractVerifyForm" class="ops-form compact"><label>Partner Source<select name="sourceId" id="partnerSourceSelect"><option value="">Source 선택</option></select></label><label>CS 책임<select name="csOwner"><option value="shared">공동</option><option value="supplier">공급자</option><option value="seller">판매자</option><option value="ekodi">EKODI</option></select></label><label>출고 SLA 일<input name="shippingSlaDays" type="number" min="0" max="30" value="2"></label><button class="btn ghost" type="submit">계약 검증 반영</button></form>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">4 · SKU</p><h2>공급 SKU 등록</h2></div></div>
+        <form id="skuForm" class="ops-form"><label>Partner Source<select name="sourceId" id="skuSourceSelect"><option value="">Source 선택</option></select></label><label>Supplier SKU<input name="skuCode" required></label><label>SKU명<input name="displayName" required></label><label>공급가<input name="costAmount" type="number" min="0" step="100" required></label><label>배송비<input name="shippingAmount" type="number" min="0" step="100" value="0" required></label><label>재고<select name="stockState"><option value="unknown">확인 전</option><option value="in_stock">재고 있음</option><option value="out_of_stock">품절</option></select></label><button class="btn primary" type="submit">SKU 등록</button></form>
+      </article>
+
+      <article class="ops-panel ops-wide">
+        <div class="ops-panel-head"><div><p class="eyebrow">5 · PRODUCT MAP</p><h2>SKU → EKODI 상품 매핑</h2></div></div>
+        <form id="mappingForm" class="ops-map-form"><label>Supplier SKU<select name="skuId" id="skuSelect"><option value="">SKU 선택</option></select></label><label>동일 판매자 상품<select name="productId" id="productSelect"><option value="">상품 선택</option></select></label><label>우선순위<input name="priority" type="number" min="1" max="999" value="100"></label><label>최소 마진액<input name="minMarginAmount" type="number" min="0" step="100" value="0"></label><label>최소 마진율 %<input name="minMarginPercent" type="number" min="0" max="100" step="0.1" value="0"></label><button class="btn primary" type="submit">Pilot 매핑</button></form>
+        <div class="ops-table-wrap"><table class="ops-table"><thead><tr><th>Partner</th><th>상태</th><th>Source</th><th>SKU</th><th>상품</th><th>마진게이트</th></tr></thead><tbody id="mappingRows"><tr><td colspan="6">등록된 매핑이 없습니다.</td></tr></tbody></table></div>
+      </article>
+    </section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Supplier Ops</span><span>Auto Order remains locked</span></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/supplier-ops.js" defer></script>
+</body>
+</html>
