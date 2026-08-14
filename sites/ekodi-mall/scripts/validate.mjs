@@ -24,12 +24,27 @@ const validUrl = (value, label) => {
     errors.push(`${label} must be an http(s) URL`);
   }
 };
+const internalPath = (value, label) => {
+  if (!value || typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) errors.push(`${label} must be an internal absolute path`);
+};
 
 required(site?.brand?.name, 'site.brand.name');
 required(site?.seo?.title, 'site.seo.title');
 required(site?.seo?.description, 'site.seo.description');
+required(site?.platform?.mode, 'site.platform.mode');
 validUrl(site?.seo?.baseUrl, 'site.seo.baseUrl');
 validUrl(site?.links?.inquiry, 'site.links.inquiry');
+validUrl(site?.links?.paymentGateway, 'site.links.paymentGateway');
+internalPath(site?.platform?.sellerStudioHref, 'site.platform.sellerStudioHref');
+internalPath(site?.platform?.basketHref, 'site.platform.basketHref');
+
+if (!Array.isArray(site?.platform?.modules) || site.platform.modules.length < 3) errors.push('site.platform.modules must define platform modules');
+if (site?.commerce?.inquiryBasketEnabled) {
+  required(site?.commerce?.basketLabel, 'site.commerce.basketLabel');
+  required(site?.commerce?.checkoutLabel, 'site.commerce.checkoutLabel');
+}
+if (!['inquiry-only', 'order-ready', 'live'].includes(site?.commerce?.orderMode)) errors.push('site.commerce.orderMode must be inquiry-only, order-ready, or live');
+if (!site?.commerce?.paymentsEnabled && site?.commerce?.orderMode === 'live') errors.push('site.commerce.orderMode cannot be live while paymentsEnabled=false');
 
 const categoryIds = new Set((site.categories || []).map((item) => item.id));
 if (!categoryIds.has('all')) errors.push('site.categories must include "all"');
@@ -72,6 +87,10 @@ for (const [index, product] of products.entries()) {
   if (product.price !== null && product.price !== undefined && (!Number.isFinite(product.price) || product.price < 0)) errors.push(`${label}.price must be null or a non-negative number`);
   validUrl(product?.action?.url, `${label}.action.url`);
   required(product?.action?.label, `${label}.action.label`);
+  if (!site?.commerce?.paymentsEnabled && ['purchase', 'pay', 'checkout'].includes(String(product?.action?.type || '').toLowerCase())) {
+    errors.push(`${label}.action.type cannot imply purchase while paymentsEnabled=false`);
+  }
+  if (product.detail?.highlights && !Array.isArray(product.detail.highlights)) errors.push(`${label}.detail.highlights must be an array`);
 }
 
 const policySlugs = new Set();
@@ -90,6 +109,7 @@ if (site?.commerce?.paymentsEnabled) {
   for (const key of ['registrationNumber', 'commerceRegistrationNumber', 'address', 'customerService']) {
     required(site?.business?.[key], `site.business.${key} (required when paymentsEnabled=true)`);
   }
+  validUrl(site?.links?.paymentGateway, 'site.links.paymentGateway (required when paymentsEnabled=true)');
 }
 
 if (errors.length) {
@@ -98,4 +118,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`EKODI Mall content OK: ${stores.length} stores, ${products.length} products, ${(pages.policies || []).length} policy pages`);
+console.log(`EKODI Mall content OK: ${stores.length} stores, ${products.length} products, ${(pages.policies || []).length} policy pages, mode=${site.platform.mode}`);
