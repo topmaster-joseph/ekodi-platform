@@ -35,6 +35,8 @@ const ADMIN_ALIASES = new Set([
   '/control-center',
   '/control-center/',
   '/control-center.html',
+  '/community',
+  '/community/',
   '/books',
   '/books/',
 ]);
@@ -59,6 +61,8 @@ const ADMIN_ASSETS = new Set([
   '/domains-hub.js',
   '/social-admin.css',
   '/social-admin.js',
+  '/community-reports-admin.css',
+  '/community-reports-admin.js',
   '/books-admin.css',
   '/books-admin.js',
   '/books-finance-admin.css',
@@ -131,9 +135,7 @@ export default {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
 
-    if (TRADE_LEGACY_HOSTS.has(host)) {
-      return redirectToTradeCanonical(url);
-    }
+    if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
 
     if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
@@ -145,17 +147,10 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
-
-      // Keep old bookmarks working, but never render the obsolete legacy shell.
-      // All legacy aliases are served from the canonical Control Center asset.
       if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
-
-      // Static admin assets may be kept by the browser, but must be revalidated on
-      // every navigation. This preserves fresh deployments while avoiding repeated
-      // full transfers of unchanged CSS/JS.
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-asset');
