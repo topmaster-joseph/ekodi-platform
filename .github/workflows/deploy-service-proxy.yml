@@ -1,20 +1,15 @@
-name: Deploy EKODI Service Proxy
+name: Deploy EKODI Service Proxy (Manual Topology Change)
+# deployment-guardrail: topology-workflow-manual-only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - service-proxy.js
-      - wrangler.service-proxy.toml
-      - .github/workflows/deploy-service-proxy.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: ekodi-service-proxy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -40,11 +35,8 @@ jobs:
           set -u
           api="https://api.cloudflare.com/client/v4"
           for spec in "ekodi-church:church.ekodi.kr" "ekodilab:lab.ekodi.kr" "ekodi-mall:mall.ekodi.kr"; do
-            project="${spec%%:*}"
-            domain="${spec#*:}"
-            code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X DELETE \
-              -H "Authorization: Bearer $CF_API_TOKEN" \
-              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
+            project="${spec%%:*}"; domain="${spec#*:}"
+            code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
             echo "$domain detach_http=$code"
             if [ "$code" != "200" ] && [ "$code" != "204" ] && [ "$code" != "404" ]; then cat /tmp/delete.json || true; fi
           done
@@ -57,32 +49,10 @@ jobs:
         run: |
           set -u
           failed=0
-          for domain in \
-            biz.ekodi.kr \
-            church.ekodi.kr \
-            live.church.ekodi.kr \
-            lab.ekodi.kr \
-            mall.ekodi.kr \
-            mall.biz.ekodi.kr \
-            mail.ekodi.kr \
-            mail.biz.ekodi.kr \
-            mail.church.ekodi.kr \
-            mail.lab.ekodi.kr \
-            mail.books.ekodi.kr \
-            mail.trade.ekodi.kr; do
+          for domain in biz.ekodi.kr church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr mall.biz.ekodi.kr mail.ekodi.kr mail.biz.ekodi.kr mail.church.ekodi.kr mail.lab.ekodi.kr mail.books.ekodi.kr mail.trade.ekodi.kr; do
             code=000
-            for attempt in $(seq 1 20); do
-              code=$(curl -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$domain/" || true)
-              case "$code" in
-                2*|3*) break ;;
-              esac
-              sleep 3
-            done
-            echo "$domain edge_http=$code"
-            case "$code" in 2*|3*) ;; *) failed=1 ;; esac
-            if [ "$domain" = "biz.ekodi.kr" ] && ! grep -Fq 'EKODI BIZ' /tmp/site.html; then
-              echo 'biz.ekodi.kr did not return the independent EKODI BIZ lobby.'
-              failed=1
-            fi
+            for attempt in $(seq 1 20); do code=$(curl -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$domain/" || true); case "$code" in 2*|3*) break ;; esac; sleep 3; done
+            echo "$domain edge_http=$code"; case "$code" in 2*|3*) ;; *) failed=1 ;; esac
+            if [ "$domain" = "biz.ekodi.kr" ] && ! grep -Fq 'EKODI BIZ' /tmp/site.html; then failed=1; fi
           done
           exit "$failed"

@@ -1,59 +1,43 @@
 # EKODI Guarded Release Policy
 
-EKODI 웹 서비스 변경은 운영 사이트에 직접 배포하지 않는다.
+EKODI 서비스 변경은 운영환경에 직접 덮어쓰지 않는다. 서비스 성격에 따라 아래 세 단계의 보호 모델을 사용한다.
 
-## Cloudflare Pages
+## 1. Cloudflare Pages: Preview-Gated Promotion
 
-Pages 서비스의 기본 흐름은 다음과 같다.
+Pages는 빌드 → 격리 preview branch 배포 → preview 자동검증 → 전부 통과한 경우에만 production 승격 → 운영 smoke/deep verification 순서로 진행한다. 공통 컨트롤러는 `scripts/guarded-pages-release.mjs`, 대상은 `deploy/manifests/*.pages.json`이다.
 
-1. 소스 빌드와 정적 검증을 수행한다.
-2. 동일한 빌드 산출물을 Cloudflare Pages의 격리된 preview branch에 배포한다.
-3. preview URL에서 HTTP 상태와 서비스별 필수/금지 마커를 자동 검증한다.
-4. 모든 preview가 통과한 경우에만 같은 산출물을 production branch로 승격한다.
-5. 운영 도메인에서 다시 smoke test와 서비스별 심층 검증을 수행한다.
-6. 어느 단계든 실패하면 즉시 실패 처리하고 다음 단계로 진행하지 않는다.
+현재 Marketing AI의 `marketing.ekodi.kr`, `jadam.ekodi.kr`, `pizzamaru.ekodi.kr`, `yogurt.ekodi.kr` 네 프로젝트는 하나의 release unit으로 보호한다.
 
-공통 컨트롤러는 `scripts/guarded-pages-release.mjs`이며 대상은 `deploy/manifests/*.pages.json`으로 선언한다.
+## 2. Stateless Workers: Stable 100% + Candidate 0%
 
-현재 Marketing AI의 다음 네 Pages 프로젝트가 하나의 release unit으로 보호된다.
+상태 저장소 마이그레이션이 없는 Worker는 현재 production 단일 안정 버전 100%를 확인한 뒤 새 candidate version을 업로드한다. stable 100% + candidate 0% 상태에서 `Cloudflare-Workers-Version-Overrides`로 후보만 검증하고, 성공하면 candidate를 100%로 승격한다. 실패하면 이전 stable version을 100%로 자동 복구한다.
 
-- marketing.ekodi.kr
-- jadam.ekodi.kr
-- pizzamaru.ekodi.kr
-- yogurt.ekodi.kr
+공통 컨트롤러는 `scripts/guarded-worker-release.mjs`, 대상은 `deploy/manifests/*.worker.json`이다. 현재 Community, Books, Social, 그리고 ekodi.kr/Admin/Auth/공통 허브 shared Worker가 이 정책을 사용한다.
 
-네 preview가 모두 통과하기 전에는 어느 production 프로젝트도 변경하지 않는다.
+## 3. Stateful Workers + D1
 
-## Cloudflare Workers
+Control API와 Finance API는 destructive migration 사전 차단 → production과 분리된 `ekodi-auth-staging` D1에 migration 적용 → `api-staging.ekodi.kr` 또는 `finance-api-staging.ekodi.kr` 검증 → production D1 Time Travel recovery bookmark 기록 → production migration → Worker candidate 0% 검증 → 100% 승격 → 운영 심층검증 순서로 진행한다.
 
-Workers 서비스는 Cloudflare의 Version/Deployment 모델을 이용한다.
+Worker 코드 검증 실패는 자동 롤백한다. D1 Time Travel restore는 정상 신규 쓰기까지 지울 수 있으므로 자동 실행하지 않고 recovery bookmark를 남겨 수동 판단한다.
 
-1. 현재 production이 단일 안정 버전 100%인지 확인한다.
-2. `wrangler versions upload`로 새 후보 버전을 만들되 production 트래픽에는 연결하지 않는다.
-3. 기존 안정 버전 100%, 후보 버전 0%로 deployment를 구성한다.
-4. `Cloudflare-Workers-Version-Overrides` 헤더로 일반 사용자 트래픽을 후보에 보내지 않은 상태에서 후보 버전을 smoke test한다.
-5. 모든 후보 검사가 통과한 경우에만 후보 버전을 100%로 승격한다.
-6. 승격 후 운영 URL을 다시 검증한다.
-7. 후보 검사 또는 승격 후 운영 검증이 실패하면 이전 안정 버전을 100%로 자동 복구하고 복구 상태를 다시 검사한다.
+Finance의 Toss 비밀키는 production 배포 뒤 별도 `secret put`으로 덮어쓰지 않는다. GitHub secret이 존재하면 후보 version upload의 `--secrets-file`에 포함해 0% 후보와 함께 검증·승격한다. secret 값은 로그에 출력하지 않는다.
 
-공통 컨트롤러는 `scripts/guarded-worker-release.mjs`이며 대상은 `deploy/manifests/*.worker.json`으로 선언한다.
+## Domain / Route Topology
 
-현재 2차 적용 대상은 다음과 같다.
+Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는 코드 승격과 분리한다. `deploy-service-proxy.yml`, `deploy-biz-legacy.yml`, `deploy-legacy-redirects.yml`은 자동 push 실행을 금지하고 `workflow_dispatch` 전용으로 둔다. 이 workflow들은 `deployment-guardrail: topology-workflow-manual-only` 표식을 가진다.
 
-- community.ekodi.kr (`ekodi-community`)
-- books.ekodi.kr (`ekodi-books`)
+## Repository-Wide Policy Audit
 
-Admin/Auth가 함께 있는 shared site Worker는 영향 범위가 넓으므로 위 두 서비스에서 guarded Worker release를 실전 검증한 뒤 다음 단계로 적용한다.
+`scripts/validate-deployment-guardrails.mjs`가 CI에서 배포경로 자체를 검사한다. 보호 대상 workflow가 다시 direct `wrangler deploy`, `npm run deploy:*`, production Pages 직행, post-deploy `secret put` 등으로 회귀하면 CI를 실패시킨다.
+
+로컬 `npm run deploy:site`, `deploy:books`, `deploy:community`도 guarded Worker controller를 사용한다. `deploy:api`, `deploy:finance`는 stateful staging 절차를 우회할 수 있어 직접 실행을 차단하고 서비스별 guarded workflow를 사용한다.
+
+기존 Full Ecosystem Deploy는 production 쓰기 없는 `Full Ecosystem Verification`으로 축소했다. 전체 운영 상태는 확인하지만 배포, migration, DNS, secret 변경은 수행하지 않는다.
 
 ## 안전 원칙
 
-- 이미 gradual deployment가 진행 중인 Worker는 자동 릴리스가 개입하지 않는다. 단일 100% 안정 버전 상태가 아니면 즉시 중단한다.
-- 데이터 저장소(KV, D1, R2, Durable Objects 등)의 상태 변화는 Worker 버전 롤백으로 되돌아가지 않는다. 데이터 마이그레이션은 별도 검증·백업·롤백 절차가 필요하다.
-- Worker route/custom-domain 토폴로지 변경은 코드 버전 승격과 분리해 관리한다. guarded Worker release는 기존 운영 라우팅 위에서 코드·assets·bindings 후보를 검증하고 승격하는 용도다.
-- 운영에 배포된 뒤 심층 검증이 실패하면 자동 롤백을 우선한다.
-
-## 블루-그린에 대한 정의
-
-Pages의 branch preview 승격은 완전한 dual-stack blue-green은 아니며 preview-gated promotion이다.
-
-Workers의 100% 안정 버전 + 0% 후보 버전 구조는 production deployment 안에 blue와 green 후보를 동시에 둔 뒤 version override로 green을 점검하고 100%로 전환하는 방식이다. 이는 빠른 자동 롤백이 가능하지만, 저장소 상태 자체까지 버전화하는 것은 아니다.
+- gradual deployment가 이미 진행 중이면 자동 릴리스가 개입하지 않는다.
+- destructive D1 변경은 expand/contract 방식으로 재설계한다.
+- Worker route/custom-domain 토폴로지는 코드 version 승격과 분리한다.
+- 인증, 결제, 고객, 회계 데이터는 단순 HTTP 200이 아니라 권한 경계와 필수 계약을 함께 검사한다.
+- Pages의 방식은 preview-gated promotion이며, Workers의 stable100/candidate0 방식은 production deployment 안에서 blue/green 후보를 동시에 두고 전환하는 구조다.

@@ -1,13 +1,8 @@
-name: Deploy EKODI Legacy Redirects
+name: Deploy EKODI Legacy Redirects (Manual Topology Change)
+# deployment-guardrail: topology-workflow-manual-only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - legacy-redirect.js
-      - wrangler.legacy-redirect.toml
-      - .github/workflows/deploy-legacy-redirects.yml
 
 permissions:
   contents: read
@@ -40,11 +35,8 @@ jobs:
           set -u
           api="https://api.cloudflare.com/client/v4"
           for spec in "ekodi-church:ekodichurch.kr" "ekodilab:ekodilab.kr" "ekodi-mall:ekodimall.kr"; do
-            project="${spec%%:*}"
-            domain="${spec#*:}"
-            code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X DELETE \
-              -H "Authorization: Bearer $CF_API_TOKEN" \
-              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
+            project="${spec%%:*}"; domain="${spec#*:}"
+            code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)
             echo "$domain detach_http=$code"
             if [ "$code" != "200" ] && [ "$code" != "204" ] && [ "$code" != "404" ]; then cat /tmp/delete.json || true; fi
           done
@@ -58,10 +50,7 @@ jobs:
           set -u
           failed=0
           for spec in "ekodichurch.kr:church.ekodi.kr" "ekodilab.kr:lab.ekodi.kr" "ekodimall.kr:mall.ekodi.kr"; do
-            old="${spec%%:*}"
-            new="${spec#*:}"
-            code=000
-            location=""
+            old="${spec%%:*}"; new="${spec#*:}"; code=000; location=""
             for attempt in $(seq 1 12); do
               curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old/domain-check?source=legacy" || true
               code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/headers 2>/dev/null || echo 0)
