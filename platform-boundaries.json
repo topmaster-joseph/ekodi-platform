@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "principle": "A platform change deploys only that platform unless a declared shared dependency changes.",
+  "platforms": {
+    "mall": {
+      "kind": "independent-platform",
+      "source": ["sites/ekodi-mall/**"],
+      "domains": ["mall.ekodi.kr", "mall.biz.ekodi.kr", "ekodi-mall.pages.dev"],
+      "deployWorkflow": ".github/workflows/deploy-ekodi-mall.yml",
+      "sharedDependencies": ["service-proxy"],
+      "database": "none"
+    },
+    "books": {
+      "kind": "independent-platform",
+      "source": ["books/**", "books-worker.js", "wrangler.books.toml"],
+      "domains": ["books.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-books.yml",
+      "sharedDependencies": ["control-api for operational APIs"],
+      "database": "ekodi-auth D1 via control-api"
+    },
+    "finance": {
+      "kind": "independent-service",
+      "source": ["finance-worker.js", "finance-entry-worker.js", "wrangler.finance.toml"],
+      "domains": ["finance-api.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-finance.yml",
+      "sharedDependencies": ["ekodi-auth D1"],
+      "database": "ekodi-auth D1 with finance_* table namespace"
+    },
+    "control-api": {
+      "kind": "shared-control-plane",
+      "source": ["api-worker.js", "auth-worker.js", "customer-*.js", "admin-google-auth.js", "books-control.js", "books-finance-control.js", "affiliate-control.js", "migrations/**"],
+      "domains": ["api.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-control-api.yml",
+      "sharedDependencies": ["ekodi-auth D1"],
+      "database": "ekodi-auth D1"
+    },
+    "admin-auth": {
+      "kind": "shared-control-plane-ui",
+      "source": ["control-center*", "compact-control-center*", "client-access*", "google-admin-auth*", "finance-monitor.js", "books-admin*", "books-finance-admin*", "marketing-funnel-admin*", "auth-site/**"],
+      "domains": ["admin.ekodi.kr", "auth.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-admin-site.yml",
+      "sharedDependencies": ["shared-site-worker"],
+      "database": "none"
+    },
+    "site-core": {
+      "kind": "shared-edge-runtime",
+      "source": ["site-worker.js", "index.html", "hub.html", "trade.html", "styles.css", "script.js", "responsive.css", "scripts/build.mjs", "wrangler.site.toml"],
+      "domains": ["ekodi.kr", "www.ekodi.kr", "pay.ekodi.kr", "trade.ekodi.kr", "mail.ekodi.kr", "live.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-site-core.yml",
+      "sharedDependencies": [],
+      "database": "none",
+      "note": "Temporary shared Worker. Split by domain family in isolation v2."
+    },
+    "service-proxy": {
+      "kind": "shared-edge-proxy",
+      "source": ["service-proxy.js", "wrangler.service-proxy.toml"],
+      "domains": ["biz.ekodi.kr", "church.ekodi.kr", "lab.ekodi.kr", "mall.ekodi.kr", "mail.*.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-service-proxy.yml",
+      "sharedDependencies": ["mall Pages", "church Pages", "lab Pages"],
+      "database": "none",
+      "note": "Proxy changes are shared-edge changes and require regression verification of every routed domain."
+    },
+    "marketing-ai": {
+      "kind": "independent-platform-family",
+      "source": ["marketing/**", "customer-sites/**", "marketing-*", "client-*"],
+      "domains": ["marketing.ekodi.kr", "cgma.ekodi.kr", "jadam.ekodi.kr", "pizzamaru.ekodi.kr", "yogurt.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/sync-marketing-ai.yml",
+      "sharedDependencies": ["control-api customer authentication"],
+      "database": "platform-specific external storage and control-api tenant data"
+    }
+  },
+  "rules": [
+    "The full ecosystem deploy is manual-only.",
+    "Platform workflows must use path filters.",
+    "Shared edge runtimes must use a shared concurrency group to prevent overlapping production deploys.",
+    "A shared database migration is a shared-core change and may intentionally trigger more than one service verification.",
+    "No platform may read or write another tenant's private data without an explicit shared API contract.",
+    "Production verification must use the real public hostname."
+  ]
+}
