@@ -14,6 +14,9 @@ ALLOWED_ORIGINS = "https://ins.ekodi.kr"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 
+[triggers]
+crons = ["17 3 * * *"]
+
 [observability.logs]
 enabled = true
 invocation_logs = true
