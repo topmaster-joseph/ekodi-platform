@@ -25,6 +25,8 @@ on:
       - 'books-admin.css'
       - 'books-finance-admin.js'
       - 'books-finance-admin.css'
+      - 'books-distribution-admin.js'
+      - 'books-distribution-admin.css'
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
       - 'domains-hub.js'
@@ -68,6 +70,7 @@ jobs:
           node --check marketing-funnel-admin.js
           node --check books-admin.js
           node --check books-finance-admin.js
+          node --check books-distribution-admin.js
           node --check google-admin-auth.js
           node --check domains-hub.js
           node --check social-admin.js
@@ -110,6 +113,10 @@ jobs:
           grep -Fq 'Activity Logs' compact-control-center.js
           grep -Fq '.campus-layout' compact-control-center.css
           grep -Fq '.policy-grid' compact-control-center.css
+          grep -Fq 'STALE_DAYS = 14' books-distribution-admin.js
+          grep -Fq 'ACTION QUEUE' books-distribution-admin.js
+          grep -Fq 'exportCsv' books-distribution-admin.js
+          grep -Fq '.books-distribution-attention' books-distribution-admin.css
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'control-center-features.js' scripts/build.mjs
@@ -119,6 +126,8 @@ jobs:
           grep -Fq 'social-admin.js' scripts/build.mjs
           grep -Fq 'community-reports-admin.css' scripts/build.mjs
           grep -Fq 'community-reports-admin.js' scripts/build.mjs
+          grep -Fq 'books-distribution-admin.css' scripts/build.mjs
+          grep -Fq 'books-distribution-admin.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
@@ -195,6 +204,8 @@ jobs:
               && verify_asset 'social-admin.css' '.social-org-card' \
               && verify_asset 'community-reports-admin.js' 'Community Source Evidence' \
               && verify_asset 'community-reports-admin.css' '.community-report-source-panel' \
+              && verify_asset 'books-finance-admin.js' 'ACTION QUEUE' \
+              && verify_asset 'books-finance-admin.css' '.books-distribution-attention' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
               echo 'Admin/Auth production boundary verified.'
