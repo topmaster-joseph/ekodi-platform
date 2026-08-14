@@ -28,7 +28,7 @@ test('Books control plane exposes publications, services, features and inquiries
 
 test('Books admin ships with the Control Center but loads lazily after authentication', () => {
   for (const asset of ['books-admin.css', 'books-admin.js', 'books-finance-admin.css', 'books-finance-admin.js']) {
-    assert.match(build, new RegExp(`'${asset.replaceAll('.', '\\.')}''?`.replace("''?", "'")));
+    assert.ok(build.includes(`'${asset}'`), `${asset} must remain in production assets`);
   }
   assert.match(build, /'control-center-features\.js'/);
   assert.doesNotMatch(build, /<link rel="stylesheet" href="books-admin\.css">/);
