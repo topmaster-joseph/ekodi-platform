@@ -26,6 +26,7 @@ jobs:
         run: |
           node --check auth-site/auth.js
           node --check auth-site/auth-router.js
+          node --check auth-site/marketing-auth-hotfix.js
           node --check auth-site/auth-workspace-target.js
           node --check auth-site/admin-auth.js
           node --check auth-site/client-auth.js
@@ -45,10 +46,27 @@ jobs:
           grep -Fq "site==='cgma-client'" auth-site/auth-router.js
           grep -Fq 'targetedWorkspace' auth-site/auth-router.js
           grep -Fq "await import('./auth-workspace-target.js')" auth-site/auth-router.js
+          grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
+          if grep -Fq "params.set('intent','pro')" auth-site/auth-router.js; then
+            echo 'Marketing Pro mode must not be forced for normal login'
+            exit 1
+          fi
           grep -Fq "site!=='marketing'" auth-site/auth-workspace-target.js
           grep -Fq 'workspace_key===requested' auth-site/auth-workspace-target.js
           grep -Fq 'requires_handoff===true' auth-site/auth-workspace-target.js
           grep -Fq "api('/handoff'" auth-site/auth.js
+          grep -Fq 'functions/v1/access-api' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'functions/v1/identity-api' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'ekodi_token:d.tokenHash' auth-site/marketing-auth-hotfix.js
+          grep -Fq "sb.auth.onAuthStateChange((event,s)=>" auth-site/marketing-auth-hotfix.js
+          grep -Fq 'setTimeout(()=>{' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'supabase_cdn_timeout' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'supabase_fallback_timeout' auth-site/marketing-auth-hotfix.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/marketing-auth-hotfix.js; then
+            echo 'Async Supabase auth-state callback can deadlock'
+            exit 1
+          fi
           grep -Fq '청계상권 고객관리' auth-site/client-auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
