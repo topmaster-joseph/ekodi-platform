@@ -145,6 +145,24 @@
     return true;
   }
 
+  function publicServiceUrl(domain) {
+    const host = String(domain || '').trim().toLowerCase();
+    if (!host || !/^[a-z0-9.-]+$/.test(host) || !host.includes('.')) return '';
+    return `https://${host}`;
+  }
+
+  function normalizeServiceOpenLinks() {
+    const grid = document.querySelector('#serviceControlGrid');
+    if (!grid) return;
+    for (const card of grid.querySelectorAll('.service-control-card')) {
+      const domain = card.querySelector('.service-control-head small')?.textContent?.trim() || '';
+      const open = card.querySelector('.service-actions a');
+      if (!open || domain === 'api.ekodi.kr') continue;
+      const publicUrl = publicServiceUrl(domain);
+      if (publicUrl) open.href = publicUrl;
+    }
+  }
+
   function removeDomainsMenu() {
     const root = nav();
     if (!root) return;
@@ -174,11 +192,18 @@
   function init() {
     renderCampus();
     normalizeSidebar();
+    normalizeServiceOpenLinks();
 
     const sidebarNav = nav();
     if (sidebarNav) {
       const observer = new MutationObserver(() => normalizeSidebar());
       observer.observe(sidebarNav, { childList: true, subtree: true });
+    }
+
+    const serviceGrid = document.querySelector('#serviceControlGrid');
+    if (serviceGrid) {
+      const observer = new MutationObserver(() => normalizeServiceOpenLinks());
+      observer.observe(serviceGrid, { childList: true, subtree: true });
     }
 
     const content = document.querySelector('.content');

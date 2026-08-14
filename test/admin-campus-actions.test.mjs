@@ -18,6 +18,14 @@ test('Campus first screen renders the full operational site list with three dire
   assert.match(js, /<th>Type<\/th><th>Service<\/th><th>Domain<\/th><th>Actions<\/th>/);
 });
 
+test('public site Open links never inherit monitor-only health endpoints', () => {
+  assert.match(js, /function publicServiceUrl/);
+  assert.match(js, /function normalizeServiceOpenLinks/);
+  assert.match(js, /domain === 'api\.ekodi\.kr'/);
+  assert.match(js, /open\.href = publicUrl/);
+  assert.match(js, /serviceControlGrid/);
+});
+
 test('Domains and DNS navigation is removed while Affiliates has a visible icon', () => {
   assert.match(js, /data-section="domains"/);
   assert.match(js, /data-lazy-section="domains"/);
