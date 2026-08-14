@@ -18,10 +18,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: supabase-local-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  SUPABASE_CLI_VERSION: '2.110.0'
+  TEST_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+
 jobs:
   local-supabase:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
 
@@ -30,16 +38,15 @@ jobs:
           node-version: '24'
 
       - name: Initialize ephemeral Supabase config
-        run: npx --yes supabase@2.110.0 init --force
+        run: npx --yes supabase@$SUPABASE_CLI_VERSION init --force
 
-      - name: Start clean local Supabase stack
+      - name: Start database-only Supabase
         shell: bash
         run: |
           set -euo pipefail
           mv supabase/migrations "$RUNNER_TEMP/ekodi-migrations"
           mkdir -p supabase/migrations
-          npx --yes supabase@2.110.0 start \
-            -x studio,imgproxy,realtime,storage-api,mailpit,logflare,vector,supavisor
+          npx --yes supabase@$SUPABASE_CLI_VERSION db start
           rm -rf supabase/migrations
           mv "$RUNNER_TEMP/ekodi-migrations" supabase/migrations
 
@@ -64,14 +71,21 @@ jobs:
           done
 
       - name: Lint Postgres functions
-        run: npx --yes supabase@2.110.0 db lint --local --level error --fail-on error
+        run: >-
+          npx --yes supabase@$SUPABASE_CLI_VERSION db lint
+          --db-url "$TEST_DB_URL"
+          --level error
+          --fail-on error
 
       - name: Run pgTAP database contracts
-        run: npx --yes supabase@2.110.0 test db --local
+        run: npx --yes supabase@$SUPABASE_CLI_VERSION test db --db-url "$TEST_DB_URL"
 
       - name: Run application contract tests
         run: npm test
 
-      - name: Stop ephemeral Supabase stack
+      - name: Stop ephemeral Supabase database
         if: always()
-        run: npx --yes supabase@2.110.0 stop --no-backup
+        shell: bash
+        run: |
+          npx --yes supabase@$SUPABASE_CLI_VERSION stop --no-backup || true
+          docker ps -aq --filter 'name=supabase_db_' | xargs -r docker rm -f || true
