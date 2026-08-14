@@ -9,7 +9,6 @@ on:
       - 'sites/ekodi-insurance/**'
       - 'insurance-admin.css'
       - 'insurance-admin.js'
-      - 'insurance-control-entry.js'
       - 'insurance-control-proxy.js'
       - 'customer-entry-worker.js'
       - 'control-center-features.js'
@@ -49,12 +48,14 @@ jobs:
           node --check sites/ekodi-insurance/public/server-bridge.js
           node --check sites/ekodi-insurance/api/worker.js
           node --check insurance-control-proxy.js
-          node --check insurance-control-entry.js
           node --check customer-entry-worker.js
           node --check control-center-features.js
           node --check scripts/build.mjs
           grep -Fq "path.startsWith('/api/insurance/admin')" customer-entry-worker.js
           grep -Fq 'handleInsuranceAdminProxy' customer-entry-worker.js
+          grep -Fq 'insuranceAdminEnabled' customer-entry-worker.js
+          grep -Fq 'INSURANCE_ADMIN_NOT_ENABLED' customer-entry-worker.js
+          grep -Fq 'INSURANCE_ADMIN_ENABLED = "false"' wrangler.api.toml
           grep -Fq 'INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"' wrangler.api.toml
           grep -Fq 'loadInsurance' control-center-features.js
           grep -Fq 'insurance-admin.css' scripts/build.mjs
