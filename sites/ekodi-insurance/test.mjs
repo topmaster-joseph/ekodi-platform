@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 const html=fs.readFileSync(new URL('./public/index.html',import.meta.url),'utf8');
 const js=fs.readFileSync(new URL('./public/app.js',import.meta.url),'utf8');
+const bridge=fs.readFileSync(new URL('./public/server-bridge.js',import.meta.url),'utf8');
 const worker=fs.readFileSync(new URL('./worker.js',import.meta.url),'utf8');
 const privacyCss=fs.readFileSync(new URL('./public/privacy.css',import.meta.url),'utf8');
 const chatCss=fs.readFileSync(new URL('./public/chat.css',import.meta.url),'utf8');
@@ -12,11 +13,10 @@ for(const required of ['AI가 먼저 충분히 상담합니다.','설계사 전�
 if(html.includes('/100')||js.includes('diagnosisScore'))throw new Error('opaque numeric insurance score must not return');
 if(!html.includes('/privacy.css')||!privacyCss.includes('.privacy-grid'))throw new Error('privacy UI stylesheet missing');
 if(!chatCss.includes('.chat-layout')||!chatCss.includes('.handoff-panel'))throw new Error('AI chat stylesheet missing');
-if(!adminHtml.includes('STAGING LOCAL ADMIN')||!adminJs.includes('HUMAN_HANDOFF_QUEUE')&& !adminJs.includes('AI_CHAT_HANDOFF'))throw new Error('staging admin queue missing');
+if(!adminHtml.includes('STAGING LOCAL ADMIN')||(!adminJs.includes('HUMAN_HANDOFF_QUEUE')&&!adminJs.includes('AI_CHAT_HANDOFF')))throw new Error('staging admin queue missing');
 if(!html.includes('상품 추천 기능이 아닙니다.'))throw new Error('insurance recommendation boundary missing');
 if(!html.includes('민감정보 입력 최소화'))throw new Error('sensitive-data minimization notice missing');
-if(!worker.includes("serverSensitiveData:false"))throw new Error('health guard missing');
-if(!worker.includes("privacyCenter:true"))throw new Error('privacy center health signal missing');
-for(const marker of ['aiChat:true','humanHandoffQueue:true','adminQueue:true','externalAiProvider:false'])if(!worker.includes(marker))throw new Error(`health signal missing: ${marker}`);
+for(const marker of ["personalPolicyData:'browser-local'","personalClaimData:'browser-local'","consultationStorage:'encrypted-d1-on-explicit-handoff'","privacyCenter:true",'aiChat:true','humanHandoffQueue:true','adminQueue:true','externalAiProvider:false'])if(!worker.includes(marker))throw new Error(`health signal missing: ${marker}`);
+for(const marker of ['insurance-api-staging.ekodi.kr','shareConsent','shareTranscript','consultation-access-v1'])if(!bridge.includes(marker))throw new Error(`D1 handoff bridge missing: ${marker}`);
 if(!worker.includes("frame-ancestors 'none'"))throw new Error('CSP missing');
-console.log('EKODI Insurance AI-chat consultation MVP checks passed');
+console.log('EKODI Insurance free-D1 AI consultation checks passed');
