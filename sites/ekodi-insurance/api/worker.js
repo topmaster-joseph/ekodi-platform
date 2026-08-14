@@ -3,6 +3,13 @@ const DEFAULT_ORIGINS = [
   'https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
 ];
 const VALID_STATUS = new Set(['new', 'reviewing', 'contacted', 'closed']);
+const SUMMARY_CODES = new Map([
+  ['CLAIMS', '보험금 청구 준비 관련 상담'],
+  ['PREMIUM', '보험료 유지부담 및 기존계약 점검 상담'],
+  ['COVERAGE', '기존 보험 보장구조 점검 상담'],
+  ['PRODUCT_HANDOFF', '보험 가입·설계사 연결 전 확인 상담'],
+  ['GENERAL', '일반 보험관리 상담']
+]);
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -89,13 +96,15 @@ function normalizeMessages(value) {
     content: redact(item?.content || item?.text || '')
   })).filter(item => item.content);
 }
-function consultationSummary(messages, topic = '') {
+function consultationSummary(summaryCode, messages = [], topic = '') {
+  const code = clean(summaryCode, 40).toUpperCase();
+  if (SUMMARY_CODES.has(code)) return SUMMARY_CODES.get(code);
   const text = `${topic} ${messages.map(m => m.content).join(' ')}`;
-  if (/청구|병원비|진료|입원|수술/.test(text)) return '보험금 청구 준비 관련 상담';
-  if (/보험료|부담|해지|유지/.test(text)) return '보험료 유지부담 및 기존계약 점검 상담';
-  if (/보장|중복|갱신|보험.*점검/.test(text)) return '기존 보험 보장구조 점검 상담';
-  if (/설계사|가입|상품/.test(text)) return '보험 가입·설계사 연결 전 확인 상담';
-  return '일반 보험관리 상담';
+  if (/청구|병원비|진료|입원|수술/.test(text)) return SUMMARY_CODES.get('CLAIMS');
+  if (/보험료|부담|해지|유지/.test(text)) return SUMMARY_CODES.get('PREMIUM');
+  if (/보장|중복|갱신|보험.*점검/.test(text)) return SUMMARY_CODES.get('COVERAGE');
+  if (/설계사|가입|상품/.test(text)) return SUMMARY_CODES.get('PRODUCT_HANDOFF');
+  return SUMMARY_CODES.get('GENERAL');
 }
 function freeGuidanceReply(messages) {
   const last = messages.filter(m => m.role === 'user').at(-1)?.content || '';
@@ -103,7 +112,7 @@ function freeGuidanceReply(messages) {
   if (/청구|병원비|진료|입원|수술/.test(last)) return '먼저 어떤 보험에 가입되어 있는지와 사고·진료 유형을 확인하고, 해당 보험사의 공식 청구채널에서 필요서류를 다시 확인하는 순서가 좋습니다. 여기서는 보험금 지급 여부를 확정하지 않습니다. 원하시면 현재 상황에서 확인할 항목을 하나씩 정리해 드릴게요.';
   if (/보험료|부담|해지|유지/.test(last)) return '보험료가 부담될 때는 새 상품을 먼저 찾기보다 기존 계약의 보장, 갱신 여부, 중복 가능성, 해지 시 불이익을 차례로 확인하는 편이 안전합니다. 월 보험료와 보험 개수 정도만 알려주시면 민감정보 없이 점검 순서를 정리할 수 있습니다.';
   if (/보장|중복|점검|보험.*몇|가입.*보험/.test(last)) return '기존 보험 점검은 보험 개수보다 각 계약의 주요 보장, 갱신 조건, 월 유지비, 가족 상황을 함께 보는 것이 중요합니다. 특정 상품 추천 없이 현재 계약에서 먼저 확인할 항목을 정리해 드릴 수 있습니다.';
-  if (/설계사|전화|연락|사람/.test(last)) return 'AI 상담으로 충분하지 않다면 실제 설계사 전화상담을 요청할 수 있습니다. 그때만 연락처와 공유에 동의한 상담내용을 암호화해 상담대기열에 저장합니다. 원하실 때 “설계사 연결 요청”을 선택해 주세요.';
+  if (/설계사|전화|연락|사람/.test(last)) return 'AI 상담으로 충분하지 않다면 실제 설계사 전화상담을 요청할 수 있습니다. 그때만 연락처를 암호화해 상담대기열에 저장하며, AI 대화 원문은 별도로 공유에 동의한 경우에만 전달합니다.';
   return '말씀하신 내용을 기준으로 먼저 현재 보험을 이해하고 확인할 항목을 정리하는 것이 좋습니다. 특정 상품을 바로 권하기보다 기존 계약, 보험료 부담, 가족 상황, 청구 필요 여부 중 무엇이 가장 궁금한지 알려주시면 그 부분부터 좁혀 보겠습니다.';
 }
 async function authenticate(request, env) {
@@ -154,29 +163,32 @@ function contactHint(value) {
 async function createConsultation(request, env) {
   if (!(await allowRequest(request, env, 6))) return { status: 429, body: { error: '상담요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' } };
   const body = await readJson(request);
-  if (!body || body.shareConsent !== true) return { status: 400, body: { error: '설계사 연결 및 상담내용 공유에 대한 명시적 동의가 필요합니다.' } };
+  if (!body || body.shareConsent !== true) return { status: 400, body: { error: '설계사 연락요청을 위한 연락정보 처리 동의가 필요합니다.' } };
   const name = clean(body.name, 80);
   const contact = clean(body.contact, 160);
   if (!name || contact.length < 4) return { status: 400, body: { error: '이름과 연락처를 확인해 주세요.' } };
   const authorization = request.headers.get('authorization') || '';
   const user = authorization ? await authenticate(request, env) : null;
   if (authorization && !user) return { status: 401, body: { error: '로그인 정보를 확인해 주세요.' } };
-  const messages = normalizeMessages(body.messages);
+
+  const transcriptRequested = body.shareTranscript === true;
+  const messages = transcriptRequested ? normalizeMessages(body.messages) : [];
+  const transcriptShared = transcriptRequested && messages.length > 0;
+  const topic = transcriptShared ? redact(body.topic || '') : '';
   const id = `con_${crypto.randomUUID()}`;
   const accessToken = `ic_${crypto.randomUUID().replaceAll('-', '')}${crypto.randomUUID().replaceAll('-', '')}`;
   const now = new Date().toISOString();
-  const transcriptShared = body.shareTranscript !== false && messages.length > 0;
   const transcriptCiphertext = transcriptShared ? await encryptText(env, JSON.stringify(messages)) : null;
   const contactCiphertext = await encryptText(env, contact);
-  const summary = consultationSummary(messages, redact(body.topic || ''));
+  const summary = consultationSummary(body.summaryCode, messages, topic);
   await env.DB.prepare(`INSERT INTO consultation_requests
     (id,user_id,contact_name,contact_ciphertext,contact_hint,preferred_time,ai_summary,transcript_ciphertext,transcript_shared,status,access_token_hash,created_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,'new',?,?,?)`).bind(
       id, user?.id || null, name, contactCiphertext, contactHint(contact), clean(body.preferredTime, 120), summary,
       transcriptCiphertext, transcriptShared ? 1 : 0, await sha256(accessToken), now, now
     ).run();
-  await audit(env, id, 'customer', user?.id || 'anonymous', 'consultation.created', transcriptShared ? 'transcript-shared' : 'summary-only');
-  return { status: 201, body: { consultation: { id, status: 'new', summary, createdAt: now }, accessToken } };
+  await audit(env, id, 'customer', user?.id || 'anonymous', 'consultation.created', transcriptShared ? 'explicit-transcript-consent' : 'summary-code-only');
+  return { status: 201, body: { consultation: { id, status: 'new', summary, transcriptShared, createdAt: now }, accessToken } };
 }
 async function revokeConsultation(id, request, env) {
   const body = await readJson(request);
@@ -210,8 +222,8 @@ async function consultationDetail(id, request, env) {
   if (row.transcript_shared && row.transcript_ciphertext) {
     try { transcript = JSON.parse(await decryptText(env, row.transcript_ciphertext)); } catch { transcript = []; }
   }
-  await audit(env, id, 'admin', actor, 'admin.consultation.viewed', row.transcript_shared ? 'contact+shared-transcript' : 'contact-only');
-  return { id: row.id, name: row.contact_name, contact, preferredTime: row.preferred_time, summary: row.ai_summary, status: row.status, transcript, createdAt: row.created_at, updatedAt: row.updated_at };
+  await audit(env, id, 'admin', actor, 'admin.consultation.viewed', row.transcript_shared ? 'contact+explicitly-shared-transcript' : 'contact-only');
+  return { id: row.id, name: row.contact_name, contact, preferredTime: row.preferred_time, summary: row.ai_summary, status: row.status, transcriptShared: Boolean(row.transcript_shared), transcript, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 async function updateStatus(id, request, env) {
   const body = await readJson(request);
@@ -224,6 +236,13 @@ async function updateStatus(id, request, env) {
   await audit(env, id, 'admin', clean(request.headers.get('x-ekodi-actor'), 240) || 'central-admin', 'admin.consultation.status_changed', status);
   return { status: 200, body: { consultation: { id, status, updatedAt: now } } };
 }
+async function cleanupExpired(env) {
+  if (!env.DB) return;
+  const consultationCutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+  const rateCutoff = new Date(Date.now() - 2 * 86400000).toISOString();
+  await env.DB.prepare('DELETE FROM consultation_requests WHERE created_at < ?').bind(consultationCutoff).run();
+  await env.DB.prepare('DELETE FROM request_rate_limits WHERE updated_at < ?').bind(rateCutoff).run();
+}
 
 export default {
   async fetch(request, env) {
@@ -235,19 +254,26 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') {
       const dbReady = await schemaReady(env);
       const encryptionReady = Boolean(await dataKey(env));
+      const internalAdminReady = Boolean(clean(env.INSURANCE_INTERNAL_TOKEN, 240));
+      const rateLimitReady = Boolean(clean(env.RATE_LIMIT_SALT, 240));
+      const ok = dbReady && encryptionReady && internalAdminReady && rateLimitReady;
       return json({
-        ok: dbReady,
+        ok,
         service: 'ekodi-insurance-api',
         environment: env.ENVIRONMENT || 'unknown',
         architecture: 'cloudflare-worker-d1',
         dbReady,
         encryptionReady,
+        internalAdminReady,
+        rateLimitReady,
         externalAiProvider: false,
         aiMode: 'free-guidance-engine',
         persistentPolicyLedger: false,
         persistentClaimLedger: false,
+        transcriptDefault: 'not-shared',
+        consultationRetentionDays: 30,
         consultationQueue: true
-      }, dbReady ? 200 : 503, origin, env);
+      }, ok ? 200 : 503, origin, env);
     }
     if (!env.DB) return json({ error: 'Insurance D1 데이터베이스 연결이 없습니다.' }, 503, origin, env);
 
@@ -293,5 +319,8 @@ export default {
       }
     }
     return json({ error: 'Not found' }, 404, origin, env);
+  },
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(cleanupExpired(env));
   }
 };
