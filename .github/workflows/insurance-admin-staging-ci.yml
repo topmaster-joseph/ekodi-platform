@@ -1,0 +1,54 @@
+name: EKODI Insurance Admin · Staging CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-admin-*'
+    paths:
+      - 'insurance-admin.js'
+      - 'insurance-admin.css'
+      - 'control-center-features.js'
+      - 'scripts/build.mjs'
+      - '.github/workflows/insurance-admin-staging-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check insurance-admin.js
+          node --check control-center-features.js
+          node --check scripts/build.mjs
+      - name: Verify Insurance admin contract
+        run: |
+          set -euo pipefail
+          grep -Fq "loadInsurance" control-center-features.js
+          grep -Fq "placeholder('insurance'" control-center-features.js
+          grep -Fq "insurance-admin.css" control-center-features.js
+          grep -Fq "insurance-admin.js" control-center-features.js
+          grep -Fq "/api/insurance/admin/consultations" insurance-admin.js
+          grep -Fq "AI 상담요약" insurance-admin.js
+          grep -Fq "고객의 전체 보험계약·청구기록" insurance-admin.js
+          grep -Fq "insurance-admin.css" scripts/build.mjs
+          grep -Fq "insurance-admin.js" scripts/build.mjs
+      - name: Build root assets
+        run: npm run build
+      - name: Verify built Insurance assets
+        run: |
+          set -euo pipefail
+          test -f dist/insurance-admin.js
+          test -f dist/insurance-admin.css
+          grep -Fq "/api/insurance/admin/consultations" dist/insurance-admin.js
+          grep -Fq ".insurance-admin" dist/insurance-admin.css
+          grep -Fq "loadInsurance" dist/control-center-features.js
