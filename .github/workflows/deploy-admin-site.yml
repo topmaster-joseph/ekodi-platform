@@ -27,7 +27,6 @@ on:
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
       - 'auth-site/**'
-      - '.github/workflows/deploy-admin-site.yml'
 
 permissions:
   contents: read
