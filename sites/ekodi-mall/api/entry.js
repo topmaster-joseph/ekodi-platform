@@ -1,5 +1,6 @@
 import core from './worker.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
+import { handleSourcingPlanRequest } from './sourcing-plan.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -179,6 +180,10 @@ export default {
       return reply(result.body, result.status, origin, env);
     }
 
+    if (url.pathname.startsWith('/api/sourcing/')) {
+      const plan = await handleSourcingPlanRequest(request, env);
+      if (plan) return reply(plan.body, plan.status, origin, env);
+    }
     if (url.pathname.startsWith('/api/sourcing/') || url.pathname.startsWith('/api/internal/sourcing/')) {
       const result = await handleSourcingRequest(request, env);
       if (result) return reply(result.body, result.status, origin, env);
