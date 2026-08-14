@@ -11,6 +11,7 @@ on:
       - 'platform-boundaries.json'
       - 'migrations/0014_remove_legacy_mission_service.sql'
       - 'test/community-canonical-control.test.mjs'
+      - 'test/business-contract.test.mjs'
       - '.github/workflows/community-canonical-release-gate.yml'
 
 permissions:
