@@ -39,6 +39,7 @@
     { key: 'books', label: '출판', name: '에코디북스', domain: 'books.ekodi.kr', section: 'books', fallback: 'services' },
     { key: 'mall', label: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services' },
     { key: 'community', label: '커뮤니티', name: '에코디커뮤니티', domain: 'community.ekodi.kr', section: 'services' },
+    { key: 'work', label: '일·인재', name: 'EKODI Work', domain: 'work.ekodi.kr', section: 'services' },
     { key: 'lab', label: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services' },
     { key: 'biz', label: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'services' },
   ];
