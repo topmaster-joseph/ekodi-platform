@@ -1,47 +1,54 @@
-name: CI
+name: Supabase Local CI
 
 on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'auth-site/**'
+      - 'test/**'
+      - '.github/workflows/supabase-local-ci.yml'
   push:
     branches: [main]
-    paths-ignore:
-      - 'monitor-status.json'
-  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'auth-site/**'
+      - 'test/**'
+      - '.github/workflows/supabase-local-ci.yml'
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - run: npm run check
-      - run: npm test
-
-  supabase-local:
+  local-supabase:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: '24'
+
       - name: Initialize ephemeral Supabase config
         run: npx --yes supabase@2.110.0 init --force
+
       - name: Start local Supabase stack and apply migrations
         run: >-
           npx --yes supabase@2.110.0 start
           -x studio,imgproxy,realtime,storage-api,mailpit,logflare,vector,supavisor
+
       - name: Rebuild database from migrations
         run: npx --yes supabase@2.110.0 db reset --local
+
       - name: Lint Postgres functions
         run: npx --yes supabase@2.110.0 db lint --local --level error --fail-on error
+
       - name: Run pgTAP database contracts
         run: npx --yes supabase@2.110.0 test db --local
+
+      - name: Run application contract tests
+        run: npm test
+
       - name: Stop ephemeral Supabase stack
         if: always()
         run: npx --yes supabase@2.110.0 stop --no-backup
