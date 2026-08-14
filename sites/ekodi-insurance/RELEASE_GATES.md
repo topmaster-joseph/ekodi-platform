@@ -1,18 +1,18 @@
 # EKODI Insurance · Production Release Gates
 
-`staging/insurance-d1-free-20260815`는 에코디몰의 지속가능한 운영방식을 보험서비스에 맞게 단순화한 Release Candidate다.
+`staging/insurance-release-20260815`는 에코디몰의 지속가능한 운영방식을 보험서비스에 맞게 단순화한 통합 Release Candidate다.
 
 ## 기본 아키텍처
 
-- 고객 UI: Cloudflare Worker static assets
+- 고객 UI: Cloudflare static assets + 필요한 경로만 Worker
 - 상담 API: Cloudflare Worker
 - 상담대기열: 전용 Cloudflare D1
 - 로그인 확인: 기존 Google/Supabase Auth를 필요할 때 사용자 확인용으로만 사용
-- 고객 보험목록·청구메모: 기본 브라우저 로컬
-- 실제 설계사 연결요청: 명시적 동의 후 D1에 최소정보만 저장
-- 연락처·공유대화: AES-GCM 암호화
+- 고객 보험목록·청구메모·기본 AI 대화: 브라우저 로컬
+- 실제 설계사 연결요청: 연락정보 처리 필수동의 후 D1에 최소정보만 저장
+- AI 상담 대화 원문: 별도 선택동의가 있을 때만 AES-GCM 암호화 저장
 - 관리자: `admin.ekodi.kr → api.ekodi.kr → Insurance Worker → D1`
-- 배포: GitHub Actions validate → isolated staging D1 → E2E → blue-green production
+- 배포: GitHub Actions validate → isolated staging D1 → 실제 중앙세션 E2E → production Green → blue-green cutover
 
 **유료 Supabase development branch는 사용하지 않는다.**
 
@@ -37,85 +37,100 @@ D1에는 다음 테이블을 만들지 않는다.
 - 이름
 - AES-GCM 암호화 연락처
 - 연락처 힌트
-- 일반화된 상담요약
-- 명시적 공유동의가 있는 경우에만 암호화 상담대화
+- 비민감 범주코드에서 만든 일반화 상담요약
+- **별도 선택동의가 있는 경우에만** 암호화 AI 상담대화
 - 관리자 열람·상태변경 감사로그
+
+상담요청은 기본 30일 보유 후 자동 삭제하고, rate-limit 기록은 2일 후 자동 정리한다. Cloudflare cron으로 매일 cleanup을 실행한다.
 
 ## 현재 staging
 
 - UI: `https://ekodi-insurance-staging.topmaster-joseph.workers.dev`
 - API: `https://insurance-api-staging.ekodi.kr`
-- D1: `ekodi-insurance-staging`
+- Insurance D1: `ekodi-insurance-staging`
+- 중앙 세션 E2E Worker: `https://ekodi-insurance-control-staging.topmaster-joseph.workers.dev`
+- 중앙 세션 E2E D1: `ekodi-insurance-control-staging`
 
-staging 암호화키는 테스트 전용이며 실제 고객 개인정보를 사용하지 않는다.
+staging은 합성데이터만 사용하며 테스트 완료 후 자동 삭제한다.
 
-## 자동검증 필수조건
+## 기술 자동검증 완료
 
-1. UI/Worker JS syntax 및 기존 보험업무 경계 검사
-2. 모든 D1 migration을 로컬 SQLite에 순서대로 적용
-3. 금지된 민감정보 원장 테이블 부재 확인
-4. `ekodi-insurance-staging` D1 resolve/create
-5. remote D1 migration 적용
-6. staging Insurance API 배포
-7. 테스트용 AES-GCM key/internal token 설치
-8. `/health`에서 D1·암호화 준비상태 확인
-9. 무료 상담엔진 응답이 서버에 대화기록을 영구저장하지 않는지 확인
-10. 합성 연락처로 상담요청 생성
-11. Admin list에서 연락처 원문이 노출되지 않는지 확인
-12. Admin detail에서 권한 있는 내부요청만 복호화되는지 확인
-13. 상담상태 변경 감사흐름 확인
-14. 고객 취소토큰으로 상담요청 철회 및 암호문 제거 확인
-15. 합성 staging 데이터 삭제
+- [x] UI/Worker JS syntax 및 보험업무 경계 검사
+- [x] 모든 D1 migration을 로컬 SQLite에 순서대로 적용
+- [x] 금지된 민감정보 원장 테이블 부재 확인
+- [x] `ekodi-insurance-staging` D1 resolve/create
+- [x] remote D1 migration 적용
+- [x] staging Insurance API 배포
+- [x] staging 전용 AES-GCM key/internal token/rate-limit salt 설치
+- [x] `/health`에서 D1·암호화·내부관리자·rate-limit 준비상태 확인
+- [x] 무료 상담엔진 `persisted:false` 확인
+- [x] 연락정보 처리 동의와 AI 대화 공유 선택동의 분리
+- [x] 대화 공유 OFF 시 원문 미저장 확인
+- [x] 대화 공유 ON 시 암호화 저장·권한 있는 상세에서만 복호화 확인
+- [x] Admin list에서 연락처 원문 비노출
+- [x] 고객 취소토큰으로 상담요청 철회 및 암호문 제거
+- [x] 실제 중앙 bearer 세션을 별도 D1에 생성해 중앙 Control Worker → Insurance D1 연결 확인
+- [x] 비로그인 중앙 관리자 API 401 확인
+- [x] 중앙 관리자 상세 열람·상태변경 및 audit 흐름 확인
+- [x] 합성 staging 데이터 삭제
+- [x] 운영 `customer-entry-worker.js`에 `/api/insurance/admin` 프록시 라우트 준비
+- [x] 운영 `wrangler.api.toml`에 `INSURANCE_API_BASE=https://insurance-api.ekodi.kr` 준비
+- [x] 30일 상담정보 자동파기 cron 코드·설정 준비
+
+실제 중앙 세션 통합 E2E 성공 Run: `31842647201`
 
 ## 운영 전 남은 게이트
 
-### 1. Production secrets
+### 1. 운영주체·보험모집·Privacy 외부 검토
 
-Cloudflare Worker secret으로 준비한다.
+기술 CI가 대신 승인할 수 없는 마지막 외부 게이트다.
 
-- `INSURANCE_DATA_KEY`: 32-byte AES-GCM key
-- `INSURANCE_INTERNAL_TOKEN`: 중앙 Admin proxy ↔ Insurance API
+- 서비스 운영주체 법적 명칭
+- 실제 보험상품 설명·권유를 담당할 등록된 모집자/위촉관계 표시
+- `EKODI Insurance` 브랜드가 보험회사 자체 서비스로 오인되지 않도록 표시 검토
+- 보험사 내부 광고·모집 컴플라이언스 확인이 필요한 문구 확정
+- 개인정보 처리방침 확정
+- 상담 연락정보 처리 필수동의 문구 확정
+- AI 대화/건강정보 포함 가능성에 대한 별도 선택동의 문구 확정
+
+이 검토가 완료되기 전에는 특정 보험상품 추천, 보험사 공식서비스 표방, 자동청약 기능을 활성화하지 않는다.
+
+### 2. Production secrets 최초 1회 고정
+
+운영 암호화키는 staging처럼 배포 때마다 회전시키면 안 된다.
+
+- `INSURANCE_DATA_KEY`: 32-byte AES-GCM key, **운영기간 동안 안정적으로 보존**
+- `INSURANCE_INTERNAL_TOKEN`: 중앙 Admin proxy ↔ Insurance API, 동시회전 가능
 - `RATE_LIMIT_SALT`: 익명 rate-limit fingerprint salt
 
-프런트엔드·GitHub 소스·D1 평문에는 넣지 않는다.
+프런트엔드·소스·D1 평문에 넣지 않는다. 특히 `INSURANCE_DATA_KEY` 변경은 기존 암호문의 복호화를 불가능하게 만들 수 있으므로 운영 데이터가 있는 상태에서 자동회전하지 않는다.
 
-### 2. Central Admin staging
+### 3. Blue-Green production cutover
 
-- 기존 중앙 관리자 세션 검증
-- `Insurance > Consultations` 목록
-- 연락처 힌트 + 일반화 요약만 목록에 표시
-- 상세보기 시에만 복호화
-- 상태 `신규 / 확인중 / 연락완료 / 종료`
-- 열람·상태변경 audit 확인
-- 고객 전체 보험·청구 원장을 조회하는 endpoint가 없는지 재검증
-
-### 3. Compliance / Privacy review
-
-운영 공개 전 서비스 브랜드, 보험모집 관련 표현, AI 상담범위, 설계사 연결 문구, 동의문, 개인정보 처리방침을 보험사 내부 컴플라이언스 및 필요한 개인정보/법률 검토 대상으로 둔다.
-
-### 4. Blue-Green production cutover
-
-1. `ekodi-insurance` production D1을 별도로 준비
+1. `ekodi-insurance` production D1 별도 준비
 2. migration 적용
 3. Insurance API Green 배포
-4. production secrets 연결
+4. 고정 production secrets 연결
 5. 합성데이터 E2E
 6. 고객 UI Green 배포
-7. 중앙 Admin proxy Green 연결
-8. `ins.ekodi.kr` 단계 전환
-9. 로그인·AI상담·설계사 연결·Admin Queue·취소 흐름 smoke test
-10. 이상 시 이전 route로 즉시 rollback
+7. 중앙 Admin Green 연결 및 실제 운영 관리자 세션 smoke
+8. `insurance-api.ekodi.kr` 및 `ins.ekodi.kr` 단계 전환
+9. AI상담·설계사 연결·Admin Queue·취소 흐름 smoke
+10. 이상 시 이전 route 즉시 rollback
 
 ## 자동승격 금지 조건
 
 - CI 실패
+- 연락정보 필수동의와 AI 대화 공유 선택동의가 분리되지 않음
+- 대화 공유 선택동의 없이 원문 대화가 저장됨
 - 연락처 평문 D1 저장 가능
-- 공유동의 없는 대화 저장 가능
 - 관리자 목록에서 연락처 원문 노출
-- 고객 보험·청구 원장 서버저장 기능 추가
+- 고객 보험·청구·건강 원장 서버저장 기능 추가
 - 내부 Admin token 브라우저 노출
 - 상담 취소 시 암호문 삭제 실패
-- 보험 모집/광고/개인정보 문구 검토 미완료
+- 30일 보유기간 자동파기 설정 누락
+- 운영 `INSURANCE_DATA_KEY` 자동회전 가능성
+- 운영주체/모집책임/보험 광고·개인정보 문구 검토 미완료
 
 ## 현재 상태
 
@@ -123,4 +138,8 @@ Cloudflare Worker secret으로 준비한다.
 
 **Mall-style Cloudflare Worker + D1 architecture: ADOPTED**
 
-**Production main / `ins.ekodi.kr`: NOT CHANGED until staging gates pass**
+**Separate consent + real central-session staging E2E: PASS**
+
+**Technical staging gates: PASS**
+
+**Production `main` / `ins.ekodi.kr`: NOT CHANGED. External compliance/privacy + production-secret gates remain.**
