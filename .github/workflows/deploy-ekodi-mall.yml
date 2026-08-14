@@ -56,12 +56,13 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Verify first-touch and live-marketplace assets
+      - name: Verify first-touch, readiness and live-marketplace assets
         shell: bash
         run: |
           set -euo pipefail
           test -f dist/index.html
           test -f dist/assets/seller-server.js
+          test -f dist/assets/seller-readiness.js
           test -f dist/assets/public-product.js
           test -f dist/assets/marketplace-live.js
           test -f dist/assets/shared-product.html
@@ -70,8 +71,11 @@ jobs:
           grep -Fq '/api/public/attribution/visit' dist/assets/public-product.js
           grep -Fq 'api/public/checkout/quote' dist/assets/public-product.js
           grep -Fq '/share-links' dist/assets/seller-server.js
+          grep -Fq '/api/readiness' dist/assets/seller-readiness.js
+          grep -Fq '/api/verification/seller/submit' dist/assets/seller-readiness.js
+          grep -Fq '/assets/seller-readiness.js' dist/seller/index.html
           grep -Fq '/p/* /assets/shared-product.html 200' dist/_redirects
-          echo "Mall static build, first-touch attribution, discovery and order quote client verified"
+          echo "Mall static build, first-touch attribution, verification readiness, discovery and order quote client verified"
 
       - name: Validate all Mall D1 migrations locally
         shell: bash
@@ -84,7 +88,7 @@ jobs:
           for migration in sorted(Path('api/migrations').glob('*.sql')):
               db.executescript(migration.read_text(encoding='utf-8'))
           tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits'}
+          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits','verification_requests','mall_ops_audit'}
           missing = required - tables
           if missing:
               raise SystemExit(f'Missing Mall tables: {sorted(missing)}')
@@ -115,6 +119,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      MALL_OPERATIONS_TOKEN: ${{ secrets.MALL_OPERATIONS_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -182,6 +187,11 @@ jobs:
       - name: Deploy staging Mall API
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
+      - name: Connect optional Mall operations token to staging
+        if: env.MALL_OPERATIONS_TOKEN != ''
+        shell: bash
+        run: printf '%s' "$MALL_OPERATIONS_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put MALL_OPERATIONS_TOKEN --config api/wrangler.staging.runtime.toml >/dev/null
+
       - name: Verify staging API, schemas and safety gates
         shell: bash
         run: |
@@ -194,8 +204,10 @@ jobs:
               && grep -Fq '"schemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"sourcingSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"verificationSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"environment":"staging"' /tmp/mall-stage-health.json \
-              && grep -Fq '"version":3' /tmp/mall-stage-health.json \
+              && grep -Fq '"version":4' /tmp/mall-stage-health.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"direct":7' /tmp/mall-stage-fees.json \
@@ -203,7 +215,7 @@ jobs:
               && grep -Fq '"ai":9' /tmp/mall-stage-fees.json \
               && grep -Fq '"attributionWindowDays":7' /tmp/mall-stage-fees.json \
               && grep -Fq '"products":[' /tmp/mall-stage-feed.json; then
-              echo "Mall staging passed D1, order, first-touch, 7/8/9, feed and disabled-payment/payout checks."
+              echo "Mall staging passed D1, verification, order, first-touch, sourcing, 7/8/9, feed and disabled-payment/payout checks."
               exit 0
             fi
             sleep 5
@@ -228,6 +240,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      MALL_OPERATIONS_TOKEN: ${{ secrets.MALL_OPERATIONS_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -265,6 +278,11 @@ jobs:
       - name: Deploy production Mall API after staging success
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.runtime.toml
 
+      - name: Connect optional Mall operations token to production
+        if: env.MALL_OPERATIONS_TOKEN != ''
+        shell: bash
+        run: printf '%s' "$MALL_OPERATIONS_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put MALL_OPERATIONS_TOKEN --config api/wrangler.runtime.toml >/dev/null
+
       - name: Verify production API before Pages promotion
         shell: bash
         run: |
@@ -277,8 +295,10 @@ jobs:
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"sourcingSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"verificationSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"environment":"production"' /tmp/mall-api.json \
-              && grep -Fq '"version":3' /tmp/mall-api.json \
+              && grep -Fq '"version":4' /tmp/mall-api.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"direct":7' /tmp/mall-fees.json \
@@ -312,16 +332,19 @@ jobs:
             public_js_code=$(curl -L -sS -o /tmp/mall-public-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/public-product.js" || true)
             live_js_code=$(curl -L -sS -o /tmp/mall-live-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/marketplace-live.js" || true)
             seller_js_code=$(curl -L -sS -o /tmp/mall-seller-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/seller-server.js" || true)
+            readiness_js_code=$(curl -L -sS -o /tmp/mall-readiness-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/seller-readiness.js" || true)
             if [[ "$root_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$shared_code" =~ ^[23] ]] \
-              && [ "$public_js_code" = "200" ] && [ "$live_js_code" = "200" ] && [ "$seller_js_code" = "200" ] \
+              && [ "$public_js_code" = "200" ] && [ "$live_js_code" = "200" ] && [ "$seller_js_code" = "200" ] && [ "$readiness_js_code" = "200" ] \
               && grep -Fq 'EKODI MALL' /tmp/mall-root.html \
               && grep -Fq '/assets/marketplace-live.js' /tmp/mall-root.html \
               && grep -Fq 'SERVER READY' /tmp/mall-seller.html \
+              && grep -Fq '/assets/seller-readiness.js' /tmp/mall-seller.html \
               && grep -Fq 'PUBLIC PRODUCT' /tmp/mall-shared.html \
               && grep -Fq 'api/public/attribution/visit' /tmp/mall-public-js \
               && grep -Fq 'api/public/checkout/quote' /tmp/mall-public-js \
               && grep -Fq 'api/public/products?limit=24' /tmp/mall-live-js \
-              && grep -Fq '/share-links' /tmp/mall-seller-js; then
+              && grep -Fq '/share-links' /tmp/mall-seller-js \
+              && grep -Fq '/api/readiness' /tmp/mall-readiness-js; then
               echo "EKODI Mall production smoke test passed."
               exit 0
             fi
