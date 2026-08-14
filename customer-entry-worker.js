@@ -5,6 +5,7 @@ import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { handleBooksRequest } from './books-control.js';
 import { handleBooksFinanceRequest } from './books-finance-control.js';
+import { handleBooksDistributionRequest } from './books-distribution-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
@@ -70,6 +71,10 @@ export default {
 
     if (path.startsWith('/api/books') && request.method !== 'OPTIONS') {
       try {
+        if (path.startsWith('/api/books/admin/distribution')) {
+          const distributionResponse = await handleBooksDistributionRequest(request, env);
+          if (distributionResponse) return distributionResponse;
+        }
         if (path.startsWith('/api/books/admin/finance')) {
           const financeResponse = await handleBooksFinanceRequest(request, env);
           if (financeResponse) return financeResponse;
