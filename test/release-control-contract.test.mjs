@@ -10,9 +10,12 @@ test('Release Control is bundled behind the secured admin runtime', async () => 
   ]);
   assert.match(build, /release-control-admin\.css/);
   assert.match(build, /release-control-admin\.js/);
+  assert.match(build, /data-section=\"release\"/);
+  assert.match(build, /<span>Release<\/span>/);
   assert.match(worker, /'\/release-control-admin\.js'/);
   assert.match(worker, /'\/release-control-admin\.css'/);
   assert.match(worker, /https:\/\/api\.github\.com/);
+  assert.match(admin, /nav\.querySelector\('\[data-section=\"release\"\]'\)/);
   assert.match(admin, /Release Control/);
   assert.match(css, /\.release-units/);
 });
