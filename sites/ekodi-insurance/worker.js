@@ -22,6 +22,13 @@ async function secureAsset(response){
   }
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
+async function fetchAsset(request,env,pathname){
+  if(!pathname)return env.ASSETS.fetch(request);
+  const target=new URL(request.url);
+  target.pathname=pathname;
+  target.search='';
+  return env.ASSETS.fetch(new Request(target.toString(),request));
+}
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
@@ -39,7 +46,7 @@ export default {
       adminQueue:true,
       externalAiProvider:false
     }),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect(new URL('/admin.html',url).toString(),302);
-    return secureAsset(await env.ASSETS.fetch(request));
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return secureAsset(await fetchAsset(request,env,'/admin.html'));
+    return secureAsset(await fetchAsset(request,env));
   }
 };
