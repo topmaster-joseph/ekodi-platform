@@ -5,9 +5,14 @@ on:
   push:
     branches:
       - 'staging/insurance-d1-free-*'
+      - 'staging/insurance-release-*'
     paths:
       - 'sites/ekodi-insurance/api/**'
+      - 'sites/ekodi-insurance/public/server-bridge.js'
       - 'insurance-control-proxy.js'
+      - 'insurance-control-entry.js'
+      - 'api-worker.js'
+      - 'auth-worker.js'
       - '.github/workflows/insurance-d1-free-staging.yml'
 
 permissions:
@@ -23,7 +28,7 @@ env:
 jobs:
   validate-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 22
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -37,14 +42,23 @@ jobs:
         run: |
           set -euo pipefail
           node --check sites/ekodi-insurance/api/worker.js
+          node --check sites/ekodi-insurance/public/server-bridge.js
           node --check insurance-control-proxy.js
+          node --check insurance-control-entry.js
+          node --check api-worker.js
+          node --check auth-worker.js
           grep -Fq "architecture: 'cloudflare-worker-d1'" sites/ekodi-insurance/api/worker.js
           grep -Fq "persistentPolicyLedger: false" sites/ekodi-insurance/api/worker.js
           grep -Fq "persistentClaimLedger: false" sites/ekodi-insurance/api/worker.js
+          grep -Fq "transcriptDefault: 'not-shared'" sites/ekodi-insurance/api/worker.js
+          grep -Fq 'shareTranscript === true' sites/ekodi-insurance/api/worker.js
           grep -Fq 'AES-GCM' sites/ekodi-insurance/api/worker.js
           grep -Fq 'INSURANCE_DATA_KEY' sites/ekodi-insurance/api/worker.js
           grep -Fq '/api/internal/consultations' insurance-control-proxy.js
+          grep -Fq 'contactConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'transcriptConsent' sites/ekodi-insurance/public/server-bridge.js
           ! grep -Fq '/functions/v1/insurance' insurance-control-proxy.js
+          ! grep -Fq "'origin':'https://api.ekodi.kr'" insurance-control-proxy.js
 
       - name: Validate D1 migrations locally
         shell: bash
@@ -72,7 +86,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
 
-      - name: Resolve or create isolated staging D1
+      - name: Resolve or create isolated Insurance staging D1
         id: d1
         working-directory: sites/ekodi-insurance
         shell: bash
@@ -90,7 +104,7 @@ jobs:
           test -n "$DB_ID"
           echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Build staging runtime config
+      - name: Build Insurance staging runtime config
         working-directory: sites/ekodi-insurance
         env:
           DB_ID: ${{ steps.d1.outputs.database_id }}
@@ -113,6 +127,9 @@ jobs:
           SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 
+          [triggers]
+          crons = ["17 3 * * *"]
+
           [observability.logs]
           enabled = true
           invocation_logs = true
@@ -132,7 +149,7 @@ jobs:
         working-directory: sites/ekodi-insurance
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
-      - name: Install rotated staging-only secrets
+      - name: Install shared staging-only secrets
         id: runtime_secrets
         working-directory: sites/ekodi-insurance
         shell: bash
@@ -148,7 +165,7 @@ jobs:
           echo "internal_token=$INTERNAL_TOKEN" >> "$GITHUB_OUTPUT"
           echo 'Staging-only secrets rotated and masked.'
 
-      - name: Verify free D1 API and encrypted handoff E2E
+      - name: Verify free D1 API, separate consent and encrypted handoff
         env:
           INTERNAL_TOKEN: ${{ steps.runtime_secrets.outputs.internal_token }}
         shell: bash
@@ -157,11 +174,13 @@ jobs:
           base='https://insurance-api-staging.ekodi.kr'
           for attempt in $(seq 1 18); do
             code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
-            if [ "$code" = 200 ] && grep -Fq '"dbReady":true' /tmp/health.json && grep -Fq '"encryptionReady":true' /tmp/health.json; then break; fi
+            if [ "$code" = 200 ] && grep -Fq '"dbReady":true' /tmp/health.json && grep -Fq '"encryptionReady":true' /tmp/health.json && grep -Fq '"internalAdminReady":true' /tmp/health.json && grep -Fq '"rateLimitReady":true' /tmp/health.json; then break; fi
             sleep 4
           done
           echo 'health:'; cat /tmp/health.json
           grep -Fq '"architecture":"cloudflare-worker-d1"' /tmp/health.json
+          grep -Fq '"transcriptDefault":"not-shared"' /tmp/health.json
+          grep -Fq '"consultationRetentionDays":30' /tmp/health.json
           grep -Fq '"persistentPolicyLedger":false' /tmp/health.json
           grep -Fq '"persistentClaimLedger":false' /tmp/health.json
           grep -Fq '"externalAiProvider":false' /tmp/health.json
@@ -171,35 +190,140 @@ jobs:
           test "$chat_code" = 200
           grep -Fq '"persisted":false' /tmp/chat.json
 
-          create_code=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "$base/api/consultations" -H 'content-type: application/json' --data '{"name":"STAGING TEST","contact":"010-0000-0000","preferredTime":"오후","shareConsent":true,"shareTranscript":true,"messages":[{"role":"user","content":"보험료 점검 상담 테스트"}]}' || true)
-          echo "create HTTP $create_code"; cat /tmp/create.json
-          test "$create_code" = 201
-          ID=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.consultation.id)")
-          ACCESS=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.accessToken)")
-          test -n "$ID"; test -n "$ACCESS"
+          private_code=$(curl -sS -o /tmp/private.json -w '%{http_code}' -X POST "$base/api/consultations" -H 'content-type: application/json' --data '{"name":"STAGING PRIVATE","contact":"010-0000-0000","preferredTime":"오후","shareConsent":true,"shareTranscript":false,"summaryCode":"PREMIUM","messages":[{"role":"user","content":"NEVER-PERSIST-TRANSCRIPT"}]}' || true)
+          echo "private handoff HTTP $private_code"; cat /tmp/private.json
+          test "$private_code" = 201
+          PRIVATE_ID=$(node -e "const d=require('/tmp/private.json');process.stdout.write(d.consultation.id)")
+          PRIVATE_ACCESS=$(node -e "const d=require('/tmp/private.json');process.stdout.write(d.accessToken)")
+          grep -Fq '"transcriptShared":false' /tmp/private.json
 
           list_code=$(curl -sS -o /tmp/list.json -w '%{http_code}' "$base/api/internal/consultations" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' || true)
           echo "list HTTP $list_code"; cat /tmp/list.json
           test "$list_code" = 200
           grep -Fq '***-***-0000' /tmp/list.json
           if grep -Fq '010-0000-0000' /tmp/list.json; then echo 'Plain contact leaked in list'; exit 1; fi
+          if grep -Fq 'NEVER-PERSIST-TRANSCRIPT' /tmp/list.json; then echo 'Unconsented transcript leaked in list'; exit 1; fi
 
-          detail_code=$(curl -sS -o /tmp/detail.json -w '%{http_code}' "$base/api/internal/consultations/$ID" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' || true)
-          echo "detail HTTP $detail_code"; cat /tmp/detail.json
+          detail_code=$(curl -sS -o /tmp/private-detail.json -w '%{http_code}' "$base/api/internal/consultations/$PRIVATE_ID" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' || true)
+          echo "private detail HTTP $detail_code"; cat /tmp/private-detail.json
           test "$detail_code" = 200
-          grep -Fq '010-0000-0000' /tmp/detail.json
-          grep -Fq '보험료 점검 상담 테스트' /tmp/detail.json
+          grep -Fq '010-0000-0000' /tmp/private-detail.json
+          grep -Fq '"transcriptShared":false' /tmp/private-detail.json
+          if grep -Fq 'NEVER-PERSIST-TRANSCRIPT' /tmp/private-detail.json; then echo 'Unconsented transcript persisted'; exit 1; fi
 
-          status_code=$(curl -sS -o /tmp/status.json -w '%{http_code}' -X PATCH "$base/api/internal/consultations/$ID/status" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' -H 'content-type: application/json' --data '{"status":"reviewing"}' || true)
-          echo "status HTTP $status_code"; cat /tmp/status.json
+          status_code=$(curl -sS -o /tmp/status.json -w '%{http_code}' -X PATCH "$base/api/internal/consultations/$PRIVATE_ID/status" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' -H 'content-type: application/json' --data '{"status":"reviewing"}' || true)
           test "$status_code" = 200
           grep -Fq '"status":"reviewing"' /tmp/status.json
 
-          revoke_code=$(curl -sS -o /tmp/revoke.json -w '%{http_code}' -X POST "$base/api/consultations/$ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$ACCESS\"}" || true)
-          echo "revoke HTTP $revoke_code"; cat /tmp/revoke.json
+          revoke_code=$(curl -sS -o /tmp/revoke.json -w '%{http_code}' -X POST "$base/api/consultations/$PRIVATE_ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$PRIVATE_ACCESS\"}" || true)
           test "$revoke_code" = 200
           grep -Fq '"status":"revoked"' /tmp/revoke.json
-          echo 'Insurance D1 chat, encrypted handoff, admin detail, status and revoke E2E passed.'
+
+          shared_code=$(curl -sS -o /tmp/shared.json -w '%{http_code}' -X POST "$base/api/consultations" -H 'content-type: application/json' --data '{"name":"STAGING SHARED","contact":"010-1111-2222","shareConsent":true,"shareTranscript":true,"summaryCode":"COVERAGE","messages":[{"role":"user","content":"보험 보장 점검 공유 테스트"}]}' || true)
+          test "$shared_code" = 201
+          SHARED_ID=$(node -e "const d=require('/tmp/shared.json');process.stdout.write(d.consultation.id)")
+          SHARED_ACCESS=$(node -e "const d=require('/tmp/shared.json');process.stdout.write(d.accessToken)")
+          grep -Fq '"transcriptShared":true' /tmp/shared.json
+          curl -fsS "$base/api/internal/consultations/$SHARED_ID" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' > /tmp/shared-detail.json
+          grep -Fq '보험 보장 점검 공유 테스트' /tmp/shared-detail.json
+          curl -fsS -X POST "$base/api/consultations/$SHARED_ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$SHARED_ACCESS\"}" >/dev/null
+          echo 'Insurance API separate-consent, encrypted handoff, detail, status and revoke E2E passed.'
+
+      - name: Resolve or create isolated central-control staging D1
+        id: control_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-insurance-control-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            echo 'Creating isolated ekodi-insurance-control-staging D1 database in APAC'
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-insurance-control-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and deploy isolated central-control staging Worker
+        env:
+          CONTROL_DB_ID: ${{ steps.control_d1.outputs.database_id }}
+          INTERNAL_TOKEN: ${{ steps.runtime_secrets.outputs.internal_token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > wrangler.insurance-control-staging.runtime.toml <<EOF
+          name = "ekodi-insurance-control-staging"
+          main = "insurance-control-entry.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [vars]
+          ENVIRONMENT = "staging"
+          INSURANCE_API_BASE = "https://insurance-api-staging.ekodi.kr"
+          ALLOWED_ORIGINS = "https://admin.ekodi.kr"
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-insurance-control-staging"
+          database_id = "$CONTROL_DB_ID"
+          EOF
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.insurance-control-staging.runtime.toml
+          printf '%s' "$INTERNAL_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_INTERNAL_TOKEN --config wrangler.insurance-control-staging.runtime.toml >/dev/null
+
+      - name: Verify real central session to Insurance D1 handoff E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          control='https://ekodi-insurance-control-staging.topmaster-joseph.workers.dev'
+          insurance='https://insurance-api-staging.ekodi.kr'
+          for attempt in $(seq 1 18); do
+            status_code=$(curl -sS -o /tmp/control-status.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$control/api/status" || true)
+            if [ "$status_code" = 200 ]; then break; fi
+            sleep 4
+          done
+          test "$status_code" = 200
+          grep -Fq '"initialized"' /tmp/control-status.json
+
+          SESSION_TOKEN=$(openssl rand -hex 32)
+          SESSION_HASH=$(printf '%s' "$SESSION_TOKEN" | sha256sum | awk '{print $1}')
+          echo "::add-mask::$SESSION_TOKEN"
+          EXPIRES=$(date -u -d '+2 hours' '+%Y-%m-%dT%H:%M:%S.000Z')
+          NOW=$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')
+          SQL="DELETE FROM sessions; DELETE FROM admins WHERE email='staging-insurance-admin@ekodi.test'; INSERT INTO admins(email,password_hash,password_salt,birth_hash,birth_salt,role,created_at,password_iterations) VALUES('staging-insurance-admin@ekodi.test','x','00112233445566778899aabbccddeeff','x','ffeeddccbbaa99887766554433221100','super_admin','$NOW',310000); INSERT INTO sessions(token_hash,admin_id,expires_at,created_at) SELECT '$SESSION_HASH',id,'$EXPIRES','$NOW' FROM admins WHERE email='staging-insurance-admin@ekodi.test';"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config wrangler.insurance-control-staging.runtime.toml --command "$SQL" >/dev/null
+
+          unauth=$(curl -sS -o /tmp/central-unauth.json -w '%{http_code}' "$control/api/insurance/admin/consultations" || true)
+          test "$unauth" = 401
+
+          create_code=$(curl -sS -o /tmp/central-create.json -w '%{http_code}' -X POST "$insurance/api/consultations" -H 'content-type: application/json' --data '{"name":"CENTRAL SESSION TEST","contact":"010-1234-5678","preferredTime":"오후","shareConsent":true,"shareTranscript":false,"summaryCode":"COVERAGE"}' || true)
+          test "$create_code" = 201
+          ID=$(node -e "const d=require('/tmp/central-create.json');process.stdout.write(d.consultation.id)")
+          ACCESS=$(node -e "const d=require('/tmp/central-create.json');process.stdout.write(d.accessToken)")
+
+          list_code=$(curl -sS -o /tmp/central-list.json -w '%{http_code}' "$control/api/insurance/admin/consultations" -H "authorization: Bearer $SESSION_TOKEN" || true)
+          echo "central list HTTP $list_code"; cat /tmp/central-list.json
+          test "$list_code" = 200
+          grep -Fq 'CENTRAL SESSION TEST' /tmp/central-list.json
+          grep -Fq '***-***-5678' /tmp/central-list.json
+          if grep -Fq '010-1234-5678' /tmp/central-list.json; then echo 'Central list exposed plain contact'; exit 1; fi
+
+          detail_code=$(curl -sS -o /tmp/central-detail.json -w '%{http_code}' "$control/api/insurance/admin/consultations/$ID" -H "authorization: Bearer $SESSION_TOKEN" || true)
+          echo "central detail HTTP $detail_code"; cat /tmp/central-detail.json
+          test "$detail_code" = 200
+          grep -Fq '010-1234-5678' /tmp/central-detail.json
+          grep -Fq '"transcriptShared":false' /tmp/central-detail.json
+
+          patch_code=$(curl -sS -o /tmp/central-patch.json -w '%{http_code}' -X PATCH "$control/api/insurance/admin/consultations/$ID/status" -H "authorization: Bearer $SESSION_TOKEN" -H 'content-type: application/json' --data '{"status":"working"}' || true)
+          echo "central patch HTTP $patch_code"; cat /tmp/central-patch.json
+          test "$patch_code" = 200
+          grep -Fq '"status":"working"' /tmp/central-patch.json
+
+          revoke_code=$(curl -sS -o /tmp/central-revoke.json -w '%{http_code}' -X POST "$insurance/api/consultations/$ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$ACCESS\"}" || true)
+          test "$revoke_code" = 200
+          echo 'Real central bearer session → control proxy → Insurance D1 E2E passed.'
 
       - name: Remove synthetic staging records
         if: always()
@@ -209,4 +333,8 @@ jobs:
           if [ -f api/wrangler.staging.runtime.toml ]; then
             npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config api/wrangler.staging.runtime.toml --command "DELETE FROM consultation_audit_events; DELETE FROM consultation_requests; DELETE FROM request_rate_limits;" || true
           fi
-          rm -f api/wrangler.staging.runtime.toml
+          cd ../..
+          if [ -f wrangler.insurance-control-staging.runtime.toml ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config wrangler.insurance-control-staging.runtime.toml --command "DELETE FROM sessions; DELETE FROM admins WHERE email='staging-insurance-admin@ekodi.test';" || true
+          fi
+          rm -f sites/ekodi-insurance/api/wrangler.staging.runtime.toml wrangler.insurance-control-staging.runtime.toml
