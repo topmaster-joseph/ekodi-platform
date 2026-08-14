@@ -1,4 +1,4 @@
-name: EKODI Mall · Build and Deploy
+name: EKODI Mall · Stage and Deploy
 
 on:
   pull_request:
@@ -17,21 +17,28 @@ permissions:
 
 concurrency:
   group: ekodi-mall-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: "4.119.0"
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      cloudflare: ${{ steps.cloudflare_credentials.outputs.available }}
+      project: ${{ steps.manifest.outputs.project }}
+      public_url: ${{ steps.manifest.outputs.url }}
     defaults:
       run:
         working-directory: sites/ekodi-mall
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -49,18 +56,40 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Verify build output
+      - name: Verify first-touch and live-marketplace assets
+        shell: bash
         run: |
+          set -euo pipefail
           test -f dist/index.html
           test -f dist/assets/seller-server.js
           test -f dist/assets/public-product.js
+          test -f dist/assets/marketplace-live.js
           test -f dist/assets/shared-product.html
           test -f dist/seller/index.html
-          grep -q "SELLER STUDIO" dist/seller/index.html
-          grep -q "/p/\* /assets/shared-product.html 200" dist/_redirects
-          grep -q "api/public/checkout/quote" dist/assets/public-product.js
-          grep -q "/share-links" dist/assets/seller-server.js
-          echo "Mall static build, attribution split and order quote client verified"
+          grep -Fq '/assets/marketplace-live.js' dist/index.html
+          grep -Fq '/api/public/attribution/visit' dist/assets/public-product.js
+          grep -Fq 'api/public/checkout/quote' dist/assets/public-product.js
+          grep -Fq '/share-links' dist/assets/seller-server.js
+          grep -Fq '/p/* /assets/shared-product.html 200' dist/_redirects
+          echo "Mall static build, first-touch attribution, discovery and order quote client verified"
+
+      - name: Validate all Mall D1 migrations locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db = sqlite3.connect(':memory:')
+          for migration in sorted(Path('api/migrations').glob('*.sql')):
+              db.executescript(migration.read_text(encoding='utf-8'))
+          tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits'}
+          missing = required - tables
+          if missing:
+              raise SystemExit(f'Missing Mall tables: {sorted(missing)}')
+          print('Mall migrations verified:', ', '.join(sorted(required)))
+          PY
 
       - name: Check Cloudflare credentials
         id: cloudflare_credentials
@@ -72,25 +101,157 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare credentials are not configured; PR validation remains green and deployment will be skipped."
+            echo "Cloudflare credentials are not configured; code validation remains green but staging and production deployment are skipped."
           fi
 
-      - name: Resolve or create Mall D1
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
-        id: mall_d1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  staging:
+    needs: validate
+    if: needs.validate.outputs.cloudflare == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: sites/ekodi-mall
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Resolve or create isolated staging D1
+        id: staging_d1
         shell: bash
         run: |
           set -euo pipefail
           list_db() {
-            npx --yes wrangler@4 d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const x=j.find(v=>v.name==='ekodi-mall');if(x)process.stdout.write(x.uuid||x.id||'')})"
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-mall-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
           }
           DB_ID=$(list_db)
           if [ -z "$DB_ID" ]; then
-            echo "Creating isolated ekodi-mall D1 database in APAC"
-            npx --yes wrangler@4 d1 create ekodi-mall --location apac
+            echo "Creating isolated ekodi-mall-staging D1 database in APAC"
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-mall-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build staging Worker config
+        shell: bash
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > api/wrangler.staging.runtime.toml <<EOF
+          name = "ekodi-mall-api-staging"
+          main = "entry.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [[routes]]
+          pattern = "mall-api-staging.ekodi.kr"
+          custom_domain = true
+
+          [vars]
+          ENVIRONMENT = "staging"
+          MALL_BASE_URL = "https://mall.ekodi.kr"
+          ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://mall.biz.ekodi.kr,https://ekodi-mall.pages.dev"
+          SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+          PAYMENTS_ENABLED = "false"
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-mall-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+
+      - name: Apply staging migrations
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.staging.runtime.toml
+
+      - name: Deploy staging Mall API
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
+
+      - name: Verify staging API, schemas and safety gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health_code=$(curl -sS -o /tmp/mall-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api-staging.ekodi.kr/health || true)
+            fees_code=$(curl -sS -o /tmp/mall-stage-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api-staging.ekodi.kr/api/public/fees || true)
+            feed_code=$(curl -sS -o /tmp/mall-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api-staging.ekodi.kr/api/public/products?limit=1' || true)
+            if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
+              && grep -Fq '"schemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"orderSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"environment":"staging"' /tmp/mall-stage-health.json \
+              && grep -Fq '"version":3' /tmp/mall-stage-health.json \
+              && grep -Fq '"paymentsEnabled":false' /tmp/mall-stage-health.json \
+              && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-stage-health.json \
+              && grep -Fq '"direct":7' /tmp/mall-stage-fees.json \
+              && grep -Fq '"marketplace":8' /tmp/mall-stage-fees.json \
+              && grep -Fq '"ai":9' /tmp/mall-stage-fees.json \
+              && grep -Fq '"attributionWindowDays":7' /tmp/mall-stage-fees.json \
+              && grep -Fq '"products":[' /tmp/mall-stage-feed.json; then
+              echo "Mall staging passed D1, order, first-touch, 7/8/9, feed and disabled-payment/payout checks."
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/mall-stage-health.json || true
+          cat /tmp/mall-stage-fees.json || true
+          cat /tmp/mall-stage-feed.json || true
+          exit 1
+
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f api/wrangler.staging.runtime.toml
+
+  production:
+    needs: [validate, staging]
+    if: github.event_name != 'pull_request' && needs.validate.outputs.cloudflare == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: sites/ekodi-mall
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Rebuild exact production artifact
+        run: npm run build
+
+      - name: Resolve or create production D1
+        id: mall_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-mall');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            echo "Creating isolated ekodi-mall production D1 database in APAC"
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-mall --location apac
             DB_ID=$(list_db)
           fi
           test -n "$DB_ID"
@@ -98,52 +259,48 @@ jobs:
           printf '\ndatabase_id = "%s"\n' "$DB_ID" >> api/wrangler.runtime.toml
           echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Apply Mall D1 migrations
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@4 d1 migrations apply DB --remote --config api/wrangler.runtime.toml
+      - name: Apply production migrations after staging success
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.runtime.toml
 
-      - name: Deploy Mall API Worker
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@4 deploy --config api/wrangler.runtime.toml
+      - name: Deploy production Mall API after staging success
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.runtime.toml
 
-      - name: Smoke test Mall API
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+      - name: Verify production API before Pages promotion
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/health || true)
-            if [ "$code" = "200" ] \
+            health_code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/health || true)
+            fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/api/public/fees || true)
+            feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/public/products?limit=1' || true)
+            if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"environment":"production"' /tmp/mall-api.json \
+              && grep -Fq '"version":3' /tmp/mall-api.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
-              && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json; then
-              echo "Mall API, order schema and disabled payment/payout gates are ready."
+              && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json \
+              && grep -Fq '"direct":7' /tmp/mall-fees.json \
+              && grep -Fq '"marketplace":8' /tmp/mall-fees.json \
+              && grep -Fq '"ai":9' /tmp/mall-fees.json; then
+              echo "Mall production API verified after staging promotion."
               exit 0
             fi
             sleep 5
           done
           cat /tmp/mall-api.json || true
+          cat /tmp/mall-fees.json || true
           exit 1
 
       - name: Deploy production to Cloudflare Pages
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CF_PROJECT: ${{ steps.manifest.outputs.project }}
-        run: npx --yes wrangler@4 pages deploy dist --project-name="$CF_PROJECT" --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
+          CF_PROJECT: ${{ needs.validate.outputs.project }}
+        run: npx --yes wrangler@${WRANGLER_VERSION} pages deploy dist --project-name="$CF_PROJECT" --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
 
-      - name: Smoke test production
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+      - name: Smoke test production UI
         env:
-          PUBLIC_URL: ${{ steps.manifest.outputs.url }}
+          PUBLIC_URL: ${{ needs.validate.outputs.public_url }}
         shell: bash
         run: |
           set -euo pipefail
@@ -153,13 +310,17 @@ jobs:
             seller_code=$(curl -L -sS -o /tmp/mall-seller.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/seller/" || true)
             shared_code=$(curl -L -sS -o /tmp/mall-shared.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/p/not-a-real-product" || true)
             public_js_code=$(curl -L -sS -o /tmp/mall-public-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/public-product.js" || true)
+            live_js_code=$(curl -L -sS -o /tmp/mall-live-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/marketplace-live.js" || true)
             seller_js_code=$(curl -L -sS -o /tmp/mall-seller-js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/assets/seller-server.js" || true)
             if [[ "$root_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$shared_code" =~ ^[23] ]] \
-              && [ "$public_js_code" = "200" ] && [ "$seller_js_code" = "200" ] \
+              && [ "$public_js_code" = "200" ] && [ "$live_js_code" = "200" ] && [ "$seller_js_code" = "200" ] \
               && grep -Fq 'EKODI MALL' /tmp/mall-root.html \
+              && grep -Fq '/assets/marketplace-live.js' /tmp/mall-root.html \
               && grep -Fq 'SERVER READY' /tmp/mall-seller.html \
               && grep -Fq 'PUBLIC PRODUCT' /tmp/mall-shared.html \
+              && grep -Fq 'api/public/attribution/visit' /tmp/mall-public-js \
               && grep -Fq 'api/public/checkout/quote' /tmp/mall-public-js \
+              && grep -Fq 'api/public/products?limit=24' /tmp/mall-live-js \
               && grep -Fq '/share-links' /tmp/mall-seller-js; then
               echo "EKODI Mall production smoke test passed."
               exit 0
@@ -168,12 +329,6 @@ jobs:
           done
           exit 1
 
-      - name: Cleanup runtime config
+      - name: Cleanup production config
         if: always()
         run: rm -f api/wrangler.runtime.toml
-
-      - name: Deployment configuration notice
-        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available != 'true'
-        run: |
-          echo "### EKODI Mall build completed" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cloudflare deployment was skipped because repository secrets are not configured." >> "$GITHUB_STEP_SUMMARY"
