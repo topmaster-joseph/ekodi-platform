@@ -1,0 +1,12 @@
+name = "ekodi-platform-staging"
+compatibility_date = "2026-08-12"
+workers_dev = true
+preview_urls = true
+
+[assets]
+directory = "./staging"
+not_found_handling = "404-page"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
