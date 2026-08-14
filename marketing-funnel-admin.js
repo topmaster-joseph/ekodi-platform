@@ -77,8 +77,6 @@
   }
 
   const run = () => { keepMarketingReview(); installAffiliate(); };
-  run();
-  const observer = new MutationObserver(run);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-  setTimeout(() => observer.disconnect(), 15000);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true });
+  else run();
 })();
