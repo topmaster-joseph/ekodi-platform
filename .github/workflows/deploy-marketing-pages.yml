@@ -120,6 +120,9 @@ jobs:
             grep -Fq 'window.EKODI_MARKETING_CONTEXT' "$file"
             grep -Fq "/workspaces?site=marketing" "$file"
             grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
+            grep -Fq 'id="customDomainPanel"' "$file"
+            grep -Fq 'https://marketing-api.ekodi.kr' "$file"
+            grep -Fq '/api/marketing/domains' "$file"
           done
           for file in \
             dist/marketing-ai/jadam/index.html \
@@ -188,7 +191,10 @@ jobs:
               'marketing.ekodi.kr:마케팅AI' \
               'jadam.ekodi.kr:자담치킨' \
               'pizzamaru.ekodi.kr:피자마루' \
-              'yogurt.ekodi.kr:요거트퍼플'; do
+              'yogurt.ekodi.kr:요거트퍼플' \
+              'jadam.ai.ekodi.kr:자담치킨' \
+              'pizzamaru.ai.ekodi.kr:피자마루' \
+              'yogurt.ai.ekodi.kr:요거트퍼플'; do
               domain="${spec%%:*}"
               needle="${spec#*:}"
               code=$(curl -L -sS -o /tmp/live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
@@ -196,7 +202,10 @@ jobs:
               if [ "$code" != '200' ] \
                  || ! grep -Fq "$needle" /tmp/live.html \
                  || ! grep -Fq 'data-ekodi-workspace-handoff' /tmp/live.html \
-                 || ! grep -Fq 'window.EKODI_MARKETING_CONTEXT' /tmp/live.html; then
+                 || ! grep -Fq 'window.EKODI_MARKETING_CONTEXT' /tmp/live.html \
+                 || ! grep -Fq 'id="customDomainPanel"' /tmp/live.html \
+                 || ! grep -Fq 'https://marketing-api.ekodi.kr' /tmp/live.html \
+                 || ! grep -Fq '/api/marketing/domains' /tmp/live.html; then
                 ok=0
               fi
             done
