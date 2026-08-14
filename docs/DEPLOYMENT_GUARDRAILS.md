@@ -26,9 +26,17 @@ Finance의 Toss 비밀키는 production 배포 뒤 별도 `secret put`으로 덮
 
 Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는 코드 승격과 분리한다. `deploy-service-proxy.yml`, `deploy-biz-legacy.yml`, `deploy-legacy-redirects.yml`은 자동 push 실행을 금지하고 `workflow_dispatch` 전용으로 둔다. 이 workflow들은 `deployment-guardrail: topology-workflow-manual-only` 표식을 가진다.
 
+## Release Control
+
+`admin.ekodi.kr`의 `Release` 화면은 주요 release unit의 최근 GitHub Actions 실행, guarded release 모델, 위험등급, 운영 도메인을 한 화면에서 보여준다. 이 화면은 읽기 전용 관제면이며 배포 우회 버튼이나 DNS 직접편집 기능을 제공하지 않는다.
+
+Release Control의 자격증명 분리 상태는 실제 전용 Cloudflare token이 발급되기 전에는 `Prepared`로 표시한다. 코드가 준비되었다는 이유만으로 `Enforced`라고 표시하지 않는다.
+
+Cloudflare 권한 분리의 목표 구조와 전환 순서는 `docs/CLOUDFLARE_ACCESS_MODEL.md`, 기계 판독 정책은 `config/cloudflare-access-profiles.json`을 기준으로 한다.
+
 ## Repository-Wide Policy Audit
 
-`scripts/validate-deployment-guardrails.mjs`가 CI에서 배포경로 자체를 검사한다. 보호 대상 workflow가 다시 direct `wrangler deploy`, `npm run deploy:*`, production Pages 직행, post-deploy `secret put` 등으로 회귀하면 CI를 실패시킨다.
+`scripts/validate-deployment-guardrails.mjs`가 CI에서 배포경로 자체와 Cloudflare 권한 역할 정의를 검사한다. 보호 대상 workflow가 다시 direct `wrangler deploy`, `npm run deploy:*`, production Pages 직행, post-deploy `secret put` 등으로 회귀하거나 runtime deploy 권한에 DNS 쓰기를 섞으면 CI를 실패시킨다.
 
 로컬 `npm run deploy:site`, `deploy:books`, `deploy:community`도 guarded Worker controller를 사용한다. `deploy:api`, `deploy:finance`는 stateful staging 절차를 우회할 수 있어 직접 실행을 차단하고 서비스별 guarded workflow를 사용한다.
 
