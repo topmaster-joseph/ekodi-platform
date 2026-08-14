@@ -32,3 +32,10 @@ CREATE TABLE IF NOT EXISTS mall_ops_audit (
 );
 CREATE INDEX IF NOT EXISTS idx_mall_ops_audit_time ON mall_ops_audit(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_mall_ops_audit_seller ON mall_ops_audit(seller_id, created_at DESC);
+
+CREATE TRIGGER IF NOT EXISTS trg_mall_lock_verified_seller_type
+BEFORE UPDATE OF seller_type ON seller_profiles
+WHEN OLD.direct_sale_status = 'verified' AND NEW.seller_type <> OLD.seller_type
+BEGIN
+  SELECT RAISE(ABORT, 'VERIFIED_SELLER_TYPE_LOCKED');
+END;
