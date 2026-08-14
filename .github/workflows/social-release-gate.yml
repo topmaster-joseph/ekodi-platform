@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'staging/social-community-*'
+      - 'staging/social-*'
     paths:
       - 'social/**'
       - 'social-worker.js'
@@ -41,7 +41,7 @@ jobs:
           node --check social/app.js
           node --check scripts/build.mjs
           node scripts/validate-platform-boundaries.mjs
-          node -e "const r=JSON.parse(require('fs').readFileSync('config/ecosystem-services.json','utf8')); const ids=r.services.map(x=>x.id); if(ids.includes('mission')) throw new Error('legacy mission service remains'); const c=r.services.find(x=>x.id==='community'); if(!c||c.name!=='에코디커뮤니티'||c.url!=='https://community.ekodi.kr') throw new Error('community canonical registry invalid'); const s=r.services.find(x=>x.id==='social'); if(!s||s.productionVerified!==false||s.homepage!==false) throw new Error('social must stay hidden until production verification');"
+          node -e "const r=JSON.parse(require('fs').readFileSync('config/ecosystem-services.json','utf8')); const ids=r.services.map(x=>x.id); if(ids.includes('mission')) throw new Error('legacy mission service remains'); const c=r.services.find(x=>x.id==='community'); if(!c||c.name!=='에코디커뮤니티'||c.url!=='https://community.ekodi.kr') throw new Error('community canonical registry invalid'); const s=r.services.find(x=>x.id==='social'); if(!s) throw new Error('social registry missing'); if(s.homepage===true&&s.productionVerified!==true) throw new Error('unverified social cannot appear on homepage'); if(s.productionVerified===true&&s.homepage!==true) throw new Error('verified social should be promoted or explicitly rolled back');"
           if grep -R -Fq '에코디선교회' social config/ecosystem-services.json; then echo 'Legacy formal organization name remains'; exit 1; fi
       - name: Build root without regressing current features
         run: |
