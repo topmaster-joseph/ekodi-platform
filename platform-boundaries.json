@@ -5,10 +5,10 @@
     "mall": {
       "kind": "independent-platform",
       "source": ["sites/ekodi-mall/**"],
-      "domains": ["mall.ekodi.kr", "mall.biz.ekodi.kr", "ekodi-mall.pages.dev"],
+      "domains": ["mall.ekodi.kr", "mall.biz.ekodi.kr", "ekodi-mall.pages.dev", "mall-api.ekodi.kr", "mall-api-staging.ekodi.kr"],
       "deployWorkflow": ".github/workflows/deploy-ekodi-mall.yml",
-      "sharedDependencies": ["service-proxy"],
-      "database": "none"
+      "sharedDependencies": ["service-proxy", "Supabase Auth identity verification only"],
+      "database": "dedicated Cloudflare D1: ekodi-mall production + ekodi-mall-staging pre-production"
     },
     "books": {
       "kind": "independent-platform",
