@@ -1,0 +1,37 @@
+name: Diagnose Marketing AI UI
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-marketing-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Capture live Marketing AI desktop and mobile views
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p capture
+          curl -L -sS -D capture/headers.txt -o capture/source.html --connect-timeout 5 --max-time 20 https://marketing.ekodi.kr/
+          google-chrome --headless=new --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1200 --screenshot=capture/desktop.png https://marketing.ekodi.kr/
+          google-chrome --headless=new --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --screenshot=capture/mobile.png https://marketing.ekodi.kr/
+          google-chrome --headless=new --no-sandbox --disable-gpu --dump-dom https://marketing.ekodi.kr/ > capture/rendered.html
+          grep -Fq '마케팅AI' capture/source.html
+          grep -Fq 'data-ekodi-workspace-handoff' capture/source.html
+          grep -Fq 'id="customDomainPanel"' capture/source.html
+          printf 'source-bytes=%s\n' "$(wc -c < capture/source.html)" > capture/summary.txt
+          printf 'rendered-bytes=%s\n' "$(wc -c < capture/rendered.html)" >> capture/summary.txt
+          grep -o 'class="[^"]*"' capture/rendered.html | sort | uniq -c | sort -nr | head -80 >> capture/summary.txt || true
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: marketing-ui-capture
+          path: capture/
+          retention-days: 3
