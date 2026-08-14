@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="description" content="EKODI 서비스 공통 Google 계정 통합 인증센터" />
   <title>EKODI 인증센터</title>
-  <link rel="stylesheet" href="/auth.css?v=20260813-3" />
+  <link rel="stylesheet" href="/auth.css?v=20260814-transient-1" />
 </head>
 <body>
   <header class="topbar"><a href="https://ekodi.kr" class="brand">EKODI</a><span>통합 인증센터</span></header>
@@ -14,29 +14,30 @@
     <section class="intro">
       <span class="eyebrow">EKODI IDENTITY</span>
       <h1>한 계정으로,<br>필요한 곳만 안전하게.</h1>
-      <p>Google 계정으로 본인을 확인하고, 서비스마다 필요한 권한은 별도로 검증합니다. 공개 서비스는 로그인 없이 그대로 이용할 수 있습니다.</p>
+      <p>Google 계정으로 본인을 확인합니다. 인증이 끝나면 인증센터에 머물지 않고 요청한 서비스로 바로 돌아갑니다. 인증에 실패하면 다시 시도하거나 취소할 수 있습니다.</p>
     </section>
 
     <section class="auth-card">
-      <div class="service-line"><div><small>접속 서비스</small><strong id="serviceName">EKODI</strong></div><span id="serviceBadge">권한 확인</span></div>
+      <div class="service-line"><div><small>접속 서비스</small><strong id="serviceName">EKODI</strong></div><span id="serviceBadge">인증 필요</span></div>
 
       <div id="signedOut">
         <div id="googleButtonHost" class="google-button-host" aria-label="Google 계정 인증"></div>
-        <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>Google 인증 다시 준비</span></button>
+        <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>Google 인증 다시 시도</span></button>
+        <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
         <p class="micro" id="signedOutCopy">Google 계정은 본인확인에만 사용하고, 서비스 권한은 EKODI에서 별도로 확인합니다.</p>
         <div id="authStatus" class="notice">Google 인증을 준비하고 있습니다.</div>
       </div>
 
       <div id="signedIn" class="hide">
-        <div class="identity"><div><small>인증된 계정</small><strong id="accountEmail">계정 확인 중</strong></div><button id="logout" class="quiet" type="button">로그아웃</button></div>
+        <div class="identity"><div><small>확인된 계정</small><strong id="accountEmail">계정 확인 중</strong></div><div class="identity-actions"><button id="logout" class="quiet" type="button">다른 계정</button><button id="cancelSignedIn" class="quiet" type="button">취소</button></div></div>
         <div id="accessStatus" class="notice">서비스 접근권한을 확인하고 있습니다.</div>
 
         <div id="approvedActions" class="hide actions">
-          <button id="continueService" type="button">서비스로 안전하게 이동</button>
+          <button id="continueService" type="button">서비스로 다시 이동</button>
         </div>
 
         <div id="freeActions" class="hide actions split-actions">
-          <button id="continueFree" type="button">무료 기능 계속 이용</button>
+          <button id="continueFree" type="button">무료 기능으로 이동</button>
         </div>
 
         <div id="requestActions" class="hide request-box">
@@ -46,15 +47,15 @@
               <strong>Marketing AI Pro</strong>
               <span>자동화·채널연동·분석 등 고급 기능 사용을 위한 승인 신청입니다.</span>
             </div>
-            <label for="businessName">상호·사업체명 <span>권장</span></label>
-            <input id="businessName" maxlength="160" autocomplete="organization" placeholder="예: ABC카페 목포대점" />
+            <label for="businessName">이름·브랜드·기관명 <span>권장</span></label>
+            <input id="businessName" maxlength="160" autocomplete="organization" placeholder="예: ABC카페 / 에코디교회 / 홍길동" />
             <div class="field-grid">
               <div><label for="contactPhone">연락처 <span>선택</span></label><input id="contactPhone" maxlength="40" autocomplete="tel" placeholder="010-0000-0000" /></div>
-              <div><label for="businessNumber">사업자번호 <span>선택</span></label><input id="businessNumber" maxlength="40" inputmode="numeric" placeholder="000-00-00000" /></div>
+              <div><label for="businessNumber">사업자번호 <span>해당 시</span></label><input id="businessNumber" maxlength="40" inputmode="numeric" placeholder="000-00-00000" /></div>
             </div>
           </div>
           <label for="requestNote" id="requestNoteLabel">확인 메모 <span>선택</span></label>
-          <textarea id="requestNote" placeholder="소속·점포·담당업무 등 확인에 도움이 되는 내용을 적어 주세요."></textarea>
+          <textarea id="requestNote" placeholder="소속·역할·이용 목적 등 확인에 도움이 되는 내용을 적어 주세요."></textarea>
           <button id="requestAccess" type="button">접근권한 신청</button>
           <div id="requestStatus" class="notice hide"></div>
         </div>
@@ -63,7 +64,7 @@
 
     <section id="reviewConsole" class="review-card hide" aria-label="Marketing AI 사용신청 검수">
       <div class="review-head">
-        <div><span class="eyebrow">MARKETING AI · REVIEW</span><h2>Pro 사용신청 검수</h2><p>승인하면 고객 테넌트와 기본 매장공간을 만들고 Pro 권한을 연결합니다.</p></div>
+        <div><span class="eyebrow">MARKETING AI · REVIEW</span><h2>Pro 사용신청 검수</h2><p>승인하면 고객 테넌트와 기본 작업공간을 만들고 Pro 권한을 연결합니다.</p></div>
         <button id="refreshReviews" class="quiet" type="button">새로고침</button>
       </div>
       <div id="reviewStatus" class="notice">신청 목록을 불러오는 중입니다.</div>
@@ -73,10 +74,10 @@
     <section class="principles" aria-label="인증 원칙">
       <div><b>Identity</b><span>Google 본인확인</span></div>
       <div><b>Access</b><span>서비스별 최소권한</span></div>
-      <div><b>Isolation</b><span>조직·고객 데이터 분리</span></div>
+      <div><b>Return</b><span>인증 후 즉시 복귀</span></div>
     </section>
   </main>
-  <footer>EKODI Platform · 계정 신원과 서비스 권한을 분리해 관리합니다.</footer>
-  <script type="module" src="/auth-router.js?v=20260813-google-gsi-fix-1"></script>
+  <footer>EKODI Platform · 인증은 통과 지점이고, 서비스 이용은 원래 화면에서 이어집니다.</footer>
+  <script type="module" src="/auth-router.js?v=20260814-transient-1"></script>
 </body>
 </html>
