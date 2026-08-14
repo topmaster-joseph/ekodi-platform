@@ -1,6 +1,6 @@
-# Control API rollout: Google allowlist admin auth + customer tenant authentication
+# Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry
 name = "ekodi-auth-api"
-main = "customer-entry-worker.js"
+main = "api-social-entry.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
