@@ -5,7 +5,7 @@ import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.m
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
-  'index.html','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
+  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
 ];
 
 await rm(output, { recursive: true, force: true });
@@ -54,6 +54,13 @@ for (const asset of htmlAssets) {
       .replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr')
       .replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
     if (html.includes('EKODI선교회') || html.includes('에코디선교회')) throw new Error('Legacy EKODI mission brand remains on homepage');
+
+    if (!html.includes('homepage-ambient.css')) {
+      html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');
+    }
+    if (!html.includes('homepage-ambient.js')) {
+      html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');
+    }
   }
 
   if (!html.includes('data-ekodi-responsive')) {
