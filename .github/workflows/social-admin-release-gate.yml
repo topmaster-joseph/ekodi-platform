@@ -11,10 +11,12 @@ on:
       - 'social-admin.*'
       - 'social-registry-api.js'
       - 'customer-entry-worker.js'
+      - 'site-worker.js'
       - 'control-center-features.js'
       - 'scripts/build.mjs'
       - 'wrangler.api*.toml'
       - 'wrangler.social-staging.toml'
+      - 'wrangler.site-social-admin-staging.toml'
       - 'test/social-registry-control.test.mjs'
       - '.github/workflows/social-admin-release-gate.yml'
 
@@ -41,6 +43,7 @@ jobs:
           node --check social-admin.js
           node --check social-worker.js
           node --check customer-entry-worker.js
+          node --check site-worker.js
           node --check control-center-features.js
           node -e "const r=JSON.parse(require('fs').readFileSync('social/channels.json','utf8')); if(r.version!==3||!r.organizations.some(o=>o.id==='community'&&o.name==='에코디커뮤니티')) process.exit(1)"
           grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
@@ -48,6 +51,7 @@ jobs:
           grep -Fq '/api/social/registry' customer-entry-worker.js
           grep -Fq 'handleSocialRegistry' customer-entry-worker.js
           grep -Fq 'social_registry_history' social-registry-api.js
+          grep -Fq "'/social-admin.js'" site-worker.js
           grep -Fq 'main = "customer-entry-worker.js"' wrangler.api.toml
           if grep -R -Fq '에코디선교회' social; then echo 'Legacy formal mission label found in published Social data'; exit 1; fi
 
@@ -117,28 +121,30 @@ jobs:
           done
           exit 1
 
-      - name: Deploy Control Center preview assets
+      - name: Deploy isolated Control Center staging Worker
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 pages deploy dist --project-name ekodi-platform --branch social-admin-preview --commit-dirty=true 2>&1 | tee /tmp/admin-preview.log
-          preview_url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' /tmp/admin-preview.log | tail -1 || true)
-          test -n "$preview_url" || (echo 'Could not resolve admin preview URL' && exit 1)
-          echo "ADMIN_PREVIEW_URL=$preview_url" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.119.0 deploy --config wrangler.site-social-admin-staging.toml 2>&1 | tee /tmp/admin-staging.log
+          admin_url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/admin-staging.log | tail -1 || true)
+          test -n "$admin_url" || (echo 'Could not resolve Admin staging URL' && exit 1)
+          echo "ADMIN_STAGING_URL=$admin_url" >> "$GITHUB_ENV"
 
-      - name: Verify Control Center preview assets
+      - name: Verify Control Center staging assets
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 10); do
-            control=$(curl -L -sS -o /tmp/control.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_PREVIEW_URL/control-center.html" || true)
-            js=$(curl -L -sS -o /tmp/social-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_PREVIEW_URL/social-admin.js" || true)
-            css=$(curl -L -sS -o /tmp/social-admin.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_PREVIEW_URL/social-admin.css" || true)
-            if [ "$control" = '200' ] && [ "$js" = '200' ] && [ "$css" = '200' ] \
-              && grep -Fq 'control-center-features.js' /tmp/control.html \
+            control=$(curl -L -sS -o /tmp/control.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/control-center" || true)
+            js=$(curl -L -sS -o /tmp/social-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/social-admin.js" || true)
+            css=$(curl -L -sS -o /tmp/social-admin.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/social-admin.css" || true)
+            features=$(curl -L -sS -o /tmp/features.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/control-center-features.js" || true)
+            if [ "$control" = '200' ] && [ "$js" = '200' ] && [ "$css" = '200' ] && [ "$features" = '200' ] \
+              && grep -Fq 'EKODI Control Center' /tmp/control.html \
               && grep -Fq '/api/control/social/registry' /tmp/social-admin.js \
-              && grep -Fq '.social-org-card' /tmp/social-admin.css; then
-              echo "Social admin staging verified: $ADMIN_PREVIEW_URL"
+              && grep -Fq '.social-org-card' /tmp/social-admin.css \
+              && grep -Fq "placeholder('social', '◉', 'Social')" /tmp/features.js; then
+              echo "Social admin staging verified: $ADMIN_STAGING_URL"
               exit 0
             fi
             sleep 3
