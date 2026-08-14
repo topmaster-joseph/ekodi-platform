@@ -1,5 +1,4 @@
 (() => {
-  const TOKEN_KEY = 'ekodi-auth-token';
   const REPOSITORY = 'topmaster-joseph/ekodi-platform';
   const RUNS_URL = `https://api.github.com/repos/${REPOSITORY}/actions/runs?per_page=80`;
   const CACHE_MS = 60 * 1000;
@@ -18,7 +17,6 @@
     topologyMutation: 'manual-only',
     cloudflareCredentialIsolation: 'prepared-for-split-token',
   };
-  const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
   let cache = null;
   let cacheAt = 0;
 
@@ -29,13 +27,8 @@
     return node;
   }
 
-  function workflowName(pathname = '') {
-    return String(pathname).split('/').pop() || '';
-  }
-
-  function unitForWorkflow(name) {
-    return RELEASE_UNITS.find(unit => unit.workflow === name || unit.alternates?.includes(name)) || null;
-  }
+  function workflowName(pathname = '') { return String(pathname).split('/').pop() || ''; }
+  function unitForWorkflow(name) { return RELEASE_UNITS.find(unit => unit.workflow === name || unit.alternates?.includes(name)) || null; }
 
   function normalizeRun(run) {
     const workflow = workflowName(run.path);
@@ -87,12 +80,9 @@
     return { label:map[run.conclusion] || run.conclusion || '완료', className:run.conclusion || 'success' };
   }
 
-  function badge(text, className = '') {
-    return el('span', text, `release-badge ${className}`.trim());
-  }
+  function badge(text, className = '') { return el('span', text, `release-badge ${className}`.trim()); }
 
   function installReleaseControl() {
-    if (!token()) return;
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
     if (!nav || !content || document.querySelector('[data-section="release"]')) return;
@@ -213,6 +203,7 @@
 
     navButton.addEventListener('click', activate);
     refresh.addEventListener('click', () => load(true));
+    if (location.hash === '#release') queueMicrotask(activate);
   }
 
   installReleaseControl();
