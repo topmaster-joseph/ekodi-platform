@@ -2,7 +2,7 @@
   "name":"@ekodi/insurance",
   "private":true,
   "scripts":{
-    "check":"node --check app.js && node --check worker.js && node test.mjs",
+    "check":"node --check public/app.js && node --check worker.js && node test.mjs",
     "deploy:staging":"wrangler deploy --config wrangler.toml"
   }
 }
