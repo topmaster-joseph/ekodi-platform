@@ -9,6 +9,7 @@ on:
       - 'community/index.html'
       - 'community/social-links.js'
       - 'community-worker.js'
+      - 'books/index.html'
       - 'books/social-links.js'
       - 'books-worker.js'
       - 'wrangler.community-social-staging.toml'
@@ -39,8 +40,8 @@ jobs:
           node --check books-worker.js
           grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
           grep -Fq 'https://api.ekodi.kr/api/social/registry' books/social-links.js
-          grep -Fq '/social-links.js' community-worker.js
-          grep -Fq '/social-links.js' books-worker.js
+          grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
+          grep -Fq '<script src="/social-links.js" defer></script>' books/index.html
           grep -Fq 'FLOWING COMMUNITY · EKODI COMMUNITY' community/index.html
           grep -Fq 'EKODI Community · community.ekodi.kr' community/index.html
           if grep -Fq 'EKODI Mission' community/index.html; then exit 1; fi
@@ -64,7 +65,7 @@ jobs:
           url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/community.log | tail -1 || true)
           test -n "$url" || exit 1
           echo "COMMUNITY_URL=$url" >> "$GITHUB_ENV"
-      - name: Verify Community Social injection
+      - name: Verify Community Social renderer
         shell: bash
         run: |
           set -euo pipefail
@@ -77,11 +78,8 @@ jobs:
               && grep -Fq 'EKODI Community · community.ekodi.kr' /tmp/community.html \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json; then exit 0; fi
-            echo "community verify pending: root=$root js=$js health=$health"
             sleep 3
           done
-          echo 'Community root markers:'
-          grep -n 'community.ekodi.kr\|social-links.js' /tmp/community.html || true
           exit 1
       - name: Deploy isolated Books staging Worker
         shell: bash
@@ -91,7 +89,7 @@ jobs:
           url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/books.log | tail -1 || true)
           test -n "$url" || exit 1
           echo "BOOKS_URL=$url" >> "$GITHUB_ENV"
-      - name: Verify Books Social injection
+      - name: Verify Books Social renderer
         shell: bash
         run: |
           set -euo pipefail
@@ -103,7 +101,6 @@ jobs:
               && grep -Fq '/social-links.js' /tmp/books.html \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/books-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/books-health.json; then exit 0; fi
-            echo "books verify pending: root=$root js=$js health=$health"
             sleep 3
           done
           exit 1
