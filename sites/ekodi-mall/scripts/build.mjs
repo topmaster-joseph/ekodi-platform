@@ -25,7 +25,8 @@ const write = async (relative, content) => {
 const formatPrice = (price) => Number.isFinite(price) ? `${new Intl.NumberFormat('ko-KR').format(price)}원` : '가격 확정 전';
 const saleTypeLabels = {
   direct: '에코디몰 직접판매',
-  affiliate: '외부 제휴 예정',
+  affiliate: '외부 제휴판매',
+  inquiry: '상담·문의형',
   local: '지역상생 기획',
   content: '콘텐츠 상품',
   curation: '큐레이션 준비'
@@ -67,10 +68,15 @@ function productCard(product, options = {}) {
 
 function productDetailSections(product, store) {
   const saleLabel = saleTypeLabels[product.saleType] || product.saleType || '준비 중';
+  const transactionText = product.saleType === 'affiliate'
+    ? '구매 버튼을 누르면 외부 제휴 판매처로 이동하며 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
+    : product.saleType === 'direct'
+      ? '직접판매 상품은 판매자 확인과 주문·결제·정산 연결이 완료된 뒤 에코디몰에서 거래됩니다.'
+      : '현재는 상품 문의와 상담을 중심으로 거래를 준비합니다.';
   const sections = [
     { label: 'PURPOSE', title: '무엇을 제안하나요', body: product.description },
     { label: 'STATUS', title: '지금 어디까지 준비됐나요', body: `${product.status}. ${store.name}에서 운영·검토하는 상품입니다.` },
-    { label: 'COMMERCE', title: '어떻게 거래되나요', body: `${saleLabel}. ${Number.isFinite(product.price) ? `현재 표시 가격은 ${formatPrice(product.price)}입니다.` : '가격과 최종 판매 조건은 아직 확정되지 않았습니다.'}` }
+    { label: 'COMMERCE', title: '어떻게 거래되나요', body: `${saleLabel}. ${transactionText} ${Number.isFinite(product.price) ? `현재 표시 가격은 ${formatPrice(product.price)}입니다.` : '가격과 최종 판매 조건은 아직 확정되지 않았습니다.'}` }
   ];
 
   const highlights = Array.isArray(product.detail?.highlights) ? product.detail.highlights : [];
@@ -165,15 +171,21 @@ await cp(path.join(root, '_redirects'), path.join(dist, '_redirects'));
 for (const product of products) {
   const productUrl = `${baseUrl}/products/${product.slug}/`;
   const store = storeMap.get(product.storeId);
+  const isAffiliate = product.saleType === 'affiliate';
   const related = products
     .filter((item) => item.id !== product.id)
     .sort((a, b) => Number(b.category === product.category) - Number(a.category === product.category))
     .slice(0, 3)
     .map((item) => productCard(item, { withData: false, withHeart: false }))
     .join('');
-  const basketAction = site.commerce?.inquiryBasketEnabled
+  const basketAction = site.commerce?.inquiryBasketEnabled && !isAffiliate
     ? `<button class="btn primary" type="button" data-add-basket data-product-id="${esc(product.id)}" data-product-name="${esc(product.name)}" data-store-name="${esc(store.name)}" data-product-status="${esc(product.status)}" data-product-href="/products/${esc(product.slug)}/">${site.commerce.paymentsEnabled && Number.isFinite(product.price) ? '구매목록에 담기' : '상담목록에 담기'}</button>`
     : '';
+  const transactionNote = isAffiliate
+    ? '이 상품은 외부 제휴 판매처에서 구매합니다. 구매 버튼을 누르면 제휴 링크로 이동하며, 에코디는 제휴 활동을 통해 일정 수수료를 제공받을 수 있습니다. 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
+    : product.saleType === 'direct'
+      ? '직접판매 상품은 판매자 확인과 결제·주문·정산 시스템 검증 후 에코디몰 결제를 활성화합니다. 현재 판매 준비 상태를 확인해 주세요.'
+      : '에코디몰은 상품과 스토어의 관계, 판매 준비 상태를 분리 표시합니다. 가격과 판매 조건이 확정되지 않은 상품은 결제 가능한 상품처럼 표시하지 않습니다.';
   const html = fill(productTemplate, {
     PRODUCT_NAME: esc(product.name),
     PRODUCT_DESCRIPTION: esc(product.description),
@@ -183,8 +195,10 @@ for (const product of products) {
     PRODUCT_STATUS: esc(product.status),
     SALE_TYPE_LABEL: esc(saleTypeLabels[product.saleType] || product.saleType || '준비 중'),
     PRICE_LABEL: esc(formatPrice(product.price)),
-    ACTION_LABEL: esc(product.action?.label || '문의하기'),
+    ACTION_LABEL: esc(product.action?.label || (isAffiliate ? '외부 판매처에서 구매' : '문의하기')),
     ACTION_URL: esc(product.action?.url || site.links.inquiry),
+    ACTION_CLASS: isAffiliate ? 'primary' : 'ghost',
+    TRANSACTION_NOTE: esc(transactionNote),
     STORE_NAME: esc(store.name),
     STORE_OPERATOR: esc(store.operator),
     STORE_STATUS: esc(store.status),
@@ -219,6 +233,7 @@ for (const store of stores) {
 const moduleDescriptions = {
   'Store': '스토어별 운영 주체와 상품 소유 관계를 분리합니다.',
   'Product Studio': '판매자가 상품 정보를 구조화하고 콘텐츠 초안을 만듭니다.',
+  'Affiliate Routing': '제휴상품은 에코디 결제 없이 등록된 외부 제휴링크로 안전하게 이동합니다.',
   'Inquiry Basket': '결제 전에 여러 상품 상담 목록을 안전하게 정리합니다.',
   'Orders': 'Mall 전용 주문 API가 준비되면 연결합니다.',
   'CRM': '고객 동의를 전제로 관계·재구매 흐름을 연결합니다.',
@@ -279,7 +294,8 @@ await write('build-meta.json', JSON.stringify({
   policies: (pages.policies || []).length,
   platformMode: site.platform?.mode || 'unknown',
   inquiryBasket: Boolean(site.commerce?.inquiryBasketEnabled),
-  paymentsEnabled: Boolean(site.commerce?.paymentsEnabled)
+  paymentsEnabled: Boolean(site.commerce?.paymentsEnabled),
+  affiliateExternalRouting: site.platform?.sellerPolicy?.affiliateRouting === 'external'
 }, null, 2));
 
-console.log(`EKODI Commerce Platform built: ${stores.length} stores, ${products.length} products, Seller Studio + inquiry basket -> dist/`);
+console.log(`EKODI Commerce Platform built: ${stores.length} stores, ${products.length} products, Seller Studio + affiliate routing + inquiry basket -> dist/`);
