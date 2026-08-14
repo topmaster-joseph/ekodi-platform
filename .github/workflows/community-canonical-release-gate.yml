@@ -1,0 +1,83 @@
+name: EKODI Community Canonical Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/community-canonical-cleanup-*'
+    paths:
+      - 'api-worker.js'
+      - 'compact-control-center.js'
+      - 'platform-boundaries.json'
+      - 'migrations/0014_remove_legacy_mission_service.sql'
+      - 'test/community-canonical-control.test.mjs'
+      - '.github/workflows/community-canonical-release-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate canonical Community contract
+        run: |
+          set -euo pipefail
+          node --check api-worker.js
+          node --check compact-control-center.js
+          grep -Fq "key: 'community', label: '커뮤니티', name: '에코디커뮤니티'" compact-control-center.js
+          if grep -Fq "key: 'community', label: '선교회'" compact-control-center.js; then exit 1; fi
+          if grep -Fq "id: 'mission'" api-worker.js; then exit 1; fi
+          if grep -Fq '에코디선교회' api-worker.js; then exit 1; fi
+          grep -Fq "id: 'community'" api-worker.js
+          grep -Fq "id: 'social'" api-worker.js
+          grep -Fq 'control-api Social registry' platform-boundaries.json
+          grep -Fq "DELETE FROM service_controls WHERE service_id = 'mission'" migrations/0014_remove_legacy_mission_service.sql
+
+      - name: Run full regression suite and production build
+        run: |
+          set -euo pipefail
+          npm run check
+          npm test
+          npm run build
+          grep -Fq "label: '커뮤니티'" dist/compact-control-center.js
+          if grep -Fq "label: '선교회'" dist/compact-control-center.js; then exit 1; fi
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || exit 1
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || exit 1
+
+      - name: Deploy isolated Admin staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.site-social-admin-staging.toml 2>&1 | tee /tmp/community-canonical-admin.log
+          admin_url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/community-canonical-admin.log | tail -1 || true)
+          test -n "$admin_url" || exit 1
+          echo "ADMIN_STAGING_URL=$admin_url" >> "$GITHUB_ENV"
+
+      - name: Verify staged Control Center assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            code=$(curl -sS -o /tmp/compact.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/compact-control-center.js" || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq "label: '커뮤니티'" /tmp/compact.js \
+              && ! grep -Fq "label: '선교회'" /tmp/compact.js; then
+              echo "Community canonical Admin staging verified: $ADMIN_STAGING_URL"
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
