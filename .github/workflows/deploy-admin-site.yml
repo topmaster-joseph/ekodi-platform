@@ -30,6 +30,8 @@ on:
       - 'books-pipeline-admin.js'
       - 'books-pipeline-admin.css'
       - 'books-pipeline-bridge.js'
+      - 'books-royalty-admin.js'
+      - 'books-royalty-admin.css'
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
       - 'domains-hub.js'
@@ -79,6 +81,7 @@ jobs:
           node --check books-distribution-admin.js
           node --check books-pipeline-admin.js
           node --check books-pipeline-bridge.js
+          node --check books-royalty-admin.js
           node --check google-admin-auth.js
           node --check domains-hub.js
           node --check social-admin.js
@@ -131,6 +134,9 @@ jobs:
           grep -Fq 'CHANNEL OPS' books-pipeline-admin.js
           grep -Fq '.books-pipeline-book' books-pipeline-admin.css
           grep -Fq 'ekodi:books-open-publication' books-pipeline-bridge.js
+          grep -Fq '권리 · 인세 · 지급 관리' books-royalty-admin.js
+          grep -Fq 'Generate Statement' books-royalty-admin.js
+          grep -Fq '.books-royalty-holder' books-royalty-admin.css
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'control-center-features.js' scripts/build.mjs
@@ -144,6 +150,8 @@ jobs:
           grep -Fq 'books-distribution-admin.js' scripts/build.mjs
           grep -Fq 'books-pipeline-admin.css' scripts/build.mjs
           grep -Fq 'books-pipeline-admin.js' scripts/build.mjs
+          grep -Fq 'books-royalty-admin.css' scripts/build.mjs
+          grep -Fq 'books-royalty-admin.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
@@ -165,52 +173,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          need_header() {
-            pattern="$1"
-            label="$2"
-            grep -Fiq "$pattern" /tmp/admin-headers || { echo "admin verify: missing $label"; return 1; }
-          }
-
-          need_body() {
-            pattern="$1"
-            label="$2"
-            grep -Fq "$pattern" /tmp/admin-body || { echo "admin verify: missing $label"; return 1; }
-          }
-
+          need_header() { pattern="$1"; label="$2"; grep -Fiq "$pattern" /tmp/admin-headers || { echo "admin verify: missing $label"; return 1; }; }
+          need_body() { pattern="$1"; label="$2"; grep -Fq "$pattern" /tmp/admin-body || { echo "admin verify: missing $label"; return 1; }; }
           verify_admin() {
-            url="$1"
-            code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
-            echo "$url -> $code"
+            url="$1"; code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code";
             [ "$code" = '200' ] || { echo 'admin verify: expected HTTP 200'; return 1; }
             need_header 'x-ekodi-route: admin-control-center' 'X-EKODI-Route=admin-control-center' || return 1
             need_header 'cross-origin-opener-policy: same-origin-allow-popups' 'Cross-Origin-Opener-Policy' || return 1
             need_body 'EKODI Control Center' 'Control Center title' || return 1
             need_body 'control-center-features.js' 'lazy feature loader' || return 1
             need_body 'compact-control-center.js' 'Campus UI loader' || return 1
-            if grep -Fiq '^location:' /tmp/admin-headers; then
-              echo 'admin verify: unexpected redirect header'
-              return 1
-            fi
+            if grep -Fiq '^location:' /tmp/admin-headers; then echo 'admin verify: unexpected redirect header'; return 1; fi
           }
-
           verify_asset() {
-            path="$1"
-            expected="$2"
-            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
-            if [ "$code" != '200' ]; then
-              echo "asset verify: $path -> $code"
-              return 1
-            fi
+            path="$1"; expected="$2"; code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true);
+            if [ "$code" != '200' ]; then echo "asset verify: $path -> $code"; return 1; fi
             grep -Fq "$expected" /tmp/admin-asset || { echo "asset verify: $path missing expected marker"; return 1; }
             grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || { echo "asset verify: $path missing admin security route"; return 1; }
           }
-
-          verify_auth() {
-            code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true)
-            [ "$code" = '200' ] \
-              && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers \
-              && grep -Fq 'EKODI 인증센터' /tmp/auth-body
-          }
+          verify_auth() { code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true); [ "$code" = '200' ] && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers && grep -Fq 'EKODI 인증센터' /tmp/auth-body; }
 
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
@@ -226,13 +207,13 @@ jobs:
               && verify_asset 'community-reports-admin.js' 'Community Source Evidence' \
               && verify_asset 'community-reports-admin.css' '.community-report-source-panel' \
               && verify_asset 'books-finance-admin.js' '출판 · 배포 · 매출 통합 파이프라인' \
+              && verify_asset 'books-finance-admin.js' '권리 · 인세 · 지급 관리' \
               && verify_asset 'books-finance-admin.css' '.books-pipeline-book' \
+              && verify_asset 'books-finance-admin.css' '.books-royalty-holder' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
-              echo 'Admin/Auth production boundary verified.'
-              exit 0
+              echo 'Admin/Auth production boundary verified.'; exit 0
             fi
-            echo "Production verification pending (attempt $attempt/18)."
-            sleep 4
+            echo "Production verification pending (attempt $attempt/18)."; sleep 4
           done
           exit 1
