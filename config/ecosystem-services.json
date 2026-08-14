@@ -43,14 +43,24 @@
       "productionVerified": true
     },
     {
-      "id": "mission",
-      "name": "에코디선교회",
-      "url": "https://youtube.com/@ekodicommunity",
-      "label": "mission / YouTube",
+      "id": "community",
+      "name": "에코디커뮤니티",
+      "url": "https://community.ekodi.kr",
+      "label": "community.ekodi.kr",
       "icon": "community",
       "order": 50,
       "homepage": true,
       "productionVerified": true
+    },
+    {
+      "id": "social",
+      "name": "EKODI Social",
+      "url": "https://social.ekodi.kr",
+      "label": "social.ekodi.kr",
+      "icon": "community",
+      "order": 60,
+      "homepage": false,
+      "productionVerified": false
     },
     {
       "id": "mall",
@@ -58,16 +68,6 @@
       "url": "https://mall.ekodi.kr",
       "label": "mall.ekodi.kr",
       "icon": "mall",
-      "order": 60,
-      "homepage": true,
-      "productionVerified": true
-    },
-    {
-      "id": "community",
-      "name": "EKODI Community",
-      "url": "https://community.ekodi.kr",
-      "label": "community.ekodi.kr",
-      "icon": "community",
       "order": 70,
       "homepage": true,
       "productionVerified": true
