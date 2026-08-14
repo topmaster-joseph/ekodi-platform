@@ -56,6 +56,10 @@ jobs:
           grep -Fq '비영리·종교단체' "$hub"
           grep -Fq '모임·협회·커뮤니티' "$hub"
           grep -Fq '나와 우리를 위한 마케팅' "$hub"
+          grep -Fq 'data-public-landing-cleanup' "$hub"
+          grep -Fq 'body:not(.member-session-mode) .product-preview{display:none!important}' "$hub"
+          grep -Fq 'body:not(.member-session-mode) .hero.hero-v2{display:block' "$hub"
+          grep -Fq 'body:not(.member-session-mode) .member-preview{max-width:820px' "$hub"
           grep -Fq 'class="member-workspace"' "$hub"
           grep -Fq 'id="channelGrid"' "$hub"
           grep -Fq 'id="quotaCaption"' "$hub"
@@ -152,6 +156,10 @@ jobs:
             grep -Fq '기관·공공기관' /tmp/hub.html
             grep -Fq '비영리·종교단체' /tmp/hub.html
             grep -Fq '나와 우리를 위한 마케팅' /tmp/hub.html
+            grep -Fq 'data-public-landing-cleanup' /tmp/hub.html
+            grep -Fq 'body:not(.member-session-mode) .product-preview{display:none!important}' /tmp/hub.html
+            grep -Fq 'body:not(.member-session-mode) .hero.hero-v2{display:block' /tmp/hub.html
+            grep -Fq 'body:not(.member-session-mode) .member-preview{max-width:820px' /tmp/hub.html
             grep -Fq 'class="member-workspace"' /tmp/hub.html
             grep -Fq 'id="channelGrid"' /tmp/hub.html
             grep -Fq 'FREE · 연결 잠김' /tmp/hub.html
@@ -209,4 +217,4 @@ jobs:
           done
           exit 1
 
-# Sync trigger: resilient authenticated workspace rendering
+# Sync trigger: compact anonymous landing without synthetic dashboard
