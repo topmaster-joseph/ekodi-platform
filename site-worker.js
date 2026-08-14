@@ -39,6 +39,8 @@ const ADMIN_ALIASES = new Set([
   '/community/',
   '/books',
   '/books/',
+  '/work',
+  '/work/',
 ]);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 const ADMIN_ASSETS = new Set([
@@ -53,6 +55,8 @@ const ADMIN_ASSETS = new Set([
   '/compact-control-center.js',
   '/campus-actions.css',
   '/campus-actions.js',
+  '/work-admin.css',
+  '/work-admin.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
