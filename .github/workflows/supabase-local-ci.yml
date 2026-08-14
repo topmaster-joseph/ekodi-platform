@@ -32,13 +32,36 @@ jobs:
       - name: Initialize ephemeral Supabase config
         run: npx --yes supabase@2.110.0 init --force
 
-      - name: Start local Supabase stack and apply migrations
-        run: >-
-          npx --yes supabase@2.110.0 start
-          -x studio,imgproxy,realtime,storage-api,mailpit,logflare,vector,supavisor
+      - name: Start clean local Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mv supabase/migrations "$RUNNER_TEMP/ekodi-migrations"
+          mkdir -p supabase/migrations
+          npx --yes supabase@2.110.0 start \
+            -x studio,imgproxy,realtime,storage-api,mailpit,logflare,vector,supavisor
+          rm -rf supabase/migrations
+          mv "$RUNNER_TEMP/ekodi-migrations" supabase/migrations
 
-      - name: Rebuild database from migrations
-        run: npx --yes supabase@2.110.0 db reset --local
+      - name: Apply production-compatible test baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            < supabase/ci/platform_baseline.sql
+
+      - name: Apply proposed migrations on baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying $migration"
+            docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration"
+          done
 
       - name: Lint Postgres functions
         run: npx --yes supabase@2.110.0 db lint --local --level error --fail-on error
