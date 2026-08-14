@@ -1,5 +1,5 @@
 name = "ekodi-mall-api"
-main = "worker.js"
+main = "entry.js"
 compatibility_date = "2026-08-14"
 workers_dev = true
 preview_urls = false
@@ -11,7 +11,7 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 MALL_BASE_URL = "https://mall.ekodi.kr"
-ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://ekodi-mall.pages.dev"
+ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://mall.biz.ekodi.kr,https://ekodi-mall.pages.dev"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 PAYMENTS_ENABLED = "false"
