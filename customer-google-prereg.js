@@ -8,15 +8,16 @@ const TENANTS = Object.freeze([
 ]);
 
 const TENANT_REALMS = Object.freeze(Object.fromEntries(TENANTS.map(item => [item.slug, item.realm])));
-const ROLE_SET = new Set([
-  'store_owner',
-  'marketing_manager',
-  'hq_manager',
-  'accounting_manager',
-  'client_admin',
-  'client_editor',
-  'client_viewer',
-]);
+const ROLE_LABELS = Object.freeze({
+  store_owner: '점주/책임자',
+  marketing_manager: '마케팅담당자',
+  hq_manager: '본사담당자',
+  accounting_manager: '회계담당자',
+  client_admin: '점주/책임자 · 기존',
+  client_editor: '마케팅담당자 · 기존',
+  client_viewer: '조회·검수자 · 기존',
+});
+const ROLE_SET = new Set(Object.keys(ROLE_LABELS));
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
@@ -132,6 +133,11 @@ async function tenantBySlug(db, slug) {
   return db.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(slug).first();
 }
 
+function accessStatus(row) {
+  if (Number(row.enabled) !== 1) return 'disabled';
+  return row.last_verified_at ? 'active' : 'pre_registered';
+}
+
 async function preregister(request, env, slug) {
   const session = await adminSession(request, env);
   if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
@@ -190,13 +196,84 @@ async function listAccessUsers(request, env, slug) {
     email: row.email,
     displayName: row.display_name || '',
     role: row.role,
-    status: Number(row.enabled) !== 1 ? 'disabled' : (row.last_verified_at ? 'active' : 'pre_registered'),
+    status: accessStatus(row),
     userStatus: Number(row.enabled) === 1 ? 'active' : 'disabled',
     lastLoginAt: row.last_verified_at || row.user_last_login_at || '',
     createdAt: row.created_at,
   }));
 
   return json({ tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain }, users }, 200, request, env);
+}
+
+async function listDirectory(request, env) {
+  const session = await adminSession(request, env);
+  if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
+
+  const [tenantRows, memberRows] = await Promise.all([
+    env.DB.prepare(`SELECT
+        t.slug, t.name, t.domain, t.status,
+        COUNT(a.email) AS members,
+        SUM(CASE WHEN a.enabled = 1 AND a.last_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS active_users,
+        SUM(CASE WHEN a.enabled = 1 AND a.last_verified_at IS NULL THEN 1 ELSE 0 END) AS google_pending
+      FROM customer_tenants t
+      LEFT JOIN customer_access_grants a ON a.tenant_id = t.id
+      GROUP BY t.id
+      ORDER BY t.name`).all(),
+    env.DB.prepare(`SELECT
+        a.email, a.role, a.enabled, a.created_at, a.last_verified_at,
+        t.slug, t.name AS tenant_name, t.domain, t.status AS tenant_status,
+        COALESCE(u.display_name, '') AS display_name,
+        COALESCE(u.last_login_at, '') AS user_last_login_at
+      FROM customer_access_grants a
+      JOIN customer_tenants t ON t.id = a.tenant_id
+      LEFT JOIN customer_users u ON lower(trim(u.email)) = a.email
+      ORDER BY t.name, a.email`).all(),
+  ]);
+
+  const members = memberRows.results.map(row => ({
+    email: row.email,
+    displayName: row.display_name || '',
+    role: row.role,
+    roleLabel: ROLE_LABELS[row.role] || row.role,
+    status: accessStatus(row),
+    lastLoginAt: row.last_verified_at || row.user_last_login_at || '',
+    createdAt: row.created_at,
+    tenant: {
+      slug: row.slug,
+      name: row.tenant_name,
+      domain: row.domain,
+      status: row.tenant_status,
+    },
+  }));
+
+  const roleCounts = new Map();
+  for (const member of members) roleCounts.set(member.role, (roleCounts.get(member.role) || 0) + 1);
+  const roles = [...roleCounts.entries()]
+    .map(([role, count]) => ({ role, label: ROLE_LABELS[role] || role, count }))
+    .sort((left, right) => left.label.localeCompare(right.label, 'ko'));
+
+  const tenants = tenantRows.results.map(row => ({
+    slug: row.slug,
+    name: row.name,
+    domain: row.domain,
+    status: row.status,
+    members: Number(row.members || 0),
+    activeUsers: Number(row.active_users || 0),
+    googlePending: Number(row.google_pending || 0),
+  }));
+
+  return json({
+    summary: {
+      uniqueGoogleAccounts: new Set(members.map(member => member.email)).size,
+      memberships: members.length,
+      tenants: tenants.length,
+      active: members.filter(member => member.status === 'active').length,
+      pending: members.filter(member => member.status === 'pre_registered').length,
+    },
+    tenants,
+    roles,
+    members,
+  }, 200, request, env);
 }
 
 export async function handleGoogleCustomerPreregistration(request, env) {
@@ -207,6 +284,10 @@ export async function handleGoogleCustomerPreregistration(request, env) {
   await ensureSchema(env.DB);
 
   const path = new URL(request.url).pathname;
+  if (request.method === 'GET' && path === '/api/customers/directory') {
+    return listDirectory(request, env);
+  }
+
   const preregisterMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/pre-register$/);
   if (request.method === 'POST' && preregisterMatch) {
     const slug = normalizeTenant(preregisterMatch[1]);
