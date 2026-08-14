@@ -1,6 +1,6 @@
 name = "ekodi-insurance-staging"
 main = "worker.js"
-compatibility_date = "2026-08-15"
+compatibility_date = "2026-08-14"
 workers_dev = true
 preview_urls = false
 
