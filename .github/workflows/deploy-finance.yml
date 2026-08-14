@@ -9,7 +9,6 @@ on:
       - 'finance-entry-worker.js'
       - 'wrangler.finance.toml'
       - 'migrations/*finance*.sql'
-      - '.github/workflows/deploy-finance.yml'
 
 permissions:
   contents: read
