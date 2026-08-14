@@ -69,11 +69,6 @@ for (const asset of htmlAssets) {
   }
   if (asset === 'control-center.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
-    if (!html.includes('data-section="release"')) {
-      const activityLink = '        <a class="nav" href="/legacy#activity">≡ <span>운영 기록</span></a>';
-      if (!html.includes(activityLink)) throw new Error('Admin sidebar activity marker not found for Release navigation');
-      html = html.replace(activityLink, `        <button class="nav" data-section="release" type="button">◆ <span>Release</span></button>\n${activityLink}`);
-    }
     if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
     if (!html.includes('campus-actions.css')) html = html.replace('</head>', '<link rel="stylesheet" href="campus-actions.css">\n</head>');
     if (!html.includes('release-control-admin.css')) html = html.replace('</head>', '<link rel="stylesheet" href="release-control-admin.css">\n</head>');
