@@ -18,6 +18,14 @@
       "sharedDependencies": ["control-api for operational APIs"],
       "database": "ekodi-auth D1 via control-api"
     },
+    "community": {
+      "kind": "independent-platform",
+      "source": ["community/**", "community-worker.js", "wrangler.community.toml"],
+      "domains": ["community.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-community.yml",
+      "sharedDependencies": ["Supabase Auth", "community-api"],
+      "database": "Supabase community_* table namespace"
+    },
     "finance": {
       "kind": "independent-service",
       "source": ["finance-worker.js", "finance-entry-worker.js", "wrangler.finance.toml"],
