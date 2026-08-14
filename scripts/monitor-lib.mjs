@@ -8,6 +8,7 @@ export const SITE_DEFINITIONS = Object.freeze([
   ['live', 'EKODI Live', 'live.ekodi.kr'],
   ['cloud', 'EKODI Cloud', 'cloud.ekodi.kr'],
   ['mall', '에코디몰', 'mall.ekodi.kr'],
+  ['mall-api', '에코디몰 API', 'api.mall.ekodi.kr', 'https://api.mall.ekodi.kr/health'],
   ['biz', '에코디비즈', 'biz.ekodi.kr'],
   ['trade', 'EKODI Trading', 'trade.ekodi.kr'],
   ['marketing', '마케팅AI', 'marketing.ekodi.kr'],
@@ -30,61 +31,22 @@ export async function checkSite(
   const url = targetUrl || `https://${domain}`;
   const started = clock();
   const checkedAt = now().toISOString();
-
   try {
-    const response = await fetchImpl(url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(12000),
-      headers: { 'user-agent': 'EKODI-Monitor/2.0' }
-    });
+    const response = await fetchImpl(url, { redirect: 'follow', signal: AbortSignal.timeout(12000), headers: { 'user-agent': 'EKODI-Monitor/2.0' } });
     await response.body?.cancel();
     const responseTime = Math.round(clock() - started);
-    return {
-      id,
-      name,
-      domain,
-      url,
-      status: classifyStatus(response.status, responseTime),
-      httpStatus: response.status,
-      responseTime,
-      checkedAt,
-      error: null
-    };
+    return { id, name, domain, url, status: classifyStatus(response.status, responseTime), httpStatus: response.status, responseTime, checkedAt, error: null };
   } catch (error) {
-    return {
-      id,
-      name,
-      domain,
-      url,
-      status: 'offline',
-      httpStatus: null,
-      responseTime: Math.round(clock() - started),
-      checkedAt,
-      error: error?.name === 'TimeoutError' ? 'timeout' : String(error?.message || error)
-    };
+    return { id, name, domain, url, status: 'offline', httpStatus: null, responseTime: Math.round(clock() - started), checkedAt, error: error?.name === 'TimeoutError' ? 'timeout' : String(error?.message || error) };
   }
 }
 
 export function buildPayload(results, generatedAt = new Date().toISOString()) {
-  return {
-    generatedAt,
-    summary: {
-      total: results.length,
-      online: results.filter(site => site.status === 'online').length,
-      degraded: results.filter(site => site.status === 'degraded').length,
-      offline: results.filter(site => site.status === 'offline').length
-    },
-    sites: results
-  };
+  return { generatedAt, summary: { total: results.length, online: results.filter(site => site.status === 'online').length, degraded: results.filter(site => site.status === 'degraded').length, offline: results.filter(site => site.status === 'offline').length }, sites: results };
 }
 
 function operationalSignature(payload) {
-  return JSON.stringify((payload?.sites || []).map(site => ({
-    id: site.id,
-    status: site.status,
-    httpStatus: site.httpStatus,
-    error: site.error
-  })));
+  return JSON.stringify((payload?.sites || []).map(site => ({ id: site.id, status: site.status, httpStatus: site.httpStatus, error: site.error })));
 }
 
 export function shouldPublish(previous, next, now = Date.now(), maxAgeMs = 6 * 60 * 60 * 1000) {
