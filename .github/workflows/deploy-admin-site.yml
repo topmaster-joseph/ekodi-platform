@@ -27,6 +27,9 @@ on:
       - 'books-finance-admin.css'
       - 'books-distribution-admin.js'
       - 'books-distribution-admin.css'
+      - 'books-pipeline-admin.js'
+      - 'books-pipeline-admin.css'
+      - 'books-pipeline-bridge.js'
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
       - 'domains-hub.js'
@@ -74,6 +77,8 @@ jobs:
           node --check books-admin.js
           node --check books-finance-admin.js
           node --check books-distribution-admin.js
+          node --check books-pipeline-admin.js
+          node --check books-pipeline-bridge.js
           node --check google-admin-auth.js
           node --check domains-hub.js
           node --check social-admin.js
@@ -122,6 +127,10 @@ jobs:
           grep -Fq 'ACTION QUEUE' books-distribution-admin.js
           grep -Fq 'exportCsv' books-distribution-admin.js
           grep -Fq '.books-distribution-attention' books-distribution-admin.css
+          grep -Fq '출판 · 배포 · 매출 통합 파이프라인' books-pipeline-admin.js
+          grep -Fq 'CHANNEL OPS' books-pipeline-admin.js
+          grep -Fq '.books-pipeline-book' books-pipeline-admin.css
+          grep -Fq 'ekodi:books-open-publication' books-pipeline-bridge.js
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'control-center-features.js' scripts/build.mjs
@@ -133,6 +142,8 @@ jobs:
           grep -Fq 'community-reports-admin.js' scripts/build.mjs
           grep -Fq 'books-distribution-admin.css' scripts/build.mjs
           grep -Fq 'books-distribution-admin.js' scripts/build.mjs
+          grep -Fq 'books-pipeline-admin.css' scripts/build.mjs
+          grep -Fq 'books-pipeline-admin.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
@@ -214,8 +225,8 @@ jobs:
               && verify_asset 'social-admin.css' '.social-org-card' \
               && verify_asset 'community-reports-admin.js' 'Community Source Evidence' \
               && verify_asset 'community-reports-admin.css' '.community-report-source-panel' \
-              && verify_asset 'books-finance-admin.js' 'ACTION QUEUE' \
-              && verify_asset 'books-finance-admin.css' '.books-distribution-attention' \
+              && verify_asset 'books-finance-admin.js' '출판 · 배포 · 매출 통합 파이프라인' \
+              && verify_asset 'books-finance-admin.css' '.books-pipeline-book' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
               echo 'Admin/Auth production boundary verified.'

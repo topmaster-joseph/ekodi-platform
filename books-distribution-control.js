@@ -3,6 +3,8 @@ import authWorker from './auth-worker.js';
 const PREFIX = '/api/books/admin/distribution';
 const ACCOUNT_STATUSES = new Set(['unknown', 'not_registered', 'registration_pending', 'active', 'action_required', 'suspended']);
 const BOOK_STATUSES = new Set(['not_started', 'preparing', 'submitted', 'reviewing', 'action_required', 'approved', 'published', 'paused', 'rejected']);
+const SYNC_MODES = new Set(['manual', 'csv', 'api']);
+const CHECKLIST_KEYS = ['metadata', 'files', 'identifiers', 'pricing', 'rights', 'submitted'];
 
 function allowedOrigin(request, env) {
   const origin = request.headers.get('origin') || '';
@@ -44,6 +46,15 @@ function safeUrl(value) {
   }
 }
 
+function normalizeChecklist(value) {
+  const input = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(CHECKLIST_KEYS.map(key => [key, Boolean(input[key])]));
+}
+
+function parseChecklist(value) {
+  try { return normalizeChecklist(JSON.parse(value || '{}')); } catch { return normalizeChecklist({}); }
+}
+
 async function readBody(request) {
   try { return await request.json(); } catch { return null; }
 }
@@ -52,10 +63,7 @@ async function session(request, env) {
   const url = new URL(request.url);
   url.pathname = '/api/session';
   url.search = '';
-  const response = await authWorker.fetch(new Request(url.toString(), {
-    method: 'GET',
-    headers: request.headers,
-  }), env);
+  const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
   if (!response.ok) return { response };
   return { response, data: await response.clone().json() };
 }
@@ -100,6 +108,12 @@ function statusRow(row) {
     publishedAt: row.published_at,
     lastCheckedAt: row.last_checked_at,
     note: row.note,
+    sourceStatus: row.source_status || '',
+    assignee: row.assignee || '',
+    dueAt: row.due_at || '',
+    checklist: parseChecklist(row.checklist_json),
+    syncMode: row.sync_mode || 'manual',
+    syncedAt: row.synced_at || '',
     updatedAt: row.updated_at,
   };
 }
@@ -137,7 +151,7 @@ async function overview(request, env) {
     tracked: statuses.filter(item => item.status !== 'not_started').length,
   };
 
-  return json({ channels, publications, statuses, counts }, 200, request, env);
+  return json({ channels, publications, statuses, counts, checklistKeys: CHECKLIST_KEYS }, 200, request, env);
 }
 
 async function updateChannel(request, env, sessionData, code) {
@@ -164,33 +178,43 @@ async function updateChannel(request, env, sessionData, code) {
 }
 
 async function upsertStatus(request, env, sessionData, publicationId, channelCode) {
-  const [publication, channel] = await Promise.all([
+  const [publication, channel, current] = await Promise.all([
     env.DB.prepare('SELECT id FROM books_publications WHERE id = ?').bind(publicationId).first(),
     env.DB.prepare('SELECT code FROM books_distribution_channels WHERE code = ? AND enabled = 1').bind(channelCode).first(),
+    env.DB.prepare('SELECT * FROM books_distribution_status WHERE publication_id = ? AND channel_code = ?').bind(publicationId, channelCode).first(),
   ]);
   if (!publication) return json({ error: '출판물을 찾을 수 없습니다.' }, 404, request, env);
   if (!channel) return json({ error: '배포 채널을 찾을 수 없습니다.' }, 404, request, env);
 
   const body = await readBody(request);
   if (!body || typeof body !== 'object') return json({ error: '배포 상태 정보를 확인해 주세요.' }, 400, request, env);
-  const status = clean(body.status || 'not_started', 40);
+  const status = clean(body.status ?? current?.status ?? 'not_started', 40);
   if (!BOOK_STATUSES.has(status)) return json({ error: '배포 상태가 올바르지 않습니다.' }, 400, request, env);
-  const submittedAt = validDate(body.submittedAt);
-  const publishedAt = validDate(body.publishedAt);
-  const lastCheckedAt = validDate(body.lastCheckedAt);
-  if (submittedAt === null || publishedAt === null || lastCheckedAt === null) {
+  const submittedAt = validDate(body.submittedAt ?? current?.submitted_at ?? '');
+  const publishedAt = validDate(body.publishedAt ?? current?.published_at ?? '');
+  const lastCheckedAt = validDate(body.lastCheckedAt ?? current?.last_checked_at ?? '');
+  const dueAt = validDate(body.dueAt ?? current?.due_at ?? '');
+  const syncedAt = validDate(body.syncedAt ?? current?.synced_at ?? '');
+  if ([submittedAt, publishedAt, lastCheckedAt, dueAt, syncedAt].some(value => value === null)) {
     return json({ error: '날짜는 YYYY-MM-DD 형식으로 입력해 주세요.' }, 400, request, env);
   }
-  const externalId = clean(body.externalId, 160);
-  const productUrl = safeUrl(body.productUrl);
-  if (body.productUrl && !productUrl) return json({ error: '판매 페이지 URL을 확인해 주세요.' }, 400, request, env);
-  const note = clean(body.note, 1200);
+  const externalId = clean(body.externalId ?? current?.external_id, 160);
+  const suppliedProductUrl = body.productUrl === undefined ? current?.product_url || '' : body.productUrl;
+  const productUrl = safeUrl(suppliedProductUrl);
+  if (suppliedProductUrl && !productUrl) return json({ error: '판매 페이지 URL을 확인해 주세요.' }, 400, request, env);
+  const note = clean(body.note ?? current?.note, 1200);
+  const sourceStatus = clean(body.sourceStatus ?? current?.source_status, 200);
+  const assignee = clean(body.assignee ?? current?.assignee, 120);
+  const checklist = normalizeChecklist(body.checklist ?? parseChecklist(current?.checklist_json));
+  const syncMode = clean(body.syncMode ?? current?.sync_mode ?? 'manual', 20) || 'manual';
+  if (!SYNC_MODES.has(syncMode)) return json({ error: '동기화 방식이 올바르지 않습니다.' }, 400, request, env);
   const now = new Date().toISOString();
   const who = await adminId(env, sessionData.email);
 
   await env.DB.prepare(`INSERT INTO books_distribution_status
-    (publication_id, channel_code, status, external_id, product_url, submitted_at, published_at, last_checked_at, note, created_at, updated_at, updated_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (publication_id, channel_code, status, external_id, product_url, submitted_at, published_at, last_checked_at, note,
+     source_status, assignee, due_at, checklist_json, sync_mode, synced_at, created_at, updated_at, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(publication_id, channel_code) DO UPDATE SET
       status=excluded.status,
       external_id=excluded.external_id,
@@ -199,10 +223,17 @@ async function upsertStatus(request, env, sessionData, publicationId, channelCod
       published_at=excluded.published_at,
       last_checked_at=excluded.last_checked_at,
       note=excluded.note,
+      source_status=excluded.source_status,
+      assignee=excluded.assignee,
+      due_at=excluded.due_at,
+      checklist_json=excluded.checklist_json,
+      sync_mode=excluded.sync_mode,
+      synced_at=excluded.synced_at,
       updated_at=excluded.updated_at,
       updated_by=excluded.updated_by`)
-    .bind(publicationId, channelCode, status, externalId, productUrl, submittedAt || '', publishedAt || '', lastCheckedAt || '', note, now, now, who).run();
-  await audit(env, sessionData.email, 'books.distribution.status.update', `${publicationId}:${channelCode}`, JSON.stringify({ status, externalId }));
+    .bind(publicationId, channelCode, status, externalId, productUrl, submittedAt || '', publishedAt || '', lastCheckedAt || '', note,
+      sourceStatus, assignee, dueAt || '', JSON.stringify(checklist), syncMode, syncedAt || '', now, now, who).run();
+  await audit(env, sessionData.email, 'books.distribution.status.update', `${publicationId}:${channelCode}`, JSON.stringify({ status, externalId, assignee, dueAt, syncMode }));
   return json({ ok: true }, 200, request, env);
 }
 
@@ -226,9 +257,7 @@ export async function handleBooksDistributionRequest(request, env) {
   if (request.method === 'GET' && path === PREFIX) return overview(request, env);
 
   const channelMatch = path.match(/^\/api\/books\/admin\/distribution\/channels\/([^/]+)$/);
-  if (channelMatch && request.method === 'PUT') {
-    return updateChannel(request, env, sessionData, decodeURIComponent(channelMatch[1]));
-  }
+  if (channelMatch && request.method === 'PUT') return updateChannel(request, env, sessionData, decodeURIComponent(channelMatch[1]));
 
   const statusMatch = path.match(/^\/api\/books\/admin\/distribution\/status\/([^/]+)\/([^/]+)$/);
   if (statusMatch) {

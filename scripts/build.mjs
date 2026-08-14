@@ -12,17 +12,19 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
-// Distribution tracking is part of the Books lazy feature. Bundle it into the
-// already secured Books finance assets so no additional first-paint requests or
-// admin asset routes are required.
-const [financeCss, distributionCss, financeJs, distributionJs] = await Promise.all([
+// Books finance, distribution and lifecycle pipeline share one secured lazy asset.
+// This keeps the first paint small while ensuring all Books operations load together.
+const [financeCss, distributionCss, pipelineCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs] = await Promise.all([
   readFile(`${output}books-finance-admin.css`, 'utf8'),
   readFile(`${root}books-distribution-admin.css`, 'utf8'),
+  readFile(`${root}books-pipeline-admin.css`, 'utf8'),
   readFile(`${output}books-finance-admin.js`, 'utf8'),
   readFile(`${root}books-distribution-admin.js`, 'utf8'),
+  readFile(`${root}books-pipeline-admin.js`, 'utf8'),
+  readFile(`${root}books-pipeline-bridge.js`, 'utf8'),
 ]);
-await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributionCss}\n`);
-await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n`);
+await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributionCss}\n${pipelineCss}\n`);
+await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n${pipelineJs}\n${pipelineBridgeJs}\n`);
 
 // auth.ekodi.kr is served by the existing site Worker, so flatten its dedicated
 // assets into dist rather than creating a competing Pages custom-domain route.
@@ -44,8 +46,6 @@ for (const asset of htmlAssets) {
     if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
     html = html.replace(serviceGrid, `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`);
 
-    // The former mission organization is now the canonical EKODI Community.
-    // Normalize only the EKODI root homepage, preserving ordinary mission language elsewhere.
     html = html
       .replaceAll('EKODI선교회', '에코디커뮤니티')
       .replaceAll('에코디선교회', '에코디커뮤니티')
