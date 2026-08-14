@@ -9,9 +9,11 @@ const migration=read('supabase/migrations/20260815020000_person_identity_workspa
 const mergeMigration=read('supabase/migrations/20260815021000_explicit_identity_merge.sql');
 const personalHandoffMigration=read('supabase/migrations/20260815022000_personal_marketing_handoff.sql');
 const takeoverGuardMigration=read('supabase/migrations/20260815023000_identity_subject_takeover_guard.sql');
+const mallHandoffMigration=read('supabase/migrations/20260815030000_mall_free_personal_workspace.sql');
 const identityApi=read('supabase/functions/identity-api/index.ts');
 const accessApi=read('supabase/functions/access-api/index.ts');
 const authJs=read('auth-site/auth.js');
+const authRouter=read('auth-site/auth-router.js');
 const authHtml=read('auth-site/index.html');
 
 test('person and login identity schema stays separate from organization membership',()=>{
@@ -36,6 +38,20 @@ test('personal Marketing AI workspace receives the same verified handoff path',(
   assert.match(personalHandoffMigration,/workspace_kind' = 'personal'/i);
   assert.match(personalHandoffMigration,/'requires_handoff', true/i);
   assert.match(personalHandoffMigration,/'status', 'active'/i);
+});
+
+test('Mall gives every verified Google member an active free personal seller handoff',()=>{
+  assert.match(mallHandoffMigration,/p_site_key = 'mall'/i);
+  assert.match(mallHandoffMigration,/'개인 판매자'/i);
+  assert.match(mallHandoffMigration,/'member'[\s\S]*'active'[\s\S]*'free'/i);
+  assert.match(mallHandoffMigration,/true,[\s\S]*'synthetic'/i);
+});
+
+test('legacy Mall seller login is normalized back to Seller Studio',()=>{
+  assert.match(authRouter,/'mall-seller':'mall'/);
+  assert.match(authRouter,/requestedSite==='mall-seller'/);
+  assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
+  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
