@@ -5,36 +5,7 @@ import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.m
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
-  'index.html',
-  'admin.html',
-  'control-center.html',
-  'control-center.css',
-  'control-center-ops.css',
-  'control-center-finance.css',
-  'control-center.js',
-  'control-center-features.js',
-  'admin-central-handoff.js',
-  'finance-monitor.js',
-  'client-access.css',
-  'client-access.js',
-  'marketing-funnel-admin.css',
-  'marketing-funnel-admin.js',
-  'google-admin-auth.css',
-  'google-admin-auth.js',
-  'domains-hub.css',
-  'domains-hub.js',
-  'books-admin.css',
-  'books-admin.js',
-  'books-finance-admin.css',
-  'books-finance-admin.js',
-  'compact-control-center.css',
-  'compact-control-center.js',
-  'hub.html',
-  'trade.html',
-  'styles.css',
-  'script.js',
-  'monitor-status.json',
-  '_headers',
+  'index.html','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
 ];
 
 await rm(output, { recursive: true, force: true });
@@ -71,10 +42,16 @@ for (const asset of htmlAssets) {
   if (asset === 'index.html') {
     const serviceGrid = /<div class="service-grid">[\s\S]*?(\n\s*<\/div>\n\s*<\/div>\n\s*<\/section>)/;
     if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
-    html = html.replace(
-      serviceGrid,
-      `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`,
-    );
+    html = html.replace(serviceGrid, `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`);
+
+    // The former mission organization is now the canonical EKODI Community.
+    // Normalize only the EKODI root homepage, preserving ordinary mission language elsewhere.
+    html = html
+      .replaceAll('EKODI선교회', '에코디커뮤니티')
+      .replaceAll('에코디선교회', '에코디커뮤니티')
+      .replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr')
+      .replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
+    if (html.includes('EKODI선교회') || html.includes('에코디선교회')) throw new Error('Legacy EKODI mission brand remains on homepage');
   }
 
   if (!html.includes('data-ekodi-responsive')) {
@@ -82,8 +59,6 @@ for (const asset of htmlAssets) {
     html = html.replace('</head>', `${responsiveStyle}</head>`);
   }
   if (asset === 'control-center.html') {
-    // Keep the first paint small. Feature-specific CSS/JS is loaded by
-    // control-center-features.js only after a valid admin session exists.
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
     if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
     if (!html.includes('compact-control-center.js')) html = html.replace('</body>', '<script src="compact-control-center.js" defer></script>\n</body>');
