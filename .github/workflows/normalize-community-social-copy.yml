@@ -1,0 +1,43 @@
+name: Normalize Community Social Copy
+
+on:
+  push:
+    branches:
+      - 'staging/social-links-sites-*'
+    paths:
+      - '.github/workflows/normalize-community-social-copy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - name: Normalize Community source copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('community/index.html')
+          s=p.read_text(encoding='utf-8')
+          old=s
+          s=s.replace('FLOWING COMMUNITY · EKODI MISSION','FLOWING COMMUNITY · EKODI COMMUNITY')
+          s=s.replace('EKODI Mission · community.ekodi.kr','EKODI Community · community.ekodi.kr')
+          if s==old:
+              raise SystemExit('Expected Community legacy copy not found')
+          p.write_text(s,encoding='utf-8')
+          PY
+          grep -Fq 'FLOWING COMMUNITY · EKODI COMMUNITY' community/index.html
+          grep -Fq 'EKODI Community · community.ekodi.kr' community/index.html
+          if grep -Fq 'EKODI Mission' community/index.html; then exit 1; fi
+      - name: Commit normalized Community source
+        run: |
+          git config user.name 'EKODI Automation'
+          git config user.email 'automation@ekodi.kr'
+          git add community/index.html
+          git diff --cached --quiet || git commit -m 'refactor: remove legacy Mission branding from Community source'
+          git push
