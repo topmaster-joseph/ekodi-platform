@@ -17,6 +17,8 @@ on:
       - 'compact-control-center.css'
       - 'campus-actions.js'
       - 'campus-actions.css'
+      - 'work-admin.js'
+      - 'work-admin.css'
       - 'admin-central-handoff.js'
       - 'client-access.js'
       - 'client-access.css'
@@ -77,6 +79,7 @@ jobs:
           node --check control-center-features.js
           node --check compact-control-center.js
           node --check campus-actions.js
+          node --check work-admin.js
           node --check admin-central-handoff.js
           node --check client-access.js
           node --check finance-monitor.js
@@ -119,6 +122,11 @@ jobs:
           grep -Fq "placeholder('community', '◌', 'Community')" control-center-features.js
           grep -Fq 'normalizeServiceOpenLinks' campus-actions.js
           grep -Fq '.campus-row-actions' campus-actions.css
+          grep -Fq 'WORK 운영 관리' work-admin.js
+          grep -Fq 'work-admin-rail' work-admin.js
+          grep -Fq 'data-section = '\''work'\''' work-admin.js
+          grep -Fq '.work-admin-layout' work-admin.css
+          grep -Fq '.work-admin-rail' work-admin.css
           grep -Fq '/api/control/social/registry' social-admin.js
           grep -Fq '.social-org-card' social-admin.css
           grep -Fq 'Release Control' release-control-admin.js
@@ -130,6 +138,8 @@ jobs:
           grep -Fq '.community-report-source-panel' community-reports-admin.css
           grep -Fq "'/social-admin.js'" site-worker.js
           grep -Fq "'/release-control-admin.js'" site-worker.js
+          grep -Fq "'/work-admin.js'" site-worker.js
+          grep -Fq "'/work'" site-worker.js
           grep -Fq 'https://api.github.com' site-worker.js
           grep -Fq "'/community-reports-admin.js'" site-worker.js
           grep -Fq '/api/control/overview' domains-hub.js
@@ -156,6 +166,8 @@ jobs:
           grep -Fq 'control-center-features.js' scripts/build.mjs
           grep -Fq 'campus-actions.css' scripts/build.mjs
           grep -Fq 'campus-actions.js' scripts/build.mjs
+          grep -Fq 'work-admin.css' scripts/build.mjs
+          grep -Fq 'work-admin.js' scripts/build.mjs
           grep -Fq 'domains-hub.css' scripts/build.mjs
           grep -Fq 'domains-hub.js' scripts/build.mjs
           grep -Fq 'social-admin.css' scripts/build.mjs
@@ -202,6 +214,7 @@ jobs:
             need_body 'control-center-features.js' 'lazy feature loader' || return 1
             need_body 'compact-control-center.js' 'Campus UI loader' || return 1
             need_body 'release-control-admin.js' 'Release Control loader' || return 1
+            need_body 'work-admin.js' 'WORK admin loader' || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then echo 'admin verify: unexpected redirect header'; return 1; fi
           }
           verify_asset() {
@@ -215,10 +228,13 @@ jobs:
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
+              && verify_admin 'https://admin.ekodi.kr/work' \
               && verify_asset 'compact-control-center.js' 'EKODI Digital Campus' \
               && verify_asset 'compact-control-center.css' '.campus-layout' \
               && verify_asset 'campus-actions.js' 'normalizeServiceOpenLinks' \
               && verify_asset 'campus-actions.css' '.campus-row-actions' \
+              && verify_asset 'work-admin.js' 'WORK 운영 관리' \
+              && verify_asset 'work-admin.css' '.work-admin-rail' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
               && verify_asset 'google-admin-auth.js' 'google-admin-toolbar' \
               && verify_asset 'domains-hub.js' '/api/control/overview' \
@@ -235,7 +251,7 @@ jobs:
               && verify_asset 'books-finance-admin.css' '.books-royalty-holder' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
-              echo 'Admin/Auth production boundary verified.'; exit 0
+              echo 'Admin/Auth production boundary including WORK navigation verified.'; exit 0
             fi
             echo "Production verification pending (attempt $attempt/18)."; sleep 4
           done

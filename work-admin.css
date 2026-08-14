@@ -1,0 +1,37 @@
+body.compact-control-center .work-admin{margin-top:0;padding:0;overflow:hidden;border-color:#285648;background:linear-gradient(160deg,#071b17,#07131d)}
+body.compact-control-center .work-admin-layout{display:grid;grid-template-columns:minmax(0,1fr) 238px;min-height:650px}
+body.compact-control-center .work-admin-main{min-width:0;padding:18px}
+body.compact-control-center .work-admin-head{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:2px 2px 16px;border-bottom:1px solid #1c4339}
+body.compact-control-center .work-admin-head h2{margin:4px 0 3px;font-size:22px}
+body.compact-control-center .work-admin-head .operations-copy{margin:0;max-width:760px;color:#8aa89f;white-space:normal}
+body.compact-control-center .work-admin-head-actions{display:flex;gap:7px;flex-shrink:0}
+body.compact-control-center .work-admin-views{padding-top:16px}
+body.compact-control-center .work-admin-view[hidden]{display:none!important}
+body.compact-control-center .work-admin-view-title{margin:0 0 5px;font-size:17px}
+body.compact-control-center .work-admin-view-copy{margin:0 0 14px;color:#809d95;font-size:11px;line-height:1.55;max-width:850px}
+body.compact-control-center .work-admin-summary,body.compact-control-center .work-admin-security-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}
+body.compact-control-center .work-admin-info-card{min-height:104px;padding:12px;border:1px solid #24483e;border-radius:13px;background:#0a211c}
+body.compact-control-center .work-admin-info-card small{display:block;color:#69bda5;font-size:8px;font-weight:800;letter-spacing:.1em}
+body.compact-control-center .work-admin-info-card strong{display:block;margin:7px 0 5px;font-size:13px;color:#eefbf7}
+body.compact-control-center .work-admin-info-card p{margin:0;color:#78968e;font-size:9px;line-height:1.45}
+body.compact-control-center .work-admin-feature-card{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:9px;padding:14px;border:1px solid #1f3b37;border-radius:13px;background:#091b1b}
+body.compact-control-center .work-admin-feature-card h3{margin:0 0 4px;font-size:13px}
+body.compact-control-center .work-admin-feature-card p{margin:0;color:#78928e;font-size:10px;line-height:1.45}
+body.compact-control-center .work-admin-feature-card>a{flex-shrink:0}
+body.compact-control-center .work-admin-rail{display:flex;flex-direction:column;padding:16px 13px;border-left:1px solid #21453c;background:linear-gradient(180deg,#0a231d,#081a18)}
+body.compact-control-center .work-admin-rail-label{margin:2px 5px 12px;color:#5fc0a5;font-size:9px;font-weight:900;letter-spacing:.15em}
+body.compact-control-center .work-admin-rail-nav{display:grid;gap:5px}
+body.compact-control-center .work-admin-rail-button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'small arrow' 'strong arrow';align-items:center;text-align:left;padding:11px 10px;border:1px solid transparent;border-radius:11px;background:transparent;color:#9bb2ac;cursor:pointer}
+body.compact-control-center .work-admin-rail-button small{grid-area:small;font-size:7px;color:#63847b;letter-spacing:.08em;text-transform:uppercase}
+body.compact-control-center .work-admin-rail-button strong{grid-area:strong;margin-top:2px;font-size:11px}
+body.compact-control-center .work-admin-rail-button span{grid-area:arrow;color:#4f776d}
+body.compact-control-center .work-admin-rail-button:hover,body.compact-control-center .work-admin-rail-button:focus-visible{border-color:#2b5a4d;background:#0c2a22;outline:0}
+body.compact-control-center .work-admin-rail-button.active{border-color:#317662;background:#0d3027;color:#eafff8;box-shadow:inset 3px 0 #58c4a4}
+body.compact-control-center .work-admin-rail-button.active small,body.compact-control-center .work-admin-rail-button.active span{color:#74c9b0}
+body.compact-control-center .work-admin-rail-footer{margin-top:auto;padding:12px 8px 2px;border-top:1px solid #1f4138}
+body.compact-control-center .work-admin-rail-footer>small{display:block;margin-bottom:5px;color:#56776e;font-size:7px;letter-spacing:.1em}
+body.compact-control-center .work-admin-public-link{color:#9ce0cd;font-size:10px;text-decoration:none}
+body.compact-control-center .work-nav{border-color:#214c40}
+body.compact-control-center .work-nav.active{background:#0d382e;color:#c9fff0;border-color:#347964}
+@media(max-width:980px){body.compact-control-center .work-admin-layout{grid-template-columns:1fr}body.compact-control-center .work-admin-rail{grid-row:1;border-left:0;border-bottom:1px solid #21453c}body.compact-control-center .work-admin-rail-nav{grid-template-columns:repeat(5,minmax(0,1fr))}body.compact-control-center .work-admin-rail-button{padding:9px 7px}body.compact-control-center .work-admin-rail-footer{display:none}body.compact-control-center .work-admin-summary,body.compact-control-center .work-admin-security-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){body.compact-control-center .work-admin-head{align-items:flex-start;flex-direction:column}body.compact-control-center .work-admin-head-actions{width:100%;flex-wrap:wrap}body.compact-control-center .work-admin-rail-nav{grid-template-columns:1fr 1fr}body.compact-control-center .work-admin-summary,body.compact-control-center .work-admin-security-grid{grid-template-columns:1fr}body.compact-control-center .work-admin-feature-card{align-items:flex-start;flex-direction:column}}
