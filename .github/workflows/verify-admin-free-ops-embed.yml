@@ -2,17 +2,8 @@ name: Verify Admin Free Ops Embed
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/verify-admin-free-ops-embed.yml'
-      - 'release-control-admin.js'
-      - 'release-control-admin.css'
-      - 'site-worker.js'
-      - 'sites/ekodi-mall/_headers'
-      - 'sites/ekodi-mall/assets/free-ops.js'
   workflow_run:
-    workflows: ['EKODI Mall · Stage and Deploy']
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy Admin & Auth Site']
     types: [completed]
 
 permissions:
@@ -24,7 +15,7 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -33,18 +24,28 @@ jobs:
         run: |
           set -euo pipefail
 
-          fetch_headers() {
+          fetch_final() {
             url="$1"
             headers="$2"
             body="$3"
-            curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true
+            effective_file="$4"
+            meta=$(curl -sS -L -o "$body" -w '%{http_code}|%{url_effective}' --connect-timeout 5 --max-time 15 "$url" || true)
+            code="${meta%%|*}"
+            effective="${meta#*|}"
+            printf '%s' "$effective" > "$effective_file"
+            if [ -n "$effective" ]; then
+              curl -sS -D "$headers" -o /dev/null --connect-timeout 5 --max-time 15 "$effective" || true
+            else
+              : > "$headers"
+            fi
+            printf '%s' "$code"
           }
 
           for attempt in $(seq 1 18); do
-            free_code=$(fetch_headers 'https://mall.ekodi.kr/free-ops?embed=admin' /tmp/free-headers /tmp/free-body)
-            root_code=$(fetch_headers 'https://mall.ekodi.kr/' /tmp/mall-headers /tmp/mall-body)
-            admin_code=$(fetch_headers 'https://admin.ekodi.kr/' /tmp/admin-headers /tmp/admin-body)
-            asset_code=$(fetch_headers 'https://admin.ekodi.kr/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset)
+            free_code=$(fetch_final 'https://mall.ekodi.kr/free-ops?embed=admin' /tmp/free-headers /tmp/free-body /tmp/free-url)
+            root_code=$(fetch_final 'https://mall.ekodi.kr/' /tmp/mall-headers /tmp/mall-body /tmp/mall-url)
+            admin_code=$(fetch_final 'https://admin.ekodi.kr/' /tmp/admin-headers /tmp/admin-body /tmp/admin-url)
+            asset_code=$(fetch_final 'https://admin.ekodi.kr/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset /tmp/admin-asset-url)
 
             free_ok=false
             root_ok=false
@@ -77,15 +78,18 @@ jobs:
             fi
 
             if [ "$free_ok" = true ] && [ "$root_ok" = true ] && [ "$admin_ok" = true ] && [ "$asset_ok" = true ]; then
-              echo 'Admin Free Ops live embed contract verified.'
+              echo "Admin Free Ops live embed contract verified at $(cat /tmp/free-url)."
               exit 0
             fi
 
-            echo "attempt=$attempt free=$free_code/$free_ok mall=$root_code/$root_ok admin=$admin_code/$admin_ok asset=$asset_code/$asset_ok"
+            echo "attempt=$attempt free=$free_code/$free_ok url=$(cat /tmp/free-url) mall=$root_code/$root_ok admin=$admin_code/$admin_ok asset=$asset_code/$asset_ok"
             sleep 5
           done
 
-          echo '--- Free Ops headers ---'
+          echo '--- Free Ops effective URL ---'
+          cat /tmp/free-url || true
+          echo
+          echo '--- Free Ops final headers ---'
           cat /tmp/free-headers || true
           echo '--- Mall root headers ---'
           cat /tmp/mall-headers || true
