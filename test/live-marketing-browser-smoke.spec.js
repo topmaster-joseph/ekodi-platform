@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test('live Marketing page and auth center do not stay in loading state', async ({ page }) => {
   const failed = [];
