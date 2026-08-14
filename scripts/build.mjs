@@ -40,7 +40,7 @@ await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)
 // auth.ekodi.kr is served by the existing site Worker, so flatten its dedicated
 // assets into dist rather than creating a competing Pages custom-domain route.
 await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
-for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'admin-auth.js', 'client-auth.js']) {
+for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'admin-auth.js', 'client-auth.js', 'marketing-onboarding.js']) {
   await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 }
 
