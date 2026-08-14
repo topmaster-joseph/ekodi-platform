@@ -1,10 +1,10 @@
 (() => {
-  const loadedScripts = new Map();
+  const loadedModules = new Map();
   const loadedStyles = new Map();
-  let started = false;
-
+  const placeholderButtons = new Map();
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';
   const app = document.querySelector('#app');
+  const nav = document.querySelector('.sidebar nav');
   const financeButton = document.querySelector('button.nav[data-section="finance"]');
 
   function loadStyle(href) {
@@ -24,36 +24,33 @@
     return promise;
   }
 
-  function loadScript(src) {
-    if (loadedScripts.has(src)) return loadedScripts.get(src);
-    const existing = document.querySelector(`script[data-ekodi-feature-script="${src}"]`);
-    if (existing) return Promise.resolve(existing);
-    const promise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = false;
-      script.dataset.ekodiFeatureScript = src;
-      script.addEventListener('load', () => resolve(script), { once: true });
-      script.addEventListener('error', () => reject(new Error(`${src} 로드 실패`)), { once: true });
-      document.body.append(script);
+  function loadModule(src) {
+    if (loadedModules.has(src)) return loadedModules.get(src);
+    const promise = import(`./${src}`).catch(error => {
+      loadedModules.delete(src);
+      throw error;
     });
-    loadedScripts.set(src, promise);
+    loadedModules.set(src, promise);
     return promise;
   }
 
   async function loadClients() {
-    await loadStyle('client-access.css');
-    await loadScript('client-access.js');
+    await Promise.all([
+      loadStyle('client-access.css'),
+      loadStyle('marketing-funnel-admin.css'),
+    ]);
+    await loadModule('client-access.js');
+    await loadModule('marketing-funnel-admin.js');
   }
 
   async function loadAdmins() {
     await loadStyle('google-admin-auth.css');
-    await loadScript('google-admin-auth.js');
+    await loadModule('google-admin-auth.js');
   }
 
-  async function loadMarketing() {
+  async function loadAffiliates() {
     await loadStyle('marketing-funnel-admin.css');
-    await loadScript('marketing-funnel-admin.js');
+    await loadModule('marketing-funnel-admin.js');
   }
 
   async function loadBooks() {
@@ -61,86 +58,120 @@
       loadStyle('books-admin.css'),
       loadStyle('books-finance-admin.css'),
     ]);
-    await loadScript('books-admin.js');
-    await loadScript('books-finance-admin.js');
+    await loadModule('books-admin.js');
+    await loadModule('books-finance-admin.js');
   }
 
   async function loadFinance() {
-    await loadScript('finance-monitor.js');
+    await loadModule('finance-monitor.js');
   }
 
-  function idle(callback) {
-    if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(callback, { timeout: 1200 });
-    } else {
-      setTimeout(callback, 180);
+  const loaders = {
+    clients: loadClients,
+    admins: loadAdmins,
+    affiliates: loadAffiliates,
+    books: loadBooks,
+    finance: loadFinance,
+  };
+
+  function removeResolvedPlaceholders() {
+    if (!nav) return;
+    for (const [section, button] of placeholderButtons) {
+      if (nav.querySelector(`[data-section="${section}"]`)) {
+        button.remove();
+        placeholderButtons.delete(section);
+      }
     }
   }
 
-  function loadIdleQueue(queue, index = 0) {
-    if (index >= queue.length || !token()) return;
-    idle(async () => {
-      try { await queue[index](); } catch (error) { console.warn('[EKODI feature]', error); }
-      loadIdleQueue(queue, index + 1);
-    });
+  function notifyInstalled(section) {
+    removeResolvedPlaceholders();
+    window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail: { section } }));
   }
 
-  async function prioritizeCurrentView() {
-    const hash = location.hash.toLowerCase();
-    if (hash === '#finance') {
-      await loadFinance();
-      financeButton?.click();
-      return 'finance';
+  async function activateLazy(section, button) {
+    const loader = loaders[section];
+    if (!loader || !token()) return;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    try {
+      await loader();
+      notifyInstalled(section);
+      const realButton = nav?.querySelector(`[data-section="${section}"]`);
+      if (!realButton) throw new Error(`${section} 화면을 준비하지 못했습니다.`);
+      queueMicrotask(() => realButton.click());
+    } catch (error) {
+      console.warn('[EKODI lazy feature]', error);
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
     }
-    if (hash === '#books') {
-      await loadBooks();
-      return 'books';
-    }
-    if (hash === '#affiliates') {
-      await loadClients();
-      await loadMarketing();
-      return 'marketing';
-    }
-    if (hash === '#clients') {
-      await loadClients();
-      document.querySelector('[data-section="clients"]')?.click();
-      return 'clients';
-    }
-    if (hash === '#admins') {
-      await loadAdmins();
-      document.querySelector('[data-section="admins"]')?.click();
-      return 'admins';
-    }
-    return '';
   }
 
-  async function start() {
-    if (started || !token() || !app || app.hidden) return;
-    started = true;
-    let priority = '';
-    try { priority = await prioritizeCurrentView(); } catch (error) { console.warn('[EKODI priority feature]', error); }
-
-    const queue = [];
-    if (priority !== 'clients') queue.push(loadClients);
-    if (priority !== 'admins') queue.push(loadAdmins);
-    if (priority !== 'marketing') queue.push(loadMarketing);
-    if (priority !== 'books') queue.push(loadBooks);
-    loadIdleQueue(queue);
+  function placeholder(section, icon, label) {
+    if (!nav || nav.querySelector(`[data-section="${section}"]`) || placeholderButtons.has(section)) return null;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'nav';
+    button.dataset.lazySection = section;
+    button.append(document.createTextNode(`${icon} `));
+    const span = document.createElement('span');
+    span.textContent = label;
+    button.append(span);
+    button.addEventListener('click', () => activateLazy(section, button));
+    placeholderButtons.set(section, button);
+    return button;
   }
+
+  function installFeatureNavigation() {
+    if (!nav) return;
+    const services = nav.querySelector('[data-section="services"]');
+    const finance = nav.querySelector('[data-section="finance"]');
+    const policies = nav.querySelector('[data-section="policies"]');
+    const domainLink = nav.querySelector('a[href="/legacy#domains"]');
+
+    const clients = placeholder('clients', '◎', 'Clients');
+    if (clients) services?.insertAdjacentElement('afterend', clients);
+
+    const admins = placeholder('admins', '◈', 'Admin Accounts');
+    if (admins) (clients || nav.querySelector('[data-section="clients"]') || services)?.insertAdjacentElement('afterend', admins);
+
+    const books = placeholder('books', '▤', 'Books');
+    if (books) {
+      if (finance) nav.insertBefore(books, finance);
+      else nav.append(books);
+    }
+
+    const affiliates = placeholder('affiliates', '↗', 'Affiliates');
+    if (affiliates) {
+      if (policies) nav.insertBefore(affiliates, policies);
+      else if (domainLink) nav.insertBefore(affiliates, domainLink);
+      else nav.append(affiliates);
+    }
+  }
+
+  function activateHash() {
+    if (!token() || !app || app.hidden) return;
+    const section = location.hash.replace(/^#/, '').toLowerCase();
+    if (!loaders[section]) return;
+    const button = nav?.querySelector(`[data-section="${section}"], [data-lazy-section="${section}"]`);
+    button?.click();
+  }
+
+  installFeatureNavigation();
 
   financeButton?.addEventListener('click', () => {
     loadFinance().catch(error => console.warn('[EKODI finance feature]', error));
   });
 
-  if (app) {
+  if (app && app.hidden) {
     const observer = new MutationObserver(() => {
       if (!app.hidden && token()) {
         observer.disconnect();
-        start();
+        activateHash();
       }
     });
     observer.observe(app, { attributes: true, attributeFilter: ['hidden'] });
+  } else {
+    activateHash();
   }
-
-  start();
 })();
