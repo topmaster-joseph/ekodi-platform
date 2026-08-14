@@ -24,12 +24,12 @@ test('Social registry rejects the retired EKODI mission organization label', () 
   assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://community.ekodi.kr', channels:[] }] }), /legacy EKODI mission/);
 });
 
-test('Control Center lazy-loads Social Channels and production build ships its assets', async () => {
-  const [features, build, admin, wrapper, wrangler] = await Promise.all([
+test('Control Center lazy-loads Social Channels while the canonical API entry remains intact', async () => {
+  const [features, build, admin, entry, wrangler] = await Promise.all([
     readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
     readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
-    readFile(new URL('../api-social-entry.js', import.meta.url), 'utf8'),
+    readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
   ]);
   assert.match(features, /placeholder\('social', '◉', 'Social'\)/);
@@ -37,6 +37,9 @@ test('Control Center lazy-loads Social Channels and production build ships its a
   assert.match(build, /social-admin\.css/);
   assert.match(build, /social-admin\.js/);
   assert.match(admin, /\/api\/control\/social\/registry/);
-  assert.match(wrapper, /\/api\/social\/registry/);
-  assert.match(wrangler, /main = "api-social-entry\.js"/);
+  assert.match(entry, /handleSocialRegistry/);
+  assert.match(entry, /\/api\/social\/registry/);
+  assert.match(entry, /return apiWorker\.fetch\(request, env, ctx\)/);
+  assert.match(entry, /return apiWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(wrangler, /main = "customer-entry-worker\.js"/);
 });
