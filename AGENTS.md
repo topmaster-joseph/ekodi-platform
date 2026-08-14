@@ -47,6 +47,20 @@ A production change is incomplete until all applicable checks pass.
 - A successful deploy command alone is not proof of a successful release.
 - Any routing, DNS, auth, payment, customer-domain, or control-plane change requires regression coverage.
 
+## 3A. Platform isolation is a production invariant
+
+EKODI sites are independent platforms or specialized services, not cosmetic pages inside one release unit.
+
+- A normal source change must deploy only the platform that owns that source.
+- The coordinated full-ecosystem deployment workflow is manual-only.
+- Every platform-specific deployment workflow must use explicit path filters.
+- Shared edge runtimes must be treated as shared infrastructure and require regression checks across every domain they serve.
+- Do not add a platform-specific source file to a shared runtime when an isolated Worker, Pages project, module, or API contract can solve the problem.
+- Shared database changes are shared-core changes. Name migrations by functional area and preserve table/tenant namespaces.
+- Platform-specific code must not directly access another platform or tenant's private data. Use an explicit shared API contract.
+- Changes to `site-worker.js`, `service-proxy.js`, shared auth, shared payment, or shared database infrastructure require an explicit impact review before deployment.
+- Keep `platform-boundaries.json` and `docs/PLATFORM-ISOLATION.md` accurate when a platform's ownership, domain, data store, or deployment unit changes.
+
 ## 4. Definition of done
 
 For business-critical changes, “done” means:
@@ -125,7 +139,7 @@ When an incident occurs, find and fix the root cause. Do not instruct users to c
 
 ## 9. Current automated safeguards
 
-The repository contains business contract tests and a Production Revenue Gate. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
+The repository contains business contract tests, a Production Revenue Gate, and platform-boundary validation. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
 
 ## 10. Quality bar
 
