@@ -43,16 +43,16 @@
       model = {
         eyebrow:'MAIL LOBBY', title:'EKODI Mail', context:`${host} · ${org}`,
         description:'하나의 계정으로 EKODI의 사람과 조직을 연결합니다. 메일을 열고, 내 계정을 확인하고, 조직 주소는 중앙에서 관리합니다.',
-        note:'Google Workspace는 ekodibiz.kr을 기본 도메인으로 운영하고 ekodi.kr을 사용자 별칭 도메인으로 함께 사용합니다. 외부 대표 주소는 @ekodi.kr을 우선 사용하되 로그인과 기본 계정은 기존 @ekodibiz.kr 계정을 유지합니다.',
+        note:'Google Workspace는 ekodibiz.kr을 기본 도메인으로 운영하고 ekodi.kr을 사용자 별칭 도메인으로 함께 사용합니다. ekodi.kr 주소는 별도 사용자 계정을 만드는 방식이 아니라 기존 ekodibiz.kr 사용자와 그룹에 같은 이름의 별칭 주소가 자동으로 제공되는 구조입니다.',
         cards:[
           card('✉','메일 열기','Google Workspace Gmail','https://mail.google.com/a/ekodibiz.kr','primary'),
           card('◎','내 EKODI 계정','통합 인증 · 계정 확인','https://auth.ekodi.kr')
         ],
         domains:[
           {name:'ekodibiz.kr',detail:'Google Workspace 기본 도메인 · Gmail 운영',status:'운영 중',statusClass:'live'},
-          {name:'ekodi.kr',detail:'사용자 별칭 도메인 · Gmail 활성 · 대표 메일 주소',status:'운영 중',statusClass:'live'}
+          {name:'ekodi.kr',detail:'사용자 별칭 도메인 · Gmail 활성 · 자동 별칭 주소 제공',status:'운영 중',statusClass:'live'}
         ],
-        aliasNote:'예: admin@ekodibiz.kr 사용자는 같은 Gmail 메일함에서 admin@ekodi.kr 주소도 함께 사용할 수 있습니다. 로그인은 기본 계정인 @ekodibiz.kr을 사용하고, 대표·조직 주소는 Google Groups 중심으로 운영합니다.',
+        aliasNote:'예: admin@ekodibiz.kr 사용자가 실제로 존재하면 admin@ekodi.kr은 따로 생성하지 않아도 자동 별칭으로 제공되고 같은 Gmail 메일함으로 수신됩니다. 별칭 주소로 발신하려면 Gmail의 보내는 주소 설정이 필요할 수 있으며, 로그인은 기본 계정인 @ekodibiz.kr을 사용합니다.',
         adminLinks:[
           {label:'Workspace Admin',href:'https://admin.google.com'},
           {label:'EKODI Admin',href:'https://admin.ekodi.kr'},
