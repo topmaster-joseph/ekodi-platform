@@ -5,11 +5,13 @@ on:
     paths:
       - 'config/marketing-tenants.json'
       - '.github/workflows/configure-marketing-tenant-domains.yml'
+      - 'test/marketing-domain-policy.test.mjs'
   push:
     branches: [main]
     paths:
       - 'config/marketing-tenants.json'
       - '.github/workflows/configure-marketing-tenant-domains.yml'
+      - 'test/marketing-domain-policy.test.mjs'
   workflow_dispatch:
 
 permissions:
@@ -24,34 +26,54 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Validate tenant domain registry
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate customer AI domain policy
         run: |
+          node --test test/marketing-domain-policy.test.mjs
           python - <<'PY'
           import json, re
           from pathlib import Path
 
           cfg = json.loads(Path('config/marketing-tenants.json').read_text())
-          assert cfg['domainPattern'] == 'marketing.{tenant}.ekodi.kr'
+          assert cfg['version'] >= 2
+          assert cfg['domainPattern'] == '{tenant}.ai.ekodi.kr'
+          assert cfg['namespace']['domain'] == 'ai.ekodi.kr'
+          assert cfg['namespace']['productHub'] == 'marketing.ekodi.kr'
           assert cfg['hub']['domain'] == 'marketing.ekodi.kr'
           assert cfg['hub']['project'] == 'marketing-ai'
+          assert cfg['policy']['storeBasic']['dedicatedEkodiDomain'] is False
+          assert cfg['policy']['storePlus']['pattern'] == '{store}.ai.ekodi.kr'
+          assert cfg['policy']['storePro']['customDomain'] is True
+          assert cfg['policy']['customDomain']['registrationIncluded'] is False
 
           seen_tenants = set()
-          seen_domains = {cfg['hub']['domain']}
+          seen_domains = {cfg['hub']['domain'], cfg['namespace']['domain']}
           for row in cfg['tenants']:
               tenant = row['tenant']
               domain = row['domain']
               project = row['project']
+              tenant_type = row['tenantType']
+              entitlement = row['domainEntitlement']
               assert re.fullmatch(r'[a-z0-9][a-z0-9-]*', tenant), tenant
-              assert domain == f'marketing.{tenant}.ekodi.kr', domain
+              assert domain == f'{tenant}.ai.ekodi.kr', domain
+              assert tenant_type in {'organization', 'store'}, row
+              assert entitlement in {'organization', 'plus', 'pro', 'enterprise', 'grandfathered'}, row
               assert tenant not in seen_tenants, tenant
               assert domain not in seen_domains, domain
               assert project, row
               assert row.get('name'), row
+              assert row.get('landingPath', '/').startswith('/'), row
               assert domain not in row.get('legacyDomains', []), row
+              if tenant_type == 'organization':
+                  assert entitlement in {'organization', 'enterprise'}, row
+              if row.get('customDomains'):
+                  assert entitlement in {'pro', 'enterprise'}, row
               seen_tenants.add(tenant)
               seen_domains.add(domain)
 
-          print('Validated Marketing AI domain standard for:', ', '.join(sorted(seen_tenants)))
+          print('Validated AI customer domain standard for:', ', '.join(sorted(seen_tenants)))
           PY
 
   apply:
@@ -70,7 +92,7 @@ jobs:
           test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Attach canonical tenant domains and configure DNS
+      - name: Attach canonical AI workspace domains and configure DNS
         shell: bash
         run: |
           set -euo pipefail
@@ -107,7 +129,7 @@ jobs:
             code=$(curl -sS -o /tmp/existing.json -w '%{http_code}' "${auth[@]}" "$api/zones/$zone_id/dns_records?type=CNAME&name=$name")
             [ "$code" = '200' ] || { cat /tmp/existing.json; echo "DNS lookup failed: $name HTTP $code"; return 1; }
             record_id=$(python -c "import json; d=json.load(open('/tmp/existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
-            payload="{\"type\":\"CNAME\",\"name\":\"$name\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"EKODI Marketing AI canonical tenant domain\"}"
+            payload="{\"type\":\"CNAME\",\"name\":\"$name\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"EKODI AI customer workspace canonical domain\"}"
             if [ -n "$record_id" ]; then
               write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X PUT "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records/$record_id")
             else
@@ -133,7 +155,7 @@ jobs:
             upsert_cname "$domain" "$target"
           done < /tmp/marketing-tenants.tsv
 
-      - name: Verify canonical domains without retiring legacy aliases
+      - name: Verify canonical AI workspace domains without retiring existing aliases
         shell: bash
         run: |
           set -euo pipefail
@@ -141,28 +163,39 @@ jobs:
           import json
           cfg=json.load(open('config/marketing-tenants.json'))
           for row in cfg['tenants']:
-              print('\t'.join([row['domain'], row['name'], ','.join(row.get('legacyDomains', []))]))
+              print('\t'.join([
+                  row['domain'],
+                  row['name'],
+                  row.get('landingPath', '/'),
+                  ','.join(row.get('legacyDomains', []))
+              ]))
           PY
 
           for attempt in $(seq 1 24); do
             ok=1
-            while IFS=$'\t' read -r domain needle legacy; do
+            while IFS=$'\t' read -r domain needle landing legacy; do
               [ -n "$domain" ] || continue
-              code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
-              echo "$domain http=$code"
+              meta=$(curl -L -sS -o /tmp/site.html -w '%{http_code}\t%{url_effective}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
+              code="${meta%%$'\t'*}"
+              effective="${meta#*$'\t'}"
+              echo "$domain http=$code effective=$effective"
               if [ "$code" != '200' ] || ! grep -Fq "$needle" /tmp/site.html; then ok=0; fi
+              if [ "$landing" != '/' ] && [[ "$effective" != "https://$domain$landing"* ]]; then
+                echo "$domain did not land on $landing"
+                ok=0
+              fi
 
               IFS=',' read -ra legacy_list <<< "$legacy"
               for legacy_domain in "${legacy_list[@]}"; do
                 [ -n "$legacy_domain" ] || continue
                 legacy_code=$(curl -L -sS -o /tmp/legacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$legacy_domain/" || true)
-                echo "$legacy_domain legacy_http=$legacy_code"
+                echo "$legacy_domain existing_alias_http=$legacy_code"
                 if [ "$legacy_code" != '200' ]; then ok=0; fi
               done
             done < /tmp/marketing-verify.tsv
 
             if [ "$ok" -eq 1 ]; then
-              echo 'Canonical Marketing AI tenant domains verified; legacy aliases remain available.'
+              echo 'Canonical AI customer domains verified; existing aliases remain available.'
               exit 0
             fi
             sleep 5
