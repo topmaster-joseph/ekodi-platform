@@ -27,8 +27,9 @@ test('payment key status client is included in the production asset build', () =
   assert.match(build, /'admin-central-handoff\.js'/);
 });
 
-test('payment key status client receives admin no-store security headers', () => {
+test('admin HTML stays no-store while static admin assets are browser-revalidated', () => {
   assert.match(siteWorker, /'\/admin-central-handoff\.js'/);
   assert.match(siteWorker, /ADMIN_ASSETS/);
-  assert.match(siteWorker, /'no-store', 'admin-asset'/);
+  assert.match(siteWorker, /'no-store', 'admin-control-center'/);
+  assert.match(siteWorker, /'public, max-age=0, must-revalidate', 'admin-asset'/);
 });
