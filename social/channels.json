@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "organizations": [
     {
       "id": "community",
@@ -8,9 +8,9 @@
       "description": "공동체, 선교, 지역과 디아스포라의 이야기를 연결합니다.",
       "website": "https://community.ekodi.kr",
       "channels": [
-        {"provider": "youtube", "label": "YouTube", "handle": "@ekodicommunity", "url": "https://www.youtube.com/@ekodicommunity", "description": "말씀 · 공동체 · 선교 · 현장"},
-        {"provider": "instagram", "label": "Instagram", "url": "https://www.instagram.com/ekodicommunity", "description": "사진 · 현장 · 짧은 이야기"},
-        {"provider": "live", "label": "EKODI Live", "url": "https://live.ekodi.kr", "description": "라이브 방송 허브"}
+        {"provider":"youtube","label":"YouTube","handle":"@ekodicommunity","channelId":"UCm1PFvzN0PRnyiF8Xx_mYTw","uploadsPlaylist":"UUm1PFvzN0PRnyiF8Xx_mYTw","url":"https://www.youtube.com/@ekodicommunity","description":"말씀 · 공동체 · 선교 · 현장"},
+        {"provider":"instagram","label":"Instagram","url":"https://www.instagram.com/ekodicommunity","description":"사진 · 현장 · 짧은 이야기"},
+        {"provider":"live","label":"EKODI Live","url":"https://live.ekodi.kr","description":"라이브 방송 허브"}
       ]
     },
     {
@@ -20,8 +20,8 @@
       "description": "예배, 말씀, 목양과 로컬교회의 소식을 전합니다.",
       "website": "https://church.ekodi.kr",
       "channels": [
-        {"provider": "youtube", "label": "YouTube", "handle": "@ekodichurch", "url": "https://www.youtube.com/@ekodichurch", "description": "예배 · 말씀 · Shorts"},
-        {"provider": "live", "label": "EKODI Live", "url": "https://live.ekodi.kr", "description": "예배 및 현장 라이브"}
+        {"provider":"youtube","label":"YouTube","handle":"@ekodichurch","channelId":"UCnp_LXmJBcJRX7CgJT9FF7w","uploadsPlaylist":"UUnp_LXmJBcJRX7CgJT9FF7w","url":"https://www.youtube.com/@ekodichurch","description":"예배 · 말씀 · Shorts"},
+        {"provider":"live","label":"EKODI Live","url":"https://live.ekodi.kr","description":"예배 및 현장 라이브"}
       ]
     },
     {
