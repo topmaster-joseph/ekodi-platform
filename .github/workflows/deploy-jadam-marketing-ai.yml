@@ -56,6 +56,7 @@ jobs:
             grep -Fq 'Powered by <span>EKODIBIZ</span>' "$file"
             grep -Fq 'data-ekodi-customer-prereg' "$file"
             grep -Fq '/api/customer/federated-login' "$file"
+            grep -Fq 'CUSTOMER_SESSION_WAIT_MS=12000' "$file"
             grep -Fq 'ekodi-customer-token' "$file"
             if grep -Fq '/api/customer/login' "$file" || grep -Fq '/api/customer/accept-invite' "$file"; then
               echo "Legacy direct login detected in $file"
@@ -159,6 +160,7 @@ jobs:
             [ "$code" = '200' ] || return 1
             grep -Fq "$realm" /tmp/site.html
             grep -Fq '/api/customer/federated-login' /tmp/site.html
+            grep -Fq 'CUSTOMER_SESSION_WAIT_MS=12000' /tmp/site.html
             grep -Fq 'data-ekodi-customer-prereg' /tmp/site.html
             ! grep -Fq '/api/customer/login' /tmp/site.html
           }
@@ -172,7 +174,7 @@ jobs:
             verify_customer_auth 'https://jadam.ekodi.kr/' 'jadam-client' || ok=0
             verify_customer_auth 'https://pizzamaru.ekodi.kr/' 'pizzamaru-client' || ok=0
             verify_customer_auth 'https://yogurt.ekodi.kr/' 'yogurt-client' || ok=0
-            if [ "$ok" -eq 1 ]; then echo 'Marketing AI domains and Google customer preregistration verified.'; exit 0; fi
+            if [ "$ok" -eq 1 ]; then echo 'Marketing AI domains and resilient Google customer activation verified.'; exit 0; fi
             sleep 5
           done
           exit 1
