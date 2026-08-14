@@ -85,14 +85,27 @@
   function installReleaseControl() {
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
-    if (!nav || !content || document.querySelector('[data-section="release"]')) return;
+    if (!nav || !content) return;
 
-    const navButton = el('button', '', 'nav');
-    navButton.type = 'button';
-    navButton.dataset.section = 'release';
-    navButton.append(document.createTextNode('◆ '), el('span', 'Release'));
-    const policies = nav.querySelector('[data-section="policies"]');
-    if (policies) nav.insertBefore(navButton, policies); else nav.append(navButton);
+    let navButton = nav.querySelector('[data-section="release"]');
+    if (!navButton) {
+      navButton = el('button', '', 'nav');
+      navButton.type = 'button';
+      navButton.dataset.section = 'release';
+      navButton.append(document.createTextNode('◆ '), el('span', 'Release'));
+      const policies = nav.querySelector('[data-section="policies"]');
+      const activity = nav.querySelector('a[href="/legacy#activity"]');
+      if (policies) nav.insertBefore(navButton, policies);
+      else if (activity) nav.insertBefore(navButton, activity);
+      else nav.append(navButton);
+    } else {
+      navButton.type = 'button';
+      navButton.classList.add('nav');
+      const label = navButton.querySelector('span');
+      if (label) label.textContent = 'Release';
+    }
+
+    if (document.querySelector('#releaseControl')) return;
 
     const section = el('section', '', 'section release-control hidden-panel');
     section.dataset.panel = 'release';
