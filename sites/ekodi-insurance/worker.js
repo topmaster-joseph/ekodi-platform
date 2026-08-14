@@ -8,7 +8,7 @@ function secure(response){const headers=new Headers(response.headers);for(const 
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
-    if(url.pathname==='/health')return new Response(JSON.stringify({ok:true,service:'ekodi-insurance',mode:'staging-local-only',serverSensitiveData:false}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
+    if(url.pathname==='/health')return new Response(JSON.stringify({ok:true,service:'ekodi-insurance',mode:'staging-local-only-v2',serverSensitiveData:false,privacyCenter:true,productRecommendation:false}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/insurance',307);
     return secure(await env.ASSETS.fetch(request));
   }
