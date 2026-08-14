@@ -27,6 +27,8 @@ on:
       - 'books-finance-admin.css'
       - 'books-distribution-admin.js'
       - 'books-distribution-admin.css'
+      - 'books-distribution-import-admin.js'
+      - 'books-distribution-import-admin.css'
       - 'books-pipeline-admin.js'
       - 'books-pipeline-admin.css'
       - 'books-pipeline-bridge.js'
@@ -79,6 +81,7 @@ jobs:
           node --check books-admin.js
           node --check books-finance-admin.js
           node --check books-distribution-admin.js
+          node --check books-distribution-import-admin.js
           node --check books-pipeline-admin.js
           node --check books-pipeline-bridge.js
           node --check books-royalty-admin.js
@@ -130,6 +133,9 @@ jobs:
           grep -Fq 'ACTION QUEUE' books-distribution-admin.js
           grep -Fq 'exportCsv' books-distribution-admin.js
           grep -Fq '.books-distribution-attention' books-distribution-admin.css
+          grep -Fq 'CSV Import' books-distribution-import-admin.js
+          grep -Fq '/api/books/admin/distribution/import' books-distribution-import-admin.js
+          grep -Fq '.books-import-card' books-distribution-import-admin.css
           grep -Fq '출판 · 배포 · 매출 통합 파이프라인' books-pipeline-admin.js
           grep -Fq 'CHANNEL OPS' books-pipeline-admin.js
           grep -Fq '.books-pipeline-book' books-pipeline-admin.css
@@ -148,6 +154,8 @@ jobs:
           grep -Fq 'community-reports-admin.js' scripts/build.mjs
           grep -Fq 'books-distribution-admin.css' scripts/build.mjs
           grep -Fq 'books-distribution-admin.js' scripts/build.mjs
+          grep -Fq 'books-distribution-import-admin.css' scripts/build.mjs
+          grep -Fq 'books-distribution-import-admin.js' scripts/build.mjs
           grep -Fq 'books-pipeline-admin.css' scripts/build.mjs
           grep -Fq 'books-pipeline-admin.js' scripts/build.mjs
           grep -Fq 'books-royalty-admin.css' scripts/build.mjs
@@ -207,8 +215,10 @@ jobs:
               && verify_asset 'community-reports-admin.js' 'Community Source Evidence' \
               && verify_asset 'community-reports-admin.css' '.community-report-source-panel' \
               && verify_asset 'books-finance-admin.js' '출판 · 배포 · 매출 통합 파이프라인' \
+              && verify_asset 'books-finance-admin.js' 'CSV Import' \
               && verify_asset 'books-finance-admin.js' '권리 · 인세 · 지급 관리' \
               && verify_asset 'books-finance-admin.css' '.books-pipeline-book' \
+              && verify_asset 'books-finance-admin.css' '.books-import-card' \
               && verify_asset 'books-finance-admin.css' '.books-royalty-holder' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
