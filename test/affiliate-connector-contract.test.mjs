@@ -24,8 +24,20 @@ test('affiliate routes are connected', () => {
   assert.match(entrySource, /\/api\/affiliate/);
   assert.match(apiSource, /sessionCheck/);
   assert.match(adminSource, /\/api\/affiliate\/overview/);
+  assert.match(adminSource, /\/api\/affiliate\/accounts\/\$\{ACCOUNT\}/);
   assert.match(adminSource, /\/api\/affiliate\/links/);
   assert.match(adminSource, /\/api\/affiliate\/metrics/);
+});
+
+test('Integrations UI exposes Coupang account connection settings', () => {
+  assert.match(adminSource, /Integrations/);
+  assert.match(adminSource, /Coupang Partners/);
+  assert.match(adminSource, /affiliateAccountForm/);
+  assert.match(adminSource, /displayName/);
+  assert.match(adminSource, /defaultChannel/);
+  assert.match(adminSource, /disclosureText/);
+  assert.match(adminSource, /계정 연결 설정 저장/);
+  assert.match(adminSource, /Access Key, Secret Key/);
 });
 
 test('V1 reports manual and automatic capability states', () => {
