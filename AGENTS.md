@@ -7,9 +7,13 @@ EKODI Platform is not a demo site collection. It is a revenue-oriented Agentic A
 - `ekodi.kr`: EKODI front door.
 - `admin.ekodi.kr`: private control plane and operational command center.
 - `api.ekodi.kr`: shared control/data API layer.
-- `marketing.ekodi.kr`: Marketing AI platform hub.
-- Short first-level customer domains are canonical customer entry points.
-- Service-specific details belong in URL paths or product configuration, not increasingly deep public subdomains.
+- `marketing.ekodi.kr`: Marketing AI platform hub and Free/Basic tenant entry namespace.
+- `ai.ekodi.kr`: reserved namespace for dedicated Marketing AI customer workspaces.
+- Marketing AI Free/Basic tenant entry uses `marketing.ekodi.kr/<tenant>`.
+- Marketing AI Plus-or-higher dedicated EKODI workspace uses `<tenant>.ai.ekodi.kr`.
+- Marketing AI Pro-or-higher may additionally map a customer-owned hostname without transferring domain ownership to EKODI.
+- Existing first-level customer domains may remain official public-site domains or compatibility aliases. Do not treat them as the canonical Marketing AI naming standard unless explicitly configured for another product.
+- Service-specific details belong in URL paths or product configuration unless a product has an explicit namespace contract such as `ai.ekodi.kr`.
 
 ## 2. Customer classification is a business invariant
 
@@ -26,10 +30,10 @@ Internal examples:
 Every non-EKODI organization is an external client even when closely partnered with EKODI.
 
 Revenue-critical external clients currently include:
-- `cgma.ekodi.kr` — 청계면상인회
-- `jadam.ekodi.kr` — 자담치킨 목포대점
-- `pizzamaru.ekodi.kr` — 피자마루 목포대점
-- `yogurt.ekodi.kr` — 요거트퍼플 목포대점
+- `cgma.ekodi.kr` — 청계면상인회 public site; `cgma.ai.ekodi.kr` is its dedicated Marketing AI workspace.
+- `jadam.ai.ekodi.kr` — 자담치킨 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
+- `pizzamaru.ai.ekodi.kr` — 피자마루 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
+- `yogurt.ai.ekodi.kr` — 요거트퍼플 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
 
 Do not silently reclassify these tenants.
 

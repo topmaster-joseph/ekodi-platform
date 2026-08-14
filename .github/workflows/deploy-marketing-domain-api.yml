@@ -1,0 +1,184 @@
+name: Deploy Marketing Domain API
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'marketing-domain-control.js'
+      - 'marketing-domain-worker.js'
+      - 'wrangler.marketing-domains.toml'
+      - 'migrations/0017_marketing_custom_domains.sql'
+      - 'test/marketing-custom-domain.test.mjs'
+      - 'deploy/manifests/marketing-domain-api.worker.json'
+      - '.github/workflows/deploy-marketing-domain-api.yml'
+      - 'scripts/guarded-worker-release.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-domain-control.js'
+      - 'marketing-domain-worker.js'
+      - 'wrangler.marketing-domains.toml'
+      - 'migrations/0017_marketing_custom_domains.sql'
+      - 'test/marketing-custom-domain.test.mjs'
+      - 'deploy/manifests/marketing-domain-api.worker.json'
+      - '.github/workflows/deploy-marketing-domain-api.yml'
+      - 'scripts/guarded-worker-release.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-marketing-domain-api-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  DOMAIN_CF_TOKEN: ${{ secrets.MARKETING_DOMAIN_CF_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Marketing domain API and policy
+        run: |
+          set -euo pipefail
+          node --check marketing-domain-control.js
+          node --check marketing-domain-worker.js
+          node --test test/marketing-custom-domain.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          test -f deploy/manifests/marketing-domain-api.worker.json
+          grep -Fq 'main = "marketing-domain-worker.js"' wrangler.marketing-domains.toml
+          grep -Fq "PRO_REQUIRED" marketing-domain-control.js
+          grep -Fq "CNAME" marketing-domain-control.js
+          grep -Fq "marketing_custom_domains" migrations/0017_marketing_custom_domains.sql
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          test -n "$DOMAIN_CF_TOKEN" || (echo 'Missing Marketing domain Cloudflare API token' && exit 1)
+      - name: Resolve or create isolated Marketing domain staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-marketing-domain-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-marketing-domain-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated staging Worker config
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.marketing-domains.staging.toml <<EOF
+          name = "ekodi-marketing-domain-api-staging"
+          main = "marketing-domain-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+
+          [[routes]]
+          pattern = "marketing-api-staging.ekodi.kr"
+          custom_domain = true
+
+          [triggers]
+          crons = ["*/10 * * * *"]
+
+          [vars]
+          ENVIRONMENT = "staging"
+          ALLOWED_ORIGINS = "https://marketing.ekodi.kr,https://auth.ekodi.kr"
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-marketing-domain-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply migrations and deploy isolated staging
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.marketing-domains.staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-domains.staging.toml
+          printf '%s' "$DOMAIN_CF_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put CF_API_TOKEN --config wrangler.marketing-domains.staging.toml
+      - name: Verify staging boundaries
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/health' || true)
+            unauthorized=$(curl -sS -o /tmp/domain-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/domains' || true)
+            preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://marketing.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/domains' || true)
+            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' && [ "$unauthorized" = '401' ] && [ "$preflight" = '204' ]; then
+              echo 'Marketing domain API isolated staging verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f wrangler.marketing-domains.staging.toml
+
+  production:
+    needs: [validate, staging]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          test -n "$DOMAIN_CF_TOKEN" || (echo 'Missing Marketing domain Cloudflare API token' && exit 1)
+      - name: Apply production D1 migration after staging success
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-domains.toml
+      - name: Preview-gated production Worker promotion
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/marketing-domain-api.worker.json
+      - name: Install server-side Cloudflare provider credential
+        run: printf '%s' "$DOMAIN_CF_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put CF_API_TOKEN --config wrangler.marketing-domains.toml
+      - name: Deep verify production API boundary
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/health' || true)
+            unauthorized=$(curl -sS -o /tmp/domain-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/domains' || true)
+            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' && [ "$unauthorized" = '401' ]; then
+              echo 'Marketing domain API production boundary verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
