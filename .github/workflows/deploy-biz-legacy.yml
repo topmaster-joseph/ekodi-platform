@@ -1,20 +1,15 @@
-name: Deploy EKODI Biz Legacy Redirect
+name: Deploy EKODI Biz Legacy Redirect (Manual Topology Change)
+# deployment-guardrail: topology-workflow-manual-only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - biz-legacy-redirect.js
-      - wrangler.biz-legacy.toml
-      - .github/workflows/deploy-biz-legacy.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: ekodi-biz-legacy-redirect
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -39,8 +34,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          api='https://api.cloudflare.com/client/v4'
-          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          api='https://api.cloudflare.com/client/v4'; auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
           curl -fsS "${auth[@]}" "$api/zones?name=ekodibiz.kr" > /tmp/zone.json || exit 0
           zone_id=$(python - <<'PY'
           import json
@@ -54,13 +48,9 @@ jobs:
             python - <<'PY' > /tmp/delete_ids
           import json
           for r in json.load(open('/tmp/records.json')).get('result') or []:
-              if r.get('type') in {'A','AAAA','CNAME'}:
-                  print(r['id'])
+              if r.get('type') in {'A','AAAA','CNAME'}: print(r['id'])
           PY
-            while read -r id; do
-              [ -n "$id" ] || continue
-              curl -fsS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$id" >/dev/null || true
-            done < /tmp/delete_ids
+            while read -r id; do [ -n "$id" ] || continue; curl -fsS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$id" >/dev/null || true; done < /tmp/delete_ids
           done
       - name: Deploy dedicated permanent redirect Worker
         env:
@@ -73,11 +63,9 @@ jobs:
           set -u
           failed=0
           for old in ekodibiz.kr www.ekodibiz.kr; do
-            code=000
-            location=""
+            code=000; location=""
             for attempt in $(seq 1 15); do
-              rm -f /tmp/headers
-              curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old/domain-check?source=biz-legacy" || true
+              rm -f /tmp/headers; curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old/domain-check?source=biz-legacy" || true
               code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/headers 2>/dev/null || echo 0)
               location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
               if [ "$code" = "301" ] && printf '%s' "$location" | grep -q 'https://biz.ekodi.kr/domain-check?source=biz-legacy'; then break; fi
