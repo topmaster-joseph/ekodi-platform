@@ -3,6 +3,7 @@ import authWorker from './auth-worker.js';
 const PREFIX = '/api/community/admin/reports';
 const VALID_STATUS = new Set(['DRAFT', 'AI_DRAFT', 'REVIEW', 'APPROVED', 'SENT']);
 const REPORT_MONTHS = new Set([2, 4, 6, 8, 10, 12]);
+const DEFAULT_SOURCE_URL = 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/community-report-source';
 
 function clean(value, max = 12000) { return String(value ?? '').trim().slice(0, max); }
 function json(data, status = 200, request, env) {
@@ -59,14 +60,24 @@ async function ensureReport(env, year, month) {
     .bind(p.id, year, month, p.activityFrom, p.activityTo, p.planFrom, p.planTo, title).run();
   return p.id;
 }
-function reportRow(row) {
-  return {
+function parseSnapshot(value) {
+  try {
+    const data = JSON.parse(value || '{}');
+    return data && typeof data === 'object' ? data : {};
+  } catch { return {}; }
+}
+function reportRow(row, includeSnapshot = false) {
+  const report = {
     id: row.id, year: Number(row.report_year), month: Number(row.report_month), activityFrom: row.activity_from, activityTo: row.activity_to,
     planFrom: row.plan_from, planTo: row.plan_to, title: row.title, activities: row.activities_text, outcomes: row.outcomes_text,
     evaluation: row.evaluation_text, plans: row.plans_text, requests: row.requests_text, prayers: row.prayers_text, sourceNotes: row.source_notes,
     body: row.body_text, aiMode: row.ai_mode, status: row.status, approvedAt: row.approved_at, sentAt: row.sent_at,
     gmailMessageId: row.gmail_message_id, sendError: row.send_error, createdAt: row.created_at, updatedAt: row.updated_at,
+    sourceStatus: row.source_status || 'not_loaded', sourceCount: Number(row.source_count || 0),
+    sourceRefreshedAt: row.source_refreshed_at || '', sourceError: row.source_error || '',
   };
+  if (includeSnapshot) report.sourceSnapshot = parseSnapshot(row.source_snapshot_json);
+  return report;
 }
 async function settings(env) {
   const row = await env.DB.prepare('SELECT * FROM community_report_settings WHERE id = 1').first();
@@ -79,14 +90,15 @@ function mailConfigured(env) {
   return Boolean(clean(env.GMAIL_CLIENT_ID, 500) && clean(env.GMAIL_CLIENT_SECRET, 500) && clean(env.GMAIL_REFRESH_TOKEN, 2000));
 }
 function aiConfigured(env) { return Boolean(clean(env.OPENAI_API_KEY, 300)); }
+function sourceEndpoint(env) { return clean(env.COMMUNITY_REPORT_SOURCE_URL, 1000) || DEFAULT_SOURCE_URL; }
 async function overview(request, env) {
   const upcoming = nextReportPeriod();
   await ensureReport(env, upcoming.year, upcoming.month);
   const [rows, config] = await Promise.all([
     env.DB.prepare('SELECT * FROM community_ministry_reports ORDER BY report_year DESC, report_month DESC LIMIT 36').all(), settings(env),
   ]);
-  const reports = rows.results.map(reportRow);
-  return json({ reports, settings: config, upcoming, capabilities: { ai: aiConfigured(env), gmail: mailConfigured(env) } }, 200, request, env);
+  const reports = rows.results.map(row => reportRow(row));
+  return json({ reports, settings: config, upcoming, capabilities: { ai: aiConfigured(env), gmail: mailConfigured(env), sources: Boolean(sourceEndpoint(env)) } }, 200, request, env);
 }
 async function updateSettings(request, env, sessionData) {
   const body = await readBody(request); if (!body) return json({ error: '설정 정보를 확인해 주세요.' }, 400, request, env);
@@ -98,7 +110,10 @@ async function updateSettings(request, env, sessionData) {
   await audit(env, sessionData.email, 'community.report.settings.update', 'community', JSON.stringify({ recipient, dueDay, auto }));
   return json({ ok: true, settings: await settings(env) }, 200, request, env);
 }
-async function getReport(env, id) { const row = await env.DB.prepare('SELECT * FROM community_ministry_reports WHERE id = ?').bind(id).first(); return row ? reportRow(row) : null; }
+async function getReport(env, id, includeSnapshot = false) {
+  const row = await env.DB.prepare('SELECT * FROM community_ministry_reports WHERE id = ?').bind(id).first();
+  return row ? reportRow(row, includeSnapshot) : null;
+}
 async function saveReport(request, env, sessionData, id) {
   const current = await getReport(env, id); if (!current) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
   if (current.status === 'SENT') return json({ error: '이미 발송된 보고서는 수정할 수 없습니다.' }, 409, request, env);
@@ -112,32 +127,154 @@ async function saveReport(request, env, sessionData, id) {
   await audit(env, sessionData.email, 'community.report.update', id, JSON.stringify({ status: nextStatus }));
   return json({ ok: true, report: await getReport(env, id) }, 200, request, env);
 }
+
+function compactSourceSnapshot(data) {
+  const snapshot = {
+    period: data?.period || {}, generatedAt: clean(data?.generatedAt, 80), source: clean(data?.source, 120),
+    counts: data?.counts && typeof data.counts === 'object' ? data.counts : {},
+    activityTypeCounts: data?.activityTypeCounts && typeof data.activityTypeCounts === 'object' ? data.activityTypeCounts : {},
+    membershipCounts: data?.membershipCounts && typeof data.membershipCounts === 'object' ? data.membershipCounts : {},
+    privacy: data?.privacy && typeof data.privacy === 'object' ? data.privacy : {},
+    ongoingCircles: Array.isArray(data?.ongoingCircles) ? data.ongoingCircles.slice(0, 40) : [],
+    items: Array.isArray(data?.items) ? data.items.slice(0, 240) : [],
+  };
+  let encoded = JSON.stringify(snapshot);
+  if (encoded.length > 80000) {
+    snapshot.items = snapshot.items.slice(0, 100);
+    encoded = JSON.stringify(snapshot);
+  }
+  return { snapshot, encoded: encoded.slice(0, 80000) };
+}
+async function collectCommunitySources(request, env, report) {
+  const authorization = request.headers.get('authorization') || '';
+  if (!authorization.startsWith('Bearer ')) throw new Error('관리자 인증 토큰이 없어 Community 원자료를 동기화할 수 없습니다.');
+  const endpoint = new URL(sourceEndpoint(env));
+  endpoint.searchParams.set('from', report.activityFrom);
+  endpoint.searchParams.set('to', report.activityTo);
+  const response = await fetch(endpoint.toString(), {
+    method: 'GET',
+    headers: { authorization, accept: 'application/json', 'user-agent': 'EKODI-Community-Reports/1.1' },
+    redirect: 'error',
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error ? `Community 원자료 동기화 실패: ${data.error}` : `Community 원자료 동기화 실패 (${response.status})`);
+  return compactSourceSnapshot(data);
+}
+async function markSourceError(env, id, message) {
+  await env.DB.prepare(`UPDATE community_ministry_reports SET source_status='error', source_error=?, updated_at=? WHERE id=?`)
+    .bind(clean(message, 1000), new Date().toISOString(), id).run();
+}
+async function syncSources(request, env, sessionData, id) {
+  const report = await getReport(env, id, true);
+  if (!report) throw new Error('사역보고를 찾을 수 없습니다.');
+  if (report.status === 'SENT') throw new Error('이미 발송된 보고서는 원자료를 다시 동기화할 수 없습니다.');
+  try {
+    const { snapshot, encoded } = await collectCommunitySources(request, env, report);
+    const now = new Date().toISOString();
+    const count = Math.max(0, Math.trunc(Number(snapshot?.counts?.items ?? snapshot?.items?.length ?? 0)));
+    const who = await adminId(env, sessionData.email);
+    await env.DB.prepare(`UPDATE community_ministry_reports SET source_snapshot_json=?, source_refreshed_at=?, source_status='ready', source_count=?, source_error='', updated_at=?, updated_by=? WHERE id=?`)
+      .bind(encoded, now, count, now, who, id).run();
+    await audit(env, sessionData.email, 'community.report.sources.refresh', id, JSON.stringify({ count }));
+    return await getReport(env, id, true);
+  } catch (error) {
+    await markSourceError(env, id, error.message || '원자료 동기화 실패');
+    await audit(env, sessionData.email, 'community.report.sources.error', id, clean(error.message, 300));
+    throw error;
+  }
+}
+async function sourceDetails(request, env, id) {
+  const report = await getReport(env, id, true);
+  if (!report) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
+  return json({
+    id: report.id,
+    sourceStatus: report.sourceStatus,
+    sourceCount: report.sourceCount,
+    sourceRefreshedAt: report.sourceRefreshedAt,
+    sourceError: report.sourceError,
+    source: report.sourceSnapshot || {},
+  }, 200, request, env);
+}
+async function refreshSources(request, env, sessionData, id) {
+  try {
+    const report = await syncSources(request, env, sessionData, id);
+    return json({
+      ok: true,
+      report: await getReport(env, id),
+      source: report.sourceSnapshot || {},
+    }, 200, request, env);
+  } catch (error) {
+    const report = await getReport(env, id);
+    const status = error.message?.includes('찾을 수') ? 404 : error.message?.includes('이미 발송') ? 409 : 502;
+    return json({ error: error.message, report }, status, request, env);
+  }
+}
+function sourceItemText(item) {
+  const date = clean(item?.date, 10);
+  const label = clean(item?.label || item?.type || item?.kind, 100);
+  const subject = clean(item?.title || item?.circle, 180);
+  const body = item?.body && typeof item.body === 'object' ? item.body : {};
+  const detail = clean(item?.summary || body.summary || body.public_summary || body.text || body.result || body.note || body.prayer_request || body.prayer, 900);
+  return [date, label, subject, detail].filter(Boolean).join(' · ');
+}
+function sourceActivityText(snapshot) {
+  const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
+  const lines = items.map(sourceItemText).filter(Boolean).slice(0, 36);
+  return lines.length ? lines.map(line => `- ${line}`).join('\n') : '';
+}
+function sourceOutcomeText(snapshot) {
+  const c = snapshot?.counts || {};
+  const values = [
+    ['활동기록', c.activities], ['모임 변동', c.circlesTouched], ['참여기록', c.memberships], ['신규 프로필', c.newProfiles], ['운영 중 모임', c.activeCircles],
+  ].filter(([, value]) => Number.isFinite(Number(value)));
+  return values.length ? `자동수집 요약: ${values.map(([label, value]) => `${label} ${Number(value)}건`).join(', ')}` : '';
+}
+function sourcePrayerText(snapshot) {
+  const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
+  const prayers = items.filter(item => /prayer|기도/i.test(`${item?.type || ''} ${item?.label || ''}`)).map(item => {
+    const body = item?.body && typeof item.body === 'object' ? item.body : {};
+    return clean(body.prayer_request || body.prayer || body.summary || body.text || item?.summary, 1000);
+  }).filter(Boolean).slice(0, 12);
+  return prayers.length ? prayers.map(text => `- ${text}`).join('\n') : '';
+}
 function fallbackBody(report) {
   const section = (title, text) => `${title}\n${clean(text, 20000) || '- 확인 및 입력 필요'}`;
+  const snapshot = report.sourceSnapshot || {};
   return [
     report.title,
     `보고기간: ${report.activityFrom} ~ ${report.activityTo}`,
-    '', section('1. 지난 2개월 주요 사역', report.activities || report.sourceNotes),
-    '', section('2. 참여·성과·변화', report.outcomes),
+    '', section('1. 지난 2개월 주요 사역', report.activities || sourceActivityText(snapshot) || report.sourceNotes),
+    '', section('2. 참여·성과·변화', report.outcomes || sourceOutcomeText(snapshot)),
     '', section('3. 감사와 평가', report.evaluation),
     '', `향후 계획기간: ${report.planFrom} ~ ${report.planTo}`,
     section('4. 향후 2개월 계획', report.plans),
     '', section('5. 본부 협조 요청', report.requests),
-    '', section('6. 기도제목', report.prayers),
+    '', section('6. 기도제목', report.prayers || sourcePrayerText(snapshot)),
   ].join('\n');
 }
 function extractOutputText(data) {
   return (data?.output || []).flatMap(item => item?.content || []).filter(part => part?.type === 'output_text').map(part => part.text || '').join('\n').trim();
 }
+function aiSourceFacts(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return {};
+  return {
+    period: snapshot.period || {}, counts: snapshot.counts || {}, activityTypeCounts: snapshot.activityTypeCounts || {},
+    membershipCounts: snapshot.membershipCounts || {}, ongoingCircles: Array.isArray(snapshot.ongoingCircles) ? snapshot.ongoingCircles.slice(0, 25) : [],
+    items: Array.isArray(snapshot.items) ? snapshot.items.slice(0, 120) : [],
+  };
+}
 async function generateWithOpenAI(env, report) {
   if (!aiConfigured(env)) return null;
-  const facts = { activities: report.activities, outcomes: report.outcomes, evaluation: report.evaluation, plans: report.plans, requests: report.requests, prayers: report.prayers, sourceNotes: report.sourceNotes };
+  const facts = {
+    manual: { activities: report.activities, outcomes: report.outcomes, evaluation: report.evaluation, plans: report.plans, requests: report.requests, prayers: report.prayers, sourceNotes: report.sourceNotes },
+    recordedSources: aiSourceFacts(report.sourceSnapshot),
+  };
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       model: clean(env.OPENAI_MODEL, 120) || 'gpt-5',
-      instructions: 'You draft concise Korean ministry reports for EKODI Community. Use only supplied facts. Never invent names, counts, dates, outcomes, or prayer requests. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
+      instructions: 'You draft concise Korean ministry reports for EKODI Community. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical Community records; ongoingCircles are recurring-schedule context only and are not confirmed future events. Future plans must come from manual.plans. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
       input: `보고서: ${report.title}\n활동기간 ${report.activityFrom}~${report.activityTo}\n계획기간 ${report.planFrom}~${report.planTo}\n\n자료(JSON):\n${JSON.stringify(facts)}\n\n다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 본부 협조 요청 6. 기도제목.`,
     }),
   });
@@ -145,16 +282,19 @@ async function generateWithOpenAI(env, report) {
   const data = await response.json(); return extractOutputText(data) || null;
 }
 async function generateDraft(request, env, sessionData, id) {
-  const report = await getReport(env, id); if (!report) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
+  let report = await getReport(env, id, true); if (!report) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
   if (report.status === 'SENT') return json({ error: '이미 발송된 보고서입니다.' }, 409, request, env);
+  let sourceSynced = false;
+  try { report = await syncSources(request, env, sessionData, id); sourceSynced = true; }
+  catch (error) { console.warn('Community report source fallback', error); report = await getReport(env, id, true) || report; }
   let body; let mode = 'smart-template';
   try { body = await generateWithOpenAI(env, report); if (body) mode = 'openai'; } catch (error) { console.warn('Community report AI fallback', error); }
   if (!body) body = fallbackBody(report);
   const who = await adminId(env, sessionData.email); const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE community_ministry_reports SET body_text=?, ai_mode=?, status='AI_DRAFT', send_error='', updated_at=?, updated_by=? WHERE id=?`)
     .bind(body, mode, now, who, id).run();
-  await audit(env, sessionData.email, 'community.report.ai_draft', id, mode);
-  return json({ ok: true, aiMode: mode, report: await getReport(env, id) }, 200, request, env);
+  await audit(env, sessionData.email, 'community.report.ai_draft', id, JSON.stringify({ mode, sourceSynced, sourceCount: report.sourceCount || 0 }));
+  return json({ ok: true, aiMode: mode, sourceSynced, sourceCount: report.sourceCount || 0, report: await getReport(env, id) }, 200, request, env);
 }
 function utf8Base64Url(value) {
   const bytes = new TextEncoder().encode(value); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -192,7 +332,7 @@ async function markSendError(env, id, message) {
   await env.DB.prepare('UPDATE community_ministry_reports SET send_error=?, updated_at=? WHERE id=?').bind(clean(message, 1000), new Date().toISOString(), id).run();
 }
 async function sendApproved(env, id, actorEmail = 'system') {
-  const report = await getReport(env, id); if (!report || report.status !== 'APPROVED' || report.sentAt) return { skipped: true };
+  const report = await getReport(env, id, true); if (!report || report.status !== 'APPROVED' || report.sentAt) return { skipped: true };
   const config = await settings(env);
   try {
     const messageId = await sendGmail(env, config, report); const now = new Date().toISOString();
@@ -236,6 +376,12 @@ export async function handleCommunityReportsRequest(request, env) {
     if (!year || !REPORT_MONTHS.has(month)) return json({ error: '연도와 보고월을 확인해 주세요.' }, 400, request, env);
     const id = await ensureReport(env, year, month); await audit(env, sessionData.email, 'community.report.ensure', id, 'created-or-existing');
     return json({ ok: true, report: await getReport(env, id) }, 200, request, env);
+  }
+  const sourcesMatch = path.match(/^\/api\/community\/admin\/reports\/(\d{4}-(?:02|04|06|08|10|12))\/sources(?:\/(refresh))?$/);
+  if (sourcesMatch) {
+    const [, id, action] = sourcesMatch;
+    if (!action && request.method === 'GET') return sourceDetails(request, env, id);
+    if (action === 'refresh' && request.method === 'POST') return refreshSources(request, env, sessionData, id);
   }
   const match = path.match(/^\/api\/community\/admin\/reports\/(\d{4}-(?:02|04|06|08|10|12))(?:\/(generate|approve|send))?$/);
   if (match) {
