@@ -40,6 +40,8 @@ on:
       - 'domains-hub.css'
       - 'social-admin.js'
       - 'social-admin.css'
+      - 'release-control-admin.js'
+      - 'release-control-admin.css'
       - 'community-reports-admin.js'
       - 'community-reports-admin.css'
       - 'site-worker.js'
@@ -88,6 +90,7 @@ jobs:
           node --check google-admin-auth.js
           node --check domains-hub.js
           node --check social-admin.js
+          node --check release-control-admin.js
           node --check community-reports-admin.js
           node --check site-worker.js
           node --check auth-site/auth.js
@@ -118,10 +121,16 @@ jobs:
           grep -Fq '.campus-row-actions' campus-actions.css
           grep -Fq '/api/control/social/registry' social-admin.js
           grep -Fq '.social-org-card' social-admin.css
+          grep -Fq 'Release Control' release-control-admin.js
+          grep -Fq 'api.github.com/repos' release-control-admin.js
+          grep -Fq 'automaticProductionBypass: false' release-control-admin.js
+          grep -Fq '.release-units' release-control-admin.css
           grep -Fq 'Community Source Evidence' community-reports-admin.js
           grep -Fq '/sources/refresh' community-reports-admin.js
           grep -Fq '.community-report-source-panel' community-reports-admin.css
           grep -Fq "'/social-admin.js'" site-worker.js
+          grep -Fq "'/release-control-admin.js'" site-worker.js
+          grep -Fq 'https://api.github.com' site-worker.js
           grep -Fq "'/community-reports-admin.js'" site-worker.js
           grep -Fq '/api/control/overview' domains-hub.js
           grep -Fq 'Services에서 관리' domains-hub.js
@@ -151,6 +160,8 @@ jobs:
           grep -Fq 'domains-hub.js' scripts/build.mjs
           grep -Fq 'social-admin.css' scripts/build.mjs
           grep -Fq 'social-admin.js' scripts/build.mjs
+          grep -Fq 'release-control-admin.css' scripts/build.mjs
+          grep -Fq 'release-control-admin.js' scripts/build.mjs
           grep -Fq 'community-reports-admin.css' scripts/build.mjs
           grep -Fq 'community-reports-admin.js' scripts/build.mjs
           grep -Fq 'books-distribution-admin.css' scripts/build.mjs
@@ -190,6 +201,7 @@ jobs:
             need_body 'EKODI Control Center' 'Control Center title' || return 1
             need_body 'control-center-features.js' 'lazy feature loader' || return 1
             need_body 'compact-control-center.js' 'Campus UI loader' || return 1
+            need_body 'release-control-admin.js' 'Release Control loader' || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then echo 'admin verify: unexpected redirect header'; return 1; fi
           }
           verify_asset() {
@@ -213,6 +225,8 @@ jobs:
               && verify_asset 'domains-hub.css' '.domains-grid' \
               && verify_asset 'social-admin.js' '/api/control/social/registry' \
               && verify_asset 'social-admin.css' '.social-org-card' \
+              && verify_asset 'release-control-admin.js' 'Release Control' \
+              && verify_asset 'release-control-admin.css' '.release-units' \
               && verify_asset 'community-reports-admin.js' 'Community Source Evidence' \
               && verify_asset 'community-reports-admin.css' '.community-report-source-panel' \
               && verify_asset 'books-finance-admin.js' '출판 · 배포 · 매출 통합 파이프라인' \
