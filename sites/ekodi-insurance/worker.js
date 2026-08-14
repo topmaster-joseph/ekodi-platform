@@ -15,6 +15,9 @@ async function secureAsset(response){
   if(response.headers.get('content-type')?.includes('text/html')){
     let html=await response.text();
     if(!html.includes('/server-bridge.js')) html=html.replace('</head>','  <script src="/server-bridge.js" defer></script>\n</head>');
+    headers.delete('content-length');
+    headers.delete('etag');
+    headers.set('cache-control','no-store');
     return new Response(html,{status:response.status,statusText:response.statusText,headers});
   }
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
