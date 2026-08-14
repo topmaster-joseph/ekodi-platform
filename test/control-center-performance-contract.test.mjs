@@ -15,9 +15,14 @@ test('heavy Control Center features are click-loaded rather than idle-preloaded'
   assert.doesNotMatch(features, /loadIdleQueue/);
   assert.doesNotMatch(features, /queue\.push\(loadClients\)/);
   assert.match(features, /import\(`\.\/\$\{src\}`\)/);
-  for (const section of ['clients', 'admins', 'books', 'affiliates']) {
+  for (const section of ['clients', 'admins', 'affiliates']) {
     assert.match(features, new RegExp(`placeholder\\('${section}'`));
   }
+  // Books is deliberately a stable sidebar entry, but its heavy modules remain click-loaded.
+  assert.match(features, /installStaticBooksNavigation/);
+  assert.match(features, /await loadBooks\(\)/);
+  assert.match(features, /loadModule\('books-admin\.js'\)/);
+  assert.match(features, /loadModule\('books-finance-admin\.js'\)/);
   assert.match(features, /loadFinance\(\)\.catch/);
 });
 
