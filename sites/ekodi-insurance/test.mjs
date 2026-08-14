@@ -7,6 +7,8 @@ const privacyCss=fs.readFileSync(new URL('./public/privacy.css',import.meta.url)
 const chatCss=fs.readFileSync(new URL('./public/chat.css',import.meta.url),'utf8');
 const adminHtml=fs.readFileSync(new URL('./public/admin.html',import.meta.url),'utf8');
 const adminJs=fs.readFileSync(new URL('./public/admin.js',import.meta.url),'utf8');
+const centralEntry=fs.readFileSync(new URL('../../customer-entry-worker.js',import.meta.url),'utf8');
+const centralWrangler=fs.readFileSync(new URL('../../wrangler.api.toml',import.meta.url),'utf8');
 for(const required of ['AI 보험점검','내 보험','청구도움','상담','개인정보 보호센터','보험설계사 되어보기']){if(!html.includes(required))throw new Error(`missing UI: ${required}`)}
 for(const required of ['localStorage','diagnosisPriority','analysisRules','claimDocs','deleteAllDataBtn','setupAdvisorChat','aiReply','humanRequestForm','summarizeConversation']){if(!js.includes(required))throw new Error(`missing behavior: ${required}`)}
 for(const required of ['AI가 먼저 충분히 상담합니다.','설계사 전화상담 요청','AI 상담요약','대화내용','처리상태']){if(!(js+adminHtml).includes(required))throw new Error(`missing consultation contract: ${required}`)}
@@ -26,4 +28,6 @@ for(const marker of ['serverConsultationPanel','상담요청 철회','revokeCons
 if(!worker.includes('실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화'))throw new Error('server-rendered privacy truth copy missing');
 if(!worker.includes('ekodi-insurance-api-green.topmaster-joseph.workers.dev'))throw new Error('Green API CSP allowlist missing');
 if(!worker.includes("frame-ancestors 'none'"))throw new Error('CSP missing');
+for(const marker of ['insuranceAdminEnabled','INSURANCE_ADMIN_ENABLED','disabledInsuranceAdminResponse','INSURANCE_ADMIN_NOT_ENABLED'])if(!centralEntry.includes(marker))throw new Error(`central Insurance default-off gate missing: ${marker}`);
+if(!centralWrangler.includes('INSURANCE_ADMIN_ENABLED = "false"'))throw new Error('production central Insurance admin route must remain disabled by default');
 console.log('EKODI Insurance free-D1 single-source separate-consent consultation checks passed');
