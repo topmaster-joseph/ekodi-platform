@@ -2,6 +2,7 @@ import apiWorker from './api-worker.js';
 import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
+import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { handleBooksRequest } from './books-control.js';
 import { handleBooksFinanceRequest } from './books-finance-control.js';
@@ -160,6 +161,8 @@ export default {
     }
     if (path.startsWith('/api/customer/') || path.startsWith('/api/customers/')) {
       try {
+        const directory = await handleCustomerMemberDirectory(request, env);
+        if (directory) return directory;
         const googlePreregistration = await handleGoogleCustomerPreregistration(request, env);
         if (googlePreregistration) return googlePreregistration;
         const federated = await handleFederatedCustomerAuth(request, env);
