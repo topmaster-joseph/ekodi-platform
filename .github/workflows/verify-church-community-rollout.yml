@@ -12,55 +12,54 @@ permissions:
   contents: read
 
 jobs:
-  preview:
+  production:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Checkout Church staging source
+      - name: Checkout normalized Church main source
         uses: actions/checkout@v7
         with:
           repository: topmaster-joseph/ekodi-church
-          ref: staging/community-rename-20260814
+          ref: main
           path: church
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Church transition
+      - name: Validate normalized Church source
         working-directory: church
         run: |
           set -euo pipefail
           node --check script.js
-          grep -Fq 'https://community.ekodi.kr' script.js
-          grep -Fq 'https://social.ekodi.kr/?org=church' script.js
+          grep -Fq '에코디커뮤니티' index.html
+          grep -Fq 'https://community.ekodi.kr' index.html
+          grep -Fq 'https://social.ekodi.kr/?org=church' index.html
           grep -Fq '에코디커뮤니티 최신 유튜브 영상' script.js
+          if grep -Fq 'EKODI선교회' index.html || grep -Fq '에코디선교회' index.html; then echo 'Legacy formal organization name remains'; exit 1; fi
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Deploy Church preview
-        shell: bash
+      - name: Deploy Church production
         working-directory: church
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4.119.0 pages deploy . --project-name ekodi-church --branch community-brand-preview --commit-dirty=true 2>&1 | tee /tmp/church-preview.log
-          preview_url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' /tmp/church-preview.log | tail -1 || true)
-          test -n "$preview_url" || (echo 'Could not resolve Church preview URL' && exit 1)
-          echo "PREVIEW_URL=$preview_url" >> "$GITHUB_ENV"
-      - name: Verify Church preview
+        run: npx --yes wrangler@4.119.0 pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
+      - name: Verify church.ekodi.kr
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 12); do
-            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PREVIEW_URL/" || true)
-            script_code=$(curl -L -sS -o /tmp/church-script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PREVIEW_URL/script.js" || true)
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/' || true)
+            script_code=$(curl -L -sS -o /tmp/church-script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/script.js' || true)
             if [[ "$root_code" =~ ^[23] ]] && [[ "$script_code" == "200" ]] \
-              && grep -Fq 'EKODI교회' /tmp/church.html \
-              && grep -Fq 'https://community.ekodi.kr' /tmp/church-script.js \
-              && grep -Fq 'https://social.ekodi.kr/?org=church' /tmp/church-script.js; then
-              echo "Church Community rollout preview verified: $PREVIEW_URL"
+              && grep -Fq '에코디커뮤니티' /tmp/church.html \
+              && grep -Fq 'https://community.ekodi.kr' /tmp/church.html \
+              && grep -Fq 'https://social.ekodi.kr/?org=church' /tmp/church.html \
+              && grep -Fq '에코디커뮤니티 최신 유튜브 영상' /tmp/church-script.js \
+              && ! grep -Fq 'EKODI선교회' /tmp/church.html \
+              && ! grep -Fq '에코디선교회' /tmp/church.html; then
+              echo 'Church Community brand production verified.'
               exit 0
             fi
             sleep 5
