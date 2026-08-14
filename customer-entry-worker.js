@@ -27,6 +27,24 @@ function googleAdminEnabled(env = {}) {
   return String(env.GOOGLE_CLIENT_ID || '').trim().endsWith('.apps.googleusercontent.com');
 }
 
+function insuranceAdminEnabled(env = {}) {
+  return String(env.INSURANCE_ADMIN_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+function disabledInsuranceAdminResponse() {
+  return new Response(JSON.stringify({
+    error: '보험 상담관리 운영경로는 아직 활성화되지 않았습니다.',
+    code: 'INSURANCE_ADMIN_NOT_ENABLED',
+  }), {
+    status: 404,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}
+
 function disabledPasswordResponse(kind = 'admin') {
   const admin = kind === 'admin';
   return new Response(JSON.stringify({
@@ -49,6 +67,7 @@ export default {
     const path = new URL(request.url).pathname;
 
     if (path.startsWith('/api/insurance/admin')) {
+      if (!insuranceAdminEnabled(env)) return disabledInsuranceAdminResponse();
       try {
         return await handleInsuranceAdminProxy(request, env, ctx, apiWorker);
       } catch (error) {
