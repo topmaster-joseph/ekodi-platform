@@ -9,12 +9,13 @@ const [ui, css, build] = await Promise.all([
   read('../scripts/build.mjs'),
 ]);
 
-test('compact admin navigation is English and includes Policies', () => {
+test('compact admin navigation is English and includes Campus, Operations and Policies', () => {
   for (const label of [
-    'Overview', 'Services', 'Clients', 'Admin Accounts', 'Finance', 'Mail & Live',
+    'Campus', 'Operations', 'Services', 'Clients', 'Admin Accounts', 'Finance', 'Mail & Live',
     'Cloud & Files', 'Organization', 'Domains & DNS', 'Policies', 'Activity Logs',
   ]) assert.ok(ui.includes(label), `missing navigation label: ${label}`);
   assert.match(ui, /dataSection|dataset\.section|data-section/);
+  assert.match(ui, /campusPanel/);
   assert.match(ui, /policiesPanel/);
 });
 
@@ -30,6 +31,7 @@ test('compact layer reduces dashboard spacing without altering core auth', () =>
   assert.match(css, /topbar\{height:70px/);
   assert.match(css, /content\{max-width:none;padding:18px 22px 34px/);
   assert.match(css, /policy-grid/);
+  assert.match(css, /campus-layout/);
   assert.doesNotMatch(ui, /\/api\/google\/login|\/api\/login/);
 });
 
