@@ -1,0 +1,91 @@
+name: Supabase Local CI
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'auth-site/**'
+      - 'test/**'
+      - '.github/workflows/supabase-local-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'auth-site/**'
+      - 'test/**'
+      - '.github/workflows/supabase-local-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-local-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  SUPABASE_CLI_VERSION: '2.110.0'
+  TEST_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+
+jobs:
+  local-supabase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Initialize ephemeral Supabase config
+        run: npx --yes supabase@$SUPABASE_CLI_VERSION init --force
+
+      - name: Start database-only Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          mv supabase/migrations "$RUNNER_TEMP/ekodi-migrations"
+          mkdir -p supabase/migrations
+          npx --yes supabase@$SUPABASE_CLI_VERSION db start
+          rm -rf supabase/migrations
+          mv "$RUNNER_TEMP/ekodi-migrations" supabase/migrations
+
+      - name: Apply production-compatible test baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            < supabase/ci/platform_baseline.sql
+
+      - name: Apply proposed migrations on baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying $migration"
+            docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration"
+          done
+
+      - name: Lint Postgres functions
+        run: >-
+          npx --yes supabase@$SUPABASE_CLI_VERSION db lint
+          --db-url "$TEST_DB_URL"
+          --level error
+          --fail-on error
+
+      - name: Run pgTAP database contracts
+        run: npx --yes supabase@$SUPABASE_CLI_VERSION test db --db-url "$TEST_DB_URL"
+
+      - name: Run application contract tests
+        run: npm test
+
+      - name: Stop ephemeral Supabase database
+        if: always()
+        shell: bash
+        run: |
+          npx --yes supabase@$SUPABASE_CLI_VERSION stop --no-backup || true
+          docker ps -aq --filter 'name=supabase_db_' | xargs -r docker rm -f || true
