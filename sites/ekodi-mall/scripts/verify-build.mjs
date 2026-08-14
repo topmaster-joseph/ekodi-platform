@@ -23,7 +23,7 @@ const checks = [
   ['assets/storefront.css', ['storefront-public-hero', 'storefront-product']],
   ['assets/marketplace-live.js', ['api/public/products?limit=24', 'Mall 8%', 'dataset.serverProduct']],
   ['assets/free-ops.html', ['FREE · SAFE · MANUAL FIRST', '후보 저장 + 안전판단', '비밀정보 입력 금지', '/assets/free-ops.js']],
-  ['assets/free-ops.js', ['ekodiMallFreeOpsDraftV1', '/api/internal/supplier-candidates', '/assessment', 'DOMEMAE', '']].filter(Boolean)],
+  ['assets/free-ops.js', ['ekodiMallFreeOpsDraftV1', '/api/internal/supplier-discovery/context', '/api/internal/supplier-candidates', '/assessment', '예상 손실']],
   ['assets/free-ops.css', ['free-flow', 'free-form', 'free-item', 'free-result']],
   ['assets/sourcing-lab.html', ['EKODI SOURCING LAB', 'Auto Source', 'Dry-run', '계약 공급자', '/assets/sourcing-lab.js']],
   ['assets/sourcing-lab.js', ['/api/sourcing/providers', '/api/sourcing/sources', '/plan', 'auction-reference', '자동발주 OFF']],
