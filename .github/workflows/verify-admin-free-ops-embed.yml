@@ -1,0 +1,94 @@
+name: Verify Admin Free Ops Embed
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-admin-free-ops-embed.yml'
+      - 'release-control-admin.js'
+      - 'release-control-admin.css'
+      - 'site-worker.js'
+      - 'sites/ekodi-mall/_headers'
+      - 'sites/ekodi-mall/assets/free-ops.js'
+  workflow_run:
+    workflows: ['EKODI Mall · Stage and Deploy']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-admin-free-ops-embed
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify live Admin and Mall framing contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fetch_headers() {
+            url="$1"
+            headers="$2"
+            body="$3"
+            curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true
+          }
+
+          for attempt in $(seq 1 18); do
+            free_code=$(fetch_headers 'https://mall.ekodi.kr/free-ops?embed=admin' /tmp/free-headers /tmp/free-body)
+            root_code=$(fetch_headers 'https://mall.ekodi.kr/' /tmp/mall-headers /tmp/mall-body)
+            admin_code=$(fetch_headers 'https://admin.ekodi.kr/' /tmp/admin-headers /tmp/admin-body)
+            asset_code=$(fetch_headers 'https://admin.ekodi.kr/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset)
+
+            free_ok=false
+            root_ok=false
+            admin_ok=false
+            asset_ok=false
+
+            if [ "$free_code" = '200' ] \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors https://admin\.ekodi\.kr([;[:space:]]|$)' /tmp/free-headers \
+              && ! grep -Eiq '^x-frame-options:[[:space:]]*DENY' /tmp/free-headers \
+              && ! grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/free-headers; then
+              free_ok=true
+            fi
+
+            if [ "$root_code" = '200' ] \
+              && grep -Eiq '^x-frame-options:[[:space:]]*DENY' /tmp/mall-headers \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/mall-headers; then
+              root_ok=true
+            fi
+
+            if [ "$admin_code" = '200' ] \
+              && grep -Eiq '^content-security-policy:.*frame-src[^;]*https://mall\.ekodi\.kr' /tmp/admin-headers \
+              && grep -Eiq '^content-security-policy:.*frame-ancestors '\''none'\''' /tmp/admin-headers; then
+              admin_ok=true
+            fi
+
+            if [ "$asset_code" = '200' ] \
+              && grep -Fq "https://mall.ekodi.kr/free-ops?embed=admin" /tmp/admin-asset \
+              && grep -Fq "dataset.section = 'mall-free-ops'" /tmp/admin-asset; then
+              asset_ok=true
+            fi
+
+            if [ "$free_ok" = true ] && [ "$root_ok" = true ] && [ "$admin_ok" = true ] && [ "$asset_ok" = true ]; then
+              echo 'Admin Free Ops live embed contract verified.'
+              exit 0
+            fi
+
+            echo "attempt=$attempt free=$free_code/$free_ok mall=$root_code/$root_ok admin=$admin_code/$admin_ok asset=$asset_code/$asset_ok"
+            sleep 5
+          done
+
+          echo '--- Free Ops headers ---'
+          cat /tmp/free-headers || true
+          echo '--- Mall root headers ---'
+          cat /tmp/mall-headers || true
+          echo '--- Admin headers ---'
+          cat /tmp/admin-headers || true
+          exit 1
