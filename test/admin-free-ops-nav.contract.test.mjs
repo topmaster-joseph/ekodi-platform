@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [adminJs, siteWorker, mallHeaders, freeOpsJs] = await Promise.all([
+const [adminJs, siteWorker, mallHeaders, freeOpsJs, authRouter] = await Promise.all([
   readFile(new URL('../release-control-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/_headers', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/free-ops.js', import.meta.url), 'utf8'),
+  readFile(new URL('../auth-site/auth-router.js', import.meta.url), 'utf8'),
 ]);
 
 test('admin sidebar renders Mall Free Ops inside the right content panel', () => {
@@ -36,9 +37,20 @@ test('Mall keeps global anti-framing but grants Admin a narrow Free Ops exceptio
   assert.match(mallHeaders, /\/assets\/free-ops\.html[\s\S]*! X-Frame-Options[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
 });
 
-test('embedded Free Ops opens central auth outside the frame and resyncs the Mall session', () => {
+test('embedded Free Ops opens central auth outside the frame and returns to Mall Free Ops', () => {
   assert.match(freeOpsJs, /EMBEDDED=.*embed.*admin/);
+  assert.match(freeOpsJs, /searchParams\.set\('site','mall'\)/);
+  assert.match(freeOpsJs, /searchParams\.set\('return_to','https:\/\/mall\.ekodi\.kr\/free-ops\?embed=admin'\)/);
+  assert.doesNotMatch(freeOpsJs, /site=mall-seller/);
+  assert.doesNotMatch(freeOpsJs, /returnTo=/);
   assert.match(freeOpsJs, /window\.open\(AUTH_URL,'ekodiMallAuth'/);
   assert.match(freeOpsJs, /refreshEmbeddedSession/);
   assert.match(freeOpsJs, /addEventListener\('storage'/);
+});
+
+test('central auth router repairs legacy Free Ops links before loading auth.js', () => {
+  assert.match(authRouter, /'mall-seller':'mall'/);
+  assert.match(authRouter, /!params\.get\('return_to'\)&&params\.get\('returnTo'\)/);
+  assert.match(authRouter, /params\.set\('return_to',params\.get\('returnTo'\)\)/);
+  assert.match(authRouter, /params\.delete\('returnTo'\)/);
 });
