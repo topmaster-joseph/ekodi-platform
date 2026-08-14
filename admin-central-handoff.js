@@ -69,7 +69,7 @@
       keyStatusCell('보안 경계','paymentKeySecurity')
     );
 
-    const note=document.createElement('p');note.id='paymentKeyStatusNote';note.className='payment-key-note';note.textContent='finance-api.ekodi.kr에서 결제 키 상태를 확인하고 있습니다.';
+    const note=document.createElement('p');note.id='paymentKeyStatusNote';note.className='payment-key-note';note.textContent='Finance 화면을 열면 결제 키 상태를 확인합니다.';
     const checked=document.createElement('small');checked.id='paymentKeyChecked';checked.className='payment-key-checked';checked.textContent='';
     panel.append(head,grid,note,checked);
     status.insertAdjacentElement('afterend',panel);
@@ -135,10 +135,10 @@
   }
 
   ensurePaymentKeyPanel();
-  document.querySelector('button.nav[data-section="finance"]')?.addEventListener('click',()=>setTimeout(loadPaymentKeyStatus));
+  const financeButton=document.querySelector('button.nav[data-section="finance"]');
+  financeButton?.addEventListener('click',()=>setTimeout(loadPaymentKeyStatus));
   document.querySelector('#refreshFinance')?.addEventListener('click',()=>setTimeout(loadPaymentKeyStatus,50));
-  const app=document.querySelector('#app');
-  if(app)new MutationObserver(()=>{if(!app.hidden)setTimeout(loadPaymentKeyStatus);}).observe(app,{attributes:true,attributeFilter:['hidden']});
-  if(app&&!app.hidden)setTimeout(loadPaymentKeyStatus);
-  setInterval(()=>{if(app&&!app.hidden&&adminToken())loadPaymentKeyStatus();},120000);
+  setInterval(()=>{
+    if(financeButton?.classList.contains('active')&&adminToken())loadPaymentKeyStatus();
+  },120000);
 })();
