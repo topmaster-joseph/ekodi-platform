@@ -2,14 +2,15 @@
   const STAGING_API = 'https://insurance-api-staging.ekodi.kr';
   const GREEN_API = 'https://ekodi-insurance-api-green.topmaster-joseph.workers.dev';
   const PRODUCTION_API = 'https://insurance-api.ekodi.kr';
+  const GREEN_HOST = 'ekodi-insurance-green.topmaster-joseph.workers.dev';
+  const IS_PRODUCTION_UI = location.hostname === 'ins.ekodi.kr' || location.hostname === GREEN_HOST;
   const API = location.hostname === 'ins.ekodi.kr'
     ? PRODUCTION_API
-    : location.hostname === 'ekodi-insurance-green.topmaster-joseph.workers.dev'
+    : location.hostname === GREEN_HOST
       ? GREEN_API
       : STAGING_API;
   const STATE_KEY = 'ekodi-insurance-staging-v3';
   const ACCESS_KEY = 'ekodi-insurance-consultation-access-v1';
-  const snapshots = new WeakMap();
 
   function toast(message) {
     const el = document.createElement('div');
@@ -23,6 +24,16 @@
       const state = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
       return Array.isArray(state?.advisorChat?.messages) ? state.advisorChat.messages.slice(-20) : [];
     } catch { return []; }
+  }
+  function loadAccess() {
+    try {
+      const items = JSON.parse(localStorage.getItem(ACCESS_KEY) || '[]');
+      return Array.isArray(items) ? items.filter(item => item?.id && item?.accessToken) : [];
+    } catch { return []; }
+  }
+  function writeAccess(items) {
+    localStorage.setItem(ACCESS_KEY, JSON.stringify(items.slice(0, 20)));
+    renderWithdrawalPanel();
   }
   function handoffForm(form) {
     return form instanceof HTMLFormElement && form.querySelector('[name="contact"]') && form.querySelector('[name="name"]');
@@ -92,17 +103,17 @@
   }
   function saveAccess(consultation, accessToken) {
     if (!consultation?.id || !accessToken) return;
-    let items = [];
-    try { items = JSON.parse(localStorage.getItem(ACCESS_KEY) || '[]'); } catch {}
-    if (!Array.isArray(items)) items = [];
+    const items = loadAccess().filter(item => item.id !== consultation.id);
     items.unshift({ id: consultation.id, accessToken, status: consultation.status, createdAt: consultation.createdAt });
-    localStorage.setItem(ACCESS_KEY, JSON.stringify(items.slice(0, 20)));
+    writeAccess(items);
   }
-  async function submitHandoff(payload) {
+  async function submitHandoff(payload, form) {
     if (!payload.shareConsent) {
       toast('설계사 연락요청에는 연락정보 처리 동의가 필요합니다. AI 대화 공유는 선택입니다.');
       return;
     }
+    const submit = form?.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = true;
     try {
       const response = await fetch(`${API}/api/consultations`, {
         method: 'POST',
@@ -112,13 +123,81 @@
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || '상담요청 저장 실패');
       saveAccess(body.consultation, body.accessToken);
+      form?.reset();
+      form?.classList.add('hidden');
       toast(body.consultation?.transcriptShared
         ? '상담요청과 선택한 AI 대화가 암호화되어 등록되었습니다.'
         : '상담요청이 등록되었습니다. AI 대화 원문은 공유하지 않았습니다.');
     } catch (error) {
       console.error('Insurance handoff bridge', error);
       toast('상담요청 서버 연결을 확인해 주세요. 브라우저의 보험관리 기록은 그대로 유지됩니다.');
+    } finally {
+      if (submit) submit.disabled = false;
     }
+  }
+  async function revokeConsultation(item, button) {
+    if (!item?.id || !item?.accessToken) return;
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch(`${API}/api/consultations/${encodeURIComponent(item.id)}/revoke`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accessToken: item.accessToken })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || '상담요청 철회 실패');
+      writeAccess(loadAccess().filter(entry => entry.id !== item.id));
+      toast('상담요청을 철회하고 서버의 연락처·공유대화 암호문을 제거했습니다.');
+    } catch (error) {
+      console.error('Insurance consultation revoke', error);
+      toast('상담요청 철회에 실패했습니다. 네트워크 연결을 확인해 주세요.');
+      if (button) button.disabled = false;
+    }
+  }
+  function renderWithdrawalPanel() {
+    const privacy = document.getElementById('privacy');
+    if (!privacy) return;
+    let panel = document.getElementById('serverConsultationPanel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'serverConsultationPanel';
+      panel.className = 'panel';
+      panel.innerHTML = '<div class="panel-head"><div><p class="eyebrow">SERVER CONSULTATIONS</p><h3>설계사 상담요청 관리</h3></div><span class="pill neutral" id="serverConsultationCount">0건</span></div><p class="muted">이 브라우저에서 요청한 서버 상담만 표시합니다. 철회하면 서버의 암호화 연락처와 선택 공유대화가 제거됩니다.</p><div id="serverConsultationList" class="list-empty">현재 브라우저에 철회 가능한 상담요청 기록이 없습니다.</div>';
+      privacy.append(panel);
+    }
+    const items = loadAccess();
+    const count = panel.querySelector('#serverConsultationCount');
+    const list = panel.querySelector('#serverConsultationList');
+    if (count) count.textContent = `${items.length}건`;
+    if (!list) return;
+    if (!items.length) {
+      list.className = 'list-empty';
+      list.textContent = '현재 브라우저에 철회 가능한 상담요청 기록이 없습니다.';
+      return;
+    }
+    list.className = '';
+    list.innerHTML = '';
+    items.forEach(item => {
+      const row = document.createElement('article');
+      row.className = 'policy-item';
+      const info = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = '설계사 상담요청';
+      const small = document.createElement('small');
+      const date = item.createdAt ? new Date(item.createdAt).toLocaleString('ko-KR') : '요청시각 미상';
+      small.textContent = `${date} · ${item.id}`;
+      info.append(strong, small);
+      const actions = document.createElement('div');
+      actions.className = 'policy-actions';
+      const revoke = document.createElement('button');
+      revoke.type = 'button';
+      revoke.className = 'danger-link';
+      revoke.textContent = '상담요청 철회';
+      revoke.addEventListener('click', () => revokeConsultation(item, revoke));
+      actions.append(revoke);
+      row.append(info, actions);
+      list.append(row);
+    });
   }
   function reviseHandoffCopy(root = document) {
     root.querySelectorAll?.('form').forEach(form => {
@@ -134,17 +213,20 @@
     root.querySelectorAll?.('.chat-panel .notice').forEach(el => {
       el.textContent = 'AI 대화는 기본적으로 브라우저에만 남습니다. 실제 설계사 연결 시 연락정보만 필수 처리하며, AI 대화 원문 공유는 별도로 선택할 수 있습니다.';
     });
+    root.querySelectorAll?.('.admin-preview-link').forEach(link => {
+      link.textContent = IS_PRODUCTION_UI ? '상담관리 →' : '스테이징 상담관리 보기 →';
+      if (IS_PRODUCTION_UI) link.href = 'https://admin.ekodi.kr/';
+    });
+    renderWithdrawalPanel();
   }
 
   document.addEventListener('submit', event => {
-    if (handoffForm(event.target)) snapshots.set(event.target, formSnapshot(event.target));
-  }, true);
-  document.addEventListener('submit', event => {
     if (!handoffForm(event.target)) return;
-    const payload = snapshots.get(event.target);
-    snapshots.delete(event.target);
-    if (payload?.name && payload?.contact) queueMicrotask(() => submitHandoff(payload));
-  });
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const payload = formSnapshot(event.target);
+    if (payload?.name && payload?.contact) queueMicrotask(() => submitHandoff(payload, event.target));
+  }, true);
 
   const observer = new MutationObserver(records => {
     for (const record of records) {
