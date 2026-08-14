@@ -89,7 +89,7 @@ jobs:
           done
       - name: Deploy EKODI root and gateways
         run: npm run deploy:site
-      - name: Verify root, admin, Books admin, pay and trading domains
+      - name: Verify root, lightweight admin shell, Books lazy loader, pay and trading domains
         shell: bash
         run: |
           set -euo pipefail
@@ -97,14 +97,18 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
             admin_code=$(curl -L -sS -o /tmp/admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
             books_admin_code=$(curl -L -sS -o /tmp/books-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/books' || true)
+            feature_loader_code=$(curl -sS -D /tmp/feature-loader-headers -o /tmp/control-center-features.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/control-center-features.js' || true)
             books_admin_asset=$(curl -sS -o /tmp/books-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/books-admin.js' || true)
             pay_code=$(curl -L -sS -o /tmp/pay.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://pay.ekodi.kr/' || true)
             trade_code=$(curl -L -sS -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
             legacy_code=$(curl -L -sS -o /tmp/legacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.biz.ekodi.kr/' || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^[23] ]] && [[ "$books_admin_code" =~ ^[23] ]] && [[ "$books_admin_asset" = '200' ]] && [[ "$pay_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_code" =~ ^[23] ]] \
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^[23] ]] && [[ "$books_admin_code" =~ ^[23] ]] && [[ "$feature_loader_code" = '200' ]] && [[ "$books_admin_asset" = '200' ]] && [[ "$pay_code" =~ ^[23] ]] && [[ "$trade_code" =~ ^[23] ]] && [[ "$legacy_code" =~ ^[23] ]] \
               && grep -Fq 'CONNECTED ECOSYSTEM' /tmp/root.html \
               && grep -Fq '결제 · 회계 관제' /tmp/admin.html \
-              && grep -Fq 'books-admin.js' /tmp/books-admin.html \
+              && grep -Fq 'control-center-features.js' /tmp/books-admin.html \
+              && grep -Fq "loadScript('books-admin.js')" /tmp/control-center-features.js \
+              && grep -Fq "loadScript('finance-monitor.js')" /tmp/control-center-features.js \
+              && grep -Fiq 'cache-control: public, max-age=0, must-revalidate' /tmp/feature-loader-headers \
               && grep -Fq 'Books Control' /tmp/books-admin.js \
               && grep -Fq 'EKODI Pay' /tmp/pay.html \
               && grep -Fq 'EKODI GLOBAL TRADING' /tmp/trade.html \
