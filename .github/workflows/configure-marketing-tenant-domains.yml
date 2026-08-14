@@ -1,0 +1,170 @@
+name: Configure Marketing Tenant Domains
+
+on:
+  pull_request:
+    paths:
+      - 'config/marketing-tenants.json'
+      - '.github/workflows/configure-marketing-tenant-domains.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/marketing-tenants.json'
+      - '.github/workflows/configure-marketing-tenant-domains.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-tenant-domains
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate tenant domain registry
+        run: |
+          python - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          cfg = json.loads(Path('config/marketing-tenants.json').read_text())
+          assert cfg['domainPattern'] == 'marketing.{tenant}.ekodi.kr'
+          assert cfg['hub']['domain'] == 'marketing.ekodi.kr'
+          assert cfg['hub']['project'] == 'marketing-ai'
+
+          seen_tenants = set()
+          seen_domains = {cfg['hub']['domain']}
+          for row in cfg['tenants']:
+              tenant = row['tenant']
+              domain = row['domain']
+              project = row['project']
+              assert re.fullmatch(r'[a-z0-9][a-z0-9-]*', tenant), tenant
+              assert domain == f'marketing.{tenant}.ekodi.kr', domain
+              assert tenant not in seen_tenants, tenant
+              assert domain not in seen_domains, domain
+              assert project, row
+              assert row.get('name'), row
+              assert domain not in row.get('legacyDomains', []), row
+              seen_tenants.add(tenant)
+              seen_domains.add(domain)
+
+          print('Validated Marketing AI domain standard for:', ', '.join(sorted(seen_tenants)))
+          PY
+
+  apply:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Attach canonical tenant domains and configure DNS
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          test -n "$zone_id" || { echo 'ekodi.kr zone not found'; exit 1; }
+
+          pages_target() {
+            project="$1"
+            curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project" | python -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])"
+          }
+
+          attach_domain() {
+            project="$1"; domain="$2"
+            code=$(curl -sS -o /tmp/domain.json -w '%{http_code}' "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain")
+            if [ "$code" = '200' ]; then
+              echo "$domain already attached to $project"
+              return 0
+            fi
+            create=$(curl -sS -o /tmp/domain-create.json -w '%{http_code}' -X POST "${auth[@]}" \
+              --data "{\"name\":\"$domain\"}" \
+              "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains")
+            case "$create" in
+              200|201) echo "$domain attached to $project" ;;
+              *) cat /tmp/domain-create.json; echo "Custom domain attach failed: $domain -> $project HTTP $create"; return 1 ;;
+            esac
+          }
+
+          upsert_cname() {
+            name="$1"; target="$2"
+            code=$(curl -sS -o /tmp/existing.json -w '%{http_code}' "${auth[@]}" "$api/zones/$zone_id/dns_records?type=CNAME&name=$name")
+            [ "$code" = '200' ] || { cat /tmp/existing.json; echo "DNS lookup failed: $name HTTP $code"; return 1; }
+            record_id=$(python -c "import json; d=json.load(open('/tmp/existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
+            payload="{\"type\":\"CNAME\",\"name\":\"$name\",\"content\":\"$target\",\"ttl\":1,\"proxied\":true,\"comment\":\"EKODI Marketing AI canonical tenant domain\"}"
+            if [ -n "$record_id" ]; then
+              write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X PUT "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records/$record_id")
+            else
+              write_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records")
+            fi
+            case "$write_code" in
+              200|201) echo "$name -> $target" ;;
+              *) cat /tmp/dns.json; echo "DNS upsert failed: $name HTTP $write_code"; return 1 ;;
+            esac
+          }
+
+          python - <<'PY' > /tmp/marketing-tenants.tsv
+          import json
+          cfg=json.load(open('config/marketing-tenants.json'))
+          for row in cfg['tenants']:
+              print('\t'.join([row['tenant'], row['project'], row['domain'], row['name']]))
+          PY
+
+          while IFS=$'\t' read -r tenant project domain name; do
+            [ -n "$tenant" ] || continue
+            target="$(pages_target "$project")"
+            attach_domain "$project" "$domain"
+            upsert_cname "$domain" "$target"
+          done < /tmp/marketing-tenants.tsv
+
+      - name: Verify canonical domains without retiring legacy aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > /tmp/marketing-verify.tsv
+          import json
+          cfg=json.load(open('config/marketing-tenants.json'))
+          for row in cfg['tenants']:
+              print('\t'.join([row['domain'], row['name'], ','.join(row.get('legacyDomains', []))]))
+          PY
+
+          for attempt in $(seq 1 24); do
+            ok=1
+            while IFS=$'\t' read -r domain needle legacy; do
+              [ -n "$domain" ] || continue
+              code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
+              echo "$domain http=$code"
+              if [ "$code" != '200' ] || ! grep -Fq "$needle" /tmp/site.html; then ok=0; fi
+
+              IFS=',' read -ra legacy_list <<< "$legacy"
+              for legacy_domain in "${legacy_list[@]}"; do
+                [ -n "$legacy_domain" ] || continue
+                legacy_code=$(curl -L -sS -o /tmp/legacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$legacy_domain/" || true)
+                echo "$legacy_domain legacy_http=$legacy_code"
+                if [ "$legacy_code" != '200' ]; then ok=0; fi
+              done
+            done < /tmp/marketing-verify.tsv
+
+            if [ "$ok" -eq 1 ]; then
+              echo 'Canonical Marketing AI tenant domains verified; legacy aliases remain available.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
