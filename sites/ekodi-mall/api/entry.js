@@ -1,6 +1,7 @@
 import core from './worker.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
+import { handleVerificationRequest, verificationSchemaReady } from './verification.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -26,7 +27,7 @@ function headers(origin, env) {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
-    'access-control-allow-headers': 'authorization, content-type, x-ekodi-mall-internal-token',
+    'access-control-allow-headers': 'authorization, content-type, x-ekodi-mall-internal-token, x-ekodi-mall-ops-token',
     'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'access-control-max-age': '86400',
     vary: 'Origin'
@@ -183,8 +184,19 @@ export default {
       const coreBody = await coreResponse.clone().json().catch(() => ({}));
       const firstTouchReady = Boolean(env.DB) && await attributionSchemaReady(env);
       const sourcingReady = Boolean(env.DB) && await sourcingSchemaReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady;
-      return reply({ ...coreBody, ok, version: 3, environment: env.ENVIRONMENT || 'unknown', firstTouchSchemaReady: firstTouchReady, sourcingSchemaReady: sourcingReady, attributionWindowDays: ATTRIBUTION_WINDOW_DAYS }, ok ? 200 : 503, origin, env);
+      const verificationReady = Boolean(env.DB) && await verificationSchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && verificationReady;
+      return reply({
+        ...coreBody,
+        ok,
+        version: 4,
+        environment: env.ENVIRONMENT || 'unknown',
+        firstTouchSchemaReady: firstTouchReady,
+        sourcingSchemaReady: sourcingReady,
+        verificationSchemaReady: verificationReady,
+        attributionWindowDays: ATTRIBUTION_WINDOW_DAYS,
+        operationsReviewConfigured: Boolean(env.MALL_OPERATIONS_TOKEN)
+      }, ok ? 200 : 503, origin, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
@@ -204,6 +216,9 @@ export default {
       const result = await firstTouch(env, body);
       return reply(result.body, result.status, origin, env);
     }
+
+    const verification = await handleVerificationRequest(request, env);
+    if (verification) return reply(verification.body, verification.status, origin, env);
 
     if (url.pathname.startsWith('/api/sourcing/')) {
       const plan = await handleSourcingPlanRequest(request, env);
