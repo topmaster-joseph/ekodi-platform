@@ -27,12 +27,23 @@ test('first-touch migration is additive after order/settlement migration', async
   assert.match(sql, /fee_rate_percent INTEGER NOT NULL CHECK \(fee_rate_percent IN \(7,8,9,10\)\)/);
 });
 
-test('entry layer delegates existing orders, Toss and settlement API to core worker', async () => {
+test('verification migration keeps requests and operator audit inside Mall D1', async () => {
+  const sql = await readFile(new URL('./migrations/0005_verification_readiness.sql', import.meta.url), 'utf8');
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS verification_requests/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS mall_ops_audit/);
+  assert.match(sql, /WHERE status IN \('submitted','under_review'\)/);
+  assert.match(sql, /REFERENCES seller_profiles\(user_id\)/);
+});
+
+test('entry layer delegates verification, orders, Toss and settlement API without merging runtimes', async () => {
   const source = await readFile(new URL('./entry.js', import.meta.url), 'utf8');
   assert.match(source, /import core from '\.\/worker\.js'/);
+  assert.match(source, /handleVerificationRequest/);
+  assert.match(source, /verificationSchemaReady/);
   assert.match(source, /return core\.fetch\(request, env\)/);
   assert.match(source, /\/api\/public\/attribution\/visit/);
   assert.match(source, /\/api\/public\/products/);
+  assert.match(source, /version:\s*4/);
 });
 
 test('legacy MallCatalog Durable Object export remains non-destructive during D1 cutover', async () => {
