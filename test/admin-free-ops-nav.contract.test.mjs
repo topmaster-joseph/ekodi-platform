@@ -32,6 +32,7 @@ test('Mall keeps global anti-framing but grants Admin a narrow Free Ops exceptio
   assert.match(globalBlock, /X-Frame-Options: DENY/);
   assert.match(globalBlock, /frame-ancestors 'none'/);
   assert.match(mallHeaders, /\/free-ops\*[\s\S]*! X-Frame-Options[\s\S]*! Content-Security-Policy[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
+  assert.match(mallHeaders, /\/assets\/free-ops\n[\s\S]*! X-Frame-Options[\s\S]*! Content-Security-Policy[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
   assert.match(mallHeaders, /\/assets\/free-ops\.html[\s\S]*! X-Frame-Options[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
 });
 
