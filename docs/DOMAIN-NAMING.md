@@ -168,3 +168,33 @@ The Google Drive information architecture must mirror the EKODI domain architect
 - Domain aliases and legacy standalone domains do not create separate primary Drive trees. Their content belongs under the canonical `*.ekodi.kr` folder.
 
 This keeps DNS, web services, mail entry points, Google Drive, and operational naming aligned as one EKODI information architecture.
+
+## 9. Customer AI workspace namespace
+
+`ai.ekodi.kr` is reserved as the namespace for dedicated customer AI workspaces. It is intentionally separate from the shared Marketing AI product hub `marketing.ekodi.kr`.
+
+Use the pattern:
+
+`<customer>.ai.ekodi.kr`
+
+Examples:
+
+- 청계면상인회 official site: `cgma.ekodi.kr`
+- 청계면상인회 AI workspace: `cgma.ai.ekodi.kr`
+- Store Plus/Pro workspace: `jadam.ai.ekodi.kr`
+
+The public website and AI workspace must be treated as separate addresses even when they belong to the same customer. This prevents a customer's public brand site from becoming technically coupled to its AI subscription.
+
+### AI domain entitlement
+
+- Organization/site customer workspace: dedicated `<organization>.ai.ekodi.kr`.
+- Store Basic, including a store receiving Basic as an organization-member benefit: no dedicated store subdomain.
+- Store Plus: dedicated `<store>.ai.ekodi.kr`.
+- Store Pro: dedicated `<store>.ai.ekodi.kr` plus one customer-owned custom hostname mapping by default.
+- Enterprise: custom hostname quantity and routing are contract-based.
+
+### Customer-owned custom domain
+
+A Pro custom domain is a hostname the customer already owns or controls, such as `ai.customer.com` or `marketing.customer.com`, mapped to the same EKODI AI workspace. EKODI does not acquire ownership of the customer's domain and domain registration/renewal is not included by default. The mapping is a branded entrance to the EKODI-hosted service, not a transfer of the underlying platform.
+
+The customer keeps registrar and DNS ownership. EKODI manages the application-side mapping, tenant routing and HTTPS configuration required to serve the workspace through that hostname. The canonical `*.ai.ekodi.kr` hostname remains the platform identity while the plan entitlement is active.
