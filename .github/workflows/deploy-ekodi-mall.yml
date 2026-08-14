@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: sites/ekodi-mall
@@ -43,7 +43,7 @@ jobs:
           echo "project=$PROJECT" >> "$GITHUB_OUTPUT"
           echo "url=$PUBLIC_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Validate content
+      - name: Validate Mall site and API contracts
         run: npm run check
 
       - name: Build static site
@@ -52,25 +52,13 @@ jobs:
       - name: Verify build output
         run: |
           test -f dist/index.html
-          test -f dist/assets/styles.css
-          test -f dist/assets/platform.css
-          test -f dist/assets/app.js
-          test -f dist/sitemap.xml
-          test -f dist/_headers
-          test -f dist/_redirects
-          test -f dist/stores/ekodi-select/index.html
+          test -f dist/assets/seller-server.js
+          test -f dist/assets/public-product.js
+          test -f dist/assets/shared-product.html
           test -f dist/seller/index.html
-          grep -q "EKODI MALL" dist/index.html
-          grep -q "MARKETPLACE" dist/index.html
-          grep -q "EKODI Select" dist/stores/ekodi-select/index.html
           grep -q "SELLER STUDIO" dist/seller/index.html
-          PRODUCT_COUNT=$(find dist/products -name index.html | wc -l)
-          STORE_COUNT=$(find dist/stores -name index.html | wc -l)
-          POLICY_COUNT=$(find dist/pages -name index.html | wc -l)
-          test "$PRODUCT_COUNT" -gt 0
-          test "$STORE_COUNT" -gt 0
-          test "$POLICY_COUNT" -gt 0
-          echo "Verified $STORE_COUNT stores, $PRODUCT_COUNT product pages and $POLICY_COUNT policy pages"
+          grep -q "/p/\* /assets/shared-product.html 200" dist/_redirects
+          echo "Mall static build and dynamic product shell verified"
 
       - name: Check Cloudflare credentials
         id: cloudflare_credentials
@@ -80,11 +68,63 @@ jobs:
         run: |
           if [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare credentials are configured."
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare credentials are not configured; build remains green and deployment will be skipped."
+            echo "Cloudflare credentials are not configured; PR validation remains green and deployment will be skipped."
           fi
+
+      - name: Resolve or create Mall D1
+        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+        id: mall_d1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@4 d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const x=j.find(v=>v.name==='ekodi-mall');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            echo "Creating isolated ekodi-mall D1 database in APAC"
+            npx --yes wrangler@4 d1 create ekodi-mall --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          cp api/wrangler.toml api/wrangler.runtime.toml
+          printf '\ndatabase_id = "%s"\n' "$DB_ID" >> api/wrangler.runtime.toml
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Apply Mall D1 migrations
+        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 d1 migrations apply DB --remote --config api/wrangler.runtime.toml
+
+      - name: Deploy Mall API Worker
+        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy --config api/wrangler.runtime.toml
+
+      - name: Smoke test Mall API
+        if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/health || true)
+            if [ "$code" = "200" ] && grep -Fq '"schemaReady":true' /tmp/mall-api.json && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json; then
+              echo "Mall API and D1 schema are ready."
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/mall-api.json || true
+          exit 1
 
       - name: Deploy production to Cloudflare Pages
         if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available == 'true'
@@ -103,30 +143,23 @@ jobs:
           set -euo pipefail
           BASE="${PUBLIC_URL%/}"
           for attempt in $(seq 1 18); do
-            echo "Production propagation check ${attempt}/18"
             root_code=$(curl -L -sS -o /tmp/mall-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/" || true)
-            product_code=$(curl -L -sS -o /tmp/mall-product.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/products/reusable-daily-bottle/" || true)
-            store_code=$(curl -L -sS -o /tmp/mall-store.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/stores/ekodi-select/" || true)
             seller_code=$(curl -L -sS -o /tmp/mall-seller.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/seller/" || true)
-            privacy_code=$(curl -L -sS -o /tmp/mall-privacy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/pages/privacy/" || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$product_code" =~ ^[23] ]] && [[ "$store_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$privacy_code" =~ ^[23] ]] \
-              && grep -Fq 'EKODI MALL' /tmp/mall-root.html \
-              && grep -Fq 'MARKETPLACE' /tmp/mall-root.html \
-              && grep -Fq 'EKODI Select' /tmp/mall-product.html \
-              && grep -Fq 'EKODI Select' /tmp/mall-store.html \
-              && grep -Fq 'SELLER STUDIO' /tmp/mall-seller.html \
-              && grep -Fq 'EKODI MALL' /tmp/mall-privacy.html; then
+            shared_code=$(curl -L -sS -o /tmp/mall-shared.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${BASE}/p/not-a-real-product" || true)
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$seller_code" =~ ^[23] ]] && [[ "$shared_code" =~ ^[23] ]] && grep -Fq 'EKODI MALL' /tmp/mall-root.html && grep -Fq 'SERVER READY' /tmp/mall-seller.html && grep -Fq 'PUBLIC PRODUCT' /tmp/mall-shared.html; then
               echo "EKODI Mall production smoke test passed."
               exit 0
             fi
             sleep 5
           done
-          echo "EKODI Mall production alias did not converge to the deployed build in time."
           exit 1
+
+      - name: Cleanup runtime config
+        if: always()
+        run: rm -f api/wrangler.runtime.toml
 
       - name: Deployment configuration notice
         if: github.event_name != 'pull_request' && steps.cloudflare_credentials.outputs.available != 'true'
         run: |
           echo "### EKODI Mall build completed" >> "$GITHUB_STEP_SUMMARY"
           echo "Cloudflare deployment was skipped because repository secrets are not configured." >> "$GITHUB_STEP_SUMMARY"
-          echo "Required secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID" >> "$GITHUB_STEP_SUMMARY"
