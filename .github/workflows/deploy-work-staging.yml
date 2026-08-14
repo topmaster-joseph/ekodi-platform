@@ -1,0 +1,64 @@
+name: Deploy EKODI Work Staging
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'work/**'
+      - 'work-worker.js'
+      - 'wrangler.work-staging.toml'
+      - 'auth-site/client-auth.js'
+      - 'auth-site/auth-router.js'
+      - '.github/workflows/deploy-work-staging.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-work-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-work-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Static validation
+        run: |
+          set -euo pipefail
+          node --check work-worker.js
+          node --check work/app.js
+          grep -Fq 'AI recommends · Human decides' work/index.html
+          grep -Fq '/config.js' work/index.html
+          grep -Fq 'DATA_ENABLED = "false"' wrangler.work-staging.toml
+      - name: Deploy isolated staging Worker
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: npx wrangler deploy --config wrangler.work-staging.toml
+      - name: Verify staging hostname and data isolation
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            root_code=$(curl -L -sS -o /tmp/work-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            config_code=$(curl -sS -o /tmp/work-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
+            health_code=$(curl -sS -o /tmp/work-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] \
+              && grep -Fq 'EKODI Work' /tmp/work-stage.html \
+              && grep -Fq '"dataEnabled":false' /tmp/work-stage-config.js \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/work-stage-health.json \
+              && grep -Fq '"dataEnabled":false' /tmp/work-stage-health.json; then
+              echo "EKODI Work staging verified and isolated at $STAGING_URL"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'EKODI Work staging verification failed or data isolation was lost.'
+          exit 1
