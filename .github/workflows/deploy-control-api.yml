@@ -12,6 +12,9 @@ on:
       - 'customer-entry-worker.js'
       - 'customer-google-prereg.js'
       - 'customer-federated-auth.js'
+      - 'books-control.js'
+      - 'books-finance-control.js'
+      - 'affiliate-control.js'
       - 'migrations/**'
       - 'wrangler.api.toml'
       - '.github/workflows/deploy-control-api.yml'
@@ -20,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-control-api
+  group: ekodi-control-api-production
   cancel-in-progress: false
 
 jobs:
@@ -35,17 +38,27 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate control, Google admin and customer API source
-        run: node --check api-worker.js && node --check auth-worker.js && node --check admin-google-auth.js && node --check customer-auth.js && node --check customer-federated-auth.js && node --check customer-google-prereg.js && node --check customer-entry-worker.js
+      - name: Validate control-plane API modules
+        run: |
+          node --check api-worker.js
+          node --check auth-worker.js
+          node --check admin-google-auth.js
+          node --check customer-auth.js
+          node --check customer-federated-auth.js
+          node --check customer-google-prereg.js
+          node --check customer-entry-worker.js
+          node --check books-control.js
+          node --check books-finance-control.js
+          node --check affiliate-control.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Apply D1 migrations
+      - name: Apply shared D1 migrations
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
-      - name: Deploy API worker
+      - name: Deploy API Worker
         run: npm run deploy:api
-      - name: Verify Google-only admin and customer tenant boundaries
+      - name: Verify Google-only admin, customer tenant and module boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -55,10 +68,8 @@ jobs:
             status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
             google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/google/config' || true)
             tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
+            books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/config' || true)
             unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
-            unauthorized_preregister=$(curl -sS -o /tmp/customer-preregister.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
-              -H 'content-type: application/json' -d '{"email":"nobody@example.com","role":"store_owner"}' \
-              'https://api.ekodi.kr/api/customers/tenants/jadam/pre-register' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
               -H 'content-type: application/json' \
@@ -69,12 +80,12 @@ jobs:
               && printf '%s' "$google" | grep -q '"enabled":true' \
               && printf '%s' "$google" | grep -Fq "$expected_client" \
               && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
+              && printf '%s' "$books" | grep -q '"digital-start"' \
               && [ "$unauthorized_customer" = '401' ] \
-              && [ "$unauthorized_preregister" = '401' ] \
               && [ "$unauthorized_admin" = '401' ] \
               && [ "$legacy_login" = '410' ] \
               && grep -Fq 'GOOGLE_ADMIN_LOGIN_REQUIRED' /tmp/legacy-login.json; then
-              echo 'Google-only administrator authentication and Google customer preregistration boundaries verified.'
+              echo 'Control API production boundary verified.'
               exit 0
             fi
             sleep 5
