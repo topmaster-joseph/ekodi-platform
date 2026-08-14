@@ -44,6 +44,9 @@ create table if not exists public.insurance_claim_cases (
 );
 create index if not exists insurance_claim_cases_user_idx on public.insurance_claim_cases(user_id, created_at desc);
 
+-- AI conversation persistence is API-managed. Ordinary chat may remain ephemeral.
+-- A conversation is persisted when the user explicitly chooses a flow that requires storage,
+-- such as sharing a transcript with a human advisor.
 create table if not exists public.insurance_ai_conversations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -69,6 +72,7 @@ create table if not exists public.insurance_ai_messages (
 );
 create index if not exists insurance_ai_messages_conversation_idx on public.insurance_ai_messages(conversation_id, created_at);
 
+-- Consent records are immutable evidence. Revocation is performed by the audited Insurance API.
 create table if not exists public.insurance_consents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -81,6 +85,9 @@ create table if not exists public.insurance_consents (
 );
 create index if not exists insurance_consents_user_idx on public.insurance_consents(user_id, created_at desc);
 
+-- Contact details are encrypted by the Insurance API before insert.
+-- Clients cannot INSERT/UPDATE this table directly, preventing bypass of encryption,
+-- consent evidence, status controls, and audit logging.
 create table if not exists public.insurance_consultation_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -136,6 +143,7 @@ alter table public.insurance_consents enable row level security;
 alter table public.insurance_consultation_requests enable row level security;
 alter table public.insurance_audit_events enable row level security;
 
+-- User-owned ordinary profile/policy/claim data.
 create policy insurance_profile_owner_select on public.insurance_profiles for select to authenticated using (user_id = auth.uid());
 create policy insurance_profile_owner_insert on public.insurance_profiles for insert to authenticated with check (user_id = auth.uid());
 create policy insurance_profile_owner_update on public.insurance_profiles for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -150,12 +158,12 @@ create policy insurance_claim_owner_insert on public.insurance_claim_cases for i
 create policy insurance_claim_owner_update on public.insurance_claim_cases for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy insurance_claim_owner_delete on public.insurance_claim_cases for delete to authenticated using (user_id = auth.uid());
 
+-- Stored AI transcript is readable by its owner. Staff can read a transcript only when it is
+-- tied to an explicit human-handoff request whose share_transcript flag remains true.
+-- Writes are service-role/API only.
 create policy insurance_conversation_owner_select on public.insurance_ai_conversations for select to authenticated using (user_id = auth.uid());
-create policy insurance_conversation_owner_insert on public.insurance_ai_conversations for insert to authenticated with check (user_id = auth.uid());
-create policy insurance_conversation_owner_update on public.insurance_ai_conversations for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy insurance_conversation_owner_delete on public.insurance_ai_conversations for delete to authenticated using (user_id = auth.uid());
 
-create policy insurance_message_owner_select on public.insurance_ai_messages for select to authenticated using (
+create policy insurance_message_shared_select on public.insurance_ai_messages for select to authenticated using (
   user_id = auth.uid()
   or exists (
     select 1 from public.insurance_consultation_requests r
@@ -164,22 +172,26 @@ create policy insurance_message_owner_select on public.insurance_ai_messages for
       and public.is_insurance_staff(array['admin','advisor','auditor'])
   )
 );
-create policy insurance_message_owner_insert on public.insurance_ai_messages for insert to authenticated with check (user_id = auth.uid());
-create policy insurance_message_owner_delete on public.insurance_ai_messages for delete to authenticated using (user_id = auth.uid());
 
+-- Consent evidence is readable by its owner but is created/revoked through the audited API.
 create policy insurance_consent_owner_select on public.insurance_consents for select to authenticated using (user_id = auth.uid());
-create policy insurance_consent_owner_insert on public.insurance_consents for insert to authenticated with check (user_id = auth.uid());
-create policy insurance_consent_owner_update on public.insurance_consents for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
-create policy insurance_consult_owner_select on public.insurance_consultation_requests for select to authenticated using (
+-- Consultation rows are readable by the requesting user and authorized Insurance staff.
+-- INSERT and UPDATE are deliberately service-role/API only to enforce encryption, consent,
+-- status rules and audit logging. Staff must use the admin API rather than direct table writes.
+create policy insurance_consult_select on public.insurance_consultation_requests for select to authenticated using (
   user_id = auth.uid() or public.is_insurance_staff(array['admin','advisor','auditor'])
 );
-create policy insurance_consult_owner_insert on public.insurance_consultation_requests for insert to authenticated with check (user_id = auth.uid());
-create policy insurance_consult_user_close on public.insurance_consultation_requests for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy insurance_consult_staff_update on public.insurance_consultation_requests for update to authenticated using (public.is_insurance_staff(array['admin','advisor'])) with check (public.is_insurance_staff(array['admin','advisor']));
 
-create policy insurance_staff_self_select on public.insurance_staff for select to authenticated using (user_id = auth.uid() or public.is_insurance_staff(array['admin']));
-create policy insurance_audit_admin_select on public.insurance_audit_events for select to authenticated using (public.is_insurance_staff(array['admin','auditor']));
+create policy insurance_staff_self_select on public.insurance_staff for select to authenticated using (
+  user_id = auth.uid() or public.is_insurance_staff(array['admin'])
+);
+create policy insurance_audit_admin_select on public.insurance_audit_events for select to authenticated using (
+  public.is_insurance_staff(array['admin','auditor'])
+);
 
--- Intentionally no staff SELECT policy on insurance_policies or insurance_claim_cases.
--- Human handoff grants access only to the consultation request and, when explicitly shared, that conversation transcript.
+-- Intentionally absent:
+-- * staff SELECT policy on insurance_policies / insurance_claim_cases
+-- * authenticated INSERT/UPDATE policies on consultation requests, consents, AI conversations/messages
+-- * authenticated INSERT policy on audit events
+-- Human handoff exposes only the consultation request and, when explicitly shared, that transcript.
