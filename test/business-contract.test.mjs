@@ -24,12 +24,14 @@ test('revenue-critical external clients stay active and monitored', () => {
 });
 
 test('EKODI-owned brands are never classified as external clients', () => {
-  const internalIds = ['biz', 'trade', 'mall', 'pay', 'books', 'lab', 'edu', 'media', 'church', 'mission', 'community'];
+  const internalIds = ['biz', 'trade', 'mall', 'pay', 'books', 'lab', 'edu', 'media', 'church', 'community', 'social'];
   for (const id of internalIds) {
     const row = apiWorker.split('\n').find(line => line.includes(`id: '${id}'`));
     assert.ok(row, `${id} must exist in SERVICE_CATALOG`);
     assert.ok(!row.includes("group: 'client'"), `${id} must not be classified as an external client`);
   }
+  assert.ok(!apiWorker.split('\n').some(line => line.includes("id: 'mission'")), 'retired mission service must not reappear in SERVICE_CATALOG');
+  assert.ok(!apiWorker.includes('에코디선교회'), 'retired formal mission organization label must not reappear in Control API source');
 });
 
 test('short canonical client domains are preserved', () => {
