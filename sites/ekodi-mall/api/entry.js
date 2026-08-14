@@ -3,6 +3,7 @@ import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
 import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.js';
 import { handleVerificationRequest, verificationSchemaReady } from './verification.js';
+import { handleAnalyticsRequest } from './analytics.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -159,6 +160,9 @@ export default {
       if (!body) return reply({ error:'Invalid JSON' },400,origin,env);
       const result=await firstTouch(env,body); return reply(result.body,result.status,origin,env);
     }
+
+    const analytics = await handleAnalyticsRequest(request, env);
+    if (analytics) return reply(analytics.body, analytics.status, origin, env);
 
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
