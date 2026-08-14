@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [api, admin, build, siteWorker, booksWorker, publishingHtml, publishingApp, migration] = await Promise.all([
+const [api, admin, build, featureLoader, siteWorker, booksWorker, publishingHtml, publishingApp, migration] = await Promise.all([
   readFile(new URL('../books-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../books-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../books-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../books/publishing/index.html', import.meta.url), 'utf8'),
@@ -25,16 +26,24 @@ test('Books control plane exposes publications, services, features and inquiries
   }
 });
 
-test('Books admin module is injected into the central Control Center', () => {
-  assert.match(build, /'books-admin\.css'/);
-  assert.match(build, /'books-admin\.js'/);
-  assert.match(build, /<link rel="stylesheet" href="books-admin\.css">/);
-  assert.match(build, /<script src="books-admin\.js" defer><\/script>/);
+test('Books admin ships with the Control Center but loads lazily after authentication', () => {
+  for (const asset of ['books-admin.css', 'books-admin.js', 'books-finance-admin.css', 'books-finance-admin.js']) {
+    assert.ok(build.includes(`'${asset}'`), `${asset} must remain in production assets`);
+  }
+  assert.match(build, /'control-center-features\.js'/);
+  assert.doesNotMatch(build, /<link rel="stylesheet" href="books-admin\.css">/);
+  assert.doesNotMatch(build, /<script src="books-admin\.js" defer><\/script>/);
+  assert.match(featureLoader, /loadStyle\('books-admin\.css'\)/);
+  assert.match(featureLoader, /loadStyle\('books-finance-admin\.css'\)/);
+  assert.match(featureLoader, /loadScript\('books-admin\.js'\)/);
+  assert.match(featureLoader, /loadScript\('books-finance-admin\.js'\)/);
+  assert.match(featureLoader, /requestIdleCallback/);
   assert.match(admin, /Books Control/);
   assert.match(admin, /Pricing & Services/);
   assert.match(admin, /Consultations/);
   assert.match(siteWorker, /'\/books'/);
   assert.match(siteWorker, /'\/books-admin\.js'/);
+  assert.match(siteWorker, /'\/books-finance-admin\.js'/);
 });
 
 test('Public publishing page has transparent pricing and consultation submission', () => {

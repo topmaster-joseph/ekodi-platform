@@ -11,6 +11,7 @@ const assets = [
   'control-center-ops.css',
   'control-center-finance.css',
   'control-center.js',
+  'control-center-features.js',
   'admin-central-handoff.js',
   'finance-monitor.js',
   'client-access.css',
@@ -54,20 +55,14 @@ for (const asset of htmlAssets) {
     html = html.replace('</head>', `${responsiveStyle}</head>`);
   }
   if (asset === 'control-center.html') {
-    if (!html.includes('client-access.css')) html = html.replace('</head>', '<link rel="stylesheet" href="client-access.css">\n</head>');
-    if (!html.includes('marketing-funnel-admin.css')) html = html.replace('</head>', '<link rel="stylesheet" href="marketing-funnel-admin.css">\n</head>');
-    if (!html.includes('google-admin-auth.css')) html = html.replace('</head>', '<link rel="stylesheet" href="google-admin-auth.css">\n</head>');
-    if (!html.includes('books-admin.css')) html = html.replace('</head>', '<link rel="stylesheet" href="books-admin.css">\n</head>');
-    if (!html.includes('books-finance-admin.css')) html = html.replace('</head>', '<link rel="stylesheet" href="books-finance-admin.css">\n</head>');
+    // Keep the first paint small. Feature-specific CSS/JS is loaded by
+    // control-center-features.js only after a valid admin session exists.
+    html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
     if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
-    if (!html.includes('client-access.js')) html = html.replace('</body>', '<script src="client-access.js" defer></script>\n</body>');
-    if (!html.includes('marketing-funnel-admin.js')) html = html.replace('</body>', '<script src="marketing-funnel-admin.js" defer></script>\n</body>');
-    if (!html.includes('google-admin-auth.js')) html = html.replace('</body>', '<script src="google-admin-auth.js" defer></script>\n</body>');
-    if (!html.includes('books-admin.js')) html = html.replace('</body>', '<script src="books-admin.js" defer></script>\n</body>');
-    if (!html.includes('books-finance-admin.js')) html = html.replace('</body>', '<script src="books-finance-admin.js" defer></script>\n</body>');
     if (!html.includes('compact-control-center.js')) html = html.replace('</body>', '<script src="compact-control-center.js" defer></script>\n</body>');
+    if (!html.includes('control-center-features.js')) html = html.replace('</body>', '<script src="control-center-features.js" defer></script>\n</body>');
   }
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root, Control Center, auth hub, service hubs and trade assets with responsive typography: ${assets.join(', ')}`);
+console.log(`Built EKODI root, lightweight Control Center shell, auth hub, service hubs and trade assets: ${assets.join(', ')}`);

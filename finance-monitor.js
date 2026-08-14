@@ -213,14 +213,11 @@ financeSectionButton.addEventListener('click', () => {
   loadFinance();
 });
 
-const financeApp = document.querySelector('#app');
-new MutationObserver(() => {
-  if (!financeApp.hidden && financeToken()) {
-    loadFinance();
-    if (location.hash === '#finance') financeSectionButton.click();
-  }
-}).observe(financeApp, { attributes: true, attributeFilter: ['hidden'] });
+if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
+  setTimeout(loadFinance, 0);
+}
 
 setInterval(() => {
-  if (!financeApp.hidden && financeToken()) loadFinance();
+  const financeVisible = financeSectionButton.classList.contains('active');
+  if (financeVisible && financeToken()) loadFinance();
 }, 120000);
