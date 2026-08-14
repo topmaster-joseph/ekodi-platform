@@ -16,6 +16,14 @@ SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 PAYMENTS_ENABLED = "false"
 
+# Non-destructive compatibility declaration for the short-lived SQLite Durable
+# Object Mall API. The namespace remains provisioned, but current Mall traffic
+# is served by the D1 API in entry.js -> worker.js. Do not remove this live
+# export without an explicit, separately reviewed Durable Object lifecycle plan.
+[exports.MallCatalog]
+type = "durable-object"
+storage = "sqlite"
+
 [observability.logs]
 enabled = true
 invocation_logs = true
