@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>EKODI Staging</title>
+  <style>
+    :root{font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;color-scheme:dark;background:#0b1020;color:#eef2ff}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#172554 0,#0b1020 42%,#060913 100%)}
+    main{width:min(980px,calc(100% - 32px));margin:0 auto;padding:56px 0 72px}.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#93c5fd;font-size:.75rem;font-weight:800}
+    h1{font-size:clamp(2rem,5vw,4rem);margin:.5rem 0 1rem;line-height:1.02}.lead{max-width:720px;color:#cbd5e1;line-height:1.75}
+    .guard{margin:28px 0;padding:18px 20px;border:1px solid #1e3a8a;border-radius:16px;background:rgba(30,58,138,.22)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:22px}.card{padding:20px;border:1px solid #26324d;border-radius:16px;background:rgba(15,23,42,.8)}
+    .card h2{font-size:1rem;margin:0 0 12px}.state{font-size:1.45rem;font-weight:800}.muted{color:#94a3b8;font-size:.9rem;line-height:1.6}.ok{color:#86efac}.bad{color:#fca5a5}.pending{color:#fde68a}
+    code{display:block;overflow-wrap:anywhere;padding:10px 12px;background:#020617;border-radius:10px;color:#bfdbfe;font-size:.8rem}button{margin-top:16px;border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;background:#dbeafe;color:#172554}
+    footer{margin-top:32px;color:#64748b;font-size:.8rem}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">EKODI · isolated environment</div>
+  <h1>Staging Safety Gate</h1>
+  <p class="lead">이 화면은 운영 사이트를 교체하기 전에 기능과 인프라를 검증하는 격리된 테스트 환경입니다. 운영 DNS, 운영 D1, 운영 Supabase 인증에는 쓰기 요청을 보내지 않습니다.</p>
+  <div class="guard"><strong>안전 원칙</strong><br>이 스테이징은 <b>*.ekodi.kr 운영 라우트가 없습니다.</b> 별도 Worker 이름과 별도 D1 데이터베이스만 사용합니다. 검증이 끝나기 전에는 운영 전환을 수행하지 않습니다.</div>
+  <section class="grid">
+    <article class="card"><h2>Staging Site</h2><div class="state ok">격리됨</div><p class="muted">운영 custom domain 없이 workers.dev에서만 실행합니다.</p><code id="siteHost"></code></article>
+    <article class="card"><h2>Staging API</h2><div id="apiState" class="state pending">확인 중</div><p id="apiMeta" class="muted">별도 API Worker의 /health를 확인합니다.</p><code>ekodi-auth-api-staging.topmaster-joseph.workers.dev</code></article>
+    <article class="card"><h2>Staging D1</h2><div id="dbState" class="state pending">확인 중</div><p id="dbMeta" class="muted">별도 D1이 연결된 API 상태를 확인합니다.</p><code>ekodi-auth-staging</code></article>
+    <article class="card"><h2>Production Guard</h2><div class="state ok">잠금</div><p class="muted">이 페이지에는 운영 API·운영 인증·운영 DB로 쓰는 코드가 포함되지 않습니다.</p><code>production write: disabled</code></article>
+  </section>
+  <button id="recheck" type="button">안전 상태 다시 확인</button>
+  <footer>EKODI staging · noindex · production cutover disabled</footer>
+</main>
+<script>
+const API='https://ekodi-auth-api-staging.topmaster-joseph.workers.dev';
+document.querySelector('#siteHost').textContent=location.host;
+async function check(){
+  const apiState=document.querySelector('#apiState');const apiMeta=document.querySelector('#apiMeta');const dbState=document.querySelector('#dbState');const dbMeta=document.querySelector('#dbMeta');
+  apiState.className='state pending';apiState.textContent='확인 중';dbState.className='state pending';dbState.textContent='확인 중';
+  try{
+    const health=await fetch(`${API}/health`,{cache:'no-store'});if(!health.ok)throw new Error(`HTTP ${health.status}`);const h=await health.json();
+    apiState.className='state ok';apiState.textContent=h.ok===false?'응답 확인':'정상';apiMeta.textContent='격리된 staging API가 응답했습니다.';
+    const status=await fetch(`${API}/api/status`,{cache:'no-store'});if(!status.ok)throw new Error(`status ${status.status}`);const s=await status.json();
+    dbState.className='state ok';dbState.textContent='연결됨';dbMeta.textContent=`초기화 상태: ${s.initialized?'initialized':'fresh staging'}`;
+  }catch(error){apiState.className='state bad';apiState.textContent='확인 필요';apiMeta.textContent=error.message;dbState.className='state bad';dbState.textContent='확인 필요';dbMeta.textContent='API 배포 또는 staging D1 연결을 확인하세요.';}
+}
+document.querySelector('#recheck').addEventListener('click',check);check();
+</script>
+</body>
+</html>
