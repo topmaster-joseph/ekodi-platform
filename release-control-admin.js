@@ -82,6 +82,22 @@
 
   function badge(text, className = '') { return el('span', text, `release-badge ${className}`.trim()); }
 
+  function installMallFreeOpsNav() {
+    const nav = document.querySelector('.sidebar nav');
+    if (!nav || nav.querySelector('[data-admin-link="mall-free-ops"]')) return;
+
+    const link = el('a', '', 'nav');
+    link.href = 'https://mall.ekodi.kr/free-ops';
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.dataset.adminLink = 'mall-free-ops';
+    link.title = 'EKODI Mall 무료·수동 우선 공급 운영';
+    link.append(document.createTextNode('◇ '), el('span', 'Mall · Free Ops'));
+
+    const domains = Array.from(nav.querySelectorAll('a.nav')).find(item => item.getAttribute('href') === '/legacy#domains');
+    if (domains) nav.insertBefore(link, domains); else nav.append(link);
+  }
+
   function installReleaseControl() {
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
@@ -206,5 +222,6 @@
     if (location.hash === '#release') queueMicrotask(activate);
   }
 
+  installMallFreeOpsNav();
   installReleaseControl();
 })();
