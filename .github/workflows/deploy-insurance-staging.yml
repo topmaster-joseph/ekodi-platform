@@ -1,0 +1,65 @@
+name: EKODI Insurance · Staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-*'
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - '.github/workflows/deploy-insurance-staging.yml'
+      - 'platform-boundaries.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-insurance-staging
+  cancel-in-progress: true
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Insurance MVP
+        working-directory: sites/ekodi-insurance
+        run: npm run check
+      - name: Verify staging-only privacy guard
+        run: |
+          set -euo pipefail
+          grep -Fq 'localStorage' sites/ekodi-insurance/public/app.js
+          grep -Fq 'serverSensitiveData:false' sites/ekodi-insurance/worker.js
+          ! grep -R -E 'SUPABASE_(SERVICE|SECRET)|API_KEY|PRIVATE_KEY' sites/ekodi-insurance
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated staging Worker
+        working-directory: sites/ekodi-insurance
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.toml
+      - name: Verify workers.dev staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/insurance.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            health_code=$(curl -sS -o /tmp/insurance-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
+            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] \
+              && grep -Fq 'EKODI Insurance' /tmp/insurance.html \
+              && grep -Fq '"serverSensitiveData":false' /tmp/insurance-health.json; then
+              echo 'EKODI Insurance staging verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Insurance staging verification failed.'
+          exit 1
