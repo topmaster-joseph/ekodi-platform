@@ -1,0 +1,107 @@
+name: EKODI Insurance Control Proxy · Staging CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-control-proxy-*'
+    paths:
+      - 'insurance-control-proxy.js'
+      - 'insurance-control-entry.js'
+      - 'supabase/functions/insurance-admin-internal/**'
+      - 'sites/ekodi-insurance/sql/004_insurance_admin_principal.sql'
+      - '.github/workflows/insurance-control-proxy-staging-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Validate Control wrapper syntax
+        run: |
+          node --check insurance-control-proxy.js
+          node --check insurance-control-entry.js
+          grep -Fq "INSURANCE_ADMIN_PREFIX" insurance-control-entry.js
+          grep -Fq "apiWorker.fetch" insurance-control-entry.js
+          grep -Fq "insurance-admin-internal" insurance-control-proxy.js
+          grep -Fq "production_insurance_backend_blocked" insurance-control-proxy.js
+          grep -Fq "renzehysxirjilvdxacv" insurance-control-proxy.js
+
+      - name: Type-check internal Insurance admin API
+        working-directory: supabase/functions/insurance-admin-internal
+        run: deno check --config deno.json index.ts
+
+      - name: Verify internal API has narrow scope
+        run: |
+          set -euo pipefail
+          f='supabase/functions/insurance-admin-internal/index.ts'
+          grep -Fq 'INSURANCE_INTERNAL_TOKEN' "$f"
+          grep -Fq 'secretEqual' "$f"
+          grep -Fq 'INSURANCE_CONTACT_KEY' "$f"
+          grep -Fq 'AES-GCM' "$f"
+          grep -Fq 'actor_principal' "$f"
+          grep -Fq 'central_admin.consultation.viewed' "$f"
+          grep -Fq 'central_admin.consultation.status_changed' "$f"
+          grep -Fq '/admin/consultations' "$f"
+          if grep -Fq 'insurance_policies' "$f" || grep -Fq 'insurance_claim_cases' "$f"; then
+            echo 'Internal admin API must not expose policy or claim ledgers'
+            exit 1
+          fi
+
+      - name: Verify central principal audit migration
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create table auth.users(id uuid primary key);
+          create or replace function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+          grant usage on schema auth to authenticated;
+          SQL
+          psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/001_insurance_platform.sql
+          psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/002_insurance_privileges.sql
+          psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/004_insurance_admin_principal.sql
+          psql -Atc "select count(*) from information_schema.columns where table_schema='public' and table_name='insurance_audit_events' and column_name='actor_principal'" | grep -Fxq 1
+
+      - name: Verify proxy cannot be configured to current production backend
+        run: |
+          node --input-type=module <<'JS'
+          import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
+          const apiWorker={fetch:async req=>new Response(JSON.stringify({email:'admin@example.com'}),{status:200,headers:{'content-type':'application/json'}})};
+          const request=new Request('https://api.example/api/insurance/admin/consultations',{headers:{authorization:'Bearer test'}});
+          const response=await handleInsuranceAdminProxy(request,{INSURANCE_API_BASE:'https://renzehysxirjilvdxacv.supabase.co',INSURANCE_INTERNAL_TOKEN:'x',INSURANCE_API_PUBLISHABLE_KEY:'y'}, {}, apiWorker);
+          if(response.status!==503)throw new Error(`expected 503, got ${response.status}`);
+          const data=await response.json();
+          if(data.error!=='production_insurance_backend_blocked')throw new Error('production backend guard failed');
+          JS
