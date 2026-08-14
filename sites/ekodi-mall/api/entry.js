@@ -1,4 +1,6 @@
 import core from './worker.js';
+import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
+import { handleSourcingPlanRequest } from './sourcing-plan.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -155,8 +157,9 @@ export default {
       const coreResponse = await core.fetch(request, env);
       const coreBody = await coreResponse.clone().json().catch(() => ({}));
       const firstTouchReady = Boolean(env.DB) && await attributionSchemaReady(env);
-      const ok = coreResponse.ok && firstTouchReady;
-      return reply({ ...coreBody, ok, version: 3, environment: env.ENVIRONMENT || 'unknown', firstTouchSchemaReady: firstTouchReady, attributionWindowDays: ATTRIBUTION_WINDOW_DAYS }, ok ? 200 : 503, origin, env);
+      const sourcingReady = Boolean(env.DB) && await sourcingSchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady;
+      return reply({ ...coreBody, ok, version: 3, environment: env.ENVIRONMENT || 'unknown', firstTouchSchemaReady: firstTouchReady, sourcingSchemaReady: sourcingReady, attributionWindowDays: ATTRIBUTION_WINDOW_DAYS }, ok ? 200 : 503, origin, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
@@ -175,6 +178,15 @@ export default {
       if (!body) return reply({ error: 'Invalid JSON' }, 400, origin, env);
       const result = await firstTouch(env, body);
       return reply(result.body, result.status, origin, env);
+    }
+
+    if (url.pathname.startsWith('/api/sourcing/')) {
+      const plan = await handleSourcingPlanRequest(request, env);
+      if (plan) return reply(plan.body, plan.status, origin, env);
+    }
+    if (url.pathname.startsWith('/api/sourcing/') || url.pathname.startsWith('/api/internal/sourcing/')) {
+      const result = await handleSourcingRequest(request, env);
+      if (result) return reply(result.body, result.status, origin, env);
     }
 
     return core.fetch(request, env);
