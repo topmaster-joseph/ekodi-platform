@@ -53,6 +53,11 @@
     await loadModule('domains-hub.js');
   }
 
+  async function loadSocial() {
+    await loadStyle('social-admin.css');
+    await loadModule('social-admin.js');
+  }
+
   async function loadAffiliates() {
     await loadStyle('marketing-funnel-admin.css');
     await loadModule('marketing-funnel-admin.js');
@@ -75,6 +80,7 @@
     clients: loadClients,
     admins: loadAdmins,
     domains: loadDomains,
+    social: loadSocial,
     affiliates: loadAffiliates,
     books: loadBooks,
     finance: loadFinance,
@@ -94,6 +100,7 @@
   function normalizeShortLabels() {
     setShortLabel('admins', 'Admin');
     setShortLabel('domains', 'Domains');
+    setShortLabel('social', 'Social');
 
     document.querySelectorAll('.campus-quick-actions [data-campus-section="admins"]').forEach(button => {
       button.textContent = 'Admin';
@@ -167,6 +174,7 @@
     if (!nav) return;
     const services = nav.querySelector('[data-section="services"]');
     const finance = nav.querySelector('[data-section="finance"]');
+    const communication = nav.querySelector('[data-section="communication"]');
     const organization = nav.querySelector('[data-section="organization"]');
     const policies = nav.querySelector('[data-section="policies"]');
     const activityLink = nav.querySelector('a[href="/legacy#activity"]');
@@ -182,6 +190,13 @@
     if (books) {
       if (finance) nav.insertBefore(books, finance);
       else nav.append(books);
+    }
+
+    const social = placeholder('social', '◉', 'Social');
+    if (social) {
+      if (communication) communication.insertAdjacentElement('afterend', social);
+      else if (organization) nav.insertBefore(social, organization);
+      else nav.append(social);
     }
 
     const domains = placeholder('domains', '◎', 'Domains');

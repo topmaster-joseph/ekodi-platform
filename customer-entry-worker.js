@@ -7,6 +7,7 @@ import { handleBooksRequest } from './books-control.js';
 import { handleBooksFinanceRequest } from './books-finance-control.js';
 import { handleBooksDistributionRequest } from './books-distribution-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
+import { handleSocialRegistry } from './social-registry-api.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
   '/api/setup',
@@ -40,6 +41,27 @@ function disabledPasswordResponse(kind = 'admin') {
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (path === '/api/social/registry' || path.startsWith('/api/control/social/')
+      || (request.method === 'OPTIONS' && (path.startsWith('/api/social/') || path.startsWith('/api/control/social/')))) {
+      try {
+        const response = await handleSocialRegistry(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Social registry API error', error);
+        return new Response(JSON.stringify({
+          error: '소셜채널 Registry API 처리 중 오류가 발생했습니다.',
+          code: 'SOCIAL_REGISTRY_API_ERROR',
+        }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+          },
+        });
+      }
+    }
 
     if (googleAdminEnabled(env) && request.method === 'POST' && LEGACY_ADMIN_PASSWORD_PATHS.has(path)) {
       return disabledPasswordResponse('admin');
