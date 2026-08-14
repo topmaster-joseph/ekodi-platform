@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+
+const [features, adminJs, adminCss, domainsJs, build, worker] = await Promise.all([
+  readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
+  readFile(new URL('../google-admin-auth.js', import.meta.url), 'utf8'),
+  readFile(new URL('../google-admin-auth.css', import.meta.url), 'utf8'),
+  readFile(new URL('../domains-hub.js', import.meta.url), 'utf8'),
+  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
+]);
+
+test('sidebar uses short Admin and Domains labels', () => {
+  assert.ok(features.includes("placeholder('admins', '◈', 'Admin')"));
+  assert.ok(features.includes("placeholder('domains', '◎', 'Domains')"));
+  assert.ok(features.includes("setShortLabel('admins', 'Admin')"));
+  assert.ok(features.includes("setShortLabel('domains', 'Domains')"));
+});
+
+test('Admin screen uses top preregistration toolbar and two-column account cards', () => {
+  assert.ok(adminJs.includes('google-admin-toolbar'));
+  assert.ok(adminJs.includes('google-admin-filters'));
+  assert.ok(adminJs.includes('google-admin-bulk'));
+  assert.ok(adminCss.includes('.google-admin-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(adminJs.includes('최소 1명의 활성 최고관리자는 반드시 유지해야 합니다.'));
+  assert.equal(adminJs.includes("method: 'DELETE'"), false);
+});
+
+test('Domains is a read-first service control hub, not a browser DNS editor', () => {
+  assert.ok(domainsJs.includes("api('/api/control/overview')"));
+  assert.ok(domainsJs.includes('Services에서 관리 →'));
+  assert.equal(domainsJs.includes('/api/dns'), false);
+  assert.equal(domainsJs.includes("method: 'PUT'"), false);
+  assert.equal(domainsJs.includes("method: 'POST'"), false);
+});
+
+test('Domains assets are built and receive admin edge security headers', () => {
+  for (const asset of ['domains-hub.css', 'domains-hub.js']) {
+    assert.ok(build.includes(`'${asset}'`), `${asset} must be copied into dist`);
+    assert.ok(worker.includes(`'/${asset}'`), `${asset} must be treated as an admin asset`);
+  }
+});

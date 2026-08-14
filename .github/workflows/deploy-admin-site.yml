@@ -27,6 +27,8 @@ on:
       - 'books-finance-admin.css'
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
+      - 'domains-hub.js'
+      - 'domains-hub.css'
       - 'auth-site/**'
 
 permissions:
@@ -61,6 +63,7 @@ jobs:
           node --check books-admin.js
           node --check books-finance-admin.js
           node --check google-admin-auth.js
+          node --check domains-hub.js
           node --check auth-site/auth.js
 
       - name: Validate authentication and compact UI contract
@@ -77,6 +80,12 @@ jobs:
           grep -Fq '/api/google/challenge' google-admin-auth.js
           grep -Fq '/api/google/login' google-admin-auth.js
           grep -Fq '/api/admin-access/google-accounts' google-admin-auth.js
+          grep -Fq 'google-admin-toolbar' google-admin-auth.js
+          grep -Fq 'google-admin-filters' google-admin-auth.js
+          grep -Fq "placeholder('admins', '◈', 'Admin')" control-center-features.js
+          grep -Fq "placeholder('domains', '◎', 'Domains')" control-center-features.js
+          grep -Fq '/api/control/overview' domains-hub.js
+          grep -Fq 'Services에서 관리' domains-hub.js
           grep -Fq 'EKODI Digital Campus' compact-control-center.js
           grep -Fq 'Policies' compact-control-center.js
           grep -Fq 'Domains & DNS' compact-control-center.js
@@ -86,6 +95,8 @@ jobs:
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'control-center-features.js' scripts/build.mjs
+          grep -Fq 'domains-hub.css' scripts/build.mjs
+          grep -Fq 'domains-hub.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
@@ -154,7 +165,9 @@ jobs:
               && verify_asset 'compact-control-center.js' 'EKODI Digital Campus' \
               && verify_asset 'compact-control-center.css' '.campus-layout' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
-              && verify_asset 'google-admin-auth.js' '/api/google/login' \
+              && verify_asset 'google-admin-auth.js' 'google-admin-toolbar' \
+              && verify_asset 'domains-hub.js' '/api/control/overview' \
+              && verify_asset 'domains-hub.css' '.domains-grid' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
               echo 'Admin/Auth production boundary verified.'
