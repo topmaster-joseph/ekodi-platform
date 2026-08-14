@@ -6,7 +6,11 @@ on:
     branches:
       - 'staging/insurance-*'
     paths:
-      - 'sites/ekodi-insurance/**'
+      - 'sites/ekodi-insurance/public/**'
+      - 'sites/ekodi-insurance/worker.js'
+      - 'sites/ekodi-insurance/wrangler.toml'
+      - 'sites/ekodi-insurance/package.json'
+      - 'sites/ekodi-insurance/test.mjs'
       - '.github/workflows/deploy-insurance-staging.yml'
       - 'platform-boundaries.json'
 
@@ -36,7 +40,10 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'localStorage' sites/ekodi-insurance/public/app.js
+          grep -Fq 'diagnosisPriority' sites/ekodi-insurance/public/app.js
+          grep -Fq '개인정보 보호센터' sites/ekodi-insurance/public/index.html
           grep -Fq 'serverSensitiveData:false' sites/ekodi-insurance/worker.js
+          grep -Fq 'privacyCenter:true' sites/ekodi-insurance/worker.js
           ! grep -R -E 'SUPABASE_(SERVICE|SECRET)|API_KEY|PRIVATE_KEY' sites/ekodi-insurance
       - name: Verify Cloudflare credentials
         run: |
@@ -52,11 +59,16 @@ jobs:
           base='https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/insurance.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            css_code=$(curl -L -sS -o /tmp/privacy.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/privacy.css" || true)
             health_code=$(curl -sS -o /tmp/insurance-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
-            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] \
+            if [[ "$root_code" == "200" ]] && [[ "$css_code" == "200" ]] && [[ "$health_code" == "200" ]] \
               && grep -Fq 'EKODI Insurance' /tmp/insurance.html \
-              && grep -Fq '"serverSensitiveData":false' /tmp/insurance-health.json; then
-              echo 'EKODI Insurance staging verified.'
+              && grep -Fq '개인정보 보호센터' /tmp/insurance.html \
+              && grep -Fq '.privacy-grid' /tmp/privacy.css \
+              && grep -Fq '"serverSensitiveData":false' /tmp/insurance-health.json \
+              && grep -Fq '"privacyCenter":true' /tmp/insurance-health.json \
+              && grep -Fq '"productRecommendation":false' /tmp/insurance-health.json; then
+              echo 'EKODI Insurance privacy-first staging verified.'
               exit 0
             fi
             sleep 5
