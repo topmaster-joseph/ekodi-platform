@@ -1,0 +1,55 @@
+name: Community Auth & Social Smoke Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/community-auth-smoke-*'
+    paths:
+      - '.github/workflows/community-auth-smoke-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate current source contracts
+        run: |
+          set -euo pipefail
+          grep -Fq "'community':{name:'EKODI Community'" auth-site/client-auth.js
+          grep -Fq "returnTo:'https://community.ekodi.kr/'" auth-site/client-auth.js
+          grep -Fq "open:true,kind:'community'" auth-site/client-auth.js
+          grep -Fq "site==='community'" auth-site/auth-router.js
+          grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
+          grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
+      - name: Verify deployed Community Social assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          root_code=$(curl -L -sS -o /tmp/community.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/' || true)
+          social_code=$(curl -L -sS -o /tmp/social-links.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/social-links.js' || true)
+          health_code=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/health' || true)
+          test "$root_code" = '200'
+          test "$social_code" = '200'
+          test "$health_code" = '200'
+          grep -Fq 'EKODI Community' /tmp/community.html
+          grep -Fq '/social-links.js' /tmp/community.html
+          grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/social-links.js
+          grep -Fq '"socialRegistry":true' /tmp/community-health.json
+      - name: Verify deployed central auth realm semantically
+        shell: bash
+        run: |
+          set -euo pipefail
+          client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+          router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+          test "$client_code" = '200'
+          test "$router_code" = '200'
+          grep -Fq "'community':{name:'EKODI Community'" /tmp/community-client-auth.js
+          grep -Fq "returnTo:'https://community.ekodi.kr/'" /tmp/community-client-auth.js
+          grep -Fq "open:true,kind:'community'" /tmp/community-client-auth.js
+          grep -Fq "site==='community'" /tmp/community-auth-router.js
+          echo 'Community auth and Social production smoke verified.'
