@@ -51,6 +51,8 @@ const ADMIN_ASSETS = new Set([
   '/finance-monitor.js',
   '/compact-control-center.css',
   '/compact-control-center.js',
+  '/campus-actions.css',
+  '/campus-actions.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
