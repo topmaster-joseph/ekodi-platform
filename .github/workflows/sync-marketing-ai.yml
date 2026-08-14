@@ -145,3 +145,5 @@ jobs:
             sleep 5
           done
           exit 1
+
+# Sync trigger: explanation-first landing and free-member hands-on trial
