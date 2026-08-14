@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -45,11 +46,23 @@ for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'admin-auth.js', '
   await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 }
 
+const homepageServices = await loadHomepageServices();
+const homepageCards = renderServiceCards(homepageServices);
 const responsiveCss = await readFile(`${root}responsive.css`, 'utf8');
 const htmlAssets = [...assets.filter(asset => asset.endsWith('.html')), 'auth-center.html'];
 for (const asset of htmlAssets) {
   const path = `${output}${asset}`;
   let html = await readFile(path, 'utf8');
+
+  if (asset === 'index.html') {
+    const serviceGrid = /<div class="service-grid">[\s\S]*?(\n\s*<\/div>\n\s*<\/div>\n\s*<\/section>)/;
+    if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
+    html = html.replace(
+      serviceGrid,
+      `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`,
+    );
+  }
+
   if (!html.includes('data-ekodi-responsive')) {
     const responsiveStyle = `<style data-ekodi-responsive>\n${responsiveCss}\n</style>\n`;
     html = html.replace('</head>', `${responsiveStyle}</head>`);
@@ -65,4 +78,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root, lightweight Control Center shell, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
