@@ -2,6 +2,7 @@
   const REPOSITORY = 'topmaster-joseph/ekodi-platform';
   const RUNS_URL = `https://api.github.com/repos/${REPOSITORY}/actions/runs?per_page=80`;
   const CACHE_MS = 60 * 1000;
+  const MALL_FREE_OPS_URL = 'https://mall.ekodi.kr/free-ops?embed=admin';
   const RELEASE_UNITS = [
     { id:'shared-site', name:'Shared Site · Admin/Auth', workflow:'deploy-admin-site.yml', model:'Candidate 0% → verify → 100%', risk:'high', domains:['ekodi.kr','admin.ekodi.kr','auth.ekodi.kr'] },
     { id:'control-api', name:'Control API', workflow:'deploy-control-api.yml', model:'Staging D1 → recovery bookmark → Candidate 0%', risk:'critical', domains:['api.ekodi.kr'] },
@@ -84,18 +85,79 @@
 
   function installMallFreeOpsNav() {
     const nav = document.querySelector('.sidebar nav');
-    if (!nav || nav.querySelector('[data-admin-link="mall-free-ops"]')) return;
+    const content = document.querySelector('.content');
+    if (!nav || !content) return;
 
-    const link = el('a', '', 'nav');
-    link.href = 'https://mall.ekodi.kr/free-ops';
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.dataset.adminLink = 'mall-free-ops';
-    link.title = 'EKODI Mall 무료·수동 우선 공급 운영';
-    link.append(document.createTextNode('◇ '), el('span', 'Mall · Free Ops'));
+    let button = nav.querySelector('[data-admin-link="mall-free-ops"]');
+    if (!button || button.tagName !== 'BUTTON') {
+      if (button) button.remove();
+      button = el('button', '', 'nav');
+      button.type = 'button';
+      button.dataset.section = 'mall-free-ops';
+      button.dataset.adminLink = 'mall-free-ops';
+      button.title = 'EKODI Mall 무료·수동 우선 공급 운영';
+      button.append(document.createTextNode('◇ '), el('span', 'Mall · Free Ops'));
+      const domains = Array.from(nav.querySelectorAll('a.nav')).find(item => item.getAttribute('href') === '/legacy#domains');
+      if (domains) nav.insertBefore(button, domains); else nav.append(button);
+    }
 
-    const domains = Array.from(nav.querySelectorAll('a.nav')).find(item => item.getAttribute('href') === '/legacy#domains');
-    if (domains) nav.insertBefore(link, domains); else nav.append(link);
+    let section = document.querySelector('#mallFreeOpsPanel');
+    if (!section) {
+      section = el('section', '', 'section mall-free-ops-admin hidden-panel');
+      section.dataset.panel = 'mall-free-ops';
+      section.id = 'mallFreeOpsPanel';
+
+      const head = el('div', '', 'mall-free-ops-head');
+      const copy = el('div');
+      copy.append(el('p', 'MALL · SIMPLE OPERATIONS', 'kicker'), el('h2', 'Mall · Free Ops'));
+      copy.append(el('p', '공급처 후보 등록, 가격·마진 계산, 안전확인을 관리자 화면을 떠나지 않고 처리합니다.', 'operations-copy'));
+      const actions = el('div', '', 'mall-free-ops-actions');
+      const refresh = el('button', '↻ 새로고침', 'secondary');
+      refresh.type = 'button';
+      refresh.dataset.mallFreeOpsRefresh = 'true';
+      const external = el('a', '전체화면 ↗', 'secondary');
+      external.href = 'https://mall.ekodi.kr/free-ops';
+      external.target = '_blank';
+      external.rel = 'noopener';
+      actions.append(refresh, external);
+      head.append(copy, actions);
+
+      const note = el('div', 'Free Ops만 admin.ekodi.kr 내부 표시를 허용합니다. 다른 Mall 페이지의 iframe 차단 정책은 그대로 유지됩니다.', 'mall-free-ops-note');
+      const frameWrap = el('div', '', 'mall-free-ops-frame-wrap');
+      const frame = document.createElement('iframe');
+      frame.title = 'EKODI Mall Free Ops';
+      frame.loading = 'lazy';
+      frame.referrerPolicy = 'no-referrer';
+      frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox';
+      frame.dataset.mallFreeOpsFrame = 'true';
+      frame.dataset.src = MALL_FREE_OPS_URL;
+      frameWrap.append(frame);
+      section.append(head, note, frameWrap);
+      content.append(section);
+
+      refresh.addEventListener('click', () => {
+        const next = new URL(MALL_FREE_OPS_URL);
+        next.searchParams.set('reload', String(Date.now()));
+        frame.src = next.toString();
+      });
+    }
+
+    const frame = section.querySelector('[data-mall-free-ops-frame]');
+    const activate = () => {
+      document.querySelectorAll('[data-panel]').forEach(panel => {
+        const targets = String(panel.dataset.panel || '').split(' ');
+        panel.classList.toggle('hidden-panel', !targets.includes('mall-free-ops'));
+      });
+      document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', item === button));
+      const pageTitle = document.querySelector('#pageTitle');
+      if (pageTitle) pageTitle.textContent = 'Mall · Free Ops';
+      if (frame && !frame.getAttribute('src')) frame.src = frame.dataset.src || MALL_FREE_OPS_URL;
+      document.querySelector('.sidebar')?.classList.remove('open');
+      if (location.hash !== '#mall-free-ops') history.replaceState(null, '', '#mall-free-ops');
+    };
+
+    button.addEventListener('click', activate);
+    if (location.hash === '#mall-free-ops') queueMicrotask(activate);
   }
 
   function installReleaseControl() {
