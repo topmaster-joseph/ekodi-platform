@@ -6,6 +6,8 @@
 /sourcing/ /assets/sourcing-lab.html 200
 /fulfillment /assets/fulfillment-lab.html 200
 /fulfillment/ /assets/fulfillment-lab.html 200
+/supplier-ops /assets/supplier-ops.html 200
+/supplier-ops/ /assets/supplier-ops.html 200
 /p/* /assets/shared-product.html 200
 /store/* /assets/shared-store.html 200
 /shipping /pages/shipping/ 301
