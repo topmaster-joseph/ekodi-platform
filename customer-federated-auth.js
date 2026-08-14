@@ -237,5 +237,11 @@ export async function handleFederatedCustomerAuth(request, env) {
   await ensureSchema(env.DB);
   const path = new URL(request.url).pathname;
   if (request.method === 'POST' && path === '/api/customer/federated-login') return federatedLogin(request, env);
+  if (request.method === 'POST' && path === '/api/customer/accept-central-invite') {
+    return json({
+      error: '초대 링크 방식은 종료되었습니다. 관리자가 고객 Google 이메일과 권한을 등록한 뒤 Google 인증으로 로그인해 주세요.',
+      code: 'GOOGLE_ACCESS_GRANT_REQUIRED',
+    }, 410, request, env);
+  }
   return null;
 }
