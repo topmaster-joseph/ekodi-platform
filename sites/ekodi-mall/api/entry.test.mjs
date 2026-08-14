@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { feeForFirstTouch, trustedSource } from './entry.js';
+import { MallCatalog, feeForFirstTouch, trustedSource } from './entry.js';
 
 test('first-touch fee contract keeps personal 7/8/9 and verified business Store 10', () => {
   assert.equal(feeForFirstTouch({ sellerType: 'individual', sourceType: 'direct' }), 7);
@@ -33,4 +33,13 @@ test('entry layer delegates existing orders, Toss and settlement API to core wor
   assert.match(source, /return core\.fetch\(request, env\)/);
   assert.match(source, /\/api\/public\/attribution\/visit/);
   assert.match(source, /\/api\/public\/products/);
+});
+
+test('legacy MallCatalog Durable Object export remains non-destructive during D1 cutover', async () => {
+  assert.equal(typeof MallCatalog, 'function');
+  const catalog = new MallCatalog({}, {});
+  const response = await catalog.fetch(new Request('https://legacy.invalid/'));
+  assert.equal(response.status, 410);
+  const body = await response.json();
+  assert.equal(body.error, 'LEGACY_MALL_CATALOG_RETIRED');
 });

@@ -147,6 +147,31 @@ async function attributionSchemaReady(env) {
   } catch { return false; }
 }
 
+// Compatibility bridge for the short-lived Durable Object based Mall API deployment.
+// Cloudflare will not allow a Worker version to drop an existing Durable Object class
+// without an explicit destructive migration. Keep the class export so any legacy
+// namespace/data remains intact, while all current Mall traffic uses the D1 API below.
+export class MallCatalog {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch() {
+    return new Response(JSON.stringify({
+      error: 'LEGACY_MALL_CATALOG_RETIRED',
+      message: 'Legacy MallCatalog storage is preserved but no longer serves EKODI Mall traffic.'
+    }), {
+      status: 410,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        'x-content-type-options': 'nosniff'
+      }
+    });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('origin') || '';
