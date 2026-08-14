@@ -16,6 +16,7 @@ on:
       - 'books-finance-control.js'
       - 'books-distribution-control.js'
       - 'books-pipeline-control.js'
+      - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'social-registry-api.js'
       - 'migrations/**'
@@ -39,6 +40,7 @@ on:
       - 'books-finance-control.js'
       - 'books-distribution-control.js'
       - 'books-pipeline-control.js'
+      - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'social-registry-api.js'
       - 'migrations/**'
@@ -82,6 +84,7 @@ jobs:
           node --check books-finance-control.js
           node --check books-distribution-control.js
           node --check books-pipeline-control.js
+          node --check books-royalty-control.js
           node --check affiliate-control.js
           node --check social-registry-api.js
           node --check scripts/guarded-worker-release.mjs
@@ -94,7 +97,11 @@ jobs:
           grep -Fq 'handleCustomerMemberDirectory' customer-entry-worker.js
           grep -Fq 'handleBooksPipelineRequest' customer-entry-worker.js
           grep -Fq '/api/books/admin/pipeline' customer-entry-worker.js
+          grep -Fq 'handleBooksRoyaltyRequest' customer-entry-worker.js
+          grep -Fq '/api/books/admin/royalties' customer-entry-worker.js
           grep -Fq 'books_finance_transactions' books-pipeline-control.js
+          grep -Fq 'books_royalty_statements' books-royalty-control.js
+          grep -Fq 'royalty-engine' books-royalty-control.js
           grep -Fq 'checklist_json' books-distribution-control.js
           grep -Fq 'main = "customer-entry-worker.js"' wrangler.api.toml
 
@@ -184,6 +191,7 @@ jobs:
             unauthorized_directory=$(curl -sS -o /tmp/stage-customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/customers/directory' || true)
             unauthorized_admin=$(curl -sS -o /tmp/stage-google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/admin-access/google-accounts' || true)
             unauthorized_pipeline=$(curl -sS -o /tmp/stage-books-pipeline.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/admin/pipeline' || true)
+            unauthorized_royalties=$(curl -sS -o /tmp/stage-books-royalties.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/admin/royalties' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$status" | grep -q '"initialized"' \
               && printf '%s' "$google" | grep -q '"enabled":true' \
@@ -195,7 +203,8 @@ jobs:
               && [ "$unauthorized_customer" = '401' ] \
               && [ "$unauthorized_directory" = '401' ] \
               && [ "$unauthorized_admin" = '401' ] \
-              && [ "$unauthorized_pipeline" = '401' ]; then
+              && [ "$unauthorized_pipeline" = '401' ] \
+              && [ "$unauthorized_royalties" = '401' ]; then
               echo 'Control API isolated staging verified.'
               exit 0
             fi
@@ -239,7 +248,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Deep verify Google-only admin, Books pipeline and module boundaries
+      - name: Deep verify Google-only admin, Books pipeline, royalties and module boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -256,6 +265,7 @@ jobs:
             unauthorized_directory=$(curl -sS -o /tmp/customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/directory' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             unauthorized_pipeline=$(curl -sS -o /tmp/books-pipeline.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/admin/pipeline' || true)
+            unauthorized_royalties=$(curl -sS -o /tmp/books-royalties.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/admin/royalties' || true)
             legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'content-type: application/json' -d '{"email":"topmaster.joseph@gmail.com","password":"not-used"}' 'https://api.ekodi.kr/api/login' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$status" | grep -q '"initialized"' \
@@ -270,6 +280,7 @@ jobs:
               && [ "$unauthorized_directory" = '401' ] \
               && [ "$unauthorized_admin" = '401' ] \
               && [ "$unauthorized_pipeline" = '401' ] \
+              && [ "$unauthorized_royalties" = '401' ] \
               && [ "$legacy_login" = '410' ] \
               && grep -Fq 'EKODI 관리자 인증이 필요합니다.' /tmp/customer-directory.json \
               && grep -Fq 'GOOGLE_ADMIN_LOGIN_REQUIRED' /tmp/legacy-login.json; then
