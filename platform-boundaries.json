@@ -18,6 +18,22 @@
       "sharedDependencies": ["control-api for operational APIs"],
       "database": "ekodi-auth D1 via control-api"
     },
+    "community": {
+      "kind": "independent-platform",
+      "source": ["community/**", "community-worker.js", "wrangler.community.toml"],
+      "domains": ["community.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-community.yml",
+      "sharedDependencies": ["central auth realm"],
+      "database": "community data via existing API/storage contracts"
+    },
+    "social": {
+      "kind": "independent-platform",
+      "source": ["social/**", "social-worker.js", "wrangler.social.toml"],
+      "domains": ["social.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-social.yml",
+      "sharedDependencies": ["public social provider APIs"],
+      "database": "none in v1; channel registry is configuration-driven"
+    },
     "finance": {
       "kind": "independent-service",
       "source": ["finance-worker.js", "finance-entry-worker.js", "wrangler.finance.toml"],
