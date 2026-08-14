@@ -4,6 +4,7 @@ import { handleSourcingPlanRequest } from './sourcing-plan.js';
 import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.js';
 import { handleVerificationRequest, verificationSchemaReady } from './verification.js';
 import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
+import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 
@@ -142,11 +143,12 @@ export default {
       const fulfillmentReady = Boolean(env.DB) && await fulfillmentSchemaReady(env);
       const verificationReady = Boolean(env.DB) && await verificationSchemaReady(env);
       const supplierPilotReady = Boolean(env.DB) && await supplierPilotSchemaReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady;
+      const supplierDiscoveryReady = Boolean(env.DB) && await supplierDiscoverySchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
-        supplierPilotSchemaReady:supplierPilotReady, attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
+        supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
         supplierForwardEnabled:String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true', supplierPayoutExecutionEnabled:false, refundExecutionEnabled:false
@@ -173,6 +175,9 @@ export default {
 
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
+
+    const supplierDiscovery = await handleSupplierDiscoveryRequest(request, env);
+    if (supplierDiscovery) return reply(supplierDiscovery.body, supplierDiscovery.status, origin, env);
 
     const supplierPilot = await handleSupplierPilotRequest(request, env);
     if (supplierPilot) return reply(supplierPilot.body, supplierPilot.status, origin, env);
