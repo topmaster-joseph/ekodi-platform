@@ -42,4 +42,10 @@ test('legacy MallCatalog Durable Object export remains non-destructive during D1
   assert.equal(response.status, 410);
   const body = await response.json();
   assert.equal(body.error, 'LEGACY_MALL_CATALOG_RETIRED');
+
+  const config = await readFile(new URL('./wrangler.toml', import.meta.url), 'utf8');
+  assert.match(config, /\[exports\.MallCatalog\]/);
+  assert.match(config, /type\s*=\s*"durable-object"/);
+  assert.match(config, /storage\s*=\s*"sqlite"/);
+  assert.doesNotMatch(config, /deleted_classes\s*=.*MallCatalog/);
 });
