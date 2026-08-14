@@ -44,7 +44,9 @@ const ADMIN_ASSETS = new Set([
   '/control-center-ops.css',
   '/control-center-finance.css',
   '/control-center.js',
+  '/control-center-features.js',
   '/admin-central-handoff.js',
+  '/finance-monitor.js',
   '/compact-control-center.css',
   '/compact-control-center.js',
   '/client-access.css',
@@ -55,6 +57,8 @@ const ADMIN_ASSETS = new Set([
   '/google-admin-auth.js',
   '/books-admin.css',
   '/books-admin.js',
+  '/books-finance-admin.css',
+  '/books-finance-admin.js',
 ]);
 
 const ADMIN_CSP = [
@@ -145,11 +149,12 @@ export default {
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
 
-      // Admin UI assets must never be allowed to lag behind the shell. A stale CSS
-      // file can visually regress navigation even when the new HTML/JS is live.
+      // Static admin assets may be kept by the browser, but must be revalidated on
+      // every navigation. This preserves fresh deployments while avoiding repeated
+      // full transfers of unchanged CSS/JS.
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-asset');
+        return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-asset');
       }
     }
 
