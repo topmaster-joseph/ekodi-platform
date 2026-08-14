@@ -166,7 +166,7 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
       }
-      if (['/auth.js','/auth.css','/auth-router.js','/admin-auth.js','/client-auth.js','/marketing-onboarding.js','/membership-ui.js'].includes(url.pathname)) {
+      if (['/auth.js','/auth.css','/auth-router.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/marketing-onboarding.js','/membership-ui.js'].includes(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, AUTH_CSP, 'public, max-age=300', 'central-auth-asset');
       }
