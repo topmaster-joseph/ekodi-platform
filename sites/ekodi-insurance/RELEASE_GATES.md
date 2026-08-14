@@ -11,14 +11,30 @@
 - 불투명한 보험점수 제거 및 분석 기준 공개
 - 특정 상품 비교·추천/보험금 지급 확정 경계
 - 정식 Control Center용 Insurance 상담 Queue 모듈 빌드
-- Insurance API Deno 타입검사
+- Insurance customer API Deno 타입검사
 - AI 입력 Redaction, 연락처 AES-GCM 암호화 코드, API-key 환경변수 사용
 - 상담 공유동의, 공유철회, 관리자 열람/상태변경 감사로그 코드
 - PostgreSQL 17 기반 RLS/권한 테스트
 - 타 사용자 보험자료 접근 차단
 - Insurance staff의 고객 전체 보험원장 직접 열람 차단
 - 상담요청/동의/AI transcript의 클라이언트 직접쓰기 차단
-- Frontend + Admin + API + Schema 통합 Release Candidate CI
+- fail-closed Insurance Auth staging UI/Worker 배포
+- Insurance Google identity staging function 타입검사
+- identity challenge 저장소의 service-role only 권한 검증
+- 현재 운영 Supabase 프로젝트를 Auth staging에서 명시적으로 차단
+- 중앙 Admin session과 Insurance Auth를 혼합하지 않는 Control Proxy 경계
+- `admin.ekodi.kr → api.ekodi.kr → insurance-admin-internal` 구조 코드 검증
+- 내부 Admin API에서 고객 보험·청구 원장 endpoint 부재 검증
+- 중앙 관리자 principal을 Insurance audit에 별도 기록하는 스키마
+- 고객 Frontend + Auth staging + Admin + Control proxy + customer API + internal admin API + 4개 SQL 통합 Release Candidate CI
+
+## 현재 공개된 안전한 스테이징
+
+- 고객 앱: `https://ekodi-insurance-staging.topmaster-joseph.workers.dev`
+- 로컬 상담관리 Preview: `https://ekodi-insurance-staging.topmaster-joseph.workers.dev/admin`
+- 분리형 Auth shell: `https://ekodi-insurance-auth-staging.topmaster-joseph.workers.dev`
+
+Auth shell은 실제 development branch가 연결되기 전까지 의도적으로 `environment=blocked` 상태를 유지한다.
 
 ## 운영 전 필수 미통과 게이트
 
@@ -27,48 +43,57 @@
 운영 중앙인증 프로젝트에 테스트 데이터를 만들지 않는다.
 
 - Supabase development branch `insurance-staging` 생성
-- `001_insurance_platform.sql` 및 `002_insurance_privileges.sql` 적용
+- `001_insurance_platform.sql`
+- `002_insurance_privileges.sql`
+- `003_insurance_identity_staging.sql`
+- `004_insurance_admin_principal.sql`
 - Supabase Security Advisor와 Performance Advisor 확인
 - 실제 branch에서 RLS/권한 재검증
 
 Development branch는 시간당 과금되는 인프라라 비용 승인 후에만 생성한다.
 
-### 2. Insurance Auth Staging
+### 2. Real Insurance Auth Staging
 
-운영 `identity-api`는 `https://auth.ekodi.kr`과 실제 Auth user/session을 사용하므로 보험 staging에 직접 재사용하지 않는다.
+분리형 Auth shell과 identity function 코드는 검증됐지만 실제 Auth session은 아직 발급하지 않는다.
 
-- Supabase development branch의 Auth를 사용한 별도 staging 인증 흐름 구축
-- 보험 전용 realm 추가
-- Google 본인확인 → staging session 교환 검증
-- Community / Mall / 기존 고객 인증 회귀검증
-- 통과 후에만 운영 중앙 Auth에 Insurance realm 승격
+- development branch URL/publishable key를 Auth staging에 연결
+- `insurance-identity-staging` function을 development branch에 배포
+- Google OAuth에서 Auth staging Origin 허용
+- Google 본인확인 → development branch staging session 교환 검증
+- 보험 고객 앱이 그 세션을 정상 수신하는지 E2E 확인
+- 이후 운영 중앙 Auth에 Insurance realm을 통합할 경우 Community / Mall / 기존 고객 인증 회귀검증
 
 ### 3. Backend Secrets
 
 다음 서버 비밀값이 준비되지 않으면 실제 Handoff backend를 활성화하지 않는다.
 
 - `INSURANCE_CONTACT_KEY`: AES-GCM 256-bit key
+- `INSURANCE_INTERNAL_TOKEN`: Control API ↔ Insurance internal admin API 전용
 - AI Provider를 사용할 경우 `OPENAI_API_KEY`
 - `INSURANCE_OPENAI_MODEL`
+- `INSURANCE_GOOGLE_CLIENT_ID`
+- `INSURANCE_AUTH_ORIGIN`
 
 비밀값을 프런트엔드, GitHub 소스, 로그에 넣지 않는다.
 
 ### 4. Real Insurance API Staging
 
-- `insurance-api`를 development branch에 `verify_jwt=true`로 배포
+- customer `insurance-api`를 development branch에 배포
+- `insurance-admin-internal`을 development branch에 custom internal auth로 배포
 - AI `/ai/chat` 인증검증
 - 연락처 암호화 round-trip 확인
 - 상담요청 생성/철회 확인
-- Admin list/detail/status API 권한 확인
-- auditor의 연락처 비공개 확인
+- 중앙 Admin proxy list/detail/status 권한 확인
+- auditor 역할의 연락처 비공개 확인
 - 모든 관리자 열람/상태변경 audit 확인
-- 외부 AI 사용 시 전송필드와 저장정책 확인
+- 외부 AI 사용 시 실제 전송필드와 저장정책 확인
 
-### 5. Admin Staging
+### 5. Real Admin Staging
 
-운영 `admin.ekodi.kr`에 바로 배포하지 않는다.
+Control Center용 Insurance 모듈과 proxy 코드는 통과했지만 운영 `admin.ekodi.kr`와 `api.ekodi.kr`에는 아직 배포하지 않는다.
 
-- 독립 Admin/Auth staging에서 Insurance 메뉴 로드
+- 독립 Admin/Control API staging에서 Insurance 메뉴 로드
+- central admin session → Insurance internal proxy E2E
 - admin/advisor/auditor 역할별 화면 검증
 - 상담 Queue는 상담요청 범위만 표시
 - 고객 보험·청구 원장이 메뉴나 API를 통해 노출되지 않는지 재확인
@@ -105,7 +130,13 @@ Development branch는 시간당 과금되는 인프라라 비용 승인 후에�
 
 ## 현재 상태
 
-**Code RC: PASS**
+**Code Release Candidate: PASS**
+
+**Fail-closed Auth Staging Shell: PASS**
+
+**Central Admin Proxy Boundary: PASS**
+
+**Full No-Paid Integrated CI: PASS**
 
 **Real isolated backend/auth staging: BLOCKED UNTIL PAID SUPABASE DEVELOPMENT BRANCH IS EXPLICITLY APPROVED**
 
