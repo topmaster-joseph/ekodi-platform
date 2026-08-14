@@ -68,7 +68,7 @@ export function normalizeDomemaeItem(payload, requestedItemNo) {
   const status = clean(findFirst(payload, ['status', 'itemStatus']), 80);
   const section = clean(findFirst(payload, ['section', 'itemSection']), 80);
   const market = clean(findFirst(payload, ['market']), 40);
-  const sellerId = clean(findFirst(payload, ['sellerId', 'id']), 120);
+  const sellerId = clean(findFirst(payload, ['sellerId']), 120);
   const itemNo = clean(findFirst(payload, ['no', 'itemNo']), 30) || requestedItemNo;
   return { itemNo, title, status, section, market, sellerId };
 }
@@ -85,8 +85,8 @@ export async function domemaeConnectorReady(env) {
   try {
     const row = await env.DB.prepare(`SELECT id,provider_type,integration_mode,connection_status,catalog_policy,order_mode,auto_order_enabled,customer_pii_allowed
       FROM sourcing_providers WHERE id=?`).bind(PROVIDER_ID).first();
-    return Boolean(row && row.provider_type === 'supplier_api' && row.integration_mode === 'api' && row.order_mode === 'api_order'
-      && Number(row.auto_order_enabled) === 0 && Number(row.customer_pii_allowed) === 0);
+    return Boolean(row && row.provider_type === 'supplier_api' && row.integration_mode === 'api' && row.catalog_policy === 'reference_only'
+      && row.order_mode === 'api_order' && Number(row.auto_order_enabled) === 0 && Number(row.customer_pii_allowed) === 0);
   } catch { return false; }
 }
 
@@ -138,7 +138,7 @@ async function itemLookup(env, actor, body) {
   let response;
   try {
     response = await fetch(`${ENDPOINT}?${params.toString()}`, { method: 'GET', headers: { accept: 'application/json' } });
-  } catch (error) {
+  } catch {
     await recordCheck(env, 'item_lookup', itemNo, 'failed', { actor, reason: 'network' });
     return { status: 502, body: { error: '도매매 공식 API 연결에 실패했습니다.', code: 'DOMEMAE_NETWORK_ERROR' } };
   }
