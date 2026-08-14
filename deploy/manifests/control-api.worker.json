@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-auth-api",
+    "config": "wrangler.api.toml",
+    "requests": [
+      {
+        "url": "https://api.ekodi.kr/health",
+        "statuses": [200],
+        "expect": ["\"ok\":true"]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/status",
+        "statuses": [200],
+        "expect": ["\"initialized\""]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/google/config",
+        "statuses": [200],
+        "expect": ["\"enabled\":true", "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/books/public/config",
+        "statuses": [200],
+        "expect": ["\"digital-start\""]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/social/registry",
+        "statuses": [200],
+        "expect": ["에코디커뮤니티", "community-youtube"]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/control/social/registry",
+        "statuses": [401]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/customers/tenants",
+        "statuses": [401]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/customers/directory",
+        "statuses": [401],
+        "expect": ["EKODI 관리자 인증이 필요합니다."]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/admin-access/google-accounts",
+        "statuses": [401]
+      }
+    ]
+  }
+}
