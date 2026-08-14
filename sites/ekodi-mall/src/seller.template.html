@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#173f35">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="EKODI Commerce Platform 판매자 센터 기반 화면">
+  <meta name="description" content="EKODI Commerce Platform 판매자용 Product Studio">
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/platform.css">
   <title>Seller Studio | EKODI MALL</title>
@@ -14,24 +14,54 @@
   <div class="notice">{{NOTICE}}</div>
   <header class="header">
     <a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
-    <nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a></nav>
+    <nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a><a href="/checkout/">BAG <span class="nav-count" data-basket-count hidden>0</span></a></nav>
   </header>
+
   <main class="seller-main">
-    <section class="seller-hero">
+    <section class="seller-hero seller-hero-v2">
       <div>
-        <p class="eyebrow">SELLER STUDIO · FOUNDATION</p>
-        <h1>한 가게의 운영을<br>하나의 흐름으로</h1>
-        <p class="detail-desc">{{PLATFORM_NAME}}의 판매자 작업공간입니다. 지금은 스토어·상품 구조를 먼저 격리 구축하고 있으며, 주문·결제·정산은 기존 서비스에 영향을 주지 않도록 다음 단계에서 별도 연결합니다.</p>
-        <div class="cta"><a class="btn primary" href="{{INQUIRY_URL}}" target="_blank" rel="noopener">입점·파트너 문의</a><a class="btn ghost" href="/#stores">현재 스토어 보기</a></div>
+        <p class="eyebrow">SELLER STUDIO · MVP</p>
+        <h1>가게의 생각을<br>상품 페이지로</h1>
+        <p class="detail-desc">{{PLATFORM_NAME}}의 판매자 작업공간입니다. 스토어와 상품의 핵심 정보를 입력하면 상세페이지 구조, SNS 문구, 쇼츠 개요에 쓸 수 있는 초안을 한 번에 만들고 JSON으로 보관할 수 있습니다.</p>
+        <div class="cta"><a class="btn primary" href="#studio">상품 초안 만들기</a><a class="btn ghost" href="{{INQUIRY_URL}}" target="_blank" rel="noopener">입점·파트너 문의</a></div>
+        <p class="studio-local-note">현재 초안은 이 브라우저에만 저장됩니다. 서버 저장·판매자 계정·결제·정산은 공용 시스템을 건드리지 않고 Mall 전용 백엔드가 준비된 뒤 연결합니다.</p>
       </div>
-      <div class="seller-console" aria-label="판매자 센터 구축 단계">
-        <div class="console-top"><span>EKODI SELLER STUDIO</span><b>FOUNDATION</b></div>
-        <div class="console-grid"><article><small>STORE</small><strong>스토어 운영</strong><span>구축 중</span></article><article><small>PRODUCT AI</small><strong>상품 콘텐츠</strong><span>다음 단계</span></article><article><small>ORDERS</small><strong>주문 관리</strong><span>연결 예정</span></article><article><small>SETTLEMENT</small><strong>정산 관리</strong><span>연결 예정</span></article></div>
+      <div class="seller-console" aria-label="판매자 센터 현재 상태">
+        <div class="console-top"><span>EKODI SELLER STUDIO</span><b>MVP</b></div>
+        <div class="console-grid"><article><small>STORE</small><strong>스토어 구조</strong><span>운영</span></article><article><small>PRODUCT STUDIO</small><strong>상품 초안</strong><span>운영</span></article><article><small>INQUIRY BAG</small><strong>상담 바구니</strong><span>운영</span></article><article><small>PAY & SETTLEMENT</small><strong>결제·정산</strong><span>격리 연결 예정</span></article></div>
       </div>
     </section>
-    <section class="seller-modules"><div class="heading"><div><p class="eyebrow">PLATFORM MODULES</p><h2>판매자의 하루를 잇는 모듈</h2><p>각 기능은 독립 모듈로 추가해 다른 EKODI 사이트의 인증·배포·회계 흐름과 충돌하지 않도록 설계합니다.</p></div></div><div class="module-grid">{{PLATFORM_MODULES}}</div></section>
-    <section class="seller-safety"><p class="eyebrow">SAFE ROLLOUT</p><h2>플랫폼은 크게,<br>배포는 작고 되돌릴 수 있게</h2><p>이번 단계에서는 에코디몰 내부의 스토어 모델과 화면만 구축합니다. 공용 인증, pay.ekodi.kr, finance-api.ekodi.kr에는 변경을 가하지 않습니다.</p></section>
+
+    <section class="studio-shell" id="studio">
+      <div class="studio-intro">
+        <div><p class="eyebrow">PRODUCT STUDIO</p><h2>상품 하나를 등록하면<br>콘텐츠 여러 개의 씨앗으로</h2><p>아직 외부 AI API를 호출하지 않습니다. 입력한 정보로 구조화된 초안을 생성해 나중에 Marketing AI나 전용 Product AI에 안전하게 연결할 수 있도록 만듭니다.</p></div>
+        <div class="readiness-card"><small>등록 준비도</small><strong id="readinessText">0%</strong><div class="readiness-track"><span id="readinessBar"></span></div><p id="draftStatus">브라우저 자동 임시저장</p></div>
+      </div>
+
+      <div class="studio-grid">
+        <form id="sellerDraftForm" class="studio-form" autocomplete="off">
+          <fieldset><legend>1 · Store</legend><label>스토어명<input name="storeName" placeholder="예: 청계상회"></label><label>스토어 slug<input name="storeSlug" placeholder="예: cheonggye-store" pattern="[a-z0-9-]+"></label><label>연락·문의 채널<input name="contact" placeholder="이메일, 전화 또는 상담 URL"></label></fieldset>
+          <fieldset><legend>2 · Product</legend><label>상품명<input name="productName" placeholder="상품 또는 서비스명"></label><label>카테고리<select name="category"><option value="local">로컬</option><option value="living">생활</option><option value="book">책·배움</option><option value="gift">선물</option></select></label><label>예상 가격<input name="price" type="number" min="0" step="100" inputmode="numeric" placeholder="미확정이면 비워두세요"></label></fieldset>
+          <fieldset><legend>3 · Product Story</legend><label>누구를 위한 상품인가<textarea name="audience" rows="2" placeholder="예: 목포대 후문을 찾는 학생과 방문객"></textarea></label><label>한 줄 소개<textarea name="oneLine" rows="2" placeholder="고객이 가장 먼저 이해해야 할 한 문장"></textarea></label><label>핵심 장점<textarea name="benefits" rows="4" placeholder="쉼표 또는 줄바꿈으로 최대 5개"></textarea></label><label>상품 이야기<textarea name="story" rows="5" placeholder="왜 만들었는지, 지역·사람·브랜드와 어떤 관계인지"></textarea></label></fieldset>
+          <fieldset><legend>4 · Operations</legend><label>규격·구성<textarea name="specs" rows="3" placeholder="확인된 정보만 입력하세요"></textarea></label><label>배송·픽업·제공 방식<textarea name="fulfillment" rows="3" placeholder="예: 매장 픽업, 택배 협의, 디지털 제공"></textarea></label></fieldset>
+          <div class="studio-buttons"><button class="btn primary" type="button" data-studio-save>초안 저장</button><button class="btn ghost" type="button" data-studio-export>JSON 내보내기</button><button class="smallbtn" type="button" data-studio-clear>새로 시작</button></div>
+        </form>
+
+        <aside class="studio-preview-wrap">
+          <div class="studio-preview-head"><div><p class="eyebrow">LIVE DRAFT</p><h2>상세페이지 초안</h2></div><button class="smallbtn" type="button" data-studio-copy>JSON 복사</button></div>
+          <div id="productPreview" class="studio-preview"></div>
+          <details class="studio-json"><summary>플랫폼용 JSON 보기</summary><textarea id="draftJson" readonly rows="18"></textarea></details>
+        </aside>
+      </div>
+    </section>
+
+    <section class="seller-modules"><div class="heading"><div><p class="eyebrow">PLATFORM MODULES</p><h2>하나씩 독립적으로 연결합니다</h2><p>판매자 기능은 Mall 내부에서 먼저 완성하고, 인증·Pay·Finance는 공개 API 계약이 준비됐을 때만 연결합니다.</p></div></div><div class="module-grid">{{PLATFORM_MODULES}}</div></section>
+
+    <section class="seller-safety"><p class="eyebrow">ISOLATED COMMERCE</p><h2>플랫폼은 이어지되<br>소스는 서로 기대지 않게</h2><p>Seller Studio는 에코디몰 안에서 동작합니다. 공용 인증, pay.ekodi.kr, finance-api.ekodi.kr의 코드를 직접 수정하거나 데이터를 임의로 공유하지 않습니다. 다음 서버 단계에서도 Mall 전용 API와 명시적 계약을 통해 연결합니다.</p></section>
   </main>
+
   <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Seller Studio</span><a href="/">에코디몰 홈</a></div></footer>
+  <script src="/assets/commerce.js" defer></script>
+  <script src="/assets/seller.js" defer></script>
 </body>
 </html>
