@@ -7,6 +7,7 @@ const enc = new TextEncoder();
 
 const SITES = new Set(['portal','marketing','biz','trade','mall','books','church','lab','community','edu','media']);
 const TENANT_PLAN_MANAGERS = new Set(['store_owner','accounting_manager','hq_manager','client_admin']);
+const STORE_PLAN_MANAGERS = new Set(['store_owner','tenant_admin','platform_admin','accounting_manager','hq_manager','client_admin']);
 const MARKETING_PLANS = Object.freeze([
   { id:'free', label:'FREE', monthlyFee:0, summary:'직접 만들어 보고 판단', billing:'free' },
   { id:'flex', label:'FLEX', monthlyFee:0, summary:'월 기본료 없이 필요한 기능만 종량제', billing:'metered' },
@@ -25,6 +26,10 @@ function normalizeSite(value) {
 function normalizeTenant(value) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80);
 }
+function normalizeStoreId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id) ? id : '';
+}
 function plansFor(site) { return site === 'marketing' ? MARKETING_PLANS : DEFAULT_PLANS; }
 function planFor(site, id) { return plansFor(site).find(plan => plan.id === String(id || '').toLowerCase()) || null; }
 function billingReady(env) {
@@ -35,7 +40,9 @@ function billingReady(env) {
   );
 }
 function canManagePlan(subject) {
-  return subject?.type === 'person' || TENANT_PLAN_MANAGERS.has(String(subject?.tenant?.role || ''));
+  if (subject?.type === 'person') return true;
+  if (subject?.type === 'store') return STORE_PLAN_MANAGERS.has(String(subject?.role || ''));
+  return TENANT_PLAN_MANAGERS.has(String(subject?.tenant?.role || ''));
 }
 function cors(origin, env) {
   const headers = {
@@ -126,6 +133,10 @@ async function ensureSchema(db) {
   ]);
 }
 
+function bearerToken(request) {
+  const auth = String(request.headers.get('authorization') || '');
+  return auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
+}
 async function supabaseUser(accessToken) {
   if (!accessToken || accessToken.length > 8192) return null;
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -142,9 +153,23 @@ async function supabaseUser(accessToken) {
   };
 }
 async function identityFromRequest(request) {
-  const auth = String(request.headers.get('authorization') || '');
-  const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
-  return supabaseUser(token);
+  return supabaseUser(bearerToken(request));
+}
+async function supabaseWorkspaces(request, site = 'marketing') {
+  const token = bearerToken(request);
+  if (!token) return [];
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/current_site_workspaces`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ p_site_key: site }),
+  });
+  if (!response.ok) return [];
+  const value = await response.json();
+  return Array.isArray(value) ? value : [];
 }
 async function adminSession(request, env) {
   const url = new URL(request.url);
@@ -155,9 +180,29 @@ async function adminSession(request, env) {
   return response.json();
 }
 
+async function resolveStoreSubject(request, identity, site, storeId) {
+  const store = normalizeStoreId(storeId);
+  if (!store || site !== 'marketing') return null;
+  const workspaces = await supabaseWorkspaces(request, 'marketing');
+  const item = workspaces.find(row => String(row?.store_id || '').toLowerCase() === store && String(row?.workspace_key || '') === `store:${store}`);
+  if (!item) return null;
+  return {
+    type:'store',
+    key:store,
+    email:identity.email,
+    role:String(item.role || ''),
+    basePlan:String(item.plan || '').toLowerCase() === 'basic' ? 'basic' : 'free',
+    tenant:{ slug:String(item.tenant || ''), role:String(item.role || '') },
+    store:{
+      id:store,
+      slug:String(item.store || ''),
+      name:String(item.store_name || item.workspace_name || ''),
+    },
+  };
+}
 async function resolveSubject(env, identity, tenantSlug = '') {
   const tenant = normalizeTenant(tenantSlug);
-  if (!tenant) return { type:'person', key:identity.id, email:identity.email, tenant:null };
+  if (!tenant) return { type:'person', key:identity.id, email:identity.email, tenant:null, basePlan:'free' };
 
   const row = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug = ?').bind(tenant).first();
   if (!row || row.status !== 'active') return null;
@@ -168,23 +213,40 @@ async function resolveSubject(env, identity, tenantSlug = '') {
     type:'tenant',
     key:row.slug,
     email:identity.email,
+    basePlan:'free',
     tenant:{ id:row.id, slug:row.slug, role:grant.role },
   };
+}
+async function subjectFor(request, env, identity, site, tenantSlug = '', storeId = '') {
+  if (storeId) return resolveStoreSubject(request, identity, site, storeId);
+  return resolveSubject(env, identity, tenantSlug);
 }
 
 async function subscriptionFor(env, subject, site) {
   let row = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE subject_type = ? AND subject_key = ? AND site = ?')
     .bind(subject.type, subject.key, site).first();
-  if (row) return row;
+  const basePlan = subject.type === 'store' && site === 'marketing' && subject.basePlan === 'basic' ? 'basic' : 'free';
+  const baseStatus = basePlan === 'basic' ? 'active' : 'free';
+  if (row) {
+    if (basePlan === 'basic' && row.status === 'canceled') {
+      const now = new Date().toISOString();
+      await env.DB.prepare(`UPDATE service_subscriptions SET
+        plan_id='basic',status='active',monthly_fee=0,provider='',provider_customer_key=NULL,
+        billing_key_cipher=NULL,billing_key_iv=NULL,current_period_start=NULL,current_period_end=NULL,
+        next_billing_at=NULL,cancel_at_period_end=0,updated_at=? WHERE id=?`).bind(now, row.id).run();
+      row = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE id=?').bind(row.id).first();
+    }
+    return row;
+  }
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT OR IGNORE INTO service_subscriptions
     (subject_type,subject_key,site,plan_id,status,monthly_fee,created_at,updated_at)
-    VALUES (?, ?, ?, 'free', 'free', 0, ?, ?)`).bind(subject.type, subject.key, site, now, now).run();
+    VALUES (?, ?, ?, ?, ?, 0, ?, ?)`).bind(subject.type, subject.key, site, basePlan, baseStatus, now, now).run();
   row = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE subject_type = ? AND subject_key = ? AND site = ?')
     .bind(subject.type, subject.key, site).first();
   return row;
 }
-function publicSubscription(row) {
+function publicSubscription(row, subject = null) {
   return {
     planId: row.plan_id,
     status: row.status,
@@ -192,6 +254,7 @@ function publicSubscription(row) {
     currentPeriodEnd: row.current_period_end || null,
     nextBillingAt: row.next_billing_at || null,
     cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+    basePlan: subject?.basePlan || 'free',
   };
 }
 
@@ -257,17 +320,19 @@ async function me(request, env) {
   const site = normalizeSite(url.searchParams.get('site'));
   const identity = await identityFromRequest(request);
   if (!site || !identity) return json({ error:'Google 로그인 세션을 확인해 주세요.' }, 401, request, env);
-  const subject = await resolveSubject(env, identity, url.searchParams.get('tenant'));
-  if (!subject) return json({ error:'이 계정은 해당 조직에 등록되어 있지 않습니다.' }, 403, request, env);
+  const subject = await subjectFor(request, env, identity, site, url.searchParams.get('tenant'), url.searchParams.get('store'));
+  if (!subject) return json({ error:'이 계정은 해당 조직·점포에 등록되어 있지 않습니다.' }, 403, request, env);
   const subscription = await subscriptionFor(env, subject, site);
   return json({
     site,
     subjectType:subject.type,
     tenant:subject.tenant?.slug || null,
-    role:subject.tenant?.role || null,
+    store:subject.store || null,
+    role:subject.role || subject.tenant?.role || null,
+    basePlan:subject.basePlan || 'free',
     email:identity.email,
     canManagePlan:canManagePlan(subject),
-    subscription:publicSubscription(subscription),
+    subscription:publicSubscription(subscription, subject),
     plans:plansFor(site),
     billingReady:billingReady(env),
   }, 200, request, env);
@@ -280,21 +345,24 @@ async function selectFree(request, env) {
   const plan = planFor(site, body?.planId);
   if (!identity || !site || !plan) return json({ error:'요청을 확인해 주세요.' }, 400, request, env);
   if (plan.monthlyFee > 0) return json({ error:'유료 플랜은 결제 등록이 필요합니다.', code:'BILLING_REQUIRED' }, 409, request, env);
-  const subject = await resolveSubject(env, identity, body?.tenant);
-  if (!subject) return json({ error:'이 계정은 해당 조직에 등록되어 있지 않습니다.' }, 403, request, env);
-  if (!canManagePlan(subject)) return json({ error:'이 조직의 회원등급을 변경할 권한이 없습니다.', code:'PLAN_MANAGER_REQUIRED' }, 403, request, env);
+  const subject = await subjectFor(request, env, identity, site, body?.tenant, body?.store);
+  if (!subject) return json({ error:'이 계정은 해당 조직·점포에 등록되어 있지 않습니다.' }, 403, request, env);
+  if (!canManagePlan(subject)) return json({ error:'이 조직·점포의 회원등급을 변경할 권한이 없습니다.', code:'PLAN_MANAGER_REQUIRED' }, 403, request, env);
   const current = await subscriptionFor(env, subject, site);
   if (Number(current.monthly_fee) > 0 && current.status === 'active') {
     return json({ error:'현재 월 구독을 먼저 기간 종료 예약한 뒤 무료·종량제로 변경해 주세요.', code:'CANCEL_SUBSCRIPTION_FIRST' }, 409, request, env);
   }
+  const baseBasic = subject.type === 'store' && site === 'marketing' && subject.basePlan === 'basic';
+  const nextPlan = baseBasic ? 'basic' : plan.id;
+  const nextStatus = baseBasic ? 'active' : (plan.id === 'free' ? 'free' : 'active');
   const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE service_subscriptions
     SET plan_id=?, status=?, monthly_fee=0, provider='', provider_customer_key=NULL,
       billing_key_cipher=NULL, billing_key_iv=NULL, current_period_start=NULL,
       current_period_end=NULL, next_billing_at=NULL, cancel_at_period_end=0, updated_at=?
-    WHERE id=?`).bind(plan.id, plan.id === 'free' ? 'free' : 'active', now, current.id).run();
+    WHERE id=?`).bind(nextPlan, nextStatus, now, current.id).run();
   const row = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE id=?').bind(current.id).first();
-  return json({ ok:true, subscription:publicSubscription(row) }, 200, request, env);
+  return json({ ok:true, subscription:publicSubscription(row, subject) }, 200, request, env);
 }
 
 async function billingStart(request, env) {
@@ -304,15 +372,15 @@ async function billingStart(request, env) {
   const plan = planFor(site, body?.planId);
   if (!identity || !site || !plan || plan.monthlyFee <= 0) return json({ error:'유료 구독 플랜을 선택해 주세요.' }, 400, request, env);
   if (!billingReady(env)) return json({ error:'자동결제 계약 또는 결제키 연결이 아직 완료되지 않았습니다.', code:'BILLING_NOT_READY' }, 503, request, env);
-  const subject = await resolveSubject(env, identity, body?.tenant);
-  if (!subject) return json({ error:'이 계정은 해당 조직에 등록되어 있지 않습니다.' }, 403, request, env);
-  if (!canManagePlan(subject)) return json({ error:'이 조직의 유료 구독을 변경할 권한이 없습니다.', code:'PLAN_MANAGER_REQUIRED' }, 403, request, env);
+  const subject = await subjectFor(request, env, identity, site, body?.tenant, body?.store);
+  if (!subject) return json({ error:'이 계정은 해당 조직·점포에 등록되어 있지 않습니다.' }, 403, request, env);
+  if (!canManagePlan(subject)) return json({ error:'이 조직·점포의 유료 구독을 변경할 권한이 없습니다.', code:'PLAN_MANAGER_REQUIRED' }, 403, request, env);
   const current = await subscriptionFor(env, subject, site);
   if (Number(current.monthly_fee) > 0 && current.status === 'active') {
     return json({
       error: current.plan_id === plan.id ? '이미 이용 중인 월 구독입니다.' : '현재 월 구독 기간이 끝난 뒤 다른 유료 플랜으로 변경해 주세요.',
       code: current.plan_id === plan.id ? 'ALREADY_SUBSCRIBED' : 'ACTIVE_SUBSCRIPTION_EXISTS',
-      subscription: publicSubscription(current),
+      subscription: publicSubscription(current, subject),
     }, 409, request, env);
   }
 
@@ -330,6 +398,7 @@ async function billingStart(request, env) {
   callback.searchParams.set('site', site);
   callback.searchParams.set('billing', 'success');
   callback.searchParams.set('checkout', checkout);
+  if (subject.type === 'store') callback.searchParams.set('store', subject.key);
   if (returnTo) callback.searchParams.set('return_to', returnTo);
   const fail = new URL(callback);
   fail.searchParams.set('billing', 'fail');
@@ -342,12 +411,18 @@ async function billingStart(request, env) {
     failUrl:fail.href,
     amount:plan.monthlyFee,
     plan,
+    subjectType:subject.type,
+    store:subject.store || null,
   }, 200, request, env);
 }
 
-async function authorizeCheckout(env, identity, row) {
+async function authorizeCheckout(request, env, identity, row) {
   if (String(row.email || '').toLowerCase() !== identity.email) return false;
   if (row.subject_type === 'person') return row.subject_key === identity.id;
+  if (row.subject_type === 'store') {
+    const subject = await resolveStoreSubject(request, identity, row.site, row.subject_key);
+    return Boolean(subject && canManagePlan(subject));
+  }
   if (row.subject_type !== 'tenant') return false;
   const tenant = await env.DB.prepare('SELECT id,status FROM customer_tenants WHERE slug = ?').bind(row.subject_key).first();
   if (!tenant || tenant.status !== 'active') return false;
@@ -366,7 +441,7 @@ async function billingComplete(request, env) {
   if (!checkout || checkout.status !== 'pending' || checkout.expires_at <= new Date().toISOString()) {
     return json({ error:'결제 요청이 만료되었거나 이미 처리되었습니다.' }, 409, request, env);
   }
-  if (checkout.customer_key !== String(body.customerKey) || !(await authorizeCheckout(env, identity, checkout))) {
+  if (checkout.customer_key !== String(body.customerKey) || !(await authorizeCheckout(request, env, identity, checkout))) {
     return json({ error:'결제 요청 계정을 확인할 수 없습니다.' }, 403, request, env);
   }
   const plan = planFor(checkout.site, checkout.plan_id);
@@ -436,15 +511,15 @@ async function cancel(request, env) {
   const body = await readJson(request);
   const site = normalizeSite(body?.site);
   if (!identity || !site) return json({ error:'요청을 확인해 주세요.' }, 400, request, env);
-  const subject = await resolveSubject(env, identity, body?.tenant);
-  if (!subject) return json({ error:'이 계정은 해당 조직에 등록되어 있지 않습니다.' }, 403, request, env);
-  if (!canManagePlan(subject)) return json({ error:'이 조직의 구독을 해지할 권한이 없습니다.', code:'PLAN_MANAGER_REQUIRED' }, 403, request, env);
+  const subject = await subjectFor(request, env, identity, site, body?.tenant, body?.store);
+  if (!subject) return json({ error:'이 계정은 해당 조직·점포에 등록되어 있지 않습니다.' }, 403, request, env);
+  if (!canManagePlan(subject)) return json({ error:'이 조직·점포의 구독을 해지할 권한이 없습니다.', code:'PLAN_MANAGER_REQUIRED' }, 403, request, env);
   const row = await subscriptionFor(env, subject, site);
-  if (Number(row.monthly_fee) <= 0) return json({ ok:true, subscription:publicSubscription(row) }, 200, request, env);
+  if (Number(row.monthly_fee) <= 0) return json({ ok:true, subscription:publicSubscription(row, subject) }, 200, request, env);
   await env.DB.prepare('UPDATE service_subscriptions SET cancel_at_period_end=1,updated_at=? WHERE id=?')
     .bind(new Date().toISOString(), row.id).run();
   const updated = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE id=?').bind(row.id).first();
-  return json({ ok:true, subscription:publicSubscription(updated) }, 200, request, env);
+  return json({ ok:true, subscription:publicSubscription(updated, subject) }, 200, request, env);
 }
 
 async function adminSubscriptions(request, env) {
