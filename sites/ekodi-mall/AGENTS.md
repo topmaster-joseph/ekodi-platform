@@ -5,30 +5,32 @@
 ## 기본 원칙
 
 1. 정적 큐레이션 상품은 `content/products.json`, 브랜드·커머스 정책은 `content/site.json`에서 관리한다.
-2. Google 회원 개인상품은 `api/worker.js` + Mall 전용 D1이 서버 원본이며 Store는 선택사항이다.
-3. 브라우저 `localStorage`는 편집 중 임시저장 안전망일 뿐 서버 원본·회원권한·수수료·정산 근거로 사용하지 않는다.
-4. 공개 개인상품은 서버 `published` 상태인 경우에만 `/p/{shareCode}` 고유링크에서 노출한다.
-5. 가격, 구매 URL, 사업자등록번호, 통신판매업 신고번호를 확인 없이 추정하거나 만들어 넣지 않는다.
-6. 제휴판매 URL은 HTTPS만 허용하고 에코디 결제로 위장하지 않는다.
-7. `dist/`는 빌드 산출물이므로 직접 편집하거나 커밋하지 않는다.
+2. Google 회원 개인상품은 Mall API + 전용 D1이 서버 원본이며 Store는 선택사항이다.
+3. `api/worker.js`는 주문·Toss·정산 core, `api/entry.js`는 first-touch·공개상품 피드·강화 health를 담당하고 나머지는 core에 위임한다.
+4. 브라우저 `localStorage`는 편집/anonymous visitor 안전망일 뿐 회원권한·수수료·정산 근거가 아니다. attribution token 자체는 서버 DB가 발급·검증한다.
+5. 공개 개인상품은 서버 `published` 상태인 경우에만 `/p/{shareCode}` 고유링크에서 노출한다.
+6. 가격, 구매 URL, 사업자등록번호, 통신판매업 신고번호를 확인 없이 추정하거나 만들어 넣지 않는다.
+7. 제휴판매 URL은 HTTPS만 허용하고 에코디 결제로 위장하지 않는다.
+8. `dist/`는 빌드 산출물이므로 직접 편집하거나 커밋하지 않는다.
 
 ## 플랫폼 격리 규칙
 
 1. Mall 기능 작업은 원칙적으로 `sites/ekodi-mall/**` 안에서 완결한다.
 2. `api.ekodi.kr`, `auth.ekodi.kr`, `pay.ekodi.kr`, `finance-api.ekodi.kr` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
-3. Mall 데이터는 별도 Worker `ekodi-mall-api`와 별도 D1 `ekodi-mall`을 사용한다.
+3. production은 Worker `ekodi-mall-api` + D1 `ekodi-mall`, staging은 Worker `ekodi-mall-api-staging` + D1 `ekodi-mall-staging`을 사용한다. 두 DB를 섞지 않는다.
 4. Google/Supabase 사용자 토큰은 Mall API가 Auth 서버에서 재검증한다. 브라우저가 보낸 이메일·회원등급을 신뢰하지 않는다.
 5. 수수료·attribution·membership·주문금액·정산원장은 서버 권한이 최종 결정한다.
 
 ## 판매경로와 수수료
 
 1. 개인상품 요율은 PG 및 플랫폼 수수료 VAT 포함 정책으로 direct 7%, marketplace 8%, AI 9%다. PRO AI 구독은 별도다.
-2. `/p/{shareCode}` canonical 상품 URL 자체는 **marketplace 8% 기본경로**다. URL을 열었다는 이유만으로 direct 7%로 분류하지 않는다.
+2. `/p/{shareCode}` canonical 상품 URL 자체는 **marketplace 8% 기본경로**다.
 3. 판매자 직접공유 7%는 로그인한 판매자가 `/api/products/{id}/share-links`에서 발급한 opaque `ref` 링크를 통해서만 시작한다.
 4. AI 9% 링크는 공개 브라우저가 임의로 만들 수 없고 `INTERNAL_ATTRIBUTION_TOKEN`으로 보호된 내부 API가 발급한다.
-5. 공개페이지 진입 후 발급되는 7일 attribution token을 주문 quote가 서버에서 재검증한다. 없거나 유효하지 않으면 marketplace 8%로 처리한다.
-6. 사업자 인증 Store 직접판매 기본요율은 10%이며 Store 검증 완료 전 checkout을 활성화하지 않는다.
-7. 정산금은 `gross - platform fee - refund/adjustment` 원칙으로 서버 원장에 기록하고 브라우저 계산값을 신뢰하지 않는다.
+5. 상품별 anonymous visitor의 **최초 유입을 7일** 서버 `attribution_visits`에 보존한다. 유효기간 안에서는 뒤에 방문한 일반 Mall/다른 ref가 최초 경로를 덮지 않는다.
+6. first-touch가 발급한 attribution token을 주문 quote가 서버에서 다시 검증한다. 없거나 유효하지 않으면 marketplace 8%로 처리한다.
+7. 사업자 인증 Store 직접판매 기본요율은 10%이며 Store 검증 완료 전 checkout을 활성화하지 않는다.
+8. 정산금은 `gross - platform fee - refund/adjustment` 원칙으로 서버 원장에 기록하고 브라우저 계산값을 신뢰하지 않는다.
 
 ## 현재 가능한 것
 
@@ -38,7 +40,9 @@
 - 상품 게시/비게시 상태
 - 상품별 opaque share code와 `/p/{shareCode}` 공개링크
 - 판매자 직접공유 7% 추적링크 서버발급
-- 일반 Mall 8% 및 내부 AI 9% attribution 분리
+- 에코디몰 메인에 서버 게시 개인상품 노출 + marketplace 8% canonical 유입
+- 내부 AI 9% attribution link
+- anonymous 7일 first-touch 서버 보존
 - 서버 주문 quote와 7/8/9·사업자 10% 수수료 계산
 - 주문·결제·정산원장 스키마와 판매자 조회 API
 - Toss 결제 승인 서버검증 코드와 금액 일치 검증
@@ -65,7 +69,14 @@ npm run doctor
 
 ## 배포
 
-`main`의 Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 검증한다. Cloudflare 자격증명이 있으면 `ekodi-mall` D1을 생성/재사용하고 migration을 적용한 뒤 `ekodi-mall-api` Worker를 배포한다. `/health`에서 base schema와 order schema가 모두 준비되고 `paymentsEnabled=false` 안전게이트가 확인된 경우에만 Pages 운영배포와 smoke test를 진행한다.
+Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 다음 순서로만 승격한다.
+
+1. JS/API 계약·정적 빌드·모든 D1 migration을 로컬 검증한다.
+2. `ekodi-mall-staging` D1에 migration을 적용한다.
+3. `mall-api-staging.ekodi.kr` staging Worker를 배포한다.
+4. staging `/health`에서 base/order/first-touch schema, 7·8·9, 공개상품 feed, `paymentsEnabled=false`, `payoutExecutionEnabled=false`를 모두 확인한다.
+5. staging 성공 후에만 production D1 `ekodi-mall`과 `mall-api.ekodi.kr`로 승격한다.
+6. production API 검증 성공 후에만 Cloudflare Pages 운영본을 배포하고 UI smoke test를 수행한다.
 
 ## 결제 기능을 켜기 전
 
