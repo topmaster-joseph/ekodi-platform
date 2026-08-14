@@ -1,20 +1,15 @@
-name: Deploy EKODI Service Proxy
+name: Deploy EKODI Service Proxy (Manual Topology Change)
+# deployment-guardrail: topology-workflow-manual-only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - service-proxy.js
-      - wrangler.service-proxy.toml
-      - .github/workflows/deploy-service-proxy.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: ekodi-service-proxy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
