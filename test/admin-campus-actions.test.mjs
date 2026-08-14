@@ -19,8 +19,8 @@ test('Campus first screen renders the full operational site list with three dire
 });
 
 test('Domains and DNS navigation is removed while Affiliates has a visible icon', () => {
-  assert.match(js, /\[data-section=\\"domains\\"\]/);
-  assert.match(js, /\[data-lazy-section=\\"domains\\"\]/);
+  assert.match(js, /data-section="domains"/);
+  assert.match(js, /data-lazy-section="domains"/);
   assert.match(js, /\.forEach\(item => item\.remove\(\)\)/);
   assert.match(js, /🤝 Affiliates/);
 });
