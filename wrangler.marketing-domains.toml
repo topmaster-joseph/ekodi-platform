@@ -1,0 +1,26 @@
+name = "ekodi-marketing-domain-api"
+main = "marketing-domain-worker.js"
+compatibility_date = "2026-08-12"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "marketing-api.ekodi.kr"
+custom_domain = true
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://marketing.ekodi.kr,https://auth.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ai.ekodi.kr,https://pizzamaru.ai.ekodi.kr,https://yogurt.ai.ekodi.kr,https://cgma.ai.ekodi.kr"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
