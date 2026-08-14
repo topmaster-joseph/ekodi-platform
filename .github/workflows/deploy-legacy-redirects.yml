@@ -1,13 +1,8 @@
-name: Deploy EKODI Legacy Redirects
+name: Deploy EKODI Legacy Redirects (Manual Topology Change)
+# deployment-guardrail: topology-workflow-manual-only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - legacy-redirect.js
-      - wrangler.legacy-redirect.toml
-      - .github/workflows/deploy-legacy-redirects.yml
 
 permissions:
   contents: read
