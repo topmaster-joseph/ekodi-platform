@@ -1,0 +1,54 @@
+name: EKODI Social Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/social-community-*'
+    paths:
+      - 'social/**'
+      - 'social-worker.js'
+      - 'wrangler.social*.toml'
+      - 'config/ecosystem-services.json'
+      - 'platform-boundaries.json'
+      - 'scripts/build.mjs'
+      - '.github/workflows/social-release-gate.yml'
+  pull_request:
+    paths:
+      - 'social/**'
+      - 'social-worker.js'
+      - 'wrangler.social*.toml'
+      - 'config/ecosystem-services.json'
+      - 'platform-boundaries.json'
+      - 'scripts/build.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Social and shared registry changes
+        run: |
+          set -euo pipefail
+          node --check social-worker.js
+          node --check social/app.js
+          node --check scripts/build.mjs
+          node scripts/validate-platform-boundaries.mjs
+          node -e "const r=JSON.parse(require('fs').readFileSync('config/ecosystem-services.json','utf8')); const ids=r.services.map(x=>x.id); if(ids.includes('mission')) throw new Error('legacy mission service remains'); const c=r.services.find(x=>x.id==='community'); if(!c||c.name!=='에코디커뮤니티'||c.url!=='https://community.ekodi.kr') throw new Error('community canonical registry invalid'); const s=r.services.find(x=>x.id==='social'); if(!s||s.productionVerified!==false||s.homepage!==false) throw new Error('social must stay hidden until production verification');"
+          if grep -R -Fq '에코디선교회' social config/ecosystem-services.json; then echo 'Legacy formal organization name remains'; exit 1; fi
+      - name: Build root without regressing current features
+        run: |
+          set -euo pipefail
+          node scripts/build.mjs
+          grep -Fq 'data-ekodi-service-registry="v1"' dist/index.html
+          grep -Fq '에코디커뮤니티' dist/index.html
+          if grep -Fq '에코디선교회' dist/index.html; then echo 'Legacy formal name remains in built homepage'; exit 1; fi
+          test -f dist/domains-hub.js
+          test -f dist/books-finance-admin.js

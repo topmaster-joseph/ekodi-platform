@@ -1,0 +1,8 @@
+name = "ekodi-social-staging"
+main = "social-worker.js"
+compatibility_date = "2026-08-14"
+workers_dev = true
+
+[assets]
+directory = "./social"
+binding = "ASSETS"
