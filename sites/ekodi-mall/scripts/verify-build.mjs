@@ -6,13 +6,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const checks = [
   ['index.html', ['EKODI MALL', 'MARKETPLACE', 'Seller Studio', 'Inquiry Basket']],
-  ['seller/index.html', ['SELLER STUDIO', 'PRODUCT STUDIO', 'sellerDraftForm', '/assets/seller.js']],
+  ['seller/index.html', ['OPEN SELLER STUDIO', 'STORE & PRODUCT STUDIO', 'sellerDraftForm', 'Google로 무료 시작', 'Starter AI', 'Pro AI', 'Business AI', '/assets/seller.js']],
   ['checkout/index.html', ['INQUIRY BASKET', 'basketItems', '/assets/commerce.js']],
   ['stores/ekodi-select/index.html', ['EKODI Select', 'STORE COLLECTION']],
   ['products/reusable-daily-bottle/index.html', ['리유저블 데일리 보틀', 'PRODUCT PAGE', 'data-add-basket']],
   ['assets/commerce.js', ['ekodiMallInquiryBasketV1', 'data-basket-copy']],
-  ['assets/seller.js', ['ekodiMallSellerStudioDraftV2', 'Product Studio local draft']],
-  ['build-meta.json', ['"platformMode": "commerce-mvp"', '"inquiryBasket": true', '"paymentsEnabled": false']]
+  ['assets/seller.js', ['ekodiMallSellerStudioDraftV3', 'mall-seller', "plan: 'free'", "type: 'affiliate'", 'affiliateRoutingReady']],
+  ['build-meta.json', ['"platformMode": "marketplace-v2"', '"inquiryBasket": true', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
 ];
 
 const errors = [];
@@ -36,4 +36,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log('EKODI Mall build verified: marketplace, stores, Product Studio, inquiry basket, product pages and safety metadata are complete.');
+console.log('EKODI Mall V2 build verified: Google seller entry, free membership, tiered AI plans, affiliate routing, direct-sale safety gate and marketplace pages are complete.');
