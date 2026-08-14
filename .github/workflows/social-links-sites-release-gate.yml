@@ -6,6 +6,7 @@ on:
     branches:
       - 'staging/social-links-sites-*'
     paths:
+      - 'community/index.html'
       - 'community/social-links.js'
       - 'community-worker.js'
       - 'books/social-links.js'
@@ -40,7 +41,9 @@ jobs:
           grep -Fq 'https://api.ekodi.kr/api/social/registry' books/social-links.js
           grep -Fq '/social-links.js' community-worker.js
           grep -Fq '/social-links.js' books-worker.js
-          grep -Fq 'EKODI Community · community.ekodi.kr' community-worker.js
+          grep -Fq 'FLOWING COMMUNITY · EKODI COMMUNITY' community/index.html
+          grep -Fq 'EKODI Community · community.ekodi.kr' community/index.html
+          if grep -Fq 'EKODI Mission' community/index.html; then exit 1; fi
           npm run check
           npm test
       - name: Verify public central registry
@@ -66,16 +69,19 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 10); do
-            root=$(curl -sS -o /tmp/community.html -w '%{http_code}' "$COMMUNITY_URL/" || true)
-            js=$(curl -sS -o /tmp/community-social.js -w '%{http_code}' "$COMMUNITY_URL/social-links.js" || true)
-            health=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' "$COMMUNITY_URL/health" || true)
+            root=$(curl -L -sS -o /tmp/community.html -w '%{http_code}' "$COMMUNITY_URL/" || true)
+            js=$(curl -L -sS -o /tmp/community-social.js -w '%{http_code}' "$COMMUNITY_URL/social-links.js" || true)
+            health=$(curl -L -sS -o /tmp/community-health.json -w '%{http_code}' "$COMMUNITY_URL/health" || true)
             if [ "$root" = '200' ] && [ "$js" = '200' ] && [ "$health" = '200' ] \
               && grep -Fq '/social-links.js' /tmp/community.html \
               && grep -Fq 'EKODI Community · community.ekodi.kr' /tmp/community.html \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json; then exit 0; fi
+            echo "community verify pending: root=$root js=$js health=$health"
             sleep 3
           done
+          echo 'Community root markers:'
+          grep -n 'community.ekodi.kr\|social-links.js' /tmp/community.html || true
           exit 1
       - name: Deploy isolated Books staging Worker
         shell: bash
@@ -90,13 +96,14 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 10); do
-            root=$(curl -sS -o /tmp/books.html -w '%{http_code}' "$BOOKS_URL/" || true)
-            js=$(curl -sS -o /tmp/books-social.js -w '%{http_code}' "$BOOKS_URL/social-links.js" || true)
-            health=$(curl -sS -o /tmp/books-health.json -w '%{http_code}' "$BOOKS_URL/health" || true)
+            root=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' "$BOOKS_URL/" || true)
+            js=$(curl -L -sS -o /tmp/books-social.js -w '%{http_code}' "$BOOKS_URL/social-links.js" || true)
+            health=$(curl -L -sS -o /tmp/books-health.json -w '%{http_code}' "$BOOKS_URL/health" || true)
             if [ "$root" = '200' ] && [ "$js" = '200' ] && [ "$health" = '200' ] \
               && grep -Fq '/social-links.js' /tmp/books.html \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/books-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/books-health.json; then exit 0; fi
+            echo "books verify pending: root=$root js=$js health=$health"
             sleep 3
           done
           exit 1
