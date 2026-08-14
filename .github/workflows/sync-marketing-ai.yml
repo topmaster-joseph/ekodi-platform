@@ -66,6 +66,14 @@ jobs:
           grep -Fq '채널 2개 · 예약 게시' "$hub"
           grep -Fq '채널 5개 · 반복·분석' "$hub"
           grep -Fq '채널 10개 · 기획→분석' "$hub"
+          grep -Fq 'data-member-session-layout' "$hub"
+          grep -Fq 'member-session-mode' "$hub"
+          grep -Fq 'body.member-session-mode .hero-copy>h1' "$hub"
+          grep -Fq 'body.member-session-mode .product-preview' "$hub"
+          grep -Fq 'body.member-session-mode .feature-strip' "$hub"
+          grep -Fq 'body.member-session-mode .bottom-cta' "$hub"
+          grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" "$hub"
+          grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" "$hub"
           if grep -Fq 'id="trialStore"' "$hub"; then
             echo 'Store-only trial field must not survive in the public hub'
             exit 1
@@ -139,6 +147,12 @@ jobs:
             grep -Fq 'class="member-workspace"' /tmp/hub.html
             grep -Fq 'id="channelGrid"' /tmp/hub.html
             grep -Fq 'FREE · 연결 잠김' /tmp/hub.html
+            grep -Fq 'data-member-session-layout' /tmp/hub.html
+            grep -Fq 'member-session-mode' /tmp/hub.html
+            grep -Fq 'body.member-session-mode .hero-copy>h1' /tmp/hub.html
+            grep -Fq 'body.member-session-mode .product-preview' /tmp/hub.html
+            grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" /tmp/hub.html
+            grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" /tmp/hub.html
             ! grep -Fq 'id="trialStore"' /tmp/hub.html
             grep -Fq 'id="pricing"' /tmp/hub.html
             grep -Fq 'id="usageEstimator"' /tmp/hub.html
@@ -172,11 +186,11 @@ jobs:
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
               && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI free-member channel workspace and tiered automation verified in production.'
+              echo 'Marketing AI authenticated workspace, flexible pricing and central authentication verified in production.'
               exit 0
             fi
             sleep 5
           done
           exit 1
 
-# Sync trigger: free-member channel workspace + tiered automation
+# Sync trigger: authenticated member workspace layout
