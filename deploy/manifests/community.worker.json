@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-community",
+    "config": "wrangler.community.toml",
+    "requests": [
+      {
+        "url": "https://community.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["EKODI Community", "/social-links.js"]
+      },
+      {
+        "url": "https://community.ekodi.kr/social-links.js",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["api.ekodi.kr/api/social/registry"]
+      },
+      {
+        "url": "https://community.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["\"socialRegistry\":true"]
+      }
+    ]
+  }
+}
