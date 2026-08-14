@@ -26,7 +26,7 @@ test('Books control plane exposes publications, services, features and inquiries
   }
 });
 
-test('Books admin ships with the Control Center but loads lazily after authentication', () => {
+test('Books admin ships with the Control Center but loads only when opened', () => {
   for (const asset of ['books-admin.css', 'books-admin.js', 'books-finance-admin.css', 'books-finance-admin.js']) {
     assert.ok(build.includes(`'${asset}'`), `${asset} must remain in production assets`);
   }
@@ -35,9 +35,11 @@ test('Books admin ships with the Control Center but loads lazily after authentic
   assert.doesNotMatch(build, /<script src="books-admin\.js" defer><\/script>/);
   assert.match(featureLoader, /loadStyle\('books-admin\.css'\)/);
   assert.match(featureLoader, /loadStyle\('books-finance-admin\.css'\)/);
-  assert.match(featureLoader, /loadScript\('books-admin\.js'\)/);
-  assert.match(featureLoader, /loadScript\('books-finance-admin\.js'\)/);
-  assert.match(featureLoader, /requestIdleCallback/);
+  assert.match(featureLoader, /loadModule\('books-admin\.js'\)/);
+  assert.match(featureLoader, /loadModule\('books-finance-admin\.js'\)/);
+  assert.match(featureLoader, /import\(`\.\/\$\{src\}`\)/);
+  assert.doesNotMatch(featureLoader, /requestIdleCallback/);
+  assert.match(featureLoader, /placeholder\('books'/);
   assert.match(admin, /Books Control/);
   assert.match(admin, /Pricing & Services/);
   assert.match(admin, /Consultations/);
