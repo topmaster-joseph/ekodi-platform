@@ -243,5 +243,5 @@ grant execute on function public.link_person_identity(uuid,uuid,text,text,text,t
 
 comment on function public.ensure_person_identity(uuid,text,text,text,text) is
   'Creates or refreshes a person identity without ever replacing an existing stable provider subject based on recycled email.';
-comment on function public.link_person_identity(uuid,uuid,text,text,text,text,text) is
+comment on function public.link_person_identity(uuid,uuid,text,text,text,text) is
   'Explicitly links verified login identities; blocks merges when an email-backed auth user is bound to a different provider subject.';
