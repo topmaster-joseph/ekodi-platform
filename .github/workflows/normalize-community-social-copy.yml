@@ -1,4 +1,4 @@
-name: Normalize Community Social Copy
+name: Normalize Site Social Source
 
 on:
   push:
@@ -18,26 +18,30 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: true
-      - name: Normalize Community source copy
+      - name: Normalize Community copy and install local Social renderers
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('community/index.html')
-          s=p.read_text(encoding='utf-8')
-          old=s
-          s=s.replace('FLOWING COMMUNITY · EKODI MISSION','FLOWING COMMUNITY · EKODI COMMUNITY')
-          s=s.replace('EKODI Mission · community.ekodi.kr','EKODI Community · community.ekodi.kr')
-          if s==old:
-              raise SystemExit('Expected Community legacy copy not found')
-          p.write_text(s,encoding='utf-8')
+          targets=[Path('community/index.html'),Path('books/index.html')]
+          for p in targets:
+              s=p.read_text(encoding='utf-8')
+              if p.as_posix()=='community/index.html':
+                  s=s.replace('FLOWING COMMUNITY · EKODI MISSION','FLOWING COMMUNITY · EKODI COMMUNITY')
+                  s=s.replace('EKODI Mission · community.ekodi.kr','EKODI Community · community.ekodi.kr')
+              marker='<script src="/social-links.js" defer></script>'
+              if marker not in s:
+                  s=s.replace('</body>',f'  {marker}\n</body>')
+              p.write_text(s,encoding='utf-8')
           PY
           grep -Fq 'FLOWING COMMUNITY · EKODI COMMUNITY' community/index.html
           grep -Fq 'EKODI Community · community.ekodi.kr' community/index.html
           if grep -Fq 'EKODI Mission' community/index.html; then exit 1; fi
-      - name: Commit normalized Community source
+          grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
+          grep -Fq '<script src="/social-links.js" defer></script>' books/index.html
+      - name: Commit normalized site source
         run: |
           git config user.name 'EKODI Automation'
           git config user.email 'automation@ekodi.kr'
-          git add community/index.html
-          git diff --cached --quiet || git commit -m 'refactor: remove legacy Mission branding from Community source'
+          git add community/index.html books/index.html
+          git diff --cached --quiet || git commit -m 'feat: install central Social links on Community and Books pages'
           git push
