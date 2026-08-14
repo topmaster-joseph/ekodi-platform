@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>EKODI Insurance Auth · Staging</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="/config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <span class="badge">ISOLATED STAGING</span>
+      <div class="brand"><span>E</span><div><strong>EKODI Insurance</strong><small>Auth Staging</small></div></div>
+      <h1>Google로 본인만<br />확인합니다.</h1>
+      <p class="lead">이 인증환경은 운영 <code>auth.ekodi.kr</code>과 분리되어야 하며, 개발용 Supabase branch에서만 사용자 세션을 발급합니다.</p>
+      <div id="status" class="status">staging 설정을 확인하고 있습니다.</div>
+      <div id="googleButtonHost" class="google-host"></div>
+      <button id="retryBtn" class="retry" type="button" hidden>다시 시도</button>
+      <div class="boundary"><strong>보험정보는 인증센터에 저장하지 않습니다.</strong><span>인증센터는 본인확인과 1회용 세션 handoff만 담당하고, 보험·청구·AI 상담정보는 별도 Insurance 데이터 경계에 둡니다.</span></div>
+      <small class="foot">운영 중앙 Auth와 연결되지 않은 검증용 화면입니다.</small>
+    </section>
+  </main>
+</body>
+</html>
