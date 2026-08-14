@@ -1,0 +1,246 @@
+name: EKODI Mall API · Stage and Deploy
+
+on:
+  pull_request:
+    paths:
+      - 'sites/ekodi-mall-api/**'
+      - '.github/workflows/deploy-ekodi-mall-api.yml'
+      - 'platform-boundaries.json'
+      - 'scripts/validate-platform-boundaries.mjs'
+      - 'test/mall-api-contract.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'sites/ekodi-mall-api/**'
+      - '.github/workflows/deploy-ekodi-mall-api.yml'
+      - 'platform-boundaries.json'
+      - 'scripts/validate-platform-boundaries.mjs'
+      - 'test/mall-api-contract.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-mall-api-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  SUPABASE_URL: 'https://renzehysxirjilvdxacv.supabase.co'
+  SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Mall API source and contracts
+        run: |
+          node --check sites/ekodi-mall-api/worker.js
+          node --test test/mall-api-contract.test.mjs
+          node scripts/validate-platform-boundaries.mjs
+      - name: Validate Mall D1 migration in SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f /tmp/mall-schema.db
+          sqlite3 /tmp/mall-schema.db < sites/ekodi-mall-api/migrations/0001_mall_core.sql
+          for table in mall_seller_profiles mall_memberships mall_stores mall_products mall_share_links mall_attribution_visits mall_orders mall_settlements; do
+            sqlite3 /tmp/mall-schema.db "SELECT name FROM sqlite_master WHERE type='table' AND name='$table';" | grep -Fxq "$table"
+          done
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Ensure isolated staging D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 list --json > /tmp/d1-list.json
+          DB_ID=$(node - <<'NODE'
+          const fs = require('fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/d1-list.json','utf8'));
+          const list = Array.isArray(rows) ? rows : (rows.result || rows.databases || []);
+          const row = list.find(x => x.name === 'ekodi-mall-staging');
+          process.stdout.write(row?.uuid || row?.id || row?.database_id || '');
+          NODE
+          )
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-mall-staging --location apac
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json > /tmp/d1-list.json
+            DB_ID=$(node - <<'NODE'
+          const fs = require('fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/d1-list.json','utf8'));
+          const list = Array.isArray(rows) ? rows : (rows.result || rows.databases || []);
+          const row = list.find(x => x.name === 'ekodi-mall-staging');
+          process.stdout.write(row?.uuid || row?.id || row?.database_id || '');
+          NODE
+            )
+          fi
+          test -n "$DB_ID" || (echo 'Could not resolve ekodi-mall-staging D1 id' && exit 1)
+          echo "MALL_STAGING_DB_ID=$DB_ID" >> "$GITHUB_ENV"
+      - name: Build staging Wrangler config
+        shell: bash
+        run: |
+          cat > .wrangler.mall-api.staging.toml <<EOF_CONFIG
+          name = "ekodi-mall-api-staging"
+          main = "sites/ekodi-mall-api/worker.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [[routes]]
+          pattern = "api-staging.mall.ekodi.kr"
+          custom_domain = true
+
+          [vars]
+          ENVIRONMENT = "staging"
+          ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://mall.biz.ekodi.kr,https://ekodi-mall.pages.dev"
+          SUPABASE_URL = "$SUPABASE_URL"
+          SUPABASE_PUBLISHABLE_KEY = "$SUPABASE_PUBLISHABLE_KEY"
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-mall-staging"
+          database_id = "$MALL_STAGING_DB_ID"
+          migrations_dir = "sites/ekodi-mall-api/migrations"
+          EOF_CONFIG
+      - name: Apply staging migrations
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-mall-staging --remote --config .wrangler.mall-api.staging.toml
+      - name: Deploy staging Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config .wrangler.mall-api.staging.toml
+      - name: Verify staging API contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.mall.ekodi.kr/health' || true)
+            policy=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.mall.ekodi.kr/api/policy' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$health" | grep -q '"environment":"staging"' \
+              && printf '%s' "$policy" | grep -q '"seller_direct":7' \
+              && printf '%s' "$policy" | grep -q '"marketplace":8' \
+              && printf '%s' "$policy" | grep -q '"ai_campaign":9' \
+              && printf '%s' "$policy" | grep -q '"paymentsEnabled":false'; then
+              echo 'EKODI Mall API staging verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Ensure isolated production D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 list --json > /tmp/d1-list.json
+          DB_ID=$(node - <<'NODE'
+          const fs = require('fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/d1-list.json','utf8'));
+          const list = Array.isArray(rows) ? rows : (rows.result || rows.databases || []);
+          const row = list.find(x => x.name === 'ekodi-mall');
+          process.stdout.write(row?.uuid || row?.id || row?.database_id || '');
+          NODE
+          )
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-mall --location apac
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json > /tmp/d1-list.json
+            DB_ID=$(node - <<'NODE'
+          const fs = require('fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/d1-list.json','utf8'));
+          const list = Array.isArray(rows) ? rows : (rows.result || rows.databases || []);
+          const row = list.find(x => x.name === 'ekodi-mall');
+          process.stdout.write(row?.uuid || row?.id || row?.database_id || '');
+          NODE
+            )
+          fi
+          test -n "$DB_ID" || (echo 'Could not resolve ekodi-mall D1 id' && exit 1)
+          echo "MALL_PRODUCTION_DB_ID=$DB_ID" >> "$GITHUB_ENV"
+      - name: Build production Wrangler config
+        shell: bash
+        run: |
+          cat > .wrangler.mall-api.production.toml <<EOF_CONFIG
+          name = "ekodi-mall-api"
+          main = "sites/ekodi-mall-api/worker.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+
+          [[routes]]
+          pattern = "api.mall.ekodi.kr"
+          custom_domain = true
+
+          [vars]
+          ENVIRONMENT = "production"
+          ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://mall.biz.ekodi.kr,https://ekodi-mall.pages.dev"
+          SUPABASE_URL = "$SUPABASE_URL"
+          SUPABASE_PUBLISHABLE_KEY = "$SUPABASE_PUBLISHABLE_KEY"
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-mall"
+          database_id = "$MALL_PRODUCTION_DB_ID"
+          migrations_dir = "sites/ekodi-mall-api/migrations"
+          EOF_CONFIG
+      - name: Apply production migrations after staging gate
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-mall --remote --config .wrangler.mall-api.production.toml
+      - name: Deploy production Worker after staging gate
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config .wrangler.mall-api.production.toml
+      - name: Verify production Mall API
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.mall.ekodi.kr/health' || true)
+            policy=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.mall.ekodi.kr/api/policy' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$health" | grep -q '"environment":"production"' \
+              && printf '%s' "$policy" | grep -q '"seller_direct":7' \
+              && printf '%s' "$policy" | grep -q '"marketplace":8' \
+              && printf '%s' "$policy" | grep -q '"ai_campaign":9' \
+              && printf '%s' "$policy" | grep -q '"paymentsEnabled":false'; then
+              echo 'EKODI Mall API production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
