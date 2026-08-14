@@ -15,8 +15,10 @@ const checks = [
   ['assets/seller-server.js', ['mall-api.ekodi.kr', '서버에 저장', '게시 · 링크 활성화', '/api/products', '/share-links', '/api/orders?limit=20', '/api/settlements', '직접링크 복사 · 7%', '일반 상품링크 · 8%']],
   ['assets/public-product.js', ['api/public/products', 'api/public/attribution/visit', 'api/public/checkout/quote', 'ekodiMallAnonymousVisitorV1', 'SERVER QUOTE', '최초 유입은 7일간']],
   ['assets/marketplace-live.js', ['api/public/products?limit=24', 'Mall 8%', 'dataset.serverProduct']],
+  ['assets/sourcing-lab.html', ['EKODI SOURCING LAB', 'Auto Source', 'Dry-run', '계약 공급자', '/assets/sourcing-lab.js']],
+  ['assets/sourcing-lab.js', ['/api/sourcing/providers', '/api/sourcing/sources', '/plan', 'auction-reference', '자동발주 OFF']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200']],
+  ['_redirects', ['/p/* /assets/shared-product.html 200', '/sourcing /assets/sourcing-lab.html 200']],
   ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
@@ -31,4 +33,4 @@ if (errors.length) {
   errors.forEach((error) => console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('EKODI Mall V2.4 build verified: seller-direct 7%, Mall 8%, AI 9%, seven-day first-touch, live personal-product discovery, order quotes and disabled payment/payout gates are complete.');
+console.log('EKODI Mall V2.5 build verified: 7/8/9 commerce, seven-day first-touch and phased sourcing with reference-only retail, contracted dropship, Auto Source dry-run and disabled Auto Order are complete.');
