@@ -15,8 +15,10 @@ on:
       - 'books-control.js'
       - 'books-finance-control.js'
       - 'affiliate-control.js'
+      - 'social-registry-api.js'
       - 'migrations/**'
       - 'wrangler.api.toml'
+      - '.github/workflows/deploy-control-api.yml'
 
 permissions:
   contents: read
@@ -49,6 +51,9 @@ jobs:
           node --check books-control.js
           node --check books-finance-control.js
           node --check affiliate-control.js
+          node --check social-registry-api.js
+          grep -Fq '/api/social/registry' customer-entry-worker.js
+          grep -Fq '/api/control/social/' customer-entry-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -57,7 +62,7 @@ jobs:
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
       - name: Deploy API Worker
         run: npm run deploy:api
-      - name: Verify Google-only admin, customer tenant and module boundaries
+      - name: Verify Google-only admin, customer tenant, Social registry and module boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +73,8 @@ jobs:
             google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/google/config' || true)
             tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
             books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/config' || true)
+            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/social/registry' || true)
+            unauthorized_social=$(curl -sS -o /tmp/social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/social/registry' || true)
             unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
@@ -80,6 +87,9 @@ jobs:
               && printf '%s' "$google" | grep -Fq "$expected_client" \
               && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
               && printf '%s' "$books" | grep -q '"digital-start"' \
+              && printf '%s' "$social" | grep -Fq '에코디커뮤니티' \
+              && printf '%s' "$social" | grep -Fq 'community-youtube' \
+              && [ "$unauthorized_social" = '401' ] \
               && [ "$unauthorized_customer" = '401' ] \
               && [ "$unauthorized_admin" = '401' ] \
               && [ "$legacy_login" = '410' ] \
