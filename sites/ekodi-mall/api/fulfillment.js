@@ -9,15 +9,27 @@ const FULFILLMENT_TRANSITIONS = Object.freeze({
   delivered: new Set(['return_requested','closed']),
   cancel_requested: new Set(['cancelled','forwarded','accepted','failed']),
   cancelled: new Set(['closed']),
-  return_requested: new Set(['returned','refund_pending','closed','failed']),
+  return_requested: new Set(['delivered','returned','refund_pending','closed','failed']),
   returned: new Set(['refund_pending','closed']),
   refund_pending: new Set(['closed','failed']),
   closed: new Set(),
   failed: new Set(['awaiting_pii','ready_to_forward','closed'])
 });
-const RETURN_STATUSES = new Set(['requested','approved','rejected','in_transit','received','refund_pending','refunded','closed']);
+const RETURN_TRANSITIONS = Object.freeze({
+  requested: new Set(['approved','rejected']),
+  approved: new Set(['in_transit','received']),
+  in_transit: new Set(['received']),
+  received: new Set(['refund_pending','closed']),
+  refund_pending: new Set(['refunded']),
+  refunded: new Set(['closed']),
+  rejected: new Set(['closed']),
+  closed: new Set()
+});
 const SHIPMENT_STATUSES = new Set(['label_pending','in_transit','delivered','exception','returned']);
-const RAW_PII_KEYS = new Set(['name','recipient','recipientName','phone','phoneNumber','mobile','address','address1','address2','postalCode','postcode','zip','email']);
+const RAW_PII_KEYS = new Set([
+  'name','fullname','recipient','recipientname','receiver','receivername','phone','phonenumber','mobile',
+  'address','address1','address2','shippingaddress','postalcode','postcode','zip','email'
+]);
 
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const nowIso = () => new Date().toISOString();
@@ -26,6 +38,16 @@ const enabled = (value) => String(value || '').toLowerCase() === 'true';
 const amount = (value) => {
   const n = Math.trunc(Number(value));
   return Number.isFinite(n) && n >= 0 && n <= 1_000_000_000 ? n : 0;
+};
+const percent = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.round(n * 100) / 100 : 0;
+};
+const optionalIso = (value) => {
+  const text = clean(value, 80);
+  if (!text) return '';
+  const time = Date.parse(text);
+  return Number.isFinite(time) ? new Date(time).toISOString() : null;
 };
 
 async function readJson(request) {
@@ -49,19 +71,51 @@ function internalAuthorized(request, env) {
   return Boolean(expected && supplied && expected === supplied);
 }
 
-function bodyContainsRawPii(body = {}) {
-  return Object.keys(body || {}).some((key) => RAW_PII_KEYS.has(key));
+function containsRawPii(value) {
+  if (Array.isArray(value)) return value.some(containsRawPii);
+  if (!value || typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, nested]) => RAW_PII_KEYS.has(String(key).toLowerCase()) || containsRawPii(nested));
 }
 
 export function fulfillmentTransitionAllowed(fromStatus, toStatus) {
   return Boolean(FULFILLMENT_TRANSITIONS[fromStatus]?.has(toStatus));
 }
 
+export function returnTransitionAllowed(fromStatus, toStatus) {
+  return Boolean(RETURN_TRANSITIONS[fromStatus]?.has(toStatus));
+}
+
 export function validatePiiReleaseInput(body = {}) {
-  if (bodyContainsRawPii(body)) return { ok: false, error: '배송 개인정보 원문은 Mall D1에 전달하지 말고 승인된 PII 참조값만 사용해야 합니다.' };
+  if (containsRawPii(body)) return { ok: false, error: '배송 개인정보 원문은 Mall D1에 전달하지 말고 승인된 PII 참조값만 사용해야 합니다.' };
   const ref = clean(body.piiReleaseRef, 220);
   if (!/^pii_[A-Za-z0-9_-]{12,200}$/.test(ref)) return { ok: false, error: '승인된 pii_ 참조값이 필요합니다.' };
   return { ok: true, ref };
+}
+
+export function computeFulfillmentEconomics({ grossAmount = 0, platformFeeAmount = 0, quantity = 1, unitCost = 0, shippingAmount = 0, minMarginAmount = 0, minMarginPercent = 0 } = {}) {
+  const gross = amount(grossAmount);
+  const fee = Math.min(gross, amount(platformFeeAmount));
+  const qty = Math.max(1, Math.min(99, Math.trunc(Number(quantity) || 1)));
+  const supplierCostAmount = amount(unitCost) * qty;
+  const supplierShippingAmount = amount(shippingAmount);
+  const supplierPayableAmount = supplierCostAmount + supplierShippingAmount;
+  const contributionMargin = gross - fee - supplierPayableAmount;
+  const contributionMarginPercent = gross > 0 ? Math.round((contributionMargin / gross) * 10000) / 100 : 0;
+  const requiredMarginAmount = amount(minMarginAmount) * qty;
+  const requiredMarginPercent = percent(minMarginPercent);
+  return {
+    grossAmount: gross,
+    platformFeeAmount: fee,
+    quantity: qty,
+    supplierCostAmount,
+    supplierShippingAmount,
+    supplierPayableAmount,
+    contributionMargin,
+    contributionMarginPercent,
+    requiredMarginAmount,
+    requiredMarginPercent,
+    economicallyEligible: gross > 0 && contributionMargin > 0 && contributionMargin >= requiredMarginAmount && contributionMarginPercent >= requiredMarginPercent
+  };
 }
 
 export async function fulfillmentSchemaReady(env) {
@@ -141,9 +195,16 @@ async function verifyContract(env, sourceId, body = {}) {
   const piiProcessorRef = clean(body.piiProcessorRef,240);
   const returnsPolicyRef = clean(body.returnsPolicyRef,240);
   if (!contractRef || !piiProcessorRef || !returnsPolicyRef) return { status: 400, body: { error: '계약·개인정보 처리위탁·반품정책 참조값이 모두 필요합니다.' } };
+  const effectiveInput = optionalIso(body.effectiveAt);
+  const expiresInput = optionalIso(body.expiresAt);
+  if (effectiveInput === null || expiresInput === null) return { status: 400, body: { error: '계약 효력일/만료일 형식이 올바르지 않습니다.' } };
+  const now = nowIso();
+  const effectiveAt = effectiveInput || now;
+  const expiresAt = expiresInput || '';
+  if (expiresAt && expiresAt <= effectiveAt) return { status: 400, body: { error: '계약 만료일은 효력일보다 이후여야 합니다.' } };
+  if (expiresAt && expiresAt <= now) return { status: 400, body: { error: '이미 만료된 계약은 승인할 수 없습니다.' } };
   const csOwner = ['seller','supplier','ekodi','shared'].includes(body.csOwner) ? body.csOwner : 'seller';
   const shippingSlaDays = body.shippingSlaDays === '' || body.shippingSlaDays == null ? null : Math.max(0,Math.min(30,Math.trunc(Number(body.shippingSlaDays)||0)));
-  const now = nowIso();
   const existing = await env.DB.prepare('SELECT id FROM supplier_contracts WHERE source_id=?').bind(sourceId).first();
   const id = existing?.id || randomId('ctr');
   await env.DB.prepare(`INSERT INTO supplier_contracts
@@ -152,8 +213,7 @@ async function verifyContract(env, sourceId, body = {}) {
     ON CONFLICT(source_id) DO UPDATE SET status='verified',contract_ref=excluded.contract_ref,pii_processor_ref=excluded.pii_processor_ref,
       returns_policy_ref=excluded.returns_policy_ref,cs_owner=excluded.cs_owner,shipping_sla_days=excluded.shipping_sla_days,
       effective_at=excluded.effective_at,expires_at=excluded.expires_at,approved_at=excluded.approved_at,updated_at=excluded.updated_at`)
-    .bind(id,sourceId,source.seller_id,contractRef,piiProcessorRef,returnsPolicyRef,csOwner,shippingSlaDays,
-      clean(body.effectiveAt,40) || now,clean(body.expiresAt,40) || null,now,now,now).run();
+    .bind(id,sourceId,source.seller_id,contractRef,piiProcessorRef,returnsPolicyRef,csOwner,shippingSlaDays,effectiveAt,expiresAt || null,now,now,now).run();
   const orderPermission = source.provider_type === 'supplier_api' ? 'api_approved' : 'manual_contract';
   await env.DB.prepare(`UPDATE sourcing_sources SET rights_status='contract_verified',order_permission=?,pii_permission='contracted_processor',updated_at=? WHERE id=?`)
     .bind(orderPermission,now,sourceId).run();
@@ -185,33 +245,44 @@ async function prepareFulfillment(env, orderId, body = {}) {
     WHERE ss.id=? AND ss.seller_id=? AND psl.product_id=? AND ss.active=1 AND psl.active=1`)
     .bind(sourceId,order.seller_id,order.product_id).first();
   if (!source) return { status: 409, body: { error: '이 주문 상품에 연결된 활성 공급처가 아닙니다.' } };
-  const contract = await env.DB.prepare(`SELECT * FROM supplier_contracts WHERE source_id=? AND seller_id=? AND status='verified'
-    AND (expires_at IS NULL OR expires_at='') OR (source_id=? AND seller_id=? AND status='verified' AND expires_at>?)`)
-    .bind(sourceId,order.seller_id,sourceId,order.seller_id,nowIso()).first();
-  if (!contract) return { status: 409, body: { error: '유효한 공급계약 검증이 필요합니다.' } };
+  const now = nowIso();
+  const contract = await env.DB.prepare(`SELECT * FROM supplier_contracts
+    WHERE source_id=? AND seller_id=? AND status='verified'
+      AND (effective_at IS NULL OR effective_at='' OR effective_at<=?)
+      AND (expires_at IS NULL OR expires_at='' OR expires_at>?)`)
+    .bind(sourceId,order.seller_id,now,now).first();
+  if (!contract) return { status: 409, body: { error: '현재 유효한 공급계약 검증이 필요합니다.' } };
   const execution = sourceExecution(source,env);
   if (!['manual_forward','api_order'].includes(execution.mode)) return { status: 409, body: { error: `현재 공급처는 Fulfillment 실행 조건을 충족하지 않습니다: ${execution.reason}` } };
   if (source.cost_amount == null) return { status: 409, body: { error: '확정 공급원가가 필요합니다.' } };
-  const supplierCostAmount = amount(source.cost_amount) * Number(order.quantity || 1);
-  const supplierShippingAmount = amount(source.shipping_amount);
-  const supplierPayableAmount = supplierCostAmount + supplierShippingAmount;
+  const economics = computeFulfillmentEconomics({
+    grossAmount: order.gross_amount,
+    platformFeeAmount: order.platform_fee_amount,
+    quantity: order.quantity,
+    unitCost: source.cost_amount,
+    shippingAmount: source.shipping_amount,
+    minMarginAmount: source.min_margin_amount,
+    minMarginPercent: source.min_margin_percent
+  });
+  if (!economics.economicallyEligible) {
+    return { status: 409, body: { error: '실제 주문금액·수수료·수량 기준으로 최소 마진 조건을 충족하지 못합니다.', economics } };
+  }
   const decision = await env.DB.prepare(`SELECT id FROM procurement_decisions WHERE product_id=? AND seller_id=? AND source_id=? ORDER BY created_at DESC LIMIT 1`)
     .bind(order.product_id,order.seller_id,sourceId).first();
   const id = randomId('ful');
-  const now = nowIso();
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO fulfillment_orders
       (id,order_id,seller_id,source_id,contract_id,procurement_decision_id,status,execution_mode,supplier_cost_amount,supplier_shipping_amount,
        supplier_payable_amount,pii_release_status,pii_release_ref,provider_order_ref,idempotency_key,created_at,updated_at)
       VALUES (?,?,?,?,?,?,'awaiting_pii',?,?,?,?,'blocked','','',?,?,?)`)
-      .bind(id,orderId,order.seller_id,sourceId,contract.id,decision?.id || null,execution.mode,supplierCostAmount,supplierShippingAmount,supplierPayableAmount,`fulfill:${orderId}:${sourceId}`,now,now),
+      .bind(id,orderId,order.seller_id,sourceId,contract.id,decision?.id || null,execution.mode,economics.supplierCostAmount,economics.supplierShippingAmount,economics.supplierPayableAmount,`fulfill:${orderId}:${sourceId}`,now,now),
     env.DB.prepare(`INSERT INTO fulfillment_events
       (fulfillment_id,event_type,actor_type,from_status,to_status,metadata_json,occurred_at)
       VALUES (?,'prepared','internal','','awaiting_pii',?,?)`)
-      .bind(id,JSON.stringify({ executionMode: execution.mode, sourceId }).slice(0,4000),now)
+      .bind(id,JSON.stringify({ executionMode: execution.mode, sourceId, economics }).slice(0,4000),now)
   ]);
   const row = await getFulfillment(env,id);
-  return { status: 201, body: { fulfillment: fulfillmentView(row), note: '배송정보는 저장하지 않았습니다. 별도 PII Release gate가 열리고 승인된 참조값이 생겨야 다음 단계로 진행됩니다.' } };
+  return { status: 201, body: { fulfillment: fulfillmentView(row), economics, note: '배송정보는 저장하지 않았습니다. 별도 PII Release gate가 열리고 승인된 참조값이 생겨야 다음 단계로 진행됩니다.' } };
 }
 
 async function releasePii(env, fulfillmentId, body = {}) {
@@ -221,11 +292,12 @@ async function releasePii(env, fulfillmentId, body = {}) {
   const row = await getFulfillment(env,fulfillmentId);
   if (!row) return { status: 404, body: { error: 'Fulfillment를 찾을 수 없습니다.' } };
   if (row.status !== 'awaiting_pii') return { status: 409, body: { error: '현재 상태에서는 PII Release를 할 수 없습니다.' } };
-  const contract = await env.DB.prepare(`SELECT status,pii_processor_ref,expires_at FROM supplier_contracts WHERE id=?`).bind(row.contract_id).first();
-  if (!contract || contract.status !== 'verified' || !contract.pii_processor_ref || (contract.expires_at && contract.expires_at <= nowIso())) {
-    return { status: 409, body: { error: '유효한 개인정보 처리위탁 계약이 필요합니다.' } };
-  }
   const now = nowIso();
+  const contract = await env.DB.prepare(`SELECT status,pii_processor_ref,effective_at,expires_at FROM supplier_contracts WHERE id=?`).bind(row.contract_id).first();
+  if (!contract || contract.status !== 'verified' || !contract.pii_processor_ref ||
+      (contract.effective_at && contract.effective_at > now) || (contract.expires_at && contract.expires_at <= now)) {
+    return { status: 409, body: { error: '현재 유효한 개인정보 처리위탁 계약이 필요합니다.' } };
+  }
   await env.DB.prepare(`UPDATE fulfillment_orders SET pii_release_status='released',pii_release_ref=?,status='ready_to_forward',updated_at=? WHERE id=?`)
     .bind(input.ref,now,fulfillmentId).run();
   await event(env,fulfillmentId,'pii_released','internal','awaiting_pii','ready_to_forward',{ referenceOnly: true });
@@ -267,11 +339,16 @@ async function acceptFulfillment(env, fulfillmentId) {
 async function updateShipment(env, fulfillmentId, body = {}) {
   const row = await getFulfillment(env,fulfillmentId);
   if (!row) return { status: 404, body: { error: 'Fulfillment를 찾을 수 없습니다.' } };
-  const status = SHIPMENT_STATUSES.has(body.status) ? body.status : 'in_transit';
+  const status = SHIPMENT_STATUSES.has(body.status) ? body.status : '';
+  if (!status) return { status: 400, body: { error: '유효한 배송 상태가 필요합니다.' } };
   const carrierCode = clean(body.carrierCode,80);
   const trackingNumber = clean(body.trackingNumber,160);
   if (status !== 'label_pending' && (!carrierCode || !trackingNumber)) return { status: 400, body: { error: '배송 상태 업데이트에는 택배사 코드와 송장번호가 필요합니다.' } };
-  if (!['forwarded','accepted','shipped'].includes(row.status) && status !== 'returned') return { status: 409, body: { error: '현재 Fulfillment 상태에서는 배송 업데이트를 할 수 없습니다.' } };
+  if (status === 'label_pending' && !['forwarded','accepted'].includes(row.status)) return { status: 409, body: { error: '발주 전달 또는 공급자 접수 상태에서만 송장을 준비할 수 있습니다.' } };
+  if (status === 'in_transit' && !['forwarded','accepted','shipped'].includes(row.status)) return { status: 409, body: { error: '발주 이후 상태에서만 배송중 처리가 가능합니다.' } };
+  if (status === 'delivered' && row.status !== 'shipped') return { status: 409, body: { error: '배송중 상태를 거친 뒤 배송완료 처리할 수 있습니다.' } };
+  if (status === 'exception' && !['forwarded','accepted','shipped'].includes(row.status)) return { status: 409, body: { error: '발주 이후 배송 예외만 기록할 수 있습니다.' } };
+  if (status === 'returned' && !['return_requested','returned'].includes(row.status)) return { status: 409, body: { error: '반품 요청 이후에만 반송 배송을 기록할 수 있습니다.' } };
   const now = nowIso();
   const shipment = await env.DB.prepare(`SELECT * FROM fulfillment_shipments WHERE fulfillment_id=? ORDER BY created_at DESC LIMIT 1`).bind(fulfillmentId).first();
   const shipmentId = shipment?.id || randomId('shp');
@@ -284,9 +361,10 @@ async function updateShipment(env, fulfillmentId, body = {}) {
       shipped_at=excluded.shipped_at,delivered_at=excluded.delivered_at,last_checked_at=excluded.last_checked_at,updated_at=excluded.updated_at`)
     .bind(shipmentId,fulfillmentId,carrierCode,trackingNumber,status,shippedAt,deliveredAt,now,shipment?.created_at || now,now).run();
   let nextStatus = row.status;
-  if ((status === 'in_transit' || status === 'delivered') && ['forwarded','accepted'].includes(row.status)) nextStatus = 'shipped';
+  if (status === 'in_transit' && ['forwarded','accepted'].includes(row.status)) nextStatus = 'shipped';
   if (status === 'delivered') nextStatus = 'delivered';
   if (nextStatus !== row.status) {
+    if (!fulfillmentTransitionAllowed(row.status,nextStatus)) return { status: 409, body: { error: '허용되지 않은 배송 상태전이입니다.' } };
     await env.DB.prepare(`UPDATE fulfillment_orders SET status=?,shipped_at=COALESCE(shipped_at,?),delivered_at=?,updated_at=? WHERE id=?`)
       .bind(nextStatus,shippedAt,deliveredAt,now,fulfillmentId).run();
   }
@@ -297,7 +375,7 @@ async function updateShipment(env, fulfillmentId, body = {}) {
 async function createReturn(env, sellerId, fulfillmentId, body = {}) {
   const row = await getFulfillment(env,fulfillmentId);
   if (!row || row.seller_id !== sellerId) return { status: 404, body: { error: '본인 Fulfillment를 찾을 수 없습니다.' } };
-  if (!['shipped','delivered'].includes(row.status)) return { status: 409, body: { error: '배송 이후 주문만 반품 케이스를 만들 수 있습니다.' } };
+  if (row.status !== 'delivered') return { status: 409, body: { error: 'V1에서는 배송완료 주문만 반품 케이스를 만들 수 있습니다. 배송 전 취소는 별도 흐름으로 처리합니다.' } };
   const existing = await env.DB.prepare(`SELECT id,status FROM fulfillment_returns WHERE fulfillment_id=? AND status NOT IN ('rejected','refunded','closed') ORDER BY created_at DESC LIMIT 1`)
     .bind(fulfillmentId).first();
   if (existing) return { status: 200, body: { returnCase: existing, idempotent: true } };
@@ -309,27 +387,31 @@ async function createReturn(env, sellerId, fulfillmentId, body = {}) {
       VALUES (?,?,?,'seller',?,'requested',?,?)`).bind(id,fulfillmentId,row.order_id,clean(body.reasonCode,80) || 'other',now,now),
     env.DB.prepare(`UPDATE fulfillment_orders SET status='return_requested',updated_at=? WHERE id=?`).bind(now,fulfillmentId)
   ]);
-  await event(env,fulfillmentId,'return_requested','seller',row.status,'return_requested',{ reasonCode: clean(body.reasonCode,80) || 'other' });
+  await event(env,fulfillmentId,'return_requested','seller','delivered','return_requested',{ reasonCode: clean(body.reasonCode,80) || 'other' });
   return { status: 201, body: { returnCase: { id, status: 'requested', reasonCode: clean(body.reasonCode,80) || 'other', createdAt: now } } };
 }
 
 async function updateReturn(env, returnId, body = {}) {
-  const status = RETURN_STATUSES.has(body.status) ? body.status : '';
-  if (!status || status === 'requested') return { status: 400, body: { error: '유효한 다음 반품 상태가 필요합니다.' } };
+  const status = clean(body.status,40);
   const rc = await env.DB.prepare(`SELECT * FROM fulfillment_returns WHERE id=?`).bind(returnId).first();
   if (!rc) return { status: 404, body: { error: '반품 케이스를 찾을 수 없습니다.' } };
+  if (!returnTransitionAllowed(rc.status,status)) return { status: 409, body: { error: `허용되지 않은 반품 상태전이입니다: ${rc.status} -> ${status}` } };
   const now = nowIso();
   const receivedAt = status === 'received' ? now : rc.return_received_at;
   const refundDueAt = clean(body.refundDueAt,40) || rc.refund_due_at || null;
   const refundCompletedAt = status === 'refunded' ? now : rc.refund_completed_at;
+  const refundReference = clean(body.refundReference,220);
+  if (status === 'refunded' && !refundReference) return { status: 400, body: { error: '실제 외부/결제 시스템에서 완료된 환불 참조값이 필요합니다. Mall은 여기서 환불을 실행하지 않습니다.' } };
   await env.DB.prepare(`UPDATE fulfillment_returns SET status=?,return_received_at=?,refund_due_at=?,refund_completed_at=?,updated_at=? WHERE id=?`)
     .bind(status,receivedAt,refundDueAt,refundCompletedAt,now,returnId).run();
   const fulfillment = await getFulfillment(env,rc.fulfillment_id);
   let nextStatus = fulfillment.status;
+  if (status === 'rejected' && fulfillment.status === 'return_requested') nextStatus = 'delivered';
   if (status === 'received') nextStatus = 'returned';
   if (status === 'refund_pending') nextStatus = 'refund_pending';
-  if (status === 'refunded' || status === 'closed') nextStatus = 'closed';
-  if (nextStatus !== fulfillment.status && fulfillmentTransitionAllowed(fulfillment.status,nextStatus)) {
+  if (status === 'closed' && ['return_requested','returned','refund_pending'].includes(fulfillment.status)) nextStatus = 'closed';
+  if (nextStatus !== fulfillment.status) {
+    if (!fulfillmentTransitionAllowed(fulfillment.status,nextStatus)) return { status: 409, body: { error: 'Fulfillment와 반품 상태가 일치하지 않습니다.' } };
     await env.DB.prepare(`UPDATE fulfillment_orders SET status=?,closed_at=?,updated_at=? WHERE id=?`)
       .bind(nextStatus,nextStatus === 'closed' ? now : fulfillment.closed_at,now,fulfillment.id).run();
   }
@@ -340,7 +422,7 @@ async function updateReturn(env, returnId, body = {}) {
         SELECT 1 FROM supplier_settlement_ledger WHERE fulfillment_id=? AND entry_type='refund'
       )`).bind(fulfillment.id,fulfillment.source_id,-Math.abs(fulfillment.supplier_payable_amount),now,now,fulfillment.id).run();
   }
-  await event(env,fulfillment.id,'return_updated','internal',fulfillment.status,nextStatus,{ returnId, returnStatus: status, refundDueAt });
+  await event(env,fulfillment.id,'return_updated','internal',fulfillment.status,nextStatus,{ returnId, returnStatus: status, refundDueAt, refundReference: status === 'refunded' ? refundReference : '' });
   return { status: 200, body: { returnCase: { id: returnId, status, returnReceivedAt: receivedAt, refundDueAt, refundCompletedAt }, fulfillment: fulfillmentView(await getFulfillment(env,fulfillment.id)), refundExecutionEnabled: false } };
 }
 
