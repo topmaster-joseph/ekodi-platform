@@ -79,8 +79,21 @@ jobs:
             exit 1
           fi
           echo 'Work database schema is reachable through the public RLS contract.'
-      - name: Candidate at 0%, verify, promote and auto-rollback on failure
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/work.worker.json
+      - name: Bootstrap first Worker or run guarded release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@4.119.0 deployments status --config wrangler.work.toml --json > /tmp/work-deployments.log 2>&1; then
+            echo 'Stable Work Worker exists; using 0% candidate guarded release.'
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/work.worker.json
+          elif grep -Fq 'This Worker does not exist' /tmp/work-deployments.log; then
+            echo 'No Work production Worker exists yet; performing one-time bootstrap deploy from the already verified source.'
+            npx --yes wrangler@4.119.0 deploy --config wrangler.work.toml
+          else
+            echo 'Unable to determine Work deployment state.'
+            cat /tmp/work-deployments.log
+            exit 1
+          fi
       - name: Verify real production hostname and runtime config
         run: |
           set -euo pipefail
