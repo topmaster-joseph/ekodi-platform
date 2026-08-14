@@ -2,7 +2,7 @@
   const grid = document.querySelector('#grid');
   if (!grid) return;
 
-  const cards = [...grid.querySelectorAll('[data-product]')];
+  const cards = () => [...grid.querySelectorAll('[data-product]')];
   const search = document.querySelector('#search');
   const empty = document.querySelector('#empty');
   const filterButtons = [...document.querySelectorAll('#filters [data-filter]')];
@@ -16,15 +16,9 @@
     try {
       const value = JSON.parse(localStorage.getItem(storageKey) || '[]');
       return Array.isArray(value) ? value : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }
-
-  function saveWishes() {
-    localStorage.setItem(storageKey, JSON.stringify(wishes));
-  }
-
+  function saveWishes() { localStorage.setItem(storageKey, JSON.stringify(wishes)); }
   function updateCount() {
     const count = String(wishes.length);
     const desktop = document.querySelector('#wishCount');
@@ -32,7 +26,6 @@
     if (desktop) desktop.textContent = count;
     if (mobile) mobile.textContent = count;
   }
-
   function syncHearts() {
     document.querySelectorAll('[data-wish]').forEach((button) => {
       const active = wishes.includes(button.dataset.wish);
@@ -40,11 +33,10 @@
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
   }
-
   function render() {
     const query = (search?.value || '').trim().toLowerCase();
     let visible = 0;
-    cards.forEach((card) => {
+    cards().forEach((card) => {
       const categoryMatch = filter === 'all' || card.dataset.category === filter;
       const searchMatch = !query || (card.dataset.search || '').includes(query);
       card.hidden = !(categoryMatch && searchMatch);
@@ -63,13 +55,11 @@
       render();
     });
   });
-
   search?.addEventListener('input', render);
   document.querySelector('#searchBtn')?.addEventListener('click', () => {
     location.hash = 'shop';
     window.setTimeout(() => search?.focus(), 220);
   });
-
   document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-wish]');
     if (!button) return;
@@ -80,17 +70,24 @@
   });
 
   function openWishlist() {
-    const selected = cards.filter((card) => wishes.includes(card.dataset.product));
+    const selected = cards().filter((card) => wishes.includes(card.dataset.product));
     if (wishlistNode) {
-      wishlistNode.innerHTML = selected.length
-        ? selected.map((card) => {
-            const id = card.dataset.product;
-            const name = card.dataset.name;
-            const status = card.dataset.status;
-            const href = card.dataset.href;
-            return `<div class="wishrow"><div><a href="${href}"><b>${name}</b></a><br><small>${status}</small></div><button class="smallbtn" data-remove="${id}">삭제</button></div>`;
-          }).join('')
-        : '<p style="color:#68726d">관심상품이 없습니다.</p>';
+      wishlistNode.replaceChildren();
+      if (!selected.length) {
+        const emptyText = document.createElement('p'); emptyText.textContent = '관심상품이 없습니다.'; emptyText.style.color = '#68726d'; wishlistNode.append(emptyText);
+      } else {
+        selected.forEach((card) => {
+          const row = document.createElement('div'); row.className = 'wishrow';
+          const info = document.createElement('div');
+          const link = document.createElement('a'); link.href = card.dataset.href || '#';
+          const strong = document.createElement('b'); strong.textContent = card.dataset.name || '상품'; link.append(strong);
+          const br = document.createElement('br');
+          const small = document.createElement('small'); small.textContent = card.dataset.status || '상품';
+          info.append(link, br, small);
+          const remove = document.createElement('button'); remove.className = 'smallbtn'; remove.dataset.remove = card.dataset.product; remove.textContent = '삭제';
+          row.append(info, remove); wishlistNode.append(row);
+        });
+      }
     }
     dialog?.showModal();
   }
@@ -102,10 +99,8 @@
     const button = event.target.closest('[data-remove]');
     if (!button) return;
     wishes = wishes.filter((item) => item !== button.dataset.remove);
-    saveWishes();
-    render();
-    openWishlist();
+    saveWishes(); render(); openWishlist();
   });
-
+  window.addEventListener('ekodi:marketplace-products-loaded', render);
   render();
 })();
