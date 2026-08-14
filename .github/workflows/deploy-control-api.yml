@@ -10,7 +10,6 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
-      - 'customer-entry-books-pipeline.js'
       - 'customer-google-prereg.js'
       - 'customer-federated-auth.js'
       - 'customer-member-directory.js'
@@ -53,7 +52,6 @@ jobs:
           node --check customer-google-prereg.js
           node --check customer-member-directory.js
           node --check customer-entry-worker.js
-          node --check customer-entry-books-pipeline.js
           node --check books-control.js
           node --check books-finance-control.js
           node --check books-distribution-control.js
@@ -64,10 +62,11 @@ jobs:
           grep -Fq '/api/control/social/' customer-entry-worker.js
           grep -Fq '/api/customers/directory' customer-member-directory.js
           grep -Fq 'handleCustomerMemberDirectory' customer-entry-worker.js
-          grep -Fq '/api/books/admin/pipeline' customer-entry-books-pipeline.js
+          grep -Fq 'handleBooksPipelineRequest' customer-entry-worker.js
+          grep -Fq '/api/books/admin/pipeline' customer-entry-worker.js
           grep -Fq 'books_finance_transactions' books-pipeline-control.js
           grep -Fq 'checklist_json' books-distribution-control.js
-          grep -Fq 'main = "customer-entry-books-pipeline.js"' wrangler.api.toml
+          grep -Fq 'main = "customer-entry-worker.js"' wrangler.api.toml
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
