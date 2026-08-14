@@ -15,7 +15,23 @@ test('Campus first screen renders the full operational site list with three dire
   assert.match(js, /makeButton\('Manage'/);
   assert.match(js, /makeButton\('Status'/);
   assert.match(js, /link\.textContent = 'Open ↗'/);
-  assert.match(js, /<th>Type<\/th><th>Service<\/th><th>Domain<\/th><th>Actions<\/th>/);
+});
+
+test('Campus groups related services into a compact two-column layout', () => {
+  for (const group of [
+    'Core & Access',
+    'Business & Commerce',
+    'Community',
+    'Client Sites',
+    'Knowledge & Content',
+    'Communication & Cloud',
+  ]) assert.match(js, new RegExp(group.replaceAll('&', '\\&')));
+  assert.match(js, /className = 'campus-groups-grid'/);
+  assert.match(js, /className = 'campus-group-card'/);
+  assert.match(js, /className = 'campus-site-item'/);
+  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.campus-group-card/);
+  assert.match(css, /\.campus-site-item/);
 });
 
 test('public site Open links never inherit monitor-only health endpoints', () => {
