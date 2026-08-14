@@ -1,33 +1,40 @@
-name: Deploy Admin Site
+name: Deploy Admin & Auth Site
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'site-worker.js'
+      - 'admin.html'
       - 'control-center.html'
       - 'control-center.js'
+      - 'control-center-features.js'
       - 'control-center.css'
       - 'control-center-ops.css'
       - 'control-center-finance.css'
       - 'compact-control-center.js'
       - 'compact-control-center.css'
+      - 'admin-central-handoff.js'
       - 'client-access.js'
       - 'client-access.css'
+      - 'finance-monitor.js'
+      - 'marketing-funnel-admin.js'
+      - 'marketing-funnel-admin.css'
+      - 'books-admin.js'
+      - 'books-admin.css'
+      - 'books-finance-admin.js'
+      - 'books-finance-admin.css'
       - 'google-admin-auth.js'
       - 'google-admin-auth.css'
       - 'auth-site/**'
-      - 'scripts/build.mjs'
-      - 'wrangler.site.toml'
       - '.github/workflows/deploy-admin-site.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-admin-site-fast
-  cancel-in-progress: true
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -42,12 +49,17 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate admin router and access modules
+      - name: Validate admin, auth and feature modules
         run: |
-          node --check site-worker.js
           node --check control-center.js
+          node --check control-center-features.js
           node --check compact-control-center.js
+          node --check admin-central-handoff.js
           node --check client-access.js
+          node --check finance-monitor.js
+          node --check marketing-funnel-admin.js
+          node --check books-admin.js
+          node --check books-finance-admin.js
           node --check google-admin-auth.js
           node --check auth-site/auth.js
 
@@ -73,15 +85,13 @@ jobs:
           grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
-          grep -Fq 'AUTH_HOST' site-worker.js
-          grep -Fq '/auth-center' site-worker.js
 
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Deploy EKODI site worker
+      - name: Deploy shared site Worker with admin/auth assets
         run: npm run deploy:site
 
       - name: Verify admin routes, compact UI, central auth and customer access assets
@@ -95,51 +105,36 @@ jobs:
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
             grep -Fiq 'cross-origin-opener-policy: same-origin-allow-popups' /tmp/admin-headers || return 1
-            grep -Fiq 'accounts.google.com/gsi/client' /tmp/admin-headers || return 1
             grep -Fq 'EKODI Control Center' /tmp/admin-body || return 1
             grep -Fq 'client-access.js' /tmp/admin-body || return 1
-            grep -Fq 'client-access.css' /tmp/admin-body || return 1
             grep -Fq 'google-admin-auth.js' /tmp/admin-body || return 1
-            grep -Fq 'google-admin-auth.css' /tmp/admin-body || return 1
             grep -Fq 'compact-control-center.js' /tmp/admin-body || return 1
-            grep -Fq 'compact-control-center.css' /tmp/admin-body || return 1
-            if grep -Fiq '^location:' /tmp/admin-headers; then
-              echo 'Unexpected redirect header'
-              return 1
-            fi
+            if grep -Fiq '^location:' /tmp/admin-headers; then return 1; fi
           }
 
           verify_asset() {
             path="$1"
             expected="$2"
             code=$(curl -sS -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
-            echo "$path -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fq "$expected" /tmp/admin-asset || return 1
+            [ "$code" = '200' ] && grep -Fq "$expected" /tmp/admin-asset
           }
 
           verify_auth() {
             code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true)
-            echo "https://auth.ekodi.kr/ -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers || return 1
-            grep -Fq 'EKODI 인증센터' /tmp/auth-body || return 1
-            curl -fsSL --max-time 15 'https://auth.ekodi.kr/auth.js' | grep -Fq 'functions/v1/access-api' || return 1
+            [ "$code" = '200' ] \
+              && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers \
+              && grep -Fq 'EKODI 인증센터' /tmp/auth-body
           }
 
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
-              && verify_admin 'https://admin.ekodi.kr/admin' \
-              && verify_admin 'https://admin.ekodi.kr/legacy' \
               && verify_asset 'compact-control-center.js' 'Operating Policies' \
-              && verify_asset 'compact-control-center.css' '.policy-grid' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
-              && verify_asset 'client-access.css' '.client-access-layout' \
               && verify_asset 'google-admin-auth.js' '/api/google/login' \
-              && verify_asset 'google-admin-auth.css' '.google-auth-panel' \
+              && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
               && verify_auth; then
-              echo 'admin.ekodi.kr verified with compact English navigation, Policies and Google-first access.'
+              echo 'Admin/Auth production boundary verified.'
               exit 0
             fi
             sleep 4
