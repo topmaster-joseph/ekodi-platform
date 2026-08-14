@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "organizations": [
     {
       "id": "community",
@@ -42,13 +42,57 @@
       "channels": []
     },
     {
+      "id": "lab",
+      "name": "에코디연구소",
+      "shortName": "Lab",
+      "description": "연구, 전략, 교육과 현장 프로젝트의 지식 콘텐츠를 연결합니다.",
+      "website": "https://lab.ekodi.kr",
+      "isActive": true,
+      "order": 40,
+      "socialPolicy": "inherit_org",
+      "channels": []
+    },
+    {
       "id": "books",
-      "name": "에코디출판",
+      "name": "에코디북스",
       "shortName": "Books",
       "description": "출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.",
       "website": "https://books.ekodi.kr",
       "isActive": true,
-      "order": 40,
+      "order": 50,
+      "socialPolicy": "inherit_org",
+      "channels": []
+    },
+    {
+      "id": "trade",
+      "name": "EKODI Trading",
+      "shortName": "Trading",
+      "description": "글로벌 무역, 제품, 바이어와 공급망 관련 소식과 콘텐츠를 연결합니다.",
+      "website": "https://trade.ekodi.kr",
+      "isActive": true,
+      "order": 60,
+      "socialPolicy": "inherit_org",
+      "channels": []
+    },
+    {
+      "id": "edu",
+      "name": "에코디교육",
+      "shortName": "Education",
+      "description": "교육, 강의, 학습 프로그램과 성장 콘텐츠를 연결합니다.",
+      "website": "https://edu.ekodi.kr",
+      "isActive": true,
+      "order": 70,
+      "socialPolicy": "inherit_org",
+      "channels": []
+    },
+    {
+      "id": "media",
+      "name": "에코디미디어",
+      "shortName": "Media",
+      "description": "영상, 라이브, 콘텐츠 제작과 미디어 아카이브를 연결합니다.",
+      "website": "https://media.ekodi.kr",
+      "isActive": true,
+      "order": 80,
       "socialPolicy": "inherit_org",
       "channels": []
     }
