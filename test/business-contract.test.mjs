@@ -59,3 +59,9 @@ test('admin security headers remain part of the routing contract', () => {
     assert.ok(siteWorker.includes(directive), `missing CSP directive: ${directive}`);
   }
 });
+
+test('Campus action assets are served through the secured admin asset route', () => {
+  assert.ok(siteWorker.includes("'/campus-actions.js'"));
+  assert.ok(siteWorker.includes("'/campus-actions.css'"));
+  assert.match(siteWorker, /ADMIN_ASSETS[\s\S]*withHostSecurity\(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-asset'\)/);
+});
