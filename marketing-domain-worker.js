@@ -1,6 +1,6 @@
 import { handleMarketingDomainRequest, runMarketingDomainSchedule } from './marketing-domain-control.js';
 import { handleMarketingStoreWorkspaceRequest, runMarketingStoreWorkspaceSchedule } from './marketing-store-workspace.js';
-import { handleMarketingStoreDomainRequest } from './marketing-store-domain.js';
+import { handleMarketingStoreDomainRequest, runMarketingStoreDomainSchedule } from './marketing-store-domain.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -62,6 +62,7 @@ export default {
     ctx.waitUntil(Promise.all([
       runMarketingDomainSchedule(env),
       runMarketingStoreWorkspaceSchedule(env),
+      runMarketingStoreDomainSchedule(env),
     ]).catch(error => console.error('Marketing domain schedule failed', error)));
   },
 };
