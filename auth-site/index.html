@@ -6,15 +6,15 @@
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="description" content="EKODI 서비스 공통 Google 계정 통합 인증센터" />
   <title>EKODI 인증센터</title>
-  <link rel="stylesheet" href="/auth.css?v=20260814-transient-1" />
+  <link rel="stylesheet" href="/auth.css?v=20260815-person-workspace-1" />
 </head>
 <body>
   <header class="topbar"><a href="https://ekodi.kr" class="brand">EKODI</a><span>통합 인증센터</span></header>
   <main class="shell">
     <section class="intro">
       <span class="eyebrow">EKODI IDENTITY</span>
-      <h1>한 계정으로,<br>필요한 곳만 안전하게.</h1>
-      <p>Google 계정으로 본인을 확인합니다. 인증이 끝나면 인증센터에 머물지 않고 요청한 서비스로 바로 돌아갑니다. 인증에 실패하면 다시 시도하거나 취소할 수 있습니다.</p>
+      <h1>사람은 하나,<br>공간은 여러 개.</h1>
+      <p>개인 Google 계정과 업무용 Google 계정을 한 사람에게 안전하게 연결할 수 있습니다. 어느 계정으로 들어와도 권한이 있는 개인·상가·단체 공간을 선택해 이용합니다.</p>
     </section>
 
     <section class="auth-card">
@@ -24,13 +24,26 @@
         <div id="googleButtonHost" class="google-button-host" aria-label="Google 계정 인증"></div>
         <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>Google 인증 다시 시도</span></button>
         <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
-        <p class="micro" id="signedOutCopy">Google 계정은 본인확인에만 사용하고, 서비스 권한은 EKODI에서 별도로 확인합니다.</p>
+        <p class="micro" id="signedOutCopy">Google 계정은 본인확인에만 사용하고, 서비스 권한과 데이터 소유권은 EKODI에서 별도로 관리합니다.</p>
         <div id="authStatus" class="notice">Google 인증을 준비하고 있습니다.</div>
       </div>
 
       <div id="signedIn" class="hide">
-        <div class="identity"><div><small>확인된 계정</small><strong id="accountEmail">계정 확인 중</strong></div><div class="identity-actions"><button id="logout" class="quiet" type="button">다른 계정</button><button id="cancelSignedIn" class="quiet" type="button">취소</button></div></div>
+        <div class="identity"><div><small>현재 로그인</small><strong id="accountEmail">계정 확인 중</strong></div><div class="identity-actions"><button id="logout" class="quiet" type="button">다른 계정</button><button id="cancelSignedIn" class="quiet" type="button">취소</button></div></div>
         <div id="accessStatus" class="notice">서비스 접근권한을 확인하고 있습니다.</div>
+
+        <section id="workspacePanel" class="subpanel hide" aria-label="내 공간 선택">
+          <div class="subpanel-head"><div><small>MY SPACES</small><strong>내 공간</strong></div><span id="workspaceCount"></span></div>
+          <p class="micro panel-copy">같은 Google 계정으로 개인과 여러 단체에 참여할 수 있습니다. 데이터와 권한은 공간별로 분리됩니다.</p>
+          <div id="workspaceList" class="workspace-list"></div>
+        </section>
+
+        <section id="identityPanel" class="subpanel hide" aria-label="연결된 로그인 계정">
+          <div class="subpanel-head"><div><small>LOGIN IDENTITIES</small><strong>로그인 계정</strong></div><button id="addGoogleAccount" class="quiet" type="button">Google 계정 추가</button></div>
+          <div id="linkedAccounts" class="linked-accounts"></div>
+          <div id="linkGoogleButtonHost" class="google-button-host compact hide"></div>
+          <div id="identityLinkStatus" class="notice hide"></div>
+        </section>
 
         <div id="approvedActions" class="hide actions">
           <button id="continueService" type="button">서비스로 다시 이동</button>
@@ -72,12 +85,12 @@
     </section>
 
     <section class="principles" aria-label="인증 원칙">
-      <div><b>Identity</b><span>Google 본인확인</span></div>
-      <div><b>Access</b><span>서비스별 최소권한</span></div>
-      <div><b>Return</b><span>인증 후 즉시 복귀</span></div>
+      <div><b>Person</b><span>한 사람, 하나의 프로필</span></div>
+      <div><b>Identity</b><span>복수 Google 로그인</span></div>
+      <div><b>Space</b><span>개인·상가·단체 분리</span></div>
     </section>
   </main>
-  <footer>EKODI Platform · 인증은 통과 지점이고, 서비스 이용은 원래 화면에서 이어집니다.</footer>
-  <script type="module" src="/auth-router.js?v=20260814-transient-1"></script>
+  <footer>EKODI Platform · 로그인 계정은 문이고, 사람과 공간이 권한의 기준입니다.</footer>
+  <script type="module" src="/auth-router.js?v=20260815-person-workspace-1"></script>
 </body>
 </html>
