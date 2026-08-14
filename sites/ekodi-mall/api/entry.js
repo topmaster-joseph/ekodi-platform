@@ -1,6 +1,7 @@
 import core from './worker.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
+import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -183,8 +184,22 @@ export default {
       const coreBody = await coreResponse.clone().json().catch(() => ({}));
       const firstTouchReady = Boolean(env.DB) && await attributionSchemaReady(env);
       const sourcingReady = Boolean(env.DB) && await sourcingSchemaReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady;
-      return reply({ ...coreBody, ok, version: 3, environment: env.ENVIRONMENT || 'unknown', firstTouchSchemaReady: firstTouchReady, sourcingSchemaReady: sourcingReady, attributionWindowDays: ATTRIBUTION_WINDOW_DAYS }, ok ? 200 : 503, origin, env);
+      const fulfillmentReady = Boolean(env.DB) && await fulfillmentSchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady;
+      return reply({
+        ...coreBody,
+        ok,
+        version: 4,
+        environment: env.ENVIRONMENT || 'unknown',
+        firstTouchSchemaReady: firstTouchReady,
+        sourcingSchemaReady: sourcingReady,
+        fulfillmentSchemaReady: fulfillmentReady,
+        attributionWindowDays: ATTRIBUTION_WINDOW_DAYS,
+        buyerPiiReleaseEnabled: String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
+        supplierForwardEnabled: String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true',
+        supplierPayoutExecutionEnabled: false,
+        refundExecutionEnabled: false
+      }, ok ? 200 : 503, origin, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
@@ -203,6 +218,11 @@ export default {
       if (!body) return reply({ error: 'Invalid JSON' }, 400, origin, env);
       const result = await firstTouch(env, body);
       return reply(result.body, result.status, origin, env);
+    }
+
+    if (url.pathname.startsWith('/api/fulfillment/') || url.pathname.startsWith('/api/internal/fulfillment/')) {
+      const fulfillment = await handleFulfillmentRequest(request, env);
+      if (fulfillment) return reply(fulfillment.body, fulfillment.status, origin, env);
     }
 
     if (url.pathname.startsWith('/api/sourcing/')) {
