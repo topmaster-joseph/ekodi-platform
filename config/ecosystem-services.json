@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "policy": "Only public services that have passed staging and production verification may appear on ekodi.kr.",
+  "services": [
+    {
+      "id": "church",
+      "name": "에코디교회",
+      "url": "https://church.ekodi.kr",
+      "label": "church.ekodi.kr",
+      "icon": "church",
+      "order": 10,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "biz",
+      "name": "에코디비즈",
+      "url": "https://biz.ekodi.kr",
+      "label": "biz.ekodi.kr",
+      "icon": "business",
+      "order": 20,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "books",
+      "name": "에코디출판",
+      "url": "https://books.ekodi.kr",
+      "label": "books.ekodi.kr",
+      "icon": "books",
+      "order": 30,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "lab",
+      "name": "에코디연구소",
+      "url": "https://lab.ekodi.kr",
+      "label": "lab.ekodi.kr",
+      "icon": "lab",
+      "order": 40,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "mission",
+      "name": "에코디선교회",
+      "url": "https://youtube.com/@ekodicommunity",
+      "label": "mission / YouTube",
+      "icon": "community",
+      "order": 50,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "mall",
+      "name": "에코디몰",
+      "url": "https://mall.ekodi.kr",
+      "label": "mall.ekodi.kr",
+      "icon": "mall",
+      "order": 60,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "community",
+      "name": "EKODI Community",
+      "url": "https://community.ekodi.kr",
+      "label": "community.ekodi.kr",
+      "icon": "community",
+      "order": 70,
+      "homepage": true,
+      "productionVerified": true
+    },
+    {
+      "id": "marketing",
+      "name": "EKODI Marketing AI",
+      "url": "https://marketing.ekodi.kr",
+      "label": "marketing.ekodi.kr",
+      "icon": "marketing",
+      "order": 80,
+      "homepage": true,
+      "productionVerified": true
+    }
+  ]
+}
