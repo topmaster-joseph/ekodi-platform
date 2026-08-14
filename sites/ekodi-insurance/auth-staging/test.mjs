@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+const html=fs.readFileSync(new URL('./public/index.html',import.meta.url),'utf8');
+const app=fs.readFileSync(new URL('./public/app.js',import.meta.url),'utf8');
+const worker=fs.readFileSync(new URL('./worker.js',import.meta.url),'utf8');
+const wrangler=fs.readFileSync(new URL('./wrangler.toml',import.meta.url),'utf8');
+for(const marker of ['ISOLATED STAGING','보험정보는 인증센터에 저장하지 않습니다.','/config.js'])if(!html.includes(marker))throw new Error(`missing auth UI marker: ${marker}`);
+for(const marker of ['environment===\'staging\'','/challenge','/google/exchange','ekodi_token','운영 인증으로 우회하지 않습니다.'])if(!app.includes(marker))throw new Error(`missing auth behavior: ${marker}`);
+for(const marker of ['BLOCKED_PRODUCTION_REF','productionProjectBlocked:true','issuesSession:false','INSURANCE_STAGING_SUPABASE_URL','INSURANCE_STAGING_IDENTITY_URL'])if(!worker.includes(marker))throw new Error(`missing fail-closed guard: ${marker}`);
+if(!worker.includes('renzehysxirjilvdxacv'))throw new Error('current production Supabase project must be explicitly blocked in staging worker');
+if(!wrangler.includes('workers_dev = true'))throw new Error('auth staging must use workers.dev');
+if(/^routes?\s*=/m.test(wrangler))throw new Error('auth staging must not contain a custom production route');
+if(html.includes('https://auth.ekodi.kr')||app.includes('https://auth.ekodi.kr'))throw new Error('production auth URL detected in Insurance auth staging');
+console.log('EKODI Insurance isolated auth staging checks passed');
