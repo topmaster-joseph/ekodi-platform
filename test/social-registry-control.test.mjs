@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { DEFAULT_REGISTRY, normalizeRegistry } from '../social-registry-api.js';
+
+test('Social registry normalizes the canonical EKODI organizations', () => {
+  const registry = normalizeRegistry(DEFAULT_REGISTRY);
+  assert.equal(registry.version, 3);
+  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '에코디커뮤니티'));
+  assert.ok(registry.organizations.some(org => org.id === 'church'));
+  assert.ok(registry.organizations.every(org => org.website.startsWith('https://')));
+  assert.ok(registry.organizations.flatMap(org => org.channels).every(channel => channel.id && channel.url.startsWith('https://')));
+});
+
+test('Social registry rejects insecure channel URLs and duplicate organizations', () => {
+  assert.throws(() => normalizeRegistry({ organizations: [{ id:'x', name:'X', website:'https://x.example', channels:[{ provider:'other', label:'X', url:'http://x.example' }] }] }), /https/);
+  assert.throws(() => normalizeRegistry({ organizations: [
+    { id:'same', name:'A', website:'https://a.example', channels:[] },
+    { id:'same', name:'B', website:'https://b.example', channels:[] }
+  ] }), /duplicate organization id/);
+});
+
+test('Social registry rejects the retired EKODI mission organization label', () => {
+  assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://community.ekodi.kr', channels:[] }] }), /legacy EKODI mission/);
+});
+
+test('Control Center lazy-loads Social Channels and production build ships its assets', async () => {
+  const [features, build, admin, wrapper, wrangler] = await Promise.all([
+    readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api-social-entry.js', import.meta.url), 'utf8'),
+    readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
+  ]);
+  assert.match(features, /placeholder\('social', '◉', 'Social'\)/);
+  assert.match(features, /social-admin\.js/);
+  assert.match(build, /social-admin\.css/);
+  assert.match(build, /social-admin\.js/);
+  assert.match(admin, /\/api\/control\/social\/registry/);
+  assert.match(wrapper, /\/api\/social\/registry/);
+  assert.match(wrangler, /main = "api-social-entry\.js"/);
+});
