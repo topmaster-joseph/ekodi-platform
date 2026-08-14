@@ -123,6 +123,10 @@ jobs:
             grep -Fq 'id="customDomainPanel"' "$file"
             grep -Fq 'https://marketing-api.ekodi.kr' "$file"
             grep -Fq '/api/marketing/domains' "$file"
+            grep -Fq 'data-store-plan-links' "$file"
+            grep -Fq '/api/marketing/workspace/resolve?host=' "$file"
+            grep -Fq '/api/marketing/store-domains' "$file"
+            grep -Fq 'STORE MARKETING AI' "$file"
           done
           for file in \
             dist/marketing-ai/jadam/index.html \
@@ -205,7 +209,11 @@ jobs:
                  || ! grep -Fq 'window.EKODI_MARKETING_CONTEXT' /tmp/live.html \
                  || ! grep -Fq 'id="customDomainPanel"' /tmp/live.html \
                  || ! grep -Fq 'https://marketing-api.ekodi.kr' /tmp/live.html \
-                 || ! grep -Fq '/api/marketing/domains' /tmp/live.html; then
+                 || ! grep -Fq '/api/marketing/domains' /tmp/live.html \
+                 || ! grep -Fq 'data-store-plan-links' /tmp/live.html \
+                 || ! grep -Fq '/api/marketing/workspace/resolve?host=' /tmp/live.html \
+                 || ! grep -Fq '/api/marketing/store-domains' /tmp/live.html \
+                 || ! grep -Fq 'STORE MARKETING AI' /tmp/live.html; then
                 ok=0
               fi
             done
