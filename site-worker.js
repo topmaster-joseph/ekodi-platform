@@ -57,6 +57,8 @@ const ADMIN_ASSETS = new Set([
   '/google-admin-auth.js',
   '/domains-hub.css',
   '/domains-hub.js',
+  '/social-admin.css',
+  '/social-admin.js',
   '/books-admin.css',
   '/books-admin.js',
   '/books-finance-admin.css',
