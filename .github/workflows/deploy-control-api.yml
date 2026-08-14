@@ -12,6 +12,7 @@ on:
       - 'customer-entry-worker.js'
       - 'customer-google-prereg.js'
       - 'customer-federated-auth.js'
+      - 'customer-member-directory.js'
       - 'books-control.js'
       - 'books-finance-control.js'
       - 'affiliate-control.js'
@@ -47,6 +48,7 @@ jobs:
           node --check customer-auth.js
           node --check customer-federated-auth.js
           node --check customer-google-prereg.js
+          node --check customer-member-directory.js
           node --check customer-entry-worker.js
           node --check books-control.js
           node --check books-finance-control.js
@@ -54,6 +56,8 @@ jobs:
           node --check social-registry-api.js
           grep -Fq '/api/social/registry' customer-entry-worker.js
           grep -Fq '/api/control/social/' customer-entry-worker.js
+          grep -Fq '/api/customers/directory' customer-member-directory.js
+          grep -Fq 'handleCustomerMemberDirectory' customer-entry-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -62,7 +66,7 @@ jobs:
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
       - name: Deploy API Worker
         run: npm run deploy:api
-      - name: Verify Google-only admin, customer tenant, Social registry and module boundaries
+      - name: Verify Google-only admin, customer directory, Social registry and module boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +80,7 @@ jobs:
             social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/social/registry' || true)
             unauthorized_social=$(curl -sS -o /tmp/social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/social/registry' || true)
             unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
+            unauthorized_directory=$(curl -sS -o /tmp/customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/directory' || true)
             unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
             legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 \
               -H 'content-type: application/json' \
@@ -91,8 +96,10 @@ jobs:
               && printf '%s' "$social" | grep -Fq 'community-youtube' \
               && [ "$unauthorized_social" = '401' ] \
               && [ "$unauthorized_customer" = '401' ] \
+              && [ "$unauthorized_directory" = '401' ] \
               && [ "$unauthorized_admin" = '401' ] \
               && [ "$legacy_login" = '410' ] \
+              && grep -Fq 'EKODI 관리자 인증이 필요합니다.' /tmp/customer-directory.json \
               && grep -Fq 'GOOGLE_ADMIN_LOGIN_REQUIRED' /tmp/legacy-login.json; then
               echo 'Control API production boundary verified.'
               exit 0
