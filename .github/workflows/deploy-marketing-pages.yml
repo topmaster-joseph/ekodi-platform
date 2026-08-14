@@ -1,4 +1,5 @@
 name: Deploy Marketing AI Pages
+# 2026-08-15 validated sync trigger for Marketing handoff fix
 
 on:
   pull_request:
