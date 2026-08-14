@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - 'staging/social-community-*'
+      - 'staging/social-*'
     paths:
       - 'social/**'
       - 'social-worker.js'
@@ -39,6 +39,8 @@ jobs:
           grep -Fq 'featuredSection' social/index.html
           grep -Fq '에코디커뮤니티' social/channels.json
           grep -Fq 'youtubeRssFallback:true' social-worker.js
+          grep -Fq 'pattern = "social.ekodi.kr"' wrangler.social.toml
+          grep -Fq 'custom_domain = true' wrangler.social.toml
           if grep -R -Fq '에코디선교회' social; then echo 'Legacy mission label found in social source'; exit 1; fi
 
   deploy-staging:
