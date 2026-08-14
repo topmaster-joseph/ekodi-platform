@@ -12,6 +12,8 @@ on:
       - 'insurance-admin.css'
       - 'insurance-control-proxy.js'
       - 'insurance-control-entry.js'
+      - 'customer-entry-worker.js'
+      - 'wrangler.api.toml'
       - 'control-center-features.js'
       - 'scripts/build.mjs'
       - '.github/workflows/insurance-*.yml'
@@ -42,10 +44,17 @@ jobs:
           grep -Fq "architecture: 'cloudflare-worker-d1'" sites/ekodi-insurance/api/worker.js
           grep -Fq "persistentPolicyLedger: false" sites/ekodi-insurance/api/worker.js
           grep -Fq "persistentClaimLedger: false" sites/ekodi-insurance/api/worker.js
+          grep -Fq "transcriptDefault: 'not-shared'" sites/ekodi-insurance/api/worker.js
+          grep -Fq 'shareTranscript === true' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'cleanupExpired' sites/ekodi-insurance/api/worker.js
+          grep -Fq 'consultationRetentionDays: 30' sites/ekodi-insurance/api/worker.js
           grep -Fq 'AES-GCM' sites/ekodi-insurance/api/worker.js
           grep -Fq 'INSURANCE_DATA_KEY' sites/ekodi-insurance/api/worker.js
-          grep -Fq 'shareConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'contactConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'transcriptConsent' sites/ekodi-insurance/public/server-bridge.js
+          grep -Fq 'AI 상담 대화 공유 (선택)' sites/ekodi-insurance/public/server-bridge.js
           grep -Fq 'encrypted-d1-on-explicit-handoff' sites/ekodi-insurance/worker.js
+          grep -Fq 'crons = ["17 3 * * *"]' sites/ekodi-insurance/api/wrangler.toml
 
       - name: Validate minimal D1 schema
         run: |
@@ -63,19 +72,24 @@ jobs:
           print('Insurance minimal D1 schema OK')
           PY
 
-      - name: Validate central Admin integration
+      - name: Validate central Admin integration and production entry
         run: |
           set -euo pipefail
           node --check insurance-admin.js
           node --check insurance-control-proxy.js
           node --check insurance-control-entry.js
+          node --check customer-entry-worker.js
           node --check control-center-features.js
           node --check scripts/build.mjs
           grep -Fq 'loadInsurance' control-center-features.js
           grep -Fq '/api/insurance/admin/consultations' insurance-admin.js
           grep -Fq '/api/internal/consultations' insurance-control-proxy.js
           grep -Fq '/api/session' insurance-control-proxy.js
+          grep -Fq "path.startsWith('/api/insurance/admin')" customer-entry-worker.js
+          grep -Fq 'handleInsuranceAdminProxy' customer-entry-worker.js
+          grep -Fq 'INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"' wrangler.api.toml
           ! grep -Fq '/functions/v1/insurance' insurance-control-proxy.js
+          ! grep -Fq "'origin':'https://api.ekodi.kr'" insurance-control-proxy.js
           npm run build
           test -f dist/insurance-admin.js
           test -f dist/insurance-admin.css
@@ -102,6 +116,7 @@ jobs:
             sites/ekodi-insurance/api/wrangler.toml
             insurance-control-proxy.js
             insurance-control-entry.js
+            customer-entry-worker.js
           )
           if grep -E '/functions/v1/insurance|SUPABASE_SERVICE_ROLE_KEY|insurance-admin-internal|insurance-identity-staging' "${active[@]}"; then
             echo 'legacy Insurance Supabase business backend referenced by active runtime'
@@ -124,12 +139,20 @@ jobs:
           bridge=$(curl -L -fsS "$ui/server-bridge.js")
           printf '%s' "$root" | grep -Fq 'EKODI Insurance'
           printf '%s' "$root" | grep -Fq '/server-bridge.js'
+          printf '%s' "$root" | grep -Fq '실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화'
           printf '%s' "$bridge" | grep -Fq 'insurance-api-staging.ekodi.kr'
+          printf '%s' "$bridge" | grep -Fq 'contactConsent'
+          printf '%s' "$bridge" | grep -Fq 'transcriptConsent'
           printf '%s' "$ui_health" | grep -Fq '"mode":"staging-cloudflare-d1-free"'
           printf '%s' "$ui_health" | grep -Fq '"personalPolicyData":"browser-local"'
+          printf '%s' "$ui_health" | grep -Fq '"transcriptDefault":"not-shared"'
           printf '%s' "$api_health" | grep -Fq '"architecture":"cloudflare-worker-d1"'
           printf '%s' "$api_health" | grep -Fq '"dbReady":true'
           printf '%s' "$api_health" | grep -Fq '"encryptionReady":true'
+          printf '%s' "$api_health" | grep -Fq '"internalAdminReady":true'
+          printf '%s' "$api_health" | grep -Fq '"rateLimitReady":true'
+          printf '%s' "$api_health" | grep -Fq '"transcriptDefault":"not-shared"'
+          printf '%s' "$api_health" | grep -Fq '"consultationRetentionDays":30'
           printf '%s' "$api_health" | grep -Fq '"persistentPolicyLedger":false'
           printf '%s' "$api_health" | grep -Fq '"persistentClaimLedger":false'
 
