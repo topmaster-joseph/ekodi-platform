@@ -2,11 +2,17 @@ name = "ekodi-social"
 main = "social-worker.js"
 compatibility_date = "2026-08-14"
 workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "social.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
 
 [assets]
 directory = "./social"
 binding = "ASSETS"
 
-[[routes]]
-pattern = "social.ekodi.kr/*"
-zone_name = "ekodi.kr"
+[observability.logs]
+enabled = true
+invocation_logs = true
