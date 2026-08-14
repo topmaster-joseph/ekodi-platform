@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-social",
+    "config": "wrangler.social.toml",
+    "requests": [
+      {
+        "url": "https://social.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["EKODI Social"]
+      },
+      {
+        "url": "https://social.ekodi.kr/health",
+        "statuses": [200],
+        "expect": ["ekodi-social"]
+      },
+      {
+        "url": "https://social.ekodi.kr/api/feed?org=community",
+        "statuses": [200],
+        "expect": ["에코디커뮤니티"]
+      }
+    ]
+  }
+}
