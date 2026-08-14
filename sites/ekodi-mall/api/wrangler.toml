@@ -15,6 +15,9 @@ ALLOWED_ORIGINS = "https://mall.ekodi.kr,https://mall.biz.ekodi.kr,https://ekodi
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 PAYMENTS_ENABLED = "false"
+SOURCING_AUTO_ORDER_ENABLED = "false"
+BUYER_PII_RELEASE_ENABLED = "false"
+SUPPLIER_FORWARD_ENABLED = "false"
 
 # Non-destructive compatibility declaration for the short-lived SQLite Durable
 # Object Mall API. The namespace remains provisioned, but current Mall traffic
