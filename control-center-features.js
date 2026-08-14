@@ -78,9 +78,9 @@
   function notifyInstalled(section) { removeResolvedPlaceholders(); window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail: { section } })); normalizeShortLabels(); queueMicrotask(normalizeShortLabels); }
   async function activateLazy(section, button) {
     const loader = loaders[section]; if (!loader || !token()) return;
-    button.disabled = true; button.setAttribute('aria-busy', 'true');
+    button.disabled = true; button.setAttribute('aria-busy', 'true'); button.hidden = true;
     try { await loader(); notifyInstalled(section); const realButton = nav?.querySelector(`[data-section="${section}"]`); if (!realButton) throw new Error(`${section} 화면을 준비하지 못했습니다.`); queueMicrotask(() => realButton.click()); }
-    catch (error) { console.warn('[EKODI lazy feature]', error); button.disabled = false; button.removeAttribute('aria-busy'); }
+    catch (error) { console.warn('[EKODI lazy feature]', error); button.hidden = false; button.disabled = false; button.removeAttribute('aria-busy'); }
   }
   function placeholder(section, icon, label) {
     if (!nav || nav.querySelector(`[data-section="${section}"]`) || placeholderButtons.has(section)) return null;
