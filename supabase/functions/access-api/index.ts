@@ -46,6 +46,15 @@ async function tenantBySlug(slug:string){
   const {data}=await admin.from("tenants").select("id,slug,name").eq("slug",slug).maybeSingle();
   return data??null;
 }
+async function personAuthUserIds(userId:string){
+  const {data:identity,error}=await admin.from("login_identities").select("person_id").eq("auth_user_id",userId).eq("status","active").maybeSingle();
+  if(error)throw error;
+  if(!identity?.person_id)return [userId];
+  const {data,error:membersError}=await admin.from("login_identities").select("auth_user_id").eq("person_id",identity.person_id).eq("status","active");
+  if(membersError)throw membersError;
+  const ids=(data??[]).map((item:any)=>item.auth_user_id).filter(Boolean);
+  return ids.length?[...new Set(ids)]:[userId];
+}
 function validHandoff(site:string,raw:string){
   const origins:Record<string,string[]>={
     cgma:["https://cgma.ekodi.kr"],
@@ -139,14 +148,17 @@ Deno.serve(async(req)=>{
       const businessNumber=clip(body?.business_number,40)||null;
       if(!site)return json(req,{error:"site_required"},400);
       const {data:access}=await auth.db.rpc("current_site_access",{p_site_key:site});
-      if(access?.status==="active"||access?.status==="pre_registered")return json(req,{ok:true,already_authorized:true,access});
+      if(site!=="marketing"&&(access?.status==="active"||access?.status==="pre_registered"))return json(req,{ok:true,already_authorized:true,access});
       const tenant=tenantSlug?await tenantBySlug(tenantSlug):null;
       if(tenantSlug&&!tenant)return json(req,{error:"tenant_not_found"},404);
       const email=String(auth.user.email??"").toLowerCase();
       if(!email)return json(req,{error:"email_required"},400);
-      let q=admin.from("site_access_requests").select("id,status,requested_at,requested_plan").eq("user_id",auth.user.id).eq("site_key",site).eq("status","pending");
+      const relatedUserIds=await personAuthUserIds(auth.user.id);
+      let q=admin.from("site_access_requests").select("id,status,requested_at,requested_plan,business_name").in("user_id",relatedUserIds).eq("site_key",site).eq("status","pending");
       q=tenant?.id?q.eq("tenant_id",tenant.id):q.is("tenant_id",null);
-      const {data:pending}=await q.maybeSingle();
+      const {data:pendingRows,error:pendingError}=await q.limit(1);
+      if(pendingError)throw pendingError;
+      const pending=pendingRows?.[0]??null;
       if(pending)return json(req,{ok:true,already_pending:true,request:pending});
       const {data:created,error}=await admin.from("site_access_requests").insert({user_id:auth.user.id,email,site_key:site,tenant_id:tenant?.id??null,requested_role:requestedRole,requested_plan:requestedPlan,business_name:businessName,contact_phone:contactPhone,business_number:businessNumber,status:"pending",applicant_note:note}).select("id,site_key,requested_role,requested_plan,status,business_name,requested_at").single();
       if(error)throw error;
@@ -168,7 +180,7 @@ Deno.serve(async(req)=>{
       const selected=workspaceKey
         ?workspaces.find((item:any)=>item?.workspace_key===workspaceKey)
         :workspaces.find((item:any)=>item?.source==="registry"&&item?.requires_handoff===true);
-      if(!selected||selected.requires_handoff!==true||!['active','pre_registered'].includes(String(selected.status||''))){
+      if(!selected||selected.requires_handoff!==true||!["active","pre_registered"].includes(String(selected.status||""))){
         return json(req,{error:"site_access_required"},403);
       }
 
