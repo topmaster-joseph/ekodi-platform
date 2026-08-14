@@ -47,7 +47,7 @@ jobs:
           grep -Fq '/api/control/social/registry' social-admin.js
           grep -Fq '/api/social/registry' api-social-entry.js
           grep -Fq 'social_registry_history' social-registry-api.js
-          if grep -R -Fq '에코디선교회' social social-registry-api.js; then echo 'Legacy formal mission label found'; exit 1; fi
+          if grep -R -Fq '에코디선교회' social; then echo 'Legacy formal mission label found in published Social data'; exit 1; fi
 
       - name: Run full regression suite and build
         run: |
