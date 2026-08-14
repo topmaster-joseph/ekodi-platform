@@ -1,8 +1,10 @@
-# EKODI Preview-Gated Release Policy
+# EKODI Guarded Release Policy
 
 EKODI 웹 서비스 변경은 운영 사이트에 직접 배포하지 않는다.
 
-기본 흐름은 다음과 같다.
+## Cloudflare Pages
+
+Pages 서비스의 기본 흐름은 다음과 같다.
 
 1. 소스 빌드와 정적 검증을 수행한다.
 2. 동일한 빌드 산출물을 Cloudflare Pages의 격리된 preview branch에 배포한다.
@@ -11,23 +13,9 @@ EKODI 웹 서비스 변경은 운영 사이트에 직접 배포하지 않는다.
 5. 운영 도메인에서 다시 smoke test와 서비스별 심층 검증을 수행한다.
 6. 어느 단계든 실패하면 즉시 실패 처리하고 다음 단계로 진행하지 않는다.
 
-## 공통 릴리스 컨트롤러
+공통 컨트롤러는 `scripts/guarded-pages-release.mjs`이며 대상은 `deploy/manifests/*.pages.json`으로 선언한다.
 
-`scripts/guarded-pages-release.mjs`
-
-배포 대상은 `deploy/manifests/*.pages.json` 파일로 선언한다. 각 대상은 다음 정보를 가진다.
-
-- `project`: Cloudflare Pages 프로젝트명
-- `directory`: 빌드 산출물 디렉터리
-- `productionUrl`: 운영 검증 URL
-- `expect`: preview와 production에서 반드시 존재해야 하는 문자열
-- `forbid`: 존재하면 배포 실패로 처리할 문자열
-
-## 현재 적용
-
-Marketing AI가 첫 적용 서비스다.
-
-`deploy/manifests/marketing-ai.pages.json`은 다음 네 프로젝트를 하나의 release unit으로 묶는다.
+현재 Marketing AI의 다음 네 Pages 프로젝트가 하나의 release unit으로 보호된다.
 
 - marketing.ekodi.kr
 - jadam.ekodi.kr
@@ -36,6 +24,36 @@ Marketing AI가 첫 적용 서비스다.
 
 네 preview가 모두 통과하기 전에는 어느 production 프로젝트도 변경하지 않는다.
 
-## 블루-그린에 대한 원칙
+## Cloudflare Workers
 
-현재 Cloudflare Pages에서는 production 승격 전에 branch preview를 green 후보로 사용한다. 이것은 운영 트래픽을 두 개의 고정 production stack 사이에서 전환하는 완전한 blue-green 라우팅은 아니다. 향후 무중단 즉시 롤백이 필요한 서비스는 별도의 blue/green Pages 프로젝트 또는 Worker 라우팅 계층을 두고 전환한다.
+Workers 서비스는 Cloudflare의 Version/Deployment 모델을 이용한다.
+
+1. 현재 production이 단일 안정 버전 100%인지 확인한다.
+2. `wrangler versions upload`로 새 후보 버전을 만들되 production 트래픽에는 연결하지 않는다.
+3. 기존 안정 버전 100%, 후보 버전 0%로 deployment를 구성한다.
+4. `Cloudflare-Workers-Version-Overrides` 헤더로 일반 사용자 트래픽을 후보에 보내지 않은 상태에서 후보 버전을 smoke test한다.
+5. 모든 후보 검사가 통과한 경우에만 후보 버전을 100%로 승격한다.
+6. 승격 후 운영 URL을 다시 검증한다.
+7. 후보 검사 또는 승격 후 운영 검증이 실패하면 이전 안정 버전을 100%로 자동 복구하고 복구 상태를 다시 검사한다.
+
+공통 컨트롤러는 `scripts/guarded-worker-release.mjs`이며 대상은 `deploy/manifests/*.worker.json`으로 선언한다.
+
+현재 2차 적용 대상은 다음과 같다.
+
+- community.ekodi.kr (`ekodi-community`)
+- books.ekodi.kr (`ekodi-books`)
+
+Admin/Auth가 함께 있는 shared site Worker는 영향 범위가 넓으므로 위 두 서비스에서 guarded Worker release를 실전 검증한 뒤 다음 단계로 적용한다.
+
+## 안전 원칙
+
+- 이미 gradual deployment가 진행 중인 Worker는 자동 릴리스가 개입하지 않는다. 단일 100% 안정 버전 상태가 아니면 즉시 중단한다.
+- 데이터 저장소(KV, D1, R2, Durable Objects 등)의 상태 변화는 Worker 버전 롤백으로 되돌아가지 않는다. 데이터 마이그레이션은 별도 검증·백업·롤백 절차가 필요하다.
+- Worker route/custom-domain 토폴로지 변경은 코드 버전 승격과 분리해 관리한다. guarded Worker release는 기존 운영 라우팅 위에서 코드·assets·bindings 후보를 검증하고 승격하는 용도다.
+- 운영에 배포된 뒤 심층 검증이 실패하면 자동 롤백을 우선한다.
+
+## 블루-그린에 대한 정의
+
+Pages의 branch preview 승격은 완전한 dual-stack blue-green은 아니며 preview-gated promotion이다.
+
+Workers의 100% 안정 버전 + 0% 후보 버전 구조는 production deployment 안에 blue와 green 후보를 동시에 둔 뒤 version override로 green을 점검하고 100%로 전환하는 방식이다. 이는 빠른 자동 롤백이 가능하지만, 저장소 상태 자체까지 버전화하는 것은 아니다.
