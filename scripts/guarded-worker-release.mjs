@@ -12,9 +12,15 @@ const root = path.resolve(readArg('--root', '.'));
 const manifestArg = readArg('--manifest');
 const manifestPath = manifestArg ? path.resolve(manifestArg) : '';
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
+const secretsFileArg = readArg('--secrets-file');
+const secretsFilePath = secretsFileArg ? path.resolve(secretsFileArg) : '';
 
 if (!manifestPath || !fs.existsSync(manifestPath)) {
-  console.error('Usage: node scripts/guarded-worker-release.mjs --manifest <file> [--root <dir>]');
+  console.error('Usage: node scripts/guarded-worker-release.mjs --manifest <file> [--root <dir>] [--secrets-file <file>]');
+  process.exit(2);
+}
+if (secretsFilePath && !fs.existsSync(secretsFilePath)) {
+  console.error('Secrets file was requested but does not exist.');
   process.exit(2);
 }
 if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
@@ -130,11 +136,13 @@ function currentSingleVersion() {
 }
 
 function uploadCandidate() {
-  const output = command([
+  const uploadArgs = [
     'versions', 'upload', '--config', worker.config,
     '--tag', tag,
     '--message', `EKODI guarded candidate ${tag}`,
-  ]);
+  ];
+  if (secretsFilePath) uploadArgs.push('--secrets-file', secretsFilePath);
+  const output = command(uploadArgs);
   const direct = output.match(/Worker Version ID:\s*([0-9a-f-]{36})/i)?.[1] || '';
   if (direct) return direct;
 
@@ -197,6 +205,7 @@ function appendSummary(lines) {
 
 try {
   console.log(`Worker guarded release: ${worker.name}`);
+  if (secretsFilePath) console.log('Candidate will include the supplied secret set without printing secret values.');
   previousVersion = currentSingleVersion();
   console.log(`Stable production version: ${previousVersion}`);
 
@@ -222,6 +231,7 @@ try {
     '',
     `- Previous stable: \`${previousVersion}\``,
     `- Candidate: \`${candidateVersion}\``,
+    `- Candidate secret file: ${secretsFilePath ? 'supplied securely' : 'not supplied; existing Worker secrets preserved by Wrangler'}`,
     '- Candidate was attached at 0% traffic, verified with version overrides, then promoted to 100%.',
     '- Production smoke verification passed after promotion.',
   ]);
