@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-finance-api",
+    "config": "wrangler.finance.toml",
+    "requests": [
+      {
+        "url": "https://finance-api.ekodi.kr/health",
+        "statuses": [200],
+        "expect": ["\"ok\":true", "ekodi-finance-api", "\"version\":4"]
+      },
+      {
+        "url": "https://finance-api.ekodi.kr/api/finance/overview",
+        "statuses": [401]
+      },
+      {
+        "url": "https://finance-api.ekodi.kr/api/finance/structure",
+        "statuses": [401]
+      }
+    ]
+  }
+}
