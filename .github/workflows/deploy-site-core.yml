@@ -13,6 +13,8 @@ on:
       - 'script.js'
       - 'responsive.css'
       - '_headers'
+      - 'config/ecosystem-services.json'
+      - 'scripts/ecosystem-registry.mjs'
       - 'scripts/build.mjs'
       - 'wrangler.site.toml'
 
@@ -39,6 +41,7 @@ jobs:
         run: |
           node --check site-worker.js
           node --check script.js
+          node --check scripts/ecosystem-registry.mjs
           node --check scripts/build.mjs
       - name: Verify Cloudflare credentials
         run: |
@@ -57,13 +60,24 @@ jobs:
             echo "$url -> $code"
             [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/site-body
           }
+          verify_homepage_registry() {
+            code=$(curl -L -sS -o /tmp/homepage -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
+            echo "https://ekodi.kr/ registry -> $code"
+            [[ "$code" =~ ^[23] ]] \
+              && grep -Fq 'data-ekodi-service-registry="v1"' /tmp/homepage \
+              && grep -Fq 'data-service-id="community"' /tmp/homepage \
+              && grep -Fq 'https://community.ekodi.kr' /tmp/homepage \
+              && grep -Fq 'data-service-id="marketing"' /tmp/homepage \
+              && grep -Fq 'https://marketing.ekodi.kr' /tmp/homepage
+          }
           for attempt in $(seq 1 18); do
             if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
+              && verify_homepage_registry \
               && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' \
               && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' \
               && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' \
               && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING'; then
-              echo 'Shared site Worker production boundary verified.'
+              echo 'Shared site Worker and automatic homepage registry verified.'
               exit 0
             fi
             sleep 5
