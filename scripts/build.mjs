@@ -39,6 +39,18 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// Distribution tracking is part of the Books lazy feature. Bundle it into the
+// already secured Books finance assets so no additional first-paint requests or
+// admin asset routes are required.
+const [financeCss, distributionCss, financeJs, distributionJs] = await Promise.all([
+  readFile(`${output}books-finance-admin.css`, 'utf8'),
+  readFile(`${root}books-distribution-admin.css`, 'utf8'),
+  readFile(`${output}books-finance-admin.js`, 'utf8'),
+  readFile(`${root}books-distribution-admin.js`, 'utf8'),
+]);
+await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributionCss}\n`);
+await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n`);
+
 // auth.ekodi.kr is served by the existing site Worker, so flatten its dedicated
 // assets into dist rather than creating a competing Pages custom-domain route.
 await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
