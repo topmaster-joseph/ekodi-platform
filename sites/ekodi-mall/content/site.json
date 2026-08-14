@@ -1,24 +1,40 @@
 {
-  "version": 1,
+  "version": 2,
   "brand": {
     "name": "EKODI MALL",
     "shortName": "EKODI",
-    "tagline": "사람과 지역과 환경을 거래로 잇는 상생 커머스"
+    "tagline": "사람·지역·브랜드가 각자의 가게를 열고 함께 성장하는 커머스 플랫폼"
   },
   "seo": {
-    "title": "EKODI MALL | 사람과 지역을 잇는 상생 커머스",
-    "description": "오늘의 작은 선택이 지역과 사람의 내일로 이어지는 에코디몰. 지역상생·생활·책·선물 상품을 이유와 함께 큐레이션합니다.",
+    "title": "EKODI MALL | 함께 성장하는 커머스 플랫폼",
+    "description": "상품만 진열하는 쇼핑몰을 넘어 판매자 스토어, 지역상생관, 콘텐츠와 마케팅을 연결하는 EKODI Commerce Platform.",
     "baseUrl": "https://ekodi-mall.pages.dev"
   },
-  "notice": "베타 운영 중 · 판매주체와 외부 이동 여부를 상품마다 분명히 표시합니다.",
+  "notice": "플랫폼 베타 구축 중 · 기존 판매·결제 기능은 변경하지 않고 스토어 기반 구조를 단계적으로 확장합니다.",
   "hero": {
-    "eyebrow": "CONNECTED COMMERCE FOR GOOD",
-    "title": "오늘의 선택이|함께 사는 내일|이 되도록",
-    "description": "환경만 생각하는 쇼핑을 넘어 지역의 가게와 사람의 이야기를 거래로 잇습니다. 에코디가 직접 살피고 이유를 설명할 수 있는 상품부터 소개합니다.",
-    "primaryLabel": "상품 둘러보기",
+    "eyebrow": "EKODI COMMERCE PLATFORM",
+    "title": "가게를 열고|고객을 만나고|함께 성장하도록",
+    "description": "에코디몰은 하나의 판매자가 운영하는 쇼핑몰이 아니라 여러 판매자와 지역·브랜드가 각자의 스토어를 운영하고 상품·콘텐츠·마케팅을 연결하는 몰플랫폼으로 확장합니다.",
+    "primaryLabel": "마켓 둘러보기",
     "primaryHref": "#shop",
-    "secondaryLabel": "선정 기준 보기",
-    "secondaryHref": "#story"
+    "secondaryLabel": "스토어 보기",
+    "secondaryHref": "#stores"
+  },
+  "platform": {
+    "name": "EKODI Commerce Platform",
+    "mode": "foundation",
+    "marketplaceEnabled": true,
+    "sellerStudioPreview": true,
+    "sellerOnboardingEnabled": false,
+    "sellerStudioHref": "/seller/",
+    "modules": [
+      "Store",
+      "Product AI",
+      "Orders",
+      "CRM",
+      "Marketing AI",
+      "Settlement"
+    ]
   },
   "categories": [
     {"id": "all", "label": "전체"},
@@ -36,7 +52,7 @@
   "local": {
     "eyebrow": "LOCAL COMMONS",
     "title": "지역의 가게가|하나의 시장이 되도록",
-    "description": "청계와 목포대 후문을 비롯한 지역 상권의 좋은 상품과 이야기를 발견하고, 온라인 콘텐츠와 실제 방문을 연결하는 상생관을 준비합니다."
+    "description": "지역 상권의 각 가게가 독립된 스토어를 갖고, 지역관 안에서 함께 발견되는 구조를 준비합니다. 온라인 콘텐츠와 실제 방문, 주문과 관계를 연결하는 지역 커머스 플랫폼을 지향합니다."
   },
   "business": {
     "name": "에코디비즈",
@@ -53,6 +69,6 @@
   },
   "commerce": {
     "paymentsEnabled": false,
-    "betaMessage": "현재 페이지는 상품 큐레이션·입점 준비 단계이며 온라인 결제를 받지 않습니다."
+    "betaMessage": "현재 플랫폼은 스토어·상품·콘텐츠 구조를 먼저 구축하는 단계이며 온라인 결제는 아직 받지 않습니다."
   }
 }
