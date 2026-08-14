@@ -1,7 +1,26 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
+  const REPOSITORY = 'topmaster-joseph/ekodi-platform';
+  const RUNS_URL = `https://api.github.com/repos/${REPOSITORY}/actions/runs?per_page=80`;
+  const CACHE_MS = 60 * 1000;
+  const RELEASE_UNITS = [
+    { id:'shared-site', name:'Shared Site · Admin/Auth', workflow:'deploy-admin-site.yml', model:'Candidate 0% → verify → 100%', risk:'high', domains:['ekodi.kr','admin.ekodi.kr','auth.ekodi.kr'] },
+    { id:'control-api', name:'Control API', workflow:'deploy-control-api.yml', model:'Staging D1 → recovery bookmark → Candidate 0%', risk:'critical', domains:['api.ekodi.kr'] },
+    { id:'finance-api', name:'Finance API', workflow:'deploy-finance.yml', model:'Staging D1 → recovery bookmark → secret-safe Candidate 0%', risk:'critical', domains:['finance-api.ekodi.kr'] },
+    { id:'marketing-ai', name:'Marketing AI', workflow:'sync-marketing-ai.yml', alternates:['deploy-jadam-marketing-ai.yml'], model:'Pages preview → verify all → production', risk:'high', domains:['marketing.ekodi.kr','jadam.ekodi.kr','pizzamaru.ekodi.kr','yogurt.ekodi.kr'] },
+    { id:'community', name:'Community', workflow:'deploy-community.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['community.ekodi.kr'] },
+    { id:'books', name:'Books', workflow:'deploy-books.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['books.ekodi.kr'] },
+    { id:'social', name:'Social', workflow:'deploy-social.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['social.ekodi.kr'] },
+  ];
+  const POLICY = {
+    sourceOfTruth: 'GitHub Actions + guarded release manifests',
+    automaticProductionBypass: false,
+    topologyMutation: 'manual-only',
+    cloudflareCredentialIsolation: 'prepared-for-split-token',
+  };
   const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
+  let cache = null;
+  let cacheAt = 0;
 
   function el(tag, text = '', className = '') {
     const node = document.createElement(tag);
@@ -10,15 +29,49 @@
     return node;
   }
 
-  async function api(path) {
-    const response = await fetch(`${API}${path}`, {
-      cache: 'no-store',
-      headers: { authorization: `Bearer ${token()}` },
+  function workflowName(pathname = '') {
+    return String(pathname).split('/').pop() || '';
+  }
+
+  function unitForWorkflow(name) {
+    return RELEASE_UNITS.find(unit => unit.workflow === name || unit.alternates?.includes(name)) || null;
+  }
+
+  function normalizeRun(run) {
+    const workflow = workflowName(run.path);
+    const unit = unitForWorkflow(workflow);
+    if (!unit) return null;
+    return {
+      id:run.id, unitId:unit.id, unitName:unit.name, workflow,
+      runNumber:run.run_number, event:run.event, branch:run.head_branch,
+      sha:String(run.head_sha || '').slice(0, 12), title:run.display_title || run.name || unit.name,
+      status:run.status || 'unknown', conclusion:run.conclusion || null,
+      createdAt:run.created_at || null, updatedAt:run.updated_at || null,
+      url:run.html_url || null, risk:unit.risk, model:unit.model,
+    };
+  }
+
+  async function releaseData(force = false) {
+    if (!force && cache && Date.now() - cacheAt < CACHE_MS) return cache;
+    const response = await fetch(RUNS_URL, {
+      cache:'no-store',
+      headers:{ accept:'application/vnd.github+json', 'x-github-api-version':'2022-11-28' },
     });
-    let data = {};
-    try { data = await response.json(); } catch {}
-    if (!response.ok) throw new Error(data.error || `Release API 요청 실패 (${response.status})`);
-    return data;
+    if (!response.ok) throw new Error(`GitHub Actions 조회 실패 (${response.status})`);
+    const raw = await response.json();
+    const recentRuns = (raw.workflow_runs || []).map(normalizeRun).filter(Boolean).slice(0, 40);
+    cache = {
+      repository:REPOSITORY,
+      generatedAt:new Date().toISOString(),
+      policy:POLICY,
+      units:RELEASE_UNITS.map(unit => ({
+        id:unit.id, name:unit.name, workflow:unit.workflow, model:unit.model, risk:unit.risk, domains:unit.domains,
+        latest:recentRuns.find(run => run.unitId === unit.id) || null,
+      })),
+      recentRuns,
+    };
+    cacheAt = Date.now();
+    return cache;
   }
 
   function date(value) {
@@ -48,11 +101,8 @@
     navButton.type = 'button';
     navButton.dataset.section = 'release';
     navButton.append(document.createTextNode('◆ '), el('span', 'Release'));
-    const placeholder = nav.querySelector('[data-lazy-section="release"]');
     const policies = nav.querySelector('[data-section="policies"]');
-    if (placeholder) placeholder.insertAdjacentElement('beforebegin', navButton);
-    else if (policies) nav.insertBefore(navButton, policies);
-    else nav.append(navButton);
+    if (policies) nav.insertBefore(navButton, policies); else nav.append(navButton);
 
     const section = el('section', '', 'section release-control hidden-panel');
     section.dataset.panel = 'release';
@@ -131,13 +181,13 @@
       }
     }
 
-    async function load() {
+    async function load(force = false) {
       refresh.disabled = true;
       stateMessage.textContent = '';
       units.replaceChildren(el('div', 'GitHub Actions와 release gate 상태를 확인하는 중입니다.', 'release-empty'));
       runs.replaceChildren();
       try {
-        const data = await api('/api/control/releases');
+        const data = await releaseData(force);
         renderPolicy(data);
         renderUnits(data.units || []);
         renderRuns(data.recentRuns || []);
@@ -162,7 +212,7 @@
     }
 
     navButton.addEventListener('click', activate);
-    refresh.addEventListener('click', load);
+    refresh.addEventListener('click', () => load(true));
   }
 
   installReleaseControl();
