@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#173f35">
+  <meta name="description" content="EKODI Mall 공식 공급망 API 연결 준비·조회·Dry-run 콘솔">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css">
+  <title>Supplier Connectors | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice" id="connectorStatus">운영자 Google 로그인 후 공식 공급망 커넥터를 점검할 수 있습니다.</div>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/supplier-discovery">DISCOVERY</a><a href="/supplier-ops">SUPPLIER OPS</a><a href="/fulfillment">FULFILLMENT</a></nav></header>
+  <main class="ops-main">
+    <section class="ops-hero"><div><p class="eyebrow">OFFICIAL SUPPLIER CONNECTORS</p><h1>공식 API는 연결하되<br>실주문은 검증 뒤에 엽니다</h1><p>도매매·도매꾹 공식 Open API를 첫 공급망 커넥터로 준비합니다. 현재는 연결상태와 상품번호 실조회, 주문 Dry-run까지만 지원하며 주문·고객정보 전달은 코드에서도 잠겨 있습니다.</p><div class="cta"><button class="btn primary" id="connectorLogin" type="button">운영자 Google 로그인</button><button class="smallbtn" id="connectorLogout" type="button" hidden>로그아웃</button><button class="smallbtn" id="connectorReload" type="button">상태 새로고침</button></div></div>
+      <div class="ops-gates"><article><small>OFFICIAL LOOKUP</small><strong id="lookupGate">OFF</strong></article><article><small>ORDER EXECUTION</small><strong>OFF</strong></article><article><small>BUYER PII</small><strong>OFF</strong></article><article><small>AUTO ORDER</small><strong>OFF</strong></article></div>
+    </section>
+
+    <section class="ops-grid">
+      <article class="ops-panel ops-wide"><div class="ops-panel-head"><div><p class="eyebrow">1 · READINESS</p><h2>도매매 · 도매꾹 공식 API</h2></div><span id="providerReady">확인 전</span></div>
+        <div class="ops-summary" id="credentialSummary"><article><small>API KEY</small><strong>?</strong></article><article><small>USER ID</small><strong>?</strong></article><article><small>SESSION</small><strong>?</strong></article><article><small>LOOKUP GATE</small><strong>?</strong></article></div>
+        <p class="ops-hint" id="nextRequired">비밀값은 브라우저에 표시하거나 입력하지 않습니다.</p>
+      </article>
+
+      <article class="ops-panel"><div class="ops-panel-head"><div><p class="eyebrow">2 · LIVE ITEM CHECK</p><h2>공식 상품번호 조회</h2></div></div>
+        <form id="itemLookupForm" class="ops-form"><label>도매매/도매꾹 상품번호<input name="itemNo" inputmode="numeric" pattern="[0-9]+" placeholder="상품번호" required></label><button class="btn primary" type="submit">공식 API로 확인</button></form>
+        <pre id="lookupResult" class="ops-hint">API KEY와 조회 gate가 준비되기 전에는 호출되지 않습니다.</pre>
+      </article>
+
+      <article class="ops-panel"><div class="ops-panel-head"><div><p class="eyebrow">3 · ORDER DRY-RUN</p><h2>주문 준비도 점검</h2></div></div>
+        <form id="orderDryRunForm" class="ops-form"><label>상품번호<input name="itemNo" inputmode="numeric" pattern="[0-9]+" required></label><label>수량<input name="quantity" type="number" min="1" max="99" value="1"></label><button class="btn primary" type="submit">Dry-run</button></form>
+        <pre id="dryRunResult" class="ops-hint">실제 주문 API는 호출하지 않습니다.</pre>
+      </article>
+
+      <article class="ops-panel ops-wide"><div class="ops-panel-head"><div><p class="eyebrow">4 · RELEASE GATES</p><h2>실주문 기능을 열기 전 필요한 조건</h2></div></div>
+        <div class="ops-table-wrap"><table class="ops-table"><thead><tr><th>검증</th><th>현재</th><th>개방 조건</th></tr></thead><tbody>
+          <tr><td>상품조회</td><td>기본 OFF</td><td>공식 API KEY secret + staging 조회검증</td></tr>
+          <tr><td>주문준비</td><td>Dry-run</td><td>계정 ID·세션 lifecycle·Private API 권한 검토</td></tr>
+          <tr><td>실주문</td><td>코드 없음</td><td>e-money 소액시험·중복방지·취소흐름·가격/재고 재검증</td></tr>
+          <tr><td>구매자 정보</td><td>OFF</td><td>PII Vault + 처리위탁 범위 + 최소정보 release</td></tr>
+          <tr><td>자동발주</td><td>DB 잠금</td><td>수동 파일럿 완료 후 별도 Supplier API V2 심사</td></tr>
+        </tbody></table></div>
+      </article>
+    </section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Official Supplier Connectors</span><span>Official API, staged execution</span></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/supplier-connectors.js" defer></script>
+</body>
+</html>
