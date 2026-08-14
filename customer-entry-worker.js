@@ -3,6 +3,7 @@ import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
+import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { handleBooksRequest } from './books-control.js';
 import { handleBooksFinanceRequest } from './books-finance-control.js';
@@ -45,6 +46,27 @@ function disabledPasswordResponse(kind = 'admin') {
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (path.startsWith('/api/membership/')) {
+      try {
+        const response = await handleMembershipBilling(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Membership and billing API error', error);
+        return new Response(JSON.stringify({
+          error: '회원등급·구독 API 처리 중 오류가 발생했습니다.',
+          code: 'MEMBERSHIP_BILLING_API_ERROR',
+        }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+            ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin': request.headers.get('origin'), vary: 'Origin' } : {}),
+          },
+        });
+      }
+    }
 
     if (path === '/api/social/registry' || path.startsWith('/api/control/social/')
       || (request.method === 'OPTIONS' && (path.startsWith('/api/social/') || path.startsWith('/api/control/social/')))) {
@@ -199,6 +221,7 @@ export default {
 
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(runCommunityReportSchedule(env).catch(error => console.error('Community report schedule failed', error)));
+    ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
     return apiWorker.scheduled(controller, env, ctx);
   },
 };

@@ -1,15 +1,13 @@
 const params=new URLSearchParams(location.search);
 const marketing=params.get('site')==='marketing';
 const reviewMode=params.get('review')==='1';
-const explicitPro=params.get('plan')==='pro'||params.get('intent')==='pro';
 
-if(marketing&&!reviewMode&&!explicitPro){
+if(marketing&&!reviewMode){
   const badge=document.getElementById('serviceBadge');
   const accessStatus=document.getElementById('accessStatus');
   const requestActions=document.getElementById('requestActions');
   const freeActions=document.getElementById('freeActions');
   const continueFree=document.getElementById('continueFree');
-  let redirectScheduled=false;
 
   const freeTarget=()=>{
     try{
@@ -39,14 +37,10 @@ if(marketing&&!reviewMode&&!explicitPro){
     if(badge?.textContent.trim()!=='무료회원')return;
     requestActions?.classList.add('hide');
     freeActions?.classList.remove('hide');
-    if(continueFree)continueFree.textContent='무료 기능 바로 체험하기';
+    if(continueFree)continueFree.textContent='FREE로 계속 이용하기';
     if(accessStatus){
-      accessStatus.textContent='무료회원 가입이 완료되었습니다. 결제 안내 없이 바로 마케팅AI 무료 체험 화면으로 이동합니다.';
+      accessStatus.textContent='Google 로그인이 완료되었습니다. FREE로 계속하거나 아래에서 FLEX·PLUS·PRO·AUTO 중 필요한 이용방식을 직접 선택할 수 있습니다.';
       accessStatus.className='notice';
-    }
-    if(!redirectScheduled){
-      redirectScheduled=true;
-      window.setTimeout(goFree,700);
     }
   };
 
