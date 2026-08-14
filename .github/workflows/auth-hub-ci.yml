@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'id="googleButtonHost"' auth-site/index.html
-          grep -Fq '/auth-router.js' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' auth-site/index.html
           grep -Fq "site==='admin'" auth-site/auth-router.js
           grep -Fq "site==='cgma-client'" auth-site/auth-router.js
           grep -Fq 'targetedWorkspace' auth-site/auth-router.js
@@ -67,6 +67,8 @@ jobs:
             echo 'Async Supabase auth-state callback can deadlock'
             exit 1
           fi
+          grep -Fq "'/marketing-auth-hotfix.js'" site-worker.js
+          grep -Fq 'https://esm.sh' site-worker.js
           grep -Fq '청계상권 고객관리' auth-site/client-auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js

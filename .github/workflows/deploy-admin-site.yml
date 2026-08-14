@@ -97,6 +97,8 @@ jobs:
           node --check community-reports-admin.js
           node --check site-worker.js
           node --check auth-site/auth.js
+          node --check auth-site/auth-router.js
+          node --check auth-site/marketing-auth-hotfix.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/shared-site.worker.json
 
@@ -144,6 +146,8 @@ jobs:
           grep -Fq "'/work'" site-worker.js
           grep -Fq 'https://api.github.com' site-worker.js
           grep -Fq "'/community-reports-admin.js'" site-worker.js
+          grep -Fq "'/marketing-auth-hotfix.js'" site-worker.js
+          grep -Fq 'https://esm.sh' site-worker.js
           grep -Fq '/api/control/overview' domains-hub.js
           grep -Fq 'Services에서 관리' domains-hub.js
           grep -Fq 'EKODI Digital Campus' compact-control-center.js
@@ -184,7 +188,15 @@ jobs:
           grep -Fq 'books-pipeline-admin.js' scripts/build.mjs
           grep -Fq 'books-royalty-admin.css' scripts/build.mjs
           grep -Fq 'books-royalty-admin.js' scripts/build.mjs
+          grep -Fq 'marketing-auth-hotfix.js' scripts/build.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' auth-site/index.html
+          grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
+          grep -Fq "sb.auth.onAuthStateChange((event,s)=>" auth-site/marketing-auth-hotfix.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/marketing-auth-hotfix.js; then
+            echo 'Async Marketing auth-state callback detected'
+            exit 1
+          fi
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
 
       - name: Verify Cloudflare credentials
@@ -193,7 +205,11 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
       - name: Build shared site assets
-        run: npm run build
+        run: |
+          npm run build
+          test -f dist/marketing-auth-hotfix.js
+          grep -Fq "sb.auth.onAuthStateChange((event,s)=>" dist/marketing-auth-hotfix.js
+          grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' dist/auth-center.html
 
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
@@ -225,7 +241,21 @@ jobs:
             grep -Fq "$expected" /tmp/admin-asset || { echo "asset verify: $path missing expected marker"; return 1; }
             grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || { echo "asset verify: $path missing admin security route"; return 1; }
           }
-          verify_auth() { code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true); [ "$code" = '200' ] && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers && grep -Fq 'EKODI 인증센터' /tmp/auth-body; }
+          verify_auth() {
+            code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true)
+            [ "$code" = '200' ] \
+              && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers \
+              && grep -Fq 'EKODI 인증센터' /tmp/auth-body \
+              && grep -Fq '/auth-router.js?v=20260815-loading-hotfix-1' /tmp/auth-body
+          }
+          verify_auth_asset() {
+            path="$1"; expected="$2"
+            code=$(curl -sS -D /tmp/auth-asset-headers -o /tmp/auth-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://auth.ekodi.kr/$path" || true)
+            echo "auth asset $path -> $code"
+            [ "$code" = '200' ] || return 1
+            grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/auth-asset-headers || return 1
+            grep -Fq "$expected" /tmp/auth-asset || return 1
+          }
 
           for attempt in $(seq 1 18); do
             if verify_admin 'https://admin.ekodi.kr/' \
@@ -252,8 +282,10 @@ jobs:
               && verify_asset 'books-finance-admin.css' '.books-pipeline-book' \
               && verify_asset 'books-finance-admin.css' '.books-royalty-holder' \
               && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
-              && verify_auth; then
-              echo 'Admin/Auth production boundary including access-scoped Deployments verified.'; exit 0
+              && verify_auth \
+              && verify_auth_asset 'auth-router.js' "await import('./marketing-auth-hotfix.js')" \
+              && verify_auth_asset 'marketing-auth-hotfix.js' 'sb.auth.onAuthStateChange((event,s)=>'; then
+              echo 'Admin/Auth production boundary including Marketing loading hotfix verified.'; exit 0
             fi
             echo "Production verification pending (attempt $attempt/18)."; sleep 4
           done

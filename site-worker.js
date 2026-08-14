@@ -95,8 +95,8 @@ const ADMIN_CSP = [
 const AUTH_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-  "script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com/gsi/client https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://accounts.google.com/gsi/ https://*.tosspayments.com",
+  "script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/client https://js.tosspayments.com",
+  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/ https://*.tosspayments.com",
   "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
   "img-src 'self' data: https://lh3.googleusercontent.com https://*.tosspayments.com",
   "frame-ancestors 'none'",
@@ -172,7 +172,7 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
       }
-      if (['/auth.js','/auth.css','/auth-router.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/marketing-onboarding.js','/membership-ui.js'].includes(url.pathname)) {
+      if (['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/marketing-onboarding.js','/membership-ui.js'].includes(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, AUTH_CSP, 'public, max-age=300', 'central-auth-asset');
       }
