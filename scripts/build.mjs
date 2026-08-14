@@ -12,19 +12,21 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
-// Books finance, distribution and lifecycle pipeline share one secured lazy asset.
+// Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
-const [financeCss, distributionCss, pipelineCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs] = await Promise.all([
+const [financeCss, distributionCss, pipelineCss, royaltyCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs, royaltyJs] = await Promise.all([
   readFile(`${output}books-finance-admin.css`, 'utf8'),
   readFile(`${root}books-distribution-admin.css`, 'utf8'),
   readFile(`${root}books-pipeline-admin.css`, 'utf8'),
+  readFile(`${root}books-royalty-admin.css`, 'utf8'),
   readFile(`${output}books-finance-admin.js`, 'utf8'),
   readFile(`${root}books-distribution-admin.js`, 'utf8'),
   readFile(`${root}books-pipeline-admin.js`, 'utf8'),
   readFile(`${root}books-pipeline-bridge.js`, 'utf8'),
+  readFile(`${root}books-royalty-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributionCss}\n${pipelineCss}\n`);
-await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n${pipelineJs}\n${pipelineBridgeJs}\n`);
+await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributionCss}\n${pipelineCss}\n${royaltyCss}\n`);
+await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n${pipelineJs}\n${pipelineBridgeJs}\n${royaltyJs}\n`);
 
 // auth.ekodi.kr is served by the existing site Worker, so flatten its dedicated
 // assets into dist rather than creating a competing Pages custom-domain route.
