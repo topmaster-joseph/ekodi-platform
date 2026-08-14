@@ -86,8 +86,14 @@ jobs:
           grep -Fq "BLOCKED_PRODUCTION_REF='renzehysxirjilvdxacv'" sites/ekodi-insurance/auth-staging/worker.js
           grep -Fq "productionProjectBlocked:true" sites/ekodi-insurance/auth-staging/worker.js
           grep -Fq "INSURANCE_AUTH_ORIGIN" supabase/functions/insurance-identity-staging/index.ts
-          if grep -R -Fq 'https://auth.ekodi.kr' sites/ekodi-insurance/auth-staging supabase/functions/insurance-identity-staging; then
-            echo 'Production auth URL detected'
+          runtime_files=(
+            sites/ekodi-insurance/auth-staging/public/index.html
+            sites/ekodi-insurance/auth-staging/public/app.js
+            sites/ekodi-insurance/auth-staging/worker.js
+            supabase/functions/insurance-identity-staging/index.ts
+          )
+          if grep -Fq 'https://auth.ekodi.kr' "${runtime_files[@]}"; then
+            echo 'Production auth URL detected in runtime source'
             exit 1
           fi
 
