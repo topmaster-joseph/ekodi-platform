@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [billing, migration, entry, authRouter, clientAuth, membershipUi, siteWorker, onboarding] = await Promise.all([
+const [billing, migration, entry, authRouter, marketingAuth, clientAuth, membershipUi, siteWorker, onboarding] = await Promise.all([
   readFile(new URL('../membership-billing.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0016_membership_billing.sql', import.meta.url), 'utf8'),
   readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/auth-router.js', import.meta.url), 'utf8'),
+  readFile(new URL('../auth-site/marketing-auth-hotfix.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/client-auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/membership-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
@@ -55,9 +56,11 @@ test('tenant plan changes are restricted to responsible roles and paid switches 
   assert.match(membershipUi, /canManagePlan/);
 });
 
-test('central auth bundles membership UI and permits the payment SDK only on auth origin', () => {
+test('central auth bundles membership UI and keeps Marketing Pro opt-in explicit', () => {
   assert.match(authRouter, /membership-ui\.js/);
-  assert.match(authRouter, /intent.*pro/s);
+  assert.match(authRouter, /marketing-auth-hotfix\.js/);
+  assert.doesNotMatch(authRouter, /params\.set\(['"]intent['"],['"]pro['"]\)/);
+  assert.match(marketingAuth, /params\.get\(['"]plan['"]\)===['"]pro['"].*params\.get\(['"]intent['"]\)===['"]pro['"]/s);
   assert.match(membershipUi, /js\.tosspayments\.com\/v2\/standard/);
   assert.match(siteWorker, /https:\/\/js\.tosspayments\.com/);
   assert.match(siteWorker, /'\/membership-ui\.js'/);
