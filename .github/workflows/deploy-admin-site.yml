@@ -15,6 +15,8 @@ on:
       - 'control-center-finance.css'
       - 'compact-control-center.js'
       - 'compact-control-center.css'
+      - 'campus-actions.js'
+      - 'campus-actions.css'
       - 'admin-central-handoff.js'
       - 'client-access.js'
       - 'client-access.css'
@@ -72,6 +74,7 @@ jobs:
           node --check control-center.js
           node --check control-center-features.js
           node --check compact-control-center.js
+          node --check campus-actions.js
           node --check admin-central-handoff.js
           node --check client-access.js
           node --check finance-monitor.js
@@ -111,6 +114,8 @@ jobs:
           grep -Fq "placeholder('domains', '◎', 'Domains')" control-center-features.js
           grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
           grep -Fq "placeholder('community', '◌', 'Community')" control-center-features.js
+          grep -Fq 'normalizeServiceOpenLinks' campus-actions.js
+          grep -Fq '.campus-row-actions' campus-actions.css
           grep -Fq '/api/control/social/registry' social-admin.js
           grep -Fq '.social-org-card' social-admin.css
           grep -Fq 'Community Source Evidence' community-reports-admin.js
@@ -140,6 +145,8 @@ jobs:
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
           grep -Fq 'control-center-features.js' scripts/build.mjs
+          grep -Fq 'campus-actions.css' scripts/build.mjs
+          grep -Fq 'campus-actions.js' scripts/build.mjs
           grep -Fq 'domains-hub.css' scripts/build.mjs
           grep -Fq 'domains-hub.js' scripts/build.mjs
           grep -Fq 'social-admin.css' scripts/build.mjs
@@ -198,6 +205,8 @@ jobs:
               && verify_admin 'https://admin.ekodi.kr/control-center.html' \
               && verify_asset 'compact-control-center.js' 'EKODI Digital Campus' \
               && verify_asset 'compact-control-center.css' '.campus-layout' \
+              && verify_asset 'campus-actions.js' 'normalizeServiceOpenLinks' \
+              && verify_asset 'campus-actions.css' '.campus-row-actions' \
               && verify_asset 'client-access.js' '/api/customers/tenants' \
               && verify_asset 'google-admin-auth.js' 'google-admin-toolbar' \
               && verify_asset 'domains-hub.js' '/api/control/overview' \
