@@ -46,6 +46,15 @@ test('discovery migration separates candidate evidence, outreach and preflight s
   assert.doesNotMatch(sql, /recipient_name|shipping_address|buyer_phone|phone_number/i);
 });
 
+test('hardening migration requires confirmed evidence and immutable conversion', async () => {
+  const sql = await readFile(new URL('./migrations/0010_supplier_discovery_hardening.sql', import.meta.url), 'utf8');
+  assert.match(sql, /SUPPLIER_CANDIDATE_CONFIRMED_EVIDENCE_REQUIRED/);
+  assert.match(sql, /SUPPLIER_CANDIDATE_CONVERSION_IMMUTABLE/);
+  assert.match(sql, /SUPPLIER_CANDIDATE_REJECTED_TERMINAL/);
+  assert.match(sql, /SUPPLIER_PREFLIGHT_CHAIN_MISMATCH/);
+  assert.match(sql, /SUPPLIER_PREFLIGHT_BLOCKERS_NOT_EMPTY/);
+});
+
 test('discovery implementation creates outreach drafts but has no automatic send or auto-order execution', async () => {
   const source = await readFile(new URL('./supplier-discovery.js', import.meta.url), 'utf8');
   assert.match(source, /autoSent:false/);
