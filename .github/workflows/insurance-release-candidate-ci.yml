@@ -7,9 +7,11 @@ on:
       - 'staging/insurance-release-*'
     paths:
       - 'sites/ekodi-insurance/**'
-      - 'supabase/functions/insurance-api/**'
+      - 'supabase/functions/insurance-*/**'
       - 'insurance-admin.js'
       - 'insurance-admin.css'
+      - 'insurance-control-proxy.js'
+      - 'insurance-control-entry.js'
       - 'control-center-features.js'
       - 'scripts/build.mjs'
       - '.github/workflows/insurance-*.yml'
@@ -20,7 +22,7 @@ permissions:
 jobs:
   integrated-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     services:
       postgres:
         image: postgres:17
@@ -53,6 +55,10 @@ jobs:
         working-directory: sites/ekodi-insurance
         run: npm run check
 
+      - name: Validate fail-closed Insurance Auth staging
+        working-directory: sites/ekodi-insurance/auth-staging
+        run: npm run check
+
       - name: Validate Insurance admin integration
         run: |
           set -euo pipefail
@@ -68,22 +74,50 @@ jobs:
           test -f dist/insurance-admin.js
           test -f dist/insurance-admin.css
 
-      - name: Type-check privacy-first Insurance API
-        working-directory: supabase/functions/insurance-api
-        run: deno check --config deno.json index.ts
-
-      - name: Verify API privacy and handoff contract
+      - name: Validate central Insurance admin proxy
         run: |
           set -euo pipefail
-          f='supabase/functions/insurance-api/index.ts'
-          for marker in 'store:false' 'INSURANCE_CONTACT_KEY' 'AES-GCM' '[고유식별정보 가림]' '[연락처 가림]' 'consultation_share_consent_required' 'insurance_audit_events' 'admin.consultation.viewed' 'consultation.revoked'; do
-            grep -Fq "$marker" "$f"
+          node --check insurance-control-proxy.js
+          node --check insurance-control-entry.js
+          grep -Fq 'INSURANCE_ADMIN_PREFIX' insurance-control-entry.js
+          grep -Fq '/api/session' insurance-control-proxy.js
+          grep -Fq 'insurance-admin-internal' insurance-control-proxy.js
+          grep -Fq 'production_insurance_backend_blocked' insurance-control-proxy.js
+          grep -Fq 'renzehysxirjilvdxacv' insurance-control-proxy.js
+
+      - name: Type-check Insurance Edge Functions
+        run: |
+          set -euo pipefail
+          (cd supabase/functions/insurance-api && deno check --config deno.json index.ts)
+          (cd supabase/functions/insurance-identity-staging && deno check --config deno.json index.ts)
+          (cd supabase/functions/insurance-admin-internal && deno check --config deno.json index.ts)
+
+      - name: Verify API privacy, auth and admin boundaries
+        run: |
+          set -euo pipefail
+          customer='supabase/functions/insurance-api/index.ts'
+          identity='supabase/functions/insurance-identity-staging/index.ts'
+          internal='supabase/functions/insurance-admin-internal/index.ts'
+          for marker in 'store:false' 'INSURANCE_CONTACT_KEY' 'AES-GCM' '[고유식별정보 가림]' '[연락처 가림]' 'consultation_share_consent_required' 'insurance_audit_events' 'consultation.revoked'; do
+            grep -Fq "$marker" "$customer"
           done
+          grep -Fq 'INSURANCE_AUTH_ORIGIN' "$identity"
+          grep -Fq 'insurance_identity_challenges' "$identity"
+          grep -Fq 'INSURANCE_INTERNAL_TOKEN' "$internal"
+          grep -Fq 'secretEqual' "$internal"
+          grep -Fq 'actor_principal' "$internal"
+          grep -Fq 'central_admin.consultation.viewed' "$internal"
+          grep -Fq 'central_admin.consultation.status_changed' "$internal"
+          if grep -Fq 'insurance_policies' "$internal" || grep -Fq 'insurance_claim_cases' "$internal"; then
+            echo 'Internal Insurance admin API must not expose customer policy or claim ledgers'
+            exit 1
+          fi
           python3 - <<'PY'
           import pathlib, re, sys
-          text = pathlib.Path('supabase/functions/insurance-api/index.ts').read_text()
-          if re.search(r"OPENAI_API_KEY\s*=\s*['\"][A-Za-z0-9_-]{16,}", text):
-              sys.exit('Hardcoded OpenAI API key detected')
+          for path in ['supabase/functions/insurance-api/index.ts','supabase/functions/insurance-admin-internal/index.ts']:
+              text = pathlib.Path(path).read_text()
+              if re.search(r"OPENAI_API_KEY\s*=\s*['\"][A-Za-z0-9_-]{16,}", text):
+                  sys.exit(f'Hardcoded OpenAI API key detected in {path}')
           PY
 
       - name: Prepare local Supabase auth mocks
@@ -99,11 +133,13 @@ jobs:
           grant usage on schema auth to authenticated;
           SQL
 
-      - name: Apply Insurance schema and explicit privileges
+      - name: Apply all Insurance schemas
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/001_insurance_platform.sql
           psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/002_insurance_privileges.sql
+          psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/003_insurance_identity_staging.sql
+          psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/004_insurance_admin_principal.sql
           psql -v ON_ERROR_STOP=1 <<'SQL'
           insert into auth.users(id) values
             ('11111111-1111-4111-8111-111111111111'),
@@ -113,7 +149,7 @@ jobs:
           values ('33333333-3333-4333-8333-333333333333','admin');
           SQL
 
-      - name: Verify RLS owner and staff boundaries
+      - name: Verify RLS owner, staff and identity boundaries
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 <<'SQL'
@@ -131,6 +167,11 @@ jobs:
           select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
           do $$ begin if (select count(*) from public.insurance_policies) <> 0 then raise exception 'staff policy-ledger leak'; end if; end $$;
           reset role;
+          do $$ begin
+            if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='insurance_audit_events' and column_name='actor_principal') then
+              raise exception 'central admin actor principal missing';
+            end if;
+          end $$;
           SQL
           if psql -v ON_ERROR_STOP=1 <<'SQL'
           set role authenticated;
@@ -144,25 +185,57 @@ jobs:
           else
             echo 'Direct consultation insert correctly blocked.'
           fi
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          set role authenticated;
+          select * from public.insurance_identity_challenges;
+          SQL
+          then
+            echo 'Identity challenge table unexpectedly readable by authenticated client'
+            exit 1
+          else
+            echo 'Identity challenge table correctly service-only.'
+          fi
 
-      - name: Verify public isolated staging still healthy
+      - name: Verify central proxy blocks current production Insurance backend
+        run: |
+          node --input-type=module <<'JS'
+          import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
+          const apiWorker={fetch:async()=>new Response(JSON.stringify({email:'admin@example.com'}),{status:200,headers:{'content-type':'application/json'}})};
+          const req=new Request('https://api.example/api/insurance/admin/consultations',{headers:{authorization:'Bearer test'}});
+          const res=await handleInsuranceAdminProxy(req,{INSURANCE_API_BASE:'https://renzehysxirjilvdxacv.supabase.co',INSURANCE_INTERNAL_TOKEN:'x',INSURANCE_API_PUBLISHABLE_KEY:'y'}, {}, apiWorker);
+          if(res.status!==503)throw new Error(`expected 503, got ${res.status}`);
+          const data=await res.json();
+          if(data.error!=='production_insurance_backend_blocked')throw new Error('production backend guard failed');
+          JS
+
+      - name: Verify public Insurance and fail-closed Auth staging
         run: |
           set -euo pipefail
-          base='https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
-          root=$(curl -L -fsS "$base/")
-          admin=$(curl -L -fsS "$base/admin")
-          health=$(curl -fsS "$base/health")
+          app='https://ekodi-insurance-staging.topmaster-joseph.workers.dev'
+          auth='https://ekodi-insurance-auth-staging.topmaster-joseph.workers.dev'
+          root=$(curl -L -fsS "$app/")
+          admin=$(curl -L -fsS "$app/admin")
+          health=$(curl -fsS "$app/health")
+          auth_root=$(curl -L -fsS "$auth/")
+          auth_cfg=$(curl -fsS "$auth/config.js")
+          auth_health=$(curl -fsS "$auth/health")
           printf '%s' "$root" | grep -Fq 'EKODI Insurance'
           printf '%s' "$admin" | grep -Fq 'STAGING LOCAL ADMIN'
           printf '%s' "$health" | grep -Fq '"aiChat":true'
           printf '%s' "$health" | grep -Fq '"humanHandoffQueue":true'
           printf '%s' "$health" | grep -Fq '"externalAiProvider":false'
+          printf '%s' "$auth_root" | grep -Fq 'ISOLATED STAGING'
+          printf '%s' "$auth_cfg" | grep -Fq '"environment":"blocked"'
+          printf '%s' "$auth_health" | grep -Fq '"environment":"blocked"'
+          printf '%s' "$auth_health" | grep -Fq '"productionProjectBlocked":true'
 
-      - name: Verify no production route in Insurance staging Worker config
+      - name: Verify no production route in Insurance staging configs
         run: |
           set -euo pipefail
-          grep -Fq 'workers_dev = true' sites/ekodi-insurance/wrangler.toml
-          if grep -Eq '^routes?\s*=' sites/ekodi-insurance/wrangler.toml; then
-            echo 'Production/custom route detected in staging config'
-            exit 1
-          fi
+          for f in sites/ekodi-insurance/wrangler.toml sites/ekodi-insurance/auth-staging/wrangler.toml; do
+            grep -Fq 'workers_dev = true' "$f"
+            if grep -Eq '^routes?\s*=' "$f"; then
+              echo "Production/custom route detected in staging config: $f"
+              exit 1
+            fi
+          done
