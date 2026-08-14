@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173f35"><meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="EKODI Mall 무료 운영모드: 공급처 후보 등록, 안전확인, 마진계산, 수동운영">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css"><link rel="stylesheet" href="/assets/free-ops.css">
+  <title>무료 운영모드 | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice" id="freeStatus">운영자 Google 로그인 후 사용할 수 있습니다.</div>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/free-ops" aria-current="page">FREE OPS</a><a href="/supplier-discovery">고급검증</a><a href="/supplier-ops">SUPPLIER OPS</a></nav></header>
+  <main class="ops-main free-main">
+    <section class="ops-hero free-hero">
+      <div><p class="eyebrow">FREE · SAFE · MANUAL FIRST</p><h1>평소에는 이 화면만<br>사용하면 됩니다</h1><p>유료 API와 자동구매 없이 공급처 URL과 실제 확인정보만 기록합니다. AI와 시스템은 계산·정리·차단을 맡고, 주문·결제·고객정보 전달은 자동 실행하지 않습니다.</p><div class="cta"><button class="btn primary" id="freeLogin" type="button">운영자 Google 로그인</button><button class="smallbtn" id="freeLogout" type="button" hidden>로그아웃</button><button class="smallbtn" id="freeReload" type="button">새로고침</button></div></div>
+      <div class="ops-gates"><article><small>PAID API</small><strong>불필요</strong></article><article><small>AUTO BUY</small><strong>OFF</strong></article><article><small>PII SEND</small><strong>OFF</strong></article><article><small>PAYMENT</small><strong>OFF</strong></article></div>
+    </section>
+
+    <section class="free-flow" aria-label="무료 운영 4단계"><article><b>1</b><span>공급처 찾기</span></article><article><b>2</b><span>가격 계산</span></article><article><b>3</b><span>안전 확인</span></article><article><b>4</b><span>필요할 때 고급검증</span></article></section>
+
+    <section class="ops-grid free-grid">
+      <article class="ops-panel ops-wide">
+        <div class="ops-panel-head"><div><p class="eyebrow">1 · 새 후보</p><h2>아는 것만 입력하세요</h2></div><span class="free-badge">비밀정보 입력 금지</span></div>
+        <form id="freeCandidateForm" class="free-form">
+          <label>공급처 이름<input name="displayName" required placeholder="예: 무안 양파 농가"></label>
+          <label>상품/카테고리<input name="category" required placeholder="예: 농산물 · 양파"></label>
+          <label class="wide">공급처 공개 URL<input name="websiteUrl" type="url" required placeholder="https://..."></label>
+          <label>예상 판매가<input name="salePrice" type="number" min="1" step="1" required inputmode="numeric"></label>
+          <label>공급가<input name="supplierCost" type="number" min="0" step="1" required inputmode="numeric"></label>
+          <label>배송비<input name="shippingCost" type="number" min="0" step="1" value="0" required inputmode="numeric"></label>
+          <label>판매경로<select name="sourceType"><option value="marketplace">에코디몰 8%</option><option value="direct">내가 직접 공유 7%</option><option value="ai">AI 유입 9%</option></select></label>
+          <div class="free-checks wide">
+            <label><input name="businessChecked" type="checkbox"> 사업자/공급자 신원을 공개자료로 확인함</label>
+            <label><input name="dropshipChecked" type="checkbox"> 고객에게 직배송 가능함을 직접 확인함</label>
+            <label><input name="rightsChecked" type="checkbox"> 이 상품을 판매·소개할 권한을 확인함</label>
+            <label><input name="stockChecked" type="checkbox"> 최근 재고/공급 가능 여부를 확인함</label>
+            <label><input name="returnsChecked" type="checkbox"> 반품·CS 방법을 확인함</label>
+          </div>
+          <div class="free-result wide" id="marginPreview"><strong>가격을 입력하면 예상 기여이익을 계산합니다.</strong><span>실제 판매 전에는 공급가·재고를 다시 확인하세요.</span></div>
+          <div class="wide free-actions"><button class="btn primary" type="submit">후보 저장 + 안전판단</button><button class="smallbtn" id="clearDraft" type="button">입력 초기화</button></div>
+        </form>
+      </article>
+
+      <article class="ops-panel ops-wide">
+        <div class="ops-panel-head"><div><p class="eyebrow">2 · 오늘 할 일</p><h2>후보 목록</h2></div><span id="candidateCount" class="free-badge">0개</span></div>
+        <div id="freeCandidateList" class="free-list"><p class="ops-hint">등록된 후보가 없습니다.</p></div>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">3 · 안전 원칙</p><h2>이 5개만 기억</h2></div></div>
+        <ol class="free-rules"><li>상품 페이지를 통째로 복사하지 않습니다.</li><li>공급처 비밀번호·세션을 저장하지 않습니다.</li><li>고객 주소·전화번호를 자동 전달하지 않습니다.</li><li>확인 안 된 상품은 판매준비로 올리지 않습니다.</li><li>거래가 커질 때만 API 자동화를 검토합니다.</li></ol>
+      </article>
+
+      <article class="ops-panel">
+        <div class="ops-panel-head"><div><p class="eyebrow">4 · 비용 원칙</p><h2>무료를 오래 유지</h2></div></div>
+        <div class="free-cost"><p><strong>평소 운영</strong><span>정적 페이지 + 기존 Mall Worker/D1 재사용</span></p><p><strong>공급처 확인</strong><span>공개 URL + 수동 확인</span></p><p><strong>AI</strong><span>필요한 순간에만 사용</span></p><p><strong>자동발주</strong><span>기본 OFF</span></p></div>
+        <p class="ops-hint">결제·배송·상품매입 같은 실제 거래비용은 무료 인프라와 별개입니다. 무료 운영모드는 그 비용을 숨기지 않고 거래가 생길 때만 발생하도록 설계합니다.</p>
+      </article>
+    </section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Free Ops</span><span>Simple first, automation later</span></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/free-ops.js" defer></script>
+</body>
+</html>

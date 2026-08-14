@@ -22,6 +22,9 @@ const checks = [
   ['assets/public-store.js', ['/api/public/stores/', 'Mall 8%', '/p/']],
   ['assets/storefront.css', ['storefront-public-hero', 'storefront-product']],
   ['assets/marketplace-live.js', ['api/public/products?limit=24', 'Mall 8%', 'dataset.serverProduct']],
+  ['assets/free-ops.html', ['FREE · SAFE · MANUAL FIRST', '후보 저장 + 안전판단', '비밀정보 입력 금지', '/assets/free-ops.js']],
+  ['assets/free-ops.js', ['ekodiMallFreeOpsDraftV1', '/api/internal/supplier-discovery/context', '/api/internal/supplier-candidates', '/assessment', '예상 손실']],
+  ['assets/free-ops.css', ['free-flow', 'free-form', 'free-item', 'free-result']],
   ['assets/sourcing-lab.html', ['EKODI SOURCING LAB', 'Auto Source', 'Dry-run', '계약 공급자', '/assets/sourcing-lab.js']],
   ['assets/sourcing-lab.js', ['/api/sourcing/providers', '/api/sourcing/sources', '/plan', 'auction-reference', '자동발주 OFF']],
   ['assets/fulfillment-lab.js', ['/api/fulfillment', '배송정보 승인 대기', '공급자 전달']],
@@ -33,7 +36,7 @@ const checks = [
   ['assets/supplier-connectors.html', ['OFFICIAL SUPPLIER CONNECTORS', '도매매 · 도매꾹 공식 API', 'ORDER DRY-RUN', '/assets/supplier-connectors.js', '코드 없음']],
   ['assets/supplier-connectors.js', ['/api/internal/connectors/domemae/readiness', '/api/internal/connectors/domemae/item-lookup', '/api/internal/connectors/domemae/order-dry-run', '실제 주문 API는 호출하지 않았습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
+  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
   ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
@@ -48,4 +51,4 @@ if (errors.length) {
   errors.forEach((error) => console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('EKODI Mall V3.2 build verified: official Domemae/Domeggook connector readiness, live item lookup gate and order dry-run join supplier discovery and manual-first fulfillment while credentials stay server-only and order execution, PII release, payout, refunds and Auto Order remain disabled.');
+console.log('EKODI Mall V3.3 build verified: Free Ops reuses the existing supplier safety API and D1 with no new paid service, while payments, PII release, supplier forwarding and Auto Order remain disabled.');
