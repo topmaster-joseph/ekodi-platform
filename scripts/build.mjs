@@ -75,6 +75,13 @@ for (const asset of htmlAssets) {
       serviceGrid,
       `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`,
     );
+
+    // Legacy mission branding must never leak into the public EKODI homepage.
+    // The former mission entry is now the canonical EKODI Community platform.
+    html = html
+      .replace('href="https://youtube.com/@ekodicommunity" aria-label="에코디선교회 유튜브로 이동"', 'href="https://community.ekodi.kr" aria-label="에코디커뮤니티로 이동"')
+      .replaceAll('에코디선교회', '에코디커뮤니티')
+      .replace('<span>선교회</span>', '<span>커뮤니티</span>');
   }
 
   if (!html.includes('data-ekodi-responsive')) {

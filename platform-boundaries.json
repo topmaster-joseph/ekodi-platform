@@ -26,6 +26,14 @@
       "sharedDependencies": ["Supabase Auth", "community-api"],
       "database": "Supabase community_* table namespace"
     },
+    "social": {
+      "kind": "independent-platform",
+      "source": ["social/**", "social-worker.js", "wrangler.social.toml"],
+      "domains": ["social.ekodi.kr"],
+      "deployWorkflow": ".github/workflows/deploy-social.yml",
+      "sharedDependencies": ["public social provider APIs"],
+      "database": "none in v1; channel registry is configuration-driven"
+    },
     "finance": {
       "kind": "independent-service",
       "source": ["finance-worker.js", "finance-entry-worker.js", "wrangler.finance.toml"],
