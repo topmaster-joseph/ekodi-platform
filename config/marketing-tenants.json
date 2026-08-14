@@ -90,7 +90,7 @@
       "name": "청계면상인회",
       "project": "cheonggye-market",
       "domain": "cgma.ai.ekodi.kr",
-      "landingPath": "/ai",
+      "landingPath": "/market-ai",
       "domainEntitlement": "organization",
       "publicSiteDomain": "cgma.ekodi.kr",
       "legacyDomains": [
