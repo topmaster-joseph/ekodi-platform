@@ -8,6 +8,7 @@ import { handleBooksRequest } from './books-control.js';
 import { handleBooksFinanceRequest } from './books-finance-control.js';
 import { handleBooksDistributionRequest } from './books-distribution-control.js';
 import { handleBooksPipelineRequest } from './books-pipeline-control.js';
+import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleSocialRegistry } from './social-registry-api.js';
@@ -114,6 +115,10 @@ export default {
 
     if (path.startsWith('/api/books') && request.method !== 'OPTIONS') {
       try {
+        if (path.startsWith('/api/books/admin/royalties')) {
+          const royaltyResponse = await handleBooksRoyaltyRequest(request, env);
+          if (royaltyResponse) return royaltyResponse;
+        }
         if (path.startsWith('/api/books/admin/pipeline')) {
           const pipelineResponse = await handleBooksPipelineRequest(request, env);
           if (pipelineResponse) return pipelineResponse;
