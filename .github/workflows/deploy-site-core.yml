@@ -15,6 +15,7 @@ on:
       - 'script.js'
       - 'responsive.css'
       - '_headers'
+      - 'auth-site/**'
       - 'config/ecosystem-services.json'
       - 'scripts/ecosystem-registry.mjs'
       - 'scripts/build.mjs'
@@ -48,30 +49,38 @@ jobs:
           node --check site-worker.js
           node --check script.js
           node --check homepage-ambient.js
+          node --check auth-site/auth-workspace-target.js
           node --check scripts/ecosystem-registry.mjs
           node --check scripts/build.mjs
           node --check scripts/guarded-worker-release.mjs
           test -f homepage-ambient.css
           test -f deploy/manifests/shared-site.worker.json
+          grep -Fq '/auth-workspace-target.js' site-worker.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
       - name: Build shared site assets
-        run: npm run build
+        run: |
+          set -euo pipefail
+          npm run build
+          cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
+          test -f dist/auth-workspace-target.js
+          grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
       - name: Verify every shared-runtime domain family
         shell: bash
         run: |
           set -euo pipefail
-          verify_html() { url="$1"; needle="$2"; code=$(curl -L -sS -o /tmp/site-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code"; [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/site-body; }
+          verify_html() { url="$1"; needle="$2"; code=$(curl -L -sS -o /tmp/verify-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code"; [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/verify-body; }
           verify_mail() { code=$(curl -L -sS -o /tmp/mail-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mail.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'EKODI Mail' /tmp/mail-body && grep -Fq 'ekodibiz.kr' /tmp/mail-body && grep -Fq 'ekodi.kr' /tmp/mail-body && grep -Fq '메일 열기' /tmp/mail-body; }
           verify_homepage_registry() { code=$(curl -L -sS -o /tmp/homepage -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'data-ekodi-service-registry="v1"' /tmp/homepage && grep -Fq 'data-service-id="community"' /tmp/homepage && grep -Fq 'https://community.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="work"' /tmp/homepage && grep -Fq 'https://work.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="marketing"' /tmp/homepage && grep -Fq 'https://marketing.ekodi.kr' /tmp/homepage && grep -Fq '/homepage-ambient.css' /tmp/homepage && grep -Fq '/homepage-ambient.js' /tmp/homepage; }
           verify_homepage_ambient() { css_code=$(curl -L -sS -o /tmp/homepage-ambient.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.css' || true); js_code=$(curl -L -sS -o /tmp/homepage-ambient.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.js' || true); [[ "$css_code" =~ ^[23] ]] && [[ "$js_code" =~ ^[23] ]] && grep -Fq 'z-index:0' /tmp/homepage-ambient.css && grep -Fq '.site-header,' /tmp/homepage-ambient.css && grep -Fq 'getRandomValues' /tmp/homepage-ambient.js; }
+          verify_targeted_auth_asset() { code=$(curl -L -sS -o /tmp/auth-workspace-target.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-workspace-target.js' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'workspace_key:requested' /tmp/auth-workspace-target.js && grep -Fq "site!=='marketing'" /tmp/auth-workspace-target.js; }
           for attempt in $(seq 1 18); do
-            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING' && verify_mail; then
-              echo 'Shared site Worker, homepage ambient layer, mail lobby and automatic homepage registry verified.'; exit 0
+            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' && verify_targeted_auth_asset && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING' && verify_mail; then
+              echo 'Shared site Worker, targeted auth workspace asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'; exit 0
             fi
             sleep 5
           done
