@@ -74,6 +74,11 @@ jobs:
           grep -Fq 'body.member-session-mode .bottom-cta' "$hub"
           grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" "$hub"
           grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" "$hub"
+          grep -Fq 'data-progressive-guidance' "$hub"
+          grep -Fq 'id="postTrialGuide"' "$hub"
+          grep -Fq 'id="openPlanGuide"' "$hub"
+          grep -Fq 'ekodi-marketing-first-trial-complete' "$hub"
+          grep -Fq 'body.member-session-mode:not(.trial-complete) #pricing' "$hub"
           if grep -Fq 'id="trialStore"' "$hub"; then
             echo 'Store-only trial field must not survive in the public hub'
             exit 1
@@ -153,6 +158,11 @@ jobs:
             grep -Fq 'body.member-session-mode .product-preview' /tmp/hub.html
             grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" /tmp/hub.html
             grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" /tmp/hub.html
+            grep -Fq 'data-progressive-guidance' /tmp/hub.html
+            grep -Fq 'id="postTrialGuide"' /tmp/hub.html
+            grep -Fq 'id="openPlanGuide"' /tmp/hub.html
+            grep -Fq 'ekodi-marketing-first-trial-complete' /tmp/hub.html
+            grep -Fq 'body.member-session-mode:not(.trial-complete) #pricing' /tmp/hub.html
             ! grep -Fq 'id="trialStore"' /tmp/hub.html
             grep -Fq 'id="pricing"' /tmp/hub.html
             grep -Fq 'id="usageEstimator"' /tmp/hub.html
@@ -186,11 +196,11 @@ jobs:
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
               && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI authenticated workspace, flexible pricing and central authentication verified in production.'
+              echo 'Marketing AI trial-first workspace, flexible pricing and central authentication verified in production.'
               exit 0
             fi
             sleep 5
           done
           exit 1
 
-# Sync trigger: authenticated member workspace layout
+# Sync trigger: trial-first progressive guidance
