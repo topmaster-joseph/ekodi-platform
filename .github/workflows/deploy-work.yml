@@ -1,0 +1,102 @@
+name: Deploy EKODI Work
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'work/**'
+      - 'work-worker.js'
+      - 'wrangler.work.toml'
+      - 'deploy/manifests/work.worker.json'
+      - 'scripts/guarded-worker-release.mjs'
+      - '.github/workflows/deploy-work.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-work-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORK_SUPABASE_URL: https://renzehysxirjilvdxacv.supabase.co
+      WORK_SUPABASE_PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Work source and release gate
+        run: |
+          set -euo pipefail
+          node --check work-worker.js
+          node --check work/app.js
+          node --check scripts/guarded-worker-release.mjs
+          test -f deploy/manifests/work.worker.json
+          grep -Fq 'EKODI Work' work/index.html
+          grep -Fq '/config.js' work/index.html
+          grep -Fq 'DATA_ENABLED = "true"' wrangler.work.toml
+          grep -Fq "'work':{name:'EKODI Work'" auth-site/client-auth.js
+          grep -Fq "site==='work'" auth-site/auth-router.js
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Wait for central Work auth realm
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/work-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            router=$(curl -sS -o /tmp/work-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+            if [[ "$code" == "200" ]] && [[ "$router" == "200" ]] \
+              && grep -Fq "'work':{name:'EKODI Work'" /tmp/work-client-auth.js \
+              && grep -Fq "returnTo:'https://work.ekodi.kr/'" /tmp/work-client-auth.js \
+              && grep -Fq "site==='work'" /tmp/work-auth-router.js; then
+              echo 'Central Work auth realm is live.'
+              break
+            fi
+            if [[ "$attempt" == "24" ]]; then echo 'Central Work auth realm is not live; production deploy blocked.'; exit 1; fi
+            sleep 5
+          done
+      - name: Verify production Work database schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/work-db.json -w '%{http_code}' --connect-timeout 5 --max-time 15 \
+            "$WORK_SUPABASE_URL/rest/v1/work_jobs?select=id&limit=1" \
+            -H "apikey: $WORK_SUPABASE_PUBLISHABLE_KEY" || true)
+          if [[ "$code" != "200" ]]; then
+            echo "Work database schema is not ready (HTTP $code). Production deploy blocked."
+            cat /tmp/work-db.json || true
+            exit 1
+          fi
+          echo 'Work database schema is reachable through the public RLS contract.'
+      - name: Candidate at 0%, verify, promote and auto-rollback on failure
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/work.worker.json
+      - name: Verify real production hostname and runtime config
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/' || true)
+            config_code=$(curl -sS -o /tmp/work-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/config.js' || true)
+            health_code=$(curl -sS -o /tmp/work-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/health' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] \
+              && grep -Fq 'EKODI Work' /tmp/work.html \
+              && grep -Fq '"dataEnabled":true' /tmp/work-config.js \
+              && grep -Fq '"dataMode":"production"' /tmp/work-health.json \
+              && grep -Fq '"service":"ekodi-work"' /tmp/work-health.json; then
+              echo 'EKODI Work production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'EKODI Work production verification failed.'
+          exit 1

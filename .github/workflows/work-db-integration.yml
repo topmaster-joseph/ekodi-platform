@@ -1,0 +1,59 @@
+name: EKODI Work DB Integration
+
+on:
+  pull_request:
+    paths:
+      - 'work/**'
+      - 'work-worker.js'
+      - 'wrangler.work*.toml'
+      - 'supabase/work-schema.sql'
+      - 'supabase/work-anon-hardening.sql'
+      - 'supabase/work-performance.sql'
+      - 'tests/work-db-integration.sql'
+      - '.github/workflows/work-db-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-work-db-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Static Work checks
+        run: |
+          set -euo pipefail
+          node --check work-worker.js
+          node --check work/app.js
+          grep -Fq '/config.js' work/index.html
+          grep -Fq 'work_employer_applications' work/app.js
+          grep -Fq 'security definer' supabase/work-schema.sql
+          grep -Fq 'from anon' supabase/work-anon-hardening.sql
+          grep -Fq '(select auth.uid())' supabase/work-performance.sql
+      - name: Run isolated PostgreSQL 17 integration
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/work-db-integration.sql
