@@ -1,17 +1,35 @@
 (() => {
   const API = 'https://mall-api.ekodi.kr';
+  const VISITOR_KEY = 'ekodiMallAnonymousVisitorV1';
+  const ATTR_PREFIX = 'ekodiMallAttributionV2:';
   const code = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');
   const root = document.querySelector('#publicProduct');
   const status = document.querySelector('#publicStatus');
   let product = null;
+
   function el(tag, className = '', text = '') { const node = document.createElement(tag); if (className) node.className = className; if (text) node.textContent = text; return node; }
   function priceLabel(value) { return Number.isFinite(value) ? `${new Intl.NumberFormat('ko-KR').format(value)}원` : '가격 확정 전'; }
-  function shareChannel() { const value = new URLSearchParams(location.search).get('ch') || 'copy'; return ['copy','share','sms','kakao','qr','social'].includes(value) ? value : 'unknown'; }
-  async function issueAttribution() {
+  function shareChannel() { const value = new URLSearchParams(location.search).get('ch') || 'unknown'; return ['copy','share','sms','kakao','qr','social'].includes(value) ? value : 'unknown'; }
+  function referralToken() { return String(new URLSearchParams(location.search).get('ref') || '').slice(0, 80); }
+  function visitorId() {
+    let id = '';
+    try { id = localStorage.getItem(VISITOR_KEY) || ''; } catch {}
+    if (!id) {
+      id = crypto.randomUUID?.().replaceAll('-', '') || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 18)}`;
+      try { localStorage.setItem(VISITOR_KEY, id); } catch {}
+    }
+    return id.slice(0, 96);
+  }
+  async function recordVisit() {
     try {
-      const response = await fetch(`${API}/api/public/attribution`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ shareCode: code, channel: shareChannel() }) });
-      const body = await response.json();
-      if (response.ok && body.attribution?.token) sessionStorage.setItem(`ekodiMallAttribution:${code}`, JSON.stringify(body.attribution));
+      const response = await fetch(`${API}/api/public/attribution/visit`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ shareCode: code, visitorId: visitorId(), ref: referralToken(), channel: shareChannel() })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok && body.attribution) {
+        try { localStorage.setItem(`${ATTR_PREFIX}${code}`, JSON.stringify(body.attribution)); } catch {}
+      }
     } catch {}
   }
   async function copyLink() { await navigator.clipboard.writeText(location.href); if (status) status.textContent = '상품 링크를 복사했습니다.'; }
@@ -29,19 +47,38 @@
     const sms = el('button', 'smallbtn', '문자'); sms.type = 'button'; sms.addEventListener('click', smsShare); actions.append(copy, share, sms);
     if (data.product.saleType === 'affiliate' && data.product.affiliateUrl) { const affiliate = el('a', 'btn primary', '외부 제휴 판매처에서 보기'); affiliate.href = data.product.affiliateUrl; affiliate.target = '_blank'; affiliate.rel = 'noopener sponsored'; actions.prepend(affiliate); }
     main.append(actions);
-    const side = el('aside', 'product-summary'); side.append(infoBlock('SELLER', data.seller.displayName, data.store?.name || '개인 등록상품'), infoBlock('STATUS', data.checkoutReady ? '결제 가능' : '상품 공개 · 결제 준비 중', data.checkoutReady ? '서버 검증된 결제 흐름을 사용합니다.' : '현재는 상품 공유와 소개가 가능하며 직접판매 결제는 아직 활성화하지 않았습니다.'));
+    const side = el('aside', 'product-summary');
+    side.append(
+      infoBlock('SELLER', data.seller.displayName, data.store?.name || '개인 등록상품'),
+      infoBlock('STATUS', data.checkoutReady ? '결제 준비 확인됨' : '상품 공개 · 결제 준비 중', data.checkoutReady ? '서버 검증된 거래 흐름만 사용합니다.' : '현재는 상품 공유와 소개가 가능하며 직접판매 결제는 아직 활성화하지 않았습니다.')
+    );
     hero.append(main, side); root.append(hero);
     const details = el('section', 'product-info-grid');
-    details.append(infoBlock('WHO', '누구를 위한 상품인가', data.product.audience || '상품 대상 설명 준비 중'), infoBlock('STORY', '상품 이야기', data.product.story || '상품 이야기를 준비 중입니다.'), infoBlock('FULFILLMENT', '받는 방법', data.product.fulfillment || '배송·제공 방식 확인 필요'));
+    details.append(
+      infoBlock('WHO', '누구를 위한 상품인가', data.product.audience || '상품 대상 설명 준비 중'),
+      infoBlock('STORY', '상품 이야기', data.product.story || '상품 이야기를 준비 중입니다.'),
+      infoBlock('FULFILLMENT', '받는 방법', data.product.fulfillment || '배송·제공 방식 확인 필요')
+    );
     if (data.product.benefits?.length) details.append(infoBlock('BENEFITS', '핵심 장점', data.product.benefits.join(' · ')));
     if (data.product.specs?.length) details.append(infoBlock('SPECS', '규격·구성', data.product.specs.join(' · ')));
-    const feeText = data.seller.type === 'individual' ? '개인상품 수수료는 판매경로에 따라 7%·8%·9%이며 PG·VAT를 포함합니다. 실제 주문 시 서버가 유입경로를 판정합니다.' : '사업자 스토어 직접판매 기본수수료는 10%이며 실제 결제 활성화에는 사업자 검증이 필요합니다.';
-    details.append(infoBlock('FEE POLICY', '판매수수료 안내', feeText)); root.append(details); if (status) status.textContent = '공개 상품 · 고유링크';
+    const feeText = data.businessStoreVerified
+      ? '사업자 인증 Store의 기본 판매수수료는 10%이며 PG·VAT를 포함합니다. 실제 거래 수수료는 서버가 확정합니다.'
+      : '개인상품 수수료는 판매자 직접공유 7% · Mall 발견 8% · AI 기여 9%이며 PG·VAT를 포함합니다. URL 문구가 아니라 서버의 신뢰된 유입기록으로 판정합니다.';
+    details.append(infoBlock('FEE POLICY', '판매수수료 안내', feeText));
+    root.append(details); if (status) status.textContent = '공개 상품 · 서버 확인 완료';
   }
   async function load() {
     if (!code) return;
-    try { const response = await fetch(`${API}/api/public/products/${encodeURIComponent(code)}`); const body = await response.json(); if (!response.ok) throw new Error(body.error || '상품을 찾을 수 없습니다.'); render(body.product); issueAttribution(); }
-    catch (error) { root.replaceChildren(infoBlock('NOT FOUND', '상품을 열 수 없습니다.', error.message)); if (status) status.textContent = '상품 확인 필요'; }
+    try {
+      const response = await fetch(`${API}/api/public/products/${encodeURIComponent(code)}`);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || '상품을 찾을 수 없습니다.');
+      render(body.product);
+      recordVisit();
+    } catch (error) {
+      root.replaceChildren(infoBlock('NOT FOUND', '상품을 열 수 없습니다.', error.message));
+      if (status) status.textContent = '상품 확인 필요';
+    }
   }
   load();
 })();
