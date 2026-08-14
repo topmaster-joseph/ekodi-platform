@@ -16,10 +16,10 @@
 </head>
 <body>
   <div class="notice">{{NOTICE}}</div>
-  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a></nav></header>
-  <main class="detail-main">
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a><a href="/checkout/">BAG <span class="nav-count" data-basket-count hidden>0</span></a></nav></header>
+  <main class="detail-main detail-main-v2">
     <a class="back" href="/#shop">← 전체 상품</a>
-    <section class="product-detail">
+    <section class="product-detail product-detail-v2">
       <div class="detail-art {{PRODUCT_CATEGORY}}"><span>{{PRODUCT_BADGE}}</span></div>
       <div class="detail-copy">
         <p class="eyebrow">{{PRODUCT_BADGE}}</p>
@@ -34,11 +34,22 @@
           <div><dt>판매 방식</dt><dd>{{SALE_TYPE_LABEL}}</dd></div>
           <div><dt>가격</dt><dd>{{PRICE_LABEL}}</dd></div>
         </dl>
-        <p class="detail-note">에코디몰은 상품과 스토어의 관계를 분리 표시합니다. 실제 결제가 활성화되기 전에는 판매 가능한 상품처럼 표시하지 않습니다.</p>
-        <div class="detail-actions"><a class="btn primary" href="{{ACTION_URL}}" target="_blank" rel="noopener">{{ACTION_LABEL}}</a><a class="btn ghost" href="{{STORE_URL}}">스토어 보기</a></div>
+        <p class="detail-note">에코디몰은 상품과 스토어의 관계, 판매 준비 상태를 분리 표시합니다. 가격과 판매 조건이 확정되지 않은 상품은 결제 가능한 상품처럼 표시하지 않습니다.</p>
+        <div class="detail-actions">{{BASKET_ACTION}}<a class="btn ghost" href="{{ACTION_URL}}" target="_blank" rel="noopener">{{ACTION_LABEL}}</a><a class="smallbtn" href="{{STORE_URL}}">스토어 보기</a></div>
       </div>
+    </section>
+
+    <section class="product-content">
+      <div class="product-content-head"><p class="eyebrow">PRODUCT PAGE</p><h2>구매보다 먼저<br>이해할 수 있도록</h2><p>확인된 정보만으로 상품의 목적, 현재 단계와 거래 방식을 설명합니다.</p></div>
+      <div class="product-blocks">{{PRODUCT_DETAIL_SECTIONS}}</div>
+    </section>
+
+    <section class="related-products">
+      <div class="heading"><div><p class="eyebrow">MORE FROM THE MARKET</p><h2>함께 살펴볼 상품</h2></div></div>
+      <div class="grid">{{RELATED_PRODUCTS}}</div>
     </section>
   </main>
   <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Commerce Platform</span><a href="/">에코디몰 홈</a></div></footer>
+  <script src="/assets/commerce.js" defer></script>
 </body>
 </html>

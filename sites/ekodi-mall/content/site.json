@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "brand": {
     "name": "EKODI MALL",
     "shortName": "EKODI",
@@ -7,14 +7,14 @@
   },
   "seo": {
     "title": "EKODI MALL | 함께 성장하는 커머스 플랫폼",
-    "description": "상품만 진열하는 쇼핑몰을 넘어 판매자 스토어, 지역상생관, 콘텐츠와 마케팅을 연결하는 EKODI Commerce Platform.",
+    "description": "상품만 진열하는 쇼핑몰을 넘어 판매자 스토어, 지역상생관, 상품 콘텐츠, 상담 바구니와 마케팅 흐름을 연결하는 EKODI Commerce Platform.",
     "baseUrl": "https://ekodi-mall.pages.dev"
   },
-  "notice": "플랫폼 베타 구축 중 · 기존 판매·결제 기능은 변경하지 않고 스토어 기반 구조를 단계적으로 확장합니다.",
+  "notice": "커머스 플랫폼 MVP 운영 중 · 스토어·상품·Seller Studio·상담 바구니는 독립 운영하며 실제 온라인 결제는 아직 비활성 상태입니다.",
   "hero": {
     "eyebrow": "EKODI COMMERCE PLATFORM",
     "title": "가게를 열고|고객을 만나고|함께 성장하도록",
-    "description": "에코디몰은 하나의 판매자가 운영하는 쇼핑몰이 아니라 여러 판매자와 지역·브랜드가 각자의 스토어를 운영하고 상품·콘텐츠·마케팅을 연결하는 몰플랫폼으로 확장합니다.",
+    "description": "에코디몰은 하나의 판매자가 운영하는 쇼핑몰이 아니라 여러 판매자와 지역·브랜드가 각자의 스토어를 운영하고 상품·콘텐츠·마케팅을 연결하는 몰플랫폼입니다.",
     "primaryLabel": "마켓 둘러보기",
     "primaryHref": "#shop",
     "secondaryLabel": "스토어 보기",
@@ -22,14 +22,16 @@
   },
   "platform": {
     "name": "EKODI Commerce Platform",
-    "mode": "foundation",
+    "mode": "commerce-mvp",
     "marketplaceEnabled": true,
-    "sellerStudioPreview": true,
-    "sellerOnboardingEnabled": false,
+    "sellerStudioPreview": false,
+    "sellerOnboardingEnabled": true,
     "sellerStudioHref": "/seller/",
+    "basketHref": "/checkout/",
     "modules": [
       "Store",
-      "Product AI",
+      "Product Studio",
+      "Inquiry Basket",
       "Orders",
       "CRM",
       "Marketing AI",
@@ -52,7 +54,7 @@
   "local": {
     "eyebrow": "LOCAL COMMONS",
     "title": "지역의 가게가|하나의 시장이 되도록",
-    "description": "지역 상권의 각 가게가 독립된 스토어를 갖고, 지역관 안에서 함께 발견되는 구조를 준비합니다. 온라인 콘텐츠와 실제 방문, 주문과 관계를 연결하는 지역 커머스 플랫폼을 지향합니다."
+    "description": "지역 상권의 각 가게가 독립된 스토어를 갖고, 지역관 안에서 함께 발견되는 구조를 운영합니다. 온라인 콘텐츠와 실제 방문, 상담과 주문 준비를 연결하는 지역 커머스 플랫폼을 지향합니다."
   },
   "business": {
     "name": "에코디비즈",
@@ -65,10 +67,15 @@
   },
   "links": {
     "inquiry": "https://ekodibiz.kr",
-    "biz": "https://ekodibiz.kr"
+    "biz": "https://ekodibiz.kr",
+    "paymentGateway": "https://pay.ekodi.kr"
   },
   "commerce": {
     "paymentsEnabled": false,
-    "betaMessage": "현재 플랫폼은 스토어·상품·콘텐츠 구조를 먼저 구축하는 단계이며 온라인 결제는 아직 받지 않습니다."
+    "inquiryBasketEnabled": true,
+    "orderMode": "inquiry-only",
+    "basketLabel": "상담 바구니",
+    "checkoutLabel": "상담 요청 준비",
+    "betaMessage": "현재 온라인 결제는 받지 않습니다. 상담 바구니와 주문 준비 기능은 상품 문의를 정리하기 위한 도구이며 결제·주문 확정을 의미하지 않습니다."
   }
 }

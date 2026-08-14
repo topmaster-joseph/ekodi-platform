@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173f35">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="EKODI MALL 상품 상담 바구니">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/platform.css">
+  <title>{{BASKET_LABEL}} | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice">{{NOTICE}}</div>
+  <header class="header">
+    <a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
+    <nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a><a href="/checkout/">BAG <span class="nav-count" data-basket-count hidden>0</span></a></nav>
+  </header>
+  <main class="basket-main">
+    <section class="basket-hero">
+      <div><p class="eyebrow">INQUIRY BASKET</p><h1>{{BASKET_LABEL}}</h1><p>{{BASKET_MESSAGE}}</p></div>
+      <div class="basket-summary-card"><small>현재 목록</small><strong id="basketSummary">0종 · 총 0개</strong><span>{{ORDER_MODE_LABEL}}</span></div>
+    </section>
+
+    <section class="basket-panel">
+      <div class="basket-panel-head"><div><p class="eyebrow">SELECTED ITEMS</p><h2>상담할 상품</h2></div><button class="smallbtn" type="button" data-basket-clear>전체 비우기</button></div>
+      <div id="basketItems" class="basket-items"></div>
+      <div id="basketEmpty" class="basket-empty"><strong>아직 담긴 상품이 없습니다.</strong><p>마켓에서 상품을 살펴보고 상담이 필요한 항목을 담아보세요.</p><a class="btn ghost" href="/#shop">마켓으로 이동</a></div>
+    </section>
+
+    <section id="basketActions" class="basket-actions" hidden>
+      <div>
+        <p class="eyebrow">NEXT STEP</p>
+        <h2>{{CHECKOUT_LABEL}}</h2>
+        <p>아래 버튼으로 상품 목록을 복사한 뒤 에코디비즈 문의창에 붙여 넣으면 여러 상품을 한 번에 상담할 수 있습니다. 이 단계에서는 주문이나 결제가 확정되지 않습니다.</p>
+      </div>
+      <div class="basket-action-buttons">
+        <button class="btn primary" type="button" data-basket-copy>상담 목록 복사</button>
+        <a class="btn ghost" href="{{INQUIRY_URL}}" target="_blank" rel="noopener">에코디비즈 문의</a>
+      </div>
+      <textarea id="basketCopyFallback" class="basket-copy-fallback" hidden readonly aria-label="복사용 상담 목록"></textarea>
+    </section>
+
+    <section class="basket-safety">
+      <p class="eyebrow">TRANSACTION SAFETY</p>
+      <h2>결제는 준비되기 전까지<br>절대 결제처럼 보이지 않게</h2>
+      <p>{{BETA_MESSAGE}}</p>
+      <div class="safety-grid"><article><b>01</b><h3>상담 목록</h3><p>브라우저에만 저장됩니다.</p></article><article><b>02</b><h3>주문 확정</h3><p>현재는 제공하지 않습니다.</p></article><article><b>03</b><h3>결제</h3><p>{{PAYMENT_STATUS}}</p></article></div>
+    </section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Commerce Platform</span><a href="/">에코디몰 홈</a></div></footer>
+  <script src="/assets/commerce.js" defer></script>
+</body>
+</html>
