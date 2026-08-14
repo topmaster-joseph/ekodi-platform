@@ -1,0 +1,7 @@
+{
+  "name":"@ekodi/insurance-auth-staging",
+  "private":true,
+  "scripts":{
+    "check":"node --check public/app.js && node --check worker.js && node test.mjs"
+  }
+}

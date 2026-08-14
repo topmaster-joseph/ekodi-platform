@@ -1,0 +1,127 @@
+name: EKODI Insurance Auth · Staging CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/insurance-auth-*'
+    paths:
+      - 'sites/ekodi-insurance/auth-staging/**'
+      - 'sites/ekodi-insurance/sql/003_insurance_identity_staging.sql'
+      - 'supabase/functions/insurance-identity-staging/**'
+      - '.github/workflows/insurance-auth-staging-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-insurance-auth-staging
+  cancel-in-progress: true
+
+jobs:
+  validate-and-deploy-blocked-shell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Validate fail-closed Auth UI/Worker
+        working-directory: sites/ekodi-insurance/auth-staging
+        run: npm run check
+
+      - name: Type-check isolated identity function
+        working-directory: supabase/functions/insurance-identity-staging
+        run: deno check --config deno.json index.ts
+
+      - name: Verify identity challenge table is service-only
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          SQL
+          psql -v ON_ERROR_STOP=1 -f sites/ekodi-insurance/sql/003_insurance_identity_staging.sql
+          psql -Atc "select relrowsecurity from pg_class where relname='insurance_identity_challenges'" | grep -Fxq t
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          set role authenticated;
+          select * from public.insurance_identity_challenges;
+          SQL
+          then
+            echo 'Authenticated role unexpectedly accessed identity challenges'
+            exit 1
+          else
+            echo 'Identity challenge table correctly service-only.'
+          fi
+
+      - name: Verify production auth isolation
+        run: |
+          set -euo pipefail
+          grep -Fq "BLOCKED_PRODUCTION_REF='renzehysxirjilvdxacv'" sites/ekodi-insurance/auth-staging/worker.js
+          grep -Fq "productionProjectBlocked:true" sites/ekodi-insurance/auth-staging/worker.js
+          grep -Fq "INSURANCE_AUTH_ORIGIN" supabase/functions/insurance-identity-staging/index.ts
+          runtime_files=(
+            sites/ekodi-insurance/auth-staging/public/index.html
+            sites/ekodi-insurance/auth-staging/public/app.js
+            sites/ekodi-insurance/auth-staging/worker.js
+            supabase/functions/insurance-identity-staging/index.ts
+          )
+          if grep -Fq 'https://auth.ekodi.kr' "${runtime_files[@]}"; then
+            echo 'Production auth URL detected in runtime source'
+            exit 1
+          fi
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Deploy blocked Auth staging shell only
+        working-directory: sites/ekodi-insurance/auth-staging
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.toml
+
+      - name: Verify blocked public Auth staging
+        run: |
+          set -euo pipefail
+          base='https://ekodi-insurance-auth-staging.topmaster-joseph.workers.dev'
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/auth.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            cfg_code=$(curl -L -sS -o /tmp/config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/config.js" || true)
+            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
+            if [[ "$root_code" == 200 ]] && [[ "$cfg_code" == 200 ]] && [[ "$health_code" == 200 ]] \
+              && grep -Fq 'ISOLATED STAGING' /tmp/auth.html \
+              && grep -Fq '"environment":"blocked"' /tmp/config.js \
+              && grep -Fq '"environment":"blocked"' /tmp/health.json \
+              && grep -Fq '"productionProjectBlocked":true' /tmp/health.json; then
+              echo 'Fail-closed Insurance Auth staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
