@@ -52,9 +52,28 @@ jobs:
               && grep -Fq 'EKODI Community' /tmp/community.html \
               && grep -Fq 'ekodi-community' /tmp/community-health.json; then
               echo 'EKODI Community production verified.'
+              break
+            fi
+            if [[ "$attempt" == "18" ]]; then
+              echo 'Community production verification failed.'
+              exit 1
+            fi
+            sleep 5
+          done
+      - name: Verify Community central auth realm
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+            if [[ "$client_code" == "200" ]] && [[ "$router_code" == "200" ]] \
+              && grep -Fq "'community':{name:'EKODI Community',returnTo:'https://community.ekodi.kr/',open:true}" /tmp/community-client-auth.js \
+              && grep -Fq "site==='community'" /tmp/community-auth-router.js; then
+              echo 'EKODI Community central auth realm verified.'
               exit 0
             fi
             sleep 5
           done
-          echo 'Community production verification failed.'
+          echo 'Community central auth verification failed.'
           exit 1
