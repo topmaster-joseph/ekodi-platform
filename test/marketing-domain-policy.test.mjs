@@ -35,6 +35,6 @@ test('CGMA keeps its public site separate from its AI workspace', () => {
   assert.equal(cgma.tenantType, 'organization');
   assert.equal(cgma.publicSiteDomain, 'cgma.ekodi.kr');
   assert.equal(cgma.domain, 'cgma.ai.ekodi.kr');
-  assert.equal(cgma.landingPath, '/ai');
+  assert.equal(cgma.landingPath, '/market-ai');
   assert.ok(!cgma.legacyDomains.includes('cgma.ekodi.kr'));
 });
