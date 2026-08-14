@@ -1,8 +1,12 @@
 (() => {
   const STAGING_API = 'https://insurance-api-staging.ekodi.kr';
+  const GREEN_API = 'https://ekodi-insurance-api-green.topmaster-joseph.workers.dev';
   const PRODUCTION_API = 'https://insurance-api.ekodi.kr';
-  const PRODUCTION_HOSTS = new Set(['ins.ekodi.kr', 'ekodi-insurance-green.topmaster-joseph.workers.dev']);
-  const API = PRODUCTION_HOSTS.has(location.hostname) ? PRODUCTION_API : STAGING_API;
+  const API = location.hostname === 'ins.ekodi.kr'
+    ? PRODUCTION_API
+    : location.hostname === 'ekodi-insurance-green.topmaster-joseph.workers.dev'
+      ? GREEN_API
+      : STAGING_API;
   const STATE_KEY = 'ekodi-insurance-staging-v3';
   const ACCESS_KEY = 'ekodi-insurance-consultation-access-v1';
   const snapshots = new WeakMap();
