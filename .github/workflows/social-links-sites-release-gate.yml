@@ -1,0 +1,102 @@
+name: EKODI Site Social Links Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/social-links-sites-*'
+    paths:
+      - 'community/social-links.js'
+      - 'community-worker.js'
+      - 'books/social-links.js'
+      - 'books-worker.js'
+      - 'wrangler.community-social-staging.toml'
+      - 'wrangler.books-social-staging.toml'
+      - '.github/workflows/social-links-sites-release-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate local Social renderers
+        run: |
+          set -euo pipefail
+          node --check community/social-links.js
+          node --check books/social-links.js
+          node --check community-worker.js
+          node --check books-worker.js
+          grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
+          grep -Fq 'https://api.ekodi.kr/api/social/registry' books/social-links.js
+          grep -Fq '/social-links.js' community-worker.js
+          grep -Fq '/social-links.js' books-worker.js
+          grep -Fq 'EKODI Community · community.ekodi.kr' community-worker.js
+          npm run check
+          npm test
+      - name: Verify public central registry
+        run: |
+          set -euo pipefail
+          curl -fsS 'https://api.ekodi.kr/api/social/registry' -o /tmp/registry.json
+          grep -Fq '에코디커뮤니티' /tmp/registry.json
+          grep -Fq 'community-youtube' /tmp/registry.json
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || exit 1
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || exit 1
+      - name: Deploy isolated Community staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.community-social-staging.toml 2>&1 | tee /tmp/community.log
+          url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/community.log | tail -1 || true)
+          test -n "$url" || exit 1
+          echo "COMMUNITY_URL=$url" >> "$GITHUB_ENV"
+      - name: Verify Community Social injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            root=$(curl -sS -o /tmp/community.html -w '%{http_code}' "$COMMUNITY_URL/" || true)
+            js=$(curl -sS -o /tmp/community-social.js -w '%{http_code}' "$COMMUNITY_URL/social-links.js" || true)
+            health=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' "$COMMUNITY_URL/health" || true)
+            if [ "$root" = '200' ] && [ "$js" = '200' ] && [ "$health" = '200' ] \
+              && grep -Fq '/social-links.js' /tmp/community.html \
+              && grep -Fq 'EKODI Community · community.ekodi.kr' /tmp/community.html \
+              && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
+              && grep -Fq '"socialRegistry":true' /tmp/community-health.json; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+      - name: Deploy isolated Books staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.books-social-staging.toml 2>&1 | tee /tmp/books.log
+          url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/books.log | tail -1 || true)
+          test -n "$url" || exit 1
+          echo "BOOKS_URL=$url" >> "$GITHUB_ENV"
+      - name: Verify Books Social injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            root=$(curl -sS -o /tmp/books.html -w '%{http_code}' "$BOOKS_URL/" || true)
+            js=$(curl -sS -o /tmp/books-social.js -w '%{http_code}' "$BOOKS_URL/social-links.js" || true)
+            health=$(curl -sS -o /tmp/books-health.json -w '%{http_code}' "$BOOKS_URL/health" || true)
+            if [ "$root" = '200' ] && [ "$js" = '200' ] && [ "$health" = '200' ] \
+              && grep -Fq '/social-links.js' /tmp/books.html \
+              && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/books-social.js \
+              && grep -Fq '"socialRegistry":true' /tmp/books-health.json; then exit 0; fi
+            sleep 3
+          done
+          exit 1
