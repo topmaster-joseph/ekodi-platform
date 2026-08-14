@@ -3,17 +3,22 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 
 const handoff = await readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8');
+const financeMonitor = await readFile(new URL('../finance-monitor.js', import.meta.url), 'utf8');
 const financeWorker = await readFile(new URL('../finance-worker.js', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
 
-test('admin payment key panel reads only readiness metadata', () => {
-  assert.match(handoff, /api\/finance\/overview/);
+test('admin payment key panel consumes only shared readiness metadata', () => {
+  assert.doesNotMatch(handoff, /api\/finance\/overview/);
+  assert.doesNotMatch(handoff, /FINANCE_API/);
+  assert.match(handoff, /ekodi-finance-overview/);
   assert.match(handoff, /tossSecretConfigured/);
   assert.match(handoff, /tossLiveKey/);
   assert.match(handoff, /tossMidConfigured/);
   assert.match(handoff, /원문 비노출/);
   assert.doesNotMatch(handoff, /TOSS_SECRET_KEY\s*[:=]/);
+  assert.match(financeMonitor, /api\/finance\/overview/);
+  assert.match(financeMonitor, /new CustomEvent\('ekodi-finance-overview'/);
 });
 
 test('finance readiness exposes status booleans without exposing the server key value', () => {
