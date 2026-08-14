@@ -9,7 +9,6 @@ on:
       - 'books-worker.js'
       - 'scripts/validate-books.mjs'
       - 'wrangler.books.toml'
-      - '.github/workflows/deploy-books.yml'
 
 permissions:
   contents: read
