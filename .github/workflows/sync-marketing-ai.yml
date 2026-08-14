@@ -68,10 +68,13 @@ jobs:
           grep -Fq '채널 10개 · 기획→분석' "$hub"
           grep -Fq 'data-member-session-layout' "$hub"
           grep -Fq 'member-session-mode' "$hub"
-          grep -Fq 'body.member-session-mode .hero-copy>h1' "$hub"
-          grep -Fq 'body.member-session-mode .product-preview' "$hub"
-          grep -Fq 'body.member-session-mode .feature-strip' "$hub"
-          grep -Fq 'body.member-session-mode .bottom-cta' "$hub"
+          grep -Fq 'member-workspace-ready' "$hub"
+          grep -Fq 'body.member-session-mode.member-workspace-ready .hero-copy>h1' "$hub"
+          grep -Fq 'body.member-session-mode.member-workspace-ready .product-preview' "$hub"
+          grep -Fq 'body.member-session-mode.member-workspace-ready .feature-strip' "$hub"
+          grep -Fq 'body.member-session-mode.member-workspace-ready .bottom-cta' "$hub"
+          grep -Fq "trial.removeAttribute('hidden')" "$hub"
+          grep -Fq "trial.querySelector('#freeTrialForm')" "$hub"
           grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" "$hub"
           grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" "$hub"
           grep -Fq 'data-progressive-guidance' "$hub"
@@ -154,8 +157,11 @@ jobs:
             grep -Fq 'FREE · 연결 잠김' /tmp/hub.html
             grep -Fq 'data-member-session-layout' /tmp/hub.html
             grep -Fq 'member-session-mode' /tmp/hub.html
-            grep -Fq 'body.member-session-mode .hero-copy>h1' /tmp/hub.html
-            grep -Fq 'body.member-session-mode .product-preview' /tmp/hub.html
+            grep -Fq 'member-workspace-ready' /tmp/hub.html
+            grep -Fq 'body.member-session-mode.member-workspace-ready .hero-copy>h1' /tmp/hub.html
+            grep -Fq 'body.member-session-mode.member-workspace-ready .product-preview' /tmp/hub.html
+            grep -Fq "trial.removeAttribute('hidden')" /tmp/hub.html
+            grep -Fq "trial.querySelector('#freeTrialForm')" /tmp/hub.html
             grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" /tmp/hub.html
             grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" /tmp/hub.html
             grep -Fq 'data-progressive-guidance' /tmp/hub.html
@@ -196,11 +202,11 @@ jobs:
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
               && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI trial-first workspace, flexible pricing and central authentication verified in production.'
+              echo 'Marketing AI resilient trial-first workspace, flexible pricing and central authentication verified in production.'
               exit 0
             fi
             sleep 5
           done
           exit 1
 
-# Sync trigger: trial-first progressive guidance
+# Sync trigger: resilient authenticated workspace rendering
