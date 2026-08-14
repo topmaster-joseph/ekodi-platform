@@ -10,6 +10,7 @@ on:
       - 'customer-federated-auth.js'
       - 'api-worker.js'
       - 'docs/AUTH-CENTER.md'
+      - 'test/live-marketing-browser-smoke.spec.js'
       - '.github/workflows/auth-hub-ci.yml'
 permissions:
   contents: read
@@ -22,6 +23,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Live Marketing browser smoke
+        run: |
+          npx --yes playwright@1.55.0 install chromium
+          npx --yes playwright@1.55.0 test test/live-marketing-browser-smoke.spec.js --reporter=line
       - name: Validate hub scripts
         run: |
           node --check auth-site/auth.js
