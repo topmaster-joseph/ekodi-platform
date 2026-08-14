@@ -15,14 +15,29 @@
 </head>
 <body>
   <div class="notice">{{NOTICE}}</div>
-  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">SHOP</a><a href="/#local">LOCAL</a><a href="/#story">OUR STORY</a><a href="/#journal">JOURNAL</a></nav></header>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a></nav></header>
   <main class="detail-main">
     <a class="back" href="/#shop">← 전체 상품</a>
     <section class="product-detail">
       <div class="detail-art {{PRODUCT_CATEGORY}}"><span>{{PRODUCT_BADGE}}</span></div>
-      <div class="detail-copy"><p class="eyebrow">{{PRODUCT_BADGE}}</p><h1>{{PRODUCT_NAME}}</h1><p class="detail-desc">{{PRODUCT_DESCRIPTION}}</p><dl><div><dt>현재 상태</dt><dd>{{PRODUCT_STATUS}}</dd></div><div><dt>판매 방식</dt><dd>{{SALE_TYPE_LABEL}}</dd></div><div><dt>가격</dt><dd>{{PRICE_LABEL}}</dd></div></dl><p class="detail-note">판매처와 가격이 확정되기 전에는 구매 가능한 상품처럼 표시하지 않습니다.</p><a class="btn primary" href="{{ACTION_URL}}" target="_blank" rel="noopener">{{ACTION_LABEL}}</a></div>
+      <div class="detail-copy">
+        <p class="eyebrow">{{PRODUCT_BADGE}}</p>
+        <p class="product-store"><span>STORE</span><a href="{{STORE_URL}}">{{STORE_NAME}} →</a></p>
+        <h1>{{PRODUCT_NAME}}</h1>
+        <p class="detail-desc">{{PRODUCT_DESCRIPTION}}</p>
+        <dl>
+          <div><dt>스토어</dt><dd><a href="{{STORE_URL}}">{{STORE_NAME}}</a></dd></div>
+          <div><dt>스토어 운영</dt><dd>{{STORE_OPERATOR}}</dd></div>
+          <div><dt>스토어 상태</dt><dd>{{STORE_STATUS}}</dd></div>
+          <div><dt>상품 상태</dt><dd>{{PRODUCT_STATUS}}</dd></div>
+          <div><dt>판매 방식</dt><dd>{{SALE_TYPE_LABEL}}</dd></div>
+          <div><dt>가격</dt><dd>{{PRICE_LABEL}}</dd></div>
+        </dl>
+        <p class="detail-note">에코디몰은 상품과 스토어의 관계를 분리 표시합니다. 실제 결제가 활성화되기 전에는 판매 가능한 상품처럼 표시하지 않습니다.</p>
+        <div class="detail-actions"><a class="btn primary" href="{{ACTION_URL}}" target="_blank" rel="noopener">{{ACTION_LABEL}}</a><a class="btn ghost" href="{{STORE_URL}}">스토어 보기</a></div>
+      </div>
     </section>
   </main>
-  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL</span><a href="/">에코디몰 홈</a></div></footer>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Commerce Platform</span><a href="/">에코디몰 홈</a></div></footer>
 </body>
 </html>
