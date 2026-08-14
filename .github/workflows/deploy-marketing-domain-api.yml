@@ -165,8 +165,21 @@ jobs:
           test -n "$DOMAIN_CF_TOKEN" || (echo 'Missing Marketing domain Cloudflare API token' && exit 1)
       - name: Apply production D1 migration after staging success
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-domains.toml
-      - name: Preview-gated production Worker promotion
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/marketing-domain-api.worker.json
+      - name: Guarded production promotion or first-install bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.marketing-domains.toml --json >/tmp/marketing-domain-status.json 2>/tmp/marketing-domain-status.err; then
+            echo 'Existing production Worker found. Using the normal guarded release.'
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/marketing-domain-api.worker.json
+          elif grep -Eq 'does not exist|10007' /tmp/marketing-domain-status.err; then
+            echo 'First production install detected. Staging has already passed, so bootstrap the isolated Worker once.'
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-domains.toml
+          else
+            cat /tmp/marketing-domain-status.err
+            echo 'Could not safely determine whether this is a first Worker install.'
+            exit 1
+          fi
       - name: Install server-side Cloudflare provider credential
         run: printf '%s' "$DOMAIN_CF_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put CF_API_TOKEN --config wrangler.marketing-domains.toml
       - name: Deep verify production API boundary
