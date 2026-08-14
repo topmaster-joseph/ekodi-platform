@@ -58,12 +58,13 @@ jobs:
               db.executescript(migration.read_text(encoding='utf-8'))
           tables={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
           required={'consultation_requests','consultation_audit_events','request_rate_limits'}
-          if not required.issubset(tables):
-              raise SystemExit(f'Missing D1 tables: {sorted(required-tables)}')
+          if not required.issubset(tables): raise SystemExit(f'Missing D1 tables: {sorted(required-tables)}')
           forbidden={'insurance_policies','insurance_claims','health_profiles','medical_records'}
-          if tables & forbidden:
-              raise SystemExit(f'Forbidden persistent sensitive tables: {sorted(tables & forbidden)}')
-          print('Minimal Insurance D1 schema verified:', ', '.join(sorted(required)))
+          if tables & forbidden: raise SystemExit(f'Forbidden persistent sensitive tables: {sorted(tables & forbidden)}')
+          db.execute("insert into request_rate_limits(fingerprint,bucket,request_count,updated_at) values ('f','b',1,'now') on conflict(fingerprint,bucket) do update set request_count=request_count+1")
+          db.execute("insert into request_rate_limits(fingerprint,bucket,request_count,updated_at) values ('f','b',1,'now') on conflict(fingerprint,bucket) do update set request_count=request_count+1")
+          assert db.execute("select request_count from request_rate_limits where fingerprint='f' and bucket='b'").fetchone()[0] == 2
+          print('Minimal Insurance D1 schema and rate-limit SQL verified')
           PY
 
       - name: Verify Cloudflare credentials
@@ -131,7 +132,7 @@ jobs:
         working-directory: sites/ekodi-insurance
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
-      - name: Install ephemeral staging-only encryption and internal secrets
+      - name: Install rotated staging-only secrets
         id: runtime_secrets
         working-directory: sites/ekodi-insurance
         shell: bash
@@ -140,11 +141,12 @@ jobs:
           DATA_KEY=$(openssl rand -base64 32 | tr -d '\n')
           INTERNAL_TOKEN=$(openssl rand -hex 32)
           RATE_SALT=$(openssl rand -hex 32)
+          echo "::add-mask::$INTERNAL_TOKEN"
           printf '%s' "$DATA_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_DATA_KEY --config api/wrangler.staging.runtime.toml >/dev/null
           printf '%s' "$INTERNAL_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_INTERNAL_TOKEN --config api/wrangler.staging.runtime.toml >/dev/null
           printf '%s' "$RATE_SALT" | npx --yes wrangler@${WRANGLER_VERSION} secret put RATE_LIMIT_SALT --config api/wrangler.staging.runtime.toml >/dev/null
           echo "internal_token=$INTERNAL_TOKEN" >> "$GITHUB_OUTPUT"
-          echo 'Staging-only secrets installed. Never use real customer PII in this ephemeral-key staging database.'
+          echo 'Staging-only secrets rotated and masked.'
 
       - name: Verify free D1 API and encrypted handoff E2E
         env:
@@ -156,35 +158,46 @@ jobs:
           for attempt in $(seq 1 18); do
             code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
             if [ "$code" = 200 ] && grep -Fq '"dbReady":true' /tmp/health.json && grep -Fq '"encryptionReady":true' /tmp/health.json; then break; fi
-            sleep 5
+            sleep 4
           done
+          echo 'health:'; cat /tmp/health.json
           grep -Fq '"architecture":"cloudflare-worker-d1"' /tmp/health.json
           grep -Fq '"persistentPolicyLedger":false' /tmp/health.json
           grep -Fq '"persistentClaimLedger":false' /tmp/health.json
           grep -Fq '"externalAiProvider":false' /tmp/health.json
 
-          curl -fsS -X POST "$base/api/chat" -H 'content-type: application/json' \
-            --data '{"messages":[{"role":"user","content":"보험료가 부담되면 무엇부터 볼까요?"}]}' > /tmp/chat.json
+          chat_code=$(curl -sS -o /tmp/chat.json -w '%{http_code}' -X POST "$base/api/chat" -H 'content-type: application/json' --data '{"messages":[{"role":"user","content":"보험료가 부담되면 무엇부터 볼까요?"}]}' || true)
+          echo "chat HTTP $chat_code"; cat /tmp/chat.json
+          test "$chat_code" = 200
           grep -Fq '"persisted":false' /tmp/chat.json
 
-          curl -fsS -X POST "$base/api/consultations" -H 'content-type: application/json' \
-            --data '{"name":"STAGING TEST","contact":"010-0000-0000","preferredTime":"오후","shareConsent":true,"shareTranscript":true,"messages":[{"role":"user","content":"보험료 점검 상담 테스트"}]}' > /tmp/create.json
+          create_code=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "$base/api/consultations" -H 'content-type: application/json' --data '{"name":"STAGING TEST","contact":"010-0000-0000","preferredTime":"오후","shareConsent":true,"shareTranscript":true,"messages":[{"role":"user","content":"보험료 점검 상담 테스트"}]}' || true)
+          echo "create HTTP $create_code"; cat /tmp/create.json
+          test "$create_code" = 201
           ID=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.consultation.id)")
           ACCESS=$(node -e "const d=require('/tmp/create.json');process.stdout.write(d.accessToken)")
           test -n "$ID"; test -n "$ACCESS"
 
-          curl -fsS "$base/api/internal/consultations" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' > /tmp/list.json
+          list_code=$(curl -sS -o /tmp/list.json -w '%{http_code}' "$base/api/internal/consultations" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' || true)
+          echo "list HTTP $list_code"; cat /tmp/list.json
+          test "$list_code" = 200
           grep -Fq '***-***-0000' /tmp/list.json
           if grep -Fq '010-0000-0000' /tmp/list.json; then echo 'Plain contact leaked in list'; exit 1; fi
 
-          curl -fsS "$base/api/internal/consultations/$ID" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' > /tmp/detail.json
+          detail_code=$(curl -sS -o /tmp/detail.json -w '%{http_code}' "$base/api/internal/consultations/$ID" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' || true)
+          echo "detail HTTP $detail_code"; cat /tmp/detail.json
+          test "$detail_code" = 200
           grep -Fq '010-0000-0000' /tmp/detail.json
           grep -Fq '보험료 점검 상담 테스트' /tmp/detail.json
 
-          curl -fsS -X PATCH "$base/api/internal/consultations/$ID/status" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' -H 'content-type: application/json' --data '{"status":"reviewing"}' > /tmp/status.json
+          status_code=$(curl -sS -o /tmp/status.json -w '%{http_code}' -X PATCH "$base/api/internal/consultations/$ID/status" -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: staging-ci@ekodi.kr' -H 'content-type: application/json' --data '{"status":"reviewing"}' || true)
+          echo "status HTTP $status_code"; cat /tmp/status.json
+          test "$status_code" = 200
           grep -Fq '"status":"reviewing"' /tmp/status.json
 
-          curl -fsS -X POST "$base/api/consultations/$ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$ACCESS\"}" > /tmp/revoke.json
+          revoke_code=$(curl -sS -o /tmp/revoke.json -w '%{http_code}' -X POST "$base/api/consultations/$ID/revoke" -H 'content-type: application/json' --data "{\"accessToken\":\"$ACCESS\"}" || true)
+          echo "revoke HTTP $revoke_code"; cat /tmp/revoke.json
+          test "$revoke_code" = 200
           grep -Fq '"status":"revoked"' /tmp/revoke.json
           echo 'Insurance D1 chat, encrypted handoff, admin detail, status and revoke E2E passed.'
 
