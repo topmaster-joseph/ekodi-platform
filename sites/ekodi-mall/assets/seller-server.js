@@ -10,15 +10,16 @@
   const shareLinkPreview = document.querySelector('#shareLinkPreview');
   const studioButtons = form.querySelector('.studio-buttons');
   let lastServerProduct = null;
+  let lastDirectLink = null;
 
   const text = (value) => String(value || '').trim();
   const list = (value) => text(value).split(/[\n,]/).map((item) => item.trim()).filter(Boolean).slice(0, 5);
+  const isServerId = (value) => /^prd_[a-f0-9]{32}$/i.test(text(value));
 
   async function accessToken() {
     const { data } = await sb.auth.getSession();
     return data.session?.access_token || '';
   }
-
   async function api(path, options = {}) {
     const token = await accessToken();
     if (!token) throw new Error('Google 판매자 로그인이 필요합니다.');
@@ -27,10 +28,9 @@
     if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
     const response = await fetch(`${API}${path}`, { ...options, headers });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `Mall API ${response.status}`);
+    if (!response.ok) throw new Error(body.error || body.message || `Mall API ${response.status}`);
     return body;
   }
-
   function payload() {
     const v = Object.fromEntries([...form.querySelectorAll('[name]')].map((field) => [field.name, text(field.value)]));
     const sellerName = v.sellerDisplayName || '판매자';
@@ -39,7 +39,7 @@
     const benefits = list(v.benefits);
     const store = v.storeName ? { name: v.storeName, slug: v.storeSlug, contact: v.contact } : null;
     return {
-      seller: { type: v.sellerType || 'individual', displayName: sellerName },
+      seller: { type: v.sellerType || 'individual', displayName: sellerName, contact: v.contact },
       store,
       product: {
         saleType: v.saleType || 'direct', category: v.category || 'local', name: productName, audience, oneLine: v.oneLine,
@@ -54,24 +54,23 @@
       }
     };
   }
-
-  const isServerId = (value) => /^prd_[a-f0-9]{32}$/i.test(text(value));
   function setStatus(message, error = false) {
     if (!status) return;
     status.textContent = message;
     status.dataset.state = error ? 'error' : 'ok';
   }
-
   function renderLink(product) {
     lastServerProduct = product || null;
+    lastDirectLink = null;
     const active = Boolean(product?.publicShareLinkActive);
-    if (shareLinkStatus) shareLinkStatus.textContent = product ? `${active ? '공개 링크 활성' : '서버 저장됨 · 게시 전'} · ${product.shareCode}` : '서버 저장 후 고유링크 발급';
-    if (shareLinkPreview) shareLinkPreview.textContent = product ? `${product.publicUrl}${active ? '' : ' · 게시하면 외부 공유 가능'}` : 'Mall 전용 서버에 저장하면 상품별 고유링크가 발급됩니다.';
+    if (shareLinkStatus) shareLinkStatus.textContent = product ? `${active ? '공개 상품 · 직접공유 가능' : '서버 저장됨 · 게시 전'} · ${product.shareCode}` : '서버 저장 후 고유링크 발급';
+    if (shareLinkPreview) shareLinkPreview.textContent = product
+      ? `${product.publicUrl}${active ? ' · Mall 유입 canonical 8% · 판매자 공유는 서버 발급 7% 링크 사용' : ' · 게시하면 공개'}`
+      : 'Mall 전용 서버에 저장하면 상품별 공개주소가 발급됩니다.';
     document.querySelectorAll('[data-server-share-action]').forEach((button) => { button.disabled = !active; });
     const open = document.querySelector('[data-server-open-link]');
     if (open) { open.hidden = !active; open.href = active ? product.publicUrl : '#'; }
   }
-
   function fillForm(product) {
     const p = product.product || {}; const s = product.seller || {}; const store = product.store || {};
     const values = { productId: product.id, sellerType: s.type || 'individual', sellerDisplayName: s.displayName || '', contact: p.contact || store.contact || '', saleType: p.saleType || 'direct', productName: p.name || '', category: p.category || 'local', price: p.price ?? '', affiliateUrl: p.affiliateUrl || '', storeName: store.name || '', storeSlug: store.slug || '', audience: p.audience || '', oneLine: p.oneLine || '', benefits: (p.benefits || []).join('\n'), story: p.story || '', specs: (p.specs || []).join('\n'), fulfillment: p.fulfillment || '' };
@@ -81,7 +80,6 @@
     renderLink(product);
     setStatus(`서버 상품을 불러왔습니다 · ${product.status === 'published' ? '게시 중' : '초안'}`);
   }
-
   async function saveServer() {
     const currentId = text(form.elements.productId?.value);
     setStatus('Mall 서버에 상품을 저장하고 있습니다...');
@@ -91,33 +89,38 @@
     if (form.elements.productId) { form.elements.productId.value = product.id; form.elements.productId.dispatchEvent(new Event('input', { bubbles: true })); }
     renderLink(product); setStatus(`서버 저장 완료 · ${product.id}`); await loadProducts(); return product;
   }
-
   async function publishServer() {
     let id = text(form.elements.productId?.value);
     if (!isServerId(id)) id = (await saveServer()).id; else await saveServer();
-    setStatus('상품을 게시하고 고유링크를 활성화하고 있습니다...');
+    setStatus('상품을 게시하고 공개주소를 활성화하고 있습니다...');
     const result = await api(`/api/products/${encodeURIComponent(id)}/publish`, { method: 'POST' });
-    renderLink(result.product); setStatus('게시 완료 · 고유링크를 지금 공유할 수 있습니다.'); await loadProducts();
+    renderLink(result.product); setStatus('게시 완료 · Mall 노출과 판매자 직접공유를 사용할 수 있습니다.'); await loadProducts();
   }
-
+  async function directLink(channel = 'copy') {
+    if (!lastServerProduct?.publicShareLinkActive) throw new Error('상품을 먼저 게시해 주세요.');
+    const result = await api(`/api/products/${encodeURIComponent(lastServerProduct.id)}/share-links`, { method: 'POST', body: JSON.stringify({ channel }) });
+    lastDirectLink = result.link;
+    return result.link;
+  }
   async function copyLink() {
-    if (!lastServerProduct?.publicShareLinkActive) return;
-    await navigator.clipboard.writeText(lastServerProduct.publicUrl); setStatus('상품 고유링크를 복사했습니다.');
+    const link = await directLink('copy');
+    await navigator.clipboard.writeText(link.url);
+    setStatus('7% 판매자 직접공유 링크를 복사했습니다. 이 링크의 첫 유입은 7일간 서버가 보존합니다.');
   }
   async function nativeShare() {
-    if (!lastServerProduct?.publicShareLinkActive) return;
-    const data = { title: lastServerProduct.product?.name || 'EKODI MALL 상품', text: lastServerProduct.product?.oneLine || '', url: lastServerProduct.publicUrl };
-    if (navigator.share) await navigator.share(data).catch(() => {}); else await copyLink();
+    const link = await directLink('share');
+    const data = { title: lastServerProduct.product?.name || 'EKODI MALL 상품', text: lastServerProduct.product?.oneLine || '', url: link.url };
+    if (navigator.share) await navigator.share(data).catch(() => {}); else { await navigator.clipboard.writeText(link.url); setStatus('7% 직접공유 링크를 복사했습니다.'); }
   }
-  function smsShare() {
-    if (!lastServerProduct?.publicShareLinkActive) return;
-    location.href = `sms:?&body=${encodeURIComponent(`${lastServerProduct.product?.name || '상품'}\n${lastServerProduct.publicUrl}`)}`;
+  async function smsShare() {
+    const link = await directLink('sms');
+    location.href = `sms:?&body=${encodeURIComponent(`${lastServerProduct.product?.name || '상품'}\n${link.url}`)}`;
   }
 
   function ensureUi() {
     if (studioButtons && !document.querySelector('[data-server-save]')) {
       const save = document.createElement('button'); save.type = 'button'; save.className = 'btn primary'; save.dataset.serverSave = ''; save.textContent = '서버에 저장';
-      const publish = document.createElement('button'); publish.type = 'button'; publish.className = 'btn ghost'; publish.dataset.serverPublish = ''; publish.textContent = '게시 · 링크 활성화';
+      const publish = document.createElement('button'); publish.type = 'button'; publish.className = 'btn ghost'; publish.dataset.serverPublish = ''; publish.textContent = '게시 · Mall 노출';
       studioButtons.prepend(publish); studioButtons.prepend(save);
       save.addEventListener('click', () => saveServer().catch((error) => setStatus(error.message, true)));
       publish.addEventListener('click', () => publishServer().catch((error) => setStatus(error.message, true)));
@@ -125,20 +128,19 @@
     const linkBlock = shareLinkPreview?.closest('.studio-preview-block');
     if (linkBlock && !linkBlock.querySelector('[data-server-share-actions]')) {
       const actions = document.createElement('div'); actions.className = 'studio-buttons'; actions.dataset.serverShareActions = '';
-      actions.innerHTML = '<button class="smallbtn" type="button" data-server-share-action="copy" disabled>링크 복사</button><button class="smallbtn" type="button" data-server-share-action="share" disabled>공유</button><button class="smallbtn" type="button" data-server-share-action="sms" disabled>문자</button><a class="smallbtn" data-server-open-link href="#" target="_blank" rel="noopener" hidden>상품 열기</a>';
+      actions.innerHTML = '<button class="smallbtn" type="button" data-server-share-action="copy" disabled>7% 직접링크 복사</button><button class="smallbtn" type="button" data-server-share-action="share" disabled>직접 공유</button><button class="smallbtn" type="button" data-server-share-action="sms" disabled>문자</button><a class="smallbtn" data-server-open-link href="#" target="_blank" rel="noopener" hidden>8% Mall 공개페이지</a>';
       linkBlock.append(actions);
-      actions.querySelector('[data-server-share-action="copy"]').addEventListener('click', () => copyLink().catch(() => {}));
-      actions.querySelector('[data-server-share-action="share"]').addEventListener('click', () => nativeShare().catch(() => {}));
-      actions.querySelector('[data-server-share-action="sms"]').addEventListener('click', smsShare);
+      actions.querySelector('[data-server-share-action="copy"]').addEventListener('click', () => copyLink().catch((error) => setStatus(error.message, true)));
+      actions.querySelector('[data-server-share-action="share"]').addEventListener('click', () => nativeShare().catch((error) => setStatus(error.message, true)));
+      actions.querySelector('[data-server-share-action="sms"]').addEventListener('click', () => smsShare().catch((error) => setStatus(error.message, true)));
     }
     const studio = document.querySelector('#studio');
     if (studio && !document.querySelector('#serverProducts')) {
       const section = document.createElement('section'); section.className = 'studio-shell'; section.id = 'serverProducts';
-      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>내 서버 저장 상품</h2><p>브라우저 임시저장과 별도로 Mall 전용 D1에 저장된 상품입니다. 게시된 상품만 고유링크로 외부에서 열립니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p>결제는 아직 비활성 상태입니다.</p></div></div><div class="module-grid" data-server-products><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
+      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>내 서버 저장 상품</h2><p>브라우저 임시저장과 별도로 Mall 전용 D1에 저장됩니다. 게시한 상품은 Mall에서 발견될 수 있고, 직접공유는 별도 7% 링크를 발급합니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p>결제는 아직 비활성 상태입니다.</p></div></div><div class="module-grid" data-server-products><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
       studio.insertAdjacentElement('afterend', section);
     }
   }
-
   function productCard(product) {
     const article = document.createElement('article');
     article.innerHTML = '<span></span><h3></h3><p></p><div class="studio-buttons"><button class="smallbtn" type="button">불러오기</button></div>';
@@ -146,10 +148,9 @@
     article.querySelector('h3').textContent = product.product?.name || '상품';
     article.querySelector('p').textContent = `${product.seller?.displayName || '판매자'} · ${product.store?.name || '개인상품'} · ${product.shareCode}`;
     article.querySelector('button').addEventListener('click', () => fillForm(product));
-    if (product.publicShareLinkActive) { const link = document.createElement('a'); link.className = 'smallbtn'; link.href = product.publicUrl; link.target = '_blank'; link.rel = 'noopener'; link.textContent = '공개링크'; article.querySelector('.studio-buttons').append(link); }
+    if (product.publicShareLinkActive) { const link = document.createElement('a'); link.className = 'smallbtn'; link.href = product.publicUrl; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Mall 공개페이지'; article.querySelector('.studio-buttons').append(link); }
     return article;
   }
-
   async function loadProducts() {
     const container = document.querySelector('[data-server-products]'); const apiStatus = document.querySelector('[data-server-api-status]'); if (!container) return;
     try {
