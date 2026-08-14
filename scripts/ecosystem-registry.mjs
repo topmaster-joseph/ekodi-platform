@@ -10,6 +10,7 @@ const ICONS = {
   lab: '<path d="M15 5h10M18 5v11L9 33c-1 2 0 3 3 3h16c3 0 4-1 3-3l-9-17V5M13 28h14"></path>',
   mall: '<path d="M9 15h22l-2 20H11L9 15ZM15 15c0-6 2-9 5-9s5 3 5 9"></path>',
   community: '<circle cx="20" cy="20" r="14"></circle><path d="M6 20h28M20 6c5 5 7 10 7 14s-2 9-7 14M20 6c-5 5-7 10-7 14s2 9 7 14"></path>',
+  work: '<path d="M7 14h26v20H7V14ZM14 14V9h12v5M7 22h26M16 22v4h8v-4"></path>',
   marketing: '<path d="M7 30V18M16 30V10M25 30V15M34 30V6M5 34h31"></path><path d="m7 14 9-7 9 4 9-8"></path>'
 };
 
