@@ -1,0 +1,12 @@
+{
+  "name": "EKODI Community",
+  "short_name": "EKODI",
+  "description": "관심으로 만나고 함께 시작하는 EKODI 소통플랫폼",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#f6f4ee",
+  "lang": "ko",
+  "categories": ["social", "lifestyle", "education"]
+}
