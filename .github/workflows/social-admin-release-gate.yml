@@ -1,0 +1,152 @@
+name: EKODI Social Admin Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/social-admin-*'
+    paths:
+      - 'social/**'
+      - 'social-worker.js'
+      - 'social-admin.*'
+      - 'social-registry-api.js'
+      - 'customer-entry-worker.js'
+      - 'site-worker.js'
+      - 'control-center-features.js'
+      - 'scripts/build.mjs'
+      - 'wrangler.api*.toml'
+      - 'wrangler.social-staging.toml'
+      - 'wrangler.site-social-admin-staging.toml'
+      - 'test/social-registry-control.test.mjs'
+      - '.github/workflows/social-admin-release-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate Social control source
+        run: |
+          set -euo pipefail
+          node --check social-registry-api.js
+          node --check social-admin.js
+          node --check social-worker.js
+          node --check customer-entry-worker.js
+          node --check site-worker.js
+          node --check control-center-features.js
+          node -e "const r=JSON.parse(require('fs').readFileSync('social/channels.json','utf8')); if(r.version!==3||!r.organizations.some(o=>o.id==='community'&&o.name==='에코디커뮤니티')) process.exit(1)"
+          grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
+          grep -Fq '/api/control/social/registry' social-admin.js
+          grep -Fq '/api/social/registry' customer-entry-worker.js
+          grep -Fq 'handleSocialRegistry' customer-entry-worker.js
+          grep -Fq 'social_registry_history' social-registry-api.js
+          grep -Fq "'/social-admin.js'" site-worker.js
+          grep -Fq 'main = "customer-entry-worker.js"' wrangler.api.toml
+          if grep -R -Fq '에코디선교회' social; then echo 'Legacy formal mission label found in published Social data'; exit 1; fi
+
+      - name: Run full regression suite and build
+        run: |
+          set -euo pipefail
+          npm run check
+          npm test
+          node scripts/build.mjs
+          test -f dist/social-admin.js
+          test -f dist/social-admin.css
+          grep -Fq 'social-admin.js' dist/control-center-features.js
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Deploy isolated public Registry API staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.api-social-staging.toml 2>&1 | tee /tmp/social-api-staging.log
+          api_url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/social-api-staging.log | tail -1 || true)
+          test -n "$api_url" || (echo 'Could not resolve Social Registry staging URL' && exit 1)
+          echo "SOCIAL_API_STAGING_URL=$api_url" >> "$GITHUB_ENV"
+
+      - name: Verify isolated public Registry API
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            code=$(curl -sS -o /tmp/registry.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$SOCIAL_API_STAGING_URL/api/social/registry" || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq '에코디커뮤니티' /tmp/registry.json \
+              && grep -Fq 'community-youtube' /tmp/registry.json; then
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
+
+      - name: Deploy isolated Social Hub staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.social-staging.toml 2>&1 | tee /tmp/social-staging.log
+          social_url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/social-staging.log | tail -1 || true)
+          test -n "$social_url" || (echo 'Could not resolve Social staging URL' && exit 1)
+          echo "SOCIAL_STAGING_URL=$social_url" >> "$GITHUB_ENV"
+
+      - name: Verify Social Hub staging and fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            root=$(curl -sS -o /tmp/social.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$SOCIAL_STAGING_URL/" || true)
+            registry=$(curl -sS -o /tmp/social-registry.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$SOCIAL_STAGING_URL/channels.json" || true)
+            feed=$(curl -sS -o /tmp/social-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 20 "$SOCIAL_STAGING_URL/api/feed?org=community" || true)
+            if [ "$root" = '200' ] && [ "$registry" = '200' ] && [ "$feed" = '200' ] \
+              && grep -Fq 'EKODI Social' /tmp/social.html \
+              && grep -Fq '에코디커뮤니티' /tmp/social-registry.json \
+              && grep -Fq '에코디커뮤니티' /tmp/social-feed.json; then
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
+
+      - name: Deploy isolated Control Center staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.site-social-admin-staging.toml 2>&1 | tee /tmp/admin-staging.log
+          admin_url=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/admin-staging.log | tail -1 || true)
+          test -n "$admin_url" || (echo 'Could not resolve Admin staging URL' && exit 1)
+          echo "ADMIN_STAGING_URL=$admin_url" >> "$GITHUB_ENV"
+
+      - name: Verify Control Center staging assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            control=$(curl -L -sS -o /tmp/control.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/control-center" || true)
+            js=$(curl -L -sS -o /tmp/social-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/social-admin.js" || true)
+            css=$(curl -L -sS -o /tmp/social-admin.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/social-admin.css" || true)
+            features=$(curl -L -sS -o /tmp/features.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ADMIN_STAGING_URL/control-center-features.js" || true)
+            if [ "$control" = '200' ] && [ "$js" = '200' ] && [ "$css" = '200' ] && [ "$features" = '200' ] \
+              && grep -Fq 'EKODI Control Center' /tmp/control.html \
+              && grep -Fq '/api/control/social/registry' /tmp/social-admin.js \
+              && grep -Fq '.social-org-card' /tmp/social-admin.css \
+              && grep -Fq "placeholder('social', '◉', 'Social')" /tmp/features.js; then
+              echo "Social admin staging verified: $ADMIN_STAGING_URL"
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
