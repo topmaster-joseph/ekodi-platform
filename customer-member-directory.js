@@ -46,17 +46,23 @@ function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function accessStatus(row) {
+  if (Number(row.enabled) !== 1) return 'disabled';
+  return row.last_verified_at ? 'active' : 'pre_registered';
+}
+
 function publicMember(row) {
+  const status = accessStatus(row);
   return {
-    userId: Number(row.user_id),
+    userId: row.user_id == null ? null : Number(row.user_id),
     email: row.email,
     displayName: row.display_name || '',
-    userStatus: row.user_status,
+    userStatus: status === 'disabled' ? 'disabled' : (row.user_status || 'active'),
     role: row.role,
     roleLabel: ROLE_LABELS[row.role] || row.role,
-    status: row.membership_status,
-    joinedAt: row.membership_created_at,
-    lastLoginAt: row.last_login_at || '',
+    status,
+    joinedAt: row.grant_created_at,
+    lastLoginAt: row.last_verified_at || row.last_login_at || '',
     identityProvider: 'google',
     tenant: {
       slug: row.tenant_slug,
@@ -85,14 +91,14 @@ function filterMembers(members, url) {
 }
 
 function directorySummary(allMembers, tenants) {
-  const uniqueUsers = new Set(allMembers.map(member => member.userId));
+  const uniqueEmails = new Set(allMembers.map(member => normalize(member.email)).filter(Boolean));
   const active = allMembers.filter(member => member.status === 'active').length;
   const pending = allMembers.filter(member => member.status === 'pre_registered').length;
-  const disabled = allMembers.filter(member => member.status === 'disabled' || member.userStatus !== 'active').length;
+  const disabled = allMembers.filter(member => member.status === 'disabled').length;
   return {
     tenants: tenants.length,
     memberships: allMembers.length,
-    uniqueGoogleAccounts: uniqueUsers.size,
+    uniqueGoogleAccounts: uniqueEmails.size,
     active,
     pending,
     disabled,
@@ -137,22 +143,23 @@ export async function handleCustomerMemberDirectory(request, env) {
   const [tenantRows, memberRows] = await Promise.all([
     env.DB.prepare('SELECT slug, name, domain, status FROM customer_tenants ORDER BY name').all(),
     env.DB.prepare(`SELECT
+        a.email,
+        a.role,
+        a.enabled,
+        a.created_at AS grant_created_at,
+        a.last_verified_at,
         u.id AS user_id,
-        u.email,
-        u.display_name,
+        COALESCE(u.display_name, '') AS display_name,
         u.status AS user_status,
-        u.last_login_at,
-        m.role,
-        m.status AS membership_status,
-        m.created_at AS membership_created_at,
+        COALESCE(u.last_login_at, '') AS last_login_at,
         t.slug AS tenant_slug,
         t.name AS tenant_name,
         t.domain AS tenant_domain,
         t.status AS tenant_status
-      FROM customer_memberships m
-      JOIN customer_users u ON u.id = m.user_id
-      JOIN customer_tenants t ON t.id = m.tenant_id
-      ORDER BY t.name, COALESCE(NULLIF(u.display_name, ''), u.email), u.email`).all(),
+      FROM customer_access_grants a
+      JOIN customer_tenants t ON t.id = a.tenant_id
+      LEFT JOIN customer_users u ON lower(trim(u.email)) = a.email
+      ORDER BY t.name, COALESCE(NULLIF(u.display_name, ''), a.email), a.email`).all(),
   ]);
 
   const allMembers = memberRows.results.map(publicMember);
