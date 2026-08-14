@@ -7,7 +7,7 @@ const js = await readFile(new URL('../release-control-admin.js', import.meta.url
 test('admin sidebar exposes Mall Free Ops safely before advanced domain controls', () => {
   assert.match(js, /https:\/\/mall\.ekodi\.kr\/free-ops/);
   assert.match(js, /Mall · Free Ops/);
-  assert.match(js, /data\.adminLink = 'mall-free-ops'/);
+  assert.match(js, /dataset\.adminLink = 'mall-free-ops'/);
   assert.match(js, /target = '_blank'/);
   assert.match(js, /rel = 'noopener'/);
   assert.match(js, /getAttribute\('href'\) === '\/legacy#domains'/);
