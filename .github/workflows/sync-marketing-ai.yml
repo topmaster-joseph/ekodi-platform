@@ -39,7 +39,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
-      - name: Build and validate merchant-first Marketing AI
+      - name: Build and validate audience-first Marketing AI
         run: |
           set -euo pipefail
           npm run build
@@ -48,6 +48,17 @@ jobs:
           grep -Fq 'id="freeTrialForm"' "$hub"
           grep -Fq '30초 마케팅 문구 무료체험' "$hub"
           grep -Fq 'Marketing AI basic trial engine' "$hub"
+          grep -Fq 'id="trialType"' "$hub"
+          grep -Fq 'id="trialSubject"' "$hub"
+          grep -Fq '개인·크리에이터' "$hub"
+          grep -Fq '기관·공공기관' "$hub"
+          grep -Fq '비영리·종교단체' "$hub"
+          grep -Fq '모임·협회·커뮤니티' "$hub"
+          grep -Fq '나와 우리를 위한 마케팅' "$hub"
+          if grep -Fq 'id="trialStore"' "$hub"; then
+            echo 'Store-only trial field must not survive in the public hub'
+            exit 1
+          fi
           grep -Fq 'id="pricing"' "$hub"
           grep -Fq 'id="usageEstimator"' "$hub"
           grep -Fq 'BEST PLAN AI' "$hub"
@@ -96,7 +107,7 @@ jobs:
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/pizzamaru --project-name=marketing-ai-pizzamaru --branch=main
           npx --yes wrangler@4.119.0 pages deploy dist/marketing-ai/yogurtpurple --project-name=marketing-ai-yogurtpurple --branch=main
 
-      - name: Verify production trial, pricing and central authentication
+      - name: Verify production audience trial, pricing and central authentication
         shell: bash
         run: |
           set -euo pipefail
@@ -107,6 +118,13 @@ jobs:
             grep -Fq 'id="freeTrialForm"' /tmp/hub.html
             grep -Fq '30초 마케팅 문구 무료체험' /tmp/hub.html
             grep -Fq 'Marketing AI basic trial engine' /tmp/hub.html
+            grep -Fq 'id="trialType"' /tmp/hub.html
+            grep -Fq 'id="trialSubject"' /tmp/hub.html
+            grep -Fq '개인·크리에이터' /tmp/hub.html
+            grep -Fq '기관·공공기관' /tmp/hub.html
+            grep -Fq '비영리·종교단체' /tmp/hub.html
+            grep -Fq '나와 우리를 위한 마케팅' /tmp/hub.html
+            ! grep -Fq 'id="trialStore"' /tmp/hub.html
             grep -Fq 'id="pricing"' /tmp/hub.html
             grep -Fq 'id="usageEstimator"' /tmp/hub.html
             grep -Fq 'BEST PLAN AI' /tmp/hub.html
@@ -139,11 +157,11 @@ jobs:
               && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
               && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
               && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI trial, flexible pricing and managed customer auth verified in production.'
+              echo 'Marketing AI multi-audience trial, flexible pricing and managed customer auth verified in production.'
               exit 0
             fi
             sleep 5
           done
           exit 1
 
-# Sync trigger: explanation-first landing and free-member hands-on trial
+# Sync trigger: multi-audience free-member trial
