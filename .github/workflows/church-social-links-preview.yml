@@ -1,4 +1,4 @@
-name: Preview Church Central Social Links
+name: Deploy Church Central Social Links
 
 on:
   workflow_dispatch:
@@ -12,23 +12,23 @@ permissions:
   contents: read
 
 jobs:
-  preview:
+  production:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Checkout Church staging branch
+      - name: Checkout Church main
         uses: actions/checkout@v7
         with:
           repository: topmaster-joseph/ekodi-church
-          ref: staging/social-links-20260815
+          ref: main
           path: church
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Church Social registry integration
+      - name: Validate merged Church Social registry integration
         working-directory: church
         run: |
           set -euo pipefail
@@ -40,26 +40,26 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || exit 1
           test -n "$CLOUDFLARE_ACCOUNT_ID" || exit 1
-      - name: Deploy Church Pages preview
+      - name: Deploy Church Pages production
         shell: bash
         working-directory: church
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 pages deploy . --project-name ekodi-church --branch social-links-preview --commit-dirty=true 2>&1 | tee /tmp/church-social.log
-          url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' /tmp/church-social.log | tail -1 || true)
-          test -n "$url" || exit 1
-          echo "CHURCH_URL=$url" >> "$GITHUB_ENV"
-      - name: Verify Church preview assets
+          npx --yes wrangler@4.119.0 pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
+      - name: Verify church.ekodi.kr production assets
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 10); do
-            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' "$CHURCH_URL/" || true)
-            script=$(curl -L -sS -o /tmp/church.js -w '%{http_code}' "$CHURCH_URL/script.js" || true)
+          for attempt in $(seq 1 12); do
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/' || true)
+            script=$(curl -L -sS -o /tmp/church.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/script.js' || true)
             if [ "$root" = '200' ] && [ "$script" = '200' ] \
               && grep -Fq 'EKODI교회' /tmp/church.html \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/church.js \
-              && grep -Fq 'social.ekodi.kr/?org=church' /tmp/church.js; then exit 0; fi
-            sleep 3
+              && grep -Fq 'social.ekodi.kr/?org=church' /tmp/church.js; then
+              echo 'Church Social registry production verified.'
+              exit 0
+            fi
+            sleep 4
           done
           exit 1
