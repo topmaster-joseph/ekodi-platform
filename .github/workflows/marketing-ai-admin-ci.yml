@@ -1,0 +1,59 @@
+name: MarketingAI Admin CI
+
+on:
+  pull_request:
+    paths:
+      - 'marketing-ai-admin.js'
+      - 'marketing-ai-admin.css'
+      - 'scripts/build.mjs'
+      - 'site-worker.js'
+      - '.github/workflows/marketing-ai-admin-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-ai-admin.js'
+      - 'marketing-ai-admin.css'
+      - 'scripts/build.mjs'
+      - 'site-worker.js'
+      - '.github/workflows/marketing-ai-admin-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate MarketingAI admin module
+        run: |
+          set -euo pipefail
+          node --check marketing-ai-admin.js
+          node --check site-worker.js
+          node --check scripts/build.mjs
+          grep -Fq "button.dataset.section = 'marketing-ai'" marketing-ai-admin.js
+          grep -Fq 'marketingAiAdminFrame' marketing-ai-admin.js
+          grep -Fq 'https://marketing.ekodi.kr/' marketing-ai-admin.js
+          grep -Fq '/api/membership/admin/subscriptions' marketing-ai-admin.js
+          grep -Fq '/api/membership/admin/charges' marketing-ai-admin.js
+          grep -Fq '관리자 토큰은 iframe에 전달하지 않습니다.' marketing-ai-admin.js
+          grep -Fq '.marketing-ai-admin-body' marketing-ai-admin.css
+          grep -Fq 'grid-template-columns:270px minmax(0,1fr)' marketing-ai-admin.css
+          grep -Fq "'/marketing-ai-admin.js'" site-worker.js
+          grep -Fq 'https://marketing.ekodi.kr' site-worker.js
+          grep -Fq 'marketing-ai-admin.css' scripts/build.mjs
+          grep -Fq 'marketing-ai-admin.js' scripts/build.mjs
+      - name: Build and verify Control Center output
+        run: |
+          set -euo pipefail
+          npm run build
+          test -f dist/marketing-ai-admin.js
+          test -f dist/marketing-ai-admin.css
+          grep -Fq 'marketing-ai-admin.css' dist/control-center.html
+          grep -Fq 'marketing-ai-admin.js' dist/control-center.html
+          grep -Fq 'MarketingAI' dist/marketing-ai-admin.js
+          grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' dist/marketing-ai-admin.js
