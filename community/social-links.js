@@ -2,7 +2,16 @@
   const API = 'https://api.ekodi.kr/api/social/registry';
   const HUB = 'https://social.ekodi.kr';
   const icons = { youtube:'▶', instagram:'◎', facebook:'f', kakao:'◇', blog:'N', threads:'@', live:'●', tiktok:'♪', linkedin:'in', other:'↗' };
-  const targets = [...document.querySelectorAll('[data-ekodi-social-links]')];
+  let targets = [...document.querySelectorAll('[data-ekodi-social-links]')];
+  if (!targets.length) {
+    const grid = document.querySelector('.channel-grid');
+    if (grid) {
+      grid.dataset.ekodiSocialLinks = '';
+      grid.dataset.org = 'community';
+      grid.dataset.variant = 'cards';
+      targets = [grid];
+    }
+  }
   if (!targets.length) return;
 
   function link(channel, variant) {
