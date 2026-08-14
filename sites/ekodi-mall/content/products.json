@@ -2,6 +2,7 @@
   {
     "id": "p1",
     "slug": "reusable-daily-bottle",
+    "storeId": "store-ekodi-select",
     "name": "리유저블 데일리 보틀",
     "category": "living",
     "badge": "에코디 셀렉트",
@@ -16,6 +17,7 @@
   {
     "id": "p2",
     "slug": "cheonggye-local-box",
+    "storeId": "store-ekodi-select",
     "name": "청계 로컬 한상 꾸러미",
     "category": "local",
     "badge": "지역상생",
@@ -30,6 +32,7 @@
   {
     "id": "p3",
     "slug": "ministry-field-notes",
+    "storeId": "store-ekodi-books",
     "name": "작은교회 사역 노트",
     "category": "book",
     "badge": "책·배움",
@@ -44,6 +47,7 @@
   {
     "id": "p4",
     "slug": "ekodi-welcome-gift",
+    "storeId": "store-ekodi-select",
     "name": "에코디 웰컴 기프트",
     "category": "gift",
     "badge": "선물",
@@ -58,6 +62,7 @@
   {
     "id": "p5",
     "slug": "zero-waste-kitchen-set",
+    "storeId": "store-ekodi-select",
     "name": "제로웨이스트 주방 세트",
     "category": "living",
     "badge": "제휴 후보",
@@ -72,6 +77,7 @@
   {
     "id": "p6",
     "slug": "mokpo-campus-local-pass",
+    "storeId": "store-ekodi-select",
     "name": "목대 후문 맛지도 패스",
     "category": "local",
     "badge": "지역상생",
@@ -86,6 +92,7 @@
   {
     "id": "p7",
     "slug": "jubilee-community-reader",
+    "storeId": "store-ekodi-books",
     "name": "희년과 공동체 읽기",
     "category": "book",
     "badge": "책·배움",
@@ -100,6 +107,7 @@
   {
     "id": "p8",
     "slug": "local-thankyou-gift-box",
+    "storeId": "store-ekodi-select",
     "name": "로컬 감사 선물박스",
     "category": "gift",
     "badge": "지역상생",
