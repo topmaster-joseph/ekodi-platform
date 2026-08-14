@@ -3,6 +3,7 @@ import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
 import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.js';
 import { handleVerificationRequest, verificationSchemaReady } from './verification.js';
+import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 
@@ -140,11 +141,13 @@ export default {
       const sourcingReady = Boolean(env.DB) && await sourcingSchemaReady(env);
       const fulfillmentReady = Boolean(env.DB) && await fulfillmentSchemaReady(env);
       const verificationReady = Boolean(env.DB) && await verificationSchemaReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady;
+      const supplierPilotReady = Boolean(env.DB) && await supplierPilotSchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
-        attributionWindowDays:ATTRIBUTION_WINDOW_DAYS, operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN),
+        supplierPilotSchemaReady:supplierPilotReady, attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
+        operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
         supplierForwardEnabled:String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true', supplierPayoutExecutionEnabled:false, refundExecutionEnabled:false
       }, ok ? 200 : 503, origin, env);
@@ -170,6 +173,9 @@ export default {
 
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
+
+    const supplierPilot = await handleSupplierPilotRequest(request, env);
+    if (supplierPilot) return reply(supplierPilot.body, supplierPilot.status, origin, env);
 
     if (url.pathname.startsWith('/api/fulfillment/') || url.pathname.startsWith('/api/internal/fulfillment/')) {
       const fulfillment = await handleFulfillmentRequest(request, env);
