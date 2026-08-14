@@ -28,8 +28,10 @@ const checks = [
   ['assets/supplier-ops.html', ['SUPPLIER OPS', 'Supplier Partner', 'SKU → EKODI 상품 매핑', '/assets/supplier-ops.js']],
   ['assets/supplier-ops.js', ['/api/internal/supplier-pilot/context', '/create-source', '/verify-contract', '/products', 'Auto Order OFF']],
   ['assets/supplier-ops.css', ['ops-grid', 'ops-map-form', 'ops-table']],
+  ['assets/supplier-discovery.html', ['SUPPLIER DISCOVERY', '증거 기반 평가', 'PILOT PREFLIGHT', '/assets/supplier-discovery.js']],
+  ['assets/supplier-discovery.js', ['/api/internal/supplier-discovery/context', '/assessment', '/evidence', '/outreach-draft', '/api/internal/supplier-preflight', '자동 발송하지 않습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200']],
+  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200']],
   ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
@@ -44,4 +46,4 @@ if (errors.length) {
   errors.forEach((error) => console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('EKODI Mall V3.0 build verified: Supplier Partner pilot ops, dynamic Storefronts, private Analytics, readiness and fulfillment coexist while payments, PII release, supplier forwarding, payout, refund execution and Auto Order remain disabled by default.');
+console.log('EKODI Mall V3.1 build verified: Supplier Discovery evidence scoring and manual-first pilot preflight join Supplier Partner ops, fulfillment, Storefronts and Analytics while auto outreach, payments, PII release, supplier forwarding, payout, refunds and Auto Order remain disabled by default.');
