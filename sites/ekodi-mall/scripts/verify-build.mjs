@@ -25,8 +25,11 @@ const checks = [
   ['assets/sourcing-lab.html', ['EKODI SOURCING LAB', 'Auto Source', 'Dry-run', '계약 공급자', '/assets/sourcing-lab.js']],
   ['assets/sourcing-lab.js', ['/api/sourcing/providers', '/api/sourcing/sources', '/plan', 'auction-reference', '자동발주 OFF']],
   ['assets/fulfillment-lab.js', ['/api/fulfillment', '배송정보 승인 대기', '공급자 전달']],
+  ['assets/supplier-ops.html', ['SUPPLIER OPS', 'Supplier Partner', 'SKU → EKODI 상품 매핑', '/assets/supplier-ops.js']],
+  ['assets/supplier-ops.js', ['/api/internal/supplier-pilot/context', '/create-source', '/verify-contract', '/products', 'Auto Order OFF']],
+  ['assets/supplier-ops.css', ['ops-grid', 'ops-map-form', 'ops-table']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment']],
+  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200']],
   ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
@@ -41,4 +44,4 @@ if (errors.length) {
   errors.forEach((error) => console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('EKODI Mall V2.9 build verified: dynamic seller Storefronts, private Analytics, readiness and contracted-supplier fulfillment coexist while payments, PII release, supplier forwarding, payout, refund execution and Auto Order remain disabled by default.');
+console.log('EKODI Mall V3.0 build verified: Supplier Partner pilot ops, dynamic Storefronts, private Analytics, readiness and fulfillment coexist while payments, PII release, supplier forwarding, payout, refund execution and Auto Order remain disabled by default.');
