@@ -4,7 +4,9 @@
     services: 'Services',
     clients: 'Clients',
     admins: 'Admin Accounts',
+    books: 'Books',
     finance: 'Finance',
+    affiliates: 'Affiliates',
     communication: 'Mail & Live',
     workspace: 'Cloud & Files',
     organization: 'Organization',
@@ -16,7 +18,9 @@
     services: 'Services',
     clients: 'Clients',
     admins: 'Admin Accounts',
+    books: 'Books',
     finance: 'Finance',
+    affiliates: 'Affiliates',
     communication: 'Mail & Live',
     workspace: 'Cloud & Files',
     organization: 'Organization',
@@ -27,16 +31,21 @@
     if (node) node.textContent = value;
   }
 
+  function translateDynamicNavigation() {
+    const nav = document.querySelector('.sidebar nav');
+    if (!nav) return;
+    for (const item of nav.querySelectorAll('[data-section]')) {
+      const label = NAV_MAP[item.dataset.section];
+      const span = item.querySelector('span');
+      if (label && span && span.textContent !== label) span.textContent = label;
+    }
+  }
+
   function translateShell() {
     const nav = document.querySelector('.sidebar nav');
     if (!nav) return;
 
-    for (const item of nav.querySelectorAll('[data-section]')) {
-      const section = item.dataset.section;
-      const label = NAV_MAP[section];
-      const span = item.querySelector('span');
-      if (label && span) span.textContent = label;
-    }
+    translateDynamicNavigation();
 
     const domainLink = nav.querySelector('a[href="/legacy#domains"]');
     const activityLink = nav.querySelector('a[href="/legacy#activity"]');
@@ -175,30 +184,19 @@
     });
   }
 
-  function watchDynamicMenus() {
-    const nav = document.querySelector('.sidebar nav');
-    if (!nav) return;
-    const observer = new MutationObserver(() => {
-      for (const item of nav.querySelectorAll('[data-section]')) {
-        const label = NAV_MAP[item.dataset.section];
-        const span = item.querySelector('span');
-        if (label && span && span.textContent !== label) span.textContent = label;
-      }
-    });
-    observer.observe(nav, { childList: true, subtree: true });
-  }
-
   function init() {
     document.body.classList.add('compact-control-center');
     translateShell();
     installPolicies();
     enforceEnglishNavigation();
-    watchDynamicMenus();
+    translateDynamicNavigation();
 
     if (location.hash === '#policies') {
       setTimeout(() => document.querySelector('[data-section="policies"]')?.click(), 0);
     }
   }
+
+  window.addEventListener('ekodi-feature-installed', translateDynamicNavigation);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();

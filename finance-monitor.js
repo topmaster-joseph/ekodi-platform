@@ -1,7 +1,11 @@
 const FINANCE_API = 'https://finance-api.ekodi.kr';
 const financeSectionButton = document.querySelector('button.nav[data-section="finance"]');
 const financeRefresh = document.querySelector('#refreshFinance');
+const FINANCE_TTL_MS = 60 * 1000;
+const ECOSYSTEM_TTL_MS = 5 * 60 * 1000;
 let financeLoading = false;
+let financeLastLoadedAt = 0;
+let ecosystemLastLoadedAt = 0;
 
 function financeToken() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
 function financeKRW(value) { return `₩${Math.round(Number(value) || 0).toLocaleString('ko-KR')}`; }
@@ -23,7 +27,7 @@ async function financeRequest(path) {
 }
 
 async function ecosystemRequest() {
-  const response = await fetch('/monitor-status.json', { cache: 'no-store' });
+  const response = await fetch('/monitor-status.json', { cache: 'default' });
   if (!response.ok) throw new Error(`전체 생태계 모니터 조회 실패 (${response.status})`);
   return response.json();
 }
@@ -62,6 +66,7 @@ function renderFinanceOverview(data) {
     notice.className = 'finance-note good';
     notice.textContent = '결제·회계 관제 구성요소가 정상 범위입니다.';
   }
+  window.dispatchEvent(new CustomEvent('ekodi-finance-overview', { detail: data }));
 }
 
 function renderFinancePayments(payments) {
@@ -167,10 +172,13 @@ function renderEcosystem(data) {
   if (stale) meta.classList.add('finance-warn'); else meta.classList.remove('finance-warn');
 }
 
-async function loadEcosystem() {
+async function loadEcosystem(force = false) {
+  const now = Date.now();
+  if (!force && ecosystemLastLoadedAt && now - ecosystemLastLoadedAt < ECOSYSTEM_TTL_MS) return;
   const tbody = ensureEcosystemPanel();
   try {
     renderEcosystem(await ecosystemRequest());
+    ecosystemLastLoadedAt = Date.now();
   } catch (error) {
     if (tbody) financeEmpty(tbody, 6, error.message);
     const meta = document.querySelector('#ecosystemGenerated');
@@ -178,12 +186,14 @@ async function loadEcosystem() {
   }
 }
 
-async function loadFinance() {
+async function loadFinance(force = false) {
   if (!financeToken() || financeLoading) return;
+  const now = Date.now();
+  if (!force && financeLastLoadedAt && now - financeLastLoadedAt < FINANCE_TTL_MS) return;
   financeLoading = true;
   financeRefresh.disabled = true;
   financeRefresh.textContent = '↻ 확인 중…';
-  loadEcosystem();
+  loadEcosystem(force);
   try {
     const [overview, payments, accounting, structure] = await Promise.all([
       financeRequest('/api/finance/overview'),
@@ -195,6 +205,7 @@ async function loadFinance() {
     renderFinancePayments(payments.payments || []);
     renderFinanceAccounting(accounting.rows || []);
     renderFinanceStructure(structure);
+    financeLastLoadedAt = Date.now();
   } catch (error) {
     document.querySelector('#financeGenerated').textContent = error.message;
     const notice = document.querySelector('#financeNotice');
@@ -207,17 +218,17 @@ async function loadFinance() {
   }
 }
 
-financeRefresh.addEventListener('click', loadFinance);
+financeRefresh.addEventListener('click', () => loadFinance(true));
 financeSectionButton.addEventListener('click', () => {
   document.querySelector('#pageTitle').textContent = '결제 · 회계';
-  loadFinance();
+  loadFinance(false);
 });
 
 if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
-  setTimeout(loadFinance, 0);
+  setTimeout(() => loadFinance(false), 0);
 }
 
 setInterval(() => {
   const financeVisible = financeSectionButton.classList.contains('active');
-  if (financeVisible && financeToken()) loadFinance();
+  if (financeVisible && financeToken()) loadFinance(false);
 }, 120000);
