@@ -1,0 +1,48 @@
+name: Diagnose Live Auth Cache Bust
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-live-auth-cache-bust.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify live auth page points to cache-busted router
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -L -sS -D /tmp/page-headers -o /tmp/page -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://auth.ekodi.kr/?site=marketing&return_to=https%3A%2F%2Fmarketing.ekodi.kr%2F')
+          echo "page http=$code"
+          test "$code" = '200'
+          grep -Fiq 'x-ekodi-route: central-auth' /tmp/page-headers
+          grep -Fq 'cb=20260815-fedcm-cache-2' /tmp/page
+      - name: Verify live router points to versioned Marketing auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -L -sS -D /tmp/router-headers -o /tmp/router -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://auth.ekodi.kr/auth-router.js?v=20260815-mall-seller-return-1&cb=20260815-fedcm-cache-2')
+          echo "router http=$code"
+          test "$code" = '200'
+          grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/router-headers
+          grep -Fq 'marketing-auth-hotfix.js?v=20260815-fedcm-cache-2' /tmp/router
+          grep -Fq "return await import('./marketing-auth-hotfix.js')" /tmp/router
+      - name: Verify live Marketing module is FedCM version
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -L -sS -D /tmp/module-headers -o /tmp/module -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://auth.ekodi.kr/marketing-auth-hotfix.js?v=20260815-fedcm-cache-2')
+          echo "module http=$code"
+          test "$code" = '200'
+          grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/module-headers
+          grep -Fq 'use_fedcm_for_button:true' /tmp/module
+          grep -Fq 'button_auto_select:false' /tmp/module
+          if grep -Fq 'use_fedcm_for_prompt' /tmp/module; then
+            echo 'Live module still serves deprecated FedCM prompt configuration.'
+            exit 1
+          fi
