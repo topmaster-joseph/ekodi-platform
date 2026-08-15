@@ -23,10 +23,14 @@ if(changed) history.replaceState({},document.title,url.href);
 
 const site=params.get('site');
 const targetedWorkspace=site==='marketing'&&Boolean(params.get('workspace'));
+async function loadMarketingAuth(){
+  try{return await import('./marketing-auth-hotfix.js?v=20260815-fedcm-cache-2')}
+  catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
+}
 if(site==='admin') await import('./admin-auth.js');
 else if(site==='work'||site==='community'||site==='cgma-client'||site==='jadam-client'||site==='pizzamaru-client'||site==='yogurt-client') await import('./client-auth.js');
 else {
-  if(site==='marketing'&&params.get('review')!=='1') await import('./marketing-auth-hotfix.js?v=20260815-fedcm-cache-2');
+  if(site==='marketing'&&params.get('review')!=='1') await loadMarketingAuth();
   else await import('./auth.js');
   if(targetedWorkspace) await import('./auth-workspace-target.js');
   if(site==='marketing') await import('./marketing-onboarding.js');
