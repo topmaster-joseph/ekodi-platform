@@ -15,42 +15,50 @@ if (!fs.existsSync(adminPath) || !fs.existsSync(financePath)) {
 }
 
 let admin = fs.readFileSync(adminPath, 'utf8');
-admin = requireReplace(
-  admin,
-  "  let loaded = false;\n",
-  "  let loaded = false;\n  let loading = false;\n",
-  'admin loading state',
-);
-admin = requireReplace(
-  admin,
-  "  function install() {\n    if (installed) return;\n    const nav = document.querySelector('.sidebar nav');\n    const content = document.querySelector('.content');\n    if (!nav || !content) return;\n",
-  "  function install() {\n    if (installed) return true;\n    const nav = document.querySelector('.sidebar nav');\n    const content = document.querySelector('.content');\n    if (!nav || !content) return false;\n",
-  'admin install return contract',
-);
-admin = requireReplace(
-  admin,
-  "    if (location.hash === '#books') setTimeout(() => button.click(), 80);\n  }\n\n  function selectTab(name) {",
-  "    if (location.hash === '#books') setTimeout(() => button.click(), 80);\n    return true;\n  }\n\n  function selectTab(name) {",
-  'admin install success',
-);
-admin = requireReplace(
-  admin,
-  "  async function load() {\n    if (!token()) { flash('관리자 인증 후 Books 데이터를 불러올 수 있습니다.', true); return; }\n    flash('Books 운영정보를 불러오는 중입니다.');\n    try {",
-  "  async function load() {\n    if (loading) return;\n    if (!token()) { flash('관리자 인증 후 Books 데이터를 불러올 수 있습니다.', true); return; }\n    loading = true;\n    flash('Books 운영정보를 불러오는 중입니다.');\n    try {",
-  'admin load guard',
-);
-admin = requireReplace(
-  admin,
-  "    } catch (error) {\n      flash(error.message, true);\n    }\n  }\n\n  function renderAll() {",
-  "    } catch (error) {\n      flash(error.message, true);\n    } finally {\n      loading = false;\n    }\n  }\n\n  function renderAll() {",
-  'admin load finally',
-);
-admin = requireReplace(
-  admin,
-  "  function boot() {\n    install();\n    const observer = new MutationObserver(() => {\n      if (!installed) install();\n      if (document.querySelector('#app') && !document.querySelector('#app').hidden && location.hash === '#books' && !loaded) load();\n    });\n    observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});\n    setTimeout(() => observer.disconnect(), 20000);\n  }",
-  "  function boot() {\n    if (install()) return;\n    const observer = new MutationObserver(() => {\n      if (install()) observer.disconnect();\n    });\n    observer.observe(document.documentElement, { childList: true, subtree: true });\n    setTimeout(() => observer.disconnect(), 5000);\n  }",
-  'admin observer scope',
-);
+const adminAlreadySafe =
+  admin.includes('let loading = false;') &&
+  admin.includes('if (loading) return;') &&
+  admin.includes('loading = false;') &&
+  !admin.includes("observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});");
+
+if (!adminAlreadySafe) {
+  admin = requireReplace(
+    admin,
+    "  let loaded = false;\n",
+    "  let loaded = false;\n  let loading = false;\n",
+    'admin loading state',
+  );
+  admin = requireReplace(
+    admin,
+    "  function install() {\n    if (installed) return;\n    const nav = document.querySelector('.sidebar nav');\n    const content = document.querySelector('.content');\n    if (!nav || !content) return;\n",
+    "  function install() {\n    if (installed) return true;\n    const nav = document.querySelector('.sidebar nav');\n    const content = document.querySelector('.content');\n    if (!nav || !content) return false;\n",
+    'admin install return contract',
+  );
+  admin = requireReplace(
+    admin,
+    "    if (location.hash === '#books') setTimeout(() => button.click(), 80);\n  }\n\n  function selectTab(name) {",
+    "    if (location.hash === '#books') setTimeout(() => button.click(), 80);\n    return true;\n  }\n\n  function selectTab(name) {",
+    'admin install success',
+  );
+  admin = requireReplace(
+    admin,
+    "  async function load() {\n    if (!token()) { flash('관리자 인증 후 Books 데이터를 불러올 수 있습니다.', true); return; }\n    flash('Books 운영정보를 불러오는 중입니다.');\n    try {",
+    "  async function load() {\n    if (loading) return;\n    if (!token()) { flash('관리자 인증 후 Books 데이터를 불러올 수 있습니다.', true); return; }\n    loading = true;\n    flash('Books 운영정보를 불러오는 중입니다.');\n    try {",
+    'admin load guard',
+  );
+  admin = requireReplace(
+    admin,
+    "    } catch (error) {\n      flash(error.message, true);\n    }\n  }\n\n  function renderAll() {",
+    "    } catch (error) {\n      flash(error.message, true);\n    } finally {\n      loading = false;\n    }\n  }\n\n  function renderAll() {",
+    'admin load finally',
+  );
+  admin = requireReplace(
+    admin,
+    "  function boot() {\n    install();\n    const observer = new MutationObserver(() => {\n      if (!installed) install();\n      if (document.querySelector('#app') && !document.querySelector('#app').hidden && location.hash === '#books' && !loaded) load();\n    });\n    observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});\n    setTimeout(() => observer.disconnect(), 20000);\n  }",
+    "  function boot() {\n    if (install()) return;\n    const observer = new MutationObserver(() => {\n      if (install()) observer.disconnect();\n    });\n    observer.observe(document.documentElement, { childList: true, subtree: true });\n    setTimeout(() => observer.disconnect(), 5000);\n  }",
+    'admin observer scope',
+  );
+}
 
 let finance = fs.readFileSync(financePath, 'utf8');
 finance = requireReplace(
@@ -78,7 +86,7 @@ for (const [label, source, forbidden] of [
 ]) {
   if (source.includes(forbidden)) throw new Error(`${label} still contains performance regression marker: ${forbidden}`);
 }
-for (const required of ['let loading = false', 'if (loading) return', 'if (install()) return']) {
+for (const required of ['let loading = false', 'if (loading) return', 'loading = false']) {
   if (!admin.includes(required)) throw new Error(`Optimized Books admin missing: ${required}`);
 }
 if (!finance.includes('strip.hidden = true') || !finance.includes('overview.hidden = false')) {
@@ -87,4 +95,4 @@ if (!finance.includes('strip.hidden = true') || !finance.includes('overview.hidd
 
 fs.writeFileSync(adminPath, admin);
 fs.writeFileSync(financePath, finance);
-console.log('✅ Books admin optimized: single overview load, narrow observer, lazy finance');
+console.log(`✅ Books admin optimized: ${adminAlreadySafe ? 'source already single-flight' : 'single-flight patch applied'}, lazy finance`);
