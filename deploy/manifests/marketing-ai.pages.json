@@ -9,12 +9,17 @@
       "expect": [
         "id=\"freeTrialForm\"",
         "data-public-landing-cleanup",
-        "id=\"googleCustomerAuth\""
+        "id=\"googleCustomerAuth\"",
+        "needsAuthClient=Boolean",
+        "data-ekodi-handoff-scrub",
+        "authTokenWhenReady",
+        "data-progressive-guidance"
       ],
       "forbid": [
         "id=\"trialStore\"",
         "class=\"case-list\"",
-        "href=\"https://pay.ekodi.kr"
+        "href=\"https://pay.ekodi.kr",
+        "import{createClient}from'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';"
       ]
     },
     {
