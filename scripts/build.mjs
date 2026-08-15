@@ -81,4 +81,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, Chief AI conversation, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
