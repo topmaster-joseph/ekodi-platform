@@ -55,6 +55,8 @@ const ADMIN_ASSETS = new Set([
   '/compact-control-center.js',
   '/campus-actions.css',
   '/campus-actions.js',
+  '/ai-ops-admin.css',
+  '/ai-ops-admin.js',
   '/work-admin.css',
   '/work-admin.js',
   '/client-access.css',
