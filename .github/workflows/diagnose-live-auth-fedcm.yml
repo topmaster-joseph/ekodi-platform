@@ -1,0 +1,45 @@
+name: Diagnose Live Auth FedCM
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-live-auth-fedcm.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify production Marketing auth asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://auth.ekodi.kr/marketing-auth-hotfix.js?diag=${GITHUB_SHA}"
+          code=$(curl -L -sS -D /tmp/headers -o /tmp/auth.js -w '%{http_code}' --connect-timeout 5 --max-time 20 "$url")
+          echo "asset http=$code"
+          test "$code" = '200'
+          grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/headers
+          grep -Fq 'use_fedcm_for_button:true' /tmp/auth.js
+          grep -Fq 'button_auto_select:false' /tmp/auth.js
+          if grep -Fq 'use_fedcm_for_prompt' /tmp/auth.js; then
+            echo 'Production still serves deprecated FedCM prompt configuration.'
+            exit 1
+          fi
+          grep -Fq "identity('/google/exchange'" /tmp/auth.js
+          grep -Fq "identity('/google/link/exchange'" /tmp/auth.js
+      - name: Verify production Marketing auth page and challenge
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -L -sS -D /tmp/page-headers -o /tmp/page -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://auth.ekodi.kr/?site=marketing&return_to=https%3A%2F%2Fmarketing.ekodi.kr%2F')
+          echo "page http=$code"
+          test "$code" = '200'
+          grep -Fiq 'x-ekodi-route: central-auth' /tmp/page-headers
+          grep -Fq 'EKODI 인증센터' /tmp/page
+          challenge=$(curl -sS -o /tmp/challenge -w '%{http_code}' -X POST 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api/challenge' -H 'Origin: https://auth.ekodi.kr' -H 'apikey: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_')
+          echo "challenge http=$challenge"
+          test "$challenge" = '201'
+          grep -Eq '"nonce":"[a-f0-9]{48}"' /tmp/challenge
