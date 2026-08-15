@@ -2,14 +2,12 @@
   'use strict';
 
   const styles = [
-    'campus-actions.css',
     'ai-ops-admin.css',
     'release-control-admin.css',
     'work-admin.css',
     'marketing-ai-admin.css',
   ];
   const scripts = [
-    'campus-actions.js',
     'ai-ops-admin.js',
     'release-control-admin.js',
     'work-admin.js',
