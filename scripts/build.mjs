@@ -75,7 +75,7 @@ for (const asset of htmlAssets) {
     if (!html.includes('control-center-features.js')) html = html.replace('</body>', '<script src="control-center-features.js" defer></script>\n</body>');
     if (!html.includes('campus-actions.js')) html = html.replace('</body>', '<script src="campus-actions.js" defer></script>\n</body>');
     if (!html.includes('admin-lazy-features.js')) {
-      html = html.replace('</body>', '<script src="admin-lazy-features.js" defer data-lazy-features="ai-ops-admin.js release-control-admin.js work-admin.js marketing-ai-admin.js"></script>\n</body>');
+      html = html.replace('</body>', '<script src="admin-lazy-features.js" defer data-lazy-features="ai-ops-admin.js release-control-admin.js work-admin.js marketing-ai-admin.js" data-lazy-styles="ai-ops-admin.css release-control-admin.css work-admin.css marketing-ai-admin.css"></script>\n</body>');
     }
   }
   await writeFile(path, html);
