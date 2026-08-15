@@ -16,6 +16,8 @@ const ADMIN_HOSTS = new Set([
 ]);
 
 const AUTH_HOST = 'auth.ekodi.kr';
+const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_CRITICAL_ASSETS = new Set(['/auth-router.js','/admin-auth.js']);
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
@@ -257,9 +259,10 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
       }
-      if (['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/marketing-onboarding.js','/membership-ui.js'].includes(url.pathname)) {
+      if (AUTH_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
-        return withHostSecurity(response, AUTH_CSP, 'public, max-age=300', 'central-auth-asset');
+        const cacheControl = AUTH_CRITICAL_ASSETS.has(url.pathname) ? 'no-store' : 'public, max-age=300';
+        return withHostSecurity(response, AUTH_CSP, cacheControl, 'central-auth-asset');
       }
     }
 
