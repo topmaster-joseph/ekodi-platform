@@ -1,0 +1,66 @@
+name: Verify Admin Login Redirect
+
+on:
+  pull_request:
+    paths:
+      - 'site-worker.js'
+      - 'control-center.html'
+      - 'admin-central-handoff.js'
+      - 'test/admin-central-login-link.test.mjs'
+      - '.github/workflows/verify-admin-login.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'site-worker.js'
+      - 'control-center.html'
+      - 'admin-central-handoff.js'
+      - 'test/admin-central-login-link.test.mjs'
+      - '.github/workflows/verify-admin-login.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify source contract
+        run: |
+          set -euo pipefail
+          node --check site-worker.js
+          node --test test/admin-central-login-link.test.mjs
+
+  production:
+    if: github.event_name == 'push'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify live Work admin login is a native same-origin form and redirects to central auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            page_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/work' || true)
+            redirect_code=$(curl -sS --max-redirs 0 -D /tmp/login-headers -o /tmp/login-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/auth/start?return_to=%2Fwork' || true)
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); sub(/^location:[[:space:]]*/,""); print; exit}' /tmp/login-headers || true)
+            if [[ "$page_code" == "200" ]] \
+              && grep -Fq 'id="centralAdminLoginForm"' /tmp/admin-work.html \
+              && grep -Fq 'action="/auth/start"' /tmp/admin-work.html \
+              && grep -Fq 'name="return_to" value="/work"' /tmp/admin-work.html \
+              && [[ "$redirect_code" == "302" ]] \
+              && [[ "$location" == https://auth.ekodi.kr/* ]] \
+              && [[ "$location" == *'site=admin'* ]] \
+              && [[ "$location" == *'return_to=https%3A%2F%2Fadmin.ekodi.kr%2Fwork'* ]]; then
+              echo 'Live Work admin login flow verified.'
+              exit 0
+            fi
+            echo "Waiting for live login flow ($attempt/60): page=$page_code redirect=$redirect_code location=$location"
+            sleep 4
+          done
+          echo 'Live Work admin login flow did not become healthy.'
+          exit 1
