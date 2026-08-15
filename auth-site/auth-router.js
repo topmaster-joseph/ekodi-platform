@@ -26,7 +26,7 @@ const targetedWorkspace=site==='marketing'&&Boolean(params.get('workspace'));
 if(site==='admin') await import('./admin-auth.js');
 else if(site==='work'||site==='community'||site==='cgma-client'||site==='jadam-client'||site==='pizzamaru-client'||site==='yogurt-client') await import('./client-auth.js');
 else {
-  if(site==='marketing'&&params.get('review')!=='1') await import('./marketing-auth-hotfix.js');
+  if(site==='marketing'&&params.get('review')!=='1') await import('./marketing-auth-hotfix.js?v=20260815-fedcm-cache-2');
   else await import('./auth.js');
   if(targetedWorkspace) await import('./auth-workspace-target.js');
   if(site==='marketing') await import('./marketing-onboarding.js');
