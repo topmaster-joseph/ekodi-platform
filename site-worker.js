@@ -142,6 +142,43 @@ function redirectToTradeCanonical(url) {
   return Response.redirect(next.toString(), 308);
 }
 
+function safeAdminReturnPath(value) {
+  const candidate = String(value || '/');
+  return ADMIN_ALIASES.has(candidate) ? candidate : '/';
+}
+
+function adminAuthRedirect(returnPath) {
+  const safePath = safeAdminReturnPath(returnPath);
+  const target = new URL('https://auth.ekodi.kr/');
+  target.searchParams.set('site', 'admin');
+  target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': target.toString(),
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      'X-EKODI-Route': 'admin-auth-start',
+    },
+  });
+}
+
+function adminLoginFormHtml(returnPath) {
+  const safePath = safeAdminReturnPath(returnPath);
+  return `<form id="centralAdminLoginForm" action="/auth/start" method="get"><input type="hidden" name="return_to" value="${safePath}"><button id="centralAdminLogin" class="primary full" type="submit">EKODI 통합인증센터로 관리자 로그인</button></form>`;
+}
+
+function rewriteAdminLogin(response, returnPath) {
+  return new HTMLRewriter()
+    .on('#centralAdminLogin', {
+      element(element) {
+        element.replace(adminLoginFormHtml(returnPath), { html: true });
+      },
+    })
+    .transform(response);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -155,9 +192,16 @@ export default {
     }
 
     if (ADMIN_HOSTS.has(host)) {
+      if (url.pathname === '/auth/start') {
+        if (!['GET', 'HEAD'].includes(request.method)) {
+          return new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
+        }
+        return adminAuthRedirect(url.searchParams.get('return_to'));
+      }
       if (ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+        const rewritten = rewriteAdminLogin(response, url.pathname);
+        return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
       if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
