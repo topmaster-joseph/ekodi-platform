@@ -21,7 +21,7 @@
         "url": "https://auth.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI 인증센터", "/auth-router.js?v=20260816-admin-fedcm-button-1"],
+        "expect": ["EKODI 인증센터", "/auth-router.js?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1"],
         "headerExpect": ["x-ekodi-route: central-auth"]
       },
       {
