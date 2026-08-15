@@ -2,13 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { normalizeManifest } from '../tools/books-publisher-agent/src/manifest.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const operatorSource = fs.readFileSync(path.join(root, 'tools/books-publisher-agent/src/google-play-books.mjs'), 'utf8');
-const cliSource = fs.readFileSync(path.join(root, 'tools/books-publisher-agent/src/cli.mjs'), 'utf8');
+const operatorPath = path.join(root, 'tools/books-publisher-agent/src/google-play-books.mjs');
+const cliPath = path.join(root, 'tools/books-publisher-agent/src/cli.mjs');
+const operatorSource = fs.readFileSync(operatorPath, 'utf8');
+const cliSource = fs.readFileSync(cliPath, 'utf8');
 const readme = fs.readFileSync(path.join(root, 'tools/books-publisher-agent/README.md'), 'utf8');
+
+test('publisher agent modules pass Node syntax checks without installing Playwright', () => {
+  for (const relative of [
+    'tools/books-publisher-agent/src/manifest.mjs',
+    'tools/books-publisher-agent/src/audit.mjs',
+    'tools/books-publisher-agent/src/google-play-books.mjs',
+    'tools/books-publisher-agent/src/cli.mjs',
+  ]) {
+    const result = spawnSync(process.execPath, ['--check', path.join(root, relative)], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${relative}: ${result.stderr || result.stdout}`);
+  }
+});
 
 test('publisher manifest supports GGKEY without storing credentials', () => {
   const book = normalizeManifest({
