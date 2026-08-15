@@ -8,11 +8,14 @@ on:
       - 'marketing-domain-worker.js'
       - 'marketing-store-workspace.js'
       - 'marketing-store-domain.js'
+      - 'marketing-auth-handoff.js'
       - 'wrangler.marketing-domains.toml'
       - 'migrations/0017_marketing_custom_domains.sql'
       - 'migrations/0018_marketing_store_workspaces.sql'
+      - 'migrations/0019_marketing_handoff_exchange.sql'
       - 'test/marketing-custom-domain.test.mjs'
       - 'test/marketing-store-workspace.test.mjs'
+      - 'test/marketing-auth-handoff.test.mjs'
       - 'deploy/manifests/marketing-domain-api.worker.json'
       - '.github/workflows/deploy-marketing-domain-api.yml'
       - 'scripts/guarded-worker-release.mjs'
@@ -23,11 +26,14 @@ on:
       - 'marketing-domain-worker.js'
       - 'marketing-store-workspace.js'
       - 'marketing-store-domain.js'
+      - 'marketing-auth-handoff.js'
       - 'wrangler.marketing-domains.toml'
       - 'migrations/0017_marketing_custom_domains.sql'
       - 'migrations/0018_marketing_store_workspaces.sql'
+      - 'migrations/0019_marketing_handoff_exchange.sql'
       - 'test/marketing-custom-domain.test.mjs'
       - 'test/marketing-store-workspace.test.mjs'
+      - 'test/marketing-auth-handoff.test.mjs'
       - 'deploy/manifests/marketing-domain-api.worker.json'
       - '.github/workflows/deploy-marketing-domain-api.yml'
       - 'scripts/guarded-worker-release.mjs'
@@ -58,8 +64,9 @@ jobs:
           node --check marketing-domain-control.js
           node --check marketing-store-workspace.js
           node --check marketing-store-domain.js
+          node --check marketing-auth-handoff.js
           node --check marketing-domain-worker.js
-          node --test test/marketing-custom-domain.test.mjs test/marketing-store-workspace.test.mjs
+          node --test test/marketing-custom-domain.test.mjs test/marketing-store-workspace.test.mjs test/marketing-auth-handoff.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           test -f deploy/manifests/marketing-domain-api.worker.json
           grep -Fq 'main = "marketing-domain-worker.js"' wrangler.marketing-domains.toml
@@ -68,9 +75,14 @@ jobs:
           grep -Fq "marketing_custom_domains" migrations/0017_marketing_custom_domains.sql
           grep -Fq "marketing_store_workspaces" migrations/0018_marketing_store_workspaces.sql
           grep -Fq "marketing_store_custom_domains" migrations/0018_marketing_store_workspaces.sql
+          grep -Fq "marketing_handoff_exchanges" migrations/0019_marketing_handoff_exchange.sql
           grep -Fq "/api/marketing/workspace/provision" marketing-store-workspace.js
           grep -Fq "/api/marketing/workspace/resolve" marketing-store-workspace.js
           grep -Fq "/api/marketing/store-domains" marketing-store-domain.js
+          grep -Fq "/api/marketing/handoff/start" marketing-auth-handoff.js
+          grep -Fq "/api/marketing/handoff/consume" marketing-auth-handoff.js
+          grep -Fq "__Host-ekodi_handoff" marketing-auth-handoff.js
+          grep -Fq "HttpOnly; Secure; SameSite=Lax" marketing-auth-handoff.js
 
   staging:
     needs: validate
@@ -152,13 +164,21 @@ jobs:
             store_domains=$(curl -sS -o /tmp/store-domains-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
             invalid_resolve=$(curl -sS -o /tmp/store-resolve-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/workspace/resolve?host=invalid.example.com' || true)
             preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://demo.ai.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/workspace/provision' || true)
-            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' \
+            handoff_preflight=$(curl -sS -D /tmp/handoff-options-headers.txt -o /tmp/handoff-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://auth.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/handoff/start' || true)
+            consume_empty=$(curl -sS -D /tmp/handoff-consume-headers.txt -o /tmp/handoff-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://marketing.ekodi.kr' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/handoff/consume' || true)
+            bad_handoff_origin=$(curl -sS -o /tmp/handoff-bad-origin.txt -w '%{http_code}' -X POST -H 'Origin: https://evil.example' --connect-timeout 5 --max-time 12 'https://marketing-api-staging.ekodi.kr/api/marketing/handoff/consume' || true)
+            if printf '%s' "$health" | grep -Fq '"authHandoff":"httpOnly-cookie"' \
               && [ "$unauthorized" = '401' ] \
               && [ "$store_workspace" = '403' ] \
               && [ "$store_domains" = '403' ] \
               && [ "$invalid_resolve" = '400' ] \
-              && [ "$preflight" = '204' ]; then
-              echo 'Marketing domain API isolated staging verified.'
+              && [ "$preflight" = '204' ] \
+              && [ "$handoff_preflight" = '204' ] \
+              && [ "$consume_empty" = '204' ] \
+              && [ "$bad_handoff_origin" = '403' ] \
+              && grep -Fiq 'access-control-allow-credentials: true' /tmp/handoff-options-headers.txt \
+              && grep -Fiq 'set-cookie: __Host-ekodi_handoff=' /tmp/handoff-consume-headers.txt; then
+              echo 'Marketing domain API isolated staging and URL-free auth boundary verified.'
               exit 0
             fi
             sleep 5
@@ -214,12 +234,18 @@ jobs:
             store_workspace=$(curl -sS -o /tmp/store-workspace-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
             store_domains=$(curl -sS -o /tmp/store-domains-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
             invalid_resolve=$(curl -sS -o /tmp/store-resolve-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace/resolve?host=invalid.example.com' || true)
-            if printf '%s' "$health" | grep -Fq 'ekodi-marketing-domain-api' \
+            handoff_preflight=$(curl -sS -D /tmp/handoff-prod-options-headers.txt -o /tmp/handoff-prod-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://auth.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/handoff/start' || true)
+            consume_empty=$(curl -sS -D /tmp/handoff-prod-consume-headers.txt -o /tmp/handoff-prod-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://marketing.ekodi.kr' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/handoff/consume' || true)
+            if printf '%s' "$health" | grep -Fq '"authHandoff":"httpOnly-cookie"' \
               && [ "$unauthorized" = '401' ] \
               && [ "$store_workspace" = '403' ] \
               && [ "$store_domains" = '403' ] \
-              && [ "$invalid_resolve" = '400' ]; then
-              echo 'Marketing domain API production boundary verified.'
+              && [ "$invalid_resolve" = '400' ] \
+              && [ "$handoff_preflight" = '204' ] \
+              && [ "$consume_empty" = '204' ] \
+              && grep -Fiq 'access-control-allow-credentials: true' /tmp/handoff-prod-options-headers.txt \
+              && grep -Fiq 'set-cookie: __Host-ekodi_handoff=' /tmp/handoff-prod-consume-headers.txt; then
+              echo 'Marketing domain API production and URL-free auth boundary verified.'
               exit 0
             fi
             sleep 5
