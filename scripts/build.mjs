@@ -70,13 +70,15 @@ for (const asset of htmlAssets) {
   if (asset === 'control-center.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
     if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
+    if (!html.includes('campus-actions.css')) html = html.replace('</head>', '<link rel="stylesheet" href="campus-actions.css">\n</head>');
     if (!html.includes('compact-control-center.js')) html = html.replace('</body>', '<script src="compact-control-center.js" defer></script>\n</body>');
     if (!html.includes('control-center-features.js')) html = html.replace('</body>', '<script src="control-center-features.js" defer></script>\n</body>');
+    if (!html.includes('campus-actions.js')) html = html.replace('</body>', '<script src="campus-actions.js" defer></script>\n</body>');
     if (!html.includes('admin-lazy-features.js')) {
-      html = html.replace('</body>', '<script src="admin-lazy-features.js" defer data-lazy-features="campus-actions.js ai-ops-admin.js release-control-admin.js work-admin.js marketing-ai-admin.js"></script>\n</body>');
+      html = html.replace('</body>', '<script src="admin-lazy-features.js" defer data-lazy-features="ai-ops-admin.js release-control-admin.js work-admin.js marketing-ai-admin.js"></script>\n</body>');
     }
   }
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, lazy admin feature modules, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
