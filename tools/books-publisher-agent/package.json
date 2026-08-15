@@ -1,0 +1,17 @@
+{
+  "name": "@ekodi/books-publisher-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local browser operator for EKODI BOOKS Google Play Books publishing",
+  "scripts": {
+    "start": "node src/cli.mjs",
+    "dry-run": "node src/cli.mjs --dry-run"
+  },
+  "dependencies": {
+    "playwright": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
