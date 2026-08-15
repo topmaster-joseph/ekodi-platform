@@ -21,8 +21,22 @@
         "url": "https://auth.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI 인증센터"],
+        "expect": ["EKODI 인증센터", "/auth-router.js?v=20260816-admin-fedcm-button-1"],
         "headerExpect": ["x-ekodi-route: central-auth"]
+      },
+      {
+        "url": "https://auth.ekodi.kr/auth-router.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["admin-auth.js?v=20260816-fedcm-button-1"],
+        "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"]
+      },
+      {
+        "url": "https://auth.ekodi.kr/admin-auth.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["use_fedcm_for_button:true", "button_auto_select:false", "expired_challenge"],
+        "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"]
       },
       {
         "url": "https://pay.ekodi.kr/",
