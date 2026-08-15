@@ -3,6 +3,7 @@
   let state = null;
   let installed = false;
   let loaded = false;
+  let loading = false;
 
   function token() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
   async function request(path, options = {}) {
@@ -144,7 +145,9 @@
   }
 
   async function load() {
+    if (loading) return;
     if (!token()) { flash('관리자 인증 후 Books 데이터를 불러올 수 있습니다.', true); return; }
+    loading = true;
     flash('Books 운영정보를 불러오는 중입니다.');
     try {
       state = await request('/api/books/admin/overview');
@@ -153,6 +156,8 @@
       flash(`마지막 갱신 ${new Date().toLocaleTimeString('ko-KR')}`);
     } catch (error) {
       flash(error.message, true);
+    } finally {
+      loading = false;
     }
   }
 
@@ -358,12 +363,6 @@
 
   function boot() {
     install();
-    const observer = new MutationObserver(() => {
-      if (!installed) install();
-      if (document.querySelector('#app') && !document.querySelector('#app').hidden && location.hash === '#books' && !loaded) load();
-    });
-    observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});
-    setTimeout(() => observer.disconnect(), 20000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true }); else boot();
