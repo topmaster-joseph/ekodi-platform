@@ -1,3 +1,4 @@
+// Shared admin redeploy marker: Books single-flight hotfix.
 (()=>{
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));
   const token=hash.get('ekodi_admin_token');
