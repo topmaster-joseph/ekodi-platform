@@ -75,13 +75,13 @@ jobs:
           for project in marketing-ai marketing-ai-jadam marketing-ai-pizzamaru marketing-ai-yogurtpurple; do
             curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/deployments?env=production&per_page=1" > "/tmp/$project-deployments.json"
             PROJECT="$project" python - <<'PY' >> /tmp/previous.tsv
-import json, os
-project=os.environ['PROJECT']
-rows=json.load(open('/tmp/'+project+'-deployments.json')).get('result') or []
-row=rows[0] if rows else {}
-trigger=(row.get('deployment_trigger') or {}).get('metadata') or {}
-print('\t'.join([project, str(row.get('id') or ''), str(trigger.get('commit_hash') or '')]))
-PY
+          import json, os
+          project=os.environ['PROJECT']
+          rows=json.load(open('/tmp/'+project+'-deployments.json')).get('result') or []
+          row=rows[0] if rows else {}
+          trigger=(row.get('deployment_trigger') or {}).get('metadata') or {}
+          print('\t'.join([project, str(row.get('id') or ''), str(trigger.get('commit_hash') or '')]))
+          PY
           done
 
           while IFS=$'\t' read -r project deployment_id commit_hash; do
@@ -235,18 +235,18 @@ PY
           for project in marketing-ai marketing-ai-jadam marketing-ai-pizzamaru marketing-ai-yogurtpurple; do
             curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/deployments?env=production&per_page=1" > "/tmp/$project-latest.json"
             PROJECT="$project" TARGET="$sha" python - <<'PY'
-import json, os, sys
-project=os.environ['PROJECT']; target=os.environ['TARGET']
-rows=json.load(open('/tmp/'+project+'-latest.json')).get('result') or []
-if not rows: raise SystemExit(project+' has no production deployment')
-row=rows[0]
-meta=(row.get('deployment_trigger') or {}).get('metadata') or {}
-got=str(meta.get('commit_hash') or '')
-stage=row.get('latest_stage') or {}
-print(project, 'commit=', got, 'stage=', stage.get('status'))
-if got != target: raise SystemExit(project+' commit mismatch')
-if stage.get('status') not in ('success','idle'): raise SystemExit(project+' deployment not successful')
-PY
+          import json, os, sys
+          project=os.environ['PROJECT']; target=os.environ['TARGET']
+          rows=json.load(open('/tmp/'+project+'-latest.json')).get('result') or []
+          if not rows: raise SystemExit(project+' has no production deployment')
+          row=rows[0]
+          meta=(row.get('deployment_trigger') or {}).get('metadata') or {}
+          got=str(meta.get('commit_hash') or '')
+          stage=row.get('latest_stage') or {}
+          print(project, 'commit=', got, 'stage=', stage.get('status'))
+          if got != target: raise SystemExit(project+' commit mismatch')
+          if stage.get('status') not in ('success','idle'): raise SystemExit(project+' deployment not successful')
+          PY
           done
 
           trap - ERR
