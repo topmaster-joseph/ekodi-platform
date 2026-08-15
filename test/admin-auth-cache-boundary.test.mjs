@@ -9,7 +9,7 @@ const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-s
 test('critical admin auth assets cannot remain stale in the browser cache', () => {
   assert.match(worker, /AUTH_CRITICAL_ASSETS = new Set\(\['\/auth-router\.js','\/admin-auth\.js'\]\)/);
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
-  assert.match(authIndex, /auth-router\.js\?v=20260816-admin-fedcm-button-1/);
+  assert.match(authIndex, /auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1/);
 });
 
 test('guarded production release verifies current FedCM admin assets', () => {
