@@ -192,21 +192,6 @@ function adminAuthRedirect(returnPath) {
   });
 }
 
-function adminLoginFormHtml(returnPath) {
-  const safePath = safeAdminReturnPath(returnPath);
-  return `<form id="centralAdminLoginForm" action="/auth/start" method="get"><input type="hidden" name="return_to" value="${safePath}"><button id="centralAdminLogin" class="primary full" type="submit">EKODI 통합인증센터로 관리자 로그인</button></form>`;
-}
-
-function rewriteAdminLogin(response, returnPath) {
-  return new HTMLRewriter()
-    .on('#centralAdminLogin', {
-      element(element) {
-        element.replace(adminLoginFormHtml(returnPath), { html: true });
-      },
-    })
-    .transform(response);
-}
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -241,8 +226,7 @@ export default {
       }
       if (ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
-        const rewritten = rewriteAdminLogin(response, url.pathname);
-        return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-control-center');
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
       if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
