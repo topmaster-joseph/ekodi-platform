@@ -60,7 +60,13 @@ jobs:
           grep -Fq 'functions/v1/access-api' auth-site/marketing-auth-hotfix.js
           grep -Fq 'functions/v1/identity-api' auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'ekodi_token:d.tokenHash' auth-site/marketing-auth-hotfix.js
+          grep -Fq "const MARKETING_API='https://marketing-api.ekodi.kr'" auth-site/marketing-auth-hotfix.js
+          grep -Fq "/api/marketing/handoff/start" auth-site/marketing-auth-hotfix.js
+          grep -Fq "credentials:'include'" auth-site/marketing-auth-hotfix.js
+          if grep -Fq 'ekodi_token' auth-site/marketing-auth-hotfix.js || grep -Fq 'target.hash=' auth-site/marketing-auth-hotfix.js || grep -Fq "api('/handoff'" auth-site/marketing-auth-hotfix.js; then
+            echo 'Marketing auth must not put handoff credentials in the browser URL'
+            exit 1
+          fi
           grep -Fq "sb.auth.onAuthStateChange((event,s)=>" auth-site/marketing-auth-hotfix.js
           grep -Fq 'setTimeout(()=>{' auth-site/marketing-auth-hotfix.js
           grep -Fq 'supabase_cdn_timeout' auth-site/marketing-auth-hotfix.js

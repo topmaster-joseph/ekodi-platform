@@ -1,6 +1,7 @@
 import { handleMarketingDomainRequest, runMarketingDomainSchedule } from './marketing-domain-control.js';
 import { handleMarketingStoreWorkspaceRequest, runMarketingStoreWorkspaceSchedule } from './marketing-store-workspace.js';
 import { handleMarketingStoreDomainRequest, runMarketingStoreDomainSchedule } from './marketing-store-domain.js';
+import { handleMarketingAuthHandoffRequest, runMarketingAuthHandoffSchedule } from './marketing-auth-handoff.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -17,7 +18,19 @@ export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (request.method === 'GET' && path === '/health') {
-      return json({ ok: true, service: 'ekodi-marketing-domain-api', version: 2 });
+      return json({ ok: true, service: 'ekodi-marketing-domain-api', version: 3, authHandoff: 'httpOnly-cookie' });
+    }
+    if (path.startsWith('/api/marketing/handoff')) {
+      try {
+        const response = await handleMarketingAuthHandoffRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Marketing AI secure handoff API error', error);
+        return json({
+          error: 'Marketing AI 보안 로그인 연결 처리 중 오류가 발생했습니다.',
+          code: 'MARKETING_AUTH_HANDOFF_API_ERROR',
+        }, 500);
+      }
     }
     if (path.startsWith('/api/marketing/workspace')) {
       try {
@@ -63,6 +76,7 @@ export default {
       runMarketingDomainSchedule(env),
       runMarketingStoreWorkspaceSchedule(env),
       runMarketingStoreDomainSchedule(env),
+      runMarketingAuthHandoffSchedule(env),
     ]).catch(error => console.error('Marketing domain schedule failed', error)));
   },
 };
