@@ -62,6 +62,9 @@ jobs:
           grep -Fq '/auth-workspace-target.js' site-worker.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
           grep -Fq 'https://marketing.ekodi.kr' site-worker.js
+          grep -Fq 'pattern = "ekodi.kr"' wrangler.site.toml
+          grep -Fq 'pattern = "admin.ekodi.kr"' wrangler.site.toml
+          grep -Fq 'pattern = "auth.ekodi.kr"' wrangler.site.toml
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -79,6 +82,10 @@ jobs:
           grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' dist/marketing-ai-admin.js
           grep -Fq 'marketing-ai-admin.js' dist/control-center.html
           grep -Fq 'marketing-ai-admin.css' dist/control-center.html
+      - name: Synchronize Cloudflare custom-domain triggers
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
       - name: Verify every shared-runtime domain family
