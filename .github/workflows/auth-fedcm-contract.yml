@@ -3,6 +3,8 @@ name: Auth FedCM Contract
 on:
   pull_request:
     paths:
+      - 'auth-site/index.html'
+      - 'auth-site/auth-router.js'
       - 'auth-site/marketing-auth-hotfix.js'
       - '.github/workflows/auth-fedcm-contract.yml'
 
@@ -18,10 +20,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Marketing Google identity script
+      - name: Validate Marketing Google identity and cache contract
         shell: bash
         run: |
           set -euo pipefail
+          node --check auth-site/auth-router.js
           node --check auth-site/marketing-auth-hotfix.js
           grep -Fq 'use_fedcm_for_button:true' auth-site/marketing-auth-hotfix.js
           grep -Fq 'button_auto_select:false' auth-site/marketing-auth-hotfix.js
@@ -33,6 +36,9 @@ jobs:
           grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'cb=20260815-fedcm-cache-2' auth-site/index.html
+          grep -Fq "marketing-auth-hotfix.js?v=20260815-fedcm-cache-2" auth-site/auth-router.js
+          grep -Fq "return await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
       - name: Probe central identity challenge contract
         shell: bash
         env:
