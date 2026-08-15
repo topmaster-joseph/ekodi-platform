@@ -1,5 +1,12 @@
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
+const PUBLIC_HOST = 'ekodi.kr';
+const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
+const PUBLIC_ASSETS = new Set([
+  '/homepage-ambient.css',
+  '/homepage-ambient.js',
+]);
+
 const ADMIN_HOSTS = new Set([
   'admin.ekodi.kr',
   'admin.biz.ekodi.kr',
@@ -50,6 +57,7 @@ const ADMIN_ASSETS = new Set([
   '/control-center.js',
   '/control-center-features.js',
   '/admin-central-handoff.js',
+  '/admin-lazy-features.js',
   '/finance-monitor.js',
   '/compact-control-center.css',
   '/compact-control-center.js',
@@ -80,6 +88,17 @@ const ADMIN_ASSETS = new Set([
   '/books-finance-admin.css',
   '/books-finance-admin.js',
 ]);
+
+const PUBLIC_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self'",
+  "img-src 'self' data:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ');
 
 const ADMIN_CSP = [
   "default-src 'self'",
@@ -135,6 +154,13 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   return secured;
 }
 
+function redirectToPublicCanonical(url) {
+  const next = new URL(url);
+  next.protocol = 'https:';
+  next.hostname = PUBLIC_HOST;
+  return Response.redirect(next.toString(), 308);
+}
+
 function redirectToTradeCanonical(url) {
   const next = new URL(url);
   next.protocol = 'https:';
@@ -183,6 +209,19 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
+
+    if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
+
+    if (host === PUBLIC_HOST) {
+      if (url.pathname === '/' || url.pathname === '/index.html') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/'));
+        return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+      }
+      if (PUBLIC_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-asset');
+      }
+    }
 
     if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
 
