@@ -14,7 +14,7 @@
         "url": "https://admin.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI Control Center", "control-center-features.js", "compact-control-center.js"],
+        "expect": ["EKODI Control Center", "control-center-features.js", "compact-control-center.js", "https://auth.ekodi.kr/?site=admin"],
         "headerExpect": ["x-ekodi-route: admin-control-center", "cross-origin-opener-policy: same-origin-allow-popups"]
       },
       {
