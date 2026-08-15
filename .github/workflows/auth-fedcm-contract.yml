@@ -1,0 +1,46 @@
+name: Auth FedCM Contract
+
+on:
+  pull_request:
+    paths:
+      - 'auth-site/marketing-auth-hotfix.js'
+      - '.github/workflows/auth-fedcm-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Marketing Google identity script
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check auth-site/marketing-auth-hotfix.js
+          grep -Fq 'use_fedcm_for_button:true' auth-site/marketing-auth-hotfix.js
+          grep -Fq 'button_auto_select:false' auth-site/marketing-auth-hotfix.js
+          test "$(grep -Fo 'use_fedcm_for_button:true' auth-site/marketing-auth-hotfix.js | wc -l)" -ge 2
+          if grep -Fq 'use_fedcm_for_prompt' auth-site/marketing-auth-hotfix.js; then
+            echo 'Deprecated Google FedCM prompt flag must not be used in Marketing auth.'
+            exit 1
+          fi
+          grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
+          grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
+          grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
+      - name: Probe central identity challenge contract
+        shell: bash
+        env:
+          IDENTITY_URL: https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api/challenge
+          PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/challenge.json -w '%{http_code}' -X POST "$IDENTITY_URL" -H 'Origin: https://auth.ekodi.kr' -H "apikey: $PUBLISHABLE_KEY")
+          test "$code" = '201'
+          grep -Eq '"nonce":"[a-f0-9]{48}"' /tmp/challenge.json
+          grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' /tmp/challenge.json
