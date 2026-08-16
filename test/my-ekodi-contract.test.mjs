@@ -36,6 +36,16 @@ test('My workspace selection enters a linked workspace instead of only changing 
   assert.match(app,/new URL\(url\)\.origin===target\.origin/);
 });
 
+test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
+  const app=await read('my/app.js');
+  assert.match(app,/OPEN_SSO_SITES=new Set\(\['social','energy'\]\)/);
+  assert.match(app,/TARGETABLE_WORKSPACE_SITES=new Set\(\[[^\]]*'social','energy'/);
+  assert.match(app,/\(!connected\(id\)&&!open\)/);
+  assert.match(app,/current\.services\?\.includes\(id\)\|\|open/);
+  assert.match(app,/workspace\.services\?\.includes\(contextual\.id\)\|\|OPEN_SSO_SITES\.has\(contextual\.id\)/);
+  assert.match(app,/open\?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.'/);
+});
+
 test('My EKODI staging is isolated from production personal data',async()=>{
   const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
   assert.match(prod,/DATA_ENABLED = "true"/);
