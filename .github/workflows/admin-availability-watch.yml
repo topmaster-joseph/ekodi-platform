@@ -1,0 +1,163 @@
+name: Admin Availability Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/admin-availability-watch.yml'
+      - 'test/admin-availability-watch.test.mjs'
+      - 'wrangler.site.toml'
+      - 'site-worker.js'
+      - 'control-center.html'
+      - 'auth-site/**'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-admin-availability-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Inspect canonical Worker and DNS state
+        id: infra
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
+          api='https://api.cloudflare.com/client/v4'
+          domains=$(curl -fsS --retry 3 --retry-delay 2 \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "admin.ekodi.kr" and .service == "shy-thunder-39a4") | .zone_id' | head -n1)
+          attached=false
+          if [ -n "$zone_id" ] && [ "$zone_id" != null ]; then attached=true; fi
+
+          dns_ok=false
+          if [ "$attached" = true ]; then
+            records=$(curl -fsS --retry 3 --retry-delay 2 \
+              "$api/zones/$zone_id/dns_records?name=admin.ekodi.kr&per_page=100" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+            echo "$records" | jq -e '.success == true' >/dev/null
+            if echo "$records" | jq -e '.result[] | select(.name == "admin.ekodi.kr" and .proxied == true)' >/dev/null; then dns_ok=true; fi
+          fi
+
+          needs_repair=false
+          if [ "$attached" != true ] || [ "$dns_ok" != true ]; then needs_repair=true; fi
+          echo "attached=$attached" >> "$GITHUB_OUTPUT"
+          echo "dns_ok=$dns_ok" >> "$GITHUB_OUTPUT"
+          echo "needs_repair=$needs_repair" >> "$GITHUB_OUTPUT"
+          echo "Canonical infra: attached=$attached dns_ok=$dns_ok needs_repair=$needs_repair"
+
+      - name: Check independent public DNS resolvers
+        id: resolvers
+        shell: bash
+        run: |
+          set -euo pipefail
+          cf=$(curl -fsS --retry 3 -H 'accept: application/dns-json' \
+            'https://cloudflare-dns.com/dns-query?name=admin.ekodi.kr&type=A')
+          google=$(curl -fsS --retry 3 \
+            'https://dns.google/resolve?name=admin.ekodi.kr&type=A')
+          cf_ok=false
+          google_ok=false
+          if echo "$cf" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1)] | length > 0)' >/dev/null; then cf_ok=true; fi
+          if echo "$google" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1)] | length > 0)' >/dev/null; then google_ok=true; fi
+          echo "cloudflare=$cf_ok" >> "$GITHUB_OUTPUT"
+          echo "google=$google_ok" >> "$GITHUB_OUTPUT"
+          echo "Resolver health: cloudflare=$cf_ok google=$google_ok"
+
+      - name: Repair missing canonical attachment only
+        if: steps.infra.outputs.needs_repair == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Canonical Worker/DNS attachment is incomplete. Running one guarded trigger repair.'
+          npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+          sleep 15
+
+      - name: Verify canonical and emergency admin paths
+        id: endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe() {
+            label="$1"; url="$2"; route="$3"; status=000
+            for attempt in 1 2 3; do
+              status=$(curl -sS -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
+                --connect-timeout 5 --max-time 15 "$url" || true)
+              if [ "$status" = 200 ] \
+                && grep -Fq 'EKODI Control Center' /tmp/${label}.body \
+                && grep -Fiq "x-ekodi-route: $route" /tmp/${label}.headers; then
+                echo "$label=ok" >> "$GITHUB_OUTPUT"
+                echo "$url -> 200 ($route)"
+                return 0
+              fi
+              echo "$url attempt $attempt -> $status"
+              sleep 3
+            done
+            echo "$label=fail" >> "$GITHUB_OUTPUT"
+            return 1
+          }
+
+          failed=0
+          probe canonical_root 'https://admin.ekodi.kr/' 'admin-control-center' || failed=1
+          probe canonical_admin 'https://admin.ekodi.kr/admin' 'admin-control-center' || failed=1
+          probe apex_fallback 'https://ekodi.kr/admin' 'admin-fallback' || failed=1
+          exit "$failed"
+
+      - name: Recheck infrastructure after any repair
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          domains=$(curl -fsS --retry 3 --retry-delay 2 \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$domains" | jq -e '.result[] | select(.hostname == "admin.ekodi.kr" and .service == "shy-thunder-39a4" and (.cert_id | length > 0))' >/dev/null
+          echo 'Verified admin.ekodi.kr Worker attachment and certificate reference.'
+
+      - name: Open or update admin incident issue
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Admin availability incident: admin.ekodi.kr'
+          fallback_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin' || true)
+          canonical_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+          body=$(cat <<EOF
+          Automated Chief AI availability guard detected a persistent admin access failure after retries and any safe attachment repair.
+
+          - canonical: https://admin.ekodi.kr/ -> $canonical_code
+          - emergency fallback: https://ekodi.kr/admin -> $fallback_code
+          - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          Do not delete/recreate DNS records automatically. Preserve the apex fallback while the canonical hostname is investigated.
+          EOF
+          )
+          existing=$(gh issue list --state open --search 'Admin availability incident: admin.ekodi.kr in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
