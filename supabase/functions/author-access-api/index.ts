@@ -27,7 +27,7 @@ async function personKey(userId:string){
 }
 function validReturn(raw:unknown){try{const target=new URL(String(raw||AUTHOR_ORIGIN+"/"));return target.protocol==="https:"&&target.origin===AUTHOR_ORIGIN?target.href:null}catch{return null}}
 
-Deno.serve(async(req=>{
+Deno.serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response(null,{headers:cors(req)});
   const auth=await authenticated(req);
   if(!auth)return json(req,{error:"unauthorized"},401);
@@ -53,4 +53,4 @@ Deno.serve(async(req=>{
     }
     return json(req,{error:"not_found"},404);
   }catch(error){console.error("author-access-api",error);return json(req,{error:"author_access_failed"},500)}
-}));
+});
