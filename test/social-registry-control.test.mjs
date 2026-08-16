@@ -24,6 +24,23 @@ test('Social registry rejects the retired EKODI mission organization label', () 
   assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://community.ekodi.kr', channels:[] }] }), /legacy EKODI mission/);
 });
 
+test('Social workspace switcher consumes one-time handoff and revalidates person workspace', async () => {
+  const [html,app,worker]=await Promise.all([
+    readFile(new URL('../social/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../social/app.js',import.meta.url),'utf8'),
+    readFile(new URL('../social-worker.js',import.meta.url),'utf8'),
+  ]);
+  assert.match(html,/id="workspaceSwitch"/);
+  assert.match(app,/workspace-api\/workspaces\?site=social/);
+  assert.match(app,/verifyOtp\(\{token_hash:token/);
+  assert.match(app,/ekodi_workspace/);
+  assert.match(app,/workspace_key===key/);
+  assert.match(app,/my\.ekodi\.kr/);
+  assert.match(app,/return_to/);
+  assert.match(worker,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
+  assert.match(worker,/connect-src 'self' https:\/\/renzehysxirjilvdxacv\.supabase\.co/);
+});
+
 test('Control Center lazy-loads Social Channels while security-wrapped Mission Control preserves the canonical API entry', async () => {
   const [features, build, admin, entry, missionEntry, wrangler] = await Promise.all([
     readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
