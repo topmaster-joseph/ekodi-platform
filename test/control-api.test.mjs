@@ -3,13 +3,14 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import apiWorker from '../api-worker.js';
 
-const [apiSource, controlHtml, controlJs, buildScript, wranglerApi, entrySource] = await Promise.all([
+const [apiSource, controlHtml, controlJs, buildScript, wranglerApi, entrySource, missionEntrySource] = await Promise.all([
   readFile(new URL('../api-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../control-center.html', import.meta.url), 'utf8'),
   readFile(new URL('../control-center.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
-  readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8')
+  readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8')
 ]);
 
 test('shared API preserves the existing health endpoint', async () => {
@@ -59,10 +60,12 @@ test('production build includes operations styling', () => {
   assert.match(buildScript, /'control-center-ops\.css'/);
 });
 
-test('Cloudflare API entry layer preserves the ten-minute monitoring schedule', () => {
-  assert.match(wranglerApi, /main = "customer-entry-worker\.js"/);
+test('Cloudflare API Mission Control entry preserves the ten-minute monitoring schedule', () => {
+  assert.match(wranglerApi, /main = "mission-control-entry-worker\.js"/);
   assert.match(wranglerApi, /pattern = "api\.ekodi\.kr"/);
   assert.match(wranglerApi, /crons = \["\*\/10 \* \* \* \*"\]/);
+  assert.match(missionEntrySource, /return customerEntryWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(missionEntrySource, /return customerEntryWorker\.fetch\(request, env, ctx\)/);
   assert.match(entrySource, /return apiWorker\.scheduled\(controller, env, ctx\)/);
   assert.match(entrySource, /return apiWorker\.fetch\(request, env, ctx\)/);
 });

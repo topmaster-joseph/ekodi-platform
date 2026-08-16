@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AI_MISSION_POLICY, canChiefOverride, evaluateAgentAction } from '../ai-governance.js';
+import { AI_MISSION_RUNTIME } from '../ai-governance-runtime.js';
 
 test('mission governance keeps delegated stewardship and human agency above revenue', () => {
   assert.equal(AI_MISSION_POLICY.authorityModel.humanRole, 'steward_delegate');
   assert.equal(AI_MISSION_POLICY.authorityModel.chiefAiRole, 'orchestrator_not_sovereign');
   assert.equal(AI_MISSION_POLICY.policyPriority[0], 'mission_and_human_dignity');
   assert.equal(AI_MISSION_POLICY.policyPriority.at(-1), 'efficiency_and_revenue');
+  assert.equal(AI_MISSION_RUNTIME.version, AI_MISSION_POLICY.version);
   for (const principle of ['stewardship', 'agency', 'koinonia', 'diaspora', 'jubilee', 'holiness']) {
     assert.ok(AI_MISSION_POLICY.principles[principle]);
   }
@@ -28,6 +30,12 @@ test('pastoral judgment stays behind a human steward gate', () => {
   const result = evaluateAgentAction({ agentId: 'ministry', area: 'spiritual_or_pastoral_judgment_about_a_person' });
   assert.equal(result.tier, 'human_gate');
   assert.equal(canChiefOverride(result), false);
+});
+
+test('authorized read-only observation can run automatically', () => {
+  const result = evaluateAgentAction({ agentId: 'platform', area: 'health_checks' });
+  assert.equal(result.tier, 'observe');
+  assert.equal(result.policyVersion, AI_MISSION_POLICY.version);
 });
 
 test('guarded reversible work can execute only after complete preflight controls', () => {
