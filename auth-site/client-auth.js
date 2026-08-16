@@ -4,7 +4,7 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const realms={
-  my:{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
+  'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
   community:{name:'EKODI Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/'},
@@ -29,14 +29,14 @@ if(config.kind==='my'){
 }else if(config.kind==='work'){
   if(introTitle)introTitle.innerHTML='한 번 로그인하고,<br>내 일과 채용을 이어가세요.';
   if(introCopy)introCopy.textContent='EKODI 통합 로그인 상태를 재사용합니다. 로그인 후 Work Profile, 지원 현황, 사업장과 채용 기능을 안전하게 연결합니다.';
-  $('signedOutCopy').textContent='EKODI 통합 로그인으로 Work에 연결합니다. 구직자와 사업주 역할은 Work Profile과 사업장 정보에 따라 적용됩니다.';
+  $('signedOutCopy').textContent='EKODI 통합 로그인으로 Work에 연결합니다. 구직자와 사업주 역할과 권한은 로그인 후 자동으로 적용됩니다.';
 }else if(config.open){
   if(introTitle)introTitle.innerHTML='한 번 로그인하고,<br>내 활동을 이어가세요.';
-  if(introCopy)introCopy.textContent='EKODI 통합 로그인 상태를 재사용하고, 서비스별 참여 상태와 권한은 로그인 후 자동으로 적용합니다.';
+  if(introCopy)introCopy.textContent='EKODI 통합 로그인 상태를 재사용하고, 서비스별 역할과 권한은 로그인 후 자동으로 적용합니다.';
   $('signedOutCopy').textContent='EKODI에서 이미 본인확인을 했다면 Google 로그인을 반복하지 않습니다.';
 }else{
   if(introTitle)introTitle.innerHTML='한 번 로그인하면,<br>등록된 역할이 이어집니다.';
-  if(introCopy)introCopy.textContent='EKODI 통합 로그인으로 본인을 확인합니다. 실제 역할은 사전등록된 권한을 서버가 자동으로 확인합니다.';
+  if(introCopy)introCopy.textContent='EKODI 통합 로그인으로 본인을 확인합니다. 역할과 권한은 로그인 후 자동으로 적용하고 서버가 다시 확인합니다.';
   $('signedOutCopy').textContent='등록된 Google 계정과 EKODI 사용자 연결을 기준으로 서비스 권한을 적용합니다.';
 }
 
