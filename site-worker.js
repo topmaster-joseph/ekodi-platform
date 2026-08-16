@@ -151,7 +151,7 @@ function applyBaseSecurityHeaders(headers) {
   headers.set('Referrer-Policy', 'no-referrer');
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('X-Frame-Options', 'DENY');
-  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=(), payment=()');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=()');
   headers.set('X-XSS-Protection', '0');
 }
 
