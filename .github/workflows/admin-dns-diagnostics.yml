@@ -30,40 +30,44 @@ jobs:
             "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           echo "$payload" | jq -e '.success == true' >/dev/null
-          echo 'Worker domain:'
-          echo "$payload" | jq -c '.result[] | select(.hostname == "admin.ekodi.kr") | {id,cert_id,hostname,service,zone_id,zone_name,environment}'
+          echo 'Worker domains:'
+          echo "$payload" | jq -c '.result[] | select(.hostname == "ekodi.kr" or .hostname == "admin.ekodi.kr" or .hostname == "auth.ekodi.kr") | {id,cert_id,hostname,service,zone_id,zone_name,environment}'
           zone_id=$(echo "$payload" | jq -r '.result[] | select(.hostname == "admin.ekodi.kr") | .zone_id' | head -n1)
           test -n "$zone_id" && test "$zone_id" != null
           echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
 
-      - name: Inspect Cloudflare DNS record when token permits
+      - name: Compare Cloudflare DNS records
         shell: bash
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4"
-          code=$(curl -sS -o /tmp/dns-record.json -w '%{http_code}' --retry 2 --retry-delay 1 \
-            "$api/zones/$ZONE_ID/dns_records?name=admin.ekodi.kr&per_page=100" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          echo "DNS Records API -> HTTP $code"
-          if [ "$code" = 200 ]; then
-            jq -c '{success,result:[.result[] | {id,type,name,content,proxied,proxiable,ttl,modified_on}]}' /tmp/dns-record.json
-          else
-            jq -c '{success,errors}' /tmp/dns-record.json 2>/dev/null || cat /tmp/dns-record.json
-          fi
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
+            code=$(curl -sS -o /tmp/dns-record.json -w '%{http_code}' --retry 2 --retry-delay 1 \
+              "$api/zones/$ZONE_ID/dns_records?name=$host&per_page=100" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+            echo "=== $host DNS Records API -> HTTP $code ==="
+            if [ "$code" = 200 ]; then
+              jq -c '{success,result:[.result[] | {id,type,name,content,proxied,proxiable,ttl,settings,modified_on}]}' /tmp/dns-record.json
+            else
+              jq -c '{success,errors}' /tmp/dns-record.json 2>/dev/null || cat /tmp/dns-record.json
+            fi
+          done
 
       - name: Resolve through independent public resolvers
         shell: bash
         run: |
           set -euo pipefail
-          for type in A AAAA; do
-            echo "=== Cloudflare DoH $type ==="
-            curl -fsS --retry 3 -H 'accept: application/dns-json' \
-              "https://cloudflare-dns.com/dns-query?name=admin.ekodi.kr&type=$type" \
-              | jq -c '{Status,AD,Question,Answer}'
-            echo "=== Google DoH $type ==="
-            curl -fsS --retry 3 \
-              "https://dns.google/resolve?name=admin.ekodi.kr&type=$type" \
-              | jq -c '{Status,AD,Question,Answer}'
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
+            for type in A AAAA; do
+              echo "=== Cloudflare DoH $host $type ==="
+              curl -fsS --retry 3 -H 'accept: application/dns-json' \
+                "https://cloudflare-dns.com/dns-query?name=$host&type=$type" \
+                | jq -c '{Status,AD,Question,Answer}'
+              echo "=== Google DoH $host $type ==="
+              curl -fsS --retry 3 \
+                "https://dns.google/resolve?name=$host&type=$type" \
+                | jq -c '{Status,AD,Question,Answer}'
+            done
           done
           echo '=== Runner resolver ==='
           getent ahosts admin.ekodi.kr || true
