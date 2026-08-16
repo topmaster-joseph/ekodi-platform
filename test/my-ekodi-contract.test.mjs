@@ -15,6 +15,28 @@ test('My EKODI is a unified private-first hub, not a second source of truth',asy
   assert.doesNotMatch(app,/\.update\(\{visibility:/);
 });
 
+test('My EKODI AI navigator starts from intent and only returns a read-only capability blueprint',async()=>{
+  const [html,navigator,worker,orchestrator]=await Promise.all([
+    read('my/index.html'),
+    read('my/navigator.js'),
+    read('my-worker.js'),
+    read('ai-capability-orchestrator.js')
+  ]);
+  assert.match(html,/MY PATH/);
+  assert.match(html,/지금 무엇을 하고 싶으세요/);
+  assert.match(html,/\/navigator\.js/);
+  assert.match(navigator,/fetch\('\/api\/navigator'/);
+  assert.match(navigator,/method:'POST'/);
+  assert.match(navigator,/추천만 합니다 · 자동 실행 없음/);
+  assert.match(worker,/config\/ai-capabilities\.json/);
+  assert.match(worker,/config\/workspace-packs\.json/);
+  assert.match(worker,/buildWorkspaceBlueprint/);
+  assert.match(worker,/url\.pathname==='\/api\/navigator'/);
+  assert.match(worker,/mode:'read-only'/);
+  assert.match(worker,/dedicatedSiteRecommended:false/);
+  assert.match(orchestrator,/principle: 'capability_first_site_on_demand'/);
+});
+
 test('My EKODI reuses central identity and consumes one-time auth handoff',async()=>{
   const [app,auth,router]=await Promise.all([read('my/app.js'),read('auth-site/client-auth.js'),read('auth-site/auth-router.js')]);
   assert.match(app,/ekodi_token/);
