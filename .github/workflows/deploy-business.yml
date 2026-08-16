@@ -6,6 +6,11 @@ on:
     paths:
       - 'business/**'
       - 'business-worker.js'
+      - 'business-live-worker.js'
+      - 'auth-site/business-auth.js'
+      - 'auth-site/auth-router.js'
+      - 'supabase/migrations/*business_os*.sql'
+      - 'supabase/functions/business-handoff-api/**'
       - 'wrangler.business*.toml'
       - 'test/business-os-platform.test.mjs'
       - 'deploy/manifests/business.worker.json'
@@ -21,6 +26,11 @@ on:
     paths:
       - 'business/**'
       - 'business-worker.js'
+      - 'business-live-worker.js'
+      - 'auth-site/business-auth.js'
+      - 'auth-site/auth-router.js'
+      - 'supabase/migrations/*business_os*.sql'
+      - 'supabase/functions/business-handoff-api/**'
       - 'wrangler.business*.toml'
       - 'test/business-os-platform.test.mjs'
       - 'deploy/manifests/business.worker.json'
@@ -51,17 +61,26 @@ jobs:
         run: |
           set -euo pipefail
           node --check business-worker.js
+          node --check business-live-worker.js
           node --check business/app.js
+          node --check auth-site/business-auth.js
+          node --check auth-site/auth-router.js
           node --test test/business-os-platform.test.mjs
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
+          grep -Fq 'main = "business-live-worker.js"' wrangler.business-staging.toml
           grep -Fq 'INTEGRATIONS_ENABLED = "false"' wrangler.business-staging.toml
           grep -Fq 'EXECUTION_ENABLED = "false"' wrangler.business-staging.toml
+          grep -Fq 'main = "business-live-worker.js"' wrangler.business.toml
           grep -Fq 'pattern = "business.ekodi.kr"' wrangler.business.toml
-          grep -Fq 'INTEGRATIONS_ENABLED = "false"' wrangler.business.toml
+          grep -Fq 'INTEGRATIONS_ENABLED = "true"' wrangler.business.toml
           grep -Fq 'EXECUTION_ENABLED = "false"' wrangler.business.toml
+          grep -Fq 'SUPABASE_URL' wrangler.business.toml
+          grep -Fq 'SUPABASE_PUBLISHABLE_KEY' wrangler.business.toml
           test -f deploy/manifests/business.worker.json
+          test -f supabase/migrations/20260817003000_business_os_live_data.sql
+          test -f supabase/functions/business-handoff-api/index.ts
 
   deploy-staging:
     needs: validate
@@ -88,15 +107,21 @@ jobs:
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/business-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/' || true)
             health_code=$(curl -sS -o /tmp/business-staging-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/health' || true)
-            block_code=$(curl -sS -o /tmp/business-staging-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"transfer_money"}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/api/action-check' || true)
-            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
+            config_code=$(curl -sS -o /tmp/business-staging-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/config.js' || true)
+            workspaces_code=$(curl -sS -o /tmp/business-staging-workspaces.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/api/workspaces' || true)
+            snapshot_code=$(curl -sS -o /tmp/business-staging-snapshot.json -w '%{http_code}' -H 'content-type: application/json' -d '{"workspace":"jadam"}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/api/snapshot' || true)
+            block_code=$(curl -sS -o /tmp/business-staging-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"transfer_money","workspace":"jadam"}' --connect-timeout 5 --max-time 15 'https://ekodi-business-staging.topmaster-joseph.workers.dev/api/action-check' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$workspaces_code" == "200" ]] && [[ "$snapshot_code" == "401" ]] && [[ "$block_code" == "200" ]] \
               && grep -Fq 'EKODI' /tmp/business-staging.html \
               && grep -Fq 'BUSINESS OS' /tmp/business-staging.html \
               && grep -Fq '"stage":"isolated-staging"' /tmp/business-staging-health.json \
               && grep -Fq '"executionEnabled":false' /tmp/business-staging-health.json \
               && grep -Fq '"integrationsEnabled":false' /tmp/business-staging-health.json \
+              && grep -Fq '"dataEnabled":false' /tmp/business-staging-config.js \
+              && grep -Fq '"id":"ekodibiz"' /tmp/business-staging-workspaces.json \
+              && grep -Fq '"id":"jadam"' /tmp/business-staging-workspaces.json \
               && grep -Fq '"reason":"high_impact_human_only"' /tmp/business-staging-block.json; then
-              echo 'Business OS staging verified with integrations and external execution disabled.'
+              echo 'Business OS staging verified with live gateway isolated and external execution disabled.'
               exit 0
             fi
             sleep 5
@@ -139,43 +164,36 @@ jobs:
           fi
           echo 'No production Business OS Worker exists. Performing one-time read-only bootstrap from the staging-verified source.'
           npx --yes wrangler@4.119.0 deploy --config wrangler.business.toml
-          for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/business-bootstrap.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/business-bootstrap-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/health' || true)
-            block_code=$(curl -sS -o /tmp/business-bootstrap-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"transfer_money"}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/api/action-check' || true)
-            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
-              && grep -Fq 'BUSINESS OS' /tmp/business-bootstrap.html \
-              && grep -Fq '"stage":"production-readonly-mvp"' /tmp/business-bootstrap-health.json \
-              && grep -Fq '"executionEnabled":false' /tmp/business-bootstrap-health.json \
-              && grep -Fq '"integrationsEnabled":false' /tmp/business-bootstrap-health.json \
-              && grep -Fq '"reason":"high_impact_human_only"' /tmp/business-bootstrap-block.json; then
-              echo 'One-time Business OS production bootstrap verified in read-only mode.'
-              exit 0
-            fi
-            sleep 5
-          done
-          echo 'Bootstrap verification failed; guarded promotion will not run.'
-          exit 1
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/business.worker.json
-      - name: Deep verify Business OS production hostname and high-impact safety boundary
+      - name: Deep verify Business OS production hostname and safety boundaries
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/business.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/' || true)
             health_code=$(curl -sS -o /tmp/business-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/health' || true)
-            block_code=$(curl -sS -o /tmp/business-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"sign_contract"}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/api/action-check' || true)
-            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
+            config_code=$(curl -sS -o /tmp/business-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/config.js' || true)
+            workspaces_code=$(curl -sS -o /tmp/business-workspaces.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/api/workspaces' || true)
+            ekodibiz_code=$(curl -L -sS -o /tmp/business-ekodibiz.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/ekodibiz' || true)
+            jadam_code=$(curl -L -sS -o /tmp/business-jadam.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/jadam' || true)
+            snapshot_code=$(curl -sS -o /tmp/business-snapshot.json -w '%{http_code}' -H 'content-type: application/json' -d '{"workspace":"jadam"}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/api/snapshot' || true)
+            block_code=$(curl -sS -o /tmp/business-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"sign_contract","workspace":"jadam"}' --connect-timeout 5 --max-time 15 'https://business.ekodi.kr/api/action-check' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$workspaces_code" == "200" ]] && [[ "$ekodibiz_code" == "200" ]] && [[ "$jadam_code" == "200" ]] && [[ "$snapshot_code" == "401" ]] && [[ "$block_code" == "200" ]] \
               && grep -Fq 'EKODI' /tmp/business.html \
               && grep -Fq 'BUSINESS OS' /tmp/business.html \
+              && grep -Fq 'BUSINESS OS' /tmp/business-ekodibiz.html \
+              && grep -Fq 'BUSINESS OS' /tmp/business-jadam.html \
               && grep -Fq '"stage":"production-readonly-mvp"' /tmp/business-health.json \
               && grep -Fq '"executionEnabled":false' /tmp/business-health.json \
-              && grep -Fq '"integrationsEnabled":false' /tmp/business-health.json \
+              && grep -Fq '"integrationsEnabled":true' /tmp/business-health.json \
+              && grep -Fq '"dataEnabled":true' /tmp/business-config.js \
+              && grep -Fq '"id":"ekodibiz"' /tmp/business-workspaces.json \
+              && grep -Fq '"id":"jadam"' /tmp/business-workspaces.json \
               && grep -Fq '"reason":"high_impact_human_only"' /tmp/business-block.json; then
-              echo 'Business OS production verified in read-only MVP mode.'
+              echo 'Business OS production verified with read-only live integration and execution disabled.'
               exit 0
             fi
             sleep 5
