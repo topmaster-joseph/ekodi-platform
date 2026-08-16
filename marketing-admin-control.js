@@ -62,6 +62,11 @@ function safeJson(value, fallback = {}) {
   try { return JSON.parse(value || ''); } catch { return fallback; }
 }
 
+function safeMarketingTarget(value) {
+  const target = String(value || '').trim().slice(0, 240);
+  return MARKETING_TARGET_RE.test(target) ? target : '';
+}
+
 function publicAiAction(row) {
   return {
     id:Number(row.id),
@@ -69,16 +74,11 @@ function publicAiAction(row) {
     agentName:String(row.agent_name || ''),
     actionType:String(row.action_type || ''),
     area:String(row.area || ''),
-    target:String(row.target || ''),
-    rationale:String(row.rationale || '').slice(0, 600),
+    target:safeMarketingTarget(row.target),
     decisionTier:String(row.decision_tier || ''),
-    decisionReason:String(row.decision_reason || '').slice(0, 500),
     status:String(row.status || ''),
-    requestedBy:String(row.requested_by || ''),
     createdAt:row.created_at || null,
-    decidedBy:row.decided_by || null,
     decidedAt:row.decided_at || null,
-    decisionNote:String(row.decision_note || '').slice(0, 500),
     verifiedAt:row.verified_at || null,
   };
 }
@@ -140,8 +140,7 @@ async function overview(request, env) {
       LEFT JOIN service_subscriptions s
         ON s.subject_type='store' AND s.subject_key=w.store_id AND s.site='marketing'
       ORDER BY w.updated_at DESC LIMIT 300`).all(),
-    env.DB.prepare(`SELECT id,agent_id,agent_name,action_type,area,target,rationale,decision_tier,decision_reason,
-      status,requested_by,created_at,decided_by,decided_at,decision_note,verified_at
+    env.DB.prepare(`SELECT id,agent_id,agent_name,action_type,area,target,decision_tier,status,created_at,decided_at,verified_at
       FROM ai_agent_actions ORDER BY id DESC LIMIT 250`).all(),
     env.DB.prepare('SELECT registry_json,revision,updated_at FROM social_registry_config WHERE id=1').first(),
   ]);
