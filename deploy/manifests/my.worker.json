@@ -8,7 +8,7 @@
         "url": "https://my.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["My EKODI", "한 사람의 삶이 이어지는 곳", "CREATOR PORTFOLIO"],
+        "expect": ["My EKODI", "MY PLATFORMS", "CREATOR PORTFOLIO"],
         "headerExpect": ["x-ekodi-service: my-ekodi", "x-content-type-options: nosniff"]
       },
       {
