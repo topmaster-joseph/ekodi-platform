@@ -142,7 +142,8 @@ function parseJson(value, fallback = {}) {
 
 function safeJsonObject(value, max = 8000, fallback = '{}') {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
-  return JSON.stringify(value).slice(0, max);
+  const encoded = JSON.stringify(value);
+  return encoded.length <= max ? encoded : fallback;
 }
 
 function statusFor(lastSeenAt, revokedAt) {
