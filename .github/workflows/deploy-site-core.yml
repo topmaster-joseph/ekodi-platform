@@ -2,6 +2,12 @@ name: Deploy EKODI Shared Site Core
 
 on:
   workflow_dispatch:
+    inputs:
+      sync_domains:
+        description: 'Force Cloudflare custom-domain trigger synchronization'
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -42,6 +48,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -82,10 +90,58 @@ jobs:
           grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' dist/marketing-ai-admin.js
           grep -Fq 'marketing-ai-admin.js' dist/control-center.html
           grep -Fq 'marketing-ai-admin.css' dist/control-center.html
-      - name: Synchronize Cloudflare custom-domain triggers
+      - name: Inspect Cloudflare custom-domain attachments
+        id: domain_state
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload=$(curl -fsS --retry 3 --retry-delay 2 \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$payload" | jq -e '.success == true' >/dev/null
+          needs_sync=false
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
+            if echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
+              echo "Cloudflare Worker domain attached: $host"
+            else
+              echo "Cloudflare Worker domain missing: $host"
+              needs_sync=true
+            fi
+          done
+          echo "needs_sync=$needs_sync" >> "$GITHUB_OUTPUT"
+      - name: Detect domain configuration change
+        id: domain_config
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          FORCE_SYNC: ${{ inputs.sync_domains }}
+        run: |
+          set -euo pipefail
+          changed=false
+          if [ "$GITHUB_EVENT_NAME" = 'push' ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != '0000000000000000000000000000000000000000' ]; then
+            if git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" 2>/dev/null | grep -Fxq 'wrangler.site.toml'; then changed=true; fi
+          fi
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ] && [ "${FORCE_SYNC:-false}" = 'true' ]; then changed=true; fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "Cloudflare domain config changed/forced: $changed"
+      - name: Repair or synchronize Cloudflare custom-domain triggers
+        if: steps.domain_config.outputs.changed == 'true' || steps.domain_state.outputs.needs_sync == 'true'
         run: |
           set -euo pipefail
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+      - name: Verify Cloudflare custom-domain attachments without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload=$(curl -fsS --retry 3 --retry-delay 2 \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$payload" | jq -e '.success == true' >/dev/null
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
+            echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
+              || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
+            echo "Verified Cloudflare Worker domain: $host"
+          done
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
       - name: Verify every shared-runtime domain family
