@@ -2,17 +2,17 @@
   "version": 1,
   "policy": "Only public services that have passed staging and production verification may appear on ekodi.kr.",
   "services": [
-    {"id":"church","name":"에코디교회","url":"https://church.ekodi.kr","label":"church.ekodi.kr","icon":"church","order":10,"homepage":true,"productionVerified":true},
-    {"id":"biz","name":"에코디비즈","url":"https://biz.ekodi.kr","label":"biz.ekodi.kr","icon":"business","order":20,"homepage":true,"productionVerified":true},
-    {"id":"books","name":"에코디출판","url":"https://books.ekodi.kr","label":"books.ekodi.kr","icon":"books","order":30,"homepage":true,"productionVerified":true},
-    {"id":"author","name":"EKODI Creator AI","url":"https://author.ekodi.kr","label":"author.ekodi.kr","icon":"books","order":35,"homepage":true,"productionVerified":true},
-    {"id":"lab","name":"에코디연구소","url":"https://lab.ekodi.kr","label":"lab.ekodi.kr","icon":"lab","order":40,"homepage":true,"productionVerified":true},
-    {"id":"community","name":"에코디커뮤니티","url":"https://community.ekodi.kr","label":"community.ekodi.kr","icon":"community","order":50,"homepage":true,"productionVerified":true},
-    {"id":"work","name":"EKODI Work","url":"https://work.ekodi.kr","label":"work.ekodi.kr","icon":"work","order":55,"homepage":true,"productionVerified":true},
-    {"id":"social","name":"EKODI Social","url":"https://social.ekodi.kr","label":"social.ekodi.kr","icon":"community","order":60,"homepage":true,"productionVerified":true},
-    {"id":"energy","name":"EKODI Energy AI","url":"https://energy.ekodi.kr","label":"energy.ekodi.kr","icon":"energy","order":65,"homepage":true,"productionVerified":true,"status":"production-readonly-mvp"},
-    {"id":"business","name":"EKODI Business OS","url":"https://business.ekodi.kr","label":"business.ekodi.kr","icon":"business","order":67,"homepage":true,"productionVerified":true,"status":"production-readonly-mvp"},
-    {"id":"mall","name":"에코디몰","url":"https://mall.ekodi.kr","label":"mall.ekodi.kr","icon":"mall","order":70,"homepage":true,"productionVerified":true},
-    {"id":"marketing","name":"EKODI Marketing AI","url":"https://marketing.ekodi.kr","label":"marketing.ekodi.kr","icon":"marketing","order":80,"homepage":true,"productionVerified":true}
+    {"id":"church","name":"에코디교회","url":"https://church.ekodi.kr","label":"church.ekodi.kr","icon":"church","category":"community-ministry","order":10,"homepage":true,"productionVerified":true},
+    {"id":"biz","name":"에코디비즈","url":"https://biz.ekodi.kr","label":"biz.ekodi.kr","icon":"business","category":"business-growth","order":20,"homepage":true,"productionVerified":true},
+    {"id":"books","name":"에코디출판","url":"https://books.ekodi.kr","label":"books.ekodi.kr","icon":"books","category":"knowledge-creation","order":30,"homepage":true,"productionVerified":true},
+    {"id":"author","name":"EKODI Creator AI","url":"https://author.ekodi.kr","label":"author.ekodi.kr","icon":"books","category":"knowledge-creation","order":35,"homepage":true,"productionVerified":true},
+    {"id":"lab","name":"에코디연구소","url":"https://lab.ekodi.kr","label":"lab.ekodi.kr","icon":"lab","category":"knowledge-creation","order":40,"homepage":true,"productionVerified":true},
+    {"id":"community","name":"에코디커뮤니티","url":"https://community.ekodi.kr","label":"community.ekodi.kr","icon":"community","category":"community-ministry","order":50,"homepage":true,"productionVerified":true},
+    {"id":"work","name":"EKODI Work","url":"https://work.ekodi.kr","label":"work.ekodi.kr","icon":"work","category":"work-life","order":55,"homepage":true,"productionVerified":true},
+    {"id":"social","name":"EKODI Social","url":"https://social.ekodi.kr","label":"social.ekodi.kr","icon":"community","category":"community-ministry","order":60,"homepage":true,"productionVerified":true},
+    {"id":"energy","name":"EKODI Energy AI","url":"https://energy.ekodi.kr","label":"energy.ekodi.kr","icon":"energy","category":"work-life","order":65,"homepage":true,"productionVerified":true,"status":"production-readonly-mvp"},
+    {"id":"business","name":"EKODI Business OS","url":"https://business.ekodi.kr","label":"business.ekodi.kr","icon":"business","category":"business-growth","order":67,"homepage":true,"productionVerified":true,"status":"production-readonly-mvp"},
+    {"id":"mall","name":"에코디몰","url":"https://mall.ekodi.kr","label":"mall.ekodi.kr","icon":"mall","category":"business-growth","order":70,"homepage":true,"productionVerified":true},
+    {"id":"marketing","name":"EKODI Marketing AI","url":"https://marketing.ekodi.kr","label":"marketing.ekodi.kr","icon":"marketing","category":"business-growth","order":80,"homepage":true,"productionVerified":true}
   ]
 }
