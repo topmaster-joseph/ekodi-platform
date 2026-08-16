@@ -7,7 +7,8 @@ const files = {
   auth: 'auth-site/author-auth.js',
   router: 'auth-site/auth-router.js',
   foundation: 'supabase/migrations/20260816010000_author_ai_foundation.sql',
-  creator: 'supabase/migrations/20260817010000_creator_ai_my_ekodi.sql',
+  creator: 'supabase/migrations/20260816155146_creator_ai_my_ekodi.sql',
+  creatorPolicy: 'supabase/migrations/20260816155153_creator_portfolio_person_policy_hardening.sql',
   membership: 'supabase/migrations/20260816020000_author_membership_paid_ai_gate.sql',
   access: 'supabase/functions/author-access-api/index.ts',
   ai: 'supabase/functions/author-ai-api/index.ts',
@@ -48,6 +49,8 @@ must('creator', 'publish_creator_to_my_ekodi');
 must('creator', "visibility text not null default 'private'");
 must('creator', 'workspace_key text not null');
 must('creator', 'creator_human_approval_required');
+must('creatorPolicy', 'current_person_id');
+must('creatorPolicy', 'security definer');
 must('membership', "('free', 'FREE', false, 0");
 must('membership', 'billable_ai_enabled boolean not null default false');
 must('membership', "reason', 'paid_membership_required'");
