@@ -3,6 +3,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
+const PERSON_WORKSPACE=`${SUPABASE_URL}/functions/v1/workspace-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const services={
   cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',origins:['https://cgma.ekodi.kr'],requestable:true},
@@ -18,12 +19,17 @@ const services={
   community:{name:'에코디커뮤니티',tenant:null,role:'member',returnTo:'https://community.ekodi.kr',origins:['https://community.ekodi.kr'],requestable:true},
   edu:{name:'에코디교육',tenant:null,role:'member',returnTo:'https://edu.ekodi.kr',origins:['https://edu.ekodi.kr'],requestable:true},
   media:{name:'에코디미디어',tenant:null,role:'member',returnTo:'https://media.ekodi.kr',origins:['https://media.ekodi.kr'],requestable:true},
+  social:{name:'EKODI Social',tenant:null,role:'member',returnTo:'https://social.ekodi.kr',origins:['https://social.ekodi.kr'],requestable:false},
+  energy:{name:'EKODI Energy AI',tenant:null,role:'member',returnTo:'https://energy.ekodi.kr',origins:['https://energy.ekodi.kr'],requestable:false},
   admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://admin.ekodi.kr',origins:['https://admin.ekodi.kr'],requestable:false},
   portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr'],requestable:false}
 };
+const PERSON_SCOPED_SITES=new Set(['social','energy']);
 const params=new URLSearchParams(location.search);
 const site=Object.hasOwn(services,params.get('site'))?params.get('site'):'portal';
 const config=services[site];
+const requestedWorkspace=String(params.get('workspace')||'').trim();
+const SERVICE_API=PERSON_SCOPED_SITES.has(site)?PERSON_WORKSPACE:ACCESS;
 const marketing=site==='marketing';
 const reviewMode=marketing&&params.get('review')==='1';
 const explicitPro=marketing&&(params.get('plan')==='pro'||params.get('intent')==='pro');
@@ -47,11 +53,11 @@ if(marketing){
 }
 
 async function session(){const {data}=await sb.auth.getSession();return data.session}
-async function api(path,options={}){const s=await session();if(!s)throw new Error('login_required');const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${s.access_token}`,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${ACCESS}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
+async function api(path,options={}){const s=await session();if(!s)throw new Error('login_required');const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${s.access_token}`,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${SERVICE_API}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
 async function identity(path,options={}){const {authenticated=false,...fetchOptions}=options;const headers={apikey:PUBLISHABLE_KEY,...(fetchOptions.headers||{})};if(authenticated){const s=await session();if(!s)throw new Error('login_required');headers.Authorization=`Bearer ${s.access_token}`;}if(fetchOptions.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${IDENTITY}${path}`,{...fetchOptions,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={}}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data;}
 function show(id,on=true){$(id)?.classList.toggle('hide',!on)}
 function notice(id,text,type=''){const el=$(id);if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
-function cleanUrl(){const q=new URLSearchParams({site,return_to:returnTo});if(reviewMode)q.set('review','1');if(explicitPro)q.set('plan','pro');if(manageMode)q.set('manage','1');history.replaceState({},document.title,`/?${q.toString()}`)}
+function cleanUrl(){const q=new URLSearchParams({site,return_to:returnTo});if(requestedWorkspace)q.set('workspace',requestedWorkspace);if(reviewMode)q.set('review','1');if(explicitPro)q.set('plan','pro');if(manageMode)q.set('manage','1');history.replaceState({},document.title,`/?${q.toString()}`)}
 function fmtDate(value){const d=new Date(value);return Number.isNaN(d.getTime())?'확인 필요':d.toLocaleString('ko-KR')}
 function escText(value){return String(value??'')}
 function cancelToService(){location.assign(returnTo)}
@@ -137,6 +143,7 @@ async function handoffToService(workspaceKey=null){
   if(d.workspace?.workspace_key)fragment.ekodi_workspace=d.workspace.workspace_key;
   if(d.workspace?.tenant_id)fragment.ekodi_tenant=d.workspace.tenant_id;
   if(d.workspace?.store_id)fragment.ekodi_store=d.workspace.store_id;
+  window.__EKODI_WORKSPACE_ROUTING=true;
   target.hash=new URLSearchParams(fragment).toString();
   location.assign(target.href);
 }
@@ -301,8 +308,14 @@ async function renderAccess(s){
     const workspaces=await loadWorkspaces();
     if(interactiveMode){await renderInteractiveAccess(s,workspaces);return;}
     const authorized=authorizedWorkspaces(workspaces);fallbackWorkspaceKey=authorized[0]?.workspace_key||null;
+    const requested=authorized.find(item=>item.workspace_key===requestedWorkspace);
 
     if(site==='portal'){location.assign(returnTo);return;}
+    if(requested){
+      routing=true;showProcessing(`${requested.workspace_name||'선택한 Workspace'}로 연결하고 있습니다.`);
+      try{await handoffToService(requested.workspace_key);return;}
+      catch(e){console.error('requested workspace handoff',e);showAccessFallback(s,'선택한 Workspace를 다시 확인하지 못했습니다. 다른 공간을 선택하거나 다시 인증해 주세요.','error');await loadLinkedIdentities();return;}
+    }
     if(authorized.length===1&&workspaces.length===1){
       routing=true;showProcessing();
       try{await handoffToService(authorized[0].workspace_key);return;}
