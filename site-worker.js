@@ -146,12 +146,20 @@ function assetRequest(request, pathname) {
   return new Request(url, request);
 }
 
+function applyBaseSecurityHeaders(headers) {
+  headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  headers.set('Referrer-Policy', 'no-referrer');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=(), payment=()');
+  headers.set('X-XSS-Protection', '0');
+}
+
 function withHostSecurity(response, csp, cacheControl, routeName = '') {
   const secured = new Response(response.body, response);
+  applyBaseSecurityHeaders(secured.headers);
   secured.headers.set('Content-Security-Policy', csp);
   secured.headers.set('Cache-Control', cacheControl);
-  secured.headers.set('Referrer-Policy', 'no-referrer');
-  secured.headers.set('X-Content-Type-Options', 'nosniff');
   if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
@@ -161,14 +169,20 @@ function redirectToPublicCanonical(url) {
   const next = new URL(url);
   next.protocol = 'https:';
   next.hostname = PUBLIC_HOST;
-  return Response.redirect(next.toString(), 308);
+  const response = Response.redirect(next.toString(), 308);
+  const secured = new Response(response.body, response);
+  applyBaseSecurityHeaders(secured.headers);
+  return secured;
 }
 
 function redirectToTradeCanonical(url) {
   const next = new URL(url);
   next.protocol = 'https:';
   next.hostname = TRADE_CANONICAL_HOST;
-  return Response.redirect(next.toString(), 308);
+  const response = Response.redirect(next.toString(), 308);
+  const secured = new Response(response.body, response);
+  applyBaseSecurityHeaders(secured.headers);
+  return secured;
 }
 
 function safeAdminReturnPath(value) {
@@ -181,16 +195,16 @@ function adminAuthRedirect(returnPath) {
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
-  return new Response(null, {
+  const response = new Response(null, {
     status: 302,
     headers: {
       'Location': target.toString(),
       'Cache-Control': 'no-store',
-      'Referrer-Policy': 'no-referrer',
-      'X-Content-Type-Options': 'nosniff',
       'X-EKODI-Route': 'admin-auth-start',
     },
   });
+  applyBaseSecurityHeaders(response.headers);
+  return response;
 }
 
 function adminApexAuthUrl() {
@@ -248,7 +262,9 @@ export default {
     if (ADMIN_HOSTS.has(host)) {
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
-          return new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
+          const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
+          applyBaseSecurityHeaders(response.headers);
+          return response;
         }
         return adminAuthRedirect(url.searchParams.get('return_to'));
       }
