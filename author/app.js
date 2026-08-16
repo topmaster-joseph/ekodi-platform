@@ -3,10 +3,12 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const LOGIN_URL = 'https://auth.ekodi.kr/?site=author&return_to=https%3A%2F%2Fauthor.ekodi.kr%2F';
+const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { detectSessionInUrl: true, persistSession: true } });
 const $ = selector => document.querySelector(selector);
 let session = null;
 let projects = [];
+let membership = freeMembership();
 
 const STATUS_LABELS = {
   idea: 'IDEA', plan: 'PLAN', writing: 'WRITING', review: 'REVIEW',
@@ -25,6 +27,9 @@ const FIELD_SEEDS = {
   Other: ['새롭게 바라보는', '처음 만나는', '다시 연결하는', '질문에서 시작하는']
 };
 
+function freeMembership() {
+  return { plan:'free', display_name:'FREE', status:'active', is_paid:false, paid_ai_active:false, monthly_ai_units:0, used_ai_units:0, remaining_ai_units:0, features:{ ai_generation:false } };
+}
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 }
@@ -50,12 +55,62 @@ async function currentSession() {
   const { data } = await sb.auth.getSession();
   return data.session;
 }
+async function functionFetch(path, options = {}) {
+  if (!session?.access_token) throw new Error('로그인이 필요합니다.');
+  const response = await fetch(`${FUNCTIONS_URL}/${path}`, {
+    ...options,
+    headers: {
+      apikey: PUBLISHABLE_KEY,
+      Authorization: `Bearer ${session.access_token}`,
+      'content-type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data?.message || data?.error || `HTTP ${response.status}`);
+    error.code = data?.error || 'request_failed';
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+async function loadMembership() {
+  if (!session) { membership = freeMembership(); renderMembership(); return; }
+  try {
+    const data = await functionFetch('author-access-api/workspace', { method:'GET' });
+    membership = { ...freeMembership(), ...(data?.membership || {}), plan:data?.workspace?.plan || data?.membership?.plan || 'free' };
+  } catch (error) {
+    console.error('Author membership load failed', error);
+    membership = freeMembership();
+  }
+  renderMembership();
+}
+function renderMembership() {
+  const badge = $('#membershipBadge');
+  const summary = $('#membershipSummary');
+  if (!badge || !summary) return;
+  const plan = String(membership.display_name || membership.plan || 'FREE').toUpperCase();
+  if (membership.paid_ai_active) {
+    badge.textContent = `${plan} · AI ${Number(membership.remaining_ai_units || 0)} 남음`;
+    badge.classList.add('quota');
+    const until = membership.paid_until ? new Date(membership.paid_until).toLocaleDateString('ko-KR') : '';
+    summary.innerHTML = `<strong>${esc(plan)} 유료회원 · AI 사용 가능</strong><span>이번 달 ${Number(membership.used_ai_units || 0)} / ${Number(membership.monthly_ai_units || 0)} units 사용${until ? ` · 결제권한 ${esc(until)}까지` : ''}</span>`;
+  } else {
+    badge.textContent = 'FREE · AI 0';
+    badge.classList.remove('quota');
+    summary.innerHTML = '<strong>무료회원은 외부 AI 호출을 하지 않습니다.</strong><span>기획 · 직접 집필 · 수정 · 출판 준비는 계속 사용할 수 있고 유료 API 비용은 0원입니다.</span>';
+  }
+  authState();
+}
 function authState() {
   const button = $('#authButton');
   const badge = $('#accountBadge');
   if (session) {
     button.textContent = '로그아웃';
-    badge.textContent = session.user.email || '로그인됨';
+    const plan = String(membership.display_name || membership.plan || 'FREE').toUpperCase();
+    badge.textContent = `${session.user.email || '로그인됨'} · ${plan}`;
   } else {
     button.textContent = 'Google로 시작';
     badge.textContent = '로그인 전';
@@ -64,7 +119,7 @@ function authState() {
 async function loginOrOut() {
   if (!session) { location.assign(LOGIN_URL); return; }
   await sb.auth.signOut();
-  session = null; projects = []; authState(); renderProjects();
+  session = null; projects = []; membership = freeMembership(); authState(); renderMembership(); renderProjects();
 }
 function openPlanner() {
   $('#planner').hidden = false;
@@ -178,7 +233,8 @@ async function openProject(id) {
   overlay.className = 'dialog-backdrop';
   const canApprove = project.status === 'review';
   const canPublish = project.status === 'author_approved';
-  overlay.innerHTML = `<section class="dialog" role="dialog" aria-modal="true"><button class="ghost close" type="button">닫기</button><p class="eyebrow">${esc(STATUS_LABELS[project.status] || project.status)}</p><h2>${esc(project.working_title || project.title)}</h2><p class="notice">저자AI · Research AI · Editor AI는 이 프로젝트의 Book Memory와 작업상태를 기준으로 협업하도록 설계되어 있습니다. 생성형 집필 엔진 연결 전에는 직접 초고 작성과 구조 편집을 안전하게 사용할 수 있습니다.</p><div class="chapter-list">${(chapters || []).map(chapter => `<button class="chapter-row" type="button" data-chapter="${esc(chapter.id)}"><span>${String(chapter.chapter_order).padStart(2,'0')}</span><strong>${esc(chapter.title)}</strong><span>${esc(chapter.status)}</span></button>`).join('')}</div><div class="dialog-actions"><button class="secondary" type="button" data-stage="writing">집필 단계</button><button class="secondary" type="button" data-stage="review">검토 요청</button><button class="primary" type="button" data-approve ${canApprove ? '' : 'disabled'}>최종 원고 승인</button><button class="primary" type="button" data-publish ${canPublish ? '' : 'disabled'}>EKODI BOOKS로 출판 준비</button></div></section>`;
+  const aiLabel = membership.paid_ai_active ? `${String(membership.display_name || membership.plan).toUpperCase()} · AI ${Number(membership.remaining_ai_units || 0)} units` : 'FREE · AI provider calls 0';
+  overlay.innerHTML = `<section class="dialog" role="dialog" aria-modal="true"><button class="ghost close" type="button">닫기</button><p class="eyebrow">${esc(STATUS_LABELS[project.status] || project.status)}</p><h2>${esc(project.working_title || project.title)}</h2><p class="notice">저자AI · Research AI · Editor AI는 Book Memory와 작업상태를 기준으로 협업합니다. <strong>${esc(aiLabel)}</strong>. 무료회원은 외부 AI 호출이 서버에서 차단됩니다.</p><div class="chapter-list">${(chapters || []).map(chapter => `<button class="chapter-row" type="button" data-chapter="${esc(chapter.id)}"><span>${String(chapter.chapter_order).padStart(2,'0')}</span><strong>${esc(chapter.title)}</strong><span>${esc(chapter.status)}</span></button>`).join('')}</div><div class="dialog-actions"><button class="secondary" type="button" data-stage="writing">집필 단계</button><button class="secondary" type="button" data-stage="review">검토 요청</button><button class="primary" type="button" data-approve ${canApprove ? '' : 'disabled'}>최종 원고 승인</button><button class="primary" type="button" data-publish ${canPublish ? '' : 'disabled'}>EKODI BOOKS로 출판 준비</button></div></section>`;
   document.body.append(overlay);
   overlay.querySelector('.close').addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', event => { if (event.target === overlay) overlay.remove(); });
@@ -189,10 +245,55 @@ async function openProject(id) {
 }
 async function openChapter(project, chapter, parentOverlay) {
   if (!chapter) return;
-  parentOverlay.querySelector('.dialog').innerHTML = `<button class="ghost close" type="button">프로젝트로</button><p class="eyebrow">CHAPTER ${chapter.chapter_order}</p><h2>${esc(chapter.title)}</h2><p class="notice">목적 · ${esc(chapter.purpose || '')}</p><div class="chapter-editor"><textarea id="chapterDraft" maxlength="90000" placeholder="여기에 초고를 작성하거나 붙여 넣으세요.">${esc(chapter.draft_text || '')}</textarea></div><div class="dialog-actions"><button class="secondary" id="saveChapter" type="button">초고 저장</button><button class="primary" id="reviewChapter" type="button">장 검토 완료</button></div>`;
+  const paid = Boolean(membership.paid_ai_active);
+  const aiPanel = paid
+    ? `<div class="ai-panel"><div class="ai-panel-head"><strong>AI Writing Desk</strong><span>${esc(String(membership.display_name || membership.plan).toUpperCase())} · ${Number(membership.remaining_ai_units || 0)} units 남음</span></div><div class="ai-controls"><select id="aiOperation"><option value="draft">Author AI · 초고</option><option value="rewrite">Author AI · 재작성</option><option value="edit">Editor AI · 편집</option><option value="research">Research AI · 검증</option><option value="chief">Chief AI · 품질검토</option></select><input id="aiInstruction" maxlength="4000" placeholder="예: 사례를 살리고 1,500자 정도로 더 따뜻하게"><button class="primary" id="runAi" type="button">AI 실행</button></div><div class="ai-status" id="aiStatus">AI 결과는 자동 저장되지 않습니다. 저자가 적용을 선택합니다.</div><div class="ai-result" id="aiResult" hidden><textarea id="aiOutput" aria-label="AI 생성 결과"></textarea><div class="ai-result-actions"><button class="secondary" id="appendAi" type="button">원고 뒤에 추가</button><button class="primary" id="replaceAi" type="button">원고로 적용</button></div></div></div>`
+    : `<div class="ai-panel locked"><div class="ai-panel-head"><strong>AI Writing Desk · 유료회원 전용</strong><span>FREE · provider calls 0</span></div><p class="notice warn">무료회원에게는 외부 AI 요청을 보내지 않습니다. 따라서 AI API 비용도 발생하지 않습니다. 직접 집필과 수정 기능은 그대로 사용할 수 있습니다.</p><button class="secondary" id="viewMembership" type="button">회원제 보기</button></div>`;
+  parentOverlay.querySelector('.dialog').innerHTML = `<button class="ghost close" type="button">프로젝트로</button><p class="eyebrow">CHAPTER ${chapter.chapter_order}</p><h2>${esc(chapter.title)}</h2><p class="notice">목적 · ${esc(chapter.purpose || '')}</p><div class="chapter-editor"><textarea id="chapterDraft" maxlength="90000" placeholder="여기에 초고를 작성하거나 붙여 넣으세요.">${esc(chapter.draft_text || '')}</textarea></div>${aiPanel}<div class="dialog-actions"><button class="secondary" id="saveChapter" type="button">초고 저장</button><button class="primary" id="reviewChapter" type="button">장 검토 완료</button></div>`;
   parentOverlay.querySelector('.close').addEventListener('click', () => { parentOverlay.remove(); openProject(project.id); });
   parentOverlay.querySelector('#saveChapter').addEventListener('click', () => saveChapter(chapter, parentOverlay.querySelector('#chapterDraft').value, 'drafting'));
   parentOverlay.querySelector('#reviewChapter').addEventListener('click', () => saveChapter(chapter, parentOverlay.querySelector('#chapterDraft').value, 'reviewed'));
+  if (paid) {
+    parentOverlay.querySelector('#runAi').addEventListener('click', () => runAi(project, chapter, parentOverlay));
+    parentOverlay.querySelector('#replaceAi').addEventListener('click', () => { parentOverlay.querySelector('#chapterDraft').value = parentOverlay.querySelector('#aiOutput').value; });
+    parentOverlay.querySelector('#appendAi').addEventListener('click', () => {
+      const draft = parentOverlay.querySelector('#chapterDraft');
+      const output = parentOverlay.querySelector('#aiOutput').value;
+      draft.value = `${draft.value.trim()}${draft.value.trim() ? '\n\n' : ''}${output}`;
+    });
+  } else {
+    parentOverlay.querySelector('#viewMembership').addEventListener('click', () => { parentOverlay.remove(); $('#membership').scrollIntoView({ behavior:'smooth', block:'start' }); });
+  }
+}
+async function runAi(project, chapter, overlay) {
+  const button = overlay.querySelector('#runAi');
+  const status = overlay.querySelector('#aiStatus');
+  const result = overlay.querySelector('#aiResult');
+  const output = overlay.querySelector('#aiOutput');
+  const operation = overlay.querySelector('#aiOperation').value;
+  const instruction = overlay.querySelector('#aiInstruction').value;
+  button.disabled = true;
+  status.classList.remove('error');
+  status.textContent = '유료회원 권한과 사용량을 확인한 뒤 AI를 실행하고 있습니다…';
+  try {
+    const data = await functionFetch('author-ai-api', { method:'POST', body:JSON.stringify({ project_id:project.id, chapter_id:chapter.id, operation, instruction }) });
+    output.value = data.text || '';
+    result.hidden = false;
+    const remaining = Number(data?.entitlement?.remaining_ai_units ?? membership.remaining_ai_units ?? 0);
+    const used = Number(data?.entitlement?.used_ai_units ?? membership.used_ai_units ?? 0);
+    membership.remaining_ai_units = remaining;
+    membership.used_ai_units = used;
+    renderMembership();
+    status.textContent = `완료 · ${Number(data?.usage?.ai_units || 0)} AI unit 사용 · ${remaining} units 남음. 결과 적용 여부는 저자가 결정합니다.`;
+  } catch (error) {
+    status.classList.add('error');
+    if (error.code === 'paid_membership_required') status.textContent = '결제가 확인된 유료회원에게만 AI 집필을 제공합니다. 무료회원 요청은 provider에 전송되지 않았습니다.';
+    else if (error.code === 'monthly_ai_quota_exceeded') status.textContent = '이번 달 AI 사용 한도에 도달했습니다. 추가 provider 호출은 차단되었습니다.';
+    else if (error.code === 'ai_provider_not_configured') status.textContent = '전용 AI 비밀키 연결이 아직 완료되지 않았습니다. 비용은 발생하지 않았습니다.';
+    else status.textContent = `AI 실행 실패: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 async function saveChapter(chapter, text, status) {
   const { error } = await sb.from('author_chapters').update({ draft_text: text, status, version: Number(chapter.version || 0) + 1, updated_at: new Date().toISOString() }).eq('id', chapter.id);
@@ -230,5 +331,6 @@ try {
 }
 session = await currentSession();
 authState();
+await loadMembership();
 await loadProjects();
-sb.auth.onAuthStateChange(async (_event, next) => { session = next; authState(); await loadProjects(); });
+sb.auth.onAuthStateChange(async (_event, next) => { session = next; authState(); await loadMembership(); await loadProjects(); });
