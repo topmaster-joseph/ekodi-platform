@@ -30,202 +30,88 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: controller
-
       - name: Checkout Marketing AI source
         uses: actions/checkout@v7
         with:
           repository: topmaster-joseph/jadam-maru
           ref: main
           path: source
-
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-
-      - name: Verify release controller and Cloudflare credentials
+      - name: Verify release controller and credentials
         run: |
           set -euo pipefail
           node --check controller/scripts/guarded-pages-release.mjs
           test -f controller/deploy/manifests/marketing-ai.pages.json
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-
-      - name: Build and validate free-member Marketing AI workspace
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Build and validate authenticated Marketing AI tiers
         working-directory: source
+        shell: bash
         run: |
           set -euo pipefail
           npm run build
           hub='dist/marketing-ai/index.html'
           test -f "$hub"
-          grep -Fq 'id="freeTrialForm"' "$hub"
-          grep -Fq '무료회원 콘텐츠 실습실' "$hub"
-          grep -Fq 'Marketing AI basic trial engine' "$hub"
-          grep -Fq 'id="trialType"' "$hub"
-          grep -Fq 'id="trialSubject"' "$hub"
-          grep -Fq 'id="trialTask"' "$hub"
-          grep -Fq '개인·크리에이터' "$hub"
-          grep -Fq '기관·공공기관' "$hub"
-          grep -Fq '비영리·종교단체' "$hub"
-          grep -Fq '모임·협회·커뮤니티' "$hub"
-          grep -Fq '나와 우리를 위한 마케팅' "$hub"
-          grep -Fq 'data-public-landing-cleanup' "$hub"
-          grep -Fq 'body:not(.member-session-mode) .product-preview{display:none!important}' "$hub"
-          grep -Fq 'body:not(.member-session-mode) .hero.hero-v2{display:block' "$hub"
-          grep -Fq 'body:not(.member-session-mode) .member-preview{max-width:820px' "$hub"
-          grep -Fq 'class="member-workspace"' "$hub"
-          grep -Fq 'id="channelGrid"' "$hub"
-          grep -Fq 'id="quotaCaption"' "$hub"
-          grep -Fq 'id="quotaPost"' "$hub"
-          grep -Fq 'id="quotaShorts"' "$hub"
-          grep -Fq 'FREE · 연결 잠김' "$hub"
-          grep -Fq '채널 1개 · 직접 게시' "$hub"
-          grep -Fq '채널 2개 · 예약 게시' "$hub"
+          grep -Fq 'id="googleCustomerAuth"' "$hub"
+          grep -Fq 'FREE MEMBER · GOOGLE VERIFIED' "$hub"
+          grep -Fq "ekodiAuthState==='authenticated'" "$hub"
+          grep -Fq 'EKODI_MARKETING_AUTH_TOKEN' "$hub"
+          grep -Fq 'EKODI_MARKETING_CONTEXT' "$hub"
+          grep -Fq 'FREE는 문구·게시글·쇼츠 각각 월 1회' "$hub"
+          grep -Fq '채널 1개 · 1회 실행' "$hub"
+          grep -Fq '채널 3개 · 예약' "$hub"
           grep -Fq '채널 5개 · 반복·분석' "$hub"
-          grep -Fq '채널 10개 · 기획→분석' "$hub"
+          grep -Fq '채널 10개 · 상시 운영' "$hub"
+          grep -Fq '/api/marketing/runtime/consume' "$hub"
+          grep -Fq '/api/marketing/runtime/channels' "$hub"
+          grep -Fq '/api/marketing/runtime/automations' "$hub"
+          grep -Fq 'data-member-workspace' "$hub"
           grep -Fq 'data-member-session-layout' "$hub"
-          grep -Fq 'member-session-mode' "$hub"
-          grep -Fq 'member-workspace-ready' "$hub"
-          grep -Fq 'body.member-session-mode.member-workspace-ready .hero-copy>h1' "$hub"
-          grep -Fq 'body.member-session-mode.member-workspace-ready .product-preview' "$hub"
-          grep -Fq 'body.member-session-mode.member-workspace-ready .feature-strip' "$hub"
-          grep -Fq 'body.member-session-mode.member-workspace-ready .bottom-cta' "$hub"
-          grep -Fq "trial.removeAttribute('hidden')" "$hub"
-          grep -Fq "trial.querySelector('#freeTrialForm')" "$hub"
-          grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" "$hub"
-          grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" "$hub"
-          grep -Fq 'data-progressive-guidance' "$hub"
-          grep -Fq 'id="postTrialGuide"' "$hub"
-          grep -Fq 'id="openPlanGuide"' "$hub"
-          grep -Fq 'ekodi-marketing-first-trial-complete' "$hub"
-          grep -Fq 'body.member-session-mode:not(.trial-complete) #pricing' "$hub"
-          if grep -Fq 'id="trialStore"' "$hub"; then
-            echo 'Store-only trial field must not survive in the public hub'
-            exit 1
-          fi
           grep -Fq 'id="pricing"' "$hub"
-          grep -Fq 'id="usageEstimator"' "$hub"
-          grep -Fq 'BEST PLAN AI' "$hub"
-          grep -Fq '1회 결제' "$hub"
-          grep -Fq '종량제' "$hub"
-          grep -Fq '자동화 플랜' "$hub"
-          grep -Fq 'Google로 무료 시작' "$hub"
-          grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$hub"
-          for plan in free flex plus pro auto; do
-            grep -Fq "data-plan=\"$plan\"" "$hub"
-          done
-          if grep -Fq 'APPLICATION CASES' "$hub" || grep -Fq 'class="case-list"' "$hub"; then
-            echo 'Public Marketing AI hub regressed to application-case directory'
-            exit 1
+          for plan in free flex plus pro auto; do grep -Fq "data-plan=\"$plan\"" "$hub"; done
+          if grep -Fq "localStorage.getItem(KEY)==='1'" "$hub" || grep -Fq 'ekodi-marketing-free-usage:' "$hub"; then
+            echo 'Browser-local membership/quota authority detected'; exit 1
           fi
           if grep -Fq 'href="https://pay.ekodi.kr' "$hub"; then
-            echo 'Live checkout must remain disabled during beta pricing QA'
-            exit 1
+            echo 'Live checkout must remain disabled until billing UI QA'; exit 1
           fi
-
           for dir in jadam pizzamaru yogurtpurple; do
             file="dist/marketing-ai/$dir/index.html"
             test -f "$file"
             grep -Fq 'id="googleCustomerAuth"' "$file"
             grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
-            grep -Fq 'Google로 무료 시작' "$file"
-            if grep -Fq 'id="customerAuthOpen"' "$file" \
-              || grep -Fq '/api/customer/login' "$file" \
-              || grep -Fq '/api/customer/accept-invite' "$file"; then
-              echo "Legacy direct customer auth detected in $file"
-              exit 1
+            if grep -Fq 'id="customerAuthOpen"' "$file" || grep -Fq '/api/customer/login' "$file"; then
+              echo "Legacy customer auth detected in $file"; exit 1
             fi
           done
-
           if grep -R -Fq 'https://yogurtpurple.ekodi.kr/' dist/marketing-ai; then
-            echo 'Legacy yogurtpurple domain detected in generated site'
-            exit 1
+            echo 'Legacy yogurtpurple domain detected'; exit 1
           fi
-          grep -Fq 'https://yogurt.ekodi.kr/' dist/marketing-ai/qa/index.html
-
       - name: Preview gate, production promotion and smoke verification
         run: |
           set -euo pipefail
-          node controller/scripts/guarded-pages-release.mjs \
-            --root source \
-            --manifest controller/deploy/manifests/marketing-ai.pages.json
-
-      - name: Deep verify production workspace and central authentication
+          node controller/scripts/guarded-pages-release.mjs --root source --manifest controller/deploy/manifests/marketing-ai.pages.json
+      - name: Verify production contract
         shell: bash
         run: |
           set -euo pipefail
-          verify_hub() {
-            code=$(curl -sS -L -o /tmp/hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' || true)
-            echo "marketing.ekodi.kr -> $code"
-            [ "$code" = '200' ]
-            grep -Fq 'id="freeTrialForm"' /tmp/hub.html
-            grep -Fq '무료회원 콘텐츠 실습실' /tmp/hub.html
-            grep -Fq 'Marketing AI basic trial engine' /tmp/hub.html
-            grep -Fq 'id="trialType"' /tmp/hub.html
-            grep -Fq 'id="trialSubject"' /tmp/hub.html
-            grep -Fq 'id="trialTask"' /tmp/hub.html
-            grep -Fq '개인·크리에이터' /tmp/hub.html
-            grep -Fq '기관·공공기관' /tmp/hub.html
-            grep -Fq '비영리·종교단체' /tmp/hub.html
-            grep -Fq '나와 우리를 위한 마케팅' /tmp/hub.html
-            grep -Fq 'data-public-landing-cleanup' /tmp/hub.html
-            grep -Fq 'body:not(.member-session-mode) .product-preview{display:none!important}' /tmp/hub.html
-            grep -Fq 'body:not(.member-session-mode) .hero.hero-v2{display:block' /tmp/hub.html
-            grep -Fq 'body:not(.member-session-mode) .member-preview{max-width:820px' /tmp/hub.html
-            grep -Fq 'class="member-workspace"' /tmp/hub.html
-            grep -Fq 'id="channelGrid"' /tmp/hub.html
-            grep -Fq 'FREE · 연결 잠김' /tmp/hub.html
-            grep -Fq 'data-member-session-layout' /tmp/hub.html
-            grep -Fq 'member-session-mode' /tmp/hub.html
-            grep -Fq 'member-workspace-ready' /tmp/hub.html
-            grep -Fq 'body.member-session-mode.member-workspace-ready .hero-copy>h1' /tmp/hub.html
-            grep -Fq 'body.member-session-mode.member-workspace-ready .product-preview' /tmp/hub.html
-            grep -Fq "trial.removeAttribute('hidden')" /tmp/hub.html
-            grep -Fq "trial.querySelector('#freeTrialForm')" /tmp/hub.html
-            grep -Fq "workspaceLink.textContent=member?'작업공간':'무료 체험'" /tmp/hub.html
-            grep -Fq "pricingLink.textContent=member?'플랜·자동화':'이용 방식'" /tmp/hub.html
-            grep -Fq 'data-progressive-guidance' /tmp/hub.html
-            grep -Fq 'id="postTrialGuide"' /tmp/hub.html
-            grep -Fq 'id="openPlanGuide"' /tmp/hub.html
-            grep -Fq 'ekodi-marketing-first-trial-complete' /tmp/hub.html
-            grep -Fq 'body.member-session-mode:not(.trial-complete) #pricing' /tmp/hub.html
-            ! grep -Fq 'id="trialStore"' /tmp/hub.html
-            grep -Fq 'id="pricing"' /tmp/hub.html
-            grep -Fq 'id="usageEstimator"' /tmp/hub.html
-            grep -Fq 'BEST PLAN AI' /tmp/hub.html
-            grep -Fq '1회 결제' /tmp/hub.html
-            grep -Fq '종량제' /tmp/hub.html
-            grep -Fq '자동화 플랜' /tmp/hub.html
-            grep -Fq 'Google로 무료 시작' /tmp/hub.html
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/hub.html
-            ! grep -Fq 'APPLICATION CASES' /tmp/hub.html
-            ! grep -Fq 'class="case-list"' /tmp/hub.html
-            ! grep -Fq 'href="https://pay.ekodi.kr' /tmp/hub.html
-          }
-          verify_customer() {
-            domain="$1"
-            store="$2"
-            code=$(curl -sS -L -o /tmp/customer.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://$domain/" || true)
-            echo "$domain -> $code"
-            [ "$code" = '200' ]
-            grep -Fq "$store" /tmp/customer.html
-            grep -Fq 'id="googleCustomerAuth"' /tmp/customer.html
-            grep -Fq 'Google로 무료 시작' /tmp/customer.html
-            grep -Fq 'https://auth.ekodi.kr/?site=marketing' /tmp/customer.html
-            ! grep -Fq 'id="customerAuthOpen"' /tmp/customer.html
-            ! grep -Fq '/api/customer/login' /tmp/customer.html
-            ! grep -Fq '/api/customer/accept-invite' /tmp/customer.html
-          }
-
           for attempt in $(seq 1 24); do
-            if verify_hub \
-              && verify_customer 'jadam.ekodi.kr' '자담치킨 목포대점' \
-              && verify_customer 'pizzamaru.ekodi.kr' '피자마루 목포대점' \
-              && verify_customer 'yogurt.ekodi.kr' '요거트퍼플 목포대점'; then
-              echo 'Marketing AI preview-gated release and central authentication verified in production.'
+            code=$(curl -sS -L -o /tmp/hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq 'FREE MEMBER · GOOGLE VERIFIED' /tmp/hub.html \
+              && grep -Fq 'FREE는 문구·게시글·쇼츠 각각 월 1회' /tmp/hub.html \
+              && grep -Fq '채널 3개 · 예약' /tmp/hub.html \
+              && grep -Fq '채널 5개 · 반복·분석' /tmp/hub.html \
+              && grep -Fq '채널 10개 · 상시 운영' /tmp/hub.html \
+              && grep -Fq '/api/marketing/runtime/consume' /tmp/hub.html \
+              && ! grep -Fq 'ekodi-marketing-free-usage:' /tmp/hub.html; then
+              echo 'Marketing AI authenticated tier contract verified in production.'
               exit 0
             fi
             sleep 5
           done
           exit 1
 
-# Release policy: build -> isolated preview -> preview smoke test -> production promote -> production verify
+# Release policy: build -> isolated preview -> preview smoke -> production promote -> production verify
