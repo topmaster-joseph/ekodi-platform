@@ -12,7 +12,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -71,6 +71,28 @@ jobs:
           done
           echo '=== Runner resolver ==='
           getent ahosts admin.ekodi.kr || true
+
+      - name: Probe Korean ISP recursive resolvers
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils >/dev/null
+          for spec in \
+            'KT-primary:168.126.63.1' \
+            'KT-secondary:168.126.63.2' \
+            'SKT-primary:219.250.36.130' \
+            'SKT-secondary:210.220.163.82' \
+            'LGU+-primary:164.124.101.2' \
+            'LGU+-secondary:203.248.252.2'; do
+            label="${spec%%:*}"
+            resolver="${spec#*:}"
+            echo "=== $label $resolver ==="
+            a=$(dig +time=3 +tries=1 +short @"$resolver" admin.ekodi.kr A | tr '\n' ' ' || true)
+            aaaa=$(dig +time=3 +tries=1 +short @"$resolver" admin.ekodi.kr AAAA | tr '\n' ' ' || true)
+            echo "A: ${a:-NO_ANSWER}"
+            echo "AAAA: ${aaaa:-NO_ANSWER}"
+          done
 
       - name: Verify TLS and all admin entry paths
         shell: bash
