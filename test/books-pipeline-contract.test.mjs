@@ -44,7 +44,7 @@ test('Books build bundles pipeline into secured lazy Books assets', async () => 
   }
 });
 
-test('Canonical Control API entry preserves Books pipeline routing behind Mission Control', async () => {
+test('Canonical Control API entry preserves Books pipeline routing behind security-wrapped Mission Control', async () => {
   const entry = await read('customer-entry-worker.js');
   const missionEntry = await read('mission-control-entry-worker.js');
   const wrangler = await read('wrangler.api.toml');
@@ -55,6 +55,8 @@ test('Canonical Control API entry preserves Books pipeline routing behind Missio
   assert.ok(genericBooks > pipelineRoute, 'pipeline route must run before generic Books controller');
   assert.ok(wrangler.includes('main = "mission-control-entry-worker.js"'));
   assert.ok(missionEntry.includes("import customerEntryWorker from './customer-entry-worker.js'"));
-  assert.ok(missionEntry.includes('return customerEntryWorker.fetch(request, env, ctx)'));
+  assert.ok(missionEntry.includes('const response = await customerEntryWorker.fetch(request, env, ctx)'));
+  assert.ok(missionEntry.includes('return applyApiSecurityHeaders(response)'));
+  assert.ok(missionEntry.includes('const guard = await enforceEdgeSecurity(request, env)'));
   assert.ok(wrangler.includes('crons = ["*/10 * * * *"]'));
 });
