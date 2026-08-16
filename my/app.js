@@ -6,26 +6,30 @@ const MODES={writer:'Writer',video:'Video',podcast:'Podcast',lecture:'Educator',
 const SERVICES=[
  ['church','에코디교회','https://church.ekodi.kr'],['biz','에코디비즈','https://biz.ekodi.kr'],['books','에코디출판','https://books.ekodi.kr'],['author','EKODI Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://lab.ekodi.kr'],['community','에코디커뮤니티','https://community.ekodi.kr'],['work','EKODI Work','https://work.ekodi.kr'],['social','EKODI Social','https://social.ekodi.kr'],['energy','EKODI Energy AI','https://energy.ekodi.kr'],['business','EKODI Business OS','https://business.ekodi.kr'],['mall','에코디몰','https://mall.ekodi.kr'],['marketing','EKODI Marketing AI','https://marketing.ekodi.kr']
 ];
+const SSO_SITES=new Set(['church','biz','books','author','lab','community','work','business','mall','marketing']);
+const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing']);
 const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
-let session=null, items=[], access=new Map(), workspaces=new Map(), filter='all';
+let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const mode=v=>MODES[v]?v:'writer';
 const plan=v=>({free:'Free',basic:'Basic',pro:'Pro',enterprise:'Business',standard:'Standard'})[String(v||'free').toLowerCase()]||String(v||'Free');
-const paid=v=>['basic','pro','enterprise'].includes(String(v||'').toLowerCase());
+const paid=v=>['standard','basic','pro','enterprise'].includes(String(v||'').toLowerCase());
+const storedWorkspace=()=>{try{return localStorage.getItem('ekodi_my_active_workspace')||''}catch{return''}};
+const rememberWorkspace=value=>{try{if(value)localStorage.setItem('ekodi_my_active_workspace',value);else localStorage.removeItem('ekodi_my_active_workspace')}catch{}};
 
 async function handoff(){
  if(!sb||!location.hash.startsWith('#'))return;
- const p=new URLSearchParams(location.hash.slice(1)), token=p.get('ekodi_token');
+ const p=new URLSearchParams(location.hash.slice(1)),token=p.get('ekodi_token');
  if(!token)return;
  const {error}=await sb.auth.verifyOtp({token_hash:token,type:p.get('ekodi_type')||'email'});
  history.replaceState({},document.title,`${location.pathname}${location.search}`);
  if(error)throw error;
 }
 function authUi(){
- const label=session?'로그아웃':'Google로 시작';
+ const label=session?'My에서 나가기':'Google로 시작';
  for(const b of [$('#authButton'),$('#accountAuthButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
 }
 function uniqueWorkspaces(){
@@ -39,19 +43,39 @@ function uniqueWorkspaces(){
  }
  return [...map.values()];
 }
+function ensureActiveWorkspace(){
+ const rows=uniqueWorkspaces();
+ if(!rows.length){activeWorkspaceKey='';rememberWorkspace('');return null}
+ const preferred=activeWorkspaceKey||storedWorkspace();
+ const selected=rows.find(w=>w.workspace_key===preferred)||rows.find(w=>w.workspace_kind==='personal')||rows[0];
+ activeWorkspaceKey=selected.workspace_key;rememberWorkspace(activeWorkspaceKey);return selected;
+}
+function activeWorkspace(){return uniqueWorkspaces().find(w=>w.workspace_key===activeWorkspaceKey)||ensureActiveWorkspace()}
 function connected(id){
- const a=access.get(id)||{}, rows=workspaces.get(id)||[];
+ const a=access.get(id)||{},rows=workspaces.get(id)||[];
  return ['active','pre_registered'].includes(a.status)||rows.some(r=>r.source==='synthetic'||r.status==='active');
 }
+function serviceRoute(id,url){
+ if(!session||!SSO_SITES.has(id)||!connected(id))return url;
+ const target=new URL('https://auth.ekodi.kr/');
+ target.searchParams.set('site',id);target.searchParams.set('return_to',url);
+ const current=activeWorkspace();
+ if(current&&TARGETABLE_WORKSPACE_SITES.has(id)&&current.services?.includes(id))target.searchParams.set('workspace',current.workspace_key);
+ return target.href;
+}
+function setActiveWorkspace(key){
+ if(!uniqueWorkspaces().some(w=>w.workspace_key===key))return;
+ activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();recommendationUi();
+}
 function identityUi(){
- const email=session?.user?.email||'', meta=session?.user?.user_metadata||{};
+ const email=session?.user?.email||'',meta=session?.user?.user_metadata||{},current=activeWorkspace();
  $('#identityName').textContent=session?(meta.full_name||meta.name||email.split('@')[0]||'EKODI Member'):'로그인 전';
- $('#identityEmail').textContent=email||'Google 인증 후 연결됩니다.';
- const personal=uniqueWorkspaces().find(w=>String(w.workspace_key||'').startsWith('personal:'))?.workspace_key||items.find(i=>i.workspace_key)?.workspace_key;
- $('#workspaceKey').textContent=personal||(session?'personal: connected':'personal:…');
+ $('#identityEmail').textContent=session?'EKODI 통합 로그인 연결됨':'Google 인증 후 연결됩니다.';
+ $('#workspaceKey').textContent=current?.workspace_key||(session?'workspace: connected':'workspace:…');
+ $('#workspaceSummary').textContent=current?`${current.workspace_name||'내 Workspace'} · ${plan(current.plan)} · ${current.role||'member'}`:'로그인하면 마지막으로 사용한 공간을 기억하고 다른 공간으로 즉시 전환할 수 있습니다.';
  const paidCount=[...access.values()].filter(a=>paid(a.plan)).length;
  $('#accountPlan').textContent=session?(paidCount?`${paidCount} Paid Plan${paidCount>1?'s':''}`:'Free Member'):'Guest';
- $('#accountLoginText').textContent=email?`${email} 계정으로 EKODI 통합인증에 연결되어 있습니다.`:'로그인 전입니다.';
+ $('#accountLoginText').textContent=email?`${email}로 EKODI 통합 로그인에 연결되어 있습니다. 다른 서비스에서는 이 로그인 상태를 재사용합니다.`:'로그인 전입니다.';
 }
 function summaryUi(){
  $('#serviceCount').textContent=String(SERVICES.filter(([id])=>connected(id)).length);
@@ -59,34 +83,49 @@ function summaryUi(){
  $('#workspaceCount').textContent=String(uniqueWorkspaces().length);
  $('#creatorCount').textContent=String(items.length);
 }
+function workspaceUi(){
+ const host=$('#workspaceList'),control=$('#workspaceControl'),switcher=$('#workspaceSwitcher');
+ if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 실제 Workspace를 읽지 않습니다.</strong></div>';control?.classList.add('hide');return}
+ if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 Workspace를 확인할 수 있습니다.</strong></div>';control?.classList.add('hide');return}
+ const rows=uniqueWorkspaces();ensureActiveWorkspace();
+ if(!rows.length){host.innerHTML='<div class="empty"><strong>아직 연결된 Workspace가 없습니다.</strong><p>개인 서비스를 시작하거나 기관 초대를 받으면 여기에 나타납니다.</p></div>';control?.classList.add('hide');return}
+ control?.classList.remove('hide');
+ switcher.innerHTML=rows.map(w=>`<option value="${esc(w.workspace_key)}"${w.workspace_key===activeWorkspaceKey?' selected':''}>${esc(w.workspace_name||'내 Workspace')}</option>`).join('');
+ host.innerHTML=rows.map(w=>`<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}</span></span></button>`).join('');
+ host.querySelectorAll('[data-workspace-key]').forEach(button=>button.addEventListener('click',()=>setActiveWorkspace(button.dataset.workspaceKey||'')));
+}
 function platformUi(){
  const host=$('#platformList');
  if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 개인 접근권한을 읽지 않습니다.</strong><p>UI와 인증 계약만 검증합니다.</p></div>';return}
  if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 내 플랫폼 상태를 볼 수 있습니다.</strong><p>한 번 로그인하면 각 서비스의 접근권한과 플랜을 확인합니다.</p></div>';return}
+ const current=activeWorkspace();
  host.innerHTML=SERVICES.map(([id,name,url])=>{
-  const a=access.get(id)||{}, rows=workspaces.get(id)||[], on=connected(id), best=rows.find(w=>paid(w.plan))||rows[0], p=best?.plan||a.plan||'free';
-  return `<article class="platform-card"><div class="platform-head"><h3>${esc(name)}</h3><span class="plan plan-${esc(String(p).toLowerCase())}">${esc(on?plan(p):'Available')}</span></div><p>${on?'통합인증으로 연결된 서비스입니다.':'필요할 때 자유롭게 시작할 수 있습니다.'}</p><div class="meta"><span>${on?'연결됨':'미연결'}</span><span>${rows.length} Workspace</span></div><a class="card-link" href="${esc(url)}">${on?'열기':'둘러보기'} →</a></article>`;
+  const a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free',route=serviceRoute(id,url);
+  const inCurrent=Boolean(current?.services?.includes(id));
+  return `<article class="platform-card"><div class="platform-head"><h3>${esc(name)}</h3><span class="plan plan-${esc(String(p).toLowerCase())}">${esc(on?plan(p):'Available')}</span></div><p>${on?(inCurrent?'현재 Workspace와 연결된 서비스입니다.':'통합 로그인으로 연결된 서비스입니다.'):'필요할 때 자유롭게 시작할 수 있습니다.'}</p><div class="meta"><span>${on?'연결됨':'미연결'}</span><span>${rows.length} Workspace</span>${inCurrent?'<span>현재 공간</span>':''}</div><a class="card-link" href="${esc(route)}">${on?'열기':'둘러보기'} →</a></article>`;
  }).join('');
 }
-function workspaceUi(){
- const host=$('#workspaceList');
- if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 실제 Workspace를 읽지 않습니다.</strong></div>';return}
- if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 Workspace를 확인할 수 있습니다.</strong></div>';return}
- const rows=uniqueWorkspaces();
- if(!rows.length){host.innerHTML='<div class="empty"><strong>아직 연결된 Workspace가 없습니다.</strong><p>개인 서비스를 시작하거나 기관 초대를 받으면 여기에 나타납니다.</p></div>';return}
- host.innerHTML=rows.map(w=>`<article class="workspace-card"><div class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</div><div><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc(w.services.join(' · '))}</p><div class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span></div></div></article>`).join('');
+function recommendationUi(){
+ const host=$('#recommendationList');
+ if(!enabled||!session){host.innerHTML='<div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong></div>';return}
+ const recs=[],current=activeWorkspace();
+ const add=(title,body,id,url,label='살펴보기')=>recs.push({title,body,href:serviceRoute(id,url),label});
+ if(connected('marketing')&&!connected('author'))add('콘텐츠 제작 흐름 연결','Marketing AI를 사용 중입니다. Creator AI를 함께 사용하면 초안·영상·콘텐츠 제작 흐름을 My EKODI에서 이어갈 수 있습니다.','author','https://author.ekodi.kr/','Creator AI 보기');
+ if(connected('author')&&!connected('books'))add('창작물의 다음 단계','Creator AI 작업을 출판으로 이어가고 싶을 때만 Books를 연결해 보세요. 지금 필요하지 않다면 현재 구성 그대로 사용해도 됩니다.','books','https://books.ekodi.kr/','Books 보기');
+ if(!connected('work'))add('일과 역할을 한곳에','필요할 때 EKODI Work에서 개인 프로필과 사업장 역할을 연결할 수 있습니다. 사용하지 않아도 다른 서비스 이용에는 영향이 없습니다.','work','https://work.ekodi.kr/','Work 보기');
+ if(!recs.length)recs.push({title:'현재 구성을 유지해도 좋습니다',body:`${current?.workspace_name||'현재 Workspace'}에서 필요한 서비스가 이미 연결되어 있습니다. 새 기능은 실제 필요가 생길 때 추가하세요.`,href:'#platforms',label:'내 서비스 확인'});
+ host.innerHTML=recs.slice(0,3).map(r=>`<article class="recommendation-card"><small>RECOMMENDED</small><h3>${esc(r.title)}</h3><p>${esc(r.body)}</p><a class="text-link" href="${esc(r.href)}">${esc(r.label)} →</a></article>`).join('');
 }
 function portfolioUi(){
- const host=$('#creatorList'), visible=filter==='all'?items:items.filter(i=>mode(i.creator_mode)===filter);
+ const host=$('#creatorList'),visible=filter==='all'?items:items.filter(i=>mode(i.creator_mode)===filter);
  if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 개인 데이터를 읽지 않습니다.</strong></div>';return}
  if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 나의 창작물을 볼 수 있습니다.</strong></div>';return}
  if(!visible.length){host.innerHTML='<div class="empty"><strong>아직 My EKODI에 연결된 창작물이 없습니다.</strong><p>Creator AI에서 최종 승인 후 My EKODI에 등록하면 여기에 비공개로 연결됩니다.</p></div>';return}
- host.innerHTML=visible.map(i=>`<article class="portfolio-card"><small>${esc(MODES[mode(i.creator_mode)])}</small><h3>${esc(i.title||'제목 없는 창작물')}</h3><p>${esc(String(i.summary||'Creator AI에서 연결된 나의 창작물입니다.').slice(0,260))}</p><div class="meta"><span>${i.visibility==='public'?'공개':'비공개'}</span></div><div class="actions"><a class="secondary" href="https://author.ekodi.kr/#projects">Creator AI에서 열기</a></div></article>`).join('');
+ host.innerHTML=visible.map(i=>`<article class="portfolio-card"><small>${esc(MODES[mode(i.creator_mode)])}</small><h3>${esc(i.title||'제목 없는 창작물')}</h3><p>${esc(String(i.summary||'Creator AI에서 연결된 나의 창작물입니다.').slice(0,260))}</p><div class="meta"><span>${i.visibility==='public'?'공개':'비공개'}</span></div><div class="actions"><a class="secondary" href="${esc(serviceRoute('author','https://author.ekodi.kr/#projects'))}">Creator AI에서 열기</a></div></article>`).join('');
 }
 async function rpc(name,args){const {data,error}=await sb.rpc(name,args);if(error){console.warn(name,args,error);return null}return data}
 async function loadAccess(){
- access=new Map();workspaces=new Map();
- if(!sb||!session)return;
+ access=new Map();workspaces=new Map();if(!sb||!session)return;
  await Promise.all(SERVICES.map(async([id])=>{
   const [a,w]=await Promise.all([rpc('current_site_access',{p_site_key:id}),rpc('current_site_workspaces',{p_site_key:id})]);
   access.set(id,a||{status:'unregistered',plan:'free'});workspaces.set(id,Array.isArray(w)?w:[]);
@@ -97,10 +136,18 @@ async function loadPortfolio(){
  const {data,error}=await sb.from('creator_portfolio_items').select('id,project_id,workspace_key,title,summary,creator_mode,status,visibility,updated_at').order('updated_at',{ascending:false});
  if(error)throw error;items=data||[];
 }
-async function loadAll(){await Promise.all([loadAccess(),loadPortfolio()]);identityUi();summaryUi();platformUi();workspaceUi();portfolioUi()}
+async function loadAll(){
+ await Promise.all([loadAccess(),loadPortfolio()]);ensureActiveWorkspace();identityUi();summaryUi();workspaceUi();platformUi();recommendationUi();portfolioUi();
+}
 async function authAction(){if(!enabled)return;if(!session){location.assign(authUrl);return}await sb.auth.signOut();session=null;await loadAll();authUi()}
-async function refresh(){const b=$('#refreshButton'), old=b.textContent;b.disabled=true;b.textContent='새로고침 중…';try{await loadAll();b.textContent='새로고침 완료'}catch(e){console.error(e);b.textContent='불러오기 실패'}setTimeout(()=>{b.textContent=old;b.disabled=false},1200)}
+async function refresh(){const b=$('#refreshButton'),old=b.textContent;b.disabled=true;b.textContent='새로고침 중…';try{await loadAll();b.textContent='새로고침 완료'}catch(e){console.error(e);b.textContent='불러오기 실패'}setTimeout(()=>{b.textContent=old;b.disabled=false},1200)}
 
 $('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#refreshButton').addEventListener('click',refresh);
+$('#workspaceSwitcher').addEventListener('change',event=>setActiveWorkspace(event.target.value));
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
-if(!enabled){authUi();await loadAll()}else{try{await handoff()}catch(e){console.error('auth handoff',e)}const {data}=await sb.auth.getSession();session=data.session;authUi();try{await loadAll()}catch(e){console.error('My EKODI load',e)}sb.auth.onAuthStateChange(async(_e,next)=>{session=next;authUi();await loadAll()})}
+if(!enabled){authUi();await loadAll()}else{
+ try{await handoff()}catch(e){console.error('auth handoff',e)}
+ const {data}=await sb.auth.getSession();session=data.session;authUi();
+ try{await loadAll()}catch(e){console.error('My EKODI load',e)}
+ sb.auth.onAuthStateChange(async(_e,next)=>{session=next;authUi();await loadAll()});
+}
