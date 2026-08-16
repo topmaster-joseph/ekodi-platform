@@ -1,6 +1,6 @@
 name = "ekodi-my-staging"
 main = "my-worker.js"
-compatibility_date = "2026-08-17"
+compatibility_date = "2026-08-16"
 workers_dev = true
 preview_urls = false
 
