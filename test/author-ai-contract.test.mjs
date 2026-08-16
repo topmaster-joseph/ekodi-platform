@@ -54,11 +54,12 @@ test('Creator AI remains an independent compatibility service with isolated stag
   assert.match(auth, /author-access-api/);
 });
 
-test('My EKODI portfolio is person-scoped across linked identities with private helper', async () => {
-  const [migration, hardening, privateHelper] = await Promise.all([
+test('My EKODI portfolio is person-scoped across linked identities with private optimized RLS', async () => {
+  const [migration, hardening, privateHelper, optimizedRls] = await Promise.all([
     read('supabase/migrations/20260816155146_creator_ai_my_ekodi.sql'),
     read('supabase/migrations/20260816155153_creator_portfolio_person_policy_hardening.sql'),
-    read('supabase/migrations/20260816155454_creator_portfolio_private_person_helper.sql')
+    read('supabase/migrations/20260816155454_creator_portfolio_private_person_helper.sql'),
+    read('supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql')
   ]);
   assert.match(migration, /creator_portfolio_items/);
   assert.match(migration, /person_id uuid references public\.people/);
@@ -67,4 +68,6 @@ test('My EKODI portfolio is person-scoped across linked identities with private 
   assert.match(hardening, /current_person_id/);
   assert.match(privateHelper, /private\.current_person_id/);
   assert.match(privateHelper, /drop function if exists public\.current_person_id/);
+  assert.match(optimizedRls, /\(select auth\.uid\(\)\)/);
+  assert.match(optimizedRls, /\(select private\.current_person_id\(\)\)/);
 });
