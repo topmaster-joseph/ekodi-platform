@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="로그인 후 모든 일반사용자를 위한 EKODI 개인 홈, Workspace 전환 허브와 맞춤형 관제실">
+  <meta name="description" content="로그인 후 모든 일반사용자를 위한 EKODI 개인 홈, Workspace 전환 허브와 맞춤형 AI 길찾기">
   <title>My EKODI | 나의 에코디</title>
   <link rel="stylesheet" href="/styles.css?v=20260817-workspace-home-1">
+  <link rel="stylesheet" href="/navigator.css?v=20260817-ai-path-1">
 </head>
 <body>
   <header class="topbar">
@@ -14,17 +15,17 @@
       <label for="workspaceSwitcher">현재 공간</label>
       <select id="workspaceSwitcher" aria-label="현재 Workspace 전환"></select>
     </div>
-    <nav aria-label="주요 메뉴"><a href="#platforms">Platforms</a><a href="#workspaces">Workspaces</a><a href="#recommendations">For You</a><a href="#account">Account</a><a href="https://ekodi.kr/">EKODI ↗</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#navigator">AI 길찾기</a><a href="#workspaces">Workspaces</a><a href="#platforms">Platforms</a><a href="#recommendations">For You</a><a href="#account">Account</a><a href="https://ekodi.kr/">EKODI ↗</a></nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
   </header>
 
   <main id="home">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">SIGNED-IN HOME · WORKSPACE ROUTER</p>
-        <h1>로그인 후의 EKODI를,<br><span>한곳에서 이어갑니다.</span></h1>
-        <p class="lead">My EKODI는 일반사용자의 개인 홈입니다. 한 번 로그인한 뒤 내 Workspace를 바꾸고, 필요한 EKODI 서비스로 이동하며, 이용 상태에 맞는 다음 기능을 확인합니다.</p>
-        <div class="hero-actions"><a class="primary" href="#workspaces">내 공간 전환</a><button id="refreshButton" class="secondary" type="button">내 정보 새로고침</button></div>
+        <p class="eyebrow">SIGNED-IN HOME · PERSONALIZED AI ECOSYSTEM</p>
+        <h1>내가 플랫폼을 찾는 대신,<br><span>필요한 AI가 나를 찾아옵니다.</span></h1>
+        <p class="lead">My EKODI는 개인·사업체·기관의 활동을 한곳에서 이어가는 맞춤형 AI 공간입니다. 하고 싶은 일을 말하면 필요한 전문 AI 능력을 조합해 길을 보여주고, 필요할 때만 전문 Workspace와 사이트로 확장합니다.</p>
+        <div class="hero-actions"><a class="primary" href="#navigator">내 길 찾기</a><button id="refreshButton" class="secondary" type="button">내 정보 새로고침</button></div>
       </div>
       <aside class="identity-card">
         <div class="identity-top"><small>MY EKODI</small><span id="accountPlan" class="status-pill">Guest</span></div>
@@ -40,6 +41,24 @@
       <article><span id="paidCount">0</span><small>Paid Plans</small></article>
       <article><span id="workspaceCount">0</span><small>Workspaces</small></article>
       <article><span id="creatorCount">0</span><small>Creator Works</small></article>
+    </section>
+
+    <section id="navigator" class="section navigator-section">
+      <div class="section-head"><div><p class="eyebrow">MY PATH</p><h2>지금 무엇을 하고 싶으세요?</h2></div><p>분야명이나 AI 이름을 몰라도 괜찮습니다. 지금 하려는 일을 적으면 My EKODI가 필요한 전문 AI 능력과 시작할 Workspace를 찾아줍니다.</p></div>
+      <div class="navigator-shell">
+        <form id="navigatorForm" class="navigator-form">
+          <div class="navigator-field"><label for="navigatorText">하고 싶은 일</label><textarea id="navigatorText" maxlength="600" placeholder="예: 그림을 그리고 있는데 작품을 알리고 판매해 보고 싶어요."></textarea></div>
+          <div class="navigator-field"><label for="navigatorAudience">현재 상황</label><select id="navigatorAudience"><option value="person">개인</option><option value="business">사업체·매장</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회·사역</option><option value="team">팀·프로젝트</option></select></div>
+          <button id="navigatorSubmit" class="primary" type="submit">내 길 찾기</button>
+        </form>
+        <div class="navigator-examples" aria-label="길찾기 예시">
+          <button class="navigator-example" type="button" data-navigator-example="그림과 애니메이션을 만들고 포트폴리오로 알리고 싶어요">창작을 시작하고 싶어요</button>
+          <button class="navigator-example" type="button" data-navigator-example="가게 고객을 관리하고 홍보와 매출을 함께 보고 싶어요">가게를 더 잘 운영하고 싶어요</button>
+          <button class="navigator-example" type="button" data-navigator-example="기관 회원과 행사, 문서와 재정을 한곳에서 관리하고 싶어요">기관·단체를 운영하고 싶어요</button>
+          <button class="navigator-example" type="button" data-navigator-example="무엇을 잘하는지 잘 모르겠고 새로운 일과 배움을 찾아보고 싶어요">아직 잘 모르겠어요</button>
+        </div>
+        <div id="navigatorResult" class="navigator-result" aria-live="polite"><div class="navigator-empty"><strong>직업이나 플랫폼부터 고르지 않아도 됩니다.</strong><p>하고 싶은 일에서 출발해 필요한 능력을 조합합니다. 결과는 추천일 뿐이며 자동으로 가입·결제·계약하지 않습니다.</p></div></div>
+      </div>
     </section>
 
     <section id="workspaces" class="section soft-section">
@@ -75,8 +94,9 @@
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>로그인 후의 EKODI · 내 공간 · 내 서비스 · 내 선택</span><a href="https://author.ekodi.kr/">Creator AI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer><strong>My EKODI</strong><span>내 활동 · 내 공간 · 필요한 AI · 내 선택</span><a href="https://author.ekodi.kr/">Creator AI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
+  <script type="module" src="/navigator.js?v=20260817-ai-path-1"></script>
   <script type="module" src="/app.js?v=20260817-workspace-router-1"></script>
 </body>
 </html>
