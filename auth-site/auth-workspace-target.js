@@ -38,7 +38,7 @@ const WORKSPACE_API=PERSON_SCOPED_SITES.has(site)?PERSON_WORKSPACE:ACCESS;
 let routing=false;
 
 async function routeToRequestedWorkspace(){
-  if(routing)return false;
+  if(routing||window.__EKODI_WORKSPACE_ROUTING)return false;
   const {data:{session}}=await sb.auth.getSession();
   if(!session?.access_token)return false;
   routing=true;
@@ -62,6 +62,7 @@ async function routeToRequestedWorkspace(){
     if(handoff.workspace?.workspace_key)fragment.set('ekodi_workspace',handoff.workspace.workspace_key);
     if(handoff.workspace?.tenant_id)fragment.set('ekodi_tenant',handoff.workspace.tenant_id);
     if(handoff.workspace?.store_id)fragment.set('ekodi_store',handoff.workspace.store_id);
+    window.__EKODI_WORKSPACE_ROUTING=true;
     destination.hash=fragment.toString();
     location.assign(destination.href);
     return true;
