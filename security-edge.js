@@ -1,6 +1,7 @@
 const MAX_MUTATION_BODY_BYTES = 2 * 1024 * 1024;
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const BLOCKED_METHODS = new Set(['TRACE', 'CONNECT']);
+const encoder = new TextEncoder();
 
 const PUBLIC_AUTH_PATHS = new Set([
   '/api/google/challenge',
@@ -8,15 +9,19 @@ const PUBLIC_AUTH_PATHS = new Set([
   '/api/customer/federated-login',
 ]);
 
-function bearerKey(request) {
-  const authorization = request.headers.get('authorization') || '';
-  if (!authorization.startsWith('Bearer ')) return '';
-  const token = authorization.slice(7).trim();
-  return token.length >= 16 ? token.slice(0, 32) : '';
+async function fingerprint(value) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(String(value || 'unknown')));
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function clientIp(request) {
-  return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+async function requestIdentity(request) {
+  const authorization = request.headers.get('authorization') || '';
+  if (authorization.startsWith('Bearer ')) {
+    const token = authorization.slice(7).trim();
+    if (token.length >= 16) return `session:${await fingerprint(token)}`;
+  }
+  const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  return `network:${await fingerprint(ip)}`;
 }
 
 function isSensitiveMutation(path, method) {
@@ -73,7 +78,7 @@ export async function enforceEdgeSecurity(request, env = {}) {
   }
 
   if (PUBLIC_AUTH_PATHS.has(path) && request.method === 'POST') {
-    const key = `${path}:${clientIp(request)}`;
+    const key = `${path}:${await requestIdentity(request)}`;
     const allowed = await enforceLimiter(env.AUTH_RATE_LIMITER, key);
     if (!allowed) {
       console.warn('Security auth rate limit exceeded', { path, ray: request.headers.get('cf-ray') || '' });
@@ -82,8 +87,7 @@ export async function enforceEdgeSecurity(request, env = {}) {
   }
 
   if (isSensitiveMutation(path, request.method)) {
-    const identity = bearerKey(request) || clientIp(request);
-    const key = `${request.method}:${path.split('/').slice(0, 5).join('/')}:${identity}`;
+    const key = `${request.method}:${path.split('/').slice(0, 5).join('/')}:${await requestIdentity(request)}`;
     const allowed = await enforceLimiter(env.SENSITIVE_RATE_LIMITER, key);
     if (!allowed) {
       console.warn('Security sensitive mutation rate limit exceeded', { path, ray: request.headers.get('cf-ray') || '' });
