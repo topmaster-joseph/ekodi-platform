@@ -18,7 +18,7 @@ export function evaluateAgentAction(action = {}) {
     reversible = false,
     delegated = false,
     logged = false,
-    verified = false,
+    preflightVerified = false,
     reducesUserRights = false,
     crossTenantPrivateData = false,
     violates = [],
@@ -43,8 +43,8 @@ export function evaluateAgentAction(action = {}) {
     return decision('human_gate', area || 'high_impact', 'A human steward must make this decision within delegated authority.');
   }
 
-  if (reversible && delegated && logged && verified) {
-    return decision('execute_reversible', area || 'bounded_action', 'Guarded execution is permitted inside the delegated, reversible scope.');
+  if (reversible && delegated && logged && preflightVerified) {
+    return decision('execute_reversible', area || 'bounded_action', 'Guarded execution is permitted inside the delegated, reversible scope after preflight verification. The result must still be verified and audited after execution.');
   }
 
   return decision('assist', area || 'insufficient_execution_evidence', 'AI may analyze or recommend, but execution requirements are not fully satisfied.');
