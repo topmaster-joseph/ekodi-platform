@@ -1,0 +1,127 @@
+name: Ecosystem Performance Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ecosystem-performance-watch.yml'
+      - 'test/ecosystem-performance-watch.test.mjs'
+      - 'site-worker.js'
+      - 'control-center.html'
+      - 'control-center.js'
+      - 'index.html'
+      - 'homepage-ambient.js'
+      - 'homepage-ambient.css'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-ecosystem-performance-watch
+  cancel-in-progress: true
+
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WARN_SECONDS: '2.0'
+      FAIL_SECONDS: '5.0'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Measure public entry performance
+        id: perf
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/perf-summary.txt
+          failed=0
+
+          probe() {
+            label="$1"
+            url="$2"
+            marker="$3"
+            metrics=$(curl -sS -L -o "/tmp/${label}.body" \
+              --connect-timeout 5 --max-time 15 \
+              -w '%{http_code} %{time_namelookup} %{time_connect} %{time_starttransfer} %{time_total} %{size_download}' \
+              "$url" || echo '000 0 0 99 99 0')
+            read -r code dns connect ttfb total bytes <<< "$metrics"
+
+            marker_ok=false
+            if [ "$code" = 200 ] && grep -Fq "$marker" "/tmp/${label}.body"; then marker_ok=true; fi
+            warn=$(awk -v v="$total" -v limit="$WARN_SECONDS" 'BEGIN { print (v > limit) ? "true" : "false" }')
+            fail=$(awk -v v="$total" -v limit="$FAIL_SECONDS" 'BEGIN { print (v > limit) ? "true" : "false" }')
+
+            printf '%s | HTTP %s | DNS %ss | connect %ss | TTFB %ss | total %ss | %s bytes\n' \
+              "$url" "$code" "$dns" "$connect" "$ttfb" "$total" "$bytes" | tee -a /tmp/perf-summary.txt
+
+            if [ "$marker_ok" != true ]; then
+              echo "::error title=${label} availability failure::${url} returned HTTP ${code} or expected content was missing"
+              failed=1
+            elif [ "$fail" = true ]; then
+              echo "::error title=${label} performance failure::${url} total ${total}s exceeds ${FAIL_SECONDS}s budget"
+              failed=1
+            elif [ "$warn" = true ]; then
+              echo "::warning title=${label} performance warning::${url} total ${total}s exceeds ${WARN_SECONDS}s target"
+            fi
+          }
+
+          probe homepage 'https://ekodi.kr/' '<title>EKODI'
+          probe admin 'https://admin.ekodi.kr/' 'EKODI Control Center'
+          probe admin_fallback 'https://ekodi.kr/admin' 'EKODI Control Center'
+
+          {
+            echo 'summary<<EOF'
+            cat /tmp/perf-summary.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          exit "$failed"
+
+      - name: Publish performance summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## EKODI Entry Performance'
+            echo ''
+            echo '| Target | Result |'
+            echo '|---|---|'
+            while IFS= read -r line; do
+              [ -n "$line" ] && printf '| Entry | `%s` |\n' "$line"
+            done <<< "${{ steps.perf.outputs.summary }}"
+            echo ''
+            echo "Target: <= ${WARN_SECONDS}s · Incident: > ${FAIL_SECONDS}s"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update performance incident
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='EKODI entry performance incident'
+          body=$(cat <<EOF
+          Chief AI Performance Guard detected an availability or severe latency failure on an EKODI entry point.
+
+          ${{ steps.perf.outputs.summary }}
+
+          - target: <= ${WARN_SECONDS}s
+          - incident threshold: > ${FAIL_SECONDS}s
+          - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          Do not change DNS, authentication policy, payment configuration, or customer data as an automatic latency repair. Diagnose edge/runtime/client-load causes first and preserve rollback paths.
+          EOF
+          )
+          existing=$(gh issue list --state open --search 'EKODI entry performance incident in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
