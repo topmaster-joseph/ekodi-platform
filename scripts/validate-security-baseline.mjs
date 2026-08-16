@@ -18,6 +18,7 @@ for (const marker of [
   'REQUEST_BODY_TOO_LARGE',
   'AUTH_RATE_LIMITED',
   'SENSITIVE_ACTION_RATE_LIMITED',
+  'SECURITY_RATE_LIMITER_UNAVAILABLE',
   "Strict-Transport-Security",
   "X-Frame-Options",
   "Permissions-Policy",
@@ -60,8 +61,9 @@ for (const marker of [
 
 assert(!edge.includes('authorization.slice(7).trim().slice('), 'raw bearer token fragments must not be used as rate-limit keys');
 assert(edge.includes("crypto.subtle.digest('SHA-256'"), 'rate-limit identities must be hashed');
+assert(edge.includes("return { available: false, allowed: false }"), 'protected routes must fail closed when rate limiting is unavailable');
 
-console.log('Security baseline valid: edge throttling, browser headers, Google allowlist, session revocation and password shutdown enforced.');
+console.log('Security baseline valid: fail-closed edge throttling, browser headers, Google allowlist, session revocation and password shutdown enforced.');
 
 function assert(condition, message) {
   if (!condition) {
