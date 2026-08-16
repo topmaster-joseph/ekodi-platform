@@ -64,6 +64,7 @@ const ADMIN_ASSETS = new Set([
   '/finance-monitor.js',
   '/compact-control-center.css',
   '/compact-control-center.js',
+  '/ekodi-device-bootstrap.cmd',
   '/campus-actions.css',
   '/campus-actions.js',
   '/ai-ops-admin.css',
