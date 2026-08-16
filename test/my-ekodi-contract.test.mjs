@@ -46,10 +46,12 @@ test('Creator portfolio stays person-scoped and private by default',async()=>{
   assert.match(optimized,/\(select private\.current_person_id\(\)\)/);
 });
 
-test('Production rollout bootstraps or repairs an unhealthy hostname before guarded promotion',async()=>{
+test('Production rollout migrates legacy My EKODI before future guarded promotions',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.match(workflow,/has no deployments/);
   assert.match(workflow,/my\.ekodi\.kr\/health/);
-  assert.match(workflow,/repairing first production route/);
+  assert.match(workflow,/MY PLATFORMS/);
+  assert.match(workflow,/one-time direct migration from staging-validated source/);
+  assert.match(workflow,/Existing production already satisfies the current My EKODI hub contract/);
   assert.match(workflow,/guarded-worker-release\.mjs/);
 });
