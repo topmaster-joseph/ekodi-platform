@@ -1,0 +1,86 @@
+name: Admin DNS Diagnostics
+
+on:
+  push:
+    branches:
+      - staging/admin-dns-diagnostics-20260816
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Inspect Worker custom-domain attachment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          api="https://api.cloudflare.com/client/v4"
+          payload=$(curl -fsS --retry 3 --retry-delay 2 \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$payload" | jq -e '.success == true' >/dev/null
+          echo 'Worker domain:'
+          echo "$payload" | jq -c '.result[] | select(.hostname == "admin.ekodi.kr") | {id,cert_id,hostname,service,zone_id,zone_name,environment}'
+          zone_id=$(echo "$payload" | jq -r '.result[] | select(.hostname == "admin.ekodi.kr") | .zone_id' | head -n1)
+          test -n "$zone_id" && test "$zone_id" != null
+          echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+
+      - name: Inspect Cloudflare DNS record when token permits
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4"
+          code=$(curl -sS -o /tmp/dns-record.json -w '%{http_code}' --retry 2 --retry-delay 1 \
+            "$api/zones/$ZONE_ID/dns_records?name=admin.ekodi.kr&per_page=100" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "DNS Records API -> HTTP $code"
+          if [ "$code" = 200 ]; then
+            jq -c '{success,result:[.result[] | {id,type,name,content,proxied,proxiable,ttl,modified_on}]}' /tmp/dns-record.json
+          else
+            jq -c '{success,errors}' /tmp/dns-record.json 2>/dev/null || cat /tmp/dns-record.json
+          fi
+
+      - name: Resolve through independent public resolvers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for type in A AAAA; do
+            echo "=== Cloudflare DoH $type ==="
+            curl -fsS --retry 3 -H 'accept: application/dns-json' \
+              "https://cloudflare-dns.com/dns-query?name=admin.ekodi.kr&type=$type" \
+              | jq -c '{Status,AD,Question,Answer}'
+            echo "=== Google DoH $type ==="
+            curl -fsS --retry 3 \
+              "https://dns.google/resolve?name=admin.ekodi.kr&type=$type" \
+              | jq -c '{Status,AD,Question,Answer}'
+          done
+          echo '=== Runner resolver ==='
+          getent ahosts admin.ekodi.kr || true
+
+      - name: Verify TLS and all admin entry paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo | openssl s_client -connect admin.ekodi.kr:443 -servername admin.ekodi.kr -brief 2>&1 | head -n 20
+          check() {
+            url="$1"
+            code=$(curl -sS -o /tmp/body -D /tmp/headers -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            echo "$url -> $code"
+            grep -Fi 'x-ekodi-route:' /tmp/headers || true
+            grep -Fi 'server:' /tmp/headers || true
+            if [ "$code" = 200 ]; then grep -Fq 'EKODI Control Center' /tmp/body; fi
+          }
+          check 'https://admin.ekodi.kr/'
+          check 'https://admin.ekodi.kr/admin'
+          check 'https://ekodi.kr/admin'
