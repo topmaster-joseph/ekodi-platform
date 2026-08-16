@@ -34,6 +34,19 @@ test('My EKODI staging is isolated from production personal data',async()=>{
   assert.match(worker,/person-scoped/);
 });
 
+test('My EKODI security middleware runs before static assets in staging and production',async()=>{
+  const [prod,staging,worker,manifest]=await Promise.all([
+    read('wrangler.my.toml'),
+    read('wrangler.my.staging.toml'),
+    read('my-worker.js'),
+    read('deploy/manifests/my.worker.json')
+  ]);
+  assert.match(prod,/run_worker_first = true/);
+  assert.match(staging,/run_worker_first = true/);
+  assert.match(worker,/'x-ekodi-service':'my-ekodi'/);
+  assert.match(manifest,/x-ekodi-service: my-ekodi/);
+});
+
 test('Creator portfolio stays person-scoped and private by default',async()=>{
   const [migration,privateHelper,optimized]=await Promise.all([
     read('supabase/migrations/20260816155146_creator_ai_my_ekodi.sql'),
