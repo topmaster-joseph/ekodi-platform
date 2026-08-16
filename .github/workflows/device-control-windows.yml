@@ -1,0 +1,68 @@
+name: Device Control Windows CI
+
+on:
+  pull_request:
+    paths:
+      - 'device-control.js'
+      - 'device-control-admin.js'
+      - 'device-control-admin.css'
+      - 'tools/ekodi-device-agent/windows/**'
+      - 'migrations/0021_device_control.sql'
+      - 'test/device-control-contract.test.mjs'
+      - '.github/workflows/device-control-windows.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'device-control.js'
+      - 'device-control-admin.js'
+      - 'device-control-admin.css'
+      - 'tools/ekodi-device-agent/windows/**'
+      - 'migrations/0021_device_control.sql'
+      - 'test/device-control-contract.test.mjs'
+      - '.github/workflows/device-control-windows.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Device Control JavaScript and contract
+        run: |
+          node --check device-control.js
+          node --check device-control-admin.js
+          node --test test/device-control-contract.test.mjs
+
+  windows-agent:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Parse Windows Agent without executing it
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+          Write-Host "PowerShell parse OK: $path"
+      - name: Verify remote execution boundary
+        shell: pwsh
+        run: |
+          $content = Get-Content 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1' -Raw
+          if ($content -match '(?i)Invoke-Expression|\biex\b') { throw 'Arbitrary expression execution is forbidden.' }
+          foreach ($command in @('power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open')) {
+            if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
+          }
+          if (-not $content.Contains('arbitraryShell = $false')) { throw 'Agent must report arbitraryShell=false.' }
+          Write-Host 'Windows agent command boundary OK.'
