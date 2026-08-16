@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-my-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
+  group: ekodi-my-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
   cancel-in-progress: false
 
 env:
@@ -151,17 +151,21 @@ jobs:
             exit 1
           fi
           echo 'Creator portfolio schema is reachable and RLS-protected.'
-      - name: Bootstrap, repair hostname, or run guarded release
+      - name: Bootstrap, migrate legacy page, or run guarded release
         shell: bash
         run: |
           set -euo pipefail
           if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.my.toml --json > /tmp/my-deployments.log 2>&1; then
             health_code=$(curl -sS -o /tmp/my-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
-            if [[ "$health_code" == '200' ]] && grep -Fq '"service":"ekodi-my"' /tmp/my-live-health.json; then
-              echo 'Stable My EKODI hostname is healthy; using guarded candidate release.'
+            root_code=$(curl -L -sS -o /tmp/my-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
+            if [[ "$health_code" == '200' && "$root_code" == '200' ]] \
+              && grep -Fq '"service":"ekodi-my"' /tmp/my-live-health.json \
+              && grep -Fq 'MY PLATFORMS' /tmp/my-live.html \
+              && grep -Fq 'CREATOR PORTFOLIO' /tmp/my-live.html; then
+              echo 'Existing production already satisfies the current My EKODI hub contract; using guarded candidate release.'
               node scripts/guarded-worker-release.mjs --manifest deploy/manifests/my.worker.json
             else
-              echo "Worker exists but my.ekodi.kr is not healthy (HTTP $health_code); repairing first production route from staging-validated source."
+              echo "Existing Worker is missing the current My EKODI hub contract (root HTTP $root_code, health HTTP $health_code); performing one-time direct migration from staging-validated source."
               npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.toml
             fi
           elif grep -Eq 'has no deployments|This Worker does not exist|does not exist on your account|code: 10007' /tmp/my-deployments.log; then
