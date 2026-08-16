@@ -11,6 +11,13 @@
         "expect": ["EKODI | 연결의 생태계", "에코디, 연결의 생태계"]
       },
       {
+        "url": "https://ekodi.kr/admin",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Control Center", "return_to=https%3A%2F%2Fekodi.kr%2Fadmin"],
+        "headerExpect": ["x-ekodi-route: admin-fallback", "cross-origin-opener-policy: same-origin-allow-popups", "cache-control: no-store"]
+      },
+      {
         "url": "https://admin.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
@@ -35,7 +42,7 @@
         "url": "https://auth.ekodi.kr/admin-auth.js",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["use_fedcm_for_button:true", "button_auto_select:false", "expired_challenge"],
+        "expect": ["use_fedcm_for_button:true", "button_auto_select:false", "expired_challenge", "u.origin==='https://ekodi.kr'"],
         "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"]
       },
       {
