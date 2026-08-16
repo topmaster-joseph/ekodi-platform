@@ -1,0 +1,25 @@
+name = "ekodi-business"
+main = "business-worker.js"
+compatibility_date = "2026-08-16"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "business.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+BUSINESS_MODE = "production-readonly-mvp"
+INTEGRATIONS_ENABLED = "false"
+EXECUTION_ENABLED = "false"
+READINESS = "62"
+AUTH_URL = "https://auth.ekodi.kr/?site=business"
+
+[assets]
+directory = "./business"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

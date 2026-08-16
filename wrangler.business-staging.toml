@@ -1,0 +1,20 @@
+name = "ekodi-business-staging"
+main = "business-worker.js"
+compatibility_date = "2026-08-16"
+workers_dev = true
+preview_urls = true
+
+[vars]
+BUSINESS_MODE = "isolated-staging"
+INTEGRATIONS_ENABLED = "false"
+EXECUTION_ENABLED = "false"
+READINESS = "62"
+AUTH_URL = "https://auth.ekodi.kr/?site=business"
+
+[assets]
+directory = "./business"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
