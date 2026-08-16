@@ -5,9 +5,11 @@ import { readFile } from 'node:fs/promises';
 const workflow = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
 
-test('shared-site production deploy explicitly synchronizes Cloudflare custom-domain triggers', () => {
-  assert.match(workflow, /Synchronize Cloudflare custom-domain triggers/);
+test('shared-site production deploy repairs Cloudflare custom-domain triggers only when needed', () => {
+  assert.match(workflow, /Repair or synchronize Cloudflare custom-domain triggers/);
+  assert.match(workflow, /steps\.domain_config\.outputs\.changed == 'true' \|\| steps\.domain_state\.outputs\.needs_sync == 'true'/);
   assert.match(workflow, /wrangler@4\.119\.0 triggers deploy --config wrangler\.site\.toml/);
+  assert.match(workflow, /Verify Cloudflare custom-domain attachments without mutation/);
 });
 
 test('public, admin and auth entry hosts remain declared as Worker custom domains', () => {
