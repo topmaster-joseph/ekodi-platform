@@ -7,7 +7,10 @@ on:
     paths:
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'marketing-ai-admin-live-ops.css'
       - 'test/marketing-ai-admin-layout.test.mjs'
+      - 'test/marketing-ai-admin-live-ops.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
       - '.github/workflows/deploy-marketing-admin-console.yml'
@@ -36,14 +39,19 @@ jobs:
         run: |
           set -euo pipefail
           node --check marketing-ai-admin.js
+          node --check marketing-ai-admin-live-ops.js
           node --check scripts/build.mjs
-          node --test test/marketing-ai-admin-layout.test.mjs
+          node --test test/marketing-ai-admin-layout.test.mjs test/marketing-ai-admin-live-ops.test.mjs
           grep -Fq 'Marketing AI 운영 관제센터' marketing-ai-admin.js
           grep -Fq '/api/marketing/admin/overview' marketing-ai-admin.js
           grep -Fq 'READ-ONLY OPS · 외부 자동실행 없음' marketing-ai-admin.js
           grep -Fq '.marketing-ai-console-tabs' marketing-ai-admin.css
-          grep -Fq 'marketing-ai-admin.js' scripts/build.mjs
-          grep -Fq 'marketing-ai-admin.css' scripts/build.mjs
+          grep -Fq 'AI AUTOMATION' marketing-ai-admin-live-ops.js
+          grep -Fq 'HUMAN GATE' marketing-ai-admin-live-ops.js
+          grep -Fq 'CHANNEL REGISTRY' marketing-ai-admin-live-ops.js
+          grep -Fq '.marketing-ai-approval-layout' marketing-ai-admin-live-ops.css
+          grep -Fq 'marketing-ai-admin-live-ops.js' scripts/build.mjs
+          grep -Fq 'marketing-ai-admin-live-ops.css' scripts/build.mjs
 
       - name: Verify Cloudflare credentials
         run: |
@@ -57,7 +65,11 @@ jobs:
           test -f dist/marketing-ai-admin.js
           test -f dist/marketing-ai-admin.css
           grep -Fq 'Marketing AI 운영 관제센터' dist/marketing-ai-admin.js
+          grep -Fq 'AI AUTOMATION' dist/marketing-ai-admin.js
+          grep -Fq 'HUMAN GATE' dist/marketing-ai-admin.js
+          grep -Fq 'CHANNEL REGISTRY' dist/marketing-ai-admin.js
           grep -Fq '.marketing-ai-console-tabs' dist/marketing-ai-admin.css
+          grep -Fq '.marketing-ai-approval-layout' dist/marketing-ai-admin.css
 
       - name: Guarded shared-site release
         run: |
@@ -69,17 +81,18 @@ jobs:
         run: |
           set -euo pipefail
           verify_asset() {
-            path="$1"; expected="$2"
+            path="$1"; expected="$2"; expected2="$3"
             code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
             echo "$path -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-asset' /tmp/headers || return 1
             grep -Fq "$expected" /tmp/body || return 1
+            grep -Fq "$expected2" /tmp/body || return 1
           }
           for attempt in $(seq 1 15); do
-            if verify_asset 'marketing-ai-admin.js' 'Marketing AI 운영 관제센터' \
-              && verify_asset 'marketing-ai-admin.css' '.marketing-ai-console-tabs'; then
-              echo 'MarketingAI admin operations console verified in production.'
+            if verify_asset 'marketing-ai-admin.js' 'Marketing AI 운영 관제센터' 'AI AUTOMATION' \
+              && verify_asset 'marketing-ai-admin.css' '.marketing-ai-console-tabs' '.marketing-ai-approval-layout'; then
+              echo 'MarketingAI admin live operations console verified in production.'
               exit 0
             fi
             echo "Production asset verification pending ($attempt/15)."
