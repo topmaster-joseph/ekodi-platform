@@ -12,11 +12,11 @@
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
   <header class="topbar">
-    <a class="brand" href="https://ekodi.kr" aria-label="EKODI 홈으로 이동">
+    <a class="brand" href="/" aria-label="EKODI Business OS 홈으로 이동">
       <span class="brand-mark">E</span>
       <span><strong>EKODI</strong><small>BUSINESS OS</small></span>
     </a>
-    <div class="workspace-picker">
+    <div class="workspace-picker" id="workspacePicker" hidden>
       <label for="workspaceSelect">WORKSPACE</label>
       <select id="workspaceSelect" aria-label="Business OS 워크스페이스 선택">
         <option value="ekodibiz">에코디비즈</option>
@@ -24,10 +24,6 @@
       </select>
     </div>
     <nav class="top-actions" aria-label="상단 메뉴">
-      <a id="publicLink" href="https://biz.ekodi.kr">에코디비즈</a>
-      <a id="marketingLink" href="https://marketing.ekodi.kr">Marketing AI</a>
-      <a href="https://work.ekodi.kr">Work</a>
-      <a href="/health">Status</a>
       <a id="authLink" class="primary-link" href="https://auth.ekodi.kr/?site=business">Sign in</a>
     </nav>
   </header>
@@ -92,7 +88,7 @@
     </section>
 
     <section class="module-section shell">
-      <div class="section-head"><div><p class="eyebrow">SPECIALIST NETWORK</p><h2>전문 AI 모듈</h2></div><p>워크스페이스별 연결 상태와 공식 진입점을 표시합니다.</p></div>
+      <div class="section-head"><div><p class="eyebrow">SPECIALIST NETWORK</p><h2>전문 AI 모듈</h2></div><p>로그인 후 권한과 회원 단계에 따라 필요한 모듈이 연결됩니다.</p></div>
       <div id="moduleGrid" class="module-grid">
         <a class="module live" href="https://marketing.ekodi.kr"><span class="module-code">MKT</span><strong>Marketing AI</strong><p>콘텐츠, 캠페인, 채널 운영</p><small>연결 가능</small></a>
         <article class="module stage"><span class="module-code">CRM</span><strong>Customer AI</strong><p>고객, 재방문, 관계 관리</p><small>데이터 연결 대기</small></article>
