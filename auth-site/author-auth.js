@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
+const AUTHOR_ACCESS=`${SUPABASE_URL}/functions/v1/author-access-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const RETURN_TO='https://author.ekodi.kr/';
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
@@ -16,16 +16,16 @@ show('requestActions',false);show('membershipPanel',false);show('identityPanel',
 
 async function session(){const {data}=await sb.auth.getSession();return data.session}
 async function identity(path,options={}){const headers={apikey:PUBLISHABLE_KEY,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const s=await session();if(options.authenticated&&s)headers.Authorization=`Bearer ${s.access_token}`;const r=await fetch(`${IDENTITY}${path}`,{...options,headers,cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`identity_${r.status}`);return data}
-async function access(path,options={}){const s=await session();if(!s)throw new Error('login_required');const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${s.access_token}`,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${ACCESS}${path}`,{...options,headers,cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`access_${r.status}`);return data}
-function loadGoogle(){if(window.google?.accounts?.id)return Promise.resolve();return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error('google_library_failed'));document.head.append(script)})}
+async function authorAccess(path,options={}){const s=await session();if(!s)throw new Error('login_required');const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${s.access_token}`,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${AUTHOR_ACCESS}${path}`,{...options,headers,cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`author_access_${r.status}`);return data}
+function loadGoogle(){if(window.google?.accounts?.id)return Promise.resolve();return new Promise((resolve,reject)=>{const existing=document.querySelector('script[data-ekodi-author-google]');if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.ekodiAuthorGoogle='true';script.onload=resolve;script.onerror=()=>reject(new Error('google_library_failed'));document.head.append(script)})}
 function showSignedIn(s){show('signedOut',false);show('signedIn',true);$('accountEmail').textContent=s?.user?.email||'Google 계정';$('serviceBadge').textContent='인증 완료'}
 function showSignedOut(){show('signedIn',false);show('signedOut',true);$('serviceBadge').textContent='인증 필요'}
 async function handoff(){
-  const spaces=await access('/workspaces?site=author');
-  const workspace=(spaces.workspaces||[]).find(item=>item?.workspace_kind==='personal'&&item?.requires_handoff===true&&item?.status==='active');
-  if(!workspace)throw new Error('author_workspace_unavailable');
+  const space=await authorAccess('/workspace');
+  const workspace=space.workspace;
+  if(!workspace?.workspace_key||workspace?.status!=='active')throw new Error('author_workspace_unavailable');
   notice('accessStatus','개인 저자 스튜디오를 연결하고 있습니다.');
-  const data=await access('/handoff',{method:'POST',body:JSON.stringify({site:'author',return_to:RETURN_TO,workspace_key:workspace.workspace_key})});
+  const data=await authorAccess('/handoff',{method:'POST',body:JSON.stringify({return_to:RETURN_TO,workspace_key:workspace.workspace_key})});
   if(!data.tokenHash||!data.returnTo)throw new Error('handoff_unavailable');
   const target=new URL(data.returnTo);target.hash=new URLSearchParams({ekodi_token:data.tokenHash,ekodi_type:data.type||'email',ekodi_workspace:workspace.workspace_key}).toString();
   location.assign(target.href);
