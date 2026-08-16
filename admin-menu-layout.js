@@ -10,6 +10,28 @@
   // but they are not daily human workspaces. AI Ops becomes their primary surface.
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
+
+  // One canonical human-facing menu order. Dynamic/lazy modules may replace their
+  // button nodes, but the visual position must never depend on which menu was clicked.
+  const VISIBLE_NAV_ORDER = Object.freeze([
+    'campus',
+    'aiops',
+    'marketing-ai',
+    'work',
+    'clients',
+    'admins',
+    'community',
+    'books',
+    'finance',
+    'communication',
+    'social',
+    'workspace',
+    'devices',
+    'organization',
+    'affiliates',
+  ]);
+  const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
+
   const HASH_SECTIONS = new Map([
     ['#ai-ops', 'aiops'],
     ['#devices', 'devices'],
@@ -28,6 +50,20 @@
   let requestedSection = '';
   let queued = false;
   let preferAiOpsOnReady = ['', '#operations', '#services', '#deployments', '#policies'].includes(location.hash);
+
+  function installCompactNavigationStyle() {
+    if (document.querySelector('#ekodi-admin-menu-density')) return;
+    const style = document.createElement('style');
+    style.id = 'ekodi-admin-menu-density';
+    style.textContent = `
+      body.compact-control-center .side-caption{margin-bottom:10px!important}
+      body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}
+      body.compact-control-center .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}
+      body.compact-control-center .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}
+      body.compact-control-center .side-bottom{padding-top:8px!important}
+    `;
+    document.head.append(style);
+  }
 
   function sectionOf(item) {
     if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -55,6 +91,21 @@
 
   function allNavItems() {
     return nav.querySelectorAll('.nav[data-section], .nav[data-lazy-section], .nav[data-device-control-nav], a.nav[href]');
+  }
+
+  function applyStableNavigationOrder() {
+    let unknownRank = 500;
+    for (const item of allNavItems()) {
+      if (isInternalNav(item)) {
+        item.style.order = '9999';
+        continue;
+      }
+      const section = sectionOf(item);
+      const rank = VISIBLE_NAV_RANK.get(section) ?? unknownRank++;
+      item.style.order = String(rank);
+      item.dataset.menuOrder = String(rank);
+    }
+    nav.dataset.stableMenuOrder = 'true';
   }
 
   function navItemFor(section) {
@@ -121,6 +172,8 @@
         markInternal(item, sectionOf(item) || item.getAttribute('href') || 'internal');
       }
     }
+
+    applyStableNavigationOrder();
 
     // Old Campus shortcuts must not reopen the retired human-facing Operations/Services panels.
     for (const control of content.querySelectorAll('[data-campus-section]')) {
@@ -250,6 +303,7 @@
     scheduleExclusivePanel(requestedSection || preferredHumanSection());
   });
 
+  installCompactNavigationStyle();
   enforceInternalNavigationPolicy();
   const initialHash = explicitHashSection();
   if (initialHash && isInternalSection(initialHash)) {
@@ -272,5 +326,6 @@
     },
     current: () => requestedSection || activeSection(),
     internalSections: Object.freeze([...INTERNAL_ONLY_SECTIONS]),
+    visibleMenuOrder: VISIBLE_NAV_ORDER,
   });
 })();
