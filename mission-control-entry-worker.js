@@ -1,16 +1,20 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
+import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 export default {
   async fetch(request, env, ctx) {
+    const guard = await enforceEdgeSecurity(request, env);
+    if (guard) return guard;
+
     const path = new URL(request.url).pathname;
     if (path.startsWith('/api/control/ai/')) {
       try {
         const response = await handleAgentMissionControl(request, env);
-        if (response) return response;
+        if (response) return applyApiSecurityHeaders(response);
       } catch (error) {
         console.error('AI Mission Control error', error);
-        return new Response(JSON.stringify({
+        return applyApiSecurityHeaders(new Response(JSON.stringify({
           error: 'AI Mission Control 처리 중 오류가 발생했습니다.',
           code: 'AI_MISSION_CONTROL_ERROR',
         }), {
@@ -20,10 +24,12 @@ export default {
             'cache-control': 'no-store',
             'x-content-type-options': 'nosniff',
           },
-        });
+        }));
       }
     }
-    return customerEntryWorker.fetch(request, env, ctx);
+
+    const response = await customerEntryWorker.fetch(request, env, ctx);
+    return applyApiSecurityHeaders(response);
   },
 
   async scheduled(controller, env, ctx) {
