@@ -24,6 +24,20 @@ ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,
 enabled = true
 invocation_logs = true
 
+[[ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2101"
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[[ratelimits]]
+name = "SENSITIVE_RATE_LIMITER"
+namespace_id = "2102"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"

@@ -63,14 +63,16 @@ test('customer session is tenant-bound and membership is revalidated', () => {
   assert.match(source, /SESSION_HOURS = 12/);
 });
 
-test('customer APIs keep their dedicated entry layer behind Mission Control without replacing control behavior', () => {
+test('customer APIs keep their dedicated entry layer behind security-wrapped Mission Control without replacing control behavior', () => {
   assert.ok(entry.includes("path.startsWith('/api/customer/')"));
   assert.ok(entry.includes("path.startsWith('/api/customers/')"));
   assert.ok(entry.includes('return apiWorker.fetch(request, env, ctx)'));
   assert.ok(entry.includes('return apiWorker.scheduled(controller, env, ctx)'));
   assert.ok(wrangler.includes('main = "mission-control-entry-worker.js"'));
   assert.ok(missionEntry.includes("import customerEntryWorker from './customer-entry-worker.js'"));
-  assert.ok(missionEntry.includes('return customerEntryWorker.fetch(request, env, ctx)'));
+  assert.ok(missionEntry.includes('const response = await customerEntryWorker.fetch(request, env, ctx)'));
+  assert.ok(missionEntry.includes('return applyApiSecurityHeaders(response)'));
+  assert.ok(missionEntry.includes('const guard = await enforceEdgeSecurity(request, env)'));
   assert.ok(missionEntry.includes('return customerEntryWorker.scheduled(controller, env, ctx)'));
 });
 

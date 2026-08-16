@@ -60,12 +60,14 @@ test('production build includes operations styling', () => {
   assert.match(buildScript, /'control-center-ops\.css'/);
 });
 
-test('Cloudflare API Mission Control entry preserves the ten-minute monitoring schedule', () => {
+test('Cloudflare API Mission Control security wrapper preserves the ten-minute monitoring schedule', () => {
   assert.match(wranglerApi, /main = "mission-control-entry-worker\.js"/);
   assert.match(wranglerApi, /pattern = "api\.ekodi\.kr"/);
   assert.match(wranglerApi, /crons = \["\*\/10 \* \* \* \*"\]/);
   assert.match(missionEntrySource, /return customerEntryWorker\.scheduled\(controller, env, ctx\)/);
-  assert.match(missionEntrySource, /return customerEntryWorker\.fetch\(request, env, ctx\)/);
+  assert.match(missionEntrySource, /const response = await customerEntryWorker\.fetch\(request, env, ctx\)/);
+  assert.match(missionEntrySource, /return applyApiSecurityHeaders\(response\)/);
+  assert.match(missionEntrySource, /const guard = await enforceEdgeSecurity\(request, env\)/);
   assert.match(entrySource, /return apiWorker\.scheduled\(controller, env, ctx\)/);
   assert.match(entrySource, /return apiWorker\.fetch\(request, env, ctx\)/);
 });
