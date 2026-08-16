@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+
+test('My EKODI is a private-first personal hub, not a second source of truth',async()=>{
+  const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
+  assert.match(html,/PRIVATE FIRST/);
+  assert.match(html,/NO DATA MONOLITH/);
+  assert.match(app,/creator_portfolio_items/);
+  assert.match(app,/visibilityLabel/);
+  assert.doesNotMatch(app,/\.update\(\{visibility:/);
+});
+
+test('My EKODI reuses central identity and consumes one-time auth handoff',async()=>{
+  const [app,auth,router]=await Promise.all([read('my/app.js'),read('auth-site/client-auth.js'),read('auth-site/auth-router.js')]);
+  assert.match(app,/ekodi_token/);
+  assert.match(app,/verifyOtp/);
+  assert.match(auth,/'my':\{name:'My EKODI'/);
+  assert.match(auth,/returnTo:'https:\/\/my\.ekodi\.kr\/'/);
+  assert.match(router,/site==='my'/);
+});
+
+test('My EKODI staging is isolated from production personal data',async()=>{
+  const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
+  assert.match(prod,/DATA_ENABLED = "true"/);
+  assert.match(prod,/my\.ekodi\.kr/);
+  assert.match(staging,/DATA_ENABLED = "false"/);
+  assert.doesNotMatch(staging,/my\.ekodi\.kr/);
+  assert.match(worker,/dataEnabled/);
+  assert.match(worker,/person-scoped/);
+});
+
+test('Creator portfolio stays person-scoped and private by default',async()=>{
+  const [migration,privateHelper,optimized]=await Promise.all([
+    read('supabase/migrations/20260816155146_creator_ai_my_ekodi.sql'),
+    read('supabase/migrations/20260816155454_creator_portfolio_private_person_helper.sql'),
+    read('supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql')
+  ]);
+  assert.match(migration,/visibility text not null default 'private'/);
+  assert.match(migration,/workspace_key text not null/);
+  assert.match(privateHelper,/private\.current_person_id/);
+  assert.match(optimized,/\(select private\.current_person_id\(\)\)/);
+});
