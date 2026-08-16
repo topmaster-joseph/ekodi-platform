@@ -1,0 +1,24 @@
+name = "ekodi-energy"
+main = "energy-worker.js"
+compatibility_date = "2026-08-16"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "energy.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+TELEMETRY_ENABLED = "false"
+TELEMETRY_MODE = "production-readonly-mvp"
+CONTROL_ENABLED = "false"
+AUTH_URL = "https://auth.ekodi.kr/?site=energy"
+
+[assets]
+directory = "./energy"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

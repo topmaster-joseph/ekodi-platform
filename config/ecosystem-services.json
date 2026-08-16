@@ -10,6 +10,7 @@
     {"id":"community","name":"에코디커뮤니티","url":"https://community.ekodi.kr","label":"community.ekodi.kr","icon":"community","order":50,"homepage":true,"productionVerified":true},
     {"id":"work","name":"EKODI Work","url":"https://work.ekodi.kr","label":"work.ekodi.kr","icon":"work","order":55,"homepage":true,"productionVerified":true},
     {"id":"social","name":"EKODI Social","url":"https://social.ekodi.kr","label":"social.ekodi.kr","icon":"community","order":60,"homepage":true,"productionVerified":true},
+    {"id":"energy","name":"EKODI Energy AI","url":"https://energy.ekodi.kr","label":"energy.ekodi.kr","icon":"work","order":65,"homepage":false,"productionVerified":false,"status":"staging"},
     {"id":"mall","name":"에코디몰","url":"https://mall.ekodi.kr","label":"mall.ekodi.kr","icon":"mall","order":70,"homepage":true,"productionVerified":true},
     {"id":"marketing","name":"EKODI Marketing AI","url":"https://marketing.ekodi.kr","label":"marketing.ekodi.kr","icon":"marketing","order":80,"homepage":true,"productionVerified":true}
   ]
