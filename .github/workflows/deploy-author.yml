@@ -12,8 +12,8 @@ on:
       - 'deploy/manifests/author.worker.json'
       - 'auth-site/author-auth.js'
       - 'auth-site/auth-router.js'
-      - 'supabase/functions/author-access-api/**'
-      - 'supabase/migrations/*author_ai*'
+      - 'supabase/functions/author-*/**'
+      - 'supabase/migrations/*author_*'
       - '.github/workflows/deploy-author.yml'
   push:
     branches: [main]
@@ -26,8 +26,8 @@ on:
       - 'deploy/manifests/author.worker.json'
       - 'auth-site/author-auth.js'
       - 'auth-site/auth-router.js'
-      - 'supabase/functions/author-access-api/**'
-      - 'supabase/migrations/*author_ai*'
+      - 'supabase/functions/author-*/**'
+      - 'supabase/migrations/*author_*'
       - '.github/workflows/deploy-author.yml'
 
 permissions:
