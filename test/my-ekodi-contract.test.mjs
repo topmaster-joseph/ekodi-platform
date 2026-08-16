@@ -3,12 +3,15 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('My EKODI is a private-first personal hub, not a second source of truth',async()=>{
+test('My EKODI is a unified private-first hub, not a second source of truth',async()=>{
   const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
+  assert.match(html,/MY PLATFORMS/);
+  assert.match(html,/MY WORKSPACES/);
   assert.match(html,/PRIVATE FIRST/);
   assert.match(html,/NO DATA MONOLITH/);
+  assert.match(app,/current_site_access/);
+  assert.match(app,/current_site_workspaces/);
   assert.match(app,/creator_portfolio_items/);
-  assert.match(app,/visibilityLabel/);
   assert.doesNotMatch(app,/\.update\(\{visibility:/);
 });
 
@@ -41,4 +44,12 @@ test('Creator portfolio stays person-scoped and private by default',async()=>{
   assert.match(migration,/workspace_key text not null/);
   assert.match(privateHelper,/private\.current_person_id/);
   assert.match(optimized,/\(select private\.current_person_id\(\)\)/);
+});
+
+test('Production rollout bootstraps or repairs an unhealthy hostname before guarded promotion',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.match(workflow,/has no deployments/);
+  assert.match(workflow,/my\.ekodi\.kr\/health/);
+  assert.match(workflow,/repairing first production route/);
+  assert.match(workflow,/guarded-worker-release\.mjs/);
 });
