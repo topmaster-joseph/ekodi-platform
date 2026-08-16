@@ -86,6 +86,10 @@ jobs:
           test -f dist/marketing-ai-admin.js
           test -f dist/marketing-ai-admin.css
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
+          grep -Fq 'serviceOrigins' dist/auth-workspace-target.js
+          grep -Fq 'marketing:' dist/auth-workspace-target.js
+          grep -Fq 'books:' dist/auth-workspace-target.js
+          grep -Fq 'church:' dist/auth-workspace-target.js
           grep -Fq "button.dataset.section = 'marketing-ai'" dist/marketing-ai-admin.js
           grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' dist/marketing-ai-admin.js
           grep -Fq 'marketing-ai-admin.js' dist/control-center.html
@@ -152,12 +156,12 @@ jobs:
           verify_mail() { code=$(curl -L -sS -o /tmp/mail-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mail.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'EKODI Mail' /tmp/mail-body && grep -Fq 'ekodibiz.kr' /tmp/mail-body && grep -Fq 'ekodi.kr' /tmp/mail-body && grep -Fq '메일 열기' /tmp/mail-body; }
           verify_homepage_registry() { code=$(curl -L -sS -o /tmp/homepage -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'data-ekodi-service-registry="v1"' /tmp/homepage && grep -Fq 'data-service-id="community"' /tmp/homepage && grep -Fq 'https://community.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="work"' /tmp/homepage && grep -Fq 'https://work.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="marketing"' /tmp/homepage && grep -Fq 'https://marketing.ekodi.kr' /tmp/homepage && grep -Fq '/homepage-ambient.css' /tmp/homepage && grep -Fq '/homepage-ambient.js' /tmp/homepage; }
           verify_homepage_ambient() { css_code=$(curl -L -sS -o /tmp/homepage-ambient.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.css' || true); js_code=$(curl -L -sS -o /tmp/homepage-ambient.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.js' || true); [[ "$css_code" =~ ^[23] ]] && [[ "$js_code" =~ ^[23] ]] && grep -Fq 'z-index:0' /tmp/homepage-ambient.css && grep -Fq '.site-header,' /tmp/homepage-ambient.css && grep -Fq 'getRandomValues' /tmp/homepage-ambient.js; }
-          verify_targeted_auth_asset() { code=$(curl -L -sS -o /tmp/auth-workspace-target.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-workspace-target.js' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'workspace_key:requested' /tmp/auth-workspace-target.js && grep -Fq "site!=='marketing'" /tmp/auth-workspace-target.js; }
+          verify_targeted_auth_asset() { code=$(curl -L -sS -o /tmp/auth-workspace-target.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-workspace-target.js' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'workspace_key:requested' /tmp/auth-workspace-target.js && grep -Fq 'serviceOrigins' /tmp/auth-workspace-target.js && grep -Fq 'marketing:' /tmp/auth-workspace-target.js && grep -Fq 'books:' /tmp/auth-workspace-target.js && grep -Fq 'church:' /tmp/auth-workspace-target.js; }
           verify_marketing_admin_asset() { js_code=$(curl -L -sS -o /tmp/marketing-ai-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.js' || true); css_code=$(curl -L -sS -o /tmp/marketing-ai-admin.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.css' || true); [[ "$js_code" =~ ^[23] ]] && [[ "$css_code" =~ ^[23] ]] && grep -Fq "button.dataset.section = 'marketing-ai'" /tmp/marketing-ai-admin.js && grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' /tmp/marketing-ai-admin.js && grep -Fq '.marketing-ai-admin-body' /tmp/marketing-ai-admin.css; }
           verify_admin_marketing_csp() { code=$(curl -sS -D /tmp/admin-marketing-headers -o /tmp/admin-marketing-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fiq 'frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr https://marketing.ekodi.kr' /tmp/admin-marketing-headers && grep -Fq 'marketing-ai-admin.js' /tmp/admin-marketing-body; }
           for attempt in $(seq 1 18); do
             if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_admin_marketing_csp && verify_marketing_admin_asset && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' && verify_targeted_auth_asset && verify_html 'https://pay.ekodi.kr/' 'EKODI Pay' && verify_html 'https://trade.ekodi.kr/' 'EKODI GLOBAL TRADING' && verify_mail; then
-              echo 'Shared site Worker, MarketingAI admin panel, targeted auth workspace asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'; exit 0
+              echo 'Shared site Worker, MarketingAI admin panel, generalized auth workspace asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'; exit 0
             fi
             sleep 5
           done
