@@ -5,6 +5,7 @@ on:
     paths:
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
+      - 'test/marketing-ai-admin-layout.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
       - '.github/workflows/marketing-ai-admin-ci.yml'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
+      - 'test/marketing-ai-admin-layout.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
       - '.github/workflows/marketing-ai-admin-ci.yml'
@@ -35,16 +37,21 @@ jobs:
           node --check marketing-ai-admin.js
           node --check site-worker.js
           node --check scripts/build.mjs
+          node --test test/marketing-ai-admin-layout.test.mjs
           grep -Fq "button.dataset.section = 'marketing-ai'" marketing-ai-admin.js
-          grep -Fq 'marketingAiAdminFrame' marketing-ai-admin.js
           grep -Fq 'https://marketing.ekodi.kr/' marketing-ai-admin.js
+          grep -Fq '사용자 페이지 ↗' marketing-ai-admin.js
           grep -Fq '/api/membership/admin/subscriptions' marketing-ai-admin.js
           grep -Fq '/api/membership/admin/charges' marketing-ai-admin.js
-          grep -Fq '관리자 토큰은 iframe에 전달하지 않습니다.' marketing-ai-admin.js
+          grep -Fq '사용자 사이트는 관리자 화면 안에 임베드하지 않습니다.' marketing-ai-admin.js
+          ! grep -Fq 'marketingAiAdminFrame' marketing-ai-admin.js
+          ! grep -Fq '<iframe' marketing-ai-admin.js
           grep -Fq '.marketing-ai-admin-body' marketing-ai-admin.css
-          grep -Fq 'grid-template-columns:270px minmax(0,1fr)' marketing-ai-admin.css
+          grep -Fq 'grid-template-columns:minmax(0,1fr) 300px' marketing-ai-admin.css
+          ! grep -Fq '.marketing-ai-frame-' marketing-ai-admin.css
           grep -Fq "'/marketing-ai-admin.js'" site-worker.js
-          grep -Fq 'https://marketing.ekodi.kr' site-worker.js
+          grep -Fq 'frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr' site-worker.js
+          ! grep -Eiq 'frame-src[^;]*https://marketing\.ekodi\.kr' site-worker.js
           grep -Fq 'marketing-ai-admin.css' scripts/build.mjs
           grep -Fq 'marketing-ai-admin.js' scripts/build.mjs
       - name: Build and verify Control Center output
@@ -56,4 +63,5 @@ jobs:
           grep -Fq 'marketing-ai-admin.css' dist/control-center.html
           grep -Fq 'marketing-ai-admin.js' dist/control-center.html
           grep -Fq 'MarketingAI' dist/marketing-ai-admin.js
-          grep -Fq 'marketing.ekodi.kr 관리자 우측 화면' dist/marketing-ai-admin.js
+          grep -Fq '사용자 페이지 ↗' dist/marketing-ai-admin.js
+          ! grep -Fq 'marketingAiAdminFrame' dist/marketing-ai-admin.js
