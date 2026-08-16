@@ -1,6 +1,8 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
+const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
+const MARKETING_TARGET_RE = /(marketing\.ekodi\.kr|\.ai\.ekodi\.kr|jadam|pizzamaru|yogurt|cgma)/i;
 
 function cors(origin, env = {}) {
   const headers = {
@@ -56,11 +58,70 @@ function customerKey(row) {
   return `${String(row.subject_type || '')}:${String(row.subject_key || '')}`;
 }
 
+function safeJson(value, fallback = {}) {
+  try { return JSON.parse(value || ''); } catch { return fallback; }
+}
+
+function publicAiAction(row) {
+  return {
+    id:Number(row.id),
+    agentId:String(row.agent_id || ''),
+    agentName:String(row.agent_name || ''),
+    actionType:String(row.action_type || ''),
+    area:String(row.area || ''),
+    target:String(row.target || ''),
+    rationale:String(row.rationale || '').slice(0, 600),
+    decisionTier:String(row.decision_tier || ''),
+    decisionReason:String(row.decision_reason || '').slice(0, 500),
+    status:String(row.status || ''),
+    requestedBy:String(row.requested_by || ''),
+    createdAt:row.created_at || null,
+    decidedBy:row.decided_by || null,
+    decidedAt:row.decided_at || null,
+    decisionNote:String(row.decision_note || '').slice(0, 500),
+    verifiedAt:row.verified_at || null,
+  };
+}
+
+function isMarketingAction(row) {
+  const scope = [row.area,row.action_type,row.agent_id,row.agent_name].map(value => String(value || '')).join(' ');
+  return MARKETING_ACTION_RE.test(scope) || MARKETING_TARGET_RE.test(String(row.target || ''));
+}
+
+function readChannelRegistry(row) {
+  const registry = safeJson(row?.registry_json, { organizations:[] });
+  const organizations = Array.isArray(registry.organizations) ? registry.organizations : [];
+  const result = [];
+  for (const org of organizations) {
+    if (org?.isActive === false) continue;
+    const channels = Array.isArray(org?.channels) ? org.channels : [];
+    for (const channel of channels) {
+      if (channel?.isActive === false) continue;
+      result.push({
+        organizationId:String(org?.id || ''),
+        organizationName:String(org?.name || org?.shortName || ''),
+        website:String(org?.website || ''),
+        channelId:String(channel?.id || ''),
+        provider:String(channel?.provider || 'other'),
+        label:String(channel?.label || channel?.provider || 'Channel'),
+        handle:String(channel?.handle || ''),
+        url:String(channel?.url || ''),
+        description:String(channel?.description || '').slice(0, 240),
+      });
+    }
+  }
+  return {
+    revision:Number(row?.revision || 0),
+    updatedAt:row?.updated_at || null,
+    channels:result,
+  };
+}
+
 async function overview(request, env) {
   const session = await adminSession(request, env);
   if (!session) return json({ error:'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
 
-  const [subscriptionsResult, chargesResult, workspacesResult] = await Promise.all([
+  const [subscriptionsResult, chargesResult, workspacesResult, aiActionsResult, socialRegistryRow] = await Promise.all([
     env.DB.prepare(`SELECT id,subject_type,subject_key,site,plan_id,status,monthly_fee,provider,
       current_period_start,current_period_end,next_billing_at,cancel_at_period_end,created_at,updated_at
       FROM service_subscriptions
@@ -79,6 +140,10 @@ async function overview(request, env) {
       LEFT JOIN service_subscriptions s
         ON s.subject_type='store' AND s.subject_key=w.store_id AND s.site='marketing'
       ORDER BY w.updated_at DESC LIMIT 300`).all(),
+    env.DB.prepare(`SELECT id,agent_id,agent_name,action_type,area,target,rationale,decision_tier,decision_reason,
+      status,requested_by,created_at,decided_by,decided_at,decision_note,verified_at
+      FROM ai_agent_actions ORDER BY id DESC LIMIT 250`).all(),
+    env.DB.prepare('SELECT registry_json,revision,updated_at FROM social_registry_config WHERE id=1').first(),
   ]);
 
   const subscriptions = subscriptionsResult.results || [];
@@ -132,6 +197,18 @@ async function overview(request, env) {
     }
   }
 
+  const aiActions = (aiActionsResult.results || []).filter(isMarketingAction).map(publicAiAction);
+  const approvals = aiActions.filter(row => row.decisionTier === 'human_gate' || ['awaiting_human','approved_pending_executor','rejected'].includes(row.status));
+  for (const row of approvals.filter(item => item.status === 'awaiting_human')) {
+    attention.push({
+      kind:'approval', severity:'high', code:'ai_human_gate',
+      subjectType:'ai_action', subjectKey:String(row.id),
+      title:'사람의 결정 대기', detail:`${row.agentName || row.agentId} · ${row.actionType} · ${row.target || row.area}`,
+      updatedAt:row.createdAt,
+    });
+  }
+
+  const channelRegistry = readChannelRegistry(socialRegistryRow);
   const cutoff30d = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const completed30d = charges.filter(row => String(row.status || '').toLowerCase() === 'done'
     && Number.isFinite(Date.parse(row.completed_at || row.created_at || ''))
@@ -149,10 +226,17 @@ async function overview(request, env) {
       attention:attention.length,
       charges30d:completed30d.length,
       revenue30d:completed30d.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+      channels:channelRegistry.channels.length,
+      automationActions:aiActions.length,
+      pendingApprovals:approvals.filter(row => row.status === 'awaiting_human').length,
     },
     subscriptions,
     charges,
     workspaces,
+    channels:channelRegistry.channels,
+    channelRegistry:{ revision:channelRegistry.revision, updatedAt:channelRegistry.updatedAt },
+    automationActions:aiActions,
+    approvals,
     attention:attention.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))).slice(0, 100),
     dataContracts:{
       subscriptions:'connected',
@@ -160,14 +244,15 @@ async function overview(request, env) {
       workspaces:'connected',
       campaigns:'not_connected',
       crm:'not_connected',
-      channels:'not_connected',
-      automation:'not_connected',
-      approvals:'not_connected',
+      channels:'connected',
+      automation:'connected',
+      approvals:'connected',
     },
     safety:{
       readOnly:true,
       customerPiiIncluded:false,
       externalExecution:false,
+      approvalDecisionEndpointExposedHere:false,
     },
   }, 200, request, env);
 }
