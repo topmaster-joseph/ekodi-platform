@@ -9,6 +9,7 @@ function applyConfig(){
   const readiness=Number.isFinite(Number(cfg.readiness))?Math.min(100,Math.max(0,Number(cfg.readiness))):62;
   $('readinessScore').textContent=`${readiness}%`;
   $('readinessBar').style.width=`${readiness}%`;
+  if($('modeBadge'))$('modeBadge').textContent=cfg.mode==='production-readonly-mvp'?'READ-ONLY MVP':cfg.mode==='isolated-staging'?'STAGING MODE':'SAFE MVP MODE';
 }
 
 function renderSample(){
