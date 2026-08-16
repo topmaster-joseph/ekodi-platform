@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.0.0'
+$AgentVersion = '2.0.1'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -239,10 +239,13 @@ function Get-StartupItemsInternal {
 
 function Get-StartupDiagnostic {
   $items = @(Get-StartupItemsInternal)
+  $disabled = @(Load-StartupBackup)
   return @{
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')
     count = $items.Count
+    disabledCount = $disabled.Count
     items = @($items | Select-Object id, name, scope | ForEach-Object { @{ id = $_.id; name = $_.name; scope = $_.scope; enabled = $true } })
+    disabledItems = @($disabled | ForEach-Object { @{ id = [string]$_.id; name = [string]$_.name; scope = [string]$_.scope; enabled = $false } })
   }
 }
 
@@ -450,14 +453,28 @@ function Parse-ProtocolEnrollment([string]$Url) {
   return @{ enrollmentCode = $code; label = $name; apiBase = $AllowedApiBase }
 }
 
+function Test-AgentSourceSafety([string]$Content) {
+  if ($Content -notmatch '\$AgentVersion\s*=') { return $false }
+  $tokens = $null
+  $errors = $null
+  $ast = [System.Management.Automation.Language.Parser]::ParseInput($Content, [ref]$tokens, [ref]$errors)
+  if ($errors.Count -gt 0) { return $false }
+  $forbiddenNames = @(('Invoke-' + 'Expression'), ('i' + 'ex'))
+  $actualCommands = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] }, $true) | ForEach-Object { $_.GetCommandName() } | Where-Object { $_ })
+  foreach ($forbidden in $forbiddenNames) {
+    if ($actualCommands -contains $forbidden) { return $false }
+  }
+  return $true
+}
+
 function Update-AgentFromOfficialSource {
   $temp = Join-Path $env:TEMP 'ekodi-device-agent-update.ps1'
   Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
   $content = Get-Content $temp -Raw -Encoding UTF8
-  if ($content -notmatch '\$AgentVersion\s*=' -or $content -match '(?i)Invoke-Expression|\biex\b') { throw '공식 Agent 업데이트 파일 검증에 실패했습니다.' }
+  if (-not (Test-AgentSourceSafety $content)) { throw '공식 Agent 업데이트 파일 검증에 실패했습니다.' }
   Copy-Item -LiteralPath $temp -Destination $AgentPath -Force
   Register-EkodiProtocol
-  return @{ message = 'EKODI Device Agent 파일과 원클릭 연결 프로토콜을 업데이트했습니다.'; settings = Get-AgentSettings }
+  return @{ message = 'EKODI Device Agent 파일과 원클릭 연결 프로토콜을 업데이트했습니다. 실행 중인 Agent는 다음 재시작부터 새 버전을 사용합니다.'; settings = Get-AgentSettings }
 }
 
 function Get-AgentSettings {
@@ -594,6 +611,22 @@ function Poll-Command($Config) {
   }
 }
 
+function Stop-ExistingAgentProcesses {
+  try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue } catch { }
+  try {
+    foreach ($process in @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)) {
+      if ([int]$process.ProcessId -eq $PID) { continue }
+      if ([string]$process.Name -notin @('powershell.exe', 'pwsh.exe')) { continue }
+      $line = [string]$process.CommandLine
+      if (-not $line) { continue }
+      if ($line.Contains($AgentPath) -and $line -match '(?i)(?:^|\s|\")-Run(?:\s|\"|$)') {
+        Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction SilentlyContinue
+      }
+    }
+  } catch { }
+  Start-Sleep -Milliseconds 350
+}
+
 function Ensure-AgentTask {
   $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
@@ -609,6 +642,11 @@ function Copy-SelfToAgentPath {
   if ($source -ne $destination) { Copy-Item -LiteralPath $PSCommandPath -Destination $AgentPath -Force }
 }
 
+function Start-CurrentAgent {
+  Ensure-AgentTask
+  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$AgentPath`"",'-Run')
+}
+
 function Install-Agent {
   if (-not $EnrollmentCode) { throw '-EnrollmentCode가 필요합니다.' }
   if ($ApiBase.TrimEnd('/') -ne $AllowedApiBase) { throw '허용되지 않은 EKODI API 주소입니다.' }
@@ -619,12 +657,13 @@ function Install-Agent {
     return
   }
 
+  $hadConfig = Test-Path $ConfigPath
+  if ($hadConfig) { Stop-ExistingAgentProcesses }
   Copy-SelfToAgentPath
   Register-EkodiProtocol
-  if (Test-Path $ConfigPath) {
-    Ensure-AgentTask
-    Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$AgentPath`"",'-Run')
-    Write-Host '이 PC는 이미 EKODI Device Agent에 등록되어 있습니다. Agent와 원클릭 연결 기능을 갱신했습니다.' -ForegroundColor Green
+  if ($hadConfig) {
+    Start-CurrentAgent
+    Write-Host '기존 EKODI 기기 등록과 토큰을 유지한 채 Agent를 최신 버전으로 전환했습니다.' -ForegroundColor Green
     return
   }
 
@@ -649,8 +688,7 @@ function Install-Agent {
     protectedToken = Protect-LocalSecret ([string]$enrollment.deviceToken)
     installedAt = (Get-Date).ToUniversalTime().ToString('o')
   } | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
-  Ensure-AgentTask
-  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$AgentPath`"",'-Run')
+  Start-CurrentAgent
   Write-Host "EKODI Device Agent 등록 완료: $($enrollment.deviceId)" -ForegroundColor Green
 }
 
@@ -659,9 +697,16 @@ function Register-ProtocolOnly {
     Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`"",'-RegisterProtocol')
     return
   }
+  $hadConfig = Test-Path $ConfigPath
+  if ($hadConfig) { Stop-ExistingAgentProcesses }
   Copy-SelfToAgentPath
   Register-EkodiProtocol
-  Write-Host 'EKODI 원클릭 PC 연결 프로그램을 설치했습니다. 관리자 사이트에서 “이 PC 연결 계속”을 누르세요.' -ForegroundColor Green
+  if ($hadConfig) {
+    Start-CurrentAgent
+    Write-Host '기존 등록을 유지한 채 EKODI Device Agent 업그레이드와 원클릭 연결 준비를 완료했습니다.' -ForegroundColor Green
+  } else {
+    Write-Host 'EKODI 원클릭 PC 연결 프로그램을 설치했습니다. 관리자 사이트에서 “이 PC 연결 계속”을 누르세요.' -ForegroundColor Green
+  }
 }
 
 function Handle-ProtocolUrl([string]$Url) {
@@ -698,7 +743,7 @@ if ($RegisterProtocol) { Register-ProtocolOnly; exit }
 if ($Install) { Install-Agent; exit }
 if ($Run) { Run-Agent; exit }
 
-Write-Host 'EKODI Device Agent 2.0' -ForegroundColor Cyan
+Write-Host 'EKODI Device Agent 2.0.1' -ForegroundColor Cyan
 Write-Host '등록: -Install -EnrollmentCode <코드>'
 Write-Host '원클릭 연결 등록: -RegisterProtocol'
 Write-Host '실행: -Run'
