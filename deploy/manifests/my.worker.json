@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-my",
+    "config": "wrangler.my.toml",
+    "requests": [
+      {
+        "url": "https://my.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["My EKODI", "한 사람의 삶이 이어지는 곳", "CREATOR PORTFOLIO"],
+        "headerExpect": ["x-ekodi-service: my-ekodi", "x-content-type-options: nosniff"]
+      },
+      {
+        "url": "https://my.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["ekodi-my", "my-ekodi", "creatorPortfolio", "person-scoped", "private-first"],
+        "headerExpect": ["x-ekodi-service: my-ekodi", "cache-control: no-store"]
+      }
+    ]
+  }
+}
