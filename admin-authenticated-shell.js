@@ -11,6 +11,7 @@
     'control-center-features.js',
     'campus-actions.js',
     'admin-lazy-features.js',
+    'admin-menu-layout.js',
   ];
   let started = false;
 
