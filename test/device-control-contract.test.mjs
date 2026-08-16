@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [api, agent, admin, build, entry] = await Promise.all([
+const [api, agent, admin, build, entry, security] = await Promise.all([
   readFile(new URL('../device-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8'),
   readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../security-edge.js', import.meta.url), 'utf8'),
 ]);
 
 test('Device Control routes are behind the mission control entry worker', () => {
@@ -25,6 +26,12 @@ test('device credentials are stored as hashes and enrollment is one-time', () =>
   assert.ok(registryInsert, 'device registry insert must exist');
   assert.match(registryInsert, /tokenHash/);
   assert.doesNotMatch(registryInsert, /deviceToken/);
+});
+
+test('public device enrollment is edge-rate-limited and fails through the shared security layer', () => {
+  assert.match(security, /'\/api\/device-agent\/enroll'/);
+  assert.match(entry, /enforceEdgeSecurity/);
+  assert.match(security, /AUTH_RATE_LIMITER/);
 });
 
 test('cloud commands are an explicit allowlist, never arbitrary shell', () => {
