@@ -15,6 +15,14 @@ const ICONS = {
   marketing: '<path d="M7 30V18M16 30V10M25 30V15M34 30V6M5 34h31"></path><path d="m7 14 9-7 9 4 9-8"></path>'
 };
 
+const CATEGORY_DEFINITIONS = [
+  { id: 'community-ministry', label: '공동체 · 사역' },
+  { id: 'business-growth', label: '비즈니스 · 성장' },
+  { id: 'knowledge-creation', label: '콘텐츠 · 지식' },
+  { id: 'work-life', label: '일 · 생활' }
+];
+const CATEGORY_IDS = new Set(CATEGORY_DEFINITIONS.map(category => category.id));
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -46,6 +54,7 @@ function validateRegistry(registry) {
 
     if (!service.name || !service.label) throw new Error(`Service name/label required: ${service.id}`);
     if (!ICONS[service.icon]) throw new Error(`Unknown service icon: ${service.id}`);
+    if (!CATEGORY_IDS.has(service.category)) throw new Error(`Unknown service category: ${service.id}`);
     if (service.homepage && service.productionVerified !== true) {
       throw new Error(`Homepage service must be production verified: ${service.id}`);
     }
@@ -60,14 +69,26 @@ export async function loadHomepageServices() {
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.id.localeCompare(b.id));
 }
 
-export function renderServiceCards(services) {
-  return services.map(service => {
-    const id = escapeHtml(service.id);
-    const url = escapeHtml(service.url);
-    const name = escapeHtml(service.name);
-    const label = escapeHtml(service.label);
-    return `        <a class="service-card" data-service-id="${id}" href="${url}"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span><span><strong>${name}</strong><small>${label}</small></span><span class="arrow">→</span></a>`;
-  }).join('\n');
+function renderServiceCard(service) {
+  const id = escapeHtml(service.id);
+  const url = escapeHtml(service.url);
+  const name = escapeHtml(service.name);
+  const label = escapeHtml(service.label);
+  return `          <a class="service-card" data-service-id="${id}" href="${url}"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span><span class="service-copy"><strong>${name}</strong><small>${label}</small></span><span class="arrow" aria-hidden="true">→</span></a>`;
 }
 
-export { validateRegistry };
+export function renderServiceCards(services) {
+  return CATEGORY_DEFINITIONS.map(category => {
+    const categoryServices = services.filter(service => service.category === category.id);
+    if (!categoryServices.length) return '';
+    const cards = categoryServices.map(renderServiceCard).join('\n');
+    return `      <section class="service-group" data-service-category="${escapeHtml(category.id)}">
+        <div class="service-group-heading"><h3>${escapeHtml(category.label)}</h3><span>${categoryServices.length}</span></div>
+        <div class="service-list">
+${cards}
+        </div>
+      </section>`;
+  }).filter(Boolean).join('\n');
+}
+
+export { CATEGORY_DEFINITIONS, validateRegistry };
