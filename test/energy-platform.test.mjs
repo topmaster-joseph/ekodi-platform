@@ -14,7 +14,8 @@ test('Energy AI presents the complete energy management surface',()=>{
 
 test('Energy workspace switcher consumes one-time handoff and revalidates person workspace',()=>{
   assert.match(html,/id="workspaceSwitch"/);
-  assert.match(app,/workspace-api\/workspaces\?site=energy/);
+  assert.match(app,/functions\/v1\/workspace-api/);
+  assert.match(app,/\$\{WORKSPACE_API\}\/workspaces\?site=energy/);
   assert.match(app,/verifyOtp\(\{token_hash:token/);
   assert.match(app,/ekodi_workspace/);
   assert.match(app,/workspace_key===key/);
