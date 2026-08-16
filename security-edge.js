@@ -7,6 +7,7 @@ const PUBLIC_AUTH_PATHS = new Set([
   '/api/google/challenge',
   '/api/google/login',
   '/api/customer/federated-login',
+  '/api/device-agent/enroll',
 ]);
 
 async function fingerprint(value) {
