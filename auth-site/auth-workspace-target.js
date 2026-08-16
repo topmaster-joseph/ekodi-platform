@@ -3,6 +3,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
+const PERSON_WORKSPACE=`${SUPABASE_URL}/functions/v1/workspace-api`;
+const PERSON_SCOPED_SITES=new Set(['social','energy']);
 const params=new URLSearchParams(location.search);
 const site=String(params.get('site')||'').trim().toLowerCase();
 const requested=String(params.get('workspace')||'').trim();
@@ -20,6 +22,8 @@ const serviceOrigins={
   community:['https://community.ekodi.kr'],
   edu:['https://edu.ekodi.kr'],
   media:['https://media.ekodi.kr'],
+  social:['https://social.ekodi.kr'],
+  energy:['https://energy.ekodi.kr'],
 };
 const origins=serviceOrigins[site]||[];
 if(!origins.length||!requested||requested.length>180||!/^[a-z]+:[a-zA-Z0-9:_-]+$/.test(requested))throw new Error('target_workspace_not_applicable');
@@ -30,6 +34,7 @@ function safeReturn(raw){
 }
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
+const WORKSPACE_API=PERSON_SCOPED_SITES.has(site)?PERSON_WORKSPACE:ACCESS;
 let routing=false;
 
 async function routeToRequestedWorkspace(){
@@ -39,13 +44,13 @@ async function routeToRequestedWorkspace(){
   routing=true;
   try{
     const headers={apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${session.access_token}`};
-    const listResponse=await fetch(`${ACCESS}/workspaces?site=${encodeURIComponent(site)}`,{headers,cache:'no-store'});
+    const listResponse=await fetch(`${WORKSPACE_API}/workspaces?site=${encodeURIComponent(site)}`,{headers,cache:'no-store'});
     if(!listResponse.ok)throw new Error('workspace_list_failed');
     const listData=await listResponse.json();
     const workspaces=Array.isArray(listData?.workspaces)?listData.workspaces:[];
     const target=workspaces.find(item=>item?.workspace_key===requested&&item?.requires_handoff===true&&['active','pre_registered'].includes(String(item?.status||'')));
     if(!target){routing=false;return false;}
-    const handoffResponse=await fetch(`${ACCESS}/handoff`,{
+    const handoffResponse=await fetch(`${WORKSPACE_API}/handoff`,{
       method:'POST',headers:{...headers,'content-type':'application/json'},cache:'no-store',
       body:JSON.stringify({site,return_to:returnTo,workspace_key:requested}),
     });
