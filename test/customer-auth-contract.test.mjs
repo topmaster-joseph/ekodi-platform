@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { CUSTOMER_TENANTS, normalizeCustomerRole, normalizeTenantSlug } from '../customer-auth.js';
 
-const [source, entry, wrangler, migration] = await Promise.all([
+const [source, entry, missionEntry, wrangler, migration] = await Promise.all([
   readFile(new URL('../customer-auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0005_customer_auth.sql', import.meta.url), 'utf8'),
 ]);
@@ -62,12 +63,15 @@ test('customer session is tenant-bound and membership is revalidated', () => {
   assert.match(source, /SESSION_HOURS = 12/);
 });
 
-test('customer APIs use a dedicated entry layer without replacing control API behavior', () => {
+test('customer APIs keep their dedicated entry layer behind Mission Control without replacing control behavior', () => {
   assert.ok(entry.includes("path.startsWith('/api/customer/')"));
   assert.ok(entry.includes("path.startsWith('/api/customers/')"));
   assert.ok(entry.includes('return apiWorker.fetch(request, env, ctx)'));
   assert.ok(entry.includes('return apiWorker.scheduled(controller, env, ctx)'));
-  assert.ok(wrangler.includes('main = "customer-entry-worker.js"'));
+  assert.ok(wrangler.includes('main = "mission-control-entry-worker.js"'));
+  assert.ok(missionEntry.includes("import customerEntryWorker from './customer-entry-worker.js'"));
+  assert.ok(missionEntry.includes('return customerEntryWorker.fetch(request, env, ctx)'));
+  assert.ok(missionEntry.includes('return customerEntryWorker.scheduled(controller, env, ctx)'));
 });
 
 test('all customer production origins are explicitly allowed', () => {
