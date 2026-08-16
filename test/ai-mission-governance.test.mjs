@@ -13,7 +13,7 @@ test('mission governance keeps delegated stewardship and human agency above reve
 });
 
 test('unknown agents receive no implicit execution authority', () => {
-  const result = evaluateAgentAction({ agentId: 'unregistered-agent', area: 'routine_task', reversible: true, delegated: true, logged: true, verified: true });
+  const result = evaluateAgentAction({ agentId: 'unregistered-agent', area: 'routine_task', reversible: true, delegated: true, logged: true, preflightVerified: true });
   assert.equal(result.tier, 'human_gate');
   assert.equal(canChiefOverride(result), false);
 });
@@ -30,24 +30,25 @@ test('pastoral judgment stays behind a human steward gate', () => {
   assert.equal(canChiefOverride(result), false);
 });
 
-test('guarded reversible work can execute only with complete controls', () => {
+test('guarded reversible work can execute only after complete preflight controls', () => {
   const permitted = evaluateAgentAction({
     agentId: 'release',
     area: 'safe_staging_configuration',
     reversible: true,
     delegated: true,
     logged: true,
-    verified: true,
+    preflightVerified: true,
   });
   assert.equal(permitted.tier, 'execute_reversible');
+  assert.match(permitted.explanation, /result must still be verified/i);
 
   const incomplete = evaluateAgentAction({
     agentId: 'release',
     area: 'safe_staging_configuration',
     reversible: true,
     delegated: true,
-    logged: false,
-    verified: true,
+    logged: true,
+    preflightVerified: false,
   });
   assert.equal(incomplete.tier, 'assist');
 });
