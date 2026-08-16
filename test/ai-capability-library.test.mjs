@@ -2,11 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildWorkspaceBlueprint, recommendWorkspacePacks } from '../ai-capability-orchestrator.js';
+import { validateCapabilityLibrary } from '../scripts/validate-ai-capabilities.mjs';
 
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const capabilities = await readJson('config/ai-capabilities.json');
 const packs = await readJson('config/workspace-packs.json');
+const governance = await readJson('config/ai-mission-governance.json');
+const ecosystem = await readJson('config/ecosystem-services.json');
 const catalog = { capabilities, packs };
+
+test('capability catalog respects governance, showroom and pack contracts', () => {
+  const result = validateCapabilityLibrary({ capabilities, packs, governance, ecosystem });
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.capabilityCount, 27);
+  assert.equal(result.packCount, 10);
+  assert.equal(result.humanGateCount, 5);
+});
 
 test('unclear personal intent falls back to My EKODI personal starter', () => {
   const result = recommendWorkspacePacks({ text: '', audience: 'person' }, packs);
