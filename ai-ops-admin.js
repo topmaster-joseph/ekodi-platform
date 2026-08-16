@@ -46,6 +46,8 @@
   let overview = null;
   let lastReviewAt = null;
   let selectedDomain = '';
+  let fleetQuery = '';
+  let fleetFilter = 'all';
 
   const $ = selector => document.querySelector(selector);
   const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
@@ -63,7 +65,7 @@
     const path = force ? '/api/control/check' : '/api/control/overview';
     const response = await fetch(`${API}${path}`, {
       method: force ? 'POST' : 'GET',
-      headers: authHeaders(),
+      headers:authHeaders(),
       cache:'no-store',
     });
     if (!response.ok) throw new Error(`운영 API ${response.status}`);
@@ -82,14 +84,14 @@
 
   function agentState(agent, map = serviceMap()) {
     const service = map.get(agent.domain);
-    if (!service) return { key:'standby', label:'Configured', note:'상태점검 연결 대기', response:null, service:null };
-    if (service.state && service.state !== 'active') return { key:'standby', label:String(service.state).toUpperCase(), note:'운영상태 확인 필요', response:service.latest?.responseTime ?? null, service };
+    if (!service) return { key:'standby', label:'연결대기', note:'Control API 상태점검 연결 대기', response:null, service:null };
+    if (service.state && service.state !== 'active') return { key:'standby', label:'점검중', note:'운영상태 확인 필요', response:service.latest?.responseTime ?? null, service };
     const health = service.latest?.status || 'pending';
-    if (health === 'offline') return { key:'critical', label:'Offline', note:service.latest?.error || '서비스 응답 없음', response:service.latest?.responseTime ?? null, service };
-    if (health === 'degraded') return { key:'attention', label:'Degraded', note:'응답 지연 또는 부분 장애', response:service.latest?.responseTime ?? null, service };
+    if (health === 'offline') return { key:'critical', label:'장애', note:service.latest?.error || '서비스 응답 없음', response:service.latest?.responseTime ?? null, service };
+    if (health === 'degraded') return { key:'attention', label:'주의', note:service.latest?.error || '응답 지연 또는 부분 장애', response:service.latest?.responseTime ?? null, service };
     const response = Number(service.latest?.responseTime ?? service.stats24h?.averageResponseTime ?? 0);
-    if (response >= 1800) return { key:'attention', label:'Watch', note:`응답 ${response}ms`, response, service };
-    return { key:'healthy', label:'Healthy', note:response ? `${response}ms` : '정상', response, service };
+    if (response >= 1800) return { key:'attention', label:'주의', note:`응답 지연 ${response}ms`, response, service };
+    return { key:'healthy', label:'정상', note:response ? `${response}ms` : '정상 응답', response, service };
   }
 
   function monitorFreshness() {
@@ -128,13 +130,15 @@
     const map = serviceMap();
     const states = SITE_AGENTS.map(agent => agentState(agent, map));
     const healthy = states.filter(state => state.key === 'healthy').length;
-    const attention = states.filter(state => ['attention','critical'].includes(state.key)).length;
+    const warning = states.filter(state => state.key === 'attention').length;
+    const down = states.filter(state => state.key === 'critical').length;
     const configured = states.filter(state => state.key === 'standby').length;
     const cases = buildCases();
     return {
       total:SITE_AGENTS.length,
       healthy,
-      attention,
+      warning,
+      down,
       configured,
       cases,
       decisions:cases.filter(item => item.level === 'DECISION').length,
@@ -142,7 +146,7 @@
   }
 
   function showSection(domain = '') {
-    selectedDomain = domain || selectedDomain;
+    if (domain) selectedDomain = domain;
     document.querySelectorAll('[data-panel]').forEach(node => {
       const targets = String(node.dataset.panel || '').split(' ');
       node.classList.toggle('hidden-panel', !targets.includes(SECTION));
@@ -153,7 +157,7 @@
     $('.sidebar')?.classList.remove('open');
     if (location.hash !== '#ai-ops') history.replaceState(null, '', '#ai-ops');
     render();
-    if (selectedDomain) requestAnimationFrame(() => focusAgent(selectedDomain));
+    if (selectedDomain) requestAnimationFrame(() => focusFleetRow(selectedDomain));
   }
 
   function installNav() {
@@ -187,31 +191,27 @@
     section.dataset.panel = SECTION;
     section.innerHTML = `
       <div class="ai-ops-head">
-        <div><p class="kicker">AI OPERATIONS COUNCIL</p><h2>EKODI Chief AI Control</h2><p>각 Site AI가 자기 영역을 감시하고, 공통 이슈는 Council에서 교차검토합니다. 되돌릴 수 없는 결정만 대표에게 올립니다.</p></div>
-        <div class="ai-ops-head-actions"><button class="secondary" id="aiOpsRefresh" type="button">↻ Council Review</button><button class="primary" id="aiOpsDecisions" type="button">Decision Gate</button></div>
+        <div class="ai-ops-title"><p class="kicker">EKODI DIGITAL CAMPUS · AI OPERATIONS</p><h2>AI Ops</h2><p>사이트 상태를 보면서 Chief AI와 바로 대화하고, 저위험 조치는 자동 처리하며 중요한 변경만 Decision Gate로 올립니다.</p></div>
+        <div class="ai-ops-head-actions"><span class="ai-ops-auto">30초 자동 갱신</span><button class="secondary" id="aiOpsRefresh" type="button">↻ 전체 점검</button><button class="primary" id="aiOpsDecisions" type="button">Decision Gate · <span id="aiOpsDecisionCompact">0</span></button></div>
       </div>
       <div class="ai-ops-metrics" id="aiOpsMetrics"></div>
-      <div class="ai-chief-card">
-        <div class="ai-chief-identity"><span class="ai-avatar">AI</span><div><small>ECOSYSTEM ORCHESTRATOR</small><strong>Chief AI</strong><p id="aiChiefBrief">운영 상태를 읽는 중입니다.</p></div></div>
-        <div class="ai-chief-mode"><small>AUTONOMY</small><strong>Guarded Auto</strong><span>저위험 자동 · 중요결정 승인</span></div>
-      </div>
-      <div class="ai-ops-columns">
-        <div class="ai-ops-main">
-          <section class="ai-ops-block" id="aiCouncilBlock"><div class="ai-block-head"><div><small>COUNCIL CASES</small><h3>AI Council</h3></div><span id="aiCouncilCount" class="ai-count">0</span></div><div id="aiCouncilCases" class="ai-case-list"></div></section>
-          <section class="ai-ops-block"><div class="ai-block-head"><div><small>SITE ADMIN AGENTS</small><h3>Site AI · ${SITE_AGENTS.length}</h3></div><span class="ai-muted">Manage와 AI를 분리해 운영</span></div><div id="aiSiteAgents" class="ai-site-grid"></div></section>
+      <div class="ai-ops-main">
+        <div class="ai-ops-observe">
+          <section class="ai-ops-block ai-fleet-block">
+            <div class="ai-block-head ai-fleet-head"><div><small>SITE FLEET</small><h3>사이트 상태</h3></div><div class="ai-fleet-tools"><input id="aiFleetSearch" type="search" autocomplete="off" placeholder="사이트·도메인 검색" aria-label="사이트 검색"><select id="aiFleetFilter" aria-label="상태 필터"><option value="all">전체 상태</option><option value="needs-attention">주의·장애</option><option value="healthy">정상</option><option value="standby">연결대기</option></select></div></div>
+            <div class="ai-fleet-scroll" id="aiFleetScroll"><table class="ai-fleet-table"><thead><tr><th>Site</th><th>Status</th><th>Response</th><th>담당 AI</th><th>Last Check</th><th>Issue</th></tr></thead><tbody id="aiFleetRows"></tbody></table></div>
+          </section>
+          <section class="ai-ops-block ai-selected-detail" id="aiSelectedDetail" aria-live="polite"></section>
         </div>
-        <aside class="ai-ops-side">
-          <section class="ai-ops-block ai-decision-block" id="aiDecisionBlock"><div class="ai-block-head"><div><small>HUMAN GATE</small><h3>Decision Gate</h3></div><span id="aiDecisionCount" class="ai-count danger">0</span></div><div id="aiDecisionQueue"></div></section>
-          <section class="ai-ops-block"><div class="ai-block-head"><div><small>SPECIALIST COUNCIL</small><h3>Core Agents</h3></div></div><div class="ai-specialists">${COUNCIL.map(agent => `<div><strong>${esc(agent.name)}</strong><span>${esc(agent.role)}</span></div>`).join('')}</div></section>
-          <section class="ai-ops-block"><div class="ai-block-head"><div><small>AI CONSTITUTION</small><h3>권한 경계</h3></div></div><div class="ai-policy-tiers"><div><b>INFO</b><span>비파괴 점검·정리·기록은 자동</span></div><div><b>REPORT</b><span>복구·롤백 후 결과 보고</span></div><div><b>DECISION</b><span>되돌리기 어렵거나 비용·권한 영향은 승인</span></div></div><button class="ai-policy-link" type="button" id="aiOpenPolicies">전체 Policies 보기 →</button></section>
-        </aside>
       </div>
-      <div class="ai-site-drawer" id="aiSiteDrawer" hidden></div>
+      <aside class="ai-ops-side" aria-hidden="true"></aside>
     `;
     content.prepend(section);
+
     $('#aiOpsRefresh')?.addEventListener('click', runReview);
-    $('#aiOpsDecisions')?.addEventListener('click', () => $('#aiDecisionBlock')?.scrollIntoView({ behavior:'smooth', block:'center' }));
-    $('#aiOpenPolicies')?.addEventListener('click', () => document.querySelector('.sidebar [data-section="policies"]')?.click());
+    $('#aiOpsDecisions')?.addEventListener('click', () => promptChat('결정 대기사항 보여줘'));
+    $('#aiFleetSearch')?.addEventListener('input', event => { fleetQuery = String(event.target.value || '').trim().toLowerCase(); renderFleet(); });
+    $('#aiFleetFilter')?.addEventListener('change', event => { fleetFilter = event.target.value || 'all'; renderFleet(); });
     return true;
   }
 
@@ -223,100 +223,169 @@
     const host = $('#aiOpsMetrics');
     if (!host) return;
     host.innerHTML = [
-      metric('Site AI', `${data.total}`, '사이트별 운영 담당'),
-      metric('Healthy', `${data.healthy}`, '실시간 정상', data.attention ? '' : 'good'),
-      metric('Council Cases', `${data.cases.length}`, '교차검토 항목', data.cases.length ? 'warn' : ''),
-      metric('Decisions', `${data.decisions}`, data.decisions ? '대표 판단 대기' : '현재 승인 요청 없음', data.decisions ? 'danger' : 'good'),
+      metric('전체 사이트', `${data.total}`, 'Site AI'),
+      metric('정상', `${data.healthy}`, '실시간 정상', data.healthy ? 'good' : ''),
+      metric('주의', `${data.warning}`, '지연·부분 이슈', data.warning ? 'warn' : ''),
+      metric('장애', `${data.down}`, '즉시 확인', data.down ? 'danger' : 'good'),
+      metric('연결대기', `${data.configured}`, '상태점검 연결', data.configured ? 'muted' : 'good'),
+      metric('결정', `${data.decisions}`, data.decisions ? '대표 판단 대기' : '승인 요청 없음', data.decisions ? 'danger' : 'good'),
     ].join('');
+    const compact = $('#aiOpsDecisionCompact');
+    if (compact) compact.textContent = String(data.decisions);
+    panel()?.setAttribute('data-decision-count', String(data.decisions));
   }
 
-  function caseCard(item) {
-    const article = document.createElement('article');
-    article.className = `ai-case ${item.level.toLowerCase()}`;
-    article.innerHTML = `<div class="ai-case-level">${esc(item.level)}</div><div class="ai-case-copy"><strong>${esc(item.title)}</strong><span>${esc(item.owner)} · ${esc(item.consult)}</span><p>${esc(item.action)}</p></div>`;
-    if (item.domain && item.domain !== 'platform') article.addEventListener('click', () => openSite(item.domain));
-    return article;
+  function severity(state) {
+    return ({ critical:0, attention:1, healthy:2, standby:3 })[state.key] ?? 4;
   }
 
-  function renderCases(data) {
-    const host = $('#aiCouncilCases');
-    const count = $('#aiCouncilCount');
-    if (!host || !count) return;
+  function lastCheck(service) {
+    const raw = service?.latest?.checkedAt || service?.latest?.checked_at || service?.lastCheckedAt || service?.updatedAt || overview?.generatedAt;
+    if (!raw) return '—';
+    const time = new Date(raw).getTime();
+    if (!Number.isFinite(time)) return '—';
+    const diff = Math.max(0, Date.now() - time);
+    if (diff < 60_000) return '방금 전';
+    if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))}분 전`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}시간 전`;
+    return new Date(time).toLocaleDateString('ko-KR');
+  }
+
+  function responseText(state) {
+    const value = Number(state.response || 0);
+    if (state.key === 'critical' && !value) return 'Timeout';
+    return value ? `${value} ms` : '—';
+  }
+
+  function issueText(state) {
+    if (state.key === 'healthy') return '—';
+    const text = String(state.note || '확인 필요');
+    return text.length > 64 ? `${text.slice(0, 61)}…` : text;
+  }
+
+  function filteredAgents() {
+    const map = serviceMap();
+    return SITE_AGENTS
+      .map(agent => ({ agent, state:agentState(agent, map) }))
+      .filter(({ agent, state }) => {
+        if (fleetFilter === 'needs-attention' && !['critical','attention'].includes(state.key)) return false;
+        if (fleetFilter === 'healthy' && state.key !== 'healthy') return false;
+        if (fleetFilter === 'standby' && state.key !== 'standby') return false;
+        if (!fleetQuery) return true;
+        const haystack = `${agent.name} ${agent.domain} ${agent.group} ${agent.role}`.toLowerCase();
+        return haystack.includes(fleetQuery);
+      })
+      .sort((a, b) => severity(a.state) - severity(b.state) || a.agent.domain.localeCompare(b.agent.domain));
+  }
+
+  function fleetRow(agent, state) {
+    const tr = document.createElement('tr');
+    tr.className = `ai-fleet-row ${state.key}${selectedDomain === agent.domain ? ' selected' : ''}`;
+    tr.dataset.aiAgentDomain = agent.domain;
+    tr.tabIndex = 0;
+    tr.innerHTML = `
+      <td><span class="ai-fleet-site"><span class="ai-state-dot"></span><span><strong>${esc(agent.name)}</strong><small>${esc(agent.domain)} · ${esc(agent.group)}</small></span></span></td>
+      <td><span class="ai-status-pill ${esc(state.key)}">${esc(state.label)}</span></td>
+      <td class="ai-fleet-response">${esc(responseText(state))}</td>
+      <td><span class="ai-owner">${esc(agent.name)} AI</span></td>
+      <td>${esc(lastCheck(state.service))}</td>
+      <td class="ai-fleet-issue">${esc(issueText(state))}</td>
+    `;
+    tr.addEventListener('click', () => openSite(agent.domain));
+    tr.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openSite(agent.domain); } });
+    return tr;
+  }
+
+  function renderFleet() {
+    const host = $('#aiFleetRows');
+    if (!host) return;
+    const items = filteredAgents();
     host.replaceChildren();
-    count.textContent = String(data.cases.length);
-    if (!data.cases.length) {
-      const empty = document.createElement('div');
-      empty.className = 'ai-empty';
-      empty.innerHTML = '<strong>현재 Council 안건 없음</strong><span>Site AI 감시 결과 즉시 협의할 이슈가 없습니다.</span>';
-      host.append(empty);
+    if (!items.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'ai-fleet-empty';
+      tr.innerHTML = '<td colspan="6">조건에 맞는 사이트가 없습니다.</td>';
+      host.append(tr);
       return;
     }
-    data.cases.forEach(item => host.append(caseCard(item)));
+    items.forEach(({ agent, state }) => host.append(fleetRow(agent, state)));
   }
 
-  function renderDecisions(data) {
-    const queue = $('#aiDecisionQueue');
-    const count = $('#aiDecisionCount');
-    if (!queue || !count) return;
-    const decisions = data.cases.filter(item => item.level === 'DECISION');
-    count.textContent = String(decisions.length);
-    queue.replaceChildren();
-    if (!decisions.length) {
-      const empty = document.createElement('div');
-      empty.className = 'ai-empty compact';
-      empty.innerHTML = '<strong>결정 대기 없음</strong><span>Chief AI가 대표 판단이 필요한 사안만 이곳에 올립니다.</span>';
-      queue.append(empty);
-    } else {
-      decisions.forEach(item => queue.append(caseCard(item)));
-    }
-    const rules = document.createElement('details');
-    rules.className = 'ai-decision-rules';
-    rules.innerHTML = `<summary>대표 승인 대상 기준</summary><ul>${DECISION_RULES.map(rule => `<li>${esc(rule)}</li>`).join('')}</ul>`;
-    queue.append(rules);
+  function detailActions(agent) {
+    return `<div class="ai-detail-actions"><button class="secondary" type="button" id="aiSelectedManage">Manage</button><a class="primary" href="https://${esc(agent.domain)}" target="_blank" rel="noopener">Open ↗</a></div>`;
   }
 
-  function agentCard(agent, state) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `ai-site-card ${state.key}`;
-    button.dataset.aiAgentDomain = agent.domain;
-    button.innerHTML = `<span class="ai-state-dot"></span><span class="ai-site-copy"><small>${esc(agent.group)}</small><strong>${esc(agent.name)}</strong><span>${esc(agent.domain)}</span></span><span class="ai-site-state"><b>${esc(state.label)}</b><small>${esc(state.note)}</small></span>`;
-    button.addEventListener('click', () => openSite(agent.domain));
-    return button;
+  function aiActionText(agent, state) {
+    if (state.key === 'critical') return agent.critical
+      ? '진단·가역 복구는 자동 진행. 권한·DNS·데이터 파괴 변경은 Decision Gate 승인 후 실행합니다.'
+      : 'Site AI가 원인 진단과 가역 복구를 우선 진행하고 Chief AI에 결과를 보고합니다.';
+    if (state.key === 'attention') return '응답 추세와 공통 인프라를 재확인하고 필요 시 Platform·Release AI 교차검토로 전환합니다.';
+    if (state.key === 'standby') return 'Control API 상태점검 레지스트리 연결 여부를 확인합니다. 연결 전에는 상태를 추정하지 않습니다.';
+    return '현재 자동 감시를 유지합니다. 불필요한 변경은 실행하지 않습니다.';
   }
 
-  function renderAgents() {
-    const host = $('#aiSiteAgents');
+  function renderSelectedDetail() {
+    const host = $('#aiSelectedDetail');
     if (!host) return;
     const map = serviceMap();
-    host.replaceChildren(...SITE_AGENTS.map(agent => agentCard(agent, agentState(agent, map))));
-    attachCampusAiButtons();
+    let agent = SITE_AGENTS.find(item => item.domain === selectedDomain);
+    if (!agent) {
+      const firstIssue = SITE_AGENTS.map(item => ({ item, state:agentState(item, map) })).sort((a, b) => severity(a.state) - severity(b.state))[0];
+      agent = firstIssue?.item || SITE_AGENTS[0];
+      selectedDomain = agent?.domain || '';
+    }
+    if (!agent) return;
+    const state = agentState(agent, map);
+    const service = state.service;
+    const availability = service?.stats24h?.availabilityPercent;
+    const average = service?.stats24h?.averageResponseTime;
+    host.innerHTML = `
+      <div class="ai-detail-head"><div><small>SELECTED SITE DETAIL</small><h3>${esc(agent.name)} <span>${esc(agent.domain)}</span></h3></div><div class="ai-detail-head-right"><span class="ai-status-pill ${esc(state.key)}">${esc(state.label)}</span>${detailActions(agent)}</div></div>
+      <div class="ai-detail-grid">
+        <div><small>이슈 요약</small><strong>${esc(state.note)}</strong><span>${esc(agent.role)}</span></div>
+        <div><small>실측 상태</small><strong>${esc(responseText(state))} · ${esc(lastCheck(service))}</strong><span>24시간 가용률 ${availability ?? '—'}% · 평균응답 ${average ?? '—'}${average == null ? '' : 'ms'}</span></div>
+        <div><small>AI 조치 요약</small><strong>${esc(`${agent.name} Site AI`)}</strong><span>${esc(aiActionText(agent, state))}</span></div>
+      </div>
+    `;
+    $('#aiSelectedManage')?.addEventListener('click', () => openManage(agent));
   }
 
-  function focusAgent(domain) {
-    const card = document.querySelector(`[data-ai-agent-domain="${CSS.escape(domain)}"]`);
-    if (!card) return;
-    card.classList.add('focused');
-    card.scrollIntoView({ behavior:'smooth', block:'center' });
-    setTimeout(() => card.classList.remove('focused'), 2200);
+  function syncChatScope(domain) {
+    const select = $('#aiChiefChatScope');
+    if (!select || !Array.from(select.options).some(option => option.value === domain)) return;
+    if (select.value === domain) return;
+    select.value = domain;
+    select.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+
+  function promptChat(text) {
+    const attempt = () => {
+      const input = $('#aiChiefChatInput');
+      const form = $('#aiChiefChatForm');
+      if (!input || !form) return false;
+      input.value = text;
+      form.requestSubmit();
+      return true;
+    };
+    if (!attempt()) setTimeout(attempt, 450);
+  }
+
+  function focusFleetRow(domain) {
+    const row = document.querySelector(`[data-ai-agent-domain="${CSS.escape(domain)}"]`);
+    if (!row) return;
+    row.classList.add('focused');
+    row.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    setTimeout(() => row.classList.remove('focused'), 1600);
   }
 
   function openSite(domain) {
     const agent = SITE_AGENTS.find(item => item.domain === domain);
     if (!agent) return;
     selectedDomain = domain;
-    const state = agentState(agent);
-    const drawer = $('#aiSiteDrawer');
-    if (!drawer) return;
-    drawer.hidden = false;
-    drawer.innerHTML = `
-      <div class="ai-drawer-head"><div><small>SITE ADMIN AI</small><h3>${esc(agent.name)} AI</h3><p>${esc(agent.domain)}</p></div><button type="button" id="aiDrawerClose" aria-label="닫기">×</button></div>
-      <div class="ai-drawer-status ${esc(state.key)}"><strong>${esc(state.label)}</strong><span>${esc(state.note)}</span></div>
-      <div class="ai-drawer-grid"><div><small>책임</small><strong>${esc(agent.role)}</strong></div><div><small>자율권</small><strong>저위험 자동 · 중요결정 Human Gate</strong></div><div><small>협업</small><strong>Chief · Platform · Security · Release AI</strong></div><div><small>최근 응답</small><strong>${state.response ? `${esc(state.response)}ms` : '점검 연결 대기'}</strong></div></div>
-      <div class="ai-drawer-actions"><button type="button" class="secondary" id="aiSiteManage">Manage</button><a class="primary" href="https://${esc(agent.domain)}" target="_blank" rel="noopener">Open ↗</a></div>
-    `;
-    $('#aiDrawerClose')?.addEventListener('click', () => { drawer.hidden = true; });
-    $('#aiSiteManage')?.addEventListener('click', () => openManage(agent));
+    renderFleet();
+    renderSelectedDetail();
+    syncChatScope(domain);
+    requestAnimationFrame(() => focusFleetRow(domain));
   }
 
   function openManage(agent) {
@@ -346,40 +415,28 @@
     });
   }
 
-  function updateChief(data, error = '') {
-    const brief = $('#aiChiefBrief');
-    if (!brief) return;
-    if (error) {
-      brief.textContent = `운영 API 연결을 확인해야 합니다. ${error}`;
-      return;
-    }
-    if (data.decisions) brief.textContent = `Site AI ${data.total}개를 조정 중이며, 대표 판단이 필요한 결정 ${data.decisions}건이 있습니다.`;
-    else if (data.cases.length) brief.textContent = `Site AI ${data.total}개 중 Council 검토 ${data.cases.length}건을 추적 중입니다. 현재 대표 승인 대기 사안은 없습니다.`;
-    else brief.textContent = `Site AI ${data.total}개를 한 화면에서 조정합니다. 현재 운영상 대표 판단이 필요한 사안은 없습니다.`;
-  }
-
   function render(error = '') {
     if (!panel()) return;
     const data = summary();
     renderMetrics(data);
-    renderCases(data);
-    renderDecisions(data);
-    renderAgents();
-    updateChief(data, error);
+    renderFleet();
+    renderSelectedDetail();
     const button = $('#aiOpsRefresh');
-    if (button && lastReviewAt) button.title = `최근 검토 ${lastReviewAt.toLocaleString('ko-KR')}`;
+    if (button && lastReviewAt) button.title = `최근 점검 ${lastReviewAt.toLocaleString('ko-KR')}`;
+    const auto = $('.ai-ops-auto');
+    if (auto) auto.textContent = error ? `점검 오류 · ${error}` : lastReviewAt ? `최근 ${lastReviewAt.toLocaleTimeString('ko-KR',{ hour:'2-digit', minute:'2-digit' })}` : '30초 자동 갱신';
   }
 
   async function runReview() {
     const button = $('#aiOpsRefresh');
-    if (button) { button.disabled = true; button.textContent = '↻ Reviewing…'; }
+    if (button) { button.disabled = true; button.textContent = '↻ 점검 중…'; }
     try {
       await loadOverview(true);
       render();
     } catch (error) {
       render(error.message || '상태점검 실패');
     } finally {
-      if (button) { button.disabled = false; button.textContent = '↻ Council Review'; }
+      if (button) { button.disabled = false; button.textContent = '↻ 전체 점검'; }
     }
   }
 
