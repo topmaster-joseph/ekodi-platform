@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-16T17:29:37.316Z",
+  "generatedAt": "2026-08-16T17:46:27.892Z",
   "summary": {
     "total": 17,
-    "online": 16,
-    "degraded": 1,
+    "online": 17,
+    "degraded": 0,
     "offline": 0
   },
   "sites": [
@@ -14,8 +14,8 @@
       "url": "https://ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 425,
-      "checkedAt": "2026-08-16T17:29:35.138Z",
+      "responseTime": 489,
+      "checkedAt": "2026-08-16T17:46:26.315Z",
       "error": null
     },
     {
@@ -25,8 +25,8 @@
       "url": "https://admin.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 290,
-      "checkedAt": "2026-08-16T17:29:35.262Z",
+      "responseTime": 382,
+      "checkedAt": "2026-08-16T17:46:26.434Z",
       "error": null
     },
     {
@@ -36,8 +36,8 @@
       "url": "https://api.ekodi.kr/health",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 347,
-      "checkedAt": "2026-08-16T17:29:35.263Z",
+      "responseTime": 447,
+      "checkedAt": "2026-08-16T17:46:26.436Z",
       "error": null
     },
     {
@@ -47,8 +47,8 @@
       "url": "https://finance-api.ekodi.kr/health",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 426,
-      "checkedAt": "2026-08-16T17:29:35.264Z",
+      "responseTime": 381,
+      "checkedAt": "2026-08-16T17:46:26.439Z",
       "error": null
     },
     {
@@ -58,8 +58,8 @@
       "url": "https://pay.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 510,
-      "checkedAt": "2026-08-16T17:29:35.265Z",
+      "responseTime": 384,
+      "checkedAt": "2026-08-16T17:46:26.440Z",
       "error": null
     },
     {
@@ -69,8 +69,8 @@
       "url": "https://mail.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 615,
-      "checkedAt": "2026-08-16T17:29:35.266Z",
+      "responseTime": 557,
+      "checkedAt": "2026-08-16T17:46:26.442Z",
       "error": null
     },
     {
@@ -80,8 +80,8 @@
       "url": "https://live.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 722,
-      "checkedAt": "2026-08-16T17:29:35.267Z",
+      "responseTime": 631,
+      "checkedAt": "2026-08-16T17:46:26.444Z",
       "error": null
     },
     {
@@ -91,8 +91,8 @@
       "url": "https://cloud.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1008,
-      "checkedAt": "2026-08-16T17:29:35.268Z",
+      "responseTime": 738,
+      "checkedAt": "2026-08-16T17:46:26.444Z",
       "error": null
     },
     {
@@ -102,8 +102,8 @@
       "url": "https://mall.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 942,
-      "checkedAt": "2026-08-16T17:29:35.269Z",
+      "responseTime": 760,
+      "checkedAt": "2026-08-16T17:46:26.445Z",
       "error": null
     },
     {
@@ -113,8 +113,8 @@
       "url": "https://biz.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1080,
-      "checkedAt": "2026-08-16T17:29:35.270Z",
+      "responseTime": 917,
+      "checkedAt": "2026-08-16T17:46:26.447Z",
       "error": null
     },
     {
@@ -122,10 +122,10 @@
       "name": "EKODI Trading",
       "domain": "trade.ekodi.kr",
       "url": "https://trade.ekodi.kr",
-      "status": "degraded",
+      "status": "online",
       "httpStatus": 200,
-      "responseTime": 2044,
-      "checkedAt": "2026-08-16T17:29:35.271Z",
+      "responseTime": 1337,
+      "checkedAt": "2026-08-16T17:46:26.448Z",
       "error": null
     },
     {
@@ -135,8 +135,8 @@
       "url": "https://marketing.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1128,
-      "checkedAt": "2026-08-16T17:29:35.272Z",
+      "responseTime": 1136,
+      "checkedAt": "2026-08-16T17:46:26.448Z",
       "error": null
     },
     {
@@ -146,8 +146,8 @@
       "url": "https://cgma.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1131,
-      "checkedAt": "2026-08-16T17:29:35.272Z",
+      "responseTime": 1157,
+      "checkedAt": "2026-08-16T17:46:26.449Z",
       "error": null
     },
     {
@@ -157,8 +157,8 @@
       "url": "https://books.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1265,
-      "checkedAt": "2026-08-16T17:29:35.273Z",
+      "responseTime": 1290,
+      "checkedAt": "2026-08-16T17:46:26.450Z",
       "error": null
     },
     {
@@ -168,8 +168,8 @@
       "url": "https://church.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1329,
-      "checkedAt": "2026-08-16T17:29:35.274Z",
+      "responseTime": 1309,
+      "checkedAt": "2026-08-16T17:46:26.450Z",
       "error": null
     },
     {
@@ -179,8 +179,8 @@
       "url": "https://lab.ekodi.kr",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1617,
-      "checkedAt": "2026-08-16T17:29:35.274Z",
+      "responseTime": 1441,
+      "checkedAt": "2026-08-16T17:46:26.451Z",
       "error": null
     },
     {
@@ -190,8 +190,8 @@
       "url": "https://youtube.com/@ekodicommunity",
       "status": "online",
       "httpStatus": 200,
-      "responseTime": 1560,
-      "checkedAt": "2026-08-16T17:29:35.275Z",
+      "responseTime": 1421,
+      "checkedAt": "2026-08-16T17:46:26.451Z",
       "error": null
     }
   ]
