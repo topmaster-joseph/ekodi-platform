@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <meta name="description" content="EKODI Business OS, 소상공인과 조직을 위한 AI 경영 운영체계">
+  <meta name="description" content="EKODI Business OS, 에코디비즈와 자담치킨을 위한 AI 경영 운영체계">
   <title>EKODI Business OS</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
@@ -16,8 +16,16 @@
       <span class="brand-mark">E</span>
       <span><strong>EKODI</strong><small>BUSINESS OS</small></span>
     </a>
+    <div class="workspace-picker">
+      <label for="workspaceSelect">WORKSPACE</label>
+      <select id="workspaceSelect" aria-label="Business OS 워크스페이스 선택">
+        <option value="ekodibiz">에코디비즈</option>
+        <option value="jadam">자담치킨 목포대점</option>
+      </select>
+    </div>
     <nav class="top-actions" aria-label="상단 메뉴">
-      <a href="https://marketing.ekodi.kr">Marketing AI</a>
+      <a id="publicLink" href="https://biz.ekodi.kr">에코디비즈</a>
+      <a id="marketingLink" href="https://marketing.ekodi.kr">Marketing AI</a>
       <a href="https://work.ekodi.kr">Work</a>
       <a href="/health">Status</a>
       <a id="authLink" class="primary-link" href="https://auth.ekodi.kr/?site=business">Sign in</a>
@@ -27,27 +35,27 @@
   <main id="main">
     <section class="hero shell">
       <div>
-        <p class="eyebrow">AI BUSINESS OPERATOR · MVP</p>
-        <h1>오늘의 사업을 읽고,<br><span>다음 행동을 정리합니다.</span></h1>
-        <p class="hero-copy">마케팅, 고객, 매출, 업무, 비용과 전문 AI를 하나의 운영 흐름으로 묶습니다. 사람의 선택권과 승인 경계를 유지하면서 반복 업무는 점차 자동화합니다.</p>
+        <div class="workspace-heading"><p id="workspaceKind" class="workspace-kind">EKODI INTERNAL</p><p id="workspaceEnglish" class="eyebrow">EKODIBIZ</p></div>
+        <h1><span id="workspaceName">에코디비즈</span><br>오늘의 사업을 읽고,<br><span>다음 행동을 정리합니다.</span></h1>
+        <p id="heroCopy" class="hero-copy">고객, 프로젝트, 마케팅, 업무, 매출과 재무 신호를 하나의 운영 흐름으로 묶습니다.</p>
       </div>
       <aside class="readiness-card" aria-label="현재 운영 준비 상태">
         <div class="readiness-head"><span>READINESS</span><strong id="readinessScore">62%</strong></div>
         <div class="meter"><i id="readinessBar"></i></div>
-        <p>1차 MVP는 샘플 데이터와 수동 입력으로 작동합니다. 외부 채널 실행과 금전·법률·인사 결정은 자동 실행하지 않습니다.</p>
+        <p>스테이징 검증 후 운영으로 승격하는 구조를 유지합니다. 금전·법률·고용 확정과 외부 발송은 사람의 승인 없이 자동 실행하지 않습니다.</p>
       </aside>
     </section>
 
     <section class="sample-note shell" role="status">
-      <strong id="modeBadge">SAFE MVP MODE</strong>
-      <span>현재 숫자는 기능 검증용 샘플입니다. 실제 고객 데이터 연동 전까지 경영 판단의 근거로 사용하지 마세요.</span>
+      <strong id="modeBadge">SAFE OPERATIONS</strong>
+      <span id="dataNotice">운영 데이터를 연결하고 있습니다. 연결 전에는 임의의 샘플 숫자를 경영지표처럼 표시하지 않습니다.</span>
     </section>
 
     <section class="kpi-grid shell" aria-label="핵심 경영 지표">
-      <article class="kpi"><span>Today Sales</span><strong id="salesValue">₩1,284,000</strong><small id="salesDelta">지난주 같은 요일 대비 +8.4%</small></article>
-      <article class="kpi"><span>Customers</span><strong id="customerValue">86</strong><small>신규 19 · 재방문 67</small></article>
-      <article class="kpi"><span>Repeat Rate</span><strong id="repeatValue">41%</strong><small>목표 45%까지 4%p</small></article>
-      <article class="kpi"><span>Open Actions</span><strong id="actionValue">7</strong><small>승인 필요 2 · AI 초안 5</small></article>
+      <article class="kpi"><span>Today Sales</span><strong id="salesValue">—</strong><small id="salesDelta">읽기 전용 매출 데이터 연결 대기</small></article>
+      <article class="kpi"><span>Customers</span><strong id="customerValue">—</strong><small id="customerMeta">고객 원장 연결 대기</small></article>
+      <article class="kpi"><span>Repeat Rate</span><strong id="repeatValue">—</strong><small id="repeatMeta">재방문 지표 연결 대기</small></article>
+      <article class="kpi"><span>Open Actions</span><strong id="actionValue">—</strong><small id="actionMeta">승인함·실행이력 연결 대기</small></article>
     </section>
 
     <section class="workspace shell">
@@ -57,7 +65,7 @@
           <button id="refreshBrief" type="button">다시 분석</button>
         </div>
         <ol id="briefList" class="brief-list" aria-live="polite">
-          <li><span>01</span><div><strong>브리핑을 준비하고 있습니다.</strong><p>샘플 지표를 읽어 우선순위를 정리합니다.</p></div></li>
+          <li><span>01</span><div><strong>워크스페이스를 준비하고 있습니다.</strong><p>실제 데이터 연결 상태와 다음 구축 순서를 확인합니다.</p></div></li>
         </ol>
         <p id="briefMeta" class="meta"></p>
       </div>
@@ -65,7 +73,7 @@
       <aside class="action-panel panel">
         <p class="eyebrow">ACTION GATE</p>
         <h2>AI 실행 경계 확인</h2>
-        <p class="panel-copy">AI가 무엇을 할 수 있는지 실행 전에 정책을 확인합니다.</p>
+        <p class="panel-copy">에코디비즈와 자담치킨 모두 같은 정책 엔진을 사용하지만, 행동과 데이터 범위는 각 워크스페이스 안에서 분리합니다.</p>
         <label for="actionSelect">테스트할 행동</label>
         <select id="actionSelect">
           <option value="draft_campaign">캠페인 초안 만들기</option>
@@ -84,16 +92,14 @@
     </section>
 
     <section class="module-section shell">
-      <div class="section-head"><div><p class="eyebrow">SPECIALIST NETWORK</p><h2>전문 AI 모듈</h2></div><p>하나의 계정과 조직 단위로 연결되는 구조를 전제로 합니다.</p></div>
-      <div class="module-grid">
+      <div class="section-head"><div><p class="eyebrow">SPECIALIST NETWORK</p><h2>전문 AI 모듈</h2></div><p>워크스페이스별 연결 상태와 공식 진입점을 표시합니다.</p></div>
+      <div id="moduleGrid" class="module-grid">
         <a class="module live" href="https://marketing.ekodi.kr"><span class="module-code">MKT</span><strong>Marketing AI</strong><p>콘텐츠, 캠페인, 채널 운영</p><small>연결 가능</small></a>
-        <article class="module build"><span class="module-code">CRM</span><strong>Customer AI</strong><p>고객, 재방문, 관계 관리</p><small>Business OS 내장 예정</small></article>
-        <article class="module build"><span class="module-code">SAL</span><strong>Sales AI</strong><p>매출 흐름, 전환, 제안</p><small>Business OS 내장 예정</small></article>
+        <article class="module stage"><span class="module-code">CRM</span><strong>Customer AI</strong><p>고객, 재방문, 관계 관리</p><small>데이터 연결 대기</small></article>
+        <article class="module stage"><span class="module-code">SAL</span><strong>Sales AI</strong><p>매출 흐름, 전환, 제안</p><small>데이터 연결 대기</small></article>
         <a class="module live" href="https://work.ekodi.kr"><span class="module-code">WRK</span><strong>Work AI</strong><p>업무, 역할, 실행 추적</p><small>연결 가능</small></a>
-        <article class="module build"><span class="module-code">FIN</span><strong>Finance AI</strong><p>현금흐름, 비용, 재무 신호</p><small>API 연결 준비</small></article>
-        <a class="module live" href="https://energy.ekodi.kr"><span class="module-code">NRG</span><strong>Energy AI</strong><p>전기, 태양광, 비용 최적화</p><small>운영 중 · Read-only</small></a>
-        <a class="module live" href="https://trade.ekodi.kr"><span class="module-code">TRD</span><strong>Trading</strong><p>바이어, 공급사, 거래 흐름</p><small>서비스 연결</small></a>
-        <article class="module plan"><span class="module-code">INS</span><strong>Insurance AI</strong><p>보장, 청구, 위험 관리</p><small>전문 버티컬 예정</small></article>
+        <article class="module stage"><span class="module-code">FIN</span><strong>Finance AI</strong><p>현금흐름, 비용, 재무 신호</p><small>읽기 전용 연결 대기</small></article>
+        <article class="module stage"><span class="module-code">RPT</span><strong>AI Report</strong><p>일일 운영요약과 승인 필요 항목</p><small>집계 데이터 연결 후 자동화</small></article>
       </div>
     </section>
 
@@ -103,7 +109,7 @@
     </section>
   </main>
 
-  <footer class="footer shell"><span>EKODI Business OS · stewardship-first agentic operations</span><a href="https://ekodi.kr">ekodi.kr</a></footer>
+  <footer class="footer shell"><span>EKODI Business OS · tenant-isolated stewardship-first operations</span><a href="https://ekodi.kr">ekodi.kr</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
