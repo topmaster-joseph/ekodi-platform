@@ -6,6 +6,7 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'scripts/build.mjs'
       - 'tools/ekodi-device-agent/windows/**'
       - 'migrations/0021_device_control.sql'
       - 'test/device-control-contract.test.mjs'
@@ -16,6 +17,7 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'scripts/build.mjs'
       - 'tools/ekodi-device-agent/windows/**'
       - 'migrations/0021_device_control.sql'
       - 'test/device-control-contract.test.mjs'
@@ -27,7 +29,7 @@ permissions:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -38,6 +40,17 @@ jobs:
           node --check device-control.js
           node --check device-control-admin.js
           node --test test/device-control-contract.test.mjs
+      - name: Build authenticated Admin bundle with Device Control
+        run: |
+          npm run build
+          test -f dist/compact-control-center.js
+          test -f dist/compact-control-center.css
+          grep -Fq 'EKODI DEVICE CONTROL' dist/compact-control-center.js
+          grep -Fq '.ekodi-device-panel' dist/compact-control-center.css
+          if grep -Fq 'device-control-admin.js' dist/control-center.html; then
+            echo 'Device Control must not be loaded as a separate pre-auth asset.'
+            exit 1
+          fi
 
   windows-agent:
     runs-on: windows-latest
