@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const js = await readFile(new URL('../campus-actions.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../campus-actions.css', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+const shell = await readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8');
 
 test('Campus first screen renders the full operational site list with three direct actions', () => {
   assert.match(js, /All EKODI Sites/);
@@ -49,11 +50,14 @@ test('Domains and DNS navigation is removed while Affiliates has a visible icon'
   assert.match(js, /🤝 Affiliates/);
 });
 
-test('Campus action assets are included in the production build', () => {
+test('Campus action assets are copied for production but loaded only after authentication', () => {
   assert.match(build, /'campus-actions\.css'/);
   assert.match(build, /'campus-actions\.js'/);
-  assert.match(build, /href="campus-actions\.css"/);
-  assert.match(build, /src="campus-actions\.js"/);
+  assert.match(build, /admin-authenticated-shell\.js/);
+  assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
+  assert.match(shell, /'campus-actions\.css'/);
+  assert.match(shell, /'campus-actions\.js'/);
+  assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
   assert.match(css, /\.campus-row-actions/);
   assert.match(css, /\.campus-row-action/);
 });

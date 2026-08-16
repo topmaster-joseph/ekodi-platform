@@ -5,7 +5,7 @@ import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.m
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
-  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
+  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','admin-authenticated-shell.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
 ];
 
 await rm(output, { recursive: true, force: true });
@@ -69,16 +69,16 @@ for (const asset of htmlAssets) {
   }
   if (asset === 'control-center.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
-    if (!html.includes('compact-control-center.css')) html = html.replace('</head>', '<link rel="stylesheet" href="compact-control-center.css">\n</head>');
-    if (!html.includes('campus-actions.css')) html = html.replace('</head>', '<link rel="stylesheet" href="campus-actions.css">\n</head>');
-    if (!html.includes('compact-control-center.js')) html = html.replace('</body>', '<script src="compact-control-center.js" defer></script>\n</body>');
-    if (!html.includes('control-center-features.js')) html = html.replace('</body>', '<script src="control-center-features.js" defer></script>\n</body>');
-    if (!html.includes('campus-actions.js')) html = html.replace('</body>', '<script src="campus-actions.js" defer></script>\n</body>');
-    if (!html.includes('admin-lazy-features.js')) {
-      html = html.replace('</body>', '<script src="admin-lazy-features.js" defer data-lazy-features="ai-ops-admin.js release-control-admin.js work-admin.js marketing-ai-admin.js" data-lazy-styles="ai-ops-admin.css release-control-admin.css work-admin.css marketing-ai-admin.css"></script>\n</body>');
+    // Pre-auth must stay a tiny, dependable login shell. Campus, feature navigation,
+    // Chief AI and other admin modules are loaded only after control-center.js has
+    // validated a real administrator session and revealed #app.
+    html = html.replace(/\s*<link rel="stylesheet" href="(?:compact-control-center|campus-actions)\.css">\s*/g, '\n');
+    html = html.replace(/\s*<script src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
+    if (!html.includes('admin-authenticated-shell.js')) {
+      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260816-preauth-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js ai-ops-admin.js ai-ops-admin.css release-control-admin.js release-control-admin.css work-admin.js work-admin.css marketing-ai-admin.js marketing-ai-admin.css"></script>\n</body>');
     }
   }
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, Chief AI conversation, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Campus/Chief AI modules, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
