@@ -9,7 +9,7 @@ test('Creator AI keeps creations private and requires human approval before My E
     read('author/index.html'),
     read('author/app.js'),
     read('supabase/migrations/20260816010000_author_ai_foundation.sql'),
-    read('supabase/migrations/20260817010000_creator_ai_my_ekodi.sql')
+    read('supabase/migrations/20260816155146_creator_ai_my_ekodi.sql')
   ]);
   assert.match(html, /원고는 기본 비공개/);
   assert.match(html, /CREATOR APPROVED/);
@@ -55,10 +55,14 @@ test('Creator AI remains an independent compatibility service with isolated stag
 });
 
 test('My EKODI portfolio is person-scoped across linked identities', async () => {
-  const migration = await read('supabase/migrations/20260817010000_creator_ai_my_ekodi.sql');
+  const [migration, hardening] = await Promise.all([
+    read('supabase/migrations/20260816155146_creator_ai_my_ekodi.sql'),
+    read('supabase/migrations/20260816155153_creator_portfolio_person_policy_hardening.sql')
+  ]);
   assert.match(migration, /creator_portfolio_items/);
   assert.match(migration, /person_id uuid references public\.people/);
-  assert.match(migration, /login_identities/);
   assert.match(migration, /workspace_key/);
   assert.match(migration, /personal:/);
+  assert.match(hardening, /current_person_id/);
+  assert.match(hardening, /security definer/);
 });
