@@ -22,9 +22,11 @@ test('Chief AI chat stays guarded, contextual and grounded in Control API', asyn
   assert.match(source, /staging → CI → guarded release/);
 });
 
-test('Chief AI chat is syntax checked and shipped by the shared admin build', async () => {
-  const [pkg, build] = await Promise.all([read('package.json'), read('scripts/build.mjs')]);
+test('Chief AI chat is syntax checked, shipped, and deferred until authenticated admin app', async () => {
+  const [pkg, build, shell] = await Promise.all([read('package.json'), read('scripts/build.mjs'), read('admin-authenticated-shell.js')]);
   assert.match(pkg, /node --check admin-lazy-features\.js/);
   assert.match(build, /'admin-lazy-features\.js'/);
-  assert.match(build, /Chief AI conversation/);
+  assert.match(build, /minimal pre-auth Control Center/);
+  assert.match(shell, /'admin-lazy-features\.js'/);
+  assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
 });
