@@ -108,6 +108,17 @@ test('auth center is workspace-first and hides linked login identities outside a
   assert.match(authJs,/workspace_key/);
 });
 
+test('central auth directly honors a requested verified Social or Energy workspace',()=>{
+  assert.match(authJs,/social:\{name:'EKODI Social'/);
+  assert.match(authJs,/energy:\{name:'EKODI Energy AI'/);
+  assert.match(authJs,/PERSON_SCOPED_SITES=new Set\(\['social','energy'\]\)/);
+  assert.match(authJs,/SERVICE_API=PERSON_SCOPED_SITES\.has\(site\)\?PERSON_WORKSPACE:ACCESS/);
+  assert.match(authJs,/requestedWorkspace=String\(params\.get\('workspace'\)/);
+  assert.match(authJs,/authorized\.find\(item=>item\.workspace_key===requestedWorkspace\)/);
+  assert.match(authJs,/window\.__EKODI_WORKSPACE_ROUTING=true/);
+  assert.match(authTarget,/window\.__EKODI_WORKSPACE_ROUTING/);
+});
+
 test('client auth reuses the central EKODI session instead of forcing Google login again',()=>{
   assert.match(clientAuth,/persistSession:true/);
   assert.match(clientAuth,/sb\.auth\.getSession/);
