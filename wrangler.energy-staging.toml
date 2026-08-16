@@ -1,0 +1,19 @@
+name = "ekodi-energy-staging"
+main = "energy-worker.js"
+compatibility_date = "2026-08-17"
+workers_dev = true
+preview_urls = true
+
+[vars]
+TELEMETRY_ENABLED = "false"
+TELEMETRY_MODE = "isolated-staging"
+CONTROL_ENABLED = "false"
+AUTH_URL = "https://auth.ekodi.kr/?site=energy"
+
+[assets]
+directory = "./energy"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
