@@ -8,6 +8,7 @@ const SERVICES=[
 ];
 const SSO_SITES=new Set(['church','biz','books','author','lab','community','work','business','mall','marketing']);
 const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing']);
+const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
 const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
@@ -19,6 +20,16 @@ const plan=v=>({free:'Free',basic:'Basic',pro:'Pro',enterprise:'Business',standa
 const paid=v=>['standard','basic','pro','enterprise'].includes(String(v||'').toLowerCase());
 const storedWorkspace=()=>{try{return localStorage.getItem('ekodi_my_active_workspace')||''}catch{return''}};
 const rememberWorkspace=value=>{try{if(value)localStorage.setItem('ekodi_my_active_workspace',value);else localStorage.removeItem('ekodi_my_active_workspace')}catch{}};
+const serviceDefinition=id=>SERVICES.find(([sid])=>sid===id)||null;
+function requestedReturnTarget(){
+ const raw=new URLSearchParams(location.search).get('return_to');
+ if(!raw)return null;
+ try{
+  const target=new URL(raw);
+  const service=SERVICES.find(([, ,url])=>new URL(url).origin===target.origin);
+  return service?{id:service[0],url:target.href}:null;
+ }catch{return null}
+}
 
 async function handoff(){
  if(!sb||!location.hash.startsWith('#'))return;
@@ -36,8 +47,9 @@ function uniqueWorkspaces(){
  const map=new Map();
  for(const [sid,rows] of workspaces)for(const row of rows||[]){
   const key=row.workspace_key||`${sid}:${row.workspace_name||'workspace'}`;
-  const found=map.get(key)||{...row,services:[]};
+  const found=map.get(key)||{...row,services:[],targets:[]};
   if(!found.services.includes(sid))found.services.push(sid);
+  if(!found.targets.some(target=>target.site===sid))found.targets.push({site:sid,status:row.status||'',source:row.source||'',requires_handoff:row.requires_handoff===true});
   if(paid(row.plan)&&!paid(found.plan))found.plan=row.plan;
   map.set(key,found);
  }
@@ -63,9 +75,28 @@ function serviceRoute(id,url){
  if(current&&TARGETABLE_WORKSPACE_SITES.has(id)&&current.services?.includes(id))target.searchParams.set('workspace',current.workspace_key);
  return target.href;
 }
+function workspaceDestination(workspace){
+ if(!workspace)return null;
+ const contextual=requestedReturnTarget();
+ if(contextual&&workspace.services?.includes(contextual.id))return contextual;
+ const exactSites=(workspace.targets||[]).filter(target=>target.requires_handoff&&TARGETABLE_WORKSPACE_SITES.has(target.site)&&['active','pre_registered'].includes(String(target.status||''))).map(target=>target.site);
+ const exactId=WORKSPACE_ENTRY_PRIORITY.find(id=>exactSites.includes(id));
+ if(exactId){const service=serviceDefinition(exactId);return service?{id:service[0],url:service[2]}:null}
+ if(workspace.workspace_kind==='personal')return null;
+ const fallbackId=WORKSPACE_ENTRY_PRIORITY.find(id=>workspace.services?.includes(id)&&connected(id))||workspace.services?.find(id=>connected(id));
+ const fallback=serviceDefinition(fallbackId);
+ return fallback?{id:fallback[0],url:fallback[2]}:null;
+}
 function setActiveWorkspace(key){
- if(!uniqueWorkspaces().some(w=>w.workspace_key===key))return;
- activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();recommendationUi();
+ const selected=uniqueWorkspaces().find(w=>w.workspace_key===key);
+ if(!selected)return null;
+ activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();recommendationUi();return selected;
+}
+function enterWorkspace(key){
+ const selected=setActiveWorkspace(key);
+ if(!selected)return;
+ const destination=workspaceDestination(selected);
+ if(destination)location.assign(serviceRoute(destination.id,destination.url));
 }
 function identityUi(){
  const email=session?.user?.email||'',meta=session?.user?.user_metadata||{},current=activeWorkspace();
@@ -91,8 +122,8 @@ function workspaceUi(){
  if(!rows.length){host.innerHTML='<div class="empty"><strong>아직 연결된 Workspace가 없습니다.</strong><p>개인 서비스를 시작하거나 기관 초대를 받으면 여기에 나타납니다.</p></div>';control?.classList.add('hide');return}
  control?.classList.remove('hide');
  switcher.innerHTML=rows.map(w=>`<option value="${esc(w.workspace_key)}"${w.workspace_key===activeWorkspaceKey?' selected':''}>${esc(w.workspace_name||'내 Workspace')}</option>`).join('');
- host.innerHTML=rows.map(w=>`<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}</span></span></button>`).join('');
- host.querySelectorAll('[data-workspace-key]').forEach(button=>button.addEventListener('click',()=>setActiveWorkspace(button.dataset.workspaceKey||'')));
+ host.innerHTML=rows.map(w=>{const destination=workspaceDestination(w),action=destination?'열기 →':w.workspace_kind==='personal'?'현재 My 공간':'선택';return `<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}<span>${esc(action)}</span></span></span></button>`}).join('');
+ host.querySelectorAll('[data-workspace-key]').forEach(button=>button.addEventListener('click',()=>enterWorkspace(button.dataset.workspaceKey||'')));
 }
 function platformUi(){
  const host=$('#platformList');
@@ -143,7 +174,7 @@ async function authAction(){if(!enabled)return;if(!session){location.assign(auth
 async function refresh(){const b=$('#refreshButton'),old=b.textContent;b.disabled=true;b.textContent='새로고침 중…';try{await loadAll();b.textContent='새로고침 완료'}catch(e){console.error(e);b.textContent='불러오기 실패'}setTimeout(()=>{b.textContent=old;b.disabled=false},1200)}
 
 $('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#refreshButton').addEventListener('click',refresh);
-$('#workspaceSwitcher').addEventListener('change',event=>setActiveWorkspace(event.target.value));
+$('#workspaceSwitcher').addEventListener('change',event=>enterWorkspace(event.target.value));
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
 if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}

@@ -24,6 +24,18 @@ test('My EKODI reuses central identity and consumes one-time auth handoff',async
   assert.match(router,/site==='my'/);
 });
 
+test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
+  const app=await read('my/app.js');
+  assert.match(app,/function workspaceDestination\(workspace\)/);
+  assert.match(app,/requires_handoff/);
+  assert.match(app,/function enterWorkspace\(key\)/);
+  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/workspaceSwitcher.*enterWorkspace/s);
+  assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
+  assert.match(app,/return_to/);
+  assert.match(app,/new URL\(url\)\.origin===target\.origin/);
+});
+
 test('My EKODI staging is isolated from production personal data',async()=>{
   const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
   assert.match(prod,/DATA_ENABLED = "true"/);
