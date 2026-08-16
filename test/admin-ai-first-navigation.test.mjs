@@ -35,3 +35,30 @@ test('Campus shortcuts cannot reopen hidden operational panels', () => {
   assert.match(layout, /control\.dataset\.campusSection = 'aiops'/);
   assert.match(layout, /AI Ops/);
 });
+
+test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
+  assert.match(layout, /VISIBLE_NAV_ORDER/);
+  const expected = [
+    'campus', 'aiops', 'marketing-ai', 'work', 'clients', 'admins', 'community',
+    'books', 'finance', 'communication', 'social', 'workspace', 'devices',
+    'organization', 'affiliates',
+  ];
+  let cursor = -1;
+  for (const section of expected) {
+    const next = layout.indexOf(`'${section}'`, cursor + 1);
+    assert.ok(next > cursor, `${section} must remain in canonical menu order`);
+    cursor = next;
+  }
+  assert.match(layout, /VISIBLE_NAV_RANK/);
+  assert.match(layout, /applyStableNavigationOrder/);
+  assert.match(layout, /item\.style\.order/);
+  assert.match(layout, /data\.menuOrder|dataset\.menuOrder/);
+});
+
+test('Admin sidebar menu uses minimal vertical spacing without shrinking label readability', () => {
+  assert.match(layout, /ekodi-admin-menu-density/);
+  assert.match(layout, /gap:0!important/);
+  assert.match(layout, /min-height:30px!important/);
+  assert.match(layout, /padding:4px 9px!important/);
+  assert.match(layout, /font-size:12px!important/);
+});
