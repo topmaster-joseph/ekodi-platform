@@ -8,14 +8,15 @@
   <title>EKODI 인증센터</title>
   <link rel="stylesheet" href="/auth.css?v=20260815-membership-1" />
   <link rel="stylesheet" href="/auth-workspaces.css?v=20260815-person-workspace-2" />
+  <style>html:not([data-identity-manage="1"]) #identityPanel{display:none!important}</style>
 </head>
 <body>
   <header class="topbar"><a href="https://ekodi.kr" class="brand">EKODI</a><span>통합 인증센터</span></header>
   <main class="shell">
     <section class="intro">
       <span class="eyebrow">EKODI IDENTITY</span>
-      <h1>사람은 하나,<br>공간은 여러 개.</h1>
-      <p>Google 계정으로 본인을 확인합니다. 한 사람에게 개인·업무용 Google 로그인을 연결하고, 소속·역할·회원등급·구독은 선택한 개인·상가·단체 공간별로 안전하게 적용합니다.</p>
+      <h1>한 번 로그인하고,<br>내 공간으로 이동합니다.</h1>
+      <p>Google 계정은 본인확인에 사용하고, 로그인 후에는 개인·사업장·단체 Workspace를 중심으로 이동합니다. 연결된 Google 계정 목록은 기본 화면에서 숨기고 계정관리에서만 다룹니다.</p>
     </section>
 
     <section class="auth-card">
@@ -25,8 +26,8 @@
         <div id="googleButtonHost" class="google-button-host" aria-label="Google 계정 인증"></div>
         <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>Google 인증 다시 시도</span></button>
         <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
-        <p class="micro" id="signedOutCopy">Google 계정은 본인확인에만 사용하고, 서비스 권한·회원등급·데이터 소유권은 EKODI 공간별로 관리합니다.</p>
-        <div id="authStatus" class="notice">Google 인증을 준비하고 있습니다.</div>
+        <p class="micro" id="signedOutCopy">EKODI에서 처음 본인을 확인할 때만 Google 로그인이 필요합니다. 이후에는 통합 로그인 상태를 재사용합니다.</p>
+        <div id="authStatus" class="notice">EKODI 통합 로그인 상태를 확인하고 있습니다.</div>
       </div>
 
       <div id="signedIn" class="hide">
@@ -35,12 +36,12 @@
 
         <section id="workspacePanel" class="subpanel hide" aria-label="내 공간 선택">
           <div class="subpanel-head"><div><small>MY SPACES</small><strong>내 공간</strong></div><span id="workspaceCount"></span></div>
-          <p class="micro panel-copy">같은 Google 계정으로 개인과 여러 단체에 참여할 수 있습니다. 데이터와 권한은 공간별로 분리됩니다.</p>
+          <p class="micro panel-copy">사용할 개인·사업장·단체 공간을 선택하세요. 계정과 권한은 뒤에서 자동으로 적용됩니다.</p>
           <div id="workspaceList" class="workspace-list"></div>
         </section>
 
         <section id="identityPanel" class="subpanel hide" aria-label="연결된 로그인 계정">
-          <div class="subpanel-head"><div><small>LOGIN IDENTITIES</small><strong>로그인 계정</strong></div><button id="addGoogleAccount" class="quiet" type="button">Google 계정 추가</button></div>
+          <div class="subpanel-head"><div><small>LOGIN IDENTITIES</small><strong>연결 계정 관리</strong></div><button id="addGoogleAccount" class="quiet" type="button">Google 계정 추가</button></div>
           <div id="linkedAccounts" class="linked-accounts"></div>
           <div id="linkGoogleButtonHost" class="google-button-host compact hide"></div>
           <div id="identityLinkStatus" class="notice hide"></div>
@@ -52,21 +53,12 @@
           <div id="membershipPlans" class="membership-plans"></div>
         </section>
 
-        <div id="approvedActions" class="hide actions">
-          <button id="continueService" type="button">서비스로 다시 이동</button>
-        </div>
-
-        <div id="freeActions" class="hide actions split-actions">
-          <button id="continueFree" type="button">무료 기능으로 이동</button>
-        </div>
+        <div id="approvedActions" class="hide actions"><button id="continueService" type="button">서비스로 다시 이동</button></div>
+        <div id="freeActions" class="hide actions split-actions"><button id="continueFree" type="button">무료 기능으로 이동</button></div>
 
         <div id="requestActions" class="hide request-box">
           <div id="marketingApplication" class="hide application-fields">
-            <div class="plan-card">
-              <small>신청 요금제</small>
-              <strong>Marketing AI Pro</strong>
-              <span>자동화·채널연동·분석 등 고급 기능 사용을 위한 승인 신청입니다.</span>
-            </div>
+            <div class="plan-card"><small>신청 요금제</small><strong>Marketing AI Pro</strong><span>자동화·채널연동·분석 등 고급 기능 사용을 위한 승인 신청입니다.</span></div>
             <label for="businessName">이름·브랜드·기관명 <span>권장</span></label>
             <input id="businessName" maxlength="160" autocomplete="organization" placeholder="예: ABC카페 / 에코디교회 / 홍길동" />
             <div class="field-grid">
@@ -83,21 +75,18 @@
     </section>
 
     <section id="reviewConsole" class="review-card hide" aria-label="Marketing AI 사용신청 검수">
-      <div class="review-head">
-        <div><span class="eyebrow">MARKETING AI · REVIEW</span><h2>Pro 사용신청 검수</h2><p>승인하면 고객 테넌트와 기본 작업공간을 만들고 Pro 권한을 연결합니다.</p></div>
-        <button id="refreshReviews" class="quiet" type="button">새로고침</button>
-      </div>
+      <div class="review-head"><div><span class="eyebrow">MARKETING AI · REVIEW</span><h2>Pro 사용신청 검수</h2><p>승인하면 고객 테넌트와 기본 작업공간을 만들고 Pro 권한을 연결합니다.</p></div><button id="refreshReviews" class="quiet" type="button">새로고침</button></div>
       <div id="reviewStatus" class="notice">신청 목록을 불러오는 중입니다.</div>
       <div id="reviewList" class="review-list"></div>
     </section>
 
     <section class="principles" aria-label="인증 원칙">
-      <div><b>Person</b><span>한 사람 · 복수 로그인</span></div>
-      <div><b>Space</b><span>개인·상가·단체 권한</span></div>
-      <div><b>Plan</b><span>공간별 회원등급·구독</span></div>
+      <div><b>One Login</b><span>최초 1회 본인확인</span></div>
+      <div><b>Workspace</b><span>개인·상가·단체 중심 이동</span></div>
+      <div><b>Permission</b><span>공간별 권한 자동 적용</span></div>
     </section>
   </main>
-  <footer>EKODI Platform · 로그인 계정은 문이고, 사람·공간·권한·구독이 실제 이용 기준입니다.</footer>
-  <script type="module" src="/auth-router.js?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1"></script>
+  <footer>EKODI Platform · 로그인은 한 번, 실제 이용은 Workspace와 권한을 기준으로 합니다.</footer>
+  <script type="module" src="/auth-router.js?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1&workspace=20260817-sso-1"></script>
 </body>
 </html>

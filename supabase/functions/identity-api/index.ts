@@ -138,6 +138,17 @@ async function exchange(req:Request){
   return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",user:{email,name:String(profile.name||"").slice(0,120)}},200);
 }
 
+async function sessionHandoff(req:Request,user:any){
+  const email=String(user?.email||"").trim().toLowerCase();
+  if(!email)return json(req,{error:"verified_email_required"},400);
+  const link=await issueSupabaseLink(email);
+  if(link.user.id!==user.id){
+    console.error("session handoff user mismatch",{source:user.id,target:link.user.id});
+    return json(req,{error:"session_identity_mismatch"},409);
+  }
+  return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",user:{id:user.id,email}},200);
+}
+
 async function listIdentities(req:Request,userId:string){
   const personId=await personForUser(userId);
   if(!personId)return json(req,{person:null,identities:[],reloginRequired:true},200);
@@ -176,7 +187,7 @@ async function finishLink(req:Request,userId:string){
   });
   if(linkError){
     console.error("link_person_identity",linkError.message);
-    const conflict=/already_linked|already_linked|target_account|identity_already/i.test(linkError.message||"");
+    const conflict=/already_linked|target_account|identity_already/i.test(linkError.message||"");
     return json(req,{error:conflict?"identity_already_linked":"identity_link_failed"},conflict?409:500);
   }
 
@@ -204,6 +215,7 @@ Deno.serve(async(req)=>{
     const user=await currentUser(req);
     if(!user)return json(req,{error:"unauthorized"},401);
 
+    if(req.method==="POST"&&path==="/session/handoff")return await sessionHandoff(req,user);
     if(req.method==="GET"&&path==="/identities")return await listIdentities(req,user.id);
     if(req.method==="POST"&&path==="/google/link/challenge")return await beginLink(req,user.id);
     if(req.method==="POST"&&path==="/google/link/exchange")return await finishLink(req,user.id);

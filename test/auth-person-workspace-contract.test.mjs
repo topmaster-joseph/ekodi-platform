@@ -13,8 +13,12 @@ const mallHandoffMigration=read('supabase/migrations/20260815030000_mall_free_pe
 const identityApi=read('supabase/functions/identity-api/index.ts');
 const accessApi=read('supabase/functions/access-api/index.ts');
 const authJs=read('auth-site/auth.js');
+const clientAuth=read('auth-site/client-auth.js');
+const authTarget=read('auth-site/auth-workspace-target.js');
 const authRouter=read('auth-site/auth-router.js');
 const authHtml=read('auth-site/index.html');
+const myHtml=read('my/index.html');
+const myApp=read('my/app.js');
 
 test('person and login identity schema stays separate from organization membership',()=>{
   assert.match(migration,/create table if not exists public\.people/i);
@@ -51,7 +55,7 @@ test('legacy Mall seller login is normalized back to Seller Studio',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1&workspace=20260817-sso-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -63,12 +67,14 @@ test('stable Google subject cannot be silently replaced by a recycled email acco
   assert.match(takeoverGuardMigration,/comment on function public\.link_person_identity\(uuid,uuid,text,text,text,text\)/i);
 });
 
-test('identity api persists Google subject and supports linked Google accounts',()=>{
+test('identity api persists Google subject and can mint a one-time handoff from an authenticated central session',()=>{
   assert.match(identityApi,/p_provider_subject:String\(profile\.sub\)/);
   assert.match(identityApi,/\/google\/link\/challenge/);
   assert.match(identityApi,/\/google\/link\/exchange/);
   assert.match(identityApi,/\/identities/);
-  assert.match(identityApi,/Authorization/);
+  assert.match(identityApi,/\/session\/handoff/);
+  assert.match(identityApi,/sessionHandoff/);
+  assert.match(identityApi,/link\.user\.id!==user\.id/);
 });
 
 test('access api resolves and revalidates workspace-scoped handoff',()=>{
@@ -79,16 +85,45 @@ test('access api resolves and revalidates workspace-scoped handoff',()=>{
   assert.match(accessApi,/ekodi|tenant|store/i);
 });
 
-test('auth center exposes workspace selection and account linking UI',()=>{
+test('auth center is workspace-first and hides linked login identities outside account management',()=>{
   assert.match(authHtml,/id="workspacePanel"/);
   assert.match(authHtml,/id="identityPanel"/);
-  assert.match(authHtml,/Google 계정 추가/);
+  assert.match(authHtml,/data-identity-manage/);
+  assert.match(authHtml,/계정을 고르는 대신|Workspace|내 공간/);
   assert.match(authJs,/renderWorkspacePanel/);
   assert.match(authJs,/prepareLinkGoogle/);
   assert.match(authJs,/workspace_key/);
 });
 
-test('auth center browser script parses as JavaScript',()=>{
-  const result=spawnSync(process.execPath,['--check',new URL('../auth-site/auth.js',import.meta.url).pathname],{encoding:'utf8'});
-  assert.equal(result.status,0,result.stderr||result.stdout);
+test('client auth reuses the central EKODI session instead of forcing Google login again',()=>{
+  assert.match(clientAuth,/persistSession:true/);
+  assert.match(clientAuth,/sb\.auth\.getSession/);
+  assert.match(clientAuth,/\/session\/handoff/);
+  assert.match(clientAuth,/sb\.auth\.verifyOtp/);
+  assert.match(clientAuth,/handoffExistingSession/);
+});
+
+test('targeted workspace routing is available across shared EKODI services',()=>{
+  for(const site of ['marketing','biz','books','church','lab','mall'])assert.match(authTarget,new RegExp(`${site}:`));
+  assert.match(authRouter,/targetableWorkspaceSites/);
+  assert.match(authRouter,/auth-workspace-target\.js\?v=20260817-all-sites-1/);
+  assert.match(authTarget,/workspace_key:requested/);
+});
+
+test('My EKODI is the signed-in workspace home and routes connected platforms through central auth',()=>{
+  assert.match(myHtml,/SIGNED-IN HOME · WORKSPACE ROUTER/);
+  assert.match(myHtml,/id="workspaceSwitcher"/);
+  assert.match(myHtml,/id="recommendationList"/);
+  assert.match(myApp,/ekodi_my_active_workspace/);
+  assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
+  assert.match(myApp,/searchParams\.set\('workspace'/);
+  assert.match(myApp,/setActiveWorkspace/);
+  assert.match(myApp,/recommendationUi/);
+});
+
+test('browser auth and My router scripts parse as JavaScript',()=>{
+  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','my/app.js']){
+    const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
+    assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
+  }
 });
