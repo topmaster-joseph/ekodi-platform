@@ -1,5 +1,5 @@
 name = "ekodi-business"
-main = "business-worker.js"
+main = "business-live-worker.js"
 compatibility_date = "2026-08-16"
 workers_dev = true
 preview_urls = false
@@ -11,10 +11,12 @@ custom_domain = true
 
 [vars]
 BUSINESS_MODE = "production-readonly-mvp"
-INTEGRATIONS_ENABLED = "false"
+INTEGRATIONS_ENABLED = "true"
 EXECUTION_ENABLED = "false"
-READINESS = "62"
-AUTH_URL = "https://auth.ekodi.kr/?site=business"
+READINESS = "78"
+AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 
 [assets]
 directory = "./business"
