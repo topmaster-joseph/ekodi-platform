@@ -5,6 +5,7 @@ const AGENT_PREFIX = '/api/device-agent';
 const ENROLLMENT_TTL_MS = 10 * 60 * 1000;
 const DEVICE_ONLINE_MS = 90 * 1000;
 const DEVICE_STALE_MS = 10 * 60 * 1000;
+const COMMAND_CLAIM_TIMEOUT_MS = 5 * 60 * 1000;
 const COMMAND_TYPES = new Set([
   'power.always_on',
   'power.presentation',
@@ -139,6 +140,11 @@ function parseJson(value, fallback = {}) {
   try { return JSON.parse(value || '{}'); } catch { return fallback; }
 }
 
+function safeJsonObject(value, max = 8000, fallback = '{}') {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
+  return JSON.stringify(value).slice(0, max);
+}
+
 function statusFor(lastSeenAt, revokedAt) {
   if (revokedAt) return 'revoked';
   if (!lastSeenAt) return 'enrolled';
@@ -245,8 +251,8 @@ async function handleAdmin(request, env) {
     const issuedAt = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO device_commands
       (id, device_id, command_type, payload_json, status, issued_at, issued_by)
-      VALUES (?, ?, ?, ?, 'queued', ?, ?)`)
-      .bind(commandId, deviceId, commandType, JSON.stringify(body.payload || {}), issuedAt, actorId).run();
+      VALUES (?, ?, ?, '{}', 'queued', ?, ?)`)
+      .bind(commandId, deviceId, commandType, issuedAt, actorId).run();
     await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType}`);
     return json({ command: { id: commandId, deviceId, type: commandType, status: 'queued', issuedAt } }, 202, request, env);
   }
@@ -285,18 +291,27 @@ async function enrollAgent(request, env) {
   const tokenHash = await sha256(token);
   const deviceId = `dev_${crypto.randomUUID()}`;
   const now = new Date().toISOString();
-  const capabilities = body.capabilities && typeof body.capabilities === 'object' ? body.capabilities : {};
+  const capabilities = safeJsonObject(body.capabilities, 4000);
   const agentVersion = safeText(body.agentVersion || '1.0.0', 40);
   const osVersion = safeText(body.osVersion, 120);
 
-  await env.DB.batch([
-    env.DB.prepare(`INSERT INTO device_registry
+  const claim = await env.DB.prepare(`UPDATE device_enrollments
+    SET used_at = ?, device_id = ?
+    WHERE id = ? AND used_at IS NULL AND expires_at > ?`)
+    .bind(now, deviceId, enrollment.id, now).run();
+  if (!claim.meta?.changes) {
+    return json({ error: '등록 코드가 이미 사용되었거나 만료되었습니다.', code: 'ENROLLMENT_ALREADY_CLAIMED' }, 409, request, env);
+  }
+
+  try {
+    await env.DB.prepare(`INSERT INTO device_registry
       (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, last_seen_at, enrolled_at, enrolled_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)`)
-      .bind(deviceId, label, platform, hostname, osVersion, agentVersion, tokenHash, JSON.stringify(capabilities), now, now, enrollment.created_by),
-    env.DB.prepare(`UPDATE device_enrollments SET used_at = ?, device_id = ? WHERE id = ? AND used_at IS NULL`)
-      .bind(now, deviceId, enrollment.id),
-  ]);
+      .bind(deviceId, label, platform, hostname, osVersion, agentVersion, tokenHash, capabilities, now, now, enrollment.created_by).run();
+  } catch (error) {
+    console.error('Device enrollment registry insert failed', error);
+    return json({ error: '기기 등록 저장에 실패했습니다. 새 등록 코드를 발급해 주세요.', code: 'DEVICE_ENROLLMENT_STORE_FAILED' }, 500, request, env);
+  }
 
   return json({ deviceId, deviceToken: token, label, apiBase: new URL(request.url).origin }, 201, request, env);
 }
@@ -305,10 +320,10 @@ async function heartbeat(request, env, device) {
   const body = await readJson(request) || {};
   const now = new Date().toISOString();
   const capabilities = body.capabilities && typeof body.capabilities === 'object'
-    ? JSON.stringify(body.capabilities)
+    ? safeJsonObject(body.capabilities, 4000, device.capabilities_json)
     : device.capabilities_json;
   const settings = body.settings && typeof body.settings === 'object'
-    ? JSON.stringify(body.settings)
+    ? safeJsonObject(body.settings, 8000, device.settings_json)
     : device.settings_json;
   await env.DB.prepare(`UPDATE device_registry
     SET hostname = ?, os_version = ?, agent_version = ?, capabilities_json = ?, settings_json = ?, last_seen_at = ?
@@ -326,6 +341,12 @@ async function heartbeat(request, env, device) {
 }
 
 async function nextCommand(request, env, device) {
+  const staleClaim = new Date(Date.now() - COMMAND_CLAIM_TIMEOUT_MS).toISOString();
+  await env.DB.prepare(`UPDATE device_commands
+    SET status = 'queued', claimed_at = NULL
+    WHERE device_id = ? AND status = 'claimed' AND claimed_at < ?`)
+    .bind(device.id, staleClaim).run();
+
   const command = await env.DB.prepare(`SELECT * FROM device_commands
     WHERE device_id = ? AND status = 'queued'
     ORDER BY issued_at ASC LIMIT 1`).bind(device.id).first();
@@ -350,7 +371,9 @@ async function commandResult(request, env, device, commandId) {
   const success = body.success === true;
   const status = success ? 'succeeded' : 'failed';
   const completedAt = new Date().toISOString();
-  const result = body.result && typeof body.result === 'object' ? body.result : { message: safeText(body.message, 300) };
+  const result = body.result && typeof body.result === 'object'
+    ? parseJson(safeJsonObject(body.result, 8000), {})
+    : { message: safeText(body.message, 300) };
   const update = await env.DB.prepare(`UPDATE device_commands
     SET status = ?, completed_at = ?, result_json = ?
     WHERE id = ? AND device_id = ? AND status = 'claimed'`)
