@@ -1,3 +1,63 @@
+const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const WORKSPACE_API=`${SUPABASE_URL}/functions/v1/workspace-api`;
+const WORKSPACE_STORAGE_KEY='ekodi_social_workspace';
+let authClientPromise=null;
+
+function workspacePickerHref(){
+  const current=new URL(location.href);current.hash='';
+  const target=new URL('https://my.ekodi.kr/');
+  target.searchParams.set('return_to',current.href);target.hash='workspaces';
+  return target.href;
+}
+async function workspaceAuthClient(){
+  if(!authClientPromise)authClientPromise=import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm').then(({createClient})=>createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:false,persistSession:true}}));
+  return authClientPromise;
+}
+function savedWorkspace(){try{return localStorage.getItem(WORKSPACE_STORAGE_KEY)||''}catch{return''}}
+function saveWorkspace(key){try{if(key)localStorage.setItem(WORKSPACE_STORAGE_KEY,key);else localStorage.removeItem(WORKSPACE_STORAGE_KEY)}catch{}}
+function setWorkspaceSwitch(workspace=null){
+  const link=document.querySelector('#workspaceSwitch');if(!link)return;
+  link.href=workspacePickerHref();
+  link.textContent=workspace?.workspace_name?`${workspace.workspace_name} ▾`:'Workspace 선택 ▾';
+  link.title=workspace?.workspace_name?`현재 Workspace: ${workspace.workspace_name}`:'My EKODI에서 Workspace 선택';
+}
+async function verifiedWorkspaces(sb){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)return [];
+  const response=await fetch(`${WORKSPACE_API}/workspaces?site=social`,{headers:{apikey:PUBLISHABLE_KEY,Authorization:`Bearer ${session.access_token}`},cache:'no-store'});
+  if(!response.ok)throw new Error('workspace_list_failed');
+  const data=await response.json();return Array.isArray(data?.workspaces)?data.workspaces:[];
+}
+async function validateWorkspace(sb,key){
+  if(!key){saveWorkspace('');setWorkspaceSwitch();return null}
+  const rows=await verifiedWorkspaces(sb);
+  const selected=rows.find(row=>row?.workspace_key===key&&['active','pre_registered'].includes(String(row?.status||'')));
+  if(!selected){saveWorkspace('');setWorkspaceSwitch();return null}
+  saveWorkspace(selected.workspace_key);setWorkspaceSwitch(selected);return selected;
+}
+async function initWorkspaceSession(){
+  setWorkspaceSwitch();
+  try{
+    const sb=await workspaceAuthClient();
+    const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+    const token=hash.get('ekodi_token');
+    const requested=hash.get('ekodi_workspace')||'';
+    if(token){
+      const {error}=await sb.auth.verifyOtp({token_hash:token,type:hash.get('ekodi_type')||'email'});
+      const clean=new URL(location.href);clean.hash='';history.replaceState({},document.title,clean.href);
+      if(error)throw error;
+      await validateWorkspace(sb,requested);
+      return;
+    }
+    const {data:{session}}=await sb.auth.getSession();
+    if(session)await validateWorkspace(sb,savedWorkspace());
+  }catch(error){
+    console.warn('Social workspace session unavailable',error?.message||error);
+    setWorkspaceSwitch();
+  }
+}
+
 const els={tabs:document.querySelector('#orgTabs'),summary:document.querySelector('#orgSummary'),channels:document.querySelector('#channelGrid'),filters:document.querySelector('#providerFilters'),status:document.querySelector('#feedStatus'),feed:document.querySelector('#feedGrid'),featured:document.querySelector('#featuredSection'),featuredPlayer:document.querySelector('#featuredPlayer'),featuredCopy:document.querySelector('#featuredCopy'),featuredSource:document.querySelector('#featuredSource')};
 let registry=null;let activeOrg=new URLSearchParams(location.search).get('org')||'community';let activeProvider='all';let latestPosts=[];let activationToken=0;
 const providerLabel={all:'전체',youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',blog:'Blog',live:'Live'};
@@ -13,4 +73,6 @@ function renderFilters(channels){const providers=[...new Set(channels.map(ch=>ch
 function hideFeatured(){els.featured.hidden=true;els.featuredPlayer.innerHTML='';els.featuredCopy.innerHTML='';els.featuredSource.textContent=''}
 function renderFeatured(payload){const post=latestPosts.find(item=>item.provider==='youtube'&&item.videoId);if(!post){hideFeatured();return}const embed=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(post.videoId)}?rel=0`;els.featuredPlayer.innerHTML=`<iframe src="${esc(embed)}" title="${esc(post.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;els.featuredCopy.innerHTML=`<span class="featured-badge">최신 YouTube</span><h3>${esc(post.title)}</h3><div class="featured-meta"><span>${esc(post.channelName||'EKODI')}</span><time>${esc(fmtDate(post.publishedAt))}</time></div>${post.description?`<p>${esc(post.description).slice(0,260)}</p>`:''}<a href="${esc(post.url)}" target="_blank" rel="noopener">YouTube에서 보기 ↗</a>`;const source=payload.feedSource?.youtube==='api'?'YouTube API':payload.feedSource?.youtube==='rss'?'YouTube 공개 피드':'YouTube';els.featuredSource.textContent=`${source} · 자동 갱신`;els.featured.hidden=false}
 function renderFeed(){const posts=activeProvider==='all'?latestPosts:latestPosts.filter(post=>post.provider===activeProvider);if(!posts.length){els.feed.innerHTML='';els.status.hidden=false;els.status.innerHTML='<strong>표시할 최신 콘텐츠가 없습니다.</strong><span>공식 채널이 연결되거나 새 콘텐츠가 확인되면 자동으로 이 영역에 나타납니다.</span>';return}els.status.hidden=true;els.feed.innerHTML=posts.map(post=>`<article class="post-card"><a class="thumb" href="${esc(post.url)}" target="_blank" rel="noopener">${post.thumbnail?`<img src="${esc(post.thumbnail)}" alt="" loading="lazy">`:'<span class="thumb-fallback">EKODI</span>'}<span class="provider-badge">${esc(providerLabel[post.provider]||post.provider)}</span></a><div class="post-body"><div class="post-meta"><span>${esc(post.channelName||'EKODI')}</span><time>${esc(fmtDate(post.publishedAt))}</time></div><h3><a href="${esc(post.url)}" target="_blank" rel="noopener">${esc(post.title)}</a></h3>${post.description?`<p>${esc(post.description).slice(0,180)}</p>`:''}</div></article>`).join('')}
-window.addEventListener('popstate',()=>{const next=new URLSearchParams(location.search).get('org');if(next&&registry?.organizations?.some(org=>org.id===next))activate(next,false)});init().catch(error=>{els.status.hidden=false;els.status.textContent=error.message});
+window.addEventListener('popstate',()=>{const next=new URLSearchParams(location.search).get('org');if(next&&registry?.organizations?.some(org=>org.id===next))activate(next,false)});
+void initWorkspaceSession();
+init().catch(error=>{els.status.hidden=false;els.status.textContent=error.message});
