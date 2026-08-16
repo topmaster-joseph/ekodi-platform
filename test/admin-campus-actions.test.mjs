@@ -50,6 +50,14 @@ test('Domains and DNS navigation is removed while Affiliates has a visible icon'
   assert.match(js, /🤝 Affiliates/);
 });
 
+test('sidebar normalization is idempotent and cannot feed its own MutationObserver forever', () => {
+  assert.match(js, /if \(span\.textContent !== '🤝 Affiliates'\) span\.textContent = '🤝 Affiliates'/);
+  assert.match(js, /first\.nodeType === Node\.TEXT_NODE && first\.textContent/);
+  assert.match(js, /if \(item\.textContent !== '🤝 Affiliates'\) item\.textContent = '🤝 Affiliates'/);
+  assert.match(js, /let sidebarQueued = false/);
+  assert.match(js, /queueMicrotask\(\(\) =>/);
+});
+
 test('Campus action assets are copied for production but loaded only after authentication', () => {
   assert.match(build, /'campus-actions\.css'/);
   assert.match(build, /'campus-actions\.js'/);

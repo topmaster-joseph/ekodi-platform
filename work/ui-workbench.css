@@ -1,0 +1,79 @@
+/* EKODI Work UI DNA: precision workbench
+   Purpose: keep Work visually distinct from Community/Church while preserving the existing UX and DOM. */
+:root{
+  --ink:#101828;
+  --muted:#667085;
+  --paper:#eef2f7;
+  --card:#ffffff;
+  --green:#2f55d4;
+  --green2:#4969df;
+  --soft:#e9eeff;
+  --line:#cfd8e6;
+  --warn:#9a5b00;
+  --danger:#b42318;
+  --shadow:0 8px 24px rgba(16,24,40,.06);
+}
+body{
+  background:
+    linear-gradient(rgba(47,85,212,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(47,85,212,.035) 1px,transparent 1px),
+    #eef2f7;
+  background-size:28px 28px;
+}
+.topbar{
+  height:56px;
+  background:rgba(16,24,40,.96);
+  border-bottom:1px solid #25324a;
+  color:#f8fafc;
+  backdrop-filter:blur(18px);
+}
+.brand{color:#fff;letter-spacing:.11em}.brand b{color:#91a7ff}
+.nav-link{color:#98a6bd;border-radius:6px}.nav-link.active,.nav-link:hover{background:#1d2a43;color:#fff}
+.login{background:#fff;color:#223fba;border-color:#fff;border-radius:6px}
+main{width:min(1220px,calc(100% - 30px))}
+.hero{padding:54px 0 34px;gap:44px;align-items:stretch}
+.hero>div:first-child{display:flex;flex-direction:column;justify-content:center}
+.eyebrow{color:#405cc8;letter-spacing:.2em}
+h1 em{color:#2f55d4}
+.ask-card,.panel{
+  border-radius:9px;
+  border:1px solid #cbd5e1;
+  box-shadow:var(--shadow);
+}
+.ask-card{border-top:4px solid #2f55d4;padding:18px}
+button{background:#2f55d4;border-radius:7px;box-shadow:none}
+button:hover{filter:brightness(.95)}
+input,select,textarea{border-radius:6px;background:#fff;border-color:#c8d1df}
+input:focus,select:focus,textarea:focus{border-color:#4e6ce0;box-shadow:0 0 0 3px rgba(47,85,212,.10)}
+.quick-chips button{border-radius:5px;background:#e8edff;color:#304ebc;border:1px solid #d6defb}
+.view{padding-top:22px}
+.section-head{border-bottom:1px solid #cbd5e1;padding-bottom:13px}
+.section-head h2{letter-spacing:-.035em}
+.job-grid{gap:12px}
+.job-card{
+  border-radius:8px;
+  border:1px solid #cbd5e1;
+  border-top:3px solid #4969df;
+  box-shadow:none;
+  min-height:238px;
+}
+.job-card:hover{border-color:#9babdd;box-shadow:0 10px 24px rgba(31,56,120,.08);transform:translateY(-1px)}
+.verified,.saved,.quick-chips button,.guide-links a{background:#e8edff;color:#304ebc}
+.tag{border-radius:4px;background:#f1f4f9;border:1px solid #e0e6ef}
+.wage,.human-rule,.guide-links a{color:#304ebc}
+.job-actions .secondary,.secondary{background:#eef2ff;color:#304ebc;border-color:#cad4fb}
+.panel{padding:17px}
+.notice{border-radius:6px}
+.empty{border-radius:8px;background:rgba(255,255,255,.55)}
+.modal{background:rgba(15,23,42,.58)}
+.modal-card{border-radius:10px;border:1px solid #cbd5e1}
+.toast{background:#172554;border-radius:6px}
+footer{border-top:1px solid #ccd5e3;background:#e5eaf2;color:#5d6878;padding-top:24px}
+@media(max-width:860px){
+  .topbar nav{background:#101828;border-color:#2d3a51;border-radius:8px;box-shadow:0 12px 35px rgba(16,24,40,.20)}
+  .topbar nav .nav-link{color:#aebbd0}.topbar nav .nav-link.active{color:#fff}
+}
+@media(max-width:560px){
+  body{background-size:22px 22px}
+  .hero{padding-top:34px}.ask-card,.panel{border-radius:8px}
+}

@@ -197,7 +197,7 @@
       const open = card.querySelector('.service-actions a');
       if (!open || domain === 'api.ekodi.kr') continue;
       const publicUrl = publicServiceUrl(domain);
-      if (publicUrl) open.href = publicUrl;
+      if (publicUrl && open.href !== `${publicUrl}/` && open.href !== publicUrl) open.href = publicUrl;
     }
   }
 
@@ -214,12 +214,12 @@
     if (!item) return;
     const span = item.querySelector('span');
     if (span) {
-      span.textContent = '🤝 Affiliates';
+      if (span.textContent !== '🤝 Affiliates') span.textContent = '🤝 Affiliates';
       const first = item.firstChild;
-      if (first && first.nodeType === Node.TEXT_NODE) first.textContent = '';
+      if (first && first.nodeType === Node.TEXT_NODE && first.textContent) first.textContent = '';
       return;
     }
-    item.textContent = '🤝 Affiliates';
+    if (item.textContent !== '🤝 Affiliates') item.textContent = '🤝 Affiliates';
   }
 
   function normalizeSidebar() {
@@ -234,7 +234,15 @@
 
     const sidebarNav = nav();
     if (sidebarNav) {
-      const observer = new MutationObserver(() => normalizeSidebar());
+      let sidebarQueued = false;
+      const observer = new MutationObserver(() => {
+        if (sidebarQueued) return;
+        sidebarQueued = true;
+        queueMicrotask(() => {
+          sidebarQueued = false;
+          normalizeSidebar();
+        });
+      });
       observer.observe(sidebarNav, { childList: true, subtree: true });
     }
 
