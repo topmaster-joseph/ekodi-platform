@@ -12,6 +12,14 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// Keep the Control Center first paint unchanged. The persistent Workspace,
+// Strategy Room and AI REPORT UI ride inside the existing lazy admin bundle.
+const [lazyAdminJs, workspaceStrategyJs] = await Promise.all([
+  readFile(`${output}admin-lazy-features.js`, 'utf8'),
+  readFile(`${root}admin-workspace-strategy.js`, 'utf8'),
+]);
+await writeFile(`${output}admin-lazy-features.js`, `${lazyAdminJs}\n${workspaceStrategyJs}\n`);
+
 // Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
 const [financeCss, distributionCss, pipelineCss, royaltyCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs, royaltyJs] = await Promise.all([
@@ -81,4 +89,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, Chief AI conversation, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, Chief AI conversation, persistent Workspace, Chief AI Strategy Room, AI REPORT, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
