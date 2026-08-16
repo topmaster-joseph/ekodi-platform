@@ -1,0 +1,25 @@
+name = "ekodi-my"
+main = "my-worker.js"
+compatibility_date = "2026-08-17"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "my.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+DATA_ENABLED = "true"
+DATA_MODE = "production"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+AUTH_URL = "https://auth.ekodi.kr/?site=my"
+
+[assets]
+directory = "./my"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
