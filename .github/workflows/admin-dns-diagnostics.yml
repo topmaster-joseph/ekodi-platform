@@ -12,7 +12,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -94,17 +94,47 @@ jobs:
             echo "AAAA: ${aaaa:-NO_ANSWER}"
           done
 
+      - name: Probe HTTP from Asia-Pacific external nodes
+        shell: bash
+        run: |
+          set -euo pipefail
+          nodes=$(curl -fsS --retry 3 -H 'Accept: application/json' https://check-host.net/nodes/hosts)
+          selected=$(echo "$nodes" | jq -r '.nodes | to_entries[] | select((.value.location[0] == "kr") or (.value.location[0] == "jp") or (.value.location[0] == "sg") or (.value.location[0] == "hk")) | .key' | head -n 6)
+          if [ -z "$selected" ]; then
+            echo 'No KR/JP/SG/HK Check-Host nodes available; using automatic nodes.'
+            request=$(curl -fsS --retry 3 -H 'Accept: application/json' 'https://check-host.net/check-http?host=https%3A%2F%2Fadmin.ekodi.kr%2F&max_nodes=8')
+          else
+            args=''
+            while IFS= read -r node; do
+              [ -n "$node" ] || continue
+              echo "Selected APAC node: $node"
+              args="$args&node=$node"
+            done <<< "$selected"
+            request=$(curl -fsS --retry 3 -H 'Accept: application/json' "https://check-host.net/check-http?host=https%3A%2F%2Fadmin.ekodi.kr%2F${args}")
+          fi
+          echo "$request" | jq -c '{ok,request_id,nodes}'
+          request_id=$(echo "$request" | jq -r '.request_id')
+          test -n "$request_id" && test "$request_id" != null
+          for attempt in 1 2 3 4 5; do
+            sleep 3
+            result=$(curl -fsS --retry 2 -H 'Accept: application/json' "https://check-host.net/check-result/$request_id")
+            echo "$result" | jq -c '.'
+            ready=$(echo "$result" | jq '[to_entries[] | select(.value != null)] | length')
+            [ "$ready" -gt 0 ] && break
+          done
+
       - name: Verify TLS and all admin entry paths
         shell: bash
         run: |
           set -euo pipefail
-          echo | openssl s_client -connect admin.ekodi.kr:443 -servername admin.ekodi.kr -brief 2>&1 | head -n 20
+          echo | openssl s_client -connect admin.ekodi.kr:443 -servername admin.ekodi.kr -verify_hostname admin.ekodi.kr -brief 2>&1 | head -n 20
           check() {
             url="$1"
             code=$(curl -sS -o /tmp/body -D /tmp/headers -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
             echo "$url -> $code"
             grep -Fi 'x-ekodi-route:' /tmp/headers || true
             grep -Fi 'server:' /tmp/headers || true
+            grep -Fi 'alt-svc:' /tmp/headers || true
             if [ "$code" = 200 ]; then grep -Fq 'EKODI Control Center' /tmp/body; fi
           }
           check 'https://admin.ekodi.kr/'
