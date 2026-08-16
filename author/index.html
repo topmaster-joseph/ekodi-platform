@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="관심과 경험을 책으로 설계하고, 쓰고, 다듬고, 출판까지 연결하는 EKODI Author AI">
+  <title>EKODI Author AI | 생각을 책으로</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="EKODI Author AI 홈"><span class="mark">A</span><span><strong>EKODI Author AI</strong><small>Think · Write · Publish · Share</small></span></a>
+    <nav aria-label="주요 메뉴">
+      <a href="#studio">Studio</a><a href="#projects">My Books</a><a href="https://books.ekodi.kr">EKODI BOOKS ↗</a><a href="https://community.ekodi.kr">Community ↗</a>
+    </nav>
+    <button id="authButton" class="ghost" type="button">Google로 시작</button>
+  </header>
+
+  <main>
+    <section class="hero" id="studio">
+      <div class="hero-copy">
+        <p class="eyebrow">YOUR IDEA CAN BECOME A BOOK</p>
+        <h1>생각을 꺼내면,<br><span>저자AI가 책의 길을 만듭니다.</span></h1>
+        <p class="lead">관심사와 경험에서 시작해 기획, 집필, 검토, 저자 승인, 출판, 독자와의 나눔까지 한 프로젝트로 이어갑니다.</p>
+        <div class="hero-actions"><button class="primary" id="newBookButton" type="button">새 책 시작하기</button><button class="secondary" id="resumeButton" type="button">쓰던 책 계속하기</button></div>
+        <p class="privacy-note">원고는 기본 비공개입니다. Chief AI에는 원고 본문이 아니라 진행상태와 협업 신호만 공유합니다.</p>
+      </div>
+      <div class="flow-card" aria-label="Author AI 협업 흐름">
+        <div class="flow-node active"><b>YOU</b><span>관심 · 경험 · 승인</span></div>
+        <i>→</i><div class="flow-node"><b>AUTHOR AI</b><span>기획 · 집필</span></div>
+        <i>→</i><div class="flow-node"><b>RESEARCH</b><span>근거 · 자료</span></div>
+        <i>→</i><div class="flow-node"><b>EDITOR</b><span>구성 · 문체</span></div>
+        <i>→</i><div class="flow-node chief"><b>CHIEF AI</b><span>조정 · 품질</span></div>
+        <i>→</i><div class="flow-node publish"><b>BOOKS</b><span>출판 · 유통</span></div>
+      </div>
+    </section>
+
+    <section class="quick-start" aria-labelledby="startTitle">
+      <div class="section-head"><div><p class="eyebrow">START SMALL</p><h2 id="startTitle">어디서 시작할까요?</h2></div><p>빈 문서를 열지 않아도 됩니다. 지금 가진 것에서 출발합니다.</p></div>
+      <div class="start-grid">
+        <button class="start-card" data-start="idea" type="button"><span>01</span><strong>새 아이디어에서</strong><p>관심 분야를 말하면 서로 다른 책 방향을 제안합니다.</p></button>
+        <button class="start-card" data-start="continue" type="button"><span>02</span><strong>쓰던 글에서</strong><p>기존 초고를 프로젝트로 가져와 구조와 다음 작업을 정합니다.</p></button>
+        <button class="start-card" data-start="sources" type="button"><span>03</span><strong>내 자료에서</strong><p>메모·강의·논문·설교·현장자료를 저자 자료실로 연결합니다.</p></button>
+      </div>
+    </section>
+
+    <section class="planner" id="planner" hidden aria-labelledby="plannerTitle">
+      <div class="section-head"><div><p class="eyebrow">BOOK BLUEPRINT</p><h2 id="plannerTitle">책 설계하기</h2></div><button class="ghost" id="closePlanner" type="button">닫기</button></div>
+      <form id="plannerForm">
+        <div class="field wide"><label for="interest">무엇에 대해 쓰고 싶나요?</label><textarea id="interest" name="interest" rows="3" maxlength="1200" required placeholder="관심사, 경험, 문제의식, 꼭 전하고 싶은 이야기를 자유롭게 적어 주세요."></textarea></div>
+        <div class="field"><label for="field">분야</label><select id="field" name="field"><option>Faith & Theology</option><option>Business</option><option>Academic</option><option>Essay</option><option>Practical</option><option>Biography</option><option>Story</option><option>Workbook</option><option>Other</option></select></div>
+        <div class="field"><label for="audience">주요 독자</label><input id="audience" name="audience" maxlength="160" placeholder="예: 작은 교회 리더, 소상공인, 대학생"></div>
+        <div class="field"><label for="length">목표 분량</label><select id="length" name="length"><option value="short">짧게 · 80~120쪽</option><option value="medium" selected>보통 · 120~200쪽</option><option value="deep">깊게 · 200쪽 이상</option></select></div>
+        <div class="field"><label for="tone">문체</label><select id="tone" name="tone"><option value="warm">따뜻하고 명료하게</option><option value="analytical">분석적이고 논리적으로</option><option value="narrative">서사적으로</option><option value="conversational">대화하듯</option><option value="scholarly">학술적으로</option><option value="concise">간결하게</option></select></div>
+        <div class="field"><label for="narrative">서술 방식</label><select id="narrative" name="narrative"><option value="story">이야기 → 통찰 → 적용</option><option value="argument">주장 → 근거 → 사례</option><option value="question">질문 → 탐색 → 답</option><option value="case">현장 사례 중심</option><option value="workbook">설명 → 질문 → 활동</option></select></div>
+        <div class="field"><label for="sourceMode">자료 사용</label><select id="sourceMode" name="sourceMode"><option value="author-first">내 자료와 경험 우선</option><option value="research">리서치 근거 강화</option><option value="balanced">내 자료 + 리서치 균형</option></select></div>
+        <div class="planner-actions"><button class="primary" type="submit">책 방향 4개 만들기</button><span id="plannerStatus" role="status"></span></div>
+      </form>
+      <div id="conceptResults" class="concept-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="projects" id="projects">
+      <div class="section-head"><div><p class="eyebrow">MY AUTHOR WORKSPACE</p><h2>내 책 프로젝트</h2></div><span id="accountBadge" class="badge">로그인 전</span></div>
+      <div id="projectList" class="project-list"><div class="empty"><strong>아직 시작한 책이 없습니다.</strong><p>새 책을 시작하면 IDEA → PLAN → WRITING → REVIEW → AUTHOR APPROVED → PUBLISH READY 흐름으로 관리됩니다.</p></div></div>
+    </section>
+
+    <section class="principles">
+      <article><small>01 · OWNERSHIP</small><h3>저자가 주인입니다.</h3><p>AI는 대신 이름을 차지하지 않습니다. 방향과 최종 승인은 언제나 저자에게 있습니다.</p></article>
+      <article><small>02 · MEMORY</small><h3>책마다 기억을 둡니다.</h3><p>핵심 주장, 독자, 문체, 사례, 용어를 Book Memory에 보존해 긴 글에서도 일관성을 유지합니다.</p></article>
+      <article><small>03 · EVIDENCE</small><h3>글과 근거를 구분합니다.</h3><p>리서치가 필요한 문장은 검증 대상으로 표시해 잘못된 인용과 사실 혼동을 줄입니다.</p></article>
+      <article><small>04 · HUMAN GATE</small><h3>출판 전 사람의 승인이 있습니다.</h3><p>AUTHOR APPROVED 이후에만 EKODI BOOKS로 출판 준비를 넘깁니다.</p></article>
+    </section>
+  </main>
+
+  <footer><strong>EKODI Author AI</strong><span>생각 → 글 → 책 → 나눔</span><a href="https://ekodi.kr">EKODI Ecosystem ↗</a></footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
