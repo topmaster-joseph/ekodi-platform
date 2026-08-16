@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { AI_MISSION_RUNTIME } from '../ai-governance-runtime.js';
 
 const root = new URL('../', import.meta.url);
 const policy = JSON.parse(await readFile(new URL('config/ai-mission-governance.json', root), 'utf8'));
@@ -57,7 +58,27 @@ assert(policy.userRights?.includes('decline_or_revoke_delegated_ai_actions'), 'u
 assert(policy.userRights?.includes('leave_without_artificial_penalty_or_data_hostage_patterns'), 'artificial exit lock-in is prohibited');
 assert(policy.decisionLoop?.includes('restore_user_agency'), 'decision loop must restore user agency after assistance');
 
-console.log(`AI mission governance valid: ${policy.version} (${Object.keys(policy.agents).length} agents)`);
+assert(AI_MISSION_RUNTIME.version === policy.version, 'runtime policy version must match source policy');
+assert(AI_MISSION_RUNTIME.authorityModel.humanRole === policy.authorityModel.humanRole, 'runtime human role must match source policy');
+assert(AI_MISSION_RUNTIME.authorityModel.chiefAiRole === policy.authorityModel.chiefAiRole, 'runtime Chief AI role must match source policy');
+assert(JSON.stringify(AI_MISSION_RUNTIME.policyPriority) === JSON.stringify(policy.policyPriority), 'runtime policy priority must match source policy');
+assertSameSet(AI_MISSION_RUNTIME.humanGateAreas, policy.actionTiers.human_gate.areas, 'human gate areas');
+assertSameSet(AI_MISSION_RUNTIME.forbiddenAreas, policy.actionTiers.forbidden.areas, 'forbidden areas');
+assertSameSet(AI_MISSION_RUNTIME.nonNegotiables, policy.nonNegotiables, 'non-negotiables');
+assertSameSet(Object.keys(AI_MISSION_RUNTIME.agents), Object.keys(policy.agents), 'agent registry');
+for (const agentId of Object.keys(policy.agents)) {
+  const runtimeAgent = AI_MISSION_RUNTIME.agents[agentId];
+  assert(runtimeAgent?.name === policy.agents[agentId].name, `runtime agent name mismatch: ${agentId}`);
+  assertSameSet(runtimeAgent?.mustEscalate || [], policy.agents[agentId].mustEscalate || [], `runtime escalation mismatch: ${agentId}`);
+}
+
+console.log(`AI mission governance valid: ${policy.version} (${Object.keys(policy.agents).length} agents, runtime synchronized)`);
+
+function assertSameSet(actual, expected, label) {
+  const a = [...actual].sort();
+  const b = [...expected].sort();
+  assert(JSON.stringify(a) === JSON.stringify(b), `${label} must match between source and runtime policy`);
+}
 
 function assert(condition, message) {
   if (!condition) {
