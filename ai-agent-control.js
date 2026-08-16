@@ -4,6 +4,7 @@ import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
+const MAX_PAYLOAD_BYTES = 16_384;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
 
 function json(data, status = 200, request = null, env = {}) {
@@ -81,8 +82,24 @@ function normalizeAction(body = {}) {
     preflightVerified: Boolean(body.preflightVerified),
     reducesUserRights: Boolean(body.reducesUserRights),
     crossTenantPrivateData: Boolean(body.crossTenantPrivateData),
-    violates: Array.isArray(body.violates) ? body.violates.map(value => String(value)).slice(0, 20) : [],
+    violates: Array.isArray(body.violates) ? body.violates.map(value => String(value).slice(0, 120)).slice(0, 20) : [],
   };
+}
+
+function payloadJson(action) {
+  try {
+    const value = JSON.stringify(action.payload || {});
+    return { value, bytes: new TextEncoder().encode(value).byteLength };
+  } catch {
+    return { value: '{}', bytes: Number.POSITIVE_INFINITY };
+  }
+}
+
+function payloadError(action) {
+  const payload = payloadJson(action);
+  if (!Number.isFinite(payload.bytes)) return { error: 'payload는 JSON으로 직렬화할 수 있어야 합니다.', code: 'INVALID_ACTION_PAYLOAD' };
+  if (payload.bytes > MAX_PAYLOAD_BYTES) return { error: `AI action payload는 ${MAX_PAYLOAD_BYTES}바이트 이하여야 합니다.`, code: 'ACTION_PAYLOAD_TOO_LARGE' };
+  return null;
 }
 
 function initialStatus(result, action) {
@@ -109,7 +126,7 @@ async function insertAction(env, session, action, result) {
       action.area,
       action.target,
       action.rationale,
-      JSON.stringify(action.payload),
+      payloadJson(action).value,
       result.tier,
       result.reason,
       status,
@@ -151,8 +168,8 @@ async function finalizeAction(env, id, execution) {
 async function listActions(env, url) {
   const requested = Number.parseInt(url.searchParams.get('limit') || '30', 10);
   const limit = Math.min(Math.max(Number.isFinite(requested) ? requested : 30, 1), MAX_LIST);
-  const status = String(url.searchParams.get('status') || '').trim();
-  const agentId = String(url.searchParams.get('agentId') || '').trim();
+  const status = String(url.searchParams.get('status') || '').trim().slice(0, 80);
+  const agentId = String(url.searchParams.get('agentId') || '').trim().slice(0, 80);
   const clauses = [];
   const values = [];
   if (status) { clauses.push('status = ?'); values.push(status); }
@@ -235,6 +252,8 @@ export async function handleAgentMissionControl(request, env) {
     const body = await readJson(request);
     if (!body) return json({ error: '유효한 JSON 요청이 필요합니다.', code: 'INVALID_JSON' }, 400, request, env);
     const action = normalizeAction(body);
+    const payloadIssue = payloadError(action);
+    if (payloadIssue) return json(payloadIssue, payloadIssue.code === 'ACTION_PAYLOAD_TOO_LARGE' ? 413 : 400, request, env);
     return json({ ok: true, action, decision: evaluateMissionAction(action) }, 200, request, env);
   }
 
@@ -249,6 +268,8 @@ export async function handleAgentMissionControl(request, env) {
     if (!action.agentId || !action.actionType || !action.area) {
       return json({ error: 'agentId, actionType, area는 필수입니다.', code: 'ACTION_FIELDS_REQUIRED' }, 400, request, env);
     }
+    const payloadIssue = payloadError(action);
+    if (payloadIssue) return json(payloadIssue, payloadIssue.code === 'ACTION_PAYLOAD_TOO_LARGE' ? 413 : 400, request, env);
     const decision = evaluateMissionAction(action);
     const stored = await insertAction(env, auth.session, action, decision);
 
