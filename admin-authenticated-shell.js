@@ -59,12 +59,67 @@
     });
   }
 
+  function deactivateMallFreeOps() {
+    const panel = document.querySelector('#mallFreeOpsPanel');
+    if (!panel) return;
+    const button = document.querySelector('.sidebar [data-admin-link="mall-free-ops"]');
+    const frame = panel.querySelector('[data-mall-free-ops-frame]');
+    if (!panel.hidden) panel.hidden = true;
+    if (!panel.classList.contains('hidden-panel')) panel.classList.add('hidden-panel');
+    if (button?.classList.contains('active')) button.classList.remove('active');
+    if (frame?.getAttribute('src')) frame.removeAttribute('src');
+  }
+
+  function installMallFreeOpsIsolation() {
+    const nav = document.querySelector('.sidebar nav');
+    const content = document.querySelector('.content');
+    if (!nav || !content || nav.dataset.mallFreeOpsIsolationBound) return;
+    nav.dataset.mallFreeOpsIsolationBound = 'true';
+
+    nav.addEventListener('click', event => {
+      const item = event.target?.closest?.('.nav');
+      if (!item) return;
+      const mallFreeOps = item.dataset.adminLink === 'mall-free-ops' || item.dataset.section === 'mall-free-ops';
+      if (mallFreeOps) {
+        const panel = document.querySelector('#mallFreeOpsPanel');
+        if (panel?.hidden) panel.hidden = false;
+        return;
+      }
+      deactivateMallFreeOps();
+    }, true);
+
+    let queued = false;
+    const observer = new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        if (location.hash === '#mall-free-ops') return;
+        const panel = document.querySelector('#mallFreeOpsPanel');
+        const button = document.querySelector('.sidebar [data-admin-link="mall-free-ops"]');
+        if (!panel) return;
+        if (!panel.hidden || !panel.classList.contains('hidden-panel') || button?.classList.contains('active') || panel.querySelector('[data-mall-free-ops-frame]')?.getAttribute('src')) {
+          deactivateMallFreeOps();
+        }
+      });
+    });
+    observer.observe(content, { childList:true, subtree:true, attributes:true, attributeFilter:['class','hidden'] });
+    observer.observe(nav, { subtree:true, attributes:true, attributeFilter:['class'] });
+
+    window.addEventListener('hashchange', () => {
+      if (location.hash !== '#mall-free-ops') deactivateMallFreeOps();
+    });
+
+    if (location.hash !== '#mall-free-ops') deactivateMallFreeOps();
+  }
+
   async function startAuthenticatedShell() {
     if (started || !authenticated()) return;
     started = true;
     document.documentElement.dataset.ekodiAdminReady = 'true';
     for (const href of postAuthStyles) loadStyle(href);
     for (const src of postAuthScripts) await loadScript(src);
+    installMallFreeOpsIsolation();
     window.dispatchEvent(new CustomEvent('ekodi-admin-ready'));
   }
 

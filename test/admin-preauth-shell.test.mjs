@@ -42,3 +42,14 @@ test('authenticated feature scripts remain available after login in deterministi
   assert.ok(compact >= 0 && compact < features && features < campus && campus < lazy);
   assert.match(shell, /for \(const src of postAuthScripts\) await loadScript\(src\)/);
 });
+
+test('Mall Free Ops is hard-isolated to its own admin section and unloaded elsewhere', () => {
+  assert.match(shell, /function deactivateMallFreeOps\(\)/);
+  assert.match(shell, /panel\.hidden = true/);
+  assert.match(shell, /panel\.classList\.add\('hidden-panel'\)/);
+  assert.match(shell, /frame\.removeAttribute\('src'\)/);
+  assert.match(shell, /item\.dataset\.adminLink === 'mall-free-ops'/);
+  assert.match(shell, /if \(panel\?\.hidden\) panel\.hidden = false/);
+  assert.match(shell, /if \(location\.hash !== '#mall-free-ops'\) deactivateMallFreeOps\(\)/);
+  assert.match(shell, /installMallFreeOpsIsolation\(\)/);
+});
