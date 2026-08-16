@@ -1,4 +1,9 @@
 -- Move the Creator portfolio person helper out of the public API schema.
+-- A clean/ephemeral database may not have the private schema yet, so this migration
+-- must be self-contained rather than depending on production-only history.
+
+create schema if not exists private;
+grant usage on schema private to authenticated;
 
 create or replace function private.current_person_id()
 returns uuid
