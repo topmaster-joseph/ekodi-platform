@@ -1,0 +1,84 @@
+name: Deploy EKODI Energy AI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'energy/**'
+      - 'energy-worker.js'
+      - 'wrangler.energy.toml'
+      - 'test/energy-platform.test.mjs'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'deploy/manifests/energy.worker.json'
+      - '.github/workflows/deploy-energy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-energy-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Energy AI source and guardrails
+        run: |
+          set -euo pipefail
+          node --check energy-worker.js
+          node --check energy/app.js
+          node --test test/energy-platform.test.mjs
+          npm run validate:boundaries
+          npm run validate:ui-dna
+          npm run validate:mission
+          grep -Fq 'pattern = "energy.ekodi.kr"' wrangler.energy.toml
+          grep -Fq 'CONTROL_ENABLED = "false"' wrangler.energy.toml
+          test -f deploy/manifests/energy.worker.json
+
+  deploy-production:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Candidate at 0%, verify, promote and auto-rollback on failure
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/energy.worker.json
+      - name: Deep verify Energy AI production hostname and safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/energy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/energy-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/health' || true)
+            block_code=$(curl -sS -o /tmp/energy-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/api/action-check' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
+              && grep -Fq 'EKODI Energy AI' /tmp/energy.html \
+              && grep -Fq '"telemetryEnabled":false' /tmp/energy-health.json \
+              && grep -Fq '"controlEnabled":false' /tmp/energy-health.json \
+              && grep -Fq '"reason":"safety_boundary_permanent"' /tmp/energy-block.json; then
+              echo 'EKODI Energy AI production verified with physical control disabled.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
