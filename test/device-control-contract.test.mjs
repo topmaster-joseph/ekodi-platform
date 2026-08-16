@@ -21,7 +21,10 @@ test('device credentials are stored as hashes and enrollment is one-time', () =>
   assert.match(api, /code_hash TEXT NOT NULL UNIQUE/);
   assert.match(api, /used_at IS NULL AND expires_at > \?/);
   assert.match(api, /sha256\(token\)/);
-  assert.doesNotMatch(api, /INSERT INTO device_registry[\s\S]*deviceToken/);
+  const registryInsert = api.match(/INSERT INTO device_registry[\s\S]*?\.run\(\);/)?.[0] || '';
+  assert.ok(registryInsert, 'device registry insert must exist');
+  assert.match(registryInsert, /tokenHash/);
+  assert.doesNotMatch(registryInsert, /deviceToken/);
 });
 
 test('cloud commands are an explicit allowlist, never arbitrary shell', () => {
