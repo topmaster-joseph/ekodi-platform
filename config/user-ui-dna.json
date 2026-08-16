@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "policy": "Each public EKODI service must have a distinct visual family. Share accessibility, responsive behavior, EKODI identity and navigation conventions, but do not clone palette, card geometry, typography hierarchy or information rhythm across services.",
+  "shared": {
+    "mustKeep": ["EKODI brand relationship", "WCAG-conscious contrast", "keyboard focus", "responsive layout", "clear return path to ekodi.kr"],
+    "mustVary": ["dominant palette", "headline typography", "corner geometry", "information density", "hero composition", "motion character", "card language"]
+  },
+  "services": {
+    "church": {"family":"sanctuary","mood":"contemplative, spacious, sacred","palette":"deep forest / cream / muted gold","type":"serif-led","geometry":"open sections, restrained circles","density":"low"},
+    "community": {"family":"neighborhood-commons","mood":"warm, relational, participatory","palette":"ivory / sage / forest / warm gold","type":"humanist sans + editorial serif","geometry":"soft round cards and chips","density":"medium"},
+    "books": {"family":"academic-press","mood":"scholarly, editorial, archival","palette":"paper / navy / burgundy","type":"serif-led publication typography","geometry":"rules, columns, book proportions","density":"medium-high"},
+    "author": {"family":"writing-lab","mood":"focused, experimental, AI-native","palette":"near-black / acid lime / mint","type":"modern sans","geometry":"dark studio panels","density":"medium-high"},
+    "lab": {"family":"field-research-journal","mood":"evidence-led, investigative, grounded","palette":"warm paper / graphite / oxide orange / data blue","type":"editorial sans + mono data accents","geometry":"research notes, ruled evidence blocks","density":"medium-high","migration":"move away from green-dominant styling to avoid Church/Community overlap"},
+    "work": {"family":"precision-workbench","mood":"practical, capable, task-oriented","palette":"slate / cobalt / white","type":"compact modern sans","geometry":"crisp 6-9px cards, grid background","density":"high","status":"implemented on design/distinct-user-ui-20260816"},
+    "social": {"family":"signal-stream","mood":"live, connected, media-forward","palette":"midnight navy / electric sky","type":"system sans","geometry":"stream cards and compact tabs","density":"high"},
+    "mall": {"family":"curated-market","mood":"lively, tactile, discovery-led","palette":"apricot / coral / cobalt / market yellow","type":"editorial commerce sans","geometry":"product tiles, sticker badges, rounded image frames","density":"medium","status":"implemented on design/distinct-user-ui-20260816 in ekodi-mall"},
+    "marketing": {"family":"campaign-studio","mood":"creative, energetic, outcome-led","palette":"aubergine / electric violet / warm orange","type":"bold grotesk sans","geometry":"campaign canvases, split previews, kinetic cards","density":"medium-high"},
+    "biz": {"family":"business-briefing","mood":"credible, strategic, executive","palette":"stone / charcoal / brass","type":"clean sans + numeric accents","geometry":"briefing sheets and metric bands","density":"high"},
+    "trade": {"family":"global-terminal","mood":"international, fast, exact","palette":"midnight / cyan / ice","type":"condensed sans + mono","geometry":"route lines, quote tables, terminal panels","density":"high"},
+    "pay": {"family":"trust-ledger","mood":"quiet, secure, frictionless","palette":"white / ink navy / emerald micro-accent","type":"neutral sans","geometry":"minimal ledger rows, strong whitespace","density":"medium"},
+    "insurance": {"family":"protective-clarity","mood":"calm, reassuring, explainable","palette":"soft sky / ultramarine / warm white","type":"accessible sans","geometry":"coverage layers, comparison strips","density":"medium"},
+    "edu": {"family":"learning-studio","mood":"curious, modular, encouraging","palette":"chalk / ultramarine / sunflower","type":"friendly sans + note accents","geometry":"lesson blocks, progress rails, notebook cues","density":"medium"},
+    "media": {"family":"broadcast-stage","mood":"cinematic, immediate, story-led","palette":"near-black / white / signal red","type":"display sans","geometry":"16:9 frames, strips, bold headlines","density":"medium"}
+  },
+  "aliases": {
+    "mission": {"target":"community","rule":"legacy naming/route only; do not create a second visual family"}
+  }
+}
