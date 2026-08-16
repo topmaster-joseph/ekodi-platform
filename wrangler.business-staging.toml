@@ -1,5 +1,5 @@
 name = "ekodi-business-staging"
-main = "business-worker.js"
+main = "business-live-worker.js"
 compatibility_date = "2026-08-16"
 workers_dev = true
 preview_urls = true
@@ -9,7 +9,7 @@ BUSINESS_MODE = "isolated-staging"
 INTEGRATIONS_ENABLED = "false"
 EXECUTION_ENABLED = "false"
 READINESS = "62"
-AUTH_URL = "https://auth.ekodi.kr/?site=business"
+AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"
 
 [assets]
 directory = "./business"
