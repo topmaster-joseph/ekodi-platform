@@ -24,7 +24,7 @@ test('Social registry rejects the retired EKODI mission organization label', () 
   assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://community.ekodi.kr', channels:[] }] }), /legacy EKODI mission/);
 });
 
-test('Control Center lazy-loads Social Channels while Mission Control preserves the canonical API entry', async () => {
+test('Control Center lazy-loads Social Channels while security-wrapped Mission Control preserves the canonical API entry', async () => {
   const [features, build, admin, entry, missionEntry, wrangler] = await Promise.all([
     readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
@@ -43,6 +43,8 @@ test('Control Center lazy-loads Social Channels while Mission Control preserves 
   assert.match(entry, /return apiWorker\.fetch\(request, env, ctx\)/);
   assert.match(entry, /return apiWorker\.scheduled\(controller, env, ctx\)/);
   assert.match(wrangler, /main = "mission-control-entry-worker\.js"/);
-  assert.match(missionEntry, /return customerEntryWorker\.fetch\(request, env, ctx\)/);
+  assert.match(missionEntry, /const response = await customerEntryWorker\.fetch\(request, env, ctx\)/);
+  assert.match(missionEntry, /return applyApiSecurityHeaders\(response\)/);
+  assert.match(missionEntry, /const guard = await enforceEdgeSecurity\(request, env\)/);
   assert.match(missionEntry, /return customerEntryWorker\.scheduled\(controller, env, ctx\)/);
 });
