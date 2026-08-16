@@ -31,7 +31,8 @@ test('Social workspace switcher consumes one-time handoff and revalidates person
     readFile(new URL('../social-worker.js',import.meta.url),'utf8'),
   ]);
   assert.match(html,/id="workspaceSwitch"/);
-  assert.match(app,/workspace-api\/workspaces\?site=social/);
+  assert.match(app,/functions\/v1\/workspace-api/);
+  assert.match(app,/\$\{WORKSPACE_API\}\/workspaces\?site=social/);
   assert.match(app,/verifyOtp\(\{token_hash:token/);
   assert.match(app,/ekodi_workspace/);
   assert.match(app,/workspace_key===key/);
