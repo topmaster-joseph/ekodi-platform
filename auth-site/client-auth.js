@@ -2,6 +2,7 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const realms={
+  'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
   'community':{name:'EKODI Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   'work':{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   'mall-seller':{name:'EKODI Mall Seller',returnTo:'https://mall.ekodi.kr/seller/',open:true,kind:'seller'},
@@ -15,10 +16,14 @@ const config=realms[site]||realms['cgma-client'];
 const $=id=>document.getElementById(id);
 
 $('serviceName').textContent=config.name;
-$('serviceBadge').textContent=config.open?(config.kind==='seller'?'무료 판매자 가입':config.kind==='work'?'일·인재':'커뮤니티'):'Google 로그인';
+$('serviceBadge').textContent=config.open?(config.kind==='my'?'나의 에코디':config.kind==='seller'?'무료 판매자 가입':config.kind==='work'?'일·인재':'커뮤니티'):'Google 로그인';
 const introTitle=document.querySelector('.intro h1');
 const introCopy=document.querySelector('.intro p');
-if(config.kind==='seller'){
+if(config.kind==='my'){
+  if(introTitle)introTitle.innerHTML='Google로 확인하고,<br>나의 EKODI를 이어가세요.';
+  if(introCopy)introCopy.textContent='Google 계정으로 본인을 확인합니다. 로그인 후 같은 사람에게 연결된 창작과 활동을 개인 허브에서 안전하게 이어갑니다.';
+  $('signedOutCopy').textContent='Google 계정으로 계속하면 My EKODI에 연결됩니다. 개인 기록은 기본 비공개이며 서비스별 원본 데이터는 각 서비스가 책임집니다.';
+}else if(config.kind==='seller'){
   if(introTitle)introTitle.innerHTML='Google로 가입하고,<br>내 스토어를 시작하세요.';
   if(introCopy)introCopy.textContent='Google 계정으로 본인을 확인합니다. 로그인 후 판매자 상태와 이용 가능한 기능을 자동으로 확인합니다.';
   $('signedOutCopy').textContent='Google 계정으로 계속하면 무료 Seller 계정으로 연결됩니다. 실제 직접판매와 정산 권한은 확인된 상태에 따라 자동 적용됩니다.';
@@ -43,12 +48,12 @@ function loadGoogleLibrary(){if(window.google?.accounts?.id)return Promise.resol
 
 async function prepare(){
   const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);
-  const preparing=config.kind==='seller'?'EKODI Mall Google 로그인을 준비하고 있습니다.':config.kind==='work'?'EKODI Work Google 로그인을 준비하고 있습니다.':config.open?'EKODI Community Google 로그인을 준비하고 있습니다.':'Google 로그인을 준비하고 있습니다.';
+  const preparing=config.kind==='my'?'My EKODI Google 로그인을 준비하고 있습니다.':config.kind==='seller'?'EKODI Mall Google 로그인을 준비하고 있습니다.':config.kind==='work'?'EKODI Work Google 로그인을 준비하고 있습니다.':config.open?'EKODI Community Google 로그인을 준비하고 있습니다.':'Google 로그인을 준비하고 있습니다.';
   notice(preparing);
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:async response=>{
-      const working=config.kind==='seller'?'Google 계정을 확인하고 Seller Studio로 연결하고 있습니다.':config.kind==='work'?'Google 계정을 확인하고 EKODI Work로 연결하고 있습니다.':config.open?'Google 계정을 확인하고 Community로 연결하고 있습니다.':'Google 계정과 등록된 역할을 확인하고 있습니다.';
+      const working=config.kind==='my'?'Google 계정을 확인하고 My EKODI로 연결하고 있습니다.':config.kind==='seller'?'Google 계정을 확인하고 Seller Studio로 연결하고 있습니다.':config.kind==='work'?'Google 계정을 확인하고 EKODI Work로 연결하고 있습니다.':config.open?'Google 계정을 확인하고 Community로 연결하고 있습니다.':'Google 계정과 등록된 역할을 확인하고 있습니다.';
       notice(working);
       try{
         const proof=await identity('/google/exchange',{method:'POST',body:JSON.stringify({credential:response.credential,nonce:challenge.nonce})});
@@ -57,7 +62,7 @@ async function prepare(){
       }catch(e){console.error('central identity',e);notice('Google 본인확인을 완료하지 못했습니다. 다시 시도해 주세요.','error');show('googleRetry',true)}
     }});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
-    const ready=config.kind==='seller'?'사용할 Google 계정으로 계속해 주세요.':config.kind==='work'?'EKODI Work에 사용할 Google 계정으로 계속해 주세요.':config.open?'사용할 Google 계정으로 계속해 주세요.':'등록된 Google 계정으로 계속해 주세요. 역할과 권한은 로그인 후 자동으로 적용됩니다.';
+    const ready=config.kind==='my'?'My EKODI에 사용할 Google 계정으로 계속해 주세요.':config.kind==='seller'?'사용할 Google 계정으로 계속해 주세요.':config.kind==='work'?'EKODI Work에 사용할 Google 계정으로 계속해 주세요.':config.open?'사용할 Google 계정으로 계속해 주세요.':'등록된 Google 계정으로 계속해 주세요. 역할과 권한은 로그인 후 자동으로 적용됩니다.';
     notice(ready);
   }catch(e){console.error('prepare central identity',e);notice('Google 인증 준비에 실패했습니다. 다시 시도해 주세요.','error');show('googleRetry',true)}
 }
