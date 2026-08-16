@@ -12,6 +12,17 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// Device Control is privileged post-auth functionality. Bundle it into the existing
+// compact authenticated assets so admin.ekodi.kr does not expose another pre-auth script.
+const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
+  readFile(`${output}compact-control-center.css`, 'utf8'),
+  readFile(`${output}compact-control-center.js`, 'utf8'),
+  readFile(`${root}device-control-admin.css`, 'utf8'),
+  readFile(`${root}device-control-admin.js`, 'utf8'),
+]);
+await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n`);
+await writeFile(`${output}compact-control-center.js`, `${compactJs}\n${deviceControlJs}\n`);
+
 // Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
 const [financeCss, distributionCss, pipelineCss, royaltyCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs, royaltyJs] = await Promise.all([
@@ -81,4 +92,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Campus/Chief AI modules, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Campus/Chief AI/Device Control modules, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
