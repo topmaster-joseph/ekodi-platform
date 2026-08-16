@@ -13,16 +13,33 @@ test('Marketing admin overview is admin-authenticated and read-only', () => {
   assert.match(source, /readOnly:true/);
   assert.match(source, /customerPiiIncluded:false/);
   assert.match(source, /externalExecution:false/);
+  assert.match(source, /approvalDecisionEndpointExposedHere:false/);
 });
 
 test('Marketing admin overview exposes aggregate operational sources without billing secrets', () => {
   assert.match(source, /service_subscriptions/);
   assert.match(source, /billing_charge_events/);
   assert.match(source, /marketing_store_workspaces/);
+  assert.match(source, /ai_agent_actions/);
+  assert.match(source, /social_registry_config/);
   assert.match(source, /dataContracts/);
+  assert.match(source, /channels:'connected'/);
+  assert.match(source, /automation:'connected'/);
+  assert.match(source, /approvals:'connected'/);
+  assert.match(source, /campaigns:'not_connected'/);
+  assert.match(source, /crm:'not_connected'/);
+  assert.doesNotMatch(source, /payload_json/);
   assert.doesNotMatch(source, /billing_key_cipher/);
   assert.doesNotMatch(source, /billing_key_iv/);
   assert.doesNotMatch(source, /provider_payment_key/);
+});
+
+test('Marketing admin narrows shared AI actions to Marketing-related scope', () => {
+  assert.match(source, /MARKETING_ACTION_RE/);
+  assert.match(source, /MARKETING_TARGET_RE/);
+  assert.match(source, /filter\(isMarketingAction\)/);
+  assert.match(source, /status === 'awaiting_human'/);
+  assert.match(source, /사람의 결정 대기/);
 });
 
 test('Mission control entry routes Marketing admin control before shared customer entry', () => {
