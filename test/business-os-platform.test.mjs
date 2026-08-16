@@ -61,7 +61,8 @@ test('live gateway forwards authenticated aggregate RPCs and never contains a se
   assert.match(liveWorker,/business_os_propose_action/);
   assert.match(liveWorker,/business_os_decide_action/);
   assert.match(liveWorker,/\/api\/auth\/exchange/);
-  assert.match(liveWorker,/authorization:`Bearer/);
+  assert.match(liveWorker,/headers\.authorization/);
+  assert.match(liveWorker,/cleanToken\(value\.slice\(7\)\)/);
   assert.doesNotMatch(liveWorker,/SERVICE_ROLE|service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
