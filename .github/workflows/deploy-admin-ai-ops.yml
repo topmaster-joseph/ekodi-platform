@@ -1,0 +1,98 @@
+name: Deploy Admin AI Ops
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-admin-ai-ops.yml'
+      - 'ai-ops-admin.js'
+      - 'ai-ops-admin.css'
+      - 'admin-lazy-features.js'
+      - 'test/ai-ops-admin.test.js'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate repository and AI Ops contracts
+        run: |
+          npm run check
+          npm test
+
+      - name: Build shared admin assets
+        run: |
+          npm run build
+          test -f dist/ai-ops-admin.js
+          test -f dist/ai-ops-admin.css
+          test -f dist/admin-lazy-features.js
+          grep -Fq 'SITE FLEET' dist/ai-ops-admin.js
+          grep -Fq 'SELECTED SITE DETAIL' dist/ai-ops-admin.js
+          grep -Fq '.ai-fleet-scroll' dist/ai-ops-admin.css
+          grep -Fq '#aiOpsPanel .ai-chief-chat' dist/ai-ops-admin.css
+          grep -Fq 'CHIEF AI CONVERSATION' dist/admin-lazy-features.js
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify production Admin AI Ops boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_admin() {
+            code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            echo "admin root -> $code"
+            [ "$code" = '200' ] || return 1
+            grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
+            grep -Fiq 'cache-control: no-store' /tmp/admin-headers || return 1
+            if grep -Fiq '^location:' /tmp/admin-headers; then return 1; fi
+          }
+
+          verify_asset() {
+            path="$1"
+            expected="$2"
+            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
+            echo "$path -> $code"
+            [ "$code" = '200' ] || return 1
+            grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || return 1
+            grep -Fq "$expected" /tmp/admin-asset || return 1
+          }
+
+          for attempt in $(seq 1 18); do
+            if verify_admin \
+              && verify_asset 'ai-ops-admin.js' 'SITE FLEET' \
+              && verify_asset 'ai-ops-admin.js' 'SELECTED SITE DETAIL' \
+              && verify_asset 'ai-ops-admin.css' '.ai-fleet-scroll' \
+              && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-chief-chat' \
+              && verify_asset 'admin-lazy-features.js' 'CHIEF AI CONVERSATION'; then
+              echo 'Admin AI Ops status-first console and docked Chief AI chat verified on production.'
+              exit 0
+            fi
+            echo "Admin AI Ops verification pending (attempt $attempt/18)."
+            sleep 4
+          done
+          exit 1
