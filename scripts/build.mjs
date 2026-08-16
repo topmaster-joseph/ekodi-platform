@@ -75,7 +75,7 @@ for (const asset of htmlAssets) {
     html = html.replace(/\s*<link rel="stylesheet" href="(?:compact-control-center|campus-actions)\.css">\s*/g, '\n');
     html = html.replace(/\s*<script src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
     if (!html.includes('admin-authenticated-shell.js')) {
-      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260816-preauth-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js release-control-admin.js work-admin.js marketing-ai-admin.js"></script>\n</body>');
+      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260816-preauth-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js ai-ops-admin.js ai-ops-admin.css release-control-admin.js release-control-admin.css work-admin.js work-admin.css marketing-ai-admin.js marketing-ai-admin.css"></script>\n</body>');
     }
   }
   await writeFile(path, html);
