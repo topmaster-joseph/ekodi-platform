@@ -66,6 +66,7 @@ Deno.serve(async(req)=>{
   if(!projectId||!op)return json(req,{error:"invalid_request"},400);
 
   let reserved=false;
+  let providerStarted=false;
   try{
     const {data:project,error:projectError}=await admin.from("author_projects")
       .select("id,owner_user_id,title,working_title,interest,field,audience,book_format,tone,narrative_mode,target_words,status,book_memory")
@@ -114,6 +115,7 @@ Deno.serve(async(req)=>{
       operation==="research"?"출력 형식: 1) 검증 필요 주장 2) 근거 보강 포인트 3) 저자에게 확인할 질문 4) 안전하게 유지 가능한 문장":"출력은 바로 편집 가능한 본문 중심으로 작성하세요. 불필요한 서문이나 자기소개는 생략하세요."
     ].join("\n\n");
 
+    providerStarted=true;
     const provider=await fetch("https://api.openai.com/v1/responses",{
       method:"POST",
       headers:{"Authorization":`Bearer ${OPENAI_API_KEY}`,"Content-Type":"application/json"},
@@ -124,18 +126,21 @@ Deno.serve(async(req)=>{
     if(!provider.ok){
       await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units});
       reserved=false;
+      providerStarted=false;
       console.error("author-ai-api provider",provider.status,payload?.error?.type||"unknown");
       await admin.from("author_ai_usage").insert({user_id:user.id,project_id:projectId,chapter_id:chapter?.id||null,operation,provider:"openai",model:OPENAI_MODEL,ai_units:0,status:"failed"});
       return json(req,{error:"ai_provider_failed"},502);
     }
 
+    // Once the provider accepted and completed a request, the quota remains consumed even
+    // if local result persistence later fails. This prevents provider spend from escaping accounting.
+    reserved=false;
+    const usage=payload?.usage||{};
     const text=outputText(payload);
     if(!text){
-      await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units});
-      reserved=false;
+      await admin.from("author_ai_usage").insert({user_id:user.id,project_id:projectId,chapter_id:chapter?.id||null,operation,provider:"openai",model:String(payload?.model||OPENAI_MODEL),ai_units:op.units,input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0),status:"failed",provider_request_id:String(payload?.id||"")||null});
       return json(req,{error:"empty_ai_response"},502);
     }
-    const usage=payload?.usage||{};
     await admin.from("author_ai_usage").insert({
       user_id:user.id,project_id:projectId,chapter_id:chapter?.id||null,operation,provider:"openai",model:String(payload?.model||OPENAI_MODEL),ai_units:op.units,
       input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0),status:"completed",provider_request_id:String(payload?.id||"")||null
@@ -144,7 +149,11 @@ Deno.serve(async(req)=>{
 
     return json(req,{ok:true,operation,label:op.label,text,usage:{ai_units:op.units,input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0)},entitlement:gate});
   }catch(error){
-    if(reserved){try{await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units})}catch{}}
+    if(reserved&&!providerStarted){try{await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units})}catch{}}
+    if(reserved&&providerStarted){
+      // The request may have reached the provider. Keep the reservation to protect the paid-member budget.
+      try{await admin.from("author_ai_usage").insert({user_id:user.id,project_id:projectId,chapter_id:chapterId||null,operation,provider:"openai",model:OPENAI_MODEL,ai_units:op.units,status:"failed"})}catch{}
+    }
     console.error("author-ai-api",error);
     return json(req,{error:"author_ai_failed"},500);
   }
