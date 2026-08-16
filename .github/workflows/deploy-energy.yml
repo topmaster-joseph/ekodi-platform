@@ -46,7 +46,7 @@ jobs:
   deploy-production:
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 16
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -59,6 +59,41 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Bootstrap first production Worker only when no deployment exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          status_output=$(npx --yes wrangler@4.119.0 deployments status --config wrangler.energy.toml --json 2>&1)
+          status_code=$?
+          set -e
+          if [[ "$status_code" == "0" ]]; then
+            echo 'Existing Energy Worker found. Guarded release will preserve rollback history.'
+            exit 0
+          fi
+          if ! grep -Fq 'does not exist' <<<"$status_output"; then
+            printf '%s\n' "$status_output"
+            echo 'Could not establish Energy Worker state; refusing production bootstrap.'
+            exit "$status_code"
+          fi
+          echo 'No production Energy Worker exists. Performing one-time read-only bootstrap from the staging-verified source.'
+          npx --yes wrangler@4.119.0 deploy --config wrangler.energy.toml
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/energy-bootstrap.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/energy-bootstrap-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/health' || true)
+            block_code=$(curl -sS -o /tmp/energy-bootstrap-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/api/action-check' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
+              && grep -Fq 'EKODI Energy AI' /tmp/energy-bootstrap.html \
+              && grep -Fq '"telemetryEnabled":false' /tmp/energy-bootstrap-health.json \
+              && grep -Fq '"controlEnabled":false' /tmp/energy-bootstrap-health.json \
+              && grep -Fq '"reason":"safety_boundary_permanent"' /tmp/energy-bootstrap-block.json; then
+              echo 'One-time Energy production bootstrap verified with telemetry and physical control disabled.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Bootstrap verification failed; guarded promotion will not run.'
+          exit 1
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: |
           set -euo pipefail
