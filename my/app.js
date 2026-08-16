@@ -6,15 +6,16 @@ const MODES={writer:'Writer',video:'Video',podcast:'Podcast',lecture:'Educator',
 const SERVICES=[
  ['church','에코디교회','https://church.ekodi.kr'],['biz','에코디비즈','https://biz.ekodi.kr'],['books','에코디출판','https://books.ekodi.kr'],['author','EKODI Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://lab.ekodi.kr'],['community','에코디커뮤니티','https://community.ekodi.kr'],['work','EKODI Work','https://work.ekodi.kr'],['social','EKODI Social','https://social.ekodi.kr'],['energy','EKODI Energy AI','https://energy.ekodi.kr'],['business','EKODI Business OS','https://business.ekodi.kr'],['mall','에코디몰','https://mall.ekodi.kr'],['marketing','EKODI Marketing AI','https://marketing.ekodi.kr']
 ];
-const SSO_SITES=new Set(['church','biz','books','author','lab','community','work','business','mall','marketing']);
-const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing']);
+const OPEN_SSO_SITES=new Set(['social','energy']);
+const SSO_SITES=new Set(['church','biz','books','author','lab','community','work','business','mall','marketing','social','energy']);
+const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing','social','energy']);
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
 const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
 let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='';
 
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'})[c]);
 const mode=v=>MODES[v]?v:'writer';
 const plan=v=>({free:'Free',basic:'Basic',pro:'Pro',enterprise:'Business',standard:'Standard'})[String(v||'free').toLowerCase()]||String(v||'Free');
 const paid=v=>['standard','basic','pro','enterprise'].includes(String(v||'').toLowerCase());
@@ -68,17 +69,18 @@ function connected(id){
  return ['active','pre_registered'].includes(a.status)||rows.some(r=>r.source==='synthetic'||r.status==='active');
 }
 function serviceRoute(id,url){
- if(!session||!SSO_SITES.has(id)||!connected(id))return url;
+ const open=OPEN_SSO_SITES.has(id);
+ if(!session||!SSO_SITES.has(id)||(!connected(id)&&!open))return url;
  const target=new URL('https://auth.ekodi.kr/');
  target.searchParams.set('site',id);target.searchParams.set('return_to',url);
  const current=activeWorkspace();
- if(current&&TARGETABLE_WORKSPACE_SITES.has(id)&&current.services?.includes(id))target.searchParams.set('workspace',current.workspace_key);
+ if(current&&TARGETABLE_WORKSPACE_SITES.has(id)&&(current.services?.includes(id)||open))target.searchParams.set('workspace',current.workspace_key);
  return target.href;
 }
 function workspaceDestination(workspace){
  if(!workspace)return null;
  const contextual=requestedReturnTarget();
- if(contextual&&workspace.services?.includes(contextual.id))return contextual;
+ if(contextual&&(workspace.services?.includes(contextual.id)||OPEN_SSO_SITES.has(contextual.id)))return contextual;
  const exactSites=(workspace.targets||[]).filter(target=>target.requires_handoff&&TARGETABLE_WORKSPACE_SITES.has(target.site)&&['active','pre_registered'].includes(String(target.status||''))).map(target=>target.site);
  const exactId=WORKSPACE_ENTRY_PRIORITY.find(id=>exactSites.includes(id));
  if(exactId){const service=serviceDefinition(exactId);return service?{id:service[0],url:service[2]}:null}
@@ -109,7 +111,7 @@ function identityUi(){
  $('#accountLoginText').textContent=email?`${email}로 EKODI 통합 로그인에 연결되어 있습니다. 다른 서비스에서는 이 로그인 상태를 재사용합니다.`:'로그인 전입니다.';
 }
 function summaryUi(){
- $('#serviceCount').textContent=String(SERVICES.filter(([id])=>connected(id)).length);
+ $('#serviceCount').textContent=String(SERVICES.filter(([id])=>connected(id)||OPEN_SSO_SITES.has(id)).length);
  $('#paidCount').textContent=String(SERVICES.filter(([id])=>paid(access.get(id)?.plan)||(workspaces.get(id)||[]).some(w=>paid(w.plan))).length);
  $('#workspaceCount').textContent=String(uniqueWorkspaces().length);
  $('#creatorCount').textContent=String(items.length);
@@ -131,9 +133,10 @@ function platformUi(){
  if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 내 플랫폼 상태를 볼 수 있습니다.</strong><p>한 번 로그인하면 각 서비스의 접근권한과 플랜을 확인합니다.</p></div>';return}
  const current=activeWorkspace();
  host.innerHTML=SERVICES.map(([id,name,url])=>{
-  const a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free',route=serviceRoute(id,url);
-  const inCurrent=Boolean(current?.services?.includes(id));
-  return `<article class="platform-card"><div class="platform-head"><h3>${esc(name)}</h3><span class="plan plan-${esc(String(p).toLowerCase())}">${esc(on?plan(p):'Available')}</span></div><p>${on?(inCurrent?'현재 Workspace와 연결된 서비스입니다.':'통합 로그인으로 연결된 서비스입니다.'):'필요할 때 자유롭게 시작할 수 있습니다.'}</p><div class="meta"><span>${on?'연결됨':'미연결'}</span><span>${rows.length} Workspace</span>${inCurrent?'<span>현재 공간</span>':''}</div><a class="card-link" href="${esc(route)}">${on?'열기':'둘러보기'} →</a></article>`;
+  const a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),open=OPEN_SSO_SITES.has(id),available=on||open,best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free',route=serviceRoute(id,url);
+  const inCurrent=Boolean(current?.services?.includes(id))||open;
+  const description=open?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.':on?(inCurrent?'현재 Workspace와 연결된 서비스입니다.':'통합 로그인으로 연결된 서비스입니다.'):'필요할 때 자유롭게 시작할 수 있습니다.';
+  return `<article class="platform-card"><div class="platform-head"><h3>${esc(name)}</h3><span class="plan plan-${esc(String(p).toLowerCase())}">${esc(on?plan(p):open?'Workspace':'Available')}</span></div><p>${esc(description)}</p><div class="meta"><span>${available?'연결 가능':'미연결'}</span><span>${rows.length} Workspace</span>${inCurrent?'<span>현재 공간</span>':''}</div><a class="card-link" href="${esc(route)}">${available?'열기':'둘러보기'} →</a></article>`;
  }).join('');
 }
 function recommendationUi(){
