@@ -1,0 +1,46 @@
+name: Admin Preauth Live Verify
+
+on:
+  push:
+    branches:
+      - staging/verify-admin-preauth-live-20260816
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify live unauthenticated admin shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --connect-timeout 5 --max-time 15 -D /tmp/admin.headers https://admin.ekodi.kr/ -o /tmp/admin.html
+          grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin.headers
+          grep -Fq 'id="centralAdminLogin"' /tmp/admin.html
+          grep -Fq 'https://auth.ekodi.kr/?site=admin' /tmp/admin.html
+          grep -Fq 'admin-authenticated-shell.js?v=20260816-preauth-1' /tmp/admin.html
+          if grep -Eq '<script[^>]+src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js' /tmp/admin.html; then
+            echo 'FAIL: authenticated admin feature script is still eager on the login page'
+            exit 1
+          fi
+          echo 'Live admin HTML is a minimal pre-auth shell.'
+
+      - name: Verify authenticated shell guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --connect-timeout 5 --max-time 15 https://admin.ekodi.kr/admin-authenticated-shell.js?v=20260816-preauth-1 -o /tmp/shell.js
+          grep -Fq "return Boolean(token() && app && !app.hidden)" /tmp/shell.js
+          grep -Fq "loginLink.style.pointerEvents = 'auto'" /tmp/shell.js
+          grep -Fq "'compact-control-center.js'" /tmp/shell.js
+          grep -Fq "'campus-actions.js'" /tmp/shell.js
+          grep -Fq "'admin-lazy-features.js'" /tmp/shell.js
+          if grep -Fq 'history.replaceState' /tmp/shell.js; then
+            echo 'FAIL: pre-auth shell must not mutate URL/hash'
+            exit 1
+          fi
+          echo 'Authenticated shell guard verified; Campus cannot start before a validated session.'
