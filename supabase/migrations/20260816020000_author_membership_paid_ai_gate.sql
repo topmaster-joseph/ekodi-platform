@@ -15,8 +15,8 @@ create table if not exists public.author_plan_catalog (
 
 insert into public.author_plan_catalog(plan_code, display_name, is_paid, monthly_ai_units, max_projects, features)
 values
-  ('free', 'FREE', false, 0, 3, '{"ai_generation":false,"direct_writing":true,"book_planning":true,"publish_handoff":true}'::jsonb),
-  ('author', 'AUTHOR', true, 120, 20, '{"ai_generation":true,"author_ai":true,"editor_ai":true,"chief_ai":true,"publish_handoff":true}'::jsonb),
+  ('free', 'FREE', false, 0, null, '{"ai_generation":false,"direct_writing":true,"book_planning":true,"publish_handoff":true}'::jsonb),
+  ('author', 'AUTHOR', true, 120, null, '{"ai_generation":true,"author_ai":true,"editor_ai":true,"chief_ai":true,"publish_handoff":true}'::jsonb),
   ('pro', 'PRO', true, 500, null, '{"ai_generation":true,"author_ai":true,"editor_ai":true,"research_ai":true,"chief_ai":true,"priority_generation":true,"publish_handoff":true}'::jsonb)
 on conflict (plan_code) do update
 set display_name = excluded.display_name,
