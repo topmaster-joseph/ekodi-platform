@@ -42,8 +42,7 @@ jobs:
           node --check scripts/ecosystem-registry.mjs
           node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); if(!x.services?.length) process.exit(1); const ids=x.services.map(s=>s.id); if(new Set(ids).size!==ids.length) throw new Error('duplicate service id'); for(const s of x.services){if(s.homepage && !s.productionVerified) throw new Error('homepage service not production verified: '+s.id)}"
           npm run build
-          grep -Fq 'author.ekodi.kr' dist/index.html
-          grep -Fq 'EKODI Creator AI' dist/index.html
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('dist/index.html','utf8'); for(const s of x.services.filter(s=>s.homepage&&s.productionVerified)){for(const marker of [s.url,s.name,s.label]){if(!html.includes(marker)) throw new Error('generated homepage missing '+s.id+' marker: '+marker)}} console.log('Generated homepage contains every production-verified homepage service.')"
 
   production:
     if: github.event_name != 'pull_request'
@@ -66,14 +65,14 @@ jobs:
         run: npm run build
       - name: Guarded shared-site release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify Creator AI is visible from EKODI root
+      - name: Verify every published service is visible from EKODI root
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             code=$(curl -sS -o /tmp/ekodi-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
-            if [[ "$code" == '200' ]] && grep -Fq 'author.ekodi.kr' /tmp/ekodi-root.html && grep -Fq 'EKODI Creator AI' /tmp/ekodi-root.html; then
-              echo 'EKODI root exposes the verified Creator AI service.'
+            if [[ "$code" == '200' ]] && node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('/tmp/ekodi-root.html','utf8'); for(const s of x.services.filter(s=>s.homepage&&s.productionVerified)){for(const marker of [s.url,s.name,s.label]){if(!html.includes(marker)) process.exit(1)}}"; then
+              echo 'EKODI root exposes every production-verified homepage service.'
               exit 0
             fi
             sleep 5
