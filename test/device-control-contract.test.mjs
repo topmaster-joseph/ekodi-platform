@@ -50,8 +50,6 @@ test('cloud operations use a fixed capability allowlist and never expose arbitra
   assert.match(agent, /arbitraryShell = \$false/);
   assert.match(agent, /screenCapture = \$false/);
   assert.match(agent, /credentialCollection = \$false/);
-  // Actual PowerShell command AST is inspected in the Windows CI job. A raw text
-  // assertion here would incorrectly flag the self-update guard that rejects unsafe code.
 });
 
 test('maintain and privileged actions require explicit admin confirmation', () => {
@@ -67,6 +65,8 @@ test('startup management accepts only opaque SHA-256 item ids from cloud', () =>
   assert.match(api, /\^\[a-f0-9\]\{64\}\$/);
   assert.match(agent, /\^\[a-f0-9\]\{64\}\$/);
   assert.match(agent, /Get-Sha256String/);
+  assert.match(agent, /disabledItems/);
+  assert.match(agent, /Load-StartupBackup/);
   assert.doesNotMatch(admin, /registryPath\s*:/);
   assert.doesNotMatch(admin, /filePath\s*:/);
 });
@@ -101,7 +101,24 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
   assert.match(admin, /launchProtocol/);
   assert.match(admin, /ekodi-device-bootstrap\.cmd/);
   assert.match(bootstrap, /-RegisterProtocol/);
+  assert.match(bootstrap, /CommandAst/);
   assert.doesNotMatch(bootstrap, /EnrollmentCode/);
+});
+
+test('existing registered devices upgrade in place instead of creating duplicate enrollment', () => {
+  assert.match(agent, /\$AgentVersion = '2\.0\.1'/);
+  assert.match(agent, /Stop-ExistingAgentProcesses/);
+  assert.match(agent, /Stop-ScheduledTask/);
+  assert.match(agent, /Get-CimInstance Win32_Process/);
+  assert.match(agent, /\$hadConfig = Test-Path \$ConfigPath/);
+  assert.match(agent, /기존 EKODI 기기 등록과 토큰을 유지/);
+});
+
+test('agent self-update validates actual PowerShell command AST instead of raw guard text', () => {
+  assert.match(agent, /Test-AgentSourceSafety/);
+  assert.match(agent, /CommandAst/);
+  assert.match(agent, /ParseInput/);
+  assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
 });
 
 test('admin Device Control is bundled only into authenticated compact assets', () => {
