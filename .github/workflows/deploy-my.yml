@@ -90,6 +90,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/my-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             if [[ "$root_code" == '200' && "$config_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
+              && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'CREATOR PORTFOLIO' /tmp/my-stage.html \
               && grep -Fq '"dataEnabled":false' /tmp/my-stage-config.js \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/my-stage-health.json \
@@ -150,15 +151,21 @@ jobs:
             exit 1
           fi
           echo 'Creator portfolio schema is reachable and RLS-protected.'
-      - name: Bootstrap first Worker or run guarded release
+      - name: Bootstrap, repair hostname, or run guarded release
         shell: bash
         run: |
           set -euo pipefail
           if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.my.toml --json > /tmp/my-deployments.log 2>&1; then
-            echo 'Stable My EKODI Worker exists; using guarded candidate release.'
-            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/my.worker.json
-          elif grep -Eq 'This Worker does not exist|does not exist on your account|code: 10007' /tmp/my-deployments.log; then
-            echo 'No My EKODI production Worker exists yet; performing one-time bootstrap from staging-validated source.'
+            health_code=$(curl -sS -o /tmp/my-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
+            if [[ "$health_code" == '200' ]] && grep -Fq '"service":"ekodi-my"' /tmp/my-live-health.json; then
+              echo 'Stable My EKODI hostname is healthy; using guarded candidate release.'
+              node scripts/guarded-worker-release.mjs --manifest deploy/manifests/my.worker.json
+            else
+              echo "Worker exists but my.ekodi.kr is not healthy (HTTP $health_code); repairing first production route from staging-validated source."
+              npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.toml
+            fi
+          elif grep -Eq 'has no deployments|This Worker does not exist|does not exist on your account|code: 10007' /tmp/my-deployments.log; then
+            echo 'No active My EKODI production deployment exists; performing one-time bootstrap from staging-validated source.'
             npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.toml
           else
             echo 'Unable to determine My EKODI deployment state.'
@@ -175,6 +182,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
             if [[ "$root_code" == '200' && "$config_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
+              && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'CREATOR PORTFOLIO' /tmp/my.html \
               && grep -Fq '"dataEnabled":true' /tmp/my-config.js \
               && grep -Fq '"dataMode":"production"' /tmp/my-health.json \

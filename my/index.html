@@ -3,62 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="나의 창작, 활동, 연결을 한 사람의 여정으로 모으는 My EKODI 개인 허브">
+  <meta name="description" content="EKODI 통합 계정, 플랫폼, 멤버십, 워크스페이스와 창작물을 한곳에서 관리하는 My EKODI 개인 허브">
   <title>My EKODI | 나의 에코디</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#home">Home</a><a href="#creator">Creator</a><a href="#journey">Journey</a><a href="https://ekodi.kr/">EKODI ↗</a></nav>
+    <a class="brand" href="#home"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
+    <nav aria-label="주요 메뉴">
+      <a href="#platforms">Platforms</a><a href="#workspaces">Workspaces</a><a href="#creator">Creator</a><a href="#account">Account</a><a href="https://ekodi.kr/">EKODI ↗</a>
+    </nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
   </header>
 
   <main id="home">
     <section class="hero">
-      <div>
-        <p class="eyebrow">ONE PERSON · ONE EKODI JOURNEY</p>
-        <h1>흩어진 활동을 모으는 곳이 아니라,<br><span>한 사람의 삶이 이어지는 곳.</span></h1>
-        <p class="lead">Creator AI에서 만든 것, 공동체에서 함께한 것, 일과 배움에서 쌓은 것을 하나의 개인 정체성 아래 차곡차곡 연결합니다. 공개를 위한 프로필보다 먼저, 나 자신을 위한 안전한 개인 허브입니다.</p>
-        <div class="hero-actions"><a class="primary" href="https://author.ekodi.kr/">Creator AI에서 만들기</a><button id="refreshButton" class="secondary" type="button">내 정보 새로고침</button></div>
+      <div class="hero-copy">
+        <p class="eyebrow">ONE ACCOUNT · MANY EKODI SERVICES</p>
+        <h1>하나의 EKODI 계정으로,<br><span>나의 플랫폼과 삶을 한곳에서.</span></h1>
+        <p class="lead">Google 기반 통합인증으로 EKODI의 여러 서비스를 다시 가입하지 않고 연결합니다. 무료로 시작하고, 필요한 서비스만 단계적으로 확장하며, 개인과 기관 Workspace를 한 화면에서 관리합니다.</p>
+        <div class="hero-actions"><a class="primary" href="#platforms">내 플랫폼 보기</a><button id="refreshButton" class="secondary" type="button">내 정보 새로고침</button></div>
       </div>
       <aside class="identity-card">
-        <small>MY IDENTITY</small><strong id="identityName">로그인 전</strong><span id="identityEmail">Google 인증 후 연결됩니다.</span><code id="workspaceKey">personal:…</code>
-        <p>여러 EKODI 서비스가 같은 사람을 바라보되, 서비스별 원본 데이터는 각 서비스가 책임집니다.</p>
+        <div class="identity-top"><small>MY EKODI IDENTITY</small><span id="accountPlan" class="status-pill">Guest</span></div>
+        <strong id="identityName">로그인 전</strong>
+        <span id="identityEmail">Google 인증 후 연결됩니다.</span>
+        <code id="workspaceKey">personal:…</code>
+        <p>계정은 하나, 역할과 Workspace는 여러 개. 각 서비스의 원본 데이터는 제자리에 두고 My EKODI는 연결과 선택을 담당합니다.</p>
       </aside>
     </section>
 
     <section class="summary" aria-label="My EKODI 요약">
+      <article><span id="serviceCount">0</span><small>Connected Platforms</small></article>
+      <article><span id="paidCount">0</span><small>Paid Plans</small></article>
+      <article><span id="workspaceCount">0</span><small>Workspaces</small></article>
       <article><span id="creatorCount">0</span><small>Creator Works</small></article>
-      <article><span id="modeCount">0</span><small>Creator Modes</small></article>
-      <article><span id="privateCount">0</span><small>Private Items</small></article>
-      <article><span id="connectedCount">1</span><small>Connected Service</small></article>
+    </section>
+
+    <section id="platforms" class="section">
+      <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 쓰는 EKODI</h2></div><p>가입과 접근권한은 통합인증을 기준으로 확인합니다. Free에서 시작해 서비스별 필요에 따라 Basic, Pro, Business/Organization으로 확장할 수 있습니다.</p></div>
+      <div id="platformList" class="platform-grid"><div class="empty"><strong>로그인하면 내 플랫폼 상태를 확인할 수 있습니다.</strong><p>EKODI 서비스마다 다시 가입하지 않고 현재 Google 인증 계정의 접근권한을 불러옵니다.</p></div></div>
+      <p class="section-note">실제 결제·청구 내역 통합은 결제 모듈 연결 후 이 화면에 추가합니다. 현재는 서비스 접근권한과 플랜 상태를 기준으로 표시합니다.</p>
+    </section>
+
+    <section id="workspaces" class="section soft-section">
+      <div class="section-head"><div><p class="eyebrow">MY WORKSPACES</p><h2>개인과 기관을 한 계정으로</h2></div><p>개인, 사업장, 교회, 기관·단체가 같은 Google 계정을 사용할 수도 있고 서로 다른 Google 계정을 하나의 EKODI person에 명시적으로 연결할 수도 있습니다.</p></div>
+      <div id="workspaceList" class="workspace-grid"><div class="empty"><strong>Workspace가 아직 연결되지 않았습니다.</strong><p>로그인 후 서비스별 개인·기관 접근권한을 안전하게 모아 보여줍니다.</p></div></div>
     </section>
 
     <section id="creator" class="section">
-      <div class="section-head"><div><p class="eyebrow">CREATOR PORTFOLIO</p><h2>내가 만든 것</h2></div><p>Creator AI에서 승인해 My EKODI로 보낸 창작물이 여기에 쌓입니다. 처음에는 모두 비공개입니다.</p></div>
+      <div class="section-head"><div><p class="eyebrow">CREATOR PORTFOLIO</p><h2>내가 만든 것</h2></div><p>Creator AI에서 승인해 My EKODI로 보낸 창작물이 쌓입니다. 새 항목은 기본 비공개이며 공개는 별도의 선택입니다.</p></div>
       <div id="creatorFilters" class="filters" role="group" aria-label="창작물 필터"><button class="chip active" data-filter="all" type="button">All</button><button class="chip" data-filter="writer" type="button">Writer</button><button class="chip" data-filter="video" type="button">Video</button><button class="chip" data-filter="podcast" type="button">Podcast</button><button class="chip" data-filter="lecture" type="button">Educator</button><button class="chip" data-filter="research" type="button">Research</button><button class="chip" data-filter="visual" type="button">Visual</button><button class="chip" data-filter="mission" type="button">Mission</button><button class="chip" data-filter="ai" type="button">AI Creator</button></div>
       <div id="creatorList" class="portfolio-grid"><div class="empty"><strong>아직 My EKODI에 연결된 창작물이 없습니다.</strong><p>Creator AI에서 작업을 최종 승인한 뒤 “My EKODI에 등록”을 선택하면 여기로 연결됩니다.</p></div></div>
     </section>
 
-    <section id="journey" class="section journey">
-      <div class="section-head"><div><p class="eyebrow">MY JOURNEY</p><h2>앞으로 한 사람의 여정으로</h2></div><p>이번 버전은 Creator 연결부터 시작합니다. 다른 서비스는 원본을 복제하지 않고 요약·링크 계약으로 순차 연결합니다.</p></div>
-      <div class="journey-grid">
-        <article class="active"><small>01 · LIVE</small><h3>Creator</h3><p>책, 영상, 강의, 연구, 선교 콘텐츠 등 나의 창작 자산.</p><a href="https://author.ekodi.kr/">Creator AI ↗</a></article>
-        <article><small>02 · NEXT</small><h3>Community</h3><p>내가 함께한 공동체, 모임, 관계와 참여의 기록.</p><span>연결 준비</span></article>
-        <article><small>03 · NEXT</small><h3>Work & Learning</h3><p>일, 프로젝트, 배움, 연구와 성장의 흔적.</p><span>연결 준비</span></article>
-        <article><small>04 · NEXT</small><h3>Contribution</h3><p>나눔, 섬김, 후원, 지역과 세상에 흘려보낸 가치.</p><span>연결 준비</span></article>
+    <section id="account" class="section account-section">
+      <div class="section-head"><div><p class="eyebrow">ACCOUNT & PRIVACY</p><h2>내 계정은 내가 통제합니다</h2></div><p>통합인증은 편의를 위한 연결이지 서비스 간 무제한 데이터 공유가 아닙니다. My EKODI는 필요한 최소 정보만 읽고 원본은 각 서비스가 책임집니다.</p></div>
+      <div class="account-grid">
+        <article><small>LOGIN</small><h3>Google 통합인증</h3><p id="accountLoginText">로그인 전입니다.</p><button id="accountAuthButton" class="secondary" type="button">Google로 시작</button></article>
+        <article><small>MEMBERSHIP</small><h3>무료에서 필요한 만큼</h3><p>기본 진입은 Free. 유료 전환은 플랫폼별 기능과 자동화가 실제로 필요할 때 선택합니다.</p><a class="text-link" href="#platforms">내 플랜 확인 →</a></article>
+        <article><small>PRIVACY</small><h3>PRIVATE FIRST</h3><p>창작물과 개인 연결정보는 공개를 기본값으로 삼지 않습니다. 공개와 배포는 별도 선택입니다.</p></article>
+        <article><small>DATA</small><h3>NO DATA MONOLITH</h3><p>하나의 거대한 DB에 모든 정보를 복제하지 않습니다. My EKODI는 서비스별 원본을 잇는 개인 관점의 연결층입니다.</p></article>
       </div>
-    </section>
-
-    <section class="principles">
-      <article><small>PRIVATE FIRST</small><h3>내 기록은 먼저 나에게.</h3><p>My EKODI에 들어온 창작물은 기본 비공개입니다. 공개 범위는 별도 선택으로만 바뀝니다.</p></article>
-      <article><small>PERSON, NOT ACCOUNT</small><h3>계정보다 사람을 중심으로.</h3><p>명시적으로 연결된 여러 Google 계정도 하나의 EKODI person으로 묶일 수 있습니다.</p></article>
-      <article><small>NO DATA MONOLITH</small><h3>원본은 제자리에.</h3><p>My EKODI는 모든 서비스 DB를 삼키지 않습니다. 각 서비스는 원본을 책임지고 My EKODI는 개인 관점의 연결층이 됩니다.</p></article>
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>나의 삶 · 창작 · 관계 · 일 · 나눔을 한 여정으로</span><a href="https://author.ekodi.kr/">Creator AI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer><strong>My EKODI</strong><span>한 계정 · 여러 플랫폼 · 자유로운 선택</span><a href="https://author.ekodi.kr/">Creator AI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
