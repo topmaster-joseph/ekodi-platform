@@ -1,56 +1,71 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
-const migration=fs.readFileSync(new URL('../supabase/migrations/20260815020000_person_identity_workspaces.sql',import.meta.url),'utf8');
-const identityApi=fs.readFileSync(new URL('../supabase/functions/identity-api/index.ts',import.meta.url),'utf8');
-const accessApi=fs.readFileSync(new URL('../supabase/functions/access-api/index.ts',import.meta.url),'utf8');
-const personWorkspaceApi=fs.readFileSync(new URL('../supabase/functions/person-workspace-api/index.ts',import.meta.url),'utf8');
-const authHtml=fs.readFileSync(new URL('../auth-site/index.html',import.meta.url),'utf8');
-const authJs=fs.readFileSync(new URL('../auth-site/auth.js',import.meta.url),'utf8');
-const clientAuth=fs.readFileSync(new URL('../auth-site/client-auth.js',import.meta.url),'utf8');
-const workspaceTarget=fs.readFileSync(new URL('../auth-site/auth-workspace-target.js',import.meta.url),'utf8');
-const myRouter=fs.readFileSync(new URL('../my-site/my-router.js',import.meta.url),'utf8');
+const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
+
+const migration=read('supabase/migrations/20260815020000_person_identity_workspaces.sql');
+const mergeMigration=read('supabase/migrations/20260815021000_explicit_identity_merge.sql');
+const personalHandoffMigration=read('supabase/migrations/20260815022000_personal_marketing_handoff.sql');
+const takeoverGuardMigration=read('supabase/migrations/20260815023000_identity_subject_takeover_guard.sql');
+const mallHandoffMigration=read('supabase/migrations/20260815030000_mall_free_personal_workspace.sql');
+const identityApi=read('supabase/functions/identity-api/index.ts');
+const accessApi=read('supabase/functions/access-api/index.ts');
+const workspaceApi=read('supabase/functions/workspace-api/index.ts');
+const authJs=read('auth-site/auth.js');
+const clientAuth=read('auth-site/client-auth.js');
+const authTarget=read('auth-site/auth-workspace-target.js');
+const authRouter=read('auth-site/auth-router.js');
+const authHtml=read('auth-site/index.html');
+const myHtml=read('my/index.html');
+const myApp=read('my/app.js');
 
 test('person and login identity schema stays separate from organization membership',()=>{
-  assert.match(migration,/create table if not exists public\.persons/i);
+  assert.match(migration,/create table if not exists public\.people/i);
   assert.match(migration,/create table if not exists public\.login_identities/i);
-  assert.match(migration,/provider_subject text not null/i);
-  assert.match(migration,/unique\(provider,provider_subject\)/i);
-  assert.match(migration,/tenant_members/);
-  assert.match(migration,/store_members/);
+  assert.match(migration,/unique \(provider, provider_subject\)/i);
+  assert.match(migration,/unique \(auth_user_id\)/i);
+  assert.doesNotMatch(migration,/unique \(email\)/i);
+  assert.match(migration,/current_site_workspaces/i);
+  assert.match(migration,/current_site_access/i);
 });
 
 test('explicit dual verification can merge separately initialized people',()=>{
-  assert.match(migration,/merge_verified_person_identities/);
-  assert.match(migration,/second_auth_user_id/);
-  assert.match(migration,/initiator_person_required/);
+  assert.match(mergeMigration,/update public\.login_identities\s+set person_id = v_person_id/is);
+  assert.match(mergeMigration,/status = 'merged'/i);
+  assert.match(mergeMigration,/p_initiator_user_id/i);
+  assert.match(mergeMigration,/p_provider_subject/i);
 });
 
 test('personal Marketing AI workspace receives the same verified handoff path',()=>{
-  assert.match(migration,/marketing/);
-  assert.match(migration,/workspace_kind.*personal/is);
-  assert.match(migration,/workspace_key/);
-  assert.match(migration,/requires_handoff/);
-  assert.match(migration,/plan/);
+  assert.match(personalHandoffMigration,/current_site_workspaces_base/i);
+  assert.match(personalHandoffMigration,/workspace_kind' = 'personal'/i);
+  assert.match(personalHandoffMigration,/'requires_handoff', true/i);
+  assert.match(personalHandoffMigration,/'status', 'active'/i);
 });
 
 test('Mall gives every verified Google member an active free personal seller handoff',()=>{
-  assert.match(migration,/mall/);
-  assert.match(migration,/Seller Studio/);
-  assert.match(migration,/free/);
-  assert.match(migration,/requires_handoff/);
+  assert.match(mallHandoffMigration,/p_site_key = 'mall'/i);
+  assert.match(mallHandoffMigration,/'개인 판매자'/i);
+  assert.match(mallHandoffMigration,/'member'[\s\S]*'active'[\s\S]*'free'/i);
+  assert.match(mallHandoffMigration,/true,[\s\S]*'synthetic'/i);
 });
 
 test('legacy Mall seller login is normalized back to Seller Studio',()=>{
-  assert.match(migration,/seller/);
-  assert.match(migration,/Seller Studio/);
+  assert.match(authRouter,/'mall-seller':'mall'/);
+  assert.match(authRouter,/requestedSite==='mall-seller'/);
+  assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
+  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1&workspace=20260817-sso-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
-  assert.match(migration,/provider_subject/);
-  assert.match(migration,/identity_conflict/);
-  assert.match(migration,/recycled/i);
+  assert.match(takeoverGuardMigration,/identity_subject_conflict/i);
+  assert.match(takeoverGuardMigration,/identity_subject_requires_relink/i);
+  assert.match(takeoverGuardMigration,/target_identity_subject_conflict/i);
+  assert.match(takeoverGuardMigration,/login_identities_one_active_primary_idx/i);
+  assert.match(takeoverGuardMigration,/revoke all on table public\.people, public\.login_identities from anon, authenticated/i);
+  assert.match(takeoverGuardMigration,/comment on function public\.link_person_identity\(uuid,uuid,text,text,text,text\)/i);
 });
 
 test('identity api persists Google subject and can mint a one-time handoff from an authenticated central session',()=>{
@@ -72,6 +87,18 @@ test('access api resolves and revalidates workspace-scoped handoff',()=>{
   assert.match(accessApi,/ekodi|tenant|store/i);
 });
 
+test('person workspace api aggregates verified workspaces for open SSO services',()=>{
+  assert.match(workspaceApi,/OPEN_SSO_ORIGINS/);
+  assert.match(workspaceApi,/social:\["https:\/\/social\.ekodi\.kr"\]/);
+  assert.match(workspaceApi,/energy:\["https:\/\/energy\.ekodi\.kr"\]/);
+  assert.match(workspaceApi,/PERSON_WORKSPACE_SITES/);
+  assert.match(workspaceApi,/current_site_workspaces/);
+  assert.match(workspaceApi,/workspace_scope:"person"/);
+  assert.match(workspaceApi,/workspace_access_required/);
+  assert.match(workspaceApi,/identity-api/);
+  assert.doesNotMatch(workspaceApi,/SUPABASE_SERVICE_ROLE_KEY/);
+});
+
 test('auth center is workspace-first and hides linked login identities outside account management',()=>{
   assert.match(authHtml,/id="workspacePanel"/);
   assert.match(authHtml,/id="identityPanel"/);
@@ -85,23 +112,34 @@ test('auth center is workspace-first and hides linked login identities outside a
 test('client auth reuses the central EKODI session instead of forcing Google login again',()=>{
   assert.match(clientAuth,/persistSession:true/);
   assert.match(clientAuth,/sb\.auth\.getSession/);
-  assert.match(clientAuth,/window\.EKODI/);
+  assert.match(clientAuth,/\/session\/handoff/);
+  assert.match(clientAuth,/sb\.auth\.verifyOtp/);
+  assert.match(clientAuth,/handoffExistingSession/);
 });
 
 test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
-  assert.match(workspaceTarget,/workspace/);
-  assert.match(workspaceTarget,/return_to/);
-  assert.match(workspaceTarget,/auth\.ekodi\.kr/);
+  for(const site of ['marketing','biz','books','church','lab','mall','social','energy'])assert.match(authTarget,new RegExp(`${site}:`));
+  assert.match(authRouter,/targetableWorkspaceSites/);
+  assert.match(authRouter,/auth-workspace-target\.js\?v=20260817-all-sites-1/);
+  assert.match(authTarget,/PERSON_WORKSPACE/);
+  assert.match(authTarget,/PERSON_SCOPED_SITES/);
+  assert.match(authTarget,/workspace_key:requested/);
 });
 
 test('My EKODI is the signed-in workspace home and routes connected platforms through central auth',()=>{
-  assert.match(myRouter,/auth\.ekodi\.kr/);
-  assert.match(myRouter,/workspace/);
+  assert.match(myHtml,/SIGNED-IN HOME · WORKSPACE ROUTER/);
+  assert.match(myHtml,/id="workspaceSwitcher"/);
+  assert.match(myHtml,/id="recommendationList"/);
+  assert.match(myApp,/ekodi_my_active_workspace/);
+  assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
+  assert.match(myApp,/searchParams\.set\('workspace'/);
+  assert.match(myApp,/setActiveWorkspace/);
+  assert.match(myApp,/recommendationUi/);
 });
 
-test('browser auth and My router scripts parse as JavaScript',async()=>{
-  for(const file of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-workspace-target.js','my-site/my-router.js']){
-    const source=fs.readFileSync(new URL(`../${file}`,import.meta.url),'utf8');
-    assert.ok(source.length>100,`${file} should contain browser runtime code`);
+test('browser auth and My router scripts parse as JavaScript',()=>{
+  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','my/app.js']){
+    const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
+    assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
 });
