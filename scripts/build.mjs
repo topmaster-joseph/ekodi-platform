@@ -22,7 +22,7 @@ await writeFile(`${output}admin-lazy-features.js`, `${lazyAdminJs}\n${workspaceS
 
 // Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
-const [financeCss, distributionCss, pipelineCss, royaltyCss, financeJs, distributionJs, pipelineBridgeJs, royaltyJs] = await Promise.all([
+const [financeCss, distributionCss, pipelineCss, royaltyCss, financeJs, distributionJs, pipelineJs, pipelineBridgeJs, royaltyJs] = await Promise.all([
   readFile(`${output}books-finance-admin.css`, 'utf8'),
   readFile(`${root}books-distribution-admin.css`, 'utf8'),
   readFile(`${root}books-pipeline-admin.css`, 'utf8'),
@@ -89,4 +89,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, persistent Workspace, Chief AI Strategy Room, AI REPORT, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, lightweight Control Center shell, eager Campus actions, lazy optional admin modules, Chief AI conversation, persistent Workspace, Chief AI Strategy Room, AI REPORT, AI Ops council, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
