@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { CATEGORY_DEFINITIONS, loadHomepageServices, renderServiceCards } from '../scripts/ecosystem-registry.mjs';
+
+const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 test('homepage registry publishes only verified production services', async () => {
   const services = await loadHomepageServices();
@@ -41,4 +44,16 @@ test('homepage cards are rendered from the registry and grouped by category', as
     assert.match(html, new RegExp(`data-service-category="${category.id}"`));
     assert.ok(html.includes(category.label));
   }
+});
+
+test('homepage navigation lands on real compact sections without the legacy orbit graphic', () => {
+  for (const anchor of ['#about', '#services', '#connect', '#contact']) {
+    assert.match(homepage, new RegExp(`href="${anchor}"`));
+  }
+  for (const id of ['about', 'services', 'connect', 'contact']) {
+    assert.match(homepage, new RegExp(`id="${id}"`));
+  }
+  assert.match(homepage, /class="service-grid"/);
+  assert.match(homepage, /class="service-group"/);
+  assert.doesNotMatch(homepage, /class="[^"]*orbit|ecosystem-orbit|network-orbit/i);
 });
