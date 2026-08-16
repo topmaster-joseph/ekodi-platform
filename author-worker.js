@@ -20,6 +20,7 @@ function secure(response, cache = 'public, max-age=120') {
   next.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next.headers.set('Cache-Control', cache);
   next.headers.set('X-EKODI-Service', 'author-ai');
+  next.headers.set('X-EKODI-Product', 'creator-ai');
   return next;
 }
 
@@ -30,8 +31,12 @@ export default {
       return new Response(JSON.stringify({
         ok: true,
         service: 'ekodi-author-ai',
-        workflow: 'idea-plan-writing-review-author-approved-publish-ready',
+        product: 'ekodi-creator-ai',
+        compatibilityServiceKey: 'author',
+        workflow: 'idea-plan-creating-review-creator-approved-ready-to-share',
+        creatorModes: ['writer','video','podcast','lecture','research','visual','mission','ai'],
         chiefAiProtocol: 'author-events-v1',
+        myEkodiPortfolio: true,
         booksHandoff: true,
       }), {
         headers: {
@@ -39,10 +44,12 @@ export default {
           'cache-control': 'no-store',
           'x-content-type-options': 'nosniff',
           'x-ekodi-service': 'author-ai',
+          'x-ekodi-product': 'creator-ai',
         },
       });
     }
     if (url.pathname === '/books' || url.pathname === '/books/') return Response.redirect('https://books.ekodi.kr/', 307);
+    if (url.pathname === '/my' || url.pathname === '/my/') return Response.redirect('https://my.ekodi.kr/', 307);
     if (url.pathname === '/community' || url.pathname === '/community/') return Response.redirect('https://community.ekodi.kr/', 307);
     const response = await env.ASSETS.fetch(request);
     return secure(response, url.pathname === '/' || url.pathname === '/index.html' ? 'no-store' : 'public, max-age=300');

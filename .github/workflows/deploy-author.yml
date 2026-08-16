@@ -1,4 +1,4 @@
-name: Deploy EKODI Author AI
+name: Deploy EKODI Creator AI
 
 on:
   workflow_dispatch:
@@ -14,6 +14,8 @@ on:
       - 'auth-site/auth-router.js'
       - 'supabase/functions/author-*/**'
       - 'supabase/migrations/*author_*'
+      - 'supabase/migrations/*creator_*'
+      - 'test/author-ai-contract.test.mjs'
       - '.github/workflows/deploy-author.yml'
   push:
     branches: [main]
@@ -28,13 +30,15 @@ on:
       - 'auth-site/auth-router.js'
       - 'supabase/functions/author-*/**'
       - 'supabase/migrations/*author_*'
+      - 'supabase/migrations/*creator_*'
+      - 'test/author-ai-contract.test.mjs'
       - '.github/workflows/deploy-author.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-author-ai-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
+  group: ekodi-creator-ai-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
   cancel-in-progress: false
 
 env:
@@ -49,7 +53,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Author AI contracts
+      - name: Validate Creator AI contracts
         run: |
           set -euo pipefail
           node --check author-worker.js
@@ -57,6 +61,7 @@ jobs:
           node --check auth-site/author-auth.js
           node --check scripts/validate-author.mjs
           node scripts/validate-author.mjs
+          node --test test/author-ai-contract.test.mjs
           test -f deploy/manifests/author.worker.json
 
   staging:
@@ -73,7 +78,7 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Deploy isolated Author AI staging
+      - name: Deploy isolated Creator AI staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.author.staging.toml
       - name: Verify staging shell and health
         shell: bash
@@ -81,13 +86,14 @@ jobs:
           set -euo pipefail
           base='https://ekodi-author-ai-staging.topmaster-joseph.workers.dev'
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/author-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
-            health_code=$(curl -sS -o /tmp/author-staging-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
+            root_code=$(curl -L -sS -o /tmp/creator-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            health_code=$(curl -sS -o /tmp/creator-staging-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' ]] \
-              && grep -Fq 'EKODI Author AI' /tmp/author-staging.html \
-              && grep -Fq '저자AI가 책의 길을 만듭니다' /tmp/author-staging.html \
-              && grep -Fq 'author-events-v1' /tmp/author-staging-health.json; then
-              echo 'Author AI staging verified.'
+              && grep -Fq 'EKODI Creator AI' /tmp/creator-staging.html \
+              && grep -Fq 'Creator AI가 세상과 연결될 형태로 만듭니다' /tmp/creator-staging.html \
+              && grep -Fq 'ekodi-creator-ai' /tmp/creator-staging-health.json \
+              && grep -Fq '"myEkodiPortfolio":true' /tmp/creator-staging-health.json; then
+              echo 'Creator AI staging verified.'
               exit 0
             fi
             sleep 5
@@ -120,11 +126,11 @@ jobs:
           status_code=$?
           set -e
           if [[ "$status_code" -eq 0 ]]; then
-            echo 'Author AI production Worker already exists; bootstrap skipped.'
+            echo 'Creator AI production Worker already exists; bootstrap skipped.'
             exit 0
           fi
           if grep -Eq 'code: 10007|does not exist|does not exist on your account' <<<"$status_output"; then
-            echo 'No production Author AI Worker exists yet. Bootstrapping the exact staging-validated revision once.'
+            echo 'No production Creator AI Worker exists yet. Bootstrapping the exact staging-validated revision once.'
             npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.author.toml
             exit 0
           fi
@@ -133,18 +139,18 @@ jobs:
           exit "$status_code"
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/author.worker.json
-      - name: Deep verify Author AI production hostname
+      - name: Deep verify Creator AI production hostname
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/author.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/author-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/health' || true)
+            root_code=$(curl -L -sS -o /tmp/creator.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/creator-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/health' || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' ]] \
-              && grep -Fq 'EKODI Author AI' /tmp/author.html \
-              && grep -Fq 'AUTHOR APPROVED' /tmp/author.html \
-              && grep -Fq 'ekodi-author-ai' /tmp/author-health.json; then
-              echo 'EKODI Author AI production verified.'
+              && grep -Fq 'EKODI Creator AI' /tmp/creator.html \
+              && grep -Fq 'CREATOR APPROVED' /tmp/creator.html \
+              && grep -Fq 'ekodi-creator-ai' /tmp/creator-health.json; then
+              echo 'EKODI Creator AI production verified.'
               exit 0
             fi
             sleep 5

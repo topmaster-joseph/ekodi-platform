@@ -8,15 +8,15 @@
         "url": "https://author.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI Author AI", "생각을 꺼내면", "저자AI가 책의 길을 만듭니다"],
-        "headerExpect": ["x-ekodi-service: author-ai", "x-content-type-options: nosniff"]
+        "expect": ["EKODI Creator AI", "Creator AI가 세상과 연결될 형태로 만듭니다", "CREATOR APPROVED"],
+        "headerExpect": ["x-ekodi-service: author-ai", "x-ekodi-product: creator-ai", "x-content-type-options: nosniff"]
       },
       {
         "url": "https://author.ekodi.kr/health",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["ekodi-author-ai", "author-events-v1", "booksHandoff"],
-        "headerExpect": ["x-ekodi-service: author-ai", "cache-control: no-store"]
+        "expect": ["ekodi-author-ai", "ekodi-creator-ai", "author-events-v1", "myEkodiPortfolio", "booksHandoff"],
+        "headerExpect": ["x-ekodi-service: author-ai", "x-ekodi-product: creator-ai", "cache-control: no-store"]
       }
     ]
   }

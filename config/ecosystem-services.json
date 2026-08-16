@@ -5,7 +5,7 @@
     {"id":"church","name":"에코디교회","url":"https://church.ekodi.kr","label":"church.ekodi.kr","icon":"church","order":10,"homepage":true,"productionVerified":true},
     {"id":"biz","name":"에코디비즈","url":"https://biz.ekodi.kr","label":"biz.ekodi.kr","icon":"business","order":20,"homepage":true,"productionVerified":true},
     {"id":"books","name":"에코디출판","url":"https://books.ekodi.kr","label":"books.ekodi.kr","icon":"books","order":30,"homepage":true,"productionVerified":true},
-    {"id":"author","name":"EKODI Author AI","url":"https://author.ekodi.kr","label":"author.ekodi.kr","icon":"books","order":35,"homepage":true,"productionVerified":true},
+    {"id":"author","name":"EKODI Creator AI","url":"https://author.ekodi.kr","label":"author.ekodi.kr","icon":"books","order":35,"homepage":true,"productionVerified":true},
     {"id":"lab","name":"에코디연구소","url":"https://lab.ekodi.kr","label":"lab.ekodi.kr","icon":"lab","order":40,"homepage":true,"productionVerified":true},
     {"id":"community","name":"에코디커뮤니티","url":"https://community.ekodi.kr","label":"community.ekodi.kr","icon":"community","order":50,"homepage":true,"productionVerified":true},
     {"id":"work","name":"EKODI Work","url":"https://work.ekodi.kr","label":"work.ekodi.kr","icon":"work","order":55,"homepage":true,"productionVerified":true},
