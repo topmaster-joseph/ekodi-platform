@@ -1,6 +1,6 @@
-# Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations pipeline + membership billing
+# Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations pipeline + membership billing + AI Mission Control
 name = "ekodi-auth-api"
-main = "customer-entry-worker.js"
+main = "mission-control-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
