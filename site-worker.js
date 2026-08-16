@@ -6,6 +6,7 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
 ]);
+const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
 
 const ADMIN_HOSTS = new Set([
   'admin.ekodi.kr',
@@ -192,6 +193,24 @@ function adminAuthRedirect(returnPath) {
   });
 }
 
+function adminApexAuthUrl() {
+  const target = new URL('https://auth.ekodi.kr/');
+  target.searchParams.set('site', 'admin');
+  target.searchParams.set('return_to', 'https://ekodi.kr/admin');
+  return target.toString();
+}
+
+function rewriteAdminApexLogin(response) {
+  const loginUrl = adminApexAuthUrl();
+  return new HTMLRewriter()
+    .on('#centralAdminLogin', {
+      element(element) {
+        element.setAttribute('href', loginUrl);
+      },
+    })
+    .transform(response);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -203,6 +222,15 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+      }
+      if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        const rewritten = rewriteAdminApexLogin(response);
+        return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-fallback');
+      }
+      if (ADMIN_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-fallback-asset');
       }
       if (PUBLIC_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
