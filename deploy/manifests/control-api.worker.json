@@ -10,6 +10,8 @@
       {"url":"https://api.ekodi.kr/api/books/public/config","statuses":[200],"expect":["\"digital-start\""]},
       {"url":"https://api.ekodi.kr/api/social/registry","statuses":[200],"expect":["에코디커뮤니티","community-youtube"]},
       {"url":"https://api.ekodi.kr/api/control/social/registry","statuses":[401]},
+      {"url":"https://api.ekodi.kr/api/control/ai/governance","statuses":[401]},
+      {"url":"https://api.ekodi.kr/api/control/ai/actions","statuses":[401]},
       {"url":"https://api.ekodi.kr/api/customers/tenants","statuses":[401]},
       {"url":"https://api.ekodi.kr/api/customers/directory","statuses":[401],"expect":["EKODI 관리자 인증이 필요합니다."]},
       {"url":"https://api.ekodi.kr/api/admin-access/google-accounts","statuses":[401]},
