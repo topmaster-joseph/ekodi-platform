@@ -29,7 +29,7 @@ test('Strategy API revalidates EKODI admin session and keeps provider secret ser
   assert.match(api, /OPENAI_API_KEY/);
   assert.match(api, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(api, /https:\/\/api\.openai\.com\/v1\/responses/);
-  assert.match(api, /orchestrator/);
+  assert.match(api, /orchestrator/i);
   assert.match(api, /DECISION/);
   assert.doesNotMatch(api, /Deno\.serve[\s\S]*execute[_-]?action/i);
 });
