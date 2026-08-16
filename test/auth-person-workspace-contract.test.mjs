@@ -12,6 +12,7 @@ const takeoverGuardMigration=read('supabase/migrations/20260815023000_identity_s
 const mallHandoffMigration=read('supabase/migrations/20260815030000_mall_free_personal_workspace.sql');
 const identityApi=read('supabase/functions/identity-api/index.ts');
 const accessApi=read('supabase/functions/access-api/index.ts');
+const workspaceApi=read('supabase/functions/workspace-api/index.ts');
 const authJs=read('auth-site/auth.js');
 const clientAuth=read('auth-site/client-auth.js');
 const authTarget=read('auth-site/auth-workspace-target.js');
@@ -85,6 +86,18 @@ test('access api resolves and revalidates workspace-scoped handoff',()=>{
   assert.match(accessApi,/ekodi|tenant|store/i);
 });
 
+test('person workspace api aggregates verified workspaces for open SSO services',()=>{
+  assert.match(workspaceApi,/OPEN_SSO_ORIGINS/);
+  assert.match(workspaceApi,/social:\["https:\/\/social\.ekodi\.kr"\]/);
+  assert.match(workspaceApi,/energy:\["https:\/\/energy\.ekodi\.kr"\]/);
+  assert.match(workspaceApi,/PERSON_WORKSPACE_SITES/);
+  assert.match(workspaceApi,/current_site_workspaces/);
+  assert.match(workspaceApi,/workspace_scope:"person"/);
+  assert.match(workspaceApi,/workspace_access_required/);
+  assert.match(workspaceApi,/identity-api/);
+  assert.doesNotMatch(workspaceApi,/SUPABASE_SERVICE_ROLE_KEY/);
+});
+
 test('auth center is workspace-first and hides linked login identities outside account management',()=>{
   assert.match(authHtml,/id="workspacePanel"/);
   assert.match(authHtml,/id="identityPanel"/);
@@ -103,10 +116,12 @@ test('client auth reuses the central EKODI session instead of forcing Google log
   assert.match(clientAuth,/handoffExistingSession/);
 });
 
-test('targeted workspace routing is available across shared EKODI services',()=>{
-  for(const site of ['marketing','biz','books','church','lab','mall'])assert.match(authTarget,new RegExp(`${site}:`));
+test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
+  for(const site of ['marketing','biz','books','church','lab','mall','social','energy'])assert.match(authTarget,new RegExp(`${site}:`));
   assert.match(authRouter,/targetableWorkspaceSites/);
   assert.match(authRouter,/auth-workspace-target\.js\?v=20260817-all-sites-1/);
+  assert.match(authTarget,/PERSON_WORKSPACE/);
+  assert.match(authTarget,/PERSON_SCOPED_SITES/);
   assert.match(authTarget,/workspace_key:requested/);
 });
 
