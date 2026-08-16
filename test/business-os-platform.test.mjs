@@ -22,6 +22,15 @@ test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
   assert.match(worker,/internal/);
 });
 
+test('public Business OS header stays local and keeps workspace chrome behind sign-in',()=>{
+  assert.match(html,/class="brand" href="\/" aria-label="EKODI Business OS 홈으로 이동"/);
+  assert.doesNotMatch(html,/class="brand" href="https:\/\/ekodi\.kr"/);
+  assert.match(html,/class="workspace-picker session-only"/);
+  assert.match(html,/:has\(#authLink\[href="#logout"\]\)/);
+  assert.match(html,/<nav class="top-actions"[^>]*>[\s\S]*id="authLink"[\s\S]*Sign in/);
+  assert.match(html,/id="publicLink"[\s\S]*id="marketingLink"/);
+});
+
 test('Business OS does not present fabricated sample metrics as live data',()=>{
   assert.doesNotMatch(html,/기능 검증용 샘플/);
   assert.doesNotMatch(app,/1284000|sample\.sales|sample\.customers/);
