@@ -1,0 +1,45 @@
+name: Marketing Admin Control Dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-admin-control.js'
+      - 'test/marketing-admin-control-contract.test.mjs'
+      - '.github/workflows/marketing-admin-control-dispatch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: marketing-admin-control-dispatch
+  cancel-in-progress: false
+
+jobs:
+  validate-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Marketing admin handler contract
+        run: |
+          set -euo pipefail
+          node --check marketing-admin-control.js
+          node --test test/marketing-admin-control-contract.test.mjs
+          grep -Fq "channels:'connected'" marketing-admin-control.js
+          grep -Fq "automation:'connected'" marketing-admin-control.js
+          grep -Fq "approvals:'connected'" marketing-admin-control.js
+          grep -Fq 'customerPiiIncluded:false' marketing-admin-control.js
+          grep -Fq 'externalExecution:false' marketing-admin-control.js
+      - name: Dispatch guarded Control API workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-control-api.yml --ref main
+          echo 'Guarded Control API deployment dispatched for Marketing admin handler change.'
