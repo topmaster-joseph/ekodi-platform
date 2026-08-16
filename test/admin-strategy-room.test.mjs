@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+// Preserve the existing Chief AI build contract while extending it with the Strategy Room.
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Strategy Room is bundled behind the existing lazy admin asset', async () => {
