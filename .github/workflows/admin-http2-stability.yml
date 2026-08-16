@@ -1,0 +1,93 @@
+name: Admin HTTP2 Stability
+
+on:
+  push:
+    branches:
+      - staging/admin-http2-stability-20260816
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stabilize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve EKODI zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          api='https://api.cloudflare.com/client/v4'
+          domains=$(curl -fsS --retry 3 "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "admin.ekodi.kr") | .zone_id' | head -n1)
+          test -n "$zone_id" && test "$zone_id" != null
+          echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+
+      - name: Read HTTP3 setting
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          current=$(curl -fsS --retry 3 "$api/zones/$ZONE_ID/settings/http3" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$current" | jq -c '{success,result:{id:.result.id,value:.result.value,modified_on:.result.modified_on}}'
+          echo "$current" | jq -e '.success == true' >/dev/null
+          before=$(echo "$current" | jq -r '.result.value')
+          echo "HTTP3_BEFORE=$before" >> "$GITHUB_ENV"
+
+      - name: Disable HTTP3 temporarily
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          result=$(curl -fsS --retry 3 -X PATCH "$api/zones/$ZONE_ID/settings/http3" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data '{"value":"off"}')
+          echo "$result" | jq -c '{success,result:{id:.result.id,value:.result.value,modified_on:.result.modified_on},errors}'
+          echo "$result" | jq -e '.success == true and .result.value == "off"' >/dev/null
+
+      - name: Verify admin over HTTP2 and fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 3
+          verify() {
+            label="$1"; url="$2"; route="$3"
+            code=$(curl --http2 -sS -o "/tmp/$label.body" -D "/tmp/$label.headers" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            echo "$url -> $code"
+            grep -Fi 'x-ekodi-route:' "/tmp/$label.headers" || true
+            grep -Fi 'alt-svc:' "/tmp/$label.headers" || true
+            [ "$code" = 200 ]
+            grep -Fq 'EKODI Control Center' "/tmp/$label.body"
+            grep -Fiq "x-ekodi-route: $route" "/tmp/$label.headers"
+          }
+          failed=0
+          verify canonical 'https://admin.ekodi.kr/' 'admin-control-center' || failed=1
+          verify canonical_admin 'https://admin.ekodi.kr/admin' 'admin-control-center' || failed=1
+          verify fallback 'https://ekodi.kr/admin' 'admin-fallback' || failed=1
+          if [ "$failed" != 0 ]; then
+            echo 'Admin verification failed; rolling HTTP3 back to original value.'
+            api='https://api.cloudflare.com/client/v4'
+            curl -fsS -X PATCH "$api/zones/$ZONE_ID/settings/http3" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data "{\"value\":\"$HTTP3_BEFORE\"}" | jq -c '{success,result:{value:.result.value},errors}'
+            exit 1
+          fi
+
+      - name: Confirm zone remains in safe HTTP2 mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          final=$(curl -fsS --retry 3 "$api/zones/$ZONE_ID/settings/http3" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$final" | jq -c '{success,result:{id:.result.id,value:.result.value,modified_on:.result.modified_on}}'
+          echo "$final" | jq -e '.success == true and .result.value == "off"' >/dev/null
