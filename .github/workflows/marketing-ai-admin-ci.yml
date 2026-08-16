@@ -5,9 +5,12 @@ on:
     paths:
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'marketing-ai-admin-live-ops.css'
       - 'marketing-admin-control.js'
       - 'mission-control-entry-worker.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
+      - 'test/marketing-ai-admin-live-ops.test.mjs'
       - 'test/marketing-admin-control-contract.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
@@ -17,9 +20,12 @@ on:
     paths:
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'marketing-ai-admin-live-ops.css'
       - 'marketing-admin-control.js'
       - 'mission-control-entry-worker.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
+      - 'test/marketing-ai-admin-live-ops.test.mjs'
       - 'test/marketing-admin-control-contract.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
@@ -41,11 +47,12 @@ jobs:
         run: |
           set -euo pipefail
           node --check marketing-ai-admin.js
+          node --check marketing-ai-admin-live-ops.js
           node --check marketing-admin-control.js
           node --check mission-control-entry-worker.js
           node --check site-worker.js
           node --check scripts/build.mjs
-          node --test test/marketing-ai-admin-layout.test.mjs test/marketing-admin-control-contract.test.mjs
+          node --test test/marketing-ai-admin-layout.test.mjs test/marketing-ai-admin-live-ops.test.mjs test/marketing-admin-control-contract.test.mjs
           grep -Fq "button.dataset.section = 'marketing-ai'" marketing-ai-admin.js
           grep -Fq 'Marketing AI 운영 관제센터' marketing-ai-admin.js
           grep -Fq 'OPERATIONS CONSOLE' marketing-ai-admin.js
@@ -60,16 +67,22 @@ jobs:
           grep -Fq '.marketing-ai-console-tabs' marketing-ai-admin.css
           grep -Fq '.marketing-ai-console-view' marketing-ai-admin.css
           grep -Fq 'grid-template-columns:repeat(6,minmax(0,1fr))' marketing-ai-admin.css
+          grep -Fq 'CHANNEL REGISTRY' marketing-ai-admin-live-ops.js
+          grep -Fq 'AI AUTOMATION' marketing-ai-admin-live-ops.js
+          grep -Fq 'HUMAN GATE' marketing-ai-admin-live-ops.js
+          grep -Fq '.marketing-ai-approval-layout' marketing-ai-admin-live-ops.css
           grep -Fq 'service_subscriptions' marketing-admin-control.js
           grep -Fq 'billing_charge_events' marketing-admin-control.js
           grep -Fq 'marketing_store_workspaces' marketing-admin-control.js
+          grep -Fq 'ai_agent_actions' marketing-admin-control.js
+          grep -Fq 'social_registry_config' marketing-admin-control.js
           grep -Fq 'customerPiiIncluded:false' marketing-admin-control.js
           grep -Fq 'externalExecution:false' marketing-admin-control.js
           grep -Fq 'handleMarketingAdminControl' mission-control-entry-worker.js
           grep -Fq "'/api/marketing/admin/'" mission-control-entry-worker.js
           grep -Fq "'/marketing-ai-admin.js'" site-worker.js
-          grep -Fq 'marketing-ai-admin.css' scripts/build.mjs
-          grep -Fq 'marketing-ai-admin.js' scripts/build.mjs
+          grep -Fq 'marketing-ai-admin-live-ops.css' scripts/build.mjs
+          grep -Fq 'marketing-ai-admin-live-ops.js' scripts/build.mjs
       - name: Build and verify Control Center output
         run: |
           set -euo pipefail
@@ -80,4 +93,8 @@ jobs:
           grep -Fq 'marketing-ai-admin.js' dist/control-center.html
           grep -Fq 'Marketing AI 운영 관제센터' dist/marketing-ai-admin.js
           grep -Fq 'DATA CONTRACT NOT CONNECTED' dist/marketing-ai-admin.js
+          grep -Fq 'CHANNEL REGISTRY' dist/marketing-ai-admin.js
+          grep -Fq 'AI AUTOMATION' dist/marketing-ai-admin.js
+          grep -Fq 'HUMAN GATE' dist/marketing-ai-admin.js
+          grep -Fq '.marketing-ai-approval-layout' dist/marketing-ai-admin.css
           ! grep -Fq 'marketingAiAdminFrame' dist/marketing-ai-admin.js

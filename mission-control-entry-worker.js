@@ -21,6 +21,8 @@ export default {
     if (guard) return guard;
 
     const path = new URL(request.url).pathname;
+    // MarketingAI Operations Console is a read-only control-plane surface. Keep it
+    // ahead of the shared customer router so admin auth and API security stay explicit.
     if (path.startsWith('/api/marketing/admin/')) {
       try {
         const response = await handleMarketingAdminControl(request, env);
