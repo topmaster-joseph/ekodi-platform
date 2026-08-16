@@ -61,6 +61,7 @@ const ADMIN_ASSETS = new Set([
   '/control-center-features.js',
   '/admin-central-handoff.js',
   '/admin-lazy-features.js',
+  '/admin-menu-layout.js',
   '/finance-monitor.js',
   '/compact-control-center.css',
   '/compact-control-center.js',
