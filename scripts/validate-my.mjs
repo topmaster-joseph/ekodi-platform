@@ -18,14 +18,16 @@ function must(key,marker){if(!content[key].includes(marker))throw new Error(`My 
 function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} contains forbidden ${marker}`)}
 
 must('html','My EKODI');
+must('html','MY PLATFORMS');
+must('html','MY WORKSPACES');
 must('html','CREATOR PORTFOLIO');
 must('html','PRIVATE FIRST');
 must('html','NO DATA MONOLITH');
 must('html','/config.js');
 must('app','creator_portfolio_items');
+must('app','current_site_access');
+must('app','current_site_workspaces');
 must('app','ekodi_token');
-must('app','visibilityLabel');
-must('app','dataEnabled');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
@@ -46,4 +48,4 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: isolated staging, central Google auth, person-scoped private Creator portfolio, runtime config and guarded production manifest are present.');
+console.log('My EKODI validation passed: isolated staging, central Google auth, unified platform/workspace access, private Creator portfolio and guarded production rollout are present.');
