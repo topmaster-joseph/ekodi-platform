@@ -23,17 +23,19 @@ jobs:
           grep -Fq 'id="centralAdminLogin"' /tmp/admin.html
           grep -Fq 'https://auth.ekodi.kr/?site=admin' /tmp/admin.html
           grep -Fq 'admin-authenticated-shell.js?v=20260816-preauth-1' /tmp/admin.html
-          if grep -Eq '<script[^>]+src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js' /tmp/admin.html; then
-            echo 'FAIL: authenticated admin feature script is still eager on the login page'
-            exit 1
-          fi
+          for src in compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js; do
+            if grep -Fq "<script src=\"$src\"" /tmp/admin.html || grep -Fq "<script src=\"/$src\"" /tmp/admin.html; then
+              echo "FAIL: authenticated admin feature script is still eager on the login page: $src"
+              exit 1
+            fi
+          done
           echo 'Live admin HTML is a minimal pre-auth shell.'
 
       - name: Verify authenticated shell guard
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --connect-timeout 5 --max-time 15 https://admin.ekodi.kr/admin-authenticated-shell.js?v=20260816-preauth-1 -o /tmp/shell.js
+          curl -fsS --retry 3 --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-authenticated-shell.js?v=20260816-preauth-1' -o /tmp/shell.js
           grep -Fq "return Boolean(token() && app && !app.hidden)" /tmp/shell.js
           grep -Fq "loginLink.style.pointerEvents = 'auto'" /tmp/shell.js
           grep -Fq "'compact-control-center.js'" /tmp/shell.js
