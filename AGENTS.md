@@ -1,6 +1,26 @@
 # EKODI Platform Engineering Constitution
 
-EKODI Platform is not a demo site collection. It is a revenue-oriented Agentic AI operating platform intended to support recurring commercial services. Every change must protect trust, availability, tenant isolation, data integrity, and future monetization.
+EKODI Platform is not a demo site collection. It is a mission-oriented, sustainable Agentic AI operating ecosystem intended to serve people and recurring services. Every change must protect the mission, human dignity and agency, trust, availability, tenant isolation, data integrity, and sustainable operation.
+
+## 0. Mission governance is the highest product invariant
+
+EKODI assumes that human administrators exercise limited, delegated stewardship rather than unlimited authority. AI authority is always narrower still.
+
+The purpose of EKODI AI is to help each person become more independent, responsible, free, holy, connected in truthful community, and able to live a Jubilee-oriented life before God. AI is a bounded professional delegate and tool, never the sovereign purpose of the ecosystem.
+
+The governing principles are:
+- **Stewardship**: use only delegated authority and escalate beyond its limits.
+- **Agency**: preserve informed choice, revocation, portability, exit, and meaningful human review.
+- **Koinonia**: strengthen truthful human relationship and mutual service rather than replacing community for convenience.
+- **Diaspora**: equip people to act faithfully and competently beyond EKODI rather than creating platform captivity.
+- **Jubilee**: reduce exploitative dependency and information asymmetry, restore opportunity, and protect the vulnerable.
+- **Holiness**: reject deceptive, coercive, exploitative, or intentionally degrading means even when they improve a metric.
+
+Policy priority is mission and human dignity → safety/legal/privacy → consent and user agency → community/Jubilee impact → reliability → efficiency/revenue. Revenue is necessary for sustainability but never overrides mission boundaries, truthful consent, privacy, or human agency.
+
+Chief AI is an orchestrator, not a sovereign. Unknown agents receive no implicit autonomous authority. High-impact human gates and forbidden boundaries cannot be overridden by Chief AI.
+
+The machine-readable source of truth is `config/ai-mission-governance.json`. The executable evaluator is `ai-governance.js`. Design and review guidance is in `docs/AI-MISSION-GOVERNANCE.md`. Do not weaken or bypass mission-governance validation to ship a feature.
 
 ## 1. Product identity
 
@@ -50,6 +70,7 @@ A production change is incomplete until all applicable checks pass.
 - Production endpoint verification must test the real public hostname, not only a build artifact or Pages preview URL.
 - A successful deploy command alone is not proof of a successful release.
 - Any routing, DNS, auth, payment, customer-domain, or control-plane change requires regression coverage.
+- Any privileged agent action must pass mission governance before execution.
 
 ## 3A. Platform isolation is a production invariant
 
@@ -71,31 +92,33 @@ For business-critical changes, “done” means:
 
 1. Source validation passes.
 2. Automated tests pass.
-3. Deployment succeeds.
-4. Real production hostname returns the expected status and content.
-5. Redirect behavior is explicitly verified when routing changes.
-6. `admin.ekodi.kr` can observe the resulting service state.
-7. Security and tenant boundaries remain intact.
-8. Failure is visible through monitoring or operational logs.
+3. Mission-governance validation passes for agentic or privileged behavior.
+4. Deployment succeeds.
+5. Real production hostname returns the expected status and content.
+6. Redirect behavior is explicitly verified when routing changes.
+7. `admin.ekodi.kr` can observe the resulting service state.
+8. Security, human agency, and tenant boundaries remain intact.
+9. Failure is visible through monitoring or operational logs.
 
 Never report a feature as complete merely because code was committed.
 
 ## 5. Agentic AI architecture direction
 
-The platform should evolve from a link dashboard into an action-oriented control plane:
+The platform should evolve from a link dashboard into an action-oriented mission control plane:
 
-`observe → diagnose → propose → approve → execute → verify → audit`
+`observe → discern → consult specialists → policy check → act or request human decision → verify → restore user agency → audit → report`
 
 Examples:
 - detect a customer-site outage
 - identify DNS/deployment/application cause
 - prepare the safest repair action
-- require approval for destructive or financially sensitive actions
-- execute through server-side privileged integrations
+- require a human decision for destructive, spiritually sensitive, legally binding, rights-reducing, or financially sensitive actions
+- execute reversible work through server-side privileged integrations within delegated scope
 - verify the production result
+- restore clear user choices and portability where relevant
 - record an immutable audit event
 
-Agent actions must be scoped by tenant and role. High-impact actions must never be hidden behind vague automation.
+Agent actions must be scoped by tenant, role, delegated purpose, and mission policy. High-impact actions must never be hidden behind vague automation. A specialist AI may escalate or object when its domain boundary is crossed, and Chief AI must surface rather than suppress that dissent.
 
 ## 6. Multi-tenant direction
 
@@ -111,6 +134,8 @@ Each tenant should be able to own independent configuration for:
 - billing/subscription
 - users and roles
 - audit history
+- delegated AI permissions and revocation state
+- data access/export and exit controls where applicable
 
 Shared infrastructure is encouraged, shared customer data is not.
 
@@ -126,25 +151,26 @@ Design new capabilities so they can map cleanly to commercial packaging, for exa
 - managed domain/hosting
 - premium automation/agent actions
 
-Avoid one-off customer code when a configurable product capability can solve the same problem.
+Avoid one-off customer code when a configurable product capability can solve the same problem. Do not use dark patterns, artificial lock-in, hidden conflicts of interest, or deliberate dependency creation to improve monetization.
 
 ## 8. Release discipline
 
 Prefer small reversible releases over large opaque changes.
 
-Before changing production routing or authentication:
+Before changing production routing, authentication, or privileged AI behavior:
 - inspect the current implementation and live configuration
 - identify rollback behavior
+- check mission-governance impact and human-gate requirements
 - add or update regression tests
-- deploy
-- verify the real domain
+- deploy through the guarded path
+- verify the real domain and resulting user impact
 
 When an incident occurs, find and fix the root cause. Do not instruct users to clear cookies or perform local workarounds unless evidence shows the browser is actually the cause.
 
 ## 9. Current automated safeguards
 
-The repository contains business contract tests, a Production Revenue Gate, and platform-boundary validation. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
+The repository contains business contract tests, a Production Revenue Gate, platform-boundary validation, and AI mission-governance validation. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
 
 ## 10. Quality bar
 
-Optimize for a platform a paying customer can trust. Visual polish matters, but correctness, clarity, speed, security, observability, maintainability, and measurable customer outcomes come first.
+Optimize for an ecosystem people and paying customers can trust. Visual polish matters, but mission fidelity, human dignity and agency, correctness, clarity, speed, security, observability, maintainability, sustainable economics, and measurable beneficiary outcomes come first.
