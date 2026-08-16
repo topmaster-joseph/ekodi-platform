@@ -10,6 +10,7 @@ on:
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'mission-control-entry-worker.js'
+      - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
       - 'ai-governance-runtime.js'
@@ -24,6 +25,7 @@ on:
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'social-registry-api.js'
+      - 'test/device-control-contract.test.mjs'
       - 'migrations/**'
       - 'wrangler.api.toml'
       - 'scripts/guarded-worker-release.mjs'
@@ -41,6 +43,7 @@ on:
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'mission-control-entry-worker.js'
+      - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
       - 'ai-governance-runtime.js'
@@ -55,6 +58,7 @@ on:
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'social-registry-api.js'
+      - 'test/device-control-contract.test.mjs'
       - 'migrations/**'
       - 'wrangler.api.toml'
       - 'scripts/guarded-worker-release.mjs'
@@ -95,6 +99,7 @@ jobs:
           node --check customer-member-directory.js
           node --check customer-entry-worker.js
           node --check mission-control-entry-worker.js
+          node --check device-control.js
           node --check security-edge.js
           node --check ai-agent-control.js
           node --check ai-governance-runtime.js
@@ -109,6 +114,7 @@ jobs:
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs
+          node --test test/device-control-contract.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
@@ -116,8 +122,12 @@ jobs:
           grep -Fq '/api/social/registry' customer-entry-worker.js
           grep -Fq '/api/control/social/' customer-entry-worker.js
           grep -Fq '/api/control/ai/' mission-control-entry-worker.js
+          grep -Fq '/api/control/devices' mission-control-entry-worker.js
+          grep -Fq '/api/device-agent' mission-control-entry-worker.js
+          grep -Fq 'handleDeviceControl' mission-control-entry-worker.js
           grep -Fq 'handleAgentMissionControl' mission-control-entry-worker.js
           grep -Fq 'enforceEdgeSecurity' mission-control-entry-worker.js
+          grep -Fq '/api/device-agent/enroll' security-edge.js
           grep -Fq 'AUTH_RATE_LIMITER' security-edge.js
           grep -Fq 'SENSITIVE_RATE_LIMITER' security-edge.js
           grep -Fq 'service.health_check' ai-agent-control.js
@@ -220,7 +230,7 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control API staging Worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify staging API behavior, security headers, AI Mission Control privacy and auth boundaries
+      - name: Verify staging API behavior, security headers, Device Control, AI Mission Control privacy and auth boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -232,6 +242,7 @@ jobs:
             google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/google/config' || true)
             books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/public/config' || true)
             social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/social/registry' || true)
+            unauthorized_devices=$(curl -sS -o /tmp/stage-devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
             unauthorized_social=$(curl -sS -o /tmp/stage-social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/social/registry' || true)
             unauthorized_ai_governance=$(curl -sS -o /tmp/stage-ai-governance.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
             unauthorized_ai_actions=$(curl -sS -o /tmp/stage-ai-actions.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/actions' || true)
@@ -250,6 +261,7 @@ jobs:
               && printf '%s' "$books" | grep -q '"digital-start"' \
               && printf '%s' "$social" | grep -Fq '에코디커뮤니티' \
               && printf '%s' "$social" | grep -Fq 'community-youtube' \
+              && [ "$unauthorized_devices" = '401' ] \
               && [ "$unauthorized_social" = '401' ] \
               && [ "$unauthorized_ai_governance" = '401' ] \
               && [ "$unauthorized_ai_actions" = '401' ] \
@@ -301,7 +313,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Deep verify Google-only admin, API security headers, AI Mission Control privacy, Books pipeline, royalties and module boundaries
+      - name: Deep verify Google-only admin, API security headers, Device Control, AI Mission Control privacy, Books pipeline, royalties and module boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -314,6 +326,7 @@ jobs:
             tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
             books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/config' || true)
             social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/social/registry' || true)
+            unauthorized_devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices' || true)
             unauthorized_social=$(curl -sS -o /tmp/social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/social/registry' || true)
             unauthorized_ai_governance=$(curl -sS -o /tmp/ai-governance.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance' || true)
             unauthorized_ai_actions=$(curl -sS -o /tmp/ai-actions.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/actions' || true)
@@ -334,6 +347,7 @@ jobs:
               && printf '%s' "$books" | grep -q '"digital-start"' \
               && printf '%s' "$social" | grep -Fq '에코디커뮤니티' \
               && printf '%s' "$social" | grep -Fq 'community-youtube' \
+              && [ "$unauthorized_devices" = '401' ] \
               && [ "$unauthorized_social" = '401' ] \
               && [ "$unauthorized_ai_governance" = '401' ] \
               && [ "$unauthorized_ai_actions" = '401' ] \
