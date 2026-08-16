@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-energy",
+    "config": "wrangler.energy.toml",
+    "requests": [
+      {"url":"https://energy.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI Energy AI","읽기 전용 MVP"]},
+      {"url":"https://energy.ekodi.kr/health","statuses":[200],"expect":["ekodi-energy-ai","production-readonly-mvp","\"controlEnabled\":false"]}
+    ]
+  }
+}

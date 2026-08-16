@@ -1,0 +1,77 @@
+name: Deploy EKODI Energy AI Staging
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'energy/**'
+      - 'energy-worker.js'
+      - 'wrangler.energy-staging.toml'
+      - 'wrangler.energy.toml'
+      - 'test/energy-platform.test.mjs'
+      - 'deploy/manifests/energy.worker.json'
+      - 'platform-boundaries.json'
+      - 'config/user-ui-dna.json'
+      - 'config/ecosystem-services.json'
+      - '.github/workflows/deploy-energy-staging.yml'
+      - '.github/workflows/deploy-energy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-energy-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-energy-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Energy static validation
+        run: |
+          set -euo pipefail
+          node --check energy-worker.js
+          node --check energy/app.js
+          node --test test/energy-platform.test.mjs
+          grep -Fq '실제 인버터·계량기·ESS 제어는 비활성화' energy/index.html
+          grep -Fq 'CONTROL_ENABLED = "false"' wrangler.energy-staging.toml
+          grep -Fq 'pattern = "energy.ekodi.kr"' wrangler.energy.toml
+          grep -Fq 'CONTROL_ENABLED = "false"' wrangler.energy.toml
+          test -f deploy/manifests/energy.worker.json
+      - name: Ecosystem guardrails
+        run: |
+          npm run validate:boundaries
+          npm run validate:ui-dna
+          npm run validate:mission
+      - name: Deploy isolated staging Worker
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: npx wrangler deploy --config wrangler.energy-staging.toml
+      - name: Verify staging hostname and actuation isolation
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            root_code=$(curl -L -sS -o /tmp/energy-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health_code=$(curl -sS -o /tmp/energy-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            block_code=$(curl -sS -o /tmp/energy-stage-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/action-check" || true)
+            if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
+              && grep -Fq 'EKODI Energy AI' /tmp/energy-stage.html \
+              && grep -Fq '"telemetryEnabled":false' /tmp/energy-stage-health.json \
+              && grep -Fq '"controlEnabled":false' /tmp/energy-stage-health.json \
+              && grep -Fq '"reason":"safety_boundary_permanent"' /tmp/energy-stage-block.json; then
+              echo "EKODI Energy AI staging verified and actuation-isolated at $STAGING_URL"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'EKODI Energy AI staging verification failed or safety isolation was lost.'
+          exit 1

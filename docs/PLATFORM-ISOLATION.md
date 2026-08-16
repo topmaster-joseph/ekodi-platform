@@ -20,6 +20,9 @@ EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 �
 
 - EKODI Mall: Cloudflare Pages 전용 빌드/배포
 - EKODI Books: 전용 Worker와 `books.ekodi.kr`
+- EKODI Work: 전용 Worker와 `work.ekodi.kr`
+- EKODI Social: 전용 Worker와 `social.ekodi.kr`
+- EKODI Energy AI: 전용 Worker, 전용 `energy/**` 소스, `ekodi-energy-staging.topmaster-joseph.workers.dev` 스테이징. 운영 도메인은 검증 후 `energy.ekodi.kr`로 승격
 - Finance API: 전용 Worker와 `finance-api.ekodi.kr`
 - Control API: 전용 Worker와 `api.ekodi.kr`
 - Marketing AI 계열: 전용 동기화/고객 사이트 배포 흐름
@@ -44,6 +47,9 @@ EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 �
 ```text
 Mall source ───────────▶ Mall workflow ───────────▶ Mall Pages
 Books source ──────────▶ Books workflow ──────────▶ Books Worker
+Work source ───────────▶ Work workflow ───────────▶ Work Worker
+Social source ─────────▶ Social workflow ─────────▶ Social Worker
+Energy source ─────────▶ Energy staging workflow ─▶ Energy Worker (isolated, control disabled)
 Finance source ────────▶ Finance workflow ────────▶ Finance Worker
 Control/Auth API ──────▶ Control API workflow ────▶ API Worker
 Admin/Auth UI ─────────▶ Admin workflow ──────────▶ Shared Site Worker (temporary)
@@ -53,17 +59,20 @@ Marketing AI ──────────▶ Marketing workflows ────�
 Shared-core emergency ─▶ Full Ecosystem Deploy ──▶ MANUAL ONLY
 ```
 
+Energy AI는 스테이징에서 `TELEMETRY_ENABLED=false`, `CONTROL_ENABLED=false`를 기본값으로 유지합니다. 센서·인버터·ESS·EV 연결은 향후 명시적인 Energy 전용 adapter/API 계약으로만 추가하며, 차단기·보호계전·인버터 안전설정·안전 인터록 우회는 일반 AI 자동화 권한에 포함하지 않습니다.
+
 ## 데이터 경계
 
 현재 `api.ekodi.kr`과 `finance-api.ekodi.kr`은 동일한 `ekodi-auth` D1 데이터베이스를 사용합니다. Finance는 SQL table name을 `finance_*` namespace로 변환하여 충돌을 줄이고 있습니다. 이 구조는 당분간 유지하되 다음 원칙을 적용합니다.
 
 - Finance table은 `finance_*` prefix를 유지합니다.
 - Books 운영 table은 Books 전용 prefix를 유지합니다.
+- Energy AI 스테이징은 영속 데이터베이스를 사용하지 않습니다. 운영 데이터가 필요해지면 `energy_*` 전용 namespace 또는 별도 데이터 저장소를 사용합니다.
 - customer tenant data는 tenant ID를 항상 포함합니다.
 - 새 migration은 기능명을 파일명에 포함합니다. 예: `0012_finance_...sql`, `0013_books_...sql`.
 - D1 migration 변경은 shared-core 변경으로 취급합니다.
 
-향후 데이터량과 사업 중요도가 커지면 Finance, Commerce, Marketing 등은 별도 D1/PostgreSQL 프로젝트로 분리할 수 있습니다.
+향후 데이터량과 사업 중요도가 커지면 Finance, Commerce, Marketing, Energy 등은 별도 D1/PostgreSQL 프로젝트로 분리할 수 있습니다.
 
 ## Platform Isolation v2
 
