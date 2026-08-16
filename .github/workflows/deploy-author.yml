@@ -111,6 +111,26 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Bootstrap first production Worker only when missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          status_output=$(npx wrangler@${WRANGLER_VERSION} deployments status --config wrangler.author.toml --json 2>&1)
+          status_code=$?
+          set -e
+          if [[ "$status_code" -eq 0 ]]; then
+            echo 'Author AI production Worker already exists; bootstrap skipped.'
+            exit 0
+          fi
+          if grep -Eq 'code: 10007|does not exist|does not exist on your account' <<<"$status_output"; then
+            echo 'No production Author AI Worker exists yet. Bootstrapping the exact staging-validated revision once.'
+            npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.author.toml
+            exit 0
+          fi
+          printf '%s\n' "$status_output"
+          echo 'Worker status check failed for a reason other than first-time absence; refusing bootstrap.'
+          exit "$status_code"
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/author.worker.json
       - name: Deep verify Author AI production hostname
