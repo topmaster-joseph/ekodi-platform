@@ -1,0 +1,18 @@
+name = "ekodi-my-staging"
+main = "my-worker.js"
+compatibility_date = "2026-08-17"
+workers_dev = true
+preview_urls = false
+
+[vars]
+DATA_ENABLED = "false"
+DATA_MODE = "isolated-staging"
+AUTH_URL = "https://auth.ekodi.kr/?site=my"
+
+[assets]
+directory = "./my"
+binding = "ASSETS"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
