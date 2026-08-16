@@ -24,7 +24,7 @@ test('post-auth loader refuses to start Campus before a validated session reveal
   assert.match(shell, /if \(started \|\| !authenticated\(\)\) return/);
   assert.match(shell, /observer\.observe\(app, \{ attributes:true, attributeFilter:\['hidden'\] \}\)/);
   assert.equal(shell.includes('history.replaceState'), false, 'post-auth loader must never create #campus before authentication');
-  assert.ok(shell.indexOf("'compact-control-center.js'") > shell.indexOf('authenticated()'));
+  assert.ok(shell.indexOf('for (const src of postAuthScripts) await loadScript(src)') > shell.indexOf('if (started || !authenticated()) return'));
 });
 
 test('minimal login shell keeps the central auth link interactive while app is hidden', () => {
