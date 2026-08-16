@@ -36,7 +36,7 @@ jobs:
           grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'cb=20260815-fedcm-cache-2' auth-site/index.html
+          grep -Fq 'cb=20260816-admin-fedcm-button-1' auth-site/index.html
           grep -Fq "marketing-auth-hotfix.js?v=20260815-fedcm-cache-2" auth-site/auth-router.js
           grep -Fq "return await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
       - name: Probe central identity challenge contract
