@@ -1,100 +1,97 @@
 (() => {
   'use strict';
 
-  const body = document.body;
   const sidebar = document.querySelector('.sidebar');
   const nav = sidebar?.querySelector('nav');
   const content = document.querySelector('.content');
-  const sideBottom = sidebar?.querySelector('.side-bottom');
-  if (!body || !sidebar || !nav || !content || !sideBottom) return;
+  if (!sidebar || !nav || !content) return;
 
-  body.classList.add('admin-menu-layout');
-
-  function installSidebarAccount() {
-    if (sideBottom.querySelector('.sidebar-account')) return;
-    const profile = document.querySelector('.topbar .profile');
-    if (!profile) return;
-
-    const account = document.createElement('div');
-    account.className = 'sidebar-account';
-    account.setAttribute('aria-label', '현재 로그인 계정');
-    account.append(profile);
-
-    const logout = sideBottom.querySelector('#logoutButton');
-    if (logout) sideBottom.insertBefore(account, logout);
-    else sideBottom.append(account);
-  }
+  let requestedSection = '';
+  let queued = false;
 
   function sectionOf(item) {
     return String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
   }
 
-  function selectedSection() {
-    const active = nav.querySelector('.nav.active[data-section], .nav.active[data-lazy-section]');
-    return sectionOf(active) || (location.hash === '#campus' ? 'campus' : '');
+  function panelTargets(panel) {
+    return String(panel?.dataset?.panel || '').split(/\s+/).filter(Boolean);
   }
 
-  function panelTargets(panel) {
-    return String(panel.dataset.panel || '').split(/\s+/).filter(Boolean);
+  function activeSection() {
+    const active = nav.querySelector('.nav.active[data-section], .nav.active[data-lazy-section]');
+    return sectionOf(active);
+  }
+
+  function hasPanel(section) {
+    if (!section) return false;
+    return Array.from(content.querySelectorAll('[data-panel]')).some(panel => panelTargets(panel).includes(section));
   }
 
   function applyExclusivePanel(section) {
-    if (!section) return;
+    const target = String(section || requestedSection || activeSection()).trim();
+    if (!target || !hasPanel(target)) return false;
 
+    requestedSection = target;
     for (const panel of content.querySelectorAll('[data-panel]')) {
-      const matches = panelTargets(panel).includes(section);
-      panel.classList.toggle('hidden-panel', !matches);
-      panel.hidden = !matches;
-    }
-
-    for (const orphan of content.querySelectorAll(':scope > section:not([data-panel])')) {
-      orphan.classList.add('hidden-panel');
-      orphan.hidden = true;
-      orphan.dataset.menuOrphanHidden = 'true';
+      const visible = panelTargets(panel).includes(target);
+      panel.classList.toggle('hidden-panel', !visible);
+      if (visible) panel.removeAttribute('hidden');
+      else panel.hidden = true;
     }
 
     for (const item of nav.querySelectorAll('.nav[data-section]')) {
-      item.classList.toggle('active', item.dataset.section === section);
+      item.classList.toggle('active', item.dataset.section === target);
     }
 
     sidebar.classList.remove('open');
+    return true;
   }
 
-  function queueExclusivePanel(section) {
-    if (!section) return;
-    queueMicrotask(() => applyExclusivePanel(section));
-    window.setTimeout(() => applyExclusivePanel(section), 0);
-    window.setTimeout(() => applyExclusivePanel(section), 120);
-  }
+  function scheduleExclusivePanel(section = '') {
+    const next = String(section || '').trim();
+    if (next) requestedSection = next;
+    if (queued) return;
+    queued = true;
 
-  installSidebarAccount();
+    queueMicrotask(() => {
+      queued = false;
+      applyExclusivePanel();
+    });
+    window.setTimeout(() => applyExclusivePanel(), 40);
+    window.setTimeout(() => applyExclusivePanel(), 180);
+  }
 
   nav.addEventListener('click', event => {
     const item = event.target.closest('.nav[data-section], .nav[data-lazy-section]');
     const section = sectionOf(item);
     if (!section) return;
-    queueExclusivePanel(section);
-  });
+    requestedSection = section;
+    scheduleExclusivePanel(section);
+  }, true);
 
   let mutationQueued = false;
-  const observer = new MutationObserver(() => {
+  const mutationObserver = new MutationObserver(() => {
     if (mutationQueued) return;
     mutationQueued = true;
     queueMicrotask(() => {
       mutationQueued = false;
-      installSidebarAccount();
-      const section = selectedSection();
-      if (section) applyExclusivePanel(section);
+      const active = activeSection();
+      if (active) requestedSection = active;
+      scheduleExclusivePanel(requestedSection);
     });
   });
-  observer.observe(content, { childList:true, subtree:false });
-  observer.observe(nav, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-section','data-lazy-section'] });
+  mutationObserver.observe(content, { childList:true, subtree:false });
+  mutationObserver.observe(nav, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-section','data-lazy-section'] });
 
-  window.addEventListener('ekodi-feature-installed', () => {
-    installSidebarAccount();
-    queueExclusivePanel(selectedSection());
+  window.addEventListener('ekodi-feature-installed', () => scheduleExclusivePanel(activeSection() || requestedSection));
+  window.addEventListener('ekodi-admin-ready', () => scheduleExclusivePanel(activeSection() || requestedSection));
+  window.addEventListener('hashchange', () => scheduleExclusivePanel(activeSection() || requestedSection));
+
+  requestedSection = activeSection() || 'campus';
+  scheduleExclusivePanel(requestedSection);
+
+  window.EKODIAdminPanels = Object.freeze({
+    activate: section => scheduleExclusivePanel(section),
+    current: () => requestedSection || activeSection(),
   });
-
-  const initial = selectedSection() || 'campus';
-  queueExclusivePanel(initial);
 })();
