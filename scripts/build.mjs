@@ -12,6 +12,17 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// MarketingAI admin keeps one authenticated lazy asset, while live operations views
+// remain independently maintainable source modules. Bundle them after the base console.
+const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] = await Promise.all([
+  readFile(`${output}marketing-ai-admin.css`, 'utf8'),
+  readFile(`${output}marketing-ai-admin.js`, 'utf8'),
+  readFile(`${root}marketing-ai-admin-live-ops.css`, 'utf8'),
+  readFile(`${root}marketing-ai-admin-live-ops.js`, 'utf8'),
+]);
+await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
+await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
+
 // Device Control is privileged post-auth functionality. Bundle it into the existing
 // compact authenticated assets so admin.ekodi.kr does not expose another pre-auth script.
 const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
@@ -92,4 +103,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Campus/Chief AI/Device Control modules, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Campus/Chief AI/Device Control modules, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
