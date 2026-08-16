@@ -1,0 +1,45 @@
+name: Verify Marketing AI Plan Runtime
+
+on:
+  pull_request:
+    paths:
+      - 'marketing-plan-runtime.js'
+      - 'marketing-domain-worker.js'
+      - 'migrations/0020_marketing_plan_runtime.sql'
+      - 'test/marketing-plan-runtime.test.mjs'
+      - '.github/workflows/verify-marketing-plan-runtime.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-plan-runtime.js'
+      - 'marketing-domain-worker.js'
+      - 'migrations/0020_marketing_plan_runtime.sql'
+      - 'test/marketing-plan-runtime.test.mjs'
+      - '.github/workflows/verify-marketing-plan-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify server-enforced plan runtime
+        run: |
+          set -euo pipefail
+          node --check marketing-plan-runtime.js
+          node --check marketing-domain-worker.js
+          node --test test/marketing-plan-runtime.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          grep -Fq 'caption: 1, post: 1, shorts: 1' marketing-plan-runtime.js
+          grep -Fq "connectedChannels: 3" marketing-plan-runtime.js
+          grep -Fq "connectedChannels: 5" marketing-plan-runtime.js
+          grep -Fq "connectedChannels: 10" marketing-plan-runtime.js
+          grep -Fq 'marketing_usage_monthly' migrations/0020_marketing_plan_runtime.sql
+          grep -Fq 'marketing_automation_jobs' migrations/0020_marketing_plan_runtime.sql
