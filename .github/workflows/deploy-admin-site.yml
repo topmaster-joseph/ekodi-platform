@@ -15,6 +15,7 @@ on:
       - 'control-center-finance.css'
       - 'compact-control-center.js'
       - 'compact-control-center.css'
+      - 'admin-menu-layout.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
       - 'ekodi-device-bootstrap.cmd'
@@ -81,6 +82,7 @@ jobs:
           node --check control-center.js
           node --check control-center-features.js
           node --check compact-control-center.js
+          node --check admin-menu-layout.js
           node --check device-control-admin.js
           node --check campus-actions.js
           node --check work-admin.js
@@ -127,6 +129,10 @@ jobs:
           grep -Fq "placeholder('domains', '◎', 'Domains')" control-center-features.js
           grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
           grep -Fq "placeholder('community', '◌', 'Community')" control-center-features.js
+          grep -Fq 'INTERNAL_ONLY_SECTIONS' admin-menu-layout.js
+          grep -Fq "['overview', 'services', 'deployments', 'policies']" admin-menu-layout.js
+          grep -Fq "return 'devices'" admin-menu-layout.js
+          grep -Fq 'openAiOpsFromInternalRequest' admin-menu-layout.js
           grep -Fq 'normalizeServiceOpenLinks' campus-actions.js
           grep -Fq '.campus-row-actions' campus-actions.css
           grep -Fq 'WORK 운영 관리' work-admin.js
@@ -180,6 +186,7 @@ jobs:
           grep -Fq '.books-royalty-holder' books-royalty-admin.css
           grep -Fq 'compact-control-center.css' scripts/build.mjs
           grep -Fq 'compact-control-center.js' scripts/build.mjs
+          grep -Fq 'admin-menu-layout.js' scripts/build.mjs
           grep -Fq 'control-center-features.js' scripts/build.mjs
           grep -Fq 'campus-actions.css' scripts/build.mjs
           grep -Fq 'campus-actions.js' scripts/build.mjs
@@ -223,9 +230,12 @@ jobs:
           npm run build
           test -f dist/marketing-auth-hotfix.js
           test -f dist/ekodi-device-bootstrap.cmd
+          test -f dist/admin-menu-layout.js
           grep -Fq 'CommandAst' dist/ekodi-device-bootstrap.cmd
           grep -Fq 'EKODI DEVICE AI' dist/compact-control-center.js
           grep -Fq 'AI 운영 제안' dist/compact-control-center.js
+          grep -Fq 'INTERNAL_ONLY_SECTIONS' dist/admin-menu-layout.js
+          grep -Fq 'openAiOpsFromInternalRequest' dist/admin-menu-layout.js
           grep -Fq "sb.auth.onAuthStateChange((event,s)=>" dist/marketing-auth-hotfix.js
           grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' dist/auth-center.html
           grep -Fq "'mall-seller':'mall'" dist/auth-router.js
@@ -283,6 +293,8 @@ jobs:
               && verify_admin 'https://admin.ekodi.kr/work' \
               && verify_asset 'compact-control-center.js' 'EKODI DEVICE AI' \
               && verify_asset 'compact-control-center.css' '.device-health' \
+              && verify_asset 'admin-menu-layout.js' 'INTERNAL_ONLY_SECTIONS' \
+              && verify_asset 'admin-menu-layout.js' 'openAiOpsFromInternalRequest' \
               && verify_asset 'ekodi-device-bootstrap.cmd' 'CommandAst' \
               && verify_asset 'campus-actions.js' 'normalizeServiceOpenLinks' \
               && verify_asset 'campus-actions.css' '.campus-row-actions' \
@@ -307,7 +319,7 @@ jobs:
               && verify_auth_asset 'auth-router.js' "'mall-seller':'mall'" \
               && verify_auth_asset 'auth-router.js' 'https://mall.ekodi.kr/seller/' \
               && verify_auth_asset 'marketing-auth-hotfix.js' 'sb.auth.onAuthStateChange((event,s)=>'; then
-              echo 'Admin/Auth production boundary including Device AI bootstrap, Mall Seller return and Marketing loading hotfix verified.'; exit 0
+              echo 'Admin/Auth production boundary including AI-first navigation, Device AI bootstrap, Mall Seller return and Marketing loading hotfix verified.'; exit 0
             fi
             echo "Production verification pending (attempt $attempt/18)."; sleep 4
           done
