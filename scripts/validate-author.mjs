@@ -9,6 +9,7 @@ const files = {
   foundation: 'supabase/migrations/20260816010000_author_ai_foundation.sql',
   creator: 'supabase/migrations/20260816155146_creator_ai_my_ekodi.sql',
   creatorPolicy: 'supabase/migrations/20260816155153_creator_portfolio_person_policy_hardening.sql',
+  creatorPrivatePolicy: 'supabase/migrations/20260816155454_creator_portfolio_private_person_helper.sql',
   membership: 'supabase/migrations/20260816020000_author_membership_paid_ai_gate.sql',
   access: 'supabase/functions/author-access-api/index.ts',
   ai: 'supabase/functions/author-ai-api/index.ts',
@@ -50,7 +51,8 @@ must('creator', "visibility text not null default 'private'");
 must('creator', 'workspace_key text not null');
 must('creator', 'creator_human_approval_required');
 must('creatorPolicy', 'current_person_id');
-must('creatorPolicy', 'security definer');
+must('creatorPrivatePolicy', 'private.current_person_id');
+must('creatorPrivatePolicy', 'drop function if exists public.current_person_id()');
 must('membership', "('free', 'FREE', false, 0");
 must('membership', 'billable_ai_enabled boolean not null default false');
 must('membership', "reason', 'paid_membership_required'");
@@ -74,4 +76,4 @@ const combined = Object.values(content).join('\n');
 for (const secretLike of ['sk-proj-', 'sk-svcacct-', 'SUPABASE_SERVICE_ROLE_KEY="', "SUPABASE_SERVICE_ROLE_KEY='"]) {
   if (combined.includes(secretLike)) throw new Error(`Creator validation failed: secret-like material ${secretLike}`);
 }
-console.log('Creator AI source validation passed: multi-format creator modes, private-by-default projects, person-scoped My EKODI portfolio handoff, central auth, human publish gate, paid-only AI financial firewall, Chief AI event contract and isolated staging are present.');
+console.log('Creator AI source validation passed: multi-format creator modes, private-by-default projects, person-scoped My EKODI portfolio handoff, private-schema RLS helper, central auth, human publish gate, paid-only AI financial firewall, Chief AI event contract and isolated staging are present.');
