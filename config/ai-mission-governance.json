@@ -55,7 +55,7 @@
     },
     "execute_reversible": {
       "autonomy": "guarded_auto",
-      "requirements": ["within_delegated_scope", "reversible", "logged", "verified", "no_material_rights_loss"]
+      "requirements": ["within_delegated_scope", "reversible", "logged", "preflight_verified", "post_execution_verification_required", "no_material_rights_loss"]
     },
     "human_gate": {
       "autonomy": "human_decision_required",
