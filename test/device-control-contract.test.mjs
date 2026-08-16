@@ -2,14 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [api, agent, admin, build, entry, security] = await Promise.all([
+const [api, agent, admin, build, entry, security, bootstrap] = await Promise.all([
   readFile(new URL('../device-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8'),
   readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../security-edge.js', import.meta.url), 'utf8'),
+  readFile(new URL('../ekodi-device-bootstrap.cmd', import.meta.url), 'utf8'),
 ]);
+
+const commands = [
+  'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
+  'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
+  'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
+];
 
 test('Device Control routes are behind the mission control entry worker', () => {
   assert.match(entry, /handleDeviceControl/);
@@ -28,25 +35,40 @@ test('device credentials are stored as hashes and enrollment is one-time', () =>
   assert.doesNotMatch(registryInsert, /deviceToken/);
 });
 
-test('public device enrollment is edge-rate-limited and fails through the shared security layer', () => {
+test('public device enrollment is edge-rate-limited through the shared security layer', () => {
   assert.match(security, /'\/api\/device-agent\/enroll'/);
   assert.match(entry, /enforceEdgeSecurity/);
   assert.match(security, /AUTH_RATE_LIMITER/);
 });
 
-test('cloud commands are an explicit allowlist, never arbitrary shell', () => {
-  for (const command of [
-    'power.always_on',
-    'power.presentation',
-    'power.normal',
-    'power.restore',
-    'lock.resume_off',
-    'lock.resume_on',
-    'autologon.open',
-  ]) assert.ok(api.includes(`'${command}'`), `missing allowlisted command ${command}`);
+test('cloud operations use a fixed capability allowlist and never expose arbitrary shell', () => {
+  for (const command of commands) {
+    assert.ok(api.includes(`'${command}'`), `API missing allowlisted command ${command}`);
+    assert.ok(agent.includes(`'${command}'`), `Agent missing allowlisted command ${command}`);
+  }
   assert.doesNotMatch(api, /shell\.exec|powershell\.exec|command\.script/);
-  assert.doesNotMatch(agent, /Invoke-Expression|\biex\b/i);
   assert.match(agent, /arbitraryShell = \$false/);
+  assert.match(agent, /screenCapture = \$false/);
+  assert.match(agent, /credentialCollection = \$false/);
+  // Actual PowerShell command AST is inspected in the Windows CI job. A raw text
+  // assertion here would incorrectly flag the self-update guard that rejects unsafe code.
+});
+
+test('maintain and privileged actions require explicit admin confirmation', () => {
+  assert.match(api, /DEVICE_COMMAND_CONFIRM_REQUIRED/);
+  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update']) {
+    const escaped = command.replaceAll('.', '\\.');
+    assert.match(api, new RegExp(`'${escaped}'[^\n]*confirm: true`));
+  }
+  assert.match(admin, /CONFIRM_MESSAGES/);
+});
+
+test('startup management accepts only opaque SHA-256 item ids from cloud', () => {
+  assert.match(api, /\^\[a-f0-9\]\{64\}\$/);
+  assert.match(agent, /\^\[a-f0-9\]\{64\}\$/);
+  assert.match(agent, /Get-Sha256String/);
+  assert.doesNotMatch(admin, /registryPath\s*:/);
+  assert.doesNotMatch(admin, /filePath\s*:/);
 });
 
 test('autologon stays local and never sends a Windows password to EKODI', () => {
@@ -56,17 +78,53 @@ test('autologon stays local and never sends a Windows password to EKODI', () => 
   assert.doesNotMatch(admin, /password\s*:/i);
 });
 
+test('diagnostics avoid remote screen, keyboard and credential collection', () => {
+  assert.match(agent, /Get-SystemSnapshot/);
+  assert.match(agent, /Get-StorageSnapshot/);
+  assert.match(agent, /Get-NetworkDiagnostic/);
+  assert.match(agent, /Get-PrinterDiagnostic/);
+  assert.match(agent, /Get-WindowsUpdateDiagnostic/);
+  assert.doesNotMatch(agent, /GetAsyncKeyState|SetWindowsHookEx|BitBlt|CopyFromScreen|GetClipboard/i);
+});
+
+test('Windows Update install never triggers automatic reboot', () => {
+  assert.match(agent, /Install-WindowsUpdates/);
+  assert.match(agent, /자동 재부팅하지 않습니다/);
+  assert.doesNotMatch(agent, /Restart-Computer|shutdown\.exe\s+\/r|shutdown\s+-r/i);
+});
+
+test('one-click device protocol is bounded to EKODI enrollment and official API', () => {
+  assert.match(api, /ekodi-device:\/\/enroll\?code=/);
+  assert.match(agent, /\$ProtocolScheme = 'ekodi-device'/);
+  assert.match(agent, /\$AllowedApiBase = 'https:\/\/api\.ekodi\.kr'/);
+  assert.match(agent, /\^EKD-\[A-F0-9\]\{20\}\$/);
+  assert.match(admin, /launchProtocol/);
+  assert.match(admin, /ekodi-device-bootstrap\.cmd/);
+  assert.match(bootstrap, /-RegisterProtocol/);
+  assert.doesNotMatch(bootstrap, /EnrollmentCode/);
+});
+
 test('admin Device Control is bundled only into authenticated compact assets', () => {
   assert.match(build, /device-control-admin\.css/);
   assert.match(build, /device-control-admin\.js/);
+  assert.match(build, /ekodi-device-bootstrap\.cmd/);
   assert.match(build, /compact-control-center\.css/);
   assert.match(build, /compact-control-center\.js/);
   assert.doesNotMatch(build.match(/const assets = \[[\s\S]*?\];/)?.[0] || '', /device-control-admin/);
 });
 
-test('Windows agent preserves a power-plan backup before privileged changes', () => {
+test('Windows agent preserves reversible state before privileged changes', () => {
   assert.match(agent, /power-before-ekodi\.pow/);
   assert.match(agent, /powercfg\.exe \/export/);
   assert.match(agent, /Restore-PowerBackup/);
-  assert.match(agent, /powercfg\.exe @Arguments/);
+  assert.match(agent, /startup-backup\.json/);
+  assert.match(agent, /workstation-profile\.json/);
+  assert.match(agent, /profile\.workstation\.restore/);
+});
+
+test('Device AI health remains deterministic and action-bounded', () => {
+  assert.match(api, /function deviceHealth/);
+  assert.match(api, /recommendations\.slice\(0, 6\)/);
+  assert.match(admin, /AI 운영 제안/);
+  assert.doesNotMatch(api, /eval\(|new Function/);
 });

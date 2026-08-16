@@ -5,16 +5,36 @@ const AGENT_PREFIX = '/api/device-agent';
 const ENROLLMENT_TTL_MS = 10 * 60 * 1000;
 const DEVICE_ONLINE_MS = 90 * 1000;
 const DEVICE_STALE_MS = 10 * 60 * 1000;
-const COMMAND_CLAIM_TIMEOUT_MS = 5 * 60 * 1000;
-const COMMAND_TYPES = new Set([
-  'power.always_on',
-  'power.presentation',
-  'power.normal',
-  'power.restore',
-  'lock.resume_off',
-  'lock.resume_on',
-  'autologon.open',
-]);
+const COMMAND_CLAIM_TIMEOUT_MS = 60 * 60 * 1000;
+
+const COMMAND_POLICIES = Object.freeze({
+  'power.always_on': { risk: 'maintain' },
+  'power.presentation': { risk: 'maintain' },
+  'power.normal': { risk: 'maintain' },
+  'power.restore': { risk: 'maintain' },
+  'lock.resume_off': { risk: 'maintain' },
+  'lock.resume_on': { risk: 'maintain' },
+  'autologon.open': { risk: 'privileged', confirm: true },
+  'diagnostics.collect': { risk: 'observe' },
+  'network.diagnose': { risk: 'observe' },
+  'printers.diagnose': { risk: 'observe' },
+  'startup.scan': { risk: 'observe' },
+  'startup.disable': { risk: 'maintain', confirm: true, payload: 'startup-item' },
+  'startup.restore': { risk: 'maintain', confirm: true, payload: 'startup-item' },
+  'maintenance.temp_cleanup': { risk: 'maintain', confirm: true },
+  'updates.scan': { risk: 'observe' },
+  'updates.install': { risk: 'privileged', confirm: true },
+  'profile.workstation.apply': { risk: 'maintain', confirm: true },
+  'profile.workstation.restore': { risk: 'maintain', confirm: true },
+  'agent.self_update': { risk: 'maintain', confirm: true },
+});
+
+const DIAGNOSTIC_SECTIONS = Object.freeze({
+  'network.diagnose': 'network',
+  'printers.diagnose': 'printers',
+  'startup.scan': 'startup',
+  'updates.scan': 'updates',
+});
 
 function corsHeaders(request, env) {
   const origin = request.headers.get('origin') || '';
@@ -62,6 +82,9 @@ async function ensureSchema(db) {
       token_hash TEXT NOT NULL UNIQUE,
       capabilities_json TEXT NOT NULL DEFAULT '{}',
       settings_json TEXT NOT NULL DEFAULT '{}',
+      diagnostics_json TEXT NOT NULL DEFAULT '{}',
+      diagnostics_at TEXT,
+      profile_name TEXT NOT NULL DEFAULT '',
       last_seen_at TEXT,
       enrolled_at TEXT NOT NULL,
       enrolled_by INTEGER,
@@ -99,22 +122,14 @@ function randomHex(bytes = 16) {
 }
 
 async function readJson(request) {
-  try {
-    return await request.json();
-  } catch {
-    return null;
-  }
+  try { return await request.json(); } catch { return null; }
 }
 
 async function adminSession(request, env) {
   const url = new URL(request.url);
   url.pathname = '/api/session';
   url.search = '';
-  const sessionRequest = new Request(url.toString(), {
-    method: 'GET',
-    headers: request.headers,
-  });
-  const response = await authWorker.fetch(sessionRequest, env);
+  const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
   if (!response.ok) return { response };
   return { response, session: await response.clone().json() };
 }
@@ -146,6 +161,17 @@ function safeJsonObject(value, max = 8000, fallback = '{}') {
   return encoded.length <= max ? encoded : fallback;
 }
 
+function sanitizeCommandPayload(type, rawPayload) {
+  const policy = COMMAND_POLICIES[type];
+  if (!policy?.payload) return {};
+  if (policy.payload === 'startup-item') {
+    const itemId = safeText(rawPayload?.itemId, 80).toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('STARTUP_ITEM_INVALID');
+    return { itemId };
+  }
+  return {};
+}
+
 function statusFor(lastSeenAt, revokedAt) {
   if (revokedAt) return 'revoked';
   if (!lastSeenAt) return 'enrolled';
@@ -155,7 +181,103 @@ function statusFor(lastSeenAt, revokedAt) {
   return 'offline';
 }
 
+function numberOrNull(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function deviceHealth(settings = {}, diagnostics = {}) {
+  const light = settings.health || {};
+  const system = diagnostics.system || light.system || {};
+  const storage = diagnostics.storage || light.storage || {};
+  const network = diagnostics.network || {};
+  const printers = diagnostics.printers || {};
+  const startup = diagnostics.startup || {};
+  const updates = diagnostics.updates || {};
+  let score = 100;
+  const recommendations = [];
+
+  const cpu = numberOrNull(system.cpuLoadPct);
+  const memory = numberOrNull(system.memoryUsedPct);
+  const volumes = Array.isArray(storage.volumes) ? storage.volumes : [];
+  const freeValues = volumes.map(volume => numberOrNull(volume.freePct)).filter(value => value !== null);
+  const minFree = freeValues.length ? Math.min(...freeValues) : null;
+  const pending = numberOrNull(updates.pendingCount) || 0;
+  const startupCount = numberOrNull(startup.count) || 0;
+  const printerIssues = numberOrNull(printers.issueCount) || 0;
+
+  if (cpu !== null && cpu >= 90) score -= 15;
+  else if (cpu !== null && cpu >= 75) score -= 7;
+  if (memory !== null && memory >= 90) score -= 20;
+  else if (memory !== null && memory >= 80) score -= 10;
+  if (minFree !== null && minFree <= 10) score -= 25;
+  else if (minFree !== null && minFree <= 20) score -= 10;
+  if (network.apiReachable === false || network.dnsOk === false) score -= 20;
+  if (printerIssues > 0) score -= Math.min(10, printerIssues * 3);
+  if (pending > 0) score -= Math.min(15, pending * 2);
+
+  if (minFree !== null && minFree <= 20) recommendations.push({
+    level: minFree <= 10 ? 'high' : 'medium',
+    title: '저장공간 정리가 필요합니다.',
+    detail: `가장 여유가 적은 드라이브의 남은 공간이 ${Math.round(minFree)}%입니다.`,
+    action: 'maintenance.temp_cleanup',
+  });
+  if (memory !== null && memory >= 80) recommendations.push({
+    level: memory >= 90 ? 'high' : 'medium',
+    title: '메모리 사용량이 높습니다.',
+    detail: `현재 메모리 사용률이 약 ${Math.round(memory)}%입니다. 전체 진단으로 원인을 더 확인하세요.`,
+    action: 'diagnostics.collect',
+  });
+  if (pending > 0) recommendations.push({
+    level: 'medium',
+    title: 'Windows 업데이트가 대기 중입니다.',
+    detail: `${pending}개의 소프트웨어 업데이트가 확인되었습니다. 자동 재부팅 없이 설치할 수 있습니다.`,
+    action: 'updates.install',
+  });
+  if (startupCount >= 12) recommendations.push({
+    level: 'low',
+    title: '시작 프로그램이 많습니다.',
+    detail: `${startupCount}개의 시작 항목이 감지되었습니다. 필요한 항목만 남길 수 있습니다.`,
+    action: 'startup.scan',
+  });
+  if (network.apiReachable === false || network.dnsOk === false) recommendations.push({
+    level: 'high',
+    title: '네트워크 연결을 점검해야 합니다.',
+    detail: 'DNS 또는 EKODI API 연결 확인에 실패했습니다.',
+    action: 'network.diagnose',
+  });
+  if (printerIssues > 0) recommendations.push({
+    level: 'medium',
+    title: '프린터 상태 확인이 필요합니다.',
+    detail: `${printerIssues}개의 프린터 또는 인쇄 대기열 문제가 감지되었습니다.`,
+    action: 'printers.diagnose',
+  });
+  if (settings.protocolRegistered === false) recommendations.push({
+    level: 'low',
+    title: '원클릭 PC 연결 기능을 업데이트할 수 있습니다.',
+    detail: 'EKODI 전용 연결 프로토콜이 아직 등록되지 않았습니다.',
+    action: 'agent.self_update',
+  });
+
+  score = Math.max(0, Math.min(100, score));
+  return {
+    score,
+    label: score >= 90 ? '좋음' : score >= 75 ? '관찰' : score >= 55 ? '주의' : '점검 필요',
+    recommendations: recommendations.slice(0, 6),
+  };
+}
+
+function summarizeCommandResult(result = {}) {
+  const summary = {};
+  for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
+    if (result[key] !== undefined) summary[key] = result[key];
+  }
+  return summary;
+}
+
 function serializeDevice(row) {
+  const settings = parseJson(row.settings_json);
+  const diagnostics = parseJson(row.diagnostics_json);
   return {
     id: row.id,
     label: row.label,
@@ -164,7 +286,11 @@ function serializeDevice(row) {
     osVersion: row.os_version,
     agentVersion: row.agent_version,
     capabilities: parseJson(row.capabilities_json),
-    settings: parseJson(row.settings_json),
+    settings,
+    diagnostics,
+    diagnosticsAt: row.diagnostics_at,
+    profileName: row.profile_name || '',
+    health: deviceHealth(settings, diagnostics),
     lastSeenAt: row.last_seen_at,
     enrolledAt: row.enrolled_at,
     revokedAt: row.revoked_at,
@@ -178,17 +304,16 @@ async function authenticateDevice(request, env) {
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
   if (!deviceId || !token) return null;
   const tokenHash = await sha256(token);
-  const device = await env.DB.prepare(`SELECT * FROM device_registry
+  return await env.DB.prepare(`SELECT * FROM device_registry
     WHERE id = ? AND token_hash = ? AND revoked_at IS NULL`)
-    .bind(deviceId, tokenHash).first();
-  return device || null;
+    .bind(deviceId, tokenHash).first() || null;
 }
 
 async function listDevices(env) {
   const [devices, commandRows] = await Promise.all([
     env.DB.prepare('SELECT * FROM device_registry ORDER BY enrolled_at DESC').all(),
     env.DB.prepare(`SELECT id, device_id, command_type, status, issued_at, claimed_at, completed_at, result_json
-      FROM device_commands ORDER BY issued_at DESC LIMIT 100`).all(),
+      FROM device_commands ORDER BY issued_at DESC LIMIT 120`).all(),
   ]);
   const commandsByDevice = new Map();
   for (const command of commandRows.results || []) {
@@ -201,7 +326,7 @@ async function listDevices(env) {
       issuedAt: command.issued_at,
       claimedAt: command.claimed_at,
       completedAt: command.completed_at,
-      result: parseJson(command.result_json),
+      result: summarizeCommandResult(parseJson(command.result_json)),
     });
   }
   return (devices.results || []).map(row => ({
@@ -234,7 +359,7 @@ async function handleAdmin(request, env) {
     await env.DB.prepare('DELETE FROM device_enrollments WHERE used_at IS NOT NULL OR expires_at < ?')
       .bind(new Date(Date.now() - 86400000).toISOString()).run();
     await audit(env, auth.session, 'device.enrollment.create', 'device', label);
-    return json({ enrollmentCode, label, expiresAt }, 201, request, env);
+    return json({ enrollmentCode, label, expiresAt, protocolUrl: `ekodi-device://enroll?code=${encodeURIComponent(enrollmentCode)}` }, 201, request, env);
   }
 
   const commandMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/commands$/);
@@ -242,9 +367,15 @@ async function handleAdmin(request, env) {
     const deviceId = decodeURIComponent(commandMatch[1]);
     const body = await readJson(request) || {};
     const commandType = safeText(body.type, 80);
-    if (!COMMAND_TYPES.has(commandType)) {
-      return json({ error: '허용되지 않은 기기 명령입니다.', code: 'DEVICE_COMMAND_NOT_ALLOWED' }, 400, request, env);
+    const policy = COMMAND_POLICIES[commandType];
+    if (!policy) return json({ error: '허용되지 않은 기기 명령입니다.', code: 'DEVICE_COMMAND_NOT_ALLOWED' }, 400, request, env);
+    if (policy.confirm && body.confirmed !== true) {
+      return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
+    let payload = {};
+    try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
+    catch { return json({ error: '기기 명령 인자가 유효하지 않습니다.', code: 'DEVICE_COMMAND_PAYLOAD_INVALID' }, 400, request, env); }
+
     const device = await env.DB.prepare('SELECT id, label, revoked_at FROM device_registry WHERE id = ?').bind(deviceId).first();
     if (!device || device.revoked_at) return json({ error: '사용 가능한 기기를 찾을 수 없습니다.' }, 404, request, env);
     const actorId = await adminId(env, auth.session);
@@ -252,10 +383,10 @@ async function handleAdmin(request, env) {
     const issuedAt = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO device_commands
       (id, device_id, command_type, payload_json, status, issued_at, issued_by)
-      VALUES (?, ?, ?, '{}', 'queued', ?, ?)`)
-      .bind(commandId, deviceId, commandType, issuedAt, actorId).run();
-    await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType}`);
-    return json({ command: { id: commandId, deviceId, type: commandType, status: 'queued', issuedAt } }, 202, request, env);
+      VALUES (?, ?, ?, ?, 'queued', ?, ?)`)
+      .bind(commandId, deviceId, commandType, JSON.stringify(payload), issuedAt, actorId).run();
+    await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType} [${policy.risk}]`);
+    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, status: 'queued', issuedAt } }, 202, request, env);
   }
 
   const revokeMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/revoke$/);
@@ -285,35 +416,32 @@ async function enrollAgent(request, env) {
   if (!enrollment) return json({ error: '등록 코드가 유효하지 않거나 만료되었습니다.', code: 'ENROLLMENT_INVALID' }, 401, request, env);
 
   const platform = safeText(body.platform || 'windows', 40).toLowerCase();
-  if (platform !== 'windows') return json({ error: '현재 MVP는 Windows Agent만 등록할 수 있습니다.' }, 400, request, env);
+  if (platform !== 'windows') return json({ error: '현재 버전은 Windows Agent만 등록할 수 있습니다.' }, 400, request, env);
   const hostname = safeText(body.hostname, 120);
   const label = safeText(body.label || hostname || 'Windows PC', 80);
   const token = randomHex(32);
   const tokenHash = await sha256(token);
   const deviceId = `dev_${crypto.randomUUID()}`;
   const now = new Date().toISOString();
-  const capabilities = safeJsonObject(body.capabilities, 4000);
-  const agentVersion = safeText(body.agentVersion || '1.0.0', 40);
+  const capabilities = safeJsonObject(body.capabilities, 5000);
+  const agentVersion = safeText(body.agentVersion || '2.0.0', 40);
   const osVersion = safeText(body.osVersion, 120);
 
   const claim = await env.DB.prepare(`UPDATE device_enrollments
     SET used_at = ?, device_id = ?
     WHERE id = ? AND used_at IS NULL AND expires_at > ?`)
     .bind(now, deviceId, enrollment.id, now).run();
-  if (!claim.meta?.changes) {
-    return json({ error: '등록 코드가 이미 사용되었거나 만료되었습니다.', code: 'ENROLLMENT_ALREADY_CLAIMED' }, 409, request, env);
-  }
+  if (!claim.meta?.changes) return json({ error: '등록 코드가 이미 사용되었거나 만료되었습니다.', code: 'ENROLLMENT_ALREADY_CLAIMED' }, 409, request, env);
 
   try {
     await env.DB.prepare(`INSERT INTO device_registry
-      (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, last_seen_at, enrolled_at, enrolled_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?)`)
+      (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, diagnostics_json, profile_name, last_seen_at, enrolled_at, enrolled_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', '{}', '', ?, ?, ?)`)
       .bind(deviceId, label, platform, hostname, osVersion, agentVersion, tokenHash, capabilities, now, now, enrollment.created_by).run();
   } catch (error) {
     console.error('Device enrollment registry insert failed', error);
     return json({ error: '기기 등록 저장에 실패했습니다. 새 등록 코드를 발급해 주세요.', code: 'DEVICE_ENROLLMENT_STORE_FAILED' }, 500, request, env);
   }
-
   return json({ deviceId, deviceToken: token, label, apiBase: new URL(request.url).origin }, 201, request, env);
 }
 
@@ -321,13 +449,14 @@ async function heartbeat(request, env, device) {
   const body = await readJson(request) || {};
   const now = new Date().toISOString();
   const capabilities = body.capabilities && typeof body.capabilities === 'object'
-    ? safeJsonObject(body.capabilities, 4000, device.capabilities_json)
+    ? safeJsonObject(body.capabilities, 5000, device.capabilities_json)
     : device.capabilities_json;
   const settings = body.settings && typeof body.settings === 'object'
-    ? safeJsonObject(body.settings, 8000, device.settings_json)
+    ? safeJsonObject(body.settings, 10000, device.settings_json)
     : device.settings_json;
+  const profileName = safeText(body.profileName || parseJson(settings).workstationProfile || device.profile_name, 80);
   await env.DB.prepare(`UPDATE device_registry
-    SET hostname = ?, os_version = ?, agent_version = ?, capabilities_json = ?, settings_json = ?, last_seen_at = ?
+    SET hostname = ?, os_version = ?, agent_version = ?, capabilities_json = ?, settings_json = ?, profile_name = ?, last_seen_at = ?
     WHERE id = ? AND revoked_at IS NULL`)
     .bind(
       safeText(body.hostname || device.hostname, 120),
@@ -335,6 +464,7 @@ async function heartbeat(request, env, device) {
       safeText(body.agentVersion || device.agent_version, 40),
       capabilities,
       settings,
+      profileName,
       now,
       device.id,
     ).run();
@@ -343,60 +473,79 @@ async function heartbeat(request, env, device) {
 
 async function nextCommand(request, env, device) {
   const staleClaim = new Date(Date.now() - COMMAND_CLAIM_TIMEOUT_MS).toISOString();
-  await env.DB.prepare(`UPDATE device_commands
-    SET status = 'queued', claimed_at = NULL
-    WHERE device_id = ? AND status = 'claimed' AND claimed_at < ?`)
-    .bind(device.id, staleClaim).run();
-
+  await env.DB.prepare(`UPDATE device_commands SET status = 'queued', claimed_at = NULL
+    WHERE device_id = ? AND status = 'claimed' AND claimed_at < ?`).bind(device.id, staleClaim).run();
   const command = await env.DB.prepare(`SELECT * FROM device_commands
-    WHERE device_id = ? AND status = 'queued'
-    ORDER BY issued_at ASC LIMIT 1`).bind(device.id).first();
+    WHERE device_id = ? AND status = 'queued' ORDER BY issued_at ASC LIMIT 1`).bind(device.id).first();
   if (!command) return json({ command: null }, 200, request, env);
   const claimedAt = new Date().toISOString();
   const claim = await env.DB.prepare(`UPDATE device_commands SET status = 'claimed', claimed_at = ?
     WHERE id = ? AND status = 'queued'`).bind(claimedAt, command.id).run();
   if (!claim.meta?.changes) return json({ command: null }, 200, request, env);
-  return json({
-    command: {
-      id: command.id,
-      type: command.command_type,
-      payload: parseJson(command.payload_json),
-      issuedAt: command.issued_at,
-      claimedAt,
-    },
-  }, 200, request, env);
+  return json({ command: {
+    id: command.id,
+    type: command.command_type,
+    payload: parseJson(command.payload_json),
+    issuedAt: command.issued_at,
+    claimedAt,
+  } }, 200, request, env);
+}
+
+function mergeDiagnosticResult(device, commandType, result) {
+  if (commandType === 'diagnostics.collect' && result.diagnostics && typeof result.diagnostics === 'object') {
+    return result.diagnostics;
+  }
+  const current = parseJson(device.diagnostics_json);
+  const section = DIAGNOSTIC_SECTIONS[commandType];
+  if (section && result[section] && typeof result[section] === 'object') current[section] = result[section];
+  if (result.storage && typeof result.storage === 'object') current.storage = result.storage;
+  if (result.system && typeof result.system === 'object') current.system = result.system;
+  current.generatedAt = new Date().toISOString();
+  return current;
 }
 
 async function commandResult(request, env, device, commandId) {
+  const command = await env.DB.prepare(`SELECT command_type FROM device_commands
+    WHERE id = ? AND device_id = ? AND status = 'claimed'`).bind(commandId, device.id).first();
+  if (!command) return json({ error: '처리 중인 명령을 찾을 수 없습니다.' }, 404, request, env);
+
   const body = await readJson(request) || {};
   const success = body.success === true;
   const status = success ? 'succeeded' : 'failed';
   const completedAt = new Date().toISOString();
   const result = body.result && typeof body.result === 'object'
-    ? parseJson(safeJsonObject(body.result, 8000), {})
+    ? parseJson(safeJsonObject(body.result, 24000), {})
     : { message: safeText(body.message, 300) };
   const update = await env.DB.prepare(`UPDATE device_commands
     SET status = ?, completed_at = ?, result_json = ?
     WHERE id = ? AND device_id = ? AND status = 'claimed'`)
-    .bind(status, completedAt, JSON.stringify(result), commandId, device.id).run();
+    .bind(status, completedAt, safeJsonObject(result, 24000), commandId, device.id).run();
   if (!update.meta?.changes) return json({ error: '처리 중인 명령을 찾을 수 없습니다.' }, 404, request, env);
+
+  if (success) {
+    const diagnostics = mergeDiagnosticResult(device, command.command_type, result);
+    const diagnosticsJson = safeJsonObject(diagnostics, 30000, device.diagnostics_json || '{}');
+    const settingsJson = result.settings && typeof result.settings === 'object'
+      ? safeJsonObject(result.settings, 10000, device.settings_json || '{}')
+      : device.settings_json;
+    const profileName = safeText(result.profile || result.settings?.workstationProfile || device.profile_name, 80);
+    await env.DB.prepare(`UPDATE device_registry
+      SET diagnostics_json = ?, diagnostics_at = ?, settings_json = ?, profile_name = ?
+      WHERE id = ? AND revoked_at IS NULL`)
+      .bind(diagnosticsJson, completedAt, settingsJson, profileName, device.id).run();
+  }
   return json({ ok: true, commandId, status, completedAt }, 200, request, env);
 }
 
 async function handleAgent(request, env) {
   const path = new URL(request.url).pathname;
   if (request.method === 'POST' && path === `${AGENT_PREFIX}/enroll`) return enrollAgent(request, env);
-
   const device = await authenticateDevice(request, env);
   if (!device) return json({ error: '기기 인증에 실패했습니다.', code: 'DEVICE_AUTH_REQUIRED' }, 401, request, env);
-
   if (request.method === 'POST' && path === `${AGENT_PREFIX}/heartbeat`) return heartbeat(request, env, device);
   if (request.method === 'GET' && path === `${AGENT_PREFIX}/commands/next`) return nextCommand(request, env, device);
-
   const resultMatch = path.match(/^\/api\/device-agent\/commands\/([^/]+)\/result$/);
-  if (request.method === 'POST' && resultMatch) {
-    return commandResult(request, env, device, decodeURIComponent(resultMatch[1]));
-  }
+  if (request.method === 'POST' && resultMatch) return commandResult(request, env, device, decodeURIComponent(resultMatch[1]));
   return json({ error: 'Device Agent API 경로를 찾을 수 없습니다.' }, 404, request, env);
 }
 
