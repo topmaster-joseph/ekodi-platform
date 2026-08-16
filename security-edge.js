@@ -44,13 +44,13 @@ function tooLarge(request) {
 }
 
 async function enforceLimiter(binding, key) {
-  if (!binding?.limit || !key) return true;
+  if (!binding?.limit || !key) return { available: false, allowed: false };
   try {
     const result = await binding.limit({ key });
-    return result?.success !== false;
+    return { available: true, allowed: result?.success !== false };
   } catch (error) {
     console.error('Security rate limiter unavailable', error);
-    return true;
+    return { available: false, allowed: false };
   }
 }
 
@@ -63,6 +63,11 @@ function jsonError(error, code, status, extraHeaders = {}) {
       ...extraHeaders,
     },
   }));
+}
+
+function limiterUnavailable(path, request) {
+  console.error('Security rate limiter protection unavailable', { path, ray: request.headers.get('cf-ray') || '' });
+  return jsonError('보안 보호장치가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'SECURITY_RATE_LIMITER_UNAVAILABLE', 503, { 'retry-after': '30' });
 }
 
 export async function enforceEdgeSecurity(request, env = {}) {
@@ -79,8 +84,9 @@ export async function enforceEdgeSecurity(request, env = {}) {
 
   if (PUBLIC_AUTH_PATHS.has(path) && request.method === 'POST') {
     const key = `${path}:${await requestIdentity(request)}`;
-    const allowed = await enforceLimiter(env.AUTH_RATE_LIMITER, key);
-    if (!allowed) {
+    const result = await enforceLimiter(env.AUTH_RATE_LIMITER, key);
+    if (!result.available) return limiterUnavailable(path, request);
+    if (!result.allowed) {
       console.warn('Security auth rate limit exceeded', { path, ray: request.headers.get('cf-ray') || '' });
       return jsonError('인증 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', 'AUTH_RATE_LIMITED', 429, { 'retry-after': '60' });
     }
@@ -88,8 +94,9 @@ export async function enforceEdgeSecurity(request, env = {}) {
 
   if (isSensitiveMutation(path, request.method)) {
     const key = `${request.method}:${path.split('/').slice(0, 5).join('/')}:${await requestIdentity(request)}`;
-    const allowed = await enforceLimiter(env.SENSITIVE_RATE_LIMITER, key);
-    if (!allowed) {
+    const result = await enforceLimiter(env.SENSITIVE_RATE_LIMITER, key);
+    if (!result.available) return limiterUnavailable(path, request);
+    if (!result.allowed) {
       console.warn('Security sensitive mutation rate limit exceeded', { path, ray: request.headers.get('cf-ray') || '' });
       return jsonError('민감한 작업 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', 'SENSITIVE_ACTION_RATE_LIMITED', 429, { 'retry-after': '60' });
     }
