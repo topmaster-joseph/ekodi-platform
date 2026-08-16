@@ -59,7 +59,7 @@ Drafting, comparison, recommendation, explanation, and planning may run automati
 
 ### 3. Execute reversible
 
-Chief AI or a specialist AI may execute an action automatically only when it is within delegated scope, reversible, logged, verified, and does not materially remove a person's rights.
+Chief AI or a specialist AI may execute an action automatically only when it is within delegated scope, reversible, logged, passes preflight verification, and does not materially remove a person's rights. The result must then be verified and audited after execution.
 
 Examples include safe staging changes, bounded repairs, reversible configuration changes, scheduled content preparation, and low-risk operational housekeeping.
 
@@ -110,7 +110,7 @@ New agent types must be added to this registry before receiving autonomous execu
 
 ## Policy enforcement
 
-`ai-governance.js` is the deterministic policy evaluator for agent actions. It defaults unknown agents to a human gate, blocks forbidden actions, escalates reserved high-impact areas, and allows guarded execution only when delegated, reversible, logged, and verified.
+`ai-governance.js` is the deterministic policy evaluator for agent actions. It defaults unknown agents to a human gate, blocks forbidden actions, escalates reserved high-impact areas, and allows guarded execution only when delegated, reversible, logged, and preflight-verified. Outcome verification remains mandatory after execution.
 
 `scripts/validate-ai-mission-governance.mjs` and the contract tests make this policy part of CI. A future agent endpoint must call the evaluator, or an equivalent server-side enforcement layer using the same policy, before privileged execution.
 
