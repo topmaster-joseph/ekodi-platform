@@ -10,7 +10,9 @@
   let queued = false;
 
   function sectionOf(item) {
-    return String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
+    const direct = String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
+    if (direct) return direct;
+    return item?.dataset?.deviceControlNav ? 'devices' : '';
   }
 
   function panelTargets(panel) {
@@ -18,7 +20,7 @@
   }
 
   function activeSection() {
-    const active = nav.querySelector('.nav.active[data-section], .nav.active[data-lazy-section]');
+    const active = nav.querySelector('.nav.active[data-section], .nav.active[data-lazy-section], .nav.active[data-device-control-nav]');
     return sectionOf(active);
   }
 
@@ -39,8 +41,8 @@
       else panel.hidden = true;
     }
 
-    for (const item of nav.querySelectorAll('.nav[data-section]')) {
-      item.classList.toggle('active', item.dataset.section === target);
+    for (const item of nav.querySelectorAll('.nav[data-section], .nav[data-lazy-section], .nav[data-device-control-nav]')) {
+      item.classList.toggle('active', sectionOf(item) === target);
     }
 
     sidebar.classList.remove('open');
@@ -62,7 +64,7 @@
   }
 
   nav.addEventListener('click', event => {
-    const item = event.target.closest('.nav[data-section], .nav[data-lazy-section]');
+    const item = event.target.closest('.nav[data-section], .nav[data-lazy-section], .nav[data-device-control-nav]');
     const section = sectionOf(item);
     if (!section) return;
     requestedSection = section;
@@ -81,7 +83,7 @@
     });
   });
   mutationObserver.observe(content, { childList:true, subtree:false });
-  mutationObserver.observe(nav, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-section','data-lazy-section'] });
+  mutationObserver.observe(nav, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-section','data-lazy-section','data-device-control-nav'] });
 
   window.addEventListener('ekodi-feature-installed', () => scheduleExclusivePanel(activeSection() || requestedSection));
   window.addEventListener('ekodi-admin-ready', () => scheduleExclusivePanel(activeSection() || requestedSection));
