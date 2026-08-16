@@ -102,7 +102,7 @@ export function applyApiSecurityHeaders(response) {
   const secured = new Response(response.body, response);
   secured.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   secured.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
-  secured.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=(), payment=()');
+  secured.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=()');
   secured.headers.set('Referrer-Policy', 'no-referrer');
   secured.headers.set('X-Content-Type-Options', 'nosniff');
   secured.headers.set('X-Frame-Options', 'DENY');
