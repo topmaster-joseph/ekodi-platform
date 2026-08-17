@@ -13,6 +13,7 @@ on:
       - 'test/marketing-ledger-contract.test.mjs'
       - 'test/marketing-ledger-migration.test.mjs'
       - 'test/marketing-ledger-no-pii.test.mjs'
+      - 'test/marketing-ledger-ui-contract.test.mjs'
       - 'test/marketing-admin-control-contract.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
       - '.github/workflows/marketing-ledger-ci.yml'
@@ -29,6 +30,7 @@ on:
       - 'test/marketing-ledger-contract.test.mjs'
       - 'test/marketing-ledger-migration.test.mjs'
       - 'test/marketing-ledger-no-pii.test.mjs'
+      - 'test/marketing-ledger-ui-contract.test.mjs'
       - 'test/marketing-admin-control-contract.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
       - '.github/workflows/marketing-ledger-ci.yml'
@@ -58,7 +60,7 @@ jobs:
       - name: Verify additive migration structure
         run: node --test test/marketing-ledger-migration.test.mjs test/marketing-ledger-no-pii.test.mjs
       - name: Verify admin aggregate and live UI contracts
-        run: node --test test/marketing-admin-control-contract.test.mjs test/marketing-ai-admin-live-ops.test.mjs
+        run: node --test test/marketing-admin-control-contract.test.mjs test/marketing-ai-admin-live-ops.test.mjs test/marketing-ledger-ui-contract.test.mjs
       - name: Verify repository migration guard
         run: node scripts/validate-additive-migrations.mjs migrations
       - name: Verify critical release invariants
