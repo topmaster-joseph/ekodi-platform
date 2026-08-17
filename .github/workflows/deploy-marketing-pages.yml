@@ -1,5 +1,5 @@
 name: Deploy Marketing AI Pages
-# 2026-08-17 validated release trigger for Marketing tiered entry UI
+# 2026-08-17 validated release trigger for attractive Marketing AI landing
 
 on:
   pull_request:
