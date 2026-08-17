@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const [migration, control, mission, worker, browser, admin, build, access, ai, shared, wrangler] = await Promise.all([
-  read('migrations/0023_author_billing.sql'),
+  read('migrations/0024_author_billing.sql'),
   read('author-billing-control.js'),
   read('mission-control-entry-worker.js'),
   read('author-worker.js'),
