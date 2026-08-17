@@ -33,7 +33,8 @@ function isSensitiveMutation(path, method) {
     || path.startsWith('/api/registry')
     || path.startsWith('/api/books/admin/')
     || path.startsWith('/api/community/admin/')
-    || path.startsWith('/api/membership/');
+    || path.startsWith('/api/membership/')
+    || path.startsWith('/api/marketing/ledger/');
 }
 
 function tooLarge(request) {
