@@ -1,4 +1,4 @@
-# Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations pipeline + membership billing + AI Mission Control
+# Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations pipeline + membership billing + Author billing + AI Mission Control
 name = "ekodi-auth-api"
 main = "mission-control-entry-worker.js"
 compatibility_date = "2026-08-12"
@@ -18,7 +18,7 @@ ADMIN_EMAIL = "topmaster.joseph@gmail.com"
 ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
-ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://auth.ekodi.kr,https://marketing.ekodi.kr,https://biz.ekodi.kr,https://trade.ekodi.kr,https://mall.ekodi.kr,https://pay.ekodi.kr,https://books.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://community.ekodi.kr,https://edu.ekodi.kr,https://media.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://auth.ekodi.kr,https://author.ekodi.kr,https://marketing.ekodi.kr,https://biz.ekodi.kr,https://trade.ekodi.kr,https://mall.ekodi.kr,https://pay.ekodi.kr,https://books.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://community.ekodi.kr,https://edu.ekodi.kr,https://media.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
 
 [observability.logs]
 enabled = true
