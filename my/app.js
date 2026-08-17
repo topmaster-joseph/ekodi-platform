@@ -12,8 +12,9 @@ const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','m
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
 const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
+const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
-let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='';
+let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='',profile=null,linkedIdentities=[],profileError='';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const mode=v=>MODES[v]?v:'writer';
@@ -102,13 +103,22 @@ function enterWorkspace(key){
 }
 function identityUi(){
  const email=session?.user?.email||'',meta=session?.user?.user_metadata||{},current=activeWorkspace();
- $('#identityName').textContent=session?(meta.full_name||meta.name||email.split('@')[0]||'EKODI Member'):'로그인 전';
+ $('#identityName').textContent=session?(profile?.display_name||meta.full_name||meta.name||email.split('@')[0]||'EKODI Member'):'로그인 전';
  $('#identityEmail').textContent=session?'EKODI 통합 로그인 연결됨':'Google 인증 후 연결됩니다.';
  $('#workspaceKey').textContent=current?.workspace_key||(session?'workspace: connected':'workspace:…');
  $('#workspaceSummary').textContent=current?`${current.workspace_name||'내 Workspace'} · ${plan(current.plan)} · ${current.role||'member'}`:'로그인하면 마지막으로 사용한 공간을 기억하고 다른 공간으로 즉시 전환할 수 있습니다.';
  const paidCount=[...access.values()].filter(a=>paid(a.plan)).length;
  $('#accountPlan').textContent=session?(paidCount?`${paidCount} Paid Plan${paidCount>1?'s':''}`:'Free Member'):'Guest';
  $('#accountLoginText').textContent=email?`${email}로 EKODI 통합 로그인에 연결되어 있습니다. 다른 서비스에서는 이 로그인 상태를 재사용합니다.`:'로그인 전입니다.';
+}
+function profileUi(){
+ const input=$('#displayName'),save=$('#saveProfile'),status=$('#profileStatus'),host=$('#linkedIdentityList');
+ if(!input||!save||!status||!host)return;
+ if(!enabled){input.disabled=true;save.disabled=true;status.textContent='격리 스테이징에서는 실제 개인 데이터를 읽지 않습니다.';host.innerHTML='<span class="identity-row muted-row">개인 데이터 연결이 비활성화되어 있습니다.</span>';return}
+ if(!session){input.value='';input.disabled=true;save.disabled=true;status.className='profile-status';status.textContent='로그인하면 내 기본정보를 확인하고 수정할 수 있습니다.';host.innerHTML='<span class="identity-row muted-row">로그인 후 연결 계정을 확인합니다.</span>';return}
+ if(profileError){input.value='';input.disabled=true;save.disabled=true;status.className='profile-status error';status.textContent=profileError;host.innerHTML='<span class="identity-row muted-row">연결 계정을 불러오지 못했습니다.</span>';return}
+ input.disabled=false;save.disabled=false;input.value=profile?.display_name||'';status.className='profile-status';status.textContent='이 이름은 개인 정체성에 사용되며 사업장·단체 이름과 분리됩니다.';
+ host.innerHTML=linkedIdentities.length?linkedIdentities.map(identity=>`<span class="identity-row"><span>${esc(identity.email||'Google 계정')}</span>${identity.is_primary?'<b>기본 계정</b>':'<b>연결 계정</b>'}</span>`).join(''):'<span class="identity-row muted-row">연결된 Google 계정이 없습니다.</span>';
 }
 function summaryUi(){
  $('#serviceCount').textContent=String(SERVICES.filter(([id])=>connected(id)||OPEN_SSO_SITES.has(id)).length);
@@ -158,6 +168,23 @@ function portfolioUi(){
  host.innerHTML=visible.map(i=>`<article class="portfolio-card"><small>${esc(MODES[mode(i.creator_mode)])}</small><h3>${esc(i.title||'제목 없는 창작물')}</h3><p>${esc(String(i.summary||'Creator AI에서 연결된 나의 창작물입니다.').slice(0,260))}</p><div class="meta"><span>${i.visibility==='public'?'공개':'비공개'}</span></div><div class="actions"><a class="secondary" href="${esc(serviceRoute('author','https://author.ekodi.kr/#projects'))}">Creator AI에서 열기</a></div></article>`).join('');
 }
 async function rpc(name,args){const {data,error}=await sb.rpc(name,args);if(error){console.warn(name,args,error);return null}return data}
+async function callProfileApi(method='GET',body=null){
+ if(!session?.access_token||!PROFILE_API)throw new Error('profile_session_required');
+ const response=await fetch(PROFILE_API,{method,headers:{Authorization:`Bearer ${session.access_token}`,apikey:cfg.supabasePublishableKey,'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(data?.message||data?.error||'profile_api_failed');
+ return data;
+}
+async function loadProfile(){
+ profile=null;linkedIdentities=[];profileError='';
+ if(!enabled||!session)return;
+ try{
+  const data=await callProfileApi();
+  profile=data?.profile||null;linkedIdentities=Array.isArray(data?.identities)?data.identities:[];
+ }catch(error){
+  console.warn('profile-api',error);profileError='기본정보를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.';
+ }
+}
 async function loadAccess(){
  access=new Map();workspaces=new Map();if(!sb||!session)return;
  await Promise.all(SERVICES.map(async([id])=>{
@@ -171,12 +198,26 @@ async function loadPortfolio(){
  if(error)throw error;items=data||[];
 }
 async function loadAll(){
- await Promise.all([loadAccess(),loadPortfolio()]);ensureActiveWorkspace();identityUi();summaryUi();workspaceUi();platformUi();recommendationUi();portfolioUi();
+ await Promise.all([loadAccess(),loadPortfolio(),loadProfile()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();recommendationUi();portfolioUi();
+}
+async function saveProfile(event){
+ event.preventDefault();
+ if(!session)return;
+ const input=$('#displayName'),button=$('#saveProfile'),status=$('#profileStatus'),name=String(input?.value||'').trim().replace(/\s+/g,' ');
+ if(!name||name.length>120){status.className='profile-status error';status.textContent='이름은 1자 이상 120자 이하로 입력해 주세요.';return}
+ const old=button.textContent;button.disabled=true;input.disabled=true;button.textContent='저장 중…';status.className='profile-status';status.textContent='내 기본정보를 안전하게 저장하고 있습니다.';
+ try{
+  const data=await callProfileApi('PATCH',{display_name:name});
+  profile=data?.profile||{display_name:name};linkedIdentities=Array.isArray(data?.identities)?data.identities:linkedIdentities;profileError='';
+  identityUi();profileUi();status.className='profile-status success';status.textContent='저장되었습니다. EKODI 개인 이름에 바로 반영되었습니다.';
+ }catch(error){
+  console.error('profile save',error);status.className='profile-status error';status.textContent='저장하지 못했습니다. 기존 정보는 변경되지 않았습니다.';
+ }finally{button.textContent=old;button.disabled=false;input.disabled=false}
 }
 async function authAction(){if(!enabled)return;if(!session){location.assign(authUrl);return}await sb.auth.signOut();session=null;await loadAll();authUi()}
 async function refresh(){const b=$('#refreshButton'),old=b.textContent;b.disabled=true;b.textContent='새로고침 중…';try{await loadAll();b.textContent='새로고침 완료'}catch(e){console.error(e);b.textContent='불러오기 실패'}setTimeout(()=>{b.textContent=old;b.disabled=false},1200)}
 
-$('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#refreshButton').addEventListener('click',refresh);
+$('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#refreshButton').addEventListener('click',refresh);$('#profileForm').addEventListener('submit',saveProfile);
 $('#workspaceSwitcher').addEventListener('change',event=>enterWorkspace(event.target.value));
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
 if(!enabled){authUi();await loadAll()}else{
