@@ -70,6 +70,8 @@ const ADMIN_ASSETS = new Set([
   '/campus-actions.js',
   '/ai-ops-admin.css',
   '/ai-ops-admin.js',
+  '/mission-control-admin.css',
+  '/mission-control-admin.js',
   '/work-admin.css',
   '/work-admin.js',
   '/client-access.css',
