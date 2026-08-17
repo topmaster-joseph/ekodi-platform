@@ -35,6 +35,7 @@ function isSensitiveMutation(path, method) {
     || path.startsWith('/api/community/admin/')
     || path.startsWith('/api/membership/')
     || path.startsWith('/api/marketing/ledger/')
+    || path.startsWith('/api/marketing/connectors/')
     || path.startsWith('/api/author/billing/');
 }
 
