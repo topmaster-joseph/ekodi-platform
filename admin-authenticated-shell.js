@@ -5,7 +5,7 @@
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const loginLink = document.querySelector('#centralAdminLogin');
-  const postAuthStyles = ['compact-control-center.css', 'campus-actions.css', 'ai-ops-admin.css'];
+  const postAuthStyles = ['compact-control-center.css', 'campus-actions.css', 'ai-ops-admin.css', 'author-billing-admin.css'];
   const criticalPostAuthScripts = [
     'compact-control-center.js',
     'control-center-features.js',
@@ -13,7 +13,7 @@
     'ai-ops-admin.js',
     'admin-menu-layout.js',
   ];
-  const deferredPostAuthScripts = ['admin-lazy-features.js'];
+  const deferredPostAuthScripts = ['admin-lazy-features.js', 'author-billing-admin.js'];
   let started = false;
   let deferredScheduled = false;
 
