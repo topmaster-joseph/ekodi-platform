@@ -1,0 +1,99 @@
+name: Deploy Admin PR Staging
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-admin-staging.yml'
+      - 'admin-staging-worker.js'
+      - 'wrangler.admin.staging.toml'
+      - 'site-worker.js'
+      - 'control-center.html'
+      - 'control-center.js'
+      - 'control-center-features.js'
+      - 'compact-control-center.js'
+      - 'compact-control-center.css'
+      - 'campus-actions.js'
+      - 'campus-actions.css'
+      - 'admin-lazy-features.js'
+      - 'admin-menu-layout.js'
+      - 'ai-ops-admin.js'
+      - 'ai-ops-admin.css'
+      - 'mission-control-admin.js'
+      - 'mission-control-admin.css'
+      - 'scripts/build.mjs'
+      - 'test/mission-control-admin.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-admin-pr-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  STAGING_URL: https://ekodi-admin-staging.topmaster-joseph.workers.dev
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate Mission Control and admin routing
+        run: |
+          set -euo pipefail
+          node --check admin-staging-worker.js
+          node --check site-worker.js
+          node --check mission-control-admin.js
+          node --test test/mission-control-admin.test.mjs
+          npm run build
+          test -f dist/mission-control-admin.js
+          test -f dist/mission-control-admin.css
+          grep -Fq 'DECISION INBOX' dist/mission-control-admin.js
+          grep -Fq 'TIME MACHINE' dist/mission-control-admin.js
+          grep -Fq 'AI CREW' dist/mission-control-admin.js
+          grep -Fq 'mission-control-admin.css mission-control-admin.js' dist/control-center.html
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Deploy isolated admin staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
+
+      - name: Verify staging shell, security route and Mission Control assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -sS -D /tmp/admin-stage-headers -o /tmp/admin-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health_code=$(curl -sS -D /tmp/admin-stage-health-headers -o /tmp/admin-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            js_code=$(curl -sS -D /tmp/admin-stage-js-headers -o /tmp/admin-stage.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/mission-control-admin.js" || true)
+            css_code=$(curl -sS -D /tmp/admin-stage-css-headers -o /tmp/admin-stage.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/mission-control-admin.css" || true)
+
+            if [[ "$root_code" == '200' && "$health_code" == '200' && "$js_code" == '200' && "$css_code" == '200' ]] \
+              && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
+              && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
+              && grep -Fq 'mission-control-admin.css mission-control-admin.js' /tmp/admin-stage.html \
+              && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
+              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-js-headers \
+              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-css-headers \
+              && grep -Fq 'DECISION INBOX' /tmp/admin-stage.js \
+              && grep -Fq '.mission-dashboard' /tmp/admin-stage.css; then
+              echo 'Admin PR staging verified: isolated hostname, production admin route contract, Mission Control assets and zero production traffic.'
+              exit 0
+            fi
+            echo "Admin PR staging verification pending (attempt $attempt/18)."
+            sleep 4
+          done
+          echo 'Admin PR staging verification failed.'
+          exit 1
