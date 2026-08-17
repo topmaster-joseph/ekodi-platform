@@ -121,7 +121,8 @@ function profileUi(){
  host.innerHTML=linkedIdentities.length?linkedIdentities.map(identity=>`<span class="identity-row"><span>${esc(identity.email||'Google 계정')}</span>${identity.is_primary?'<b>기본 계정</b>':'<b>연결 계정</b>'}</span>`).join(''):'<span class="identity-row muted-row">연결된 Google 계정이 없습니다.</span>';
 }
 function summaryUi(){
- $('#serviceCount').textContent=String(SERVICES.filter(([id])=>connected(id)||OPEN_SSO_SITES.has(id)).length);
+ const connectedCount=session?SERVICES.filter(([id])=>connected(id)).length:0;
+ $('#serviceCount').textContent=String(connectedCount);
  $('#paidCount').textContent=String(SERVICES.filter(([id])=>paid(access.get(id)?.plan)||(workspaces.get(id)||[]).some(w=>paid(w.plan))).length);
  $('#workspaceCount').textContent=String(uniqueWorkspaces().length);
  $('#creatorCount').textContent=String(items.length);
