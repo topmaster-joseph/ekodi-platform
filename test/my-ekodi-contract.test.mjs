@@ -46,6 +46,32 @@ test('My keeps the active workspace when opening Social or Energy and when retur
   assert.match(app,/open\?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.'/);
 });
 
+test('My account center edits canonical person name and keeps linked Google identities separate',async()=>{
+  const [html,app,profileApi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('supabase/functions/profile-api/index.ts')]);
+  assert.match(html,/id="profileForm"/);
+  assert.match(html,/id="displayName"/);
+  assert.match(html,/id="linkedIdentityList"/);
+  assert.match(html,/manage=1/);
+  assert.match(app,/functions\/v1\/profile-api/);
+  assert.match(app,/callProfileApi\('PATCH',\{display_name:name\}\)/);
+  assert.match(app,/profile\?\.display_name/);
+  assert.match(profileApi,/admin\.from\("people"\)\.update\(\{display_name:name\}\)/);
+  assert.match(profileApi,/admin\.from\("login_identities"\)/);
+  assert.match(profileApi,/ALLOWED_ORIGINS/);
+  assert.match(profileApi,/https:\/\/my\.ekodi\.kr/);
+  assert.match(profileApi,/SUPABASE_SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(app,/SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test('profile API accepts only a bounded personal display name and does not edit workspace names',async()=>{
+  const profileApi=await read('supabase/functions/profile-api/index.ts');
+  assert.match(profileApi,/name\.length<1\|\|name\.length>120/);
+  assert.match(profileApi,/req\.method==="PATCH"/);
+  assert.doesNotMatch(profileApi,/workspace_name/);
+  assert.doesNotMatch(profileApi,/stores"\)\.update/);
+  assert.doesNotMatch(profileApi,/tenants"\)\.update/);
+});
+
 test('My EKODI staging is isolated from production personal data',async()=>{
   const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
   assert.match(prod,/DATA_ENABLED = "true"/);
