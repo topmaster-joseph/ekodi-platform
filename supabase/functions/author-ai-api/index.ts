@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { reconcileAuthorBilling } from "../_shared/author-billing.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY=Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -31,6 +32,18 @@ Deno.serve(async(req)=>{
   const body=await req.json().catch(()=>({}));
   const projectId=compact(body?.project_id,80).trim();const chapterId=compact(body?.chapter_id,80).trim();const operation=compact(body?.operation,30).trim().toLowerCase();const userInstruction=compact(body?.instruction,4000).trim();const op=OPERATIONS[operation];
   if(!projectId||!op)return json(req,{error:"invalid_request"},400);
+
+  let billingVerification:any;
+  try{
+    billingVerification=await reconcileAuthorBilling(req,admin,user.id);
+  }catch(error){
+    console.error("author-ai-api billing verification",error instanceof Error?error.message:"unknown");
+    return json(req,{error:"billing_verification_unavailable",message:"결제상태를 안전하게 확인할 수 없어 AI 호출을 시작하지 않았습니다."},503);
+  }
+  if(!billingVerification?.paid_ai_active){
+    return json(req,{error:"paid_membership_required",message:"결제가 확인된 CREATOR 또는 PRO 회원만 유료 AI를 사용할 수 있습니다.",billing:billingVerification},402);
+  }
+
   let reserved=false;let providerStarted=false;
   try{
     const {data:project,error:projectError}=await admin.from("author_projects").select("id,owner_user_id,title,working_title,interest,field,audience,book_format,tone,narrative_mode,target_words,status,book_memory,creator_mode").eq("id",projectId).eq("owner_user_id",user.id).maybeSingle();
@@ -39,8 +52,8 @@ Deno.serve(async(req)=>{
     let chapter:any=null;
     if(chapterId){const {data,error}=await admin.from("author_chapters").select("id,project_id,owner_user_id,chapter_order,title,purpose,draft_text,status,version").eq("id",chapterId).eq("project_id",projectId).eq("owner_user_id",user.id).maybeSingle();if(error)throw error;if(!data)return json(req,{error:"chapter_not_found"},404);chapter=data;}
     const {data:gate,error:gateError}=await admin.rpc("author_reserve_ai_units",{p_user_id:user.id,p_operation:operation,p_units:op.units});if(gateError)throw gateError;
-    if(!gate?.allowed){const status=gate?.reason==="monthly_ai_quota_exceeded"?429:402;return json(req,{error:gate?.reason||"paid_membership_required",entitlement:gate},status)}reserved=true;
-    if(!OPENAI_API_KEY){await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units});reserved=false;return json(req,{error:"ai_provider_not_configured",message:"전용 AI 비밀키 연결이 완료되면 유료회원에게만 Creator AI가 활성화됩니다."},503)}
+    if(!gate?.allowed){const status=gate?.reason==="monthly_ai_quota_exceeded"?429:402;return json(req,{error:gate?.reason||"paid_membership_required",entitlement:gate,billing:billingVerification},status)}reserved=true;
+    if(!OPENAI_API_KEY){await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units});reserved=false;return json(req,{error:"ai_provider_not_configured",message:"전용 AI 비밀키 연결이 완료되면 결제가 확인된 유료회원에게만 Creator AI가 활성화됩니다."},503)}
     const {data:unitList}=await admin.from("author_chapters").select("chapter_order,title,purpose,status").eq("project_id",projectId).eq("owner_user_id",user.id).order("chapter_order");
     const input=[`창작 모드: ${modeLabel}`,`프로젝트 제목: ${compact(project.working_title||project.title,300)}`,`관심/핵심 문제의식: ${compact(project.interest,1600)}`,`분야: ${compact(project.field,120)}`,`대상: ${compact(project.audience,300)}`,`톤: ${compact(project.tone,120)}`,`전개 방식: ${compact(project.narrative_mode,120)}`,`형식: ${compact(project.book_format,160)}`,`Creator Memory: ${compact(JSON.stringify(project.book_memory||{}),5000)}`,`전체 구성: ${compact((unitList||[]).map((c:any)=>`${c.chapter_order}. ${c.title} | ${c.purpose}`).join("\n"),5000)}`,chapter?`현재 구성: ${chapter.chapter_order}. ${compact(chapter.title,300)}\n구성 목적: ${compact(chapter.purpose,1200)}\n현재 작업:\n${compact(chapter.draft_text,30000)}`:"현재 구성이 지정되지 않았습니다.",userInstruction?`창작자 요청: ${userInstruction}`:"창작자 추가 요청 없음",operation==="research"?"출력 형식: 1) 검증 필요 주장 2) 근거 보강 포인트 3) 창작자에게 확인할 질문 4) 안전하게 유지 가능한 내용":"출력은 현재 창작 모드에서 바로 편집 가능한 산출물 중심으로 작성하세요. 불필요한 서문이나 자기소개는 생략하세요."].join("\n\n");
     providerStarted=true;
@@ -51,7 +64,7 @@ Deno.serve(async(req)=>{
     if(!text){await admin.from("author_ai_usage").insert({user_id:user.id,project_id:projectId,chapter_id:chapter?.id||null,operation,provider:"openai",model:String(payload?.model||OPENAI_MODEL),ai_units:op.units,input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0),status:"failed",provider_request_id:String(payload?.id||"")||null});return json(req,{error:"empty_ai_response"},502)}
     await admin.from("author_ai_usage").insert({user_id:user.id,project_id:projectId,chapter_id:chapter?.id||null,operation,provider:"openai",model:String(payload?.model||OPENAI_MODEL),ai_units:op.units,input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0),status:"completed",provider_request_id:String(payload?.id||"")||null});
     await admin.from("author_events").insert({project_id:projectId,owner_user_id:user.id,actor:operation==="edit"?"editor-ai":operation==="research"?"research-ai":operation==="chief"?"chief-ai":"author-ai",event_type:`ai.${operation}.completed`,payload:{chapter_id:chapter?.id||null,ai_units:op.units,model:String(payload?.model||OPENAI_MODEL),creator_mode:creatorMode}});
-    return json(req,{ok:true,operation,label:op.label,creator_mode:creatorMode,text,usage:{ai_units:op.units,input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0)},entitlement:gate});
+    return json(req,{ok:true,operation,label:op.label,creator_mode:creatorMode,text,usage:{ai_units:op.units,input_tokens:Number(usage.input_tokens||0),output_tokens:Number(usage.output_tokens||0)},entitlement:gate,billing:billingVerification});
   }catch(error){
     if(reserved&&!providerStarted){try{await admin.rpc("author_release_ai_units",{p_user_id:user.id,p_units:op.units})}catch{}}
     if(reserved&&providerStarted){try{await admin.from("author_ai_usage").insert({user_id:user.id,project_id:projectId,chapter_id:chapterId||null,operation,provider:"openai",model:OPENAI_MODEL,ai_units:op.units,status:"failed"})}catch{}}
