@@ -5,15 +5,23 @@ on:
   pull_request:
     paths:
       - 'config/ecosystem-services.json'
+      - 'config/user-ui-dna.json'
       - 'scripts/ecosystem-registry.mjs'
       - 'scripts/build.mjs'
+      - 'index.html'
+      - 'homepage-ambient.css'
+      - 'homepage-ambient.js'
       - '.github/workflows/deploy-ecosystem-registry.yml'
   push:
     branches: [main]
     paths:
       - 'config/ecosystem-services.json'
+      - 'config/user-ui-dna.json'
       - 'scripts/ecosystem-registry.mjs'
       - 'scripts/build.mjs'
+      - 'index.html'
+      - 'homepage-ambient.css'
+      - 'homepage-ambient.js'
       - '.github/workflows/deploy-ecosystem-registry.yml'
 
 permissions:
@@ -40,9 +48,10 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/ecosystem-registry.mjs
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); if(!x.services?.length) process.exit(1); const ids=x.services.map(s=>s.id); if(new Set(ids).size!==ids.length) throw new Error('duplicate service id'); for(const s of x.services){if(s.homepage && !s.productionVerified) throw new Error('homepage service not production verified: '+s.id)}"
+          node --check homepage-ambient.js
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); if(x.version!==2||!x.services?.length) process.exit(1); const ids=x.services.map(s=>s.id); if(new Set(ids).size!==ids.length) throw new Error('duplicate service id'); const states=new Set(['live','beta','preparing','planned']); for(const s of x.services.filter(s=>s.homepage)){if(!states.has(s.status)) throw new Error('invalid homepage status: '+s.id); if(!s.nameEn||!s.descriptionKo||!s.descriptionEn) throw new Error('missing bilingual homepage copy: '+s.id); if((s.status==='live'||s.status==='beta')&&!s.productionVerified) throw new Error('clickable service not production verified: '+s.id)}"
           npm run build
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('dist/index.html','utf8'); for(const s of x.services.filter(s=>s.homepage&&s.productionVerified)){for(const marker of [s.url,s.name,s.label]){if(!html.includes(marker)) throw new Error('generated homepage missing '+s.id+' marker: '+marker)}} console.log('Generated homepage contains every production-verified homepage service.')"
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('dist/index.html','utf8'); for(const s of x.services.filter(s=>s.homepage)){for(const marker of [s.name,s.nameEn,s.label]){if(!html.includes(marker)) throw new Error('generated homepage missing '+s.id+' marker: '+marker)} const clickable=(s.status==='live'||s.status==='beta')&&s.productionVerified===true; if(clickable&&!html.includes('href=\"'+s.url+'\"')) throw new Error('verified service missing link: '+s.id); if(!clickable&&html.includes('href=\"'+s.url+'\"')) throw new Error('roadmap service exposed as link: '+s.id)} console.log('Generated homepage contains the full bilingual lifecycle catalog with safe link gating.')"
 
   production:
     if: github.event_name != 'pull_request'
@@ -65,14 +74,14 @@ jobs:
         run: npm run build
       - name: Guarded shared-site release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify every published service is visible from EKODI root
+      - name: Verify full lifecycle catalog is visible from EKODI root
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             code=$(curl -sS -o /tmp/ekodi-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
-            if [[ "$code" == '200' ]] && node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('/tmp/ekodi-root.html','utf8'); for(const s of x.services.filter(s=>s.homepage&&s.productionVerified)){for(const marker of [s.url,s.name,s.label]){if(!html.includes(marker)) process.exit(1)}}"; then
-              echo 'EKODI root exposes every production-verified homepage service.'
+            if [[ "$code" == '200' ]] && node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('/tmp/ekodi-root.html','utf8'); for(const s of x.services.filter(s=>s.homepage)){for(const marker of [s.name,s.nameEn,s.label]){if(!html.includes(marker)) process.exit(1)} const clickable=(s.status==='live'||s.status==='beta')&&s.productionVerified===true; if(clickable&&!html.includes('href=\"'+s.url+'\"')) process.exit(1); if(!clickable&&html.includes('href=\"'+s.url+'\"')) process.exit(1)}"; then
+              echo 'EKODI root exposes the full bilingual lifecycle catalog with verified link gating.'
               exit 0
             fi
             sleep 5
