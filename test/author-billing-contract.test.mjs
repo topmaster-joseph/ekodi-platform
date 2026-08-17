@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
+const root = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const [migration, control, mission, worker, browser, admin, build, access, ai, shared, wrangler] = await Promise.all([
@@ -17,6 +20,12 @@ const [migration, control, mission, worker, browser, admin, build, access, ai, s
   read('supabase/functions/_shared/author-billing.ts'),
   read('wrangler.api.toml'),
 ]);
+
+test('Creator billing JavaScript modules parse before deployment', () => {
+  for (const path of ['author-billing-control.js','mission-control-entry-worker.js','author-worker.js','author/billing.js','author-billing-admin.js','scripts/build.mjs']) {
+    assert.doesNotThrow(() => execFileSync(process.execPath, ['--check', `${root}${path}`], { stdio:'pipe' }), path);
+  }
+});
 
 test('paid plans deploy at zero and disabled so no accidental charge is possible', () => {
   assert.match(migration, /\('author', 'CREATOR', 0, 0,/);
