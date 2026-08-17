@@ -3,6 +3,7 @@ import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
+import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -22,6 +23,18 @@ export default {
     if (guard) return guard;
 
     const path = new URL(request.url).pathname;
+    // Creator AI billing is intentionally isolated from the shared membership router.
+    // D1 is the billing source of truth and every paid Creator AI call re-verifies it.
+    if (path.startsWith('/api/author/billing/')) {
+      try {
+        const response = await handleAuthorBillingControl(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Author billing control error', error);
+        return errorResponse('Creator AI 결제 처리 중 오류가 발생했습니다.', 'AUTHOR_BILLING_CONTROL_ERROR');
+      }
+    }
+
     // MarketingAI Operations Console is a read-only control-plane surface. Keep it
     // ahead of the shared customer router so admin auth and API security stay explicit.
     if (path.startsWith('/api/marketing/admin/')) {
@@ -71,8 +84,14 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    const authorBilling = runAuthorBillingSchedule(env).catch(error => {
+      console.error('Author billing schedule error', error);
+      return { processed:0, error:'author_billing_schedule_failed' };
+    });
+    if (ctx?.waitUntil) ctx.waitUntil(authorBilling);
     if (typeof customerEntryWorker.scheduled === 'function') {
       return customerEntryWorker.scheduled(controller, env, ctx);
     }
+    return authorBilling;
   },
 };

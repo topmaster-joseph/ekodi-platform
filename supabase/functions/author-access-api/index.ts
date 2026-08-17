@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { reconcileAuthorBilling } from "../_shared/author-billing.ts";
 
 const url=Deno.env.get("SUPABASE_URL")!;
 const anon=Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -30,10 +31,21 @@ Deno.serve(async(req)=>{
   const auth=await authenticated(req);if(!auth)return json(req,{error:"unauthorized"},401);
   const requestUrl=new URL(req.url);const path=requestUrl.pathname.replace(/^\/author-access-api/,"")||"/";
   try{
+    let billingVerification:any={verified:false,paid_ai_active:false,plan:"free",reason:"unavailable"};
+    try{
+      billingVerification=await reconcileAuthorBilling(req,admin,auth.user.id);
+    }catch(error){
+      console.warn("author-access-api billing verification unavailable",error instanceof Error?error.message:"unknown");
+    }
     const entitlement=await membership(auth.user.id);
+    if(entitlement.is_paid&&!billingVerification.verified){
+      entitlement.paid_ai_active=false;
+      entitlement.remaining_ai_units=0;
+    }
+    const billing={...billingVerification,verified:Boolean(billingVerification.verified)};
     if(req.method==="GET"&&path==="/workspace"){
       const key=await personKey(auth.user.id);
-      return json(req,{workspace:{workspace_key:key,workspace_kind:"personal",workspace_name:"내 크리에이터 스튜디오",site:"author",product:"creator-ai",role:"member",status:"active",plan:entitlement.plan,requires_handoff:true,source:"membership",my_ekodi_url:MY_EKODI_URL},membership:entitlement,user:{id:auth.user.id,email:auth.user.email??null}});
+      return json(req,{workspace:{workspace_key:key,workspace_kind:"personal",workspace_name:"내 크리에이터 스튜디오",site:"author",product:"creator-ai",role:"member",status:"active",plan:entitlement.plan,requires_handoff:true,source:"membership",my_ekodi_url:MY_EKODI_URL},membership:entitlement,billing_verification:billing,user:{id:auth.user.id,email:auth.user.email??null}});
     }
     if(req.method==="POST"&&path==="/handoff"){
       const body=await req.json().catch(()=>({}));const returnTo=validReturn(body?.return_to);if(!returnTo)return json(req,{error:"invalid_handoff_target"},400);
@@ -41,7 +53,7 @@ Deno.serve(async(req)=>{
       const expectedKey=await personKey(auth.user.id);if(body?.workspace_key&&String(body.workspace_key)!==expectedKey)return json(req,{error:"workspace_mismatch"},403);
       const {data,error}=await admin.auth.admin.generateLink({type:"magiclink",email});const tokenHash=data?.properties?.hashed_token;
       if(error||!tokenHash){console.error("creator handoff",error?.message||"missing_hashed_token");return json(req,{error:"handoff_token_issue_failed"},503)}
-      return json(req,{ok:true,tokenHash,type:"email",returnTo,expiresFor:"single_use",plan:entitlement.plan,membership:entitlement,workspace:{workspace_key:expectedKey,workspace_kind:"personal",workspace_name:"내 크리에이터 스튜디오",site:"author",product:"creator-ai",status:"active",requires_handoff:true,my_ekodi_url:MY_EKODI_URL}});
+      return json(req,{ok:true,tokenHash,type:"email",returnTo,expiresFor:"single_use",plan:entitlement.plan,membership:entitlement,billing_verification:billing,workspace:{workspace_key:expectedKey,workspace_kind:"personal",workspace_name:"내 크리에이터 스튜디오",site:"author",product:"creator-ai",status:"active",requires_handoff:true,my_ekodi_url:MY_EKODI_URL}});
     }
     return json(req,{error:"not_found"},404);
   }catch(error){console.error("author-access-api",error);return json(req,{error:"author_access_failed"},500)}

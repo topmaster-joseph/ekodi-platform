@@ -23,16 +23,20 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] =
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
 await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
 
-// Device Control is privileged post-auth functionality. Bundle it into the existing
-// compact authenticated assets so admin.ekodi.kr does not expose another pre-auth script.
-const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
+// Device Control and Creator billing pricing are privileged post-auth functionality.
+// Bundle them into already-served authenticated assets to keep the admin route surface small.
+const [compactCss, compactJs, deviceControlCss, deviceControlJs, authorBillingCss, lazyJs, authorBillingJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'),
   readFile(`${output}compact-control-center.js`, 'utf8'),
   readFile(`${root}device-control-admin.css`, 'utf8'),
   readFile(`${root}device-control-admin.js`, 'utf8'),
+  readFile(`${root}author-billing-admin.css`, 'utf8'),
+  readFile(`${output}admin-lazy-features.js`, 'utf8'),
+  readFile(`${root}author-billing-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n`);
+await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n${authorBillingCss}\n`);
 await writeFile(`${output}compact-control-center.js`, `${compactJs}\n${deviceControlJs}\n`);
+await writeFile(`${output}admin-lazy-features.js`, `${lazyJs}\n${authorBillingJs}\n`);
 
 // Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
@@ -103,4 +107,4 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Mission Control/Campus/Chief AI/Device Control modules, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Mission Control/Campus/Chief AI/Device Control/Creator billing modules, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
