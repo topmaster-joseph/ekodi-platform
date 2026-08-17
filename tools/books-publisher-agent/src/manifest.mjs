@@ -16,6 +16,11 @@ function resolveFile(baseDir, value, field) {
   return resolved;
 }
 
+function textArray(value, max = 20) {
+  if (!Array.isArray(value)) return [];
+  return value.map(v => String(v || '').trim()).filter(Boolean).slice(0, max);
+}
+
 export function normalizeManifest(raw, manifestPath = process.cwd(), { verifyFiles = true } = {}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Book manifest must be a JSON object.');
   for (const field of REQUIRED_TEXT) requiredText(raw[field], field);
@@ -40,12 +45,25 @@ export function normalizeManifest(raw, manifestPath = process.cwd(), { verifyFil
     publisher: requiredText(raw.publisher, 'publisher'),
     language: requiredText(raw.language, 'language'),
     publicationDate,
+    series: String(raw.series || '').trim(),
+    seriesNumber: String(raw.seriesNumber || '').trim(),
+    keywords: textArray(raw.keywords, 7),
+    categories: textArray(raw.categories, 3),
     currency: requiredText(raw.currency, 'currency').toUpperCase(),
     price,
     territory: String(raw.territory || 'WORLD').trim().toUpperCase(),
     bookId: { mode: idMode, isbn },
     epubPath: verifyFiles ? resolveFile(baseDir, raw.epubPath, 'epubPath') : path.resolve(baseDir, requiredText(raw.epubPath, 'epubPath')),
     coverPath: verifyFiles ? resolveFile(baseDir, raw.coverPath, 'coverPath') : path.resolve(baseDir, requiredText(raw.coverPath, 'coverPath')),
+    kdp: {
+      aiGeneratedTranslation: Boolean(raw.kdp?.aiGeneratedTranslation),
+      aiGeneratedText: raw.kdp?.aiGeneratedText === true,
+      aiGeneratedImages: raw.kdp?.aiGeneratedImages === true,
+      rightsOwned: raw.kdp?.rightsOwned === true,
+      royaltyPlan: String(raw.kdp?.royaltyPlan || '').trim(),
+      drm: raw.kdp?.drm === true,
+      select: raw.kdp?.select === true,
+    },
   };
 
   if (!/\.epub$/i.test(normalized.epubPath)) throw new Error('epubPath must point to an .epub file.');
