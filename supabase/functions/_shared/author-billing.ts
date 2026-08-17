@@ -1,4 +1,4 @@
-const AUTHOR_BILLING_API="https://api.ekodi.kr/api/author/billing/me";
+const AUTHOR_BILLING_API=Deno.env.get("AUTHOR_BILLING_API_URL")||"https://api.ekodi.kr/api/author/billing/me";
 const PAID_PLANS=new Set(["author","pro"]);
 
 type BillingSubscription={
