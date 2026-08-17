@@ -22,7 +22,11 @@
     "pay": {"family":"trust-ledger","mood":"quiet, secure, frictionless","palette":"white / ink navy / emerald micro-accent","type":"neutral sans","geometry":"minimal ledger rows, strong whitespace","density":"medium"},
     "insurance": {"family":"protective-clarity","mood":"calm, reassuring, explainable","palette":"soft sky / ultramarine / warm white","type":"accessible sans","geometry":"coverage layers, comparison strips","density":"medium"},
     "edu": {"family":"learning-studio","mood":"curious, modular, encouraging","palette":"chalk / ultramarine / sunflower","type":"friendly sans + note accents","geometry":"lesson blocks, progress rails, notebook cues","density":"medium"},
-    "media": {"family":"broadcast-stage","mood":"cinematic, immediate, story-led","palette":"near-black / white / signal red","type":"display sans","geometry":"16:9 frames, strips, bold headlines","density":"medium"}
+    "media": {"family":"broadcast-stage","mood":"cinematic, immediate, story-led","palette":"near-black / white / signal red","type":"display sans","geometry":"16:9 frames, strips, bold headlines","density":"medium"},
+    "my": {"family":"personal-constellation","mood":"personal, calm, choice-led","palette":"night blue / soft cyan / warm white","type":"spacious modern sans","geometry":"personal activity lanes and modular home cards","density":"medium"},
+    "mail": {"family":"correspondence-desk","mood":"quiet, focused, dependable","palette":"ink / parchment / clear blue","type":"neutral reading sans","geometry":"message rows, clean dividers, restrained panels","density":"high"},
+    "live": {"family":"live-stage","mood":"immediate, human, broadcast-ready","palette":"charcoal / luminous white / signal coral","type":"bold display sans + compact metadata","geometry":"stage frames, live rails, audience strips","density":"medium"},
+    "cloud": {"family":"cloud-library","mood":"ordered, durable, collaborative","palette":"cloud white / steel blue / deep ink","type":"utility sans","geometry":"file shelves, workspace tiles, breadcrumb rails","density":"medium-high"}
   },
   "aliases": {
     "mission": {"target":"community","rule":"legacy naming/route only; do not create a second visual family"}

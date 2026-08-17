@@ -57,22 +57,80 @@ main{
   backdrop-filter:blur(16px) saturate(120%);
 }
 
+.ecosystem-pulse::before{
+  content:"";
+  position:absolute;
+  width:58%;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(72,166,255,.16),rgba(64,218,193,.06) 42%,transparent 68%);
+  filter:blur(10px);
+  animation:ekodiPulseGlow 7s ease-in-out infinite alternate;
+}
+
+.pulse-ring{
+  box-shadow:inset 0 0 54px rgba(85,170,255,.035),0 0 36px rgba(61,153,255,.035)!important;
+}
+
+.pulse-ring:nth-child(1){animation:ekodiRingTurn 32s linear infinite}
+.pulse-ring:nth-child(2){animation:ekodiRingTurn 24s linear infinite reverse}
+.pulse-ring:nth-child(3){animation:ekodiRingTurn 18s linear infinite}
+
+.status-satellite,
+.about-strip,
+.status-toolbar,
+.service-group,
+.info-panel{
+  -webkit-backdrop-filter:blur(16px) saturate(116%);
+  backdrop-filter:blur(16px) saturate(116%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.065),0 16px 44px rgba(0,5,18,.1);
+}
+
+.status-satellite[data-status="live"]{border-color:rgba(115,230,189,.2)}
+.status-satellite[data-status="beta"]{border-color:rgba(178,154,255,.2)}
+.status-satellite[data-status="preparing"]{border-color:rgba(117,186,255,.2)}
+.status-satellite[data-status="planned"]{border-color:rgba(155,171,192,.16)}
+
 .service-card{
-  background:linear-gradient(145deg,rgba(13,32,61,.56),rgba(9,25,50,.5))!important;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,rgba(13,32,61,.6),rgba(9,25,50,.52))!important;
   -webkit-backdrop-filter:blur(16px) saturate(120%);
   backdrop-filter:blur(16px) saturate(120%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 30px rgba(0,5,18,.12)!important;
 }
 
-.service-card:hover,
-.service-card:focus-visible{
-  background:linear-gradient(145deg,rgba(16,42,77,.72),rgba(11,32,60,.68))!important;
+.service-card::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:16%;
+  bottom:16%;
+  width:2px;
+  border-radius:999px;
+  opacity:.72;
 }
 
-.orbit-node{
-  background:linear-gradient(180deg,rgba(18,81,161,.66),rgba(10,46,101,.72))!important;
-  -webkit-backdrop-filter:blur(12px) saturate(125%);
-  backdrop-filter:blur(12px) saturate(125%);
+.service-card.status-live::before{background:var(--live)}
+.service-card.status-beta::before{background:var(--beta)}
+.service-card.status-preparing::before{background:var(--preparing)}
+.service-card.status-planned::before{background:var(--planned)}
+
+.service-card[href]:hover,
+.service-card[href]:focus-visible{
+  background:linear-gradient(145deg,rgba(16,42,77,.76),rgba(11,32,60,.7))!important;
+}
+
+.service-card.is-unavailable{
+  background:linear-gradient(145deg,rgba(10,27,51,.48),rgba(7,20,38,.48))!important;
+}
+
+.service-card.is-unavailable .service-icon{
+  filter:saturate(.72);
+}
+
+.status-filter[aria-pressed="true"]{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(32,118,194,.12)!important;
 }
 
 @keyframes ekodiAmbientDrift{
@@ -81,11 +139,22 @@ main{
   100%{transform:translate3d(2%,-1.3%,0) scale(1.04) rotate(0deg)}
 }
 
+@keyframes ekodiPulseGlow{
+  from{opacity:.58;transform:scale(.92)}
+  to{opacity:1;transform:scale(1.08)}
+}
+
+@keyframes ekodiRingTurn{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+
 @media(max-width:640px){
   body::before{filter:blur(19px) saturate(112%);opacity:.9}
   .service-card{-webkit-backdrop-filter:blur(12px) saturate(115%);backdrop-filter:blur(12px) saturate(115%)}
+  .ecosystem-pulse::before{width:74%}
 }
 
 @media(prefers-reduced-motion:reduce){
-  body::before{animation:none!important;transform:none!important}
+  body::before,.ecosystem-pulse::before,.pulse-ring{animation:none!important;transform:none!important}
 }

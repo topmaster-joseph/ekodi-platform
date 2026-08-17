@@ -12,16 +12,36 @@ const ICONS = {
   community: '<circle cx="20" cy="20" r="14"></circle><path d="M6 20h28M20 6c5 5 7 10 7 14s-2 9-7 14M20 6c-5 5-7 10-7 14s2 9 7 14"></path>',
   work: '<path d="M7 14h26v20H7V14ZM14 14V9h12v5M7 22h26M16 22v4h8v-4"></path>',
   energy: '<circle cx="20" cy="20" r="7"></circle><path d="M20 4v5M20 31v5M4 20h5M31 20h5M9 9l4 4M27 27l4 4M31 9l-4 4M13 27l-4 4"></path><path d="m22 13-6 9h5l-3 7 7-10h-5l2-6Z"></path>',
-  marketing: '<path d="M7 30V18M16 30V10M25 30V15M34 30V6M5 34h31"></path><path d="m7 14 9-7 9 4 9-8"></path>'
+  marketing: '<path d="M7 30V18M16 30V10M25 30V15M34 30V6M5 34h31"></path><path d="m7 14 9-7 9 4 9-8"></path>',
+  trade: '<path d="M5 20h30M20 5c5 5 7 10 7 15s-2 10-7 15M20 5c-5 5-7 10-7 15s2 10 7 15"></path><path d="m28 11 7 3-7 3M12 29l-7-3 7-3"></path>',
+  pay: '<rect x="5" y="9" width="30" height="22" rx="4"></rect><path d="M5 16h30M11 24h8M28 23v5M25.5 25.5h5"></path>',
+  education: '<path d="m4 14 16-8 16 8-16 8-16-8Z"></path><path d="M10 18v9c6 5 14 5 20 0v-9M36 14v10"></path>',
+  my: '<circle cx="20" cy="13" r="6"></circle><path d="M8 34c1-8 5-12 12-12s11 4 12 12"></path><circle cx="31" cy="9" r="3"></circle>',
+  insurance: '<path d="M20 5 33 10v9c0 8-5 13-13 16C12 32 7 27 7 19v-9l13-5Z"></path><path d="M20 13v13M14 19.5h12"></path>',
+  mail: '<rect x="5" y="8" width="30" height="24" rx="4"></rect><path d="m7 11 13 10 13-10"></path>',
+  live: '<rect x="7" y="8" width="26" height="24" rx="4"></rect><path d="m17 14 10 6-10 6V14Z"></path><path d="M3 14v12M37 14v12"></path>',
+  cloud: '<path d="M12 31h17a7 7 0 0 0 1-14 11 11 0 0 0-21 4 5 5 0 0 0 3 10Z"></path><path d="M20 18v10M16 22l4-4 4 4"></path>',
+  media: '<rect x="5" y="9" width="30" height="22" rx="3"></rect><path d="m17 15 9 5-9 5V15ZM10 5v4M30 5v4"></path>'
 };
 
 const CATEGORY_DEFINITIONS = [
-  { id: 'community-ministry', label: '공동체 · 사역' },
-  { id: 'business-growth', label: '비즈니스 · 성장' },
-  { id: 'knowledge-creation', label: '콘텐츠 · 지식' },
-  { id: 'work-life', label: '일 · 생활' }
+  { id: 'community-ministry', label: '공동체 · 사역', labelEn: 'Community & Ministry' },
+  { id: 'business-growth', label: '비즈니스 · 성장', labelEn: 'Business & Growth' },
+  { id: 'knowledge-creation', label: '지식 · 콘텐츠', labelEn: 'Knowledge & Content' },
+  { id: 'work-life', label: '일 · 생활', labelEn: 'Work & Life' },
+  { id: 'communication-cloud', label: '소통 · 클라우드', labelEn: 'Communication & Cloud' }
 ];
+
+const STATUS_DEFINITIONS = {
+  live: { label: '운영중', labelEn: 'Live' },
+  beta: { label: '테스트', labelEn: 'Beta' },
+  preparing: { label: '준비중', labelEn: 'Preparing' },
+  planned: { label: '오픈전', labelEn: 'Planned' }
+};
+
 const CATEGORY_IDS = new Set(CATEGORY_DEFINITIONS.map(category => category.id));
+const STATUS_IDS = new Set(Object.keys(STATUS_DEFINITIONS));
+const CLICKABLE_STATUSES = new Set(['live', 'beta']);
 
 function escapeHtml(value) {
   return String(value)
@@ -33,7 +53,7 @@ function escapeHtml(value) {
 }
 
 function validateRegistry(registry) {
-  if (!registry || registry.version !== 1 || !Array.isArray(registry.services)) {
+  if (!registry || registry.version !== 2 || !Array.isArray(registry.services)) {
     throw new Error('Invalid EKODI ecosystem service registry');
   }
 
@@ -55,8 +75,15 @@ function validateRegistry(registry) {
     if (!service.name || !service.label) throw new Error(`Service name/label required: ${service.id}`);
     if (!ICONS[service.icon]) throw new Error(`Unknown service icon: ${service.id}`);
     if (!CATEGORY_IDS.has(service.category)) throw new Error(`Unknown service category: ${service.id}`);
-    if (service.homepage && service.productionVerified !== true) {
-      throw new Error(`Homepage service must be production verified: ${service.id}`);
+
+    if (service.homepage === true) {
+      if (!service.nameEn || !service.descriptionKo || !service.descriptionEn) {
+        throw new Error(`Homepage bilingual copy required: ${service.id}`);
+      }
+      if (!STATUS_IDS.has(service.status)) throw new Error(`Unknown homepage status: ${service.id}`);
+      if (CLICKABLE_STATUSES.has(service.status) && service.productionVerified !== true) {
+        throw new Error(`Live/Beta homepage service must be production verified: ${service.id}`);
+      }
     }
   }
   return registry;
@@ -65,16 +92,34 @@ function validateRegistry(registry) {
 export async function loadHomepageServices() {
   const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
   return registry.services
-    .filter(service => service.homepage === true && service.productionVerified === true)
+    .filter(service => service.homepage === true)
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.id.localeCompare(b.id));
+}
+
+function serviceIsClickable(service) {
+  return service.productionVerified === true && CLICKABLE_STATUSES.has(service.status);
 }
 
 function renderServiceCard(service) {
   const id = escapeHtml(service.id);
   const url = escapeHtml(service.url);
   const name = escapeHtml(service.name);
+  const nameEn = escapeHtml(service.nameEn);
+  const descriptionKo = escapeHtml(service.descriptionKo);
+  const descriptionEn = escapeHtml(service.descriptionEn);
   const label = escapeHtml(service.label);
-  return `          <a class="service-card" data-service-id="${id}" href="${url}"><span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span><span class="service-copy"><strong>${name}</strong><small>${label}</small></span><span class="arrow" aria-hidden="true">→</span></a>`;
+  const statusId = escapeHtml(service.status);
+  const status = STATUS_DEFINITIONS[service.status];
+  const clickable = serviceIsClickable(service);
+  const icon = `<span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span>`;
+  const copy = `<span class="service-copy"><span class="service-title"><strong>${name}</strong><span class="service-name-en">${nameEn}</span></span><span class="service-description"><span>${descriptionKo}</span><small>${descriptionEn}</small></span><span class="service-domain">${label}</span></span>`;
+  const badge = `<span class="service-status" data-status-badge="${statusId}"><b>${escapeHtml(status.label)}</b><span>${escapeHtml(status.labelEn)}</span></span>`;
+  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}"`;
+
+  if (clickable) {
+    return `          <a ${common} href="${url}">${icon}${copy}<span class="service-card-side">${badge}<span class="arrow" aria-hidden="true">→</span></span></a>`;
+  }
+  return `          <article ${common} aria-label="${name} ${escapeHtml(status.label)}">${icon}${copy}<span class="service-card-side">${badge}<span class="arrow is-muted" aria-hidden="true">·</span></span></article>`;
 }
 
 export function renderServiceCards(services) {
@@ -83,7 +128,7 @@ export function renderServiceCards(services) {
     if (!categoryServices.length) return '';
     const cards = categoryServices.map(renderServiceCard).join('\n');
     return `      <section class="service-group" data-service-category="${escapeHtml(category.id)}">
-        <div class="service-group-heading"><h3>${escapeHtml(category.label)}</h3><span>${categoryServices.length}</span></div>
+        <div class="service-group-heading"><h3><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(category.labelEn)}</small></h3><span data-service-count>${categoryServices.length}</span></div>
         <div class="service-list">
 ${cards}
         </div>
@@ -91,4 +136,4 @@ ${cards}
   }).filter(Boolean).join('\n');
 }
 
-export { CATEGORY_DEFINITIONS, validateRegistry };
+export { CATEGORY_DEFINITIONS, STATUS_DEFINITIONS, validateRegistry };
