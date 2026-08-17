@@ -47,7 +47,8 @@ test('Campaign review creates a human gate but exposes no external execution end
   assert.match(source, /'human_gate'/);
   assert.match(source, /'awaiting_human'/);
   assert.match(source, /externalExecution:false/);
-  assert.match(source, /\/campaigns\/(\\d\+)\/review/);
+  assert.match(source, /const reviewMatch = path\.match/);
+  assert.match(source, /requestCampaignReview/);
   assert.doesNotMatch(source, /\/send|\/publish|\/execute|\/approve/);
 });
 
