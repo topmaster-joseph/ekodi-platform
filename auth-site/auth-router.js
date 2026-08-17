@@ -18,9 +18,25 @@ if(!params.get('return_to')&&params.get('returnTo')){
   params.delete('returnTo');
   changed=true;
 }
+
+const normalizedSite=params.get('site');
+const marketingHomeMode=normalizedSite==='marketing'
+  && params.get('review')!=='1'
+  && !params.get('workspace')
+  && !params.get('plan')
+  && !params.get('intent');
+if(marketingHomeMode){
+  // Keep the authenticated Marketing entry on the workspace dashboard instead
+  // of immediately handing off to a single workspace. `manage=1` is an
+  // internal compatibility switch consumed by the current Marketing auth
+  // module; the visual account-management controls stay hidden in home mode.
+  params.set('manage','1');
+  document.documentElement.dataset.ekodiDashboard='1';
+  changed=true;
+}
 if(changed)history.replaceState({},document.title,url.href);
 
-document.documentElement.dataset.identityManage=params.get('manage')==='1'?'1':'0';
+document.documentElement.dataset.identityManage=params.get('manage')==='1'&&!marketingHomeMode?'1':'0';
 const site=params.get('site');
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));
 async function loadMarketingAuth(){
