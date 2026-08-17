@@ -190,6 +190,7 @@ async function completeBillingIfNeeded(){
   const clean=new URL(cleanReturnUrl());
   history.replaceState({},document.title,clean.href);
   window.dispatchEvent(new CustomEvent('ekodi-author-billing-changed',{detail:result.subscription}));
+  window.setTimeout(()=>location.reload(),650);
 }
 
 async function load(){
