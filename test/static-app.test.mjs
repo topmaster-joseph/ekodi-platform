@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [portal, admin, control, controlJs, financeJs, hub, registryText, headers, build, siteToml, siteWorker, financeToml, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
-  read('../index.html'), read('../admin.html'), read('../control-center.html'), read('../control-center.js'),
+const [portal, admin, control, controlJs, controlFeatures, financeJs, hub, registryText, headers, build, siteToml, siteWorker, financeToml, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
+  read('../index.html'), read('../admin.html'), read('../control-center.html'), read('../control-center.js'), read('../control-center-features.js'),
   read('../finance-monitor.js'), read('../hub.html'), read('../service-registry.json'), read('../_headers'),
   read('../scripts/build.mjs'), read('../wrangler.site.toml'), read('../site-worker.js'), read('../wrangler.finance.toml'),
   read('../service-proxy.js'), read('../wrangler.service-proxy.toml'), read('../biz-legacy-redirect.js'), read('../wrangler.biz-legacy.toml')
@@ -38,7 +38,8 @@ test('production build and Control Center retain required assets and APIs', () =
   uniqueIds(control, 'Control Center');
   uniqueIds(hub, 'hub');
   assert.match(control, /control-center\.js/);
-  assert.match(control, /finance-monitor\.js/);
+  assert.doesNotMatch(control, /<script src="finance-monitor\.js"><\/script>/);
+  assert.match(controlFeatures, /loadModule\('finance-monitor\.js'\)/);
   assert.match(controlJs, /https:\/\/api\.ekodi\.kr/);
   assert.match(financeJs, /https:\/\/finance-api\.ekodi\.kr/);
 });
