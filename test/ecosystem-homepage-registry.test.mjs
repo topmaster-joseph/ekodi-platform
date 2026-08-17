@@ -4,6 +4,7 @@ import test from 'node:test';
 import { CATEGORY_DEFINITIONS, STATUS_DEFINITIONS, loadHomepageServices, renderServiceCards } from '../scripts/ecosystem-registry.mjs';
 
 const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const releaseManifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 
 const clickableStatuses = new Set(['live', 'beta']);
 const roadmapStatuses = new Set(['preparing', 'planned']);
@@ -95,4 +96,15 @@ test('homepage navigation, bilingual hero and lifecycle filters remain compact a
     assert.match(homepage, new RegExp(`data-status-filter="${status}"`));
   }
   assert.doesNotMatch(homepage, /class="[^"]*orbit|ecosystem-orbit|network-orbit/i);
+});
+
+test('guarded release smoke markers stay aligned with the actual EKODI homepage', () => {
+  const rootCheck = releaseManifest.worker?.requests?.find(request => request.url === 'https://ekodi.kr/');
+  assert.ok(rootCheck, 'shared-site release manifest must verify the EKODI root');
+  assert.ok(Array.isArray(rootCheck.expect) && rootCheck.expect.length >= 2, 'EKODI root release check needs stable body markers');
+  for (const marker of rootCheck.expect) {
+    assert.ok(homepage.includes(marker), `release marker drifted from homepage: ${marker}`);
+  }
+  assert.ok(rootCheck.expect.includes('BILINGUAL ECOSYSTEM CATALOG'));
+  assert.ok(rootCheck.expect.includes('One ecosystem. Many ways to connect.'));
 });
