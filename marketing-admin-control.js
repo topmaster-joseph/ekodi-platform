@@ -117,11 +117,94 @@ function readChannelRegistry(row) {
   };
 }
 
+function lifecycle(row) {
+  const value = safeJson(row?.lifecycle_json, []);
+  return Array.isArray(value) ? value.map(String) : [];
+}
+
+function templateKey(row) { return `${row.workspace_type}:${row.workspace_key}`; }
+function publicCampaign(row) {
+  return {
+    id:Number(row.id),
+    workspaceType:String(row.workspace_type || ''),
+    workspaceKey:String(row.workspace_key || ''),
+    tenantSlug:String(row.tenant_slug || ''),
+    storeId:row.store_id || null,
+    name:String(row.name || ''),
+    objective:String(row.objective || ''),
+    audienceSegment:String(row.audience_segment || ''),
+    channel:String(row.channel || ''),
+    offerSummary:String(row.offer_summary || ''),
+    status:String(row.status || ''),
+    approvalActionId:row.approval_action_id ? Number(row.approval_action_id) : null,
+    approvalStatus:String(row.approval_status || ''),
+    scheduledAt:row.scheduled_at || null,
+    startedAt:row.started_at || null,
+    completedAt:row.completed_at || null,
+    createdAt:row.created_at || null,
+    updatedAt:row.updated_at || null,
+  };
+}
+
+function crmAggregate(template, rows) {
+  const customers = new Map();
+  let anonymousEvents = 0;
+  let totalValueKrw = 0;
+  let lastEventAt = null;
+  for (const row of rows) {
+    totalValueKrw += Number(row.value_krw || 0);
+    if (!lastEventAt || String(row.occurred_at || '') > lastEventAt) lastEventAt = row.occurred_at || null;
+    if (!row.customer_key) { anonymousEvents += 1; continue; }
+    if (!customers.has(row.customer_key)) customers.set(row.customer_key, []);
+    customers.get(row.customer_key).push(row);
+  }
+
+  const segments = {};
+  if (template.template_key === 'food_b2c') {
+    Object.assign(segments, { new:0, returning:0, loyal:0, dormant:0, reactivated:0 });
+    for (const events of customers.values()) {
+      events.sort((a,b) => String(a.occurred_at).localeCompare(String(b.occurred_at)));
+      const latest = events.at(-1)?.event_type;
+      const orderCount = events.filter(row => ['order','repeat_order'].includes(row.event_type)).length;
+      if (latest === 'dormant') segments.dormant += 1;
+      else if (events.some(row => row.event_type === 'reactivated')) segments.reactivated += 1;
+      else if (orderCount >= 3) segments.loyal += 1;
+      else if (orderCount >= 2) segments.returning += 1;
+      else segments.new += 1;
+    }
+  } else if (template.template_key === 'service_b2b') {
+    for (const stage of lifecycle(template)) segments[stage] = 0;
+    segments.other = 0;
+    for (const events of customers.values()) {
+      events.sort((a,b) => String(a.occurred_at).localeCompare(String(b.occurred_at)));
+      const latest = [...events].reverse().find(row => Object.hasOwn(segments, row.event_type));
+      if (latest) segments[latest.event_type] += 1; else segments.other += 1;
+    }
+  } else {
+    segments.known = customers.size;
+  }
+
+  return {
+    workspaceType:template.workspace_type,
+    workspaceKey:template.workspace_key,
+    tenantSlug:template.tenant_slug,
+    storeId:template.store_id || null,
+    templateKey:template.template_key,
+    lifecycle:lifecycle(template),
+    customers:customers.size,
+    events:rows.length,
+    anonymousEvents,
+    totalValueKrw,
+    lastEventAt,
+    segments,
+  };
+}
+
 async function overview(request, env) {
   const session = await adminSession(request, env);
   if (!session) return json({ error:'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
 
-  const [subscriptionsResult, chargesResult, workspacesResult, aiActionsResult, socialRegistryRow] = await Promise.all([
+  const [subscriptionsResult, chargesResult, workspacesResult, aiActionsResult, socialRegistryRow, templatesResult, campaignsResult, marketingEventsResult] = await Promise.all([
     env.DB.prepare(`SELECT id,subject_type,subject_key,site,plan_id,status,monthly_fee,provider,
       current_period_start,current_period_end,next_billing_at,cancel_at_period_end,created_at,updated_at
       FROM service_subscriptions
@@ -143,11 +226,22 @@ async function overview(request, env) {
     env.DB.prepare(`SELECT id,agent_id,agent_name,action_type,area,target,decision_tier,status,created_at,decided_at,verified_at
       FROM ai_agent_actions ORDER BY id DESC LIMIT 250`).all(),
     env.DB.prepare('SELECT registry_json,revision,updated_at FROM social_registry_config WHERE id=1').first(),
+    env.DB.prepare(`SELECT workspace_type,workspace_key,tenant_slug,store_id,template_key,lifecycle_json,created_at,updated_at
+      FROM marketing_workspace_templates ORDER BY updated_at DESC LIMIT 300`).all(),
+    env.DB.prepare(`SELECT c.id,c.workspace_type,c.workspace_key,c.tenant_slug,c.store_id,c.name,c.objective,c.audience_segment,c.channel,c.offer_summary,
+      c.status,c.approval_action_id,c.scheduled_at,c.started_at,c.completed_at,c.created_at,c.updated_at,a.status AS approval_status
+      FROM marketing_campaigns c LEFT JOIN ai_agent_actions a ON a.id=c.approval_action_id
+      ORDER BY c.updated_at DESC LIMIT 500`).all(),
+    env.DB.prepare(`SELECT workspace_type,workspace_key,customer_key,event_type,value_krw,occurred_at
+      FROM marketing_events ORDER BY occurred_at DESC LIMIT 10000`).all(),
   ]);
 
   const subscriptions = subscriptionsResult.results || [];
   const charges = chargesResult.results || [];
   const workspaces = (workspacesResult.results || []).map(publicWorkspace);
+  const templates = templatesResult.results || [];
+  const campaigns = (campaignsResult.results || []).map(publicCampaign);
+  const marketingEvents = marketingEventsResult.results || [];
   const activePaid = subscriptions.filter(row => String(row.status || '').toLowerCase() === 'active'
     && Number(row.monthly_fee || 0) > 0);
   const activeWorkspaces = workspaces.filter(row => row.status === 'active');
@@ -207,11 +301,20 @@ async function overview(request, env) {
     });
   }
 
+  const eventGroups = new Map();
+  for (const row of marketingEvents) {
+    const key = templateKey(row);
+    if (!eventGroups.has(key)) eventGroups.set(key, []);
+    eventGroups.get(key).push(row);
+  }
+  const crm = templates.map(template => crmAggregate(template, eventGroups.get(templateKey(template)) || []));
+
   const channelRegistry = readChannelRegistry(socialRegistryRow);
   const cutoff30d = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const completed30d = charges.filter(row => String(row.status || '').toLowerCase() === 'done'
     && Number.isFinite(Date.parse(row.completed_at || row.created_at || ''))
     && Date.parse(row.completed_at || row.created_at || '') >= cutoff30d);
+  const activeCampaigns = campaigns.filter(row => ['review','approved','scheduled','running'].includes(row.status));
 
   return json({
     generatedAt:new Date().toISOString(),
@@ -228,10 +331,16 @@ async function overview(request, env) {
       channels:channelRegistry.channels.length,
       automationActions:aiActions.length,
       pendingApprovals:approvals.filter(row => row.status === 'awaiting_human').length,
+      campaigns:campaigns.length,
+      activeCampaigns:activeCampaigns.length,
+      crmCustomers:crm.reduce((sum, row) => sum + Number(row.customers || 0), 0),
+      marketingEvents:crm.reduce((sum, row) => sum + Number(row.events || 0), 0),
     },
     subscriptions,
     charges,
     workspaces,
+    campaigns,
+    crm,
     channels:channelRegistry.channels,
     channelRegistry:{ revision:channelRegistry.revision, updatedAt:channelRegistry.updatedAt },
     automationActions:aiActions,
@@ -241,8 +350,8 @@ async function overview(request, env) {
       subscriptions:'connected',
       billing:'connected',
       workspaces:'connected',
-      campaigns:'not_connected',
-      crm:'not_connected',
+      campaigns:'connected',
+      crm:'connected',
       channels:'connected',
       automation:'connected',
       approvals:'connected',
@@ -250,6 +359,7 @@ async function overview(request, env) {
     safety:{
       readOnly:true,
       customerPiiIncluded:false,
+      customerKeysIncluded:false,
       externalExecution:false,
       approvalDecisionEndpointExposedHere:false,
     },
