@@ -46,6 +46,13 @@ test('My keeps the active workspace when opening Social or Energy and when retur
   assert.match(app,/open\?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.'/);
 });
 
+test('Logged-out My EKODI reports zero connected platforms and does not count open SSO services as connected',async()=>{
+  const app=await read('my/app.js');
+  assert.match(app,/const connectedCount=session\?SERVICES\.filter\(\(\[id\]\)=>connected\(id\)\)\.length:0/);
+  assert.match(app,/serviceCount'\)\.textContent=String\(connectedCount\)/);
+  assert.doesNotMatch(app,/serviceCount'\)\.textContent=String\(SERVICES\.filter\(\(\[id\]\)=>connected\(id\)\|\|OPEN_SSO_SITES\.has\(id\)\)/);
+});
+
 test('My account center edits canonical person name and keeps linked Google identities separate',async()=>{
   const [html,app,profileApi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('supabase/functions/profile-api/index.ts')]);
   assert.match(html,/id="profileForm"/);
