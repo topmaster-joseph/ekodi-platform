@@ -32,12 +32,16 @@ test('Mission Control remains observation-first and routes risky actions to the 
   assert.doesNotMatch(source,/service[_-]?role/i);
 });
 
-test('Mission Control is shipped only through the authenticated admin shell',async()=>{
-  const [build,html]=await Promise.all([read('scripts/build.mjs'),read('control-center.html')]);
+test('Mission Control is shipped only through the authenticated admin shell and secured asset route',async()=>{
+  const [build,html,worker]=await Promise.all([read('scripts/build.mjs'),read('control-center.html'),read('site-worker.js')]);
   assert.match(build,/'mission-control-admin\.css'/);
   assert.match(build,/'mission-control-admin\.js'/);
   assert.match(build,/data-ekodi-postauth="[^"]*mission-control-admin\.css mission-control-admin\.js/);
   assert.doesNotMatch(html,/mission-control-admin\.(?:js|css)/);
+  assert.match(worker,/'\/mission-control-admin\.css'/);
+  assert.match(worker,/'\/mission-control-admin\.js'/);
+  assert.match(worker,/ADMIN_ASSETS/);
+  assert.match(worker,/'admin-asset'/);
 });
 
 test('Mission Control keeps existing AI Ops and Chief AI contracts instead of duplicating privileged control',async()=>{
