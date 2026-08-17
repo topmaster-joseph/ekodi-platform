@@ -24,7 +24,7 @@
         <p class="eyebrow">SIGNED-IN HOME · WORKSPACE ROUTER</p>
         <h1>로그인 후의 EKODI를,<br><span>한곳에서 이어갑니다.</span></h1>
         <p class="lead">My EKODI는 일반사용자의 개인 홈입니다. 한 번 로그인한 뒤 내 Workspace를 바꾸고, 필요한 EKODI 서비스로 이동하며, 이용 상태에 맞는 다음 기능을 확인합니다.</p>
-        <div class="hero-actions"><a class="primary" href="#workspaces">내 공간 전환</a><button id="refreshButton" class="secondary" type="button">내 정보 새로고침</button></div>
+        <div class="hero-actions" data-auth-only hidden><a class="primary" href="#workspaces">내 공간 전환</a><button id="refreshButton" class="secondary" type="button">내 정보 새로고침</button></div>
       </div>
       <aside class="identity-card">
         <div class="identity-top"><small>MY EKODI</small><span id="accountPlan" class="status-pill">Guest</span></div>
@@ -35,36 +35,44 @@
       </aside>
     </section>
 
-    <section class="summary" aria-label="My EKODI 요약">
+    <section id="guestEntry" class="section">
+      <div class="empty">
+        <strong>Google로 시작하면 나의 EKODI가 열립니다.</strong>
+        <p>연결된 플랫폼, 이용 플랜, Workspace, 창작물은 로그인 후에만 불러오고 표시합니다.</p>
+        <button id="guestAuthButton" class="primary" type="button">Google로 시작</button>
+      </div>
+    </section>
+
+    <section class="summary" aria-label="My EKODI 요약" data-auth-only hidden>
       <article><span id="serviceCount">0</span><small>Connected Platforms</small></article>
       <article><span id="paidCount">0</span><small>Paid Plans</small></article>
       <article><span id="workspaceCount">0</span><small>Workspaces</small></article>
       <article><span id="creatorCount">0</span><small>Creator Works</small></article>
     </section>
 
-    <section id="workspaces" class="section soft-section">
+    <section id="workspaces" class="section soft-section" data-auth-only hidden>
       <div class="section-head"><div><p class="eyebrow">MY WORKSPACES</p><h2>내 공간</h2></div><p>계정을 고르는 대신 공간을 고릅니다. 선택한 Workspace는 다음 서비스 이동의 기본 컨텍스트로 사용되며 언제든 바꿀 수 있습니다.</p></div>
       <div id="workspaceList" class="workspace-grid"><div class="empty"><strong>Workspace가 아직 연결되지 않았습니다.</strong><p>로그인 후 개인·사업장·교회·기관 공간을 불러옵니다.</p></div></div>
     </section>
 
-    <section id="platforms" class="section">
+    <section id="platforms" class="section" data-auth-only hidden>
       <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 쓰는 EKODI</h2></div><p>연결된 서비스는 중앙 인증을 거쳐 현재 Workspace 권한으로 이동합니다. 이미 EKODI에 로그인했다면 Google 로그인을 반복하지 않습니다.</p></div>
       <div id="platformList" class="platform-grid"><div class="empty"><strong>로그인하면 내 플랫폼 상태를 확인할 수 있습니다.</strong><p>서비스마다 다시 가입하지 않고 현재 EKODI 사용자의 접근권한을 불러옵니다.</p></div></div>
       <p class="section-note">서비스별 데이터와 권한은 각 Workspace에 분리되어 있으며 My EKODI는 이동과 선택을 연결합니다.</p>
     </section>
 
-    <section id="recommendations" class="section recommendation-section">
+    <section id="recommendations" class="section recommendation-section" data-auth-only hidden>
       <div class="section-head"><div><p class="eyebrow">FOR YOU</p><h2>지금 도움이 될 것</h2></div><p>현재 연결 상태와 이용 범위를 바탕으로 필요한 기능만 제안합니다. 상위 요금제 판매보다 현재 필요와 자유로운 선택을 우선합니다.</p></div>
       <div id="recommendationList" class="recommendation-grid"><div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong></div></div>
     </section>
 
-    <section id="creator" class="section">
+    <section id="creator" class="section" data-auth-only hidden>
       <div class="section-head"><div><p class="eyebrow">CREATOR PORTFOLIO</p><h2>내가 만든 것</h2></div><p>Creator AI에서 승인해 My EKODI로 보낸 창작물이 쌓입니다. 새 항목은 기본 비공개이며 공개는 별도의 선택입니다.</p></div>
       <div id="creatorFilters" class="filters" role="group" aria-label="창작물 필터"><button class="chip active" data-filter="all" type="button">All</button><button class="chip" data-filter="writer" type="button">Writer</button><button class="chip" data-filter="video" type="button">Video</button><button class="chip" data-filter="podcast" type="button">Podcast</button><button class="chip" data-filter="lecture" type="button">Educator</button><button class="chip" data-filter="research" type="button">Research</button><button class="chip" data-filter="visual" type="button">Visual</button><button class="chip" data-filter="mission" type="button">Mission</button><button class="chip" data-filter="ai" type="button">AI Creator</button></div>
       <div id="creatorList" class="portfolio-grid"><div class="empty"><strong>아직 My EKODI에 연결된 창작물이 없습니다.</strong><p>Creator AI에서 작업을 최종 승인한 뒤 My EKODI에 등록하면 여기로 연결됩니다.</p></div></div>
     </section>
 
-    <section id="account" class="section account-section">
+    <section id="account" class="section account-section" data-auth-only hidden>
       <div class="section-head"><div><p class="eyebrow">ACCOUNT & IDENTITY</p><h2>내 정보와 연결 계정</h2></div><p>My EKODI가 내 정보의 기준점이 됩니다. 로그인 수단, 개인 정체성, 사업장·단체 Workspace는 서로 섞지 않고 연결해서 관리합니다.</p></div>
       <div class="account-grid">
         <article class="profile-editor">
@@ -88,6 +96,7 @@
 
   <footer><strong>My EKODI</strong><span>로그인 후의 EKODI · 내 공간 · 내 서비스 · 내 선택</span><a href="https://author.ekodi.kr/">Creator AI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
+  <script src="/prelogin-guard.js?v=20260817-guest-gate-1"></script>
   <script type="module" src="/app.js?v=20260817-account-center-1"></script>
 </body>
 </html>
