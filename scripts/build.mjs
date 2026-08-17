@@ -5,7 +5,7 @@ import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.m
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
-  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','admin-authenticated-shell.js','admin-menu-layout.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','author-billing-admin.css','author-billing-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
+  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','admin-authenticated-shell.js','admin-menu-layout.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
 ];
 
 await rm(output, { recursive: true, force: true });
@@ -23,16 +23,20 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] =
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
 await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
 
-// Device Control is privileged post-auth functionality. Bundle it into the existing
-// compact authenticated assets so admin.ekodi.kr does not expose another pre-auth script.
-const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
+// Device Control and Creator billing pricing are privileged post-auth functionality.
+// Bundle them into already-served authenticated assets to keep the admin route surface small.
+const [compactCss, compactJs, deviceControlCss, deviceControlJs, authorBillingCss, lazyJs, authorBillingJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'),
   readFile(`${output}compact-control-center.js`, 'utf8'),
   readFile(`${root}device-control-admin.css`, 'utf8'),
   readFile(`${root}device-control-admin.js`, 'utf8'),
+  readFile(`${root}author-billing-admin.css`, 'utf8'),
+  readFile(`${output}admin-lazy-features.js`, 'utf8'),
+  readFile(`${root}author-billing-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n`);
+await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n${authorBillingCss}\n`);
 await writeFile(`${output}compact-control-center.js`, `${compactJs}\n${deviceControlJs}\n`);
+await writeFile(`${output}admin-lazy-features.js`, `${lazyJs}\n${authorBillingJs}\n`);
 
 // Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
@@ -97,7 +101,7 @@ for (const asset of htmlAssets) {
     html = html.replace(/\s*<link rel="stylesheet" href="(?:compact-control-center|campus-actions)\.css">\s*/g, '\n');
     html = html.replace(/\s*<script src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
     if (!html.includes('admin-authenticated-shell.js')) {
-      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260816-preauth-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js author-billing-admin.js mission-control-admin.css mission-control-admin.js admin-menu-layout.js ai-ops-admin.js ai-ops-admin.css release-control-admin.js release-control-admin.css work-admin.js work-admin.css marketing-ai-admin.js marketing-ai-admin.css"></script>\n</body>');
+      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260816-preauth-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js mission-control-admin.css mission-control-admin.js admin-menu-layout.js ai-ops-admin.js ai-ops-admin.css release-control-admin.js release-control-admin.css work-admin.js work-admin.css marketing-ai-admin.js marketing-ai-admin.css"></script>\n</body>');
     }
   }
   await writeFile(path, html);
