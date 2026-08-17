@@ -52,3 +52,13 @@ test('Mission Control keeps existing AI Ops and Chief AI contracts instead of du
   assert.match(lazy,/CHIEF AI CONVERSATION/);
   assert.match(lazy,/installChiefChat/);
 });
+
+test('Mission Control has an explicit guarded production trigger and post-deploy verification contract',async()=>{
+  const workflow=await read('.github/workflows/deploy-admin-ai-ops.yml');
+  assert.match(workflow,/mission-control-admin\.js/);
+  assert.match(workflow,/mission-control-admin\.css/);
+  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.match(workflow,/Verify production Admin Mission Control boundary/);
+  assert.match(workflow,/DECISION INBOX/);
+  assert.match(workflow,/TIME MACHINE/);
+});
