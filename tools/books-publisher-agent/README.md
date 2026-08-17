@@ -1,22 +1,24 @@
-# EKODI BOOKS Google Publisher Agent
+# EKODI BOOKS Multi-platform Publisher Agent
 
-A local browser operator for publishing EKODI BOOKS titles through the Google Play Books Partner Center.
+Local browser operators for EKODI BOOKS publishing through Google Play Books, Amazon KDP, and 유페이퍼.
 
 ## Why local
 
-Google Partner Center publishing is an authenticated browser workflow. This agent intentionally runs on the publisher's own computer so Google credentials, cookies, 2-step verification, and payment data do not pass through EKODI servers.
+Publisher dashboards are authenticated browser workflows. The agent runs on the publisher's own computer so passwords, cookies, 2-step verification, tax data, banking data, and payment data do not pass through EKODI servers.
 
-The agent uses a **separate automation-only Chrome profile**. It never asks for or stores a Google password. On the first run, complete Google sign-in and any 2-step verification in the Chrome window that the agent opens. The profile is then reused locally.
+Each platform uses a **separate automation-only Chrome profile**. The agent never asks for or stores platform passwords. On the first run, complete sign-in and any 2-step verification in the Chrome window opened by the agent. The platform profile can then be reused locally.
 
 ## Safety contract
 
 - No password storage.
-- No Google session upload to EKODI.
+- No authenticated publisher session upload to EKODI.
 - No use of the user's normal Chrome profile.
-- No silent final publication. The default flow stops on Review.
-- Final Publish requires both `--publish` and `--approve-title`, and the approved title must exactly match the manifest title.
+- No silent final publication.
+- Google final Publish requires both `--publish` and `--approve-title`, with an exact title match.
+- Amazon KDP stops before publishing-rights / AI disclosure attestations unless the workflow has explicit approved manifest data and a reviewed implementation for the current KDP screen.
+- 유페이퍼 stops before final 판매신청 until seller, settlement, and identifier status are verified.
 - Every operation writes a local JSONL audit trail to `~/.ekodi/books-publisher-audit.jsonl`.
-- If Google changes a required screen or field, the run blocks instead of guessing.
+- If an external publisher changes a required screen or field, the run blocks instead of guessing.
 
 ## Setup
 
@@ -27,36 +29,62 @@ cd tools/books-publisher-agent
 npm install
 ```
 
-Put the final EPUB and cover into `examples/files/` when using the included EKODIan manifest.
+Put approved EPUB and cover assets under `examples/files/` when using the included manifests.
 
-## Validate without opening Google
-
-```bash
-npm start -- --manifest ./examples/ekodian.json --dry-run
-```
-
-## Prepare a book and stop at Review
+## Dry-run validation
 
 ```bash
-npm start -- --manifest ./examples/ekodian.json
+npm start -- --platform google --manifest ./examples/ekodian.json --dry-run
+npm start -- --platform kdp --manifest ./examples/ekodian-kdp.json --dry-run
+npm start -- --platform upaper --manifest ./examples/ekodian.json --dry-run
 ```
 
-On the first run, sign in to Google in the automation Chrome window. The agent then attempts:
+## Google Play Books
 
-`Book Catalog → Add Book → Sell ebook → GGKEY/ISBN → Book Info → Content upload → Pricing → Review`
-
-## Publish after explicit approval
+Prepare through Review:
 
 ```bash
-npm start -- --manifest ./examples/ekodian.json --publish --approve-title "에코디언을 찾아서"
+npm start -- --platform google --manifest ./examples/ekodian.json
 ```
 
-This is the only mode that allows the final Publish click.
+Publish after exact title approval:
 
-## Current Google flow assumptions
+```bash
+npm start -- --platform google --manifest ./examples/ekodian.json --publish --approve-title "에코디언을 찾아서"
+```
 
-The operator uses accessible names and bilingual Korean/English text rather than CSS class names. This is less brittle than styling selectors, but Partner Center is an external UI and can still change. Any missing required action is treated as a blocked run and recorded in the audit log.
+The Google adapter attempts:
 
-## Next platform integration
+`Book Catalog → Add Book → Sell ebook → GGKEY/ISBN → Book Info → Content upload → Pricing → Review → optional Publish`
 
-The local operator is the execution adapter. EKODI Books should later provide a signed publish job containing approved metadata and downloadable release assets. The local agent can then consume that job, execute Google publishing, and report only operational status and public identifiers back to `admin.ekodi.kr`, without sending Google credentials or browser cookies to the server.
+## Amazon KDP
+
+The included English manifest is `examples/ekodian-kdp.json` and contains the approved English title, description, USD 5.99 price, EKODI ORIGINAL series data, seven keywords, category directions, rights ownership, and AI-generated-translation disclosure.
+
+```bash
+npm start -- --platform kdp --manifest ./examples/ekodian-kdp.json
+```
+
+The KDP adapter signs in through the isolated Chrome profile and begins the Kindle eBook title setup. It deliberately stops at declarations/final submission rather than silently making legal attestations. The approved manifest is retained for the next hardened KDP form adapter.
+
+## 유페이퍼
+
+```bash
+npm start -- --platform upaper --manifest ./examples/ekodian.json
+```
+
+The 유페이퍼 adapter opens the seller admin, prepares a new content draft, fills available metadata and attempts EPUB/cover upload. It stops before 판매신청 so seller conversion, settlement information, and ISBN/UCI state can be verified.
+
+## EKODIan release assets
+
+Korean edition:
+- `에코디언_EKODI_BOOKS_FINAL_v1.3.epub`
+- `에코디언_표지_FINAL_1600x2560_300dpi.jpg`
+
+Amazon English edition:
+- `In_Search_of_the_EKODIan_KDP_RC1.epub`
+- `In_Search_of_the_EKODIan_KDP_Cover_FINAL.jpg`
+
+## Operating direction
+
+The local operator is the credential-safe execution adapter. EKODI Books can issue signed publish jobs containing approved metadata and downloadable release assets, while the local agent performs the authenticated browser work and reports only operational status and public book identifiers back to the EKODI administration layer.
