@@ -1,5 +1,5 @@
 -- Privacy-safe Marketing Event Ledger and Campaign Ledger.
--- Customer identity is stored only as a one-way customer_key; raw phone/email/name must never be persisted here.
+-- Customer identity is stored only as a salted one-way customer_key; raw phone/email/name must never be persisted here.
 
 CREATE TABLE IF NOT EXISTS marketing_workspace_templates (
   workspace_type TEXT NOT NULL CHECK(workspace_type IN ('tenant','store')),
@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS marketing_workspace_templates (
   store_id TEXT,
   template_key TEXT NOT NULL CHECK(template_key IN ('food_b2c','service_b2b','generic')),
   lifecycle_json TEXT NOT NULL DEFAULT '[]',
+  identity_salt TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY(workspace_type, workspace_key)
@@ -70,11 +71,13 @@ CREATE INDEX IF NOT EXISTS idx_marketing_campaigns_workspace
 
 -- Real pilot templates. No synthetic customer or campaign activity is seeded.
 INSERT OR IGNORE INTO marketing_workspace_templates
-  (workspace_type,workspace_key,tenant_slug,store_id,template_key,lifecycle_json,created_at,updated_at)
+  (workspace_type,workspace_key,tenant_slug,store_id,template_key,lifecycle_json,identity_salt,created_at,updated_at)
 VALUES
   ('tenant','ekodibiz','ekodibiz',NULL,'service_b2b',
    '["inquiry","consultation","proposal","contract","onboarding","active","renewal"]',
+   lower(hex(randomblob(32))),
    '2026-08-17T00:00:00.000Z','2026-08-17T00:00:00.000Z'),
   ('store','4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa','ekodibiz','4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa','food_b2c',
    '["first_visit","order","repeat_order","coupon_redeemed","review","dormant","reactivated"]',
+   lower(hex(randomblob(32))),
    '2026-08-17T00:00:00.000Z','2026-08-17T00:00:00.000Z');
