@@ -65,6 +65,8 @@
   function scheduleDeferredFeatures() {
     if (deferredScheduled) return;
     deferredScheduled = true;
+    // Keep the first interaction path clear. Secondary workspaces and Chief AI chat
+    // may hydrate shortly after the primary AI Ops / Devices shell is interactive.
     window.setTimeout(() => {
       Promise.all(deferredPostAuthScripts.map(loadScript)).catch(() => {});
     }, 1600);
@@ -129,7 +131,11 @@
     started = true;
     document.documentElement.dataset.ekodiAdminReady = 'loading';
     for (const href of postAuthStyles) loadStyle(href);
+
+    // These modules are independent installers. Fetch them in parallel instead of
+    // serially so AI Ops and Device Control become interactive without a waterfall.
     await Promise.all(criticalPostAuthScripts.map(loadScript));
+
     installMallFreeOpsIsolation();
     document.documentElement.dataset.ekodiAdminReady = 'true';
     window.dispatchEvent(new CustomEvent('ekodi-admin-ready'));
