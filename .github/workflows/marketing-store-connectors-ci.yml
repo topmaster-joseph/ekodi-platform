@@ -1,0 +1,58 @@
+name: Marketing Store Connectors CI
+
+on:
+  pull_request:
+    paths:
+      - 'marketing-order-connectors.js'
+      - 'mission-control-entry-worker.js'
+      - 'security-edge.js'
+      - 'migrations/0025_marketing_store_connectors.sql'
+      - 'test/marketing-order-connectors-contract.test.mjs'
+      - '.github/workflows/marketing-store-connectors-ci.yml'
+      - '.github/workflows/marketing-store-connectors-dispatch.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-order-connectors.js'
+      - 'mission-control-entry-worker.js'
+      - 'security-edge.js'
+      - 'migrations/0025_marketing_store_connectors.sql'
+      - 'test/marketing-order-connectors-contract.test.mjs'
+      - '.github/workflows/marketing-store-connectors-ci.yml'
+      - '.github/workflows/marketing-store-connectors-dispatch.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Syntax check connector modules
+        run: |
+          set -euo pipefail
+          node --check marketing-order-connectors.js
+          node --check mission-control-entry-worker.js
+          node --check security-edge.js
+      - name: Verify store connector privacy and isolation contracts
+        run: node --test test/marketing-order-connectors-contract.test.mjs
+      - name: Verify additive migration structure
+        run: node scripts/validate-additive-migrations.mjs migrations
+      - name: Verify critical connector invariants
+        run: |
+          set -euo pipefail
+          grep -Fq "params.set('status','eq.completed')" marketing-order-connectors.js
+          grep -Fq 'rawCustomerIdentityStored:false' marketing-order-connectors.js
+          grep -Fq 'externalWriteBack:false' marketing-order-connectors.js
+          grep -Fq 'bridge_key_hash' migrations/0025_marketing_store_connectors.sql
+          grep -Fq "'pizzamaru-mokpo-univ'" supabase/migrations/20260817032000_separate_mokpo_store_memberships.sql
+          grep -Fq "'yogurtpurple-mokpo-univ'" supabase/migrations/20260817032000_separate_mokpo_store_memberships.sql
+          grep -Fq '6b1b6ae0-8641-4ee1-8e6a-7cb6019fab27' migrations/0025_marketing_store_connectors.sql
+          grep -Fq '43ef7c9c-5932-46b9-b31e-4ab4ee6a60ce' migrations/0025_marketing_store_connectors.sql
+          grep -Fq "path.startsWith('/api/marketing/connectors/')" mission-control-entry-worker.js
+          grep -Fq "path.startsWith('/api/marketing/connectors/')" security-edge.js

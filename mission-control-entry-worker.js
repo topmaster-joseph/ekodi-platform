@@ -3,6 +3,7 @@ import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
+import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
@@ -44,6 +45,18 @@ export default {
       } catch (error) {
         console.error('Marketing AI admin control error', error);
         return errorResponse('Marketing AI 운영 API 처리 중 오류가 발생했습니다.', 'MARKETING_ADMIN_CONTROL_ERROR');
+      }
+    }
+
+    // POS / delivery-app source adapters are store-scoped and import-only. Raw customer
+    // identity is transformed in memory into the Marketing ledger pseudonym and discarded.
+    if (path.startsWith('/api/marketing/connectors/')) {
+      try {
+        const response = await handleMarketingOrderConnectors(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Marketing order connector error', error);
+        return errorResponse('Marketing 주문·POS 연결 처리 중 오류가 발생했습니다.', 'MARKETING_ORDER_CONNECTOR_ERROR');
       }
     }
 
