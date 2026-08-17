@@ -8,7 +8,7 @@
         "url": "https://ekodi.kr/",
         "statuses": [200],
         "redirect": "follow",
-        "expect": ["EKODI | 연결의 생태계", "에코디, 연결의 생태계"]
+        "expect": ["BILINGUAL ECOSYSTEM CATALOG", "에코디의 모든 길을 한눈에", "One ecosystem. Many ways to connect."]
       },
       {
         "url": "https://ekodi.kr/admin",

@@ -11,6 +11,7 @@ on:
       - 'index.html'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
+      - 'deploy/manifests/shared-site.worker.json'
       - '.github/workflows/deploy-ecosystem-registry.yml'
   push:
     branches: [main]
@@ -22,6 +23,7 @@ on:
       - 'index.html'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
+      - 'deploy/manifests/shared-site.worker.json'
       - '.github/workflows/deploy-ecosystem-registry.yml'
 
 permissions:
@@ -51,7 +53,7 @@ jobs:
           node --check homepage-ambient.js
           node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); if(x.version!==2||!x.services?.length) process.exit(1); const ids=x.services.map(s=>s.id); if(new Set(ids).size!==ids.length) throw new Error('duplicate service id'); const states=new Set(['live','beta','preparing','planned']); for(const s of x.services.filter(s=>s.homepage)){if(!states.has(s.status)) throw new Error('invalid homepage status: '+s.id); if(!s.nameEn||!s.descriptionKo||!s.descriptionEn) throw new Error('missing bilingual homepage copy: '+s.id); if((s.status==='live'||s.status==='beta')&&!s.productionVerified) throw new Error('clickable service not production verified: '+s.id)}"
           npm run build
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('dist/index.html','utf8'); for(const s of x.services.filter(s=>s.homepage)){for(const marker of [s.name,s.nameEn,s.label]){if(!html.includes(marker)) throw new Error('generated homepage missing '+s.id+' marker: '+marker)} const clickable=(s.status==='live'||s.status==='beta')&&s.productionVerified===true; if(clickable&&!html.includes('href=\"'+s.url+'\"')) throw new Error('verified service missing link: '+s.id); if(!clickable&&html.includes('href=\"'+s.url+'\"')) throw new Error('roadmap service exposed as link: '+s.id)} console.log('Generated homepage contains the full bilingual lifecycle catalog with safe link gating.')"
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('config/ecosystem-services.json')); const html=fs.readFileSync('dist/index.html','utf8'); for(const s of x.services.filter(s=>s.homepage)){for(const marker of [s.name,s.nameEn,s.label]){if(!html.includes(marker)) throw new Error('generated homepage missing '+s.id+' marker: '+marker)} const clickable=(s.status==='live'||s.status==='beta')&&s.productionVerified===true; if(clickable&&!html.includes('href=\"'+s.url+'\"')) throw new Error('verified service missing link: '+s.id); if(!clickable&&html.includes('href=\"'+s.url+'\"')) throw new Error('roadmap service exposed as link: '+s.id)} const manifest=JSON.parse(fs.readFileSync('deploy/manifests/shared-site.worker.json')); const rootCheck=manifest.worker.requests.find(r=>r.url==='https://ekodi.kr/'); if(!rootCheck?.expect?.length) throw new Error('missing EKODI root release markers'); for(const marker of rootCheck.expect){if(!html.includes(marker)) throw new Error('root smoke marker drifted from generated homepage: '+marker)} console.log('Generated homepage contains the full bilingual lifecycle catalog with safe link gating and aligned release markers.')"
 
   production:
     if: github.event_name != 'pull_request'
