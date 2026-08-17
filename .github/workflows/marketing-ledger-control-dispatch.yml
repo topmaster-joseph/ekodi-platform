@@ -1,0 +1,45 @@
+name: Marketing Ledger Control Dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-ledger-control.js'
+      - 'test/marketing-ledger-contract.test.mjs'
+      - '.github/workflows/marketing-ledger-control-dispatch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: marketing-ledger-control-dispatch
+  cancel-in-progress: false
+
+jobs:
+  validate-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Marketing ledger control contract
+        run: |
+          set -euo pipefail
+          node --check marketing-ledger-control.js
+          node --test test/marketing-ledger-contract.test.mjs
+          grep -Fq '/api/marketing/ledger/overview' marketing-ledger-control.js
+          grep -Fq '/api/marketing/ledger/events' marketing-ledger-control.js
+          grep -Fq '/api/marketing/ledger/campaigns' marketing-ledger-control.js
+          grep -Fq "'human_gate'" marketing-ledger-control.js
+          grep -Fq 'externalExecution:false' marketing-ledger-control.js
+      - name: Dispatch guarded Control API workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-control-api.yml --ref main
+          echo 'Guarded Control API deployment dispatched for Marketing ledger change.'

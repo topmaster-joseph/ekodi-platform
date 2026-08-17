@@ -2,6 +2,7 @@ import customerEntryWorker from './customer-entry-worker.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
+import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -30,6 +31,18 @@ export default {
       } catch (error) {
         console.error('Marketing AI admin control error', error);
         return errorResponse('Marketing AI 운영 API 처리 중 오류가 발생했습니다.', 'MARKETING_ADMIN_CONTROL_ERROR');
+      }
+    }
+
+    // Customer/organization Marketing ledger is scoped by the central Marketing
+    // workspace membership and never exposes raw customer identity.
+    if (path.startsWith('/api/marketing/ledger/')) {
+      try {
+        const response = await handleMarketingLedgerControl(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Marketing ledger control error', error);
+        return errorResponse('Marketing CRM 원장 처리 중 오류가 발생했습니다.', 'MARKETING_LEDGER_CONTROL_ERROR');
       }
     }
 

@@ -2,8 +2,12 @@
   'use strict';
 
   const API = 'https://api.ekodi.kr';
-  const LIVE_TABS = new Set(['channels','automation','approvals']);
+  const LIVE_TABS = new Set(['campaigns','crm','channels','automation','approvals']);
   const CACHE_MS = 15_000;
+  const WORKSPACE_LABELS = {
+    'tenant:ekodibiz':'EKODIBIZ',
+    'store:4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa':'자담치킨 목포대점',
+  };
   let cache = null;
   let cacheAt = 0;
   let request = null;
@@ -16,7 +20,10 @@
     if (Number.isNaN(date.getTime())) return '—';
     return date.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
   };
+  const won = value => `${Number(value || 0).toLocaleString('ko-KR')}원`;
   const stateLabel = value => String(value || 'unknown').replaceAll('_',' ').toUpperCase();
+  const workspaceLabel = row => WORKSPACE_LABELS[`${row.workspaceType}:${row.workspaceKey}`]
+    || (row.workspaceType === 'tenant' ? String(row.tenantSlug || row.workspaceKey || '조직') : String(row.storeId || row.workspaceKey || '점포'));
 
   async function overview(force = false) {
     if (!force && cache && Date.now() - cacheAt < CACHE_MS) return cache;
@@ -41,6 +48,46 @@
 
   function empty(title, detail) {
     return `<div class="marketing-ai-live-empty"><strong>${esc(title)}</strong><span>${esc(detail)}</span></div>`;
+  }
+
+  function renderCampaigns(view, data) {
+    const rows = Array.isArray(data.campaigns) ? data.campaigns : [];
+    const active = rows.filter(row => ['review','approved','scheduled','running'].includes(row.status)).length;
+    const waiting = rows.filter(row => row.approvalStatus === 'awaiting_human').length;
+    const completed = rows.filter(row => row.status === 'completed').length;
+    view.innerHTML = `<section class="marketing-ai-console-card marketing-ai-live-panel">
+      <div class="marketing-ai-card-head"><div><small>CAMPAIGN LEDGER</small><h3>캠페인 운영</h3><p>Campaign 원장의 실제 상태입니다. 초안과 검수 상태를 보되 이 관리자 화면에서는 외부 게시·발송을 실행하지 않습니다.</p></div><div class="marketing-ai-live-head-stat"><strong>${rows.length.toLocaleString('ko-KR')}</strong><span>campaigns</span></div></div>
+      <div class="marketing-ai-live-kpis"><article><small>전체 캠페인</small><strong>${rows.length.toLocaleString('ko-KR')}</strong></article><article><small>진행/검수</small><strong>${active.toLocaleString('ko-KR')}</strong></article><article><small>Human Gate</small><strong>${waiting.toLocaleString('ko-KR')}</strong></article><article><small>완료</small><strong>${completed.toLocaleString('ko-KR')}</strong></article></div>
+      ${rows.length ? `<div class="marketing-ai-campaign-list">${rows.slice(0,60).map(row => `<article class="marketing-ai-campaign-row">
+        <div><small>${esc(workspaceLabel(row))} · ${esc(row.channel || 'unspecified')}</small><strong>${esc(row.name)}</strong><p>${esc(row.objective || '')}</p></div>
+        <span class="marketing-ai-segment-chip">${esc(row.audienceSegment || 'segment')}</span>
+        <span class="marketing-ai-action-status ${esc(row.status)}">${esc(stateLabel(row.status))}</span>
+        <span class="marketing-ai-action-tier ${row.approvalStatus === 'awaiting_human' ? 'human_gate' : ''}">${esc(row.approvalStatus ? stateLabel(row.approvalStatus) : 'NO GATE')}</span>
+        <time>${esc(dateText(row.updatedAt))}</time>
+      </article>`).join('')}</div>` : empty('아직 실제 캠페인이 없습니다.','원장은 연결되었습니다. 자담치킨 또는 EKODIBIZ에서 첫 캠페인 초안을 만들면 이곳에 즉시 나타납니다.')}
+      <div class="marketing-ai-live-boundary"><b>실행 경계</b><span>캠페인 생성과 Human Gate 요청까지 기록합니다. 고객 발송·게시·광고 실행은 별도 승인 및 실행자 영역입니다.</span></div>
+    </section>`;
+  }
+
+  function segmentEntries(row) {
+    return Object.entries(row.segments || {}).filter(([,value]) => Number(value || 0) > 0 || Object.keys(row.segments || {}).length <= 8);
+  }
+
+  function renderCrm(view, data) {
+    const rows = Array.isArray(data.crm) ? data.crm : [];
+    const totalCustomers = rows.reduce((sum,row) => sum + Number(row.customers || 0), 0);
+    const totalEvents = rows.reduce((sum,row) => sum + Number(row.events || 0), 0);
+    const totalValue = rows.reduce((sum,row) => sum + Number(row.totalValueKrw || 0), 0);
+    view.innerHTML = `<section class="marketing-ai-console-card marketing-ai-live-panel">
+      <div class="marketing-ai-card-head"><div><small>CRM RELATIONSHIP LEDGER</small><h3>고객관계 현황</h3><p>고객 이름·전화번호 원문이 아니라 salted pseudonym 기반 관계 단계와 활동 집계만 보여줍니다.</p></div><div class="marketing-ai-live-head-stat"><strong>${totalCustomers.toLocaleString('ko-KR')}</strong><span>known relationships</span></div></div>
+      <div class="marketing-ai-live-kpis"><article><small>관계 고객</small><strong>${totalCustomers.toLocaleString('ko-KR')}</strong></article><article><small>Marketing Event</small><strong>${totalEvents.toLocaleString('ko-KR')}</strong></article><article><small>연결 매출 이벤트</small><strong>${won(totalValue)}</strong></article><article><small>CRM Workspace</small><strong>${rows.length.toLocaleString('ko-KR')}</strong></article></div>
+      <div class="marketing-ai-crm-grid">${rows.length ? rows.map(row => `<article class="marketing-ai-crm-workspace">
+        <div class="marketing-ai-crm-head"><div><small>${esc(String(row.templateKey || '').toUpperCase())}</small><strong>${esc(workspaceLabel(row))}</strong><span>최근 이벤트 ${esc(dateText(row.lastEventAt))}</span></div><b>${Number(row.customers || 0).toLocaleString('ko-KR')}</b></div>
+        <div class="marketing-ai-crm-stats"><span>EVENTS <b>${Number(row.events || 0).toLocaleString('ko-KR')}</b></span><span>ANON <b>${Number(row.anonymousEvents || 0).toLocaleString('ko-KR')}</b></span><span>VALUE <b>${esc(won(row.totalValueKrw))}</b></span></div>
+        <div class="marketing-ai-segments">${segmentEntries(row).map(([key,value]) => `<span><small>${esc(String(key).replaceAll('_',' '))}</small><b>${Number(value || 0).toLocaleString('ko-KR')}</b></span>`).join('')}</div>
+      </article>`).join('') : empty('CRM 원장 템플릿이 없습니다.','Marketing CRM template이 활성화되면 관계 상태가 표시됩니다.')}</div>
+      <div class="marketing-ai-live-boundary"><b>개인정보 경계</b><span>관리자 응답에는 customer_key조차 포함하지 않습니다. 고객 연락처 원문은 이 중앙 CRM 집계 원장의 대상이 아닙니다.</span></div>
+    </section>`;
   }
 
   function providerIcon(provider) {
@@ -78,7 +125,7 @@
   function actionRow(row) {
     return `<article class="marketing-ai-action-row">
       <div class="marketing-ai-action-agent"><span>${esc(row.agentName || row.agentId || 'AI')}</span><small>${esc(row.area || '—')}</small></div>
-      <div class="marketing-ai-action-copy"><strong>${esc(row.actionType || 'action')}</strong><span>${esc(row.target || row.rationale || '대상 없음')}</span></div>
+      <div class="marketing-ai-action-copy"><strong>${esc(row.actionType || 'action')}</strong><span>${esc(row.target || '대상 없음')}</span></div>
       <span class="marketing-ai-action-tier ${esc(row.decisionTier)}">${esc(stateLabel(row.decisionTier))}</span>
       <span class="marketing-ai-action-status ${esc(row.status)}">${esc(stateLabel(row.status))}</span>
       <time>${esc(dateText(row.createdAt))}</time>
@@ -103,8 +150,8 @@
     const waiting = row.status === 'awaiting_human';
     return `<article class="marketing-ai-approval-row ${waiting ? 'waiting' : ''}">
       <div class="marketing-ai-approval-signal">${waiting ? '!' : '✓'}</div>
-      <div class="marketing-ai-approval-copy"><small>${esc(row.agentName || row.agentId || 'AI')} · ${esc(row.area || '—')}</small><strong>${esc(row.actionType || 'action')}</strong><p>${esc(row.target || row.rationale || '대상 정보 없음')}</p><span>${esc(row.decisionReason || '')}</span></div>
-      <div class="marketing-ai-approval-state"><b class="${esc(row.status)}">${esc(stateLabel(row.status))}</b><time>${esc(dateText(row.decidedAt || row.createdAt))}</time>${row.decidedBy ? `<small>${esc(row.decidedBy)}</small>` : ''}</div>
+      <div class="marketing-ai-approval-copy"><small>${esc(row.agentName || row.agentId || 'AI')} · ${esc(row.area || '—')}</small><strong>${esc(row.actionType || 'action')}</strong><p>${esc(row.target || '대상 정보 없음')}</p></div>
+      <div class="marketing-ai-approval-state"><b class="${esc(row.status)}">${esc(stateLabel(row.status))}</b><time>${esc(dateText(row.decidedAt || row.createdAt))}</time></div>
     </article>`;
   }
 
@@ -125,22 +172,30 @@
     </div>`;
   }
 
+  function loadingTitle(tab) {
+    return ({ campaigns:'캠페인 원장 확인 중', crm:'CRM 관계 원장 확인 중', channels:'채널 원장 확인 중', automation:'AI action 원장 확인 중', approvals:'승인 원장 확인 중' })[tab] || '운영 원장 확인 중';
+  }
+
   async function renderLive(tab, force = false) {
     const panel = document.querySelector('#marketingAiAdminPanel');
     const view = panel?.querySelector('#marketingAiConsoleView');
     const active = panel?.querySelector(`[data-marketing-tab="${tab}"]`)?.classList.contains('active');
     if (!panel || !view || !active) return;
-    loading(view, tab === 'channels' ? '채널 원장 확인 중' : tab === 'automation' ? 'AI action 원장 확인 중' : '승인 원장 확인 중');
+    loading(view, loadingTitle(tab));
     try {
       const data = await overview(force);
       if (!panel.querySelector(`[data-marketing-tab="${tab}"]`)?.classList.contains('active')) return;
+      if (tab === 'campaigns') renderCampaigns(view, data);
+      if (tab === 'crm') renderCrm(view, data);
       if (tab === 'channels') renderChannels(view, data);
       if (tab === 'automation') renderAutomation(view, data);
       if (tab === 'approvals') renderApprovals(view, data);
       for (const key of LIVE_TABS) {
         const button = panel.querySelector(`[data-marketing-tab="${key}"]`);
         if (!button) continue;
-        const count = key === 'channels' ? Number(data.summary?.channels || 0)
+        const count = key === 'campaigns' ? Number(data.summary?.campaigns || 0)
+          : key === 'crm' ? Number(data.summary?.crmCustomers || 0)
+          : key === 'channels' ? Number(data.summary?.channels || 0)
           : key === 'automation' ? Number(data.summary?.automationActions || 0)
           : Number(data.summary?.pendingApprovals || 0);
         button.dataset.liveCount = String(count);

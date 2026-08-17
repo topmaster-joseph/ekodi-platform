@@ -31,10 +31,13 @@ jobs:
           set -euo pipefail
           node --check marketing-admin-control.js
           node --test test/marketing-admin-control-contract.test.mjs
+          grep -Fq "campaigns:'connected'" marketing-admin-control.js
+          grep -Fq "crm:'connected'" marketing-admin-control.js
           grep -Fq "channels:'connected'" marketing-admin-control.js
           grep -Fq "automation:'connected'" marketing-admin-control.js
           grep -Fq "approvals:'connected'" marketing-admin-control.js
           grep -Fq 'customerPiiIncluded:false' marketing-admin-control.js
+          grep -Fq 'customerKeysIncluded:false' marketing-admin-control.js
           grep -Fq 'externalExecution:false' marketing-admin-control.js
       - name: Dispatch guarded Control API workflow
         env:
