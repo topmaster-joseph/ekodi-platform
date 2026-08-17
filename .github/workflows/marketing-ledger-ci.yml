@@ -1,0 +1,62 @@
+name: Marketing Ledger CI
+
+on:
+  pull_request:
+    paths:
+      - 'marketing-ledger-control.js'
+      - 'marketing-admin-control.js'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'marketing-ai-admin-live-ops.css'
+      - 'mission-control-entry-worker.js'
+      - 'security-edge.js'
+      - 'migrations/0023_marketing_event_ledger.sql'
+      - 'test/marketing-ledger-contract.test.mjs'
+      - 'test/marketing-admin-control-contract.test.mjs'
+      - 'test/marketing-ai-admin-live-ops.test.mjs'
+      - '.github/workflows/marketing-ledger-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-ledger-control.js'
+      - 'marketing-admin-control.js'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'marketing-ai-admin-live-ops.css'
+      - 'mission-control-entry-worker.js'
+      - 'security-edge.js'
+      - 'migrations/0023_marketing_event_ledger.sql'
+      - 'test/marketing-ledger-contract.test.mjs'
+      - 'test/marketing-admin-control-contract.test.mjs'
+      - 'test/marketing-ai-admin-live-ops.test.mjs'
+      - '.github/workflows/marketing-ledger-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Marketing Event Ledger and CRM contracts
+        run: |
+          set -euo pipefail
+          node --check marketing-ledger-control.js
+          node --check marketing-admin-control.js
+          node --check marketing-ai-admin-live-ops.js
+          node --check mission-control-entry-worker.js
+          node --check security-edge.js
+          node --test test/marketing-ledger-contract.test.mjs test/marketing-admin-control-contract.test.mjs test/marketing-ai-admin-live-ops.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          grep -Fq 'marketing_workspace_templates' migrations/0023_marketing_event_ledger.sql
+          grep -Fq 'identity_salt TEXT NOT NULL' migrations/0023_marketing_event_ledger.sql
+          grep -Fq 'randomblob(32)' migrations/0023_marketing_event_ledger.sql
+          grep -Fq "campaigns:'connected'" marketing-admin-control.js
+          grep -Fq "crm:'connected'" marketing-admin-control.js
+          grep -Fq "decision_tier" marketing-ledger-control.js
+          grep -Fq "'human_gate'" marketing-ledger-control.js
+          grep -Fq 'externalExecution:false' marketing-ledger-control.js
+          grep -Fq "path.startsWith('/api/marketing/ledger/')" security-edge.js
