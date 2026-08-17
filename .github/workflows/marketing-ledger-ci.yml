@@ -11,6 +11,8 @@ on:
       - 'security-edge.js'
       - 'migrations/0023_marketing_event_ledger.sql'
       - 'test/marketing-ledger-contract.test.mjs'
+      - 'test/marketing-ledger-migration.test.mjs'
+      - 'test/marketing-ledger-no-pii.test.mjs'
       - 'test/marketing-admin-control-contract.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
       - '.github/workflows/marketing-ledger-ci.yml'
@@ -25,6 +27,8 @@ on:
       - 'security-edge.js'
       - 'migrations/0023_marketing_event_ledger.sql'
       - 'test/marketing-ledger-contract.test.mjs'
+      - 'test/marketing-ledger-migration.test.mjs'
+      - 'test/marketing-ledger-no-pii.test.mjs'
       - 'test/marketing-admin-control-contract.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
       - '.github/workflows/marketing-ledger-ci.yml'
@@ -49,7 +53,7 @@ jobs:
           node --check marketing-ai-admin-live-ops.js
           node --check mission-control-entry-worker.js
           node --check security-edge.js
-          node --test test/marketing-ledger-contract.test.mjs test/marketing-admin-control-contract.test.mjs test/marketing-ai-admin-live-ops.test.mjs
+          node --test test/marketing-ledger-contract.test.mjs test/marketing-ledger-migration.test.mjs test/marketing-ledger-no-pii.test.mjs test/marketing-admin-control-contract.test.mjs test/marketing-ai-admin-live-ops.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           grep -Fq 'marketing_workspace_templates' migrations/0023_marketing_event_ledger.sql
           grep -Fq 'identity_salt TEXT NOT NULL' migrations/0023_marketing_event_ledger.sql
