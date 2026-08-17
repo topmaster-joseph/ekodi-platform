@@ -7,10 +7,11 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const [migration, control, mission, worker, browser, admin, build, access, ai, shared, wrangler] = await Promise.all([
+const [migration, control, mission, security, worker, browser, admin, build, access, ai, shared, wrangler] = await Promise.all([
   read('migrations/0024_author_billing.sql'),
   read('author-billing-control.js'),
   read('mission-control-entry-worker.js'),
+  read('security-edge.js'),
   read('author-worker.js'),
   read('author/billing.js'),
   read('author-billing-admin.js'),
@@ -22,7 +23,7 @@ const [migration, control, mission, worker, browser, admin, build, access, ai, s
 ]);
 
 test('Creator billing JavaScript modules parse before deployment', () => {
-  for (const path of ['author-billing-control.js','mission-control-entry-worker.js','author-worker.js','author/billing.js','author-billing-admin.js','scripts/build.mjs']) {
+  for (const path of ['author-billing-control.js','mission-control-entry-worker.js','security-edge.js','author-worker.js','author/billing.js','author-billing-admin.js','scripts/build.mjs']) {
     assert.doesNotThrow(() => execFileSync(process.execPath, ['--check', `${root}${path}`], { stdio:'pipe' }), path);
   }
 });
@@ -94,12 +95,16 @@ test('Creator browser exposes no server billing or Supabase service secrets', ()
   assert.match(browser, /requestBillingAuth/);
 });
 
-test('Creator site and control plane route the isolated billing surface', () => {
+test('Creator site and control plane route the isolated billing surface without dropping Marketing ledger', () => {
   assert.match(worker, /https:\/\/api\.ekodi\.kr/);
   assert.match(worker, /js\.tosspayments\.com/);
   assert.match(worker, /paidAiBilling: 'server-verified'/);
   assert.match(mission, /handleAuthorBillingControl/);
   assert.match(mission, /path\.startsWith\('\/api\/author\/billing\/'\)/);
+  assert.match(mission, /handleMarketingLedgerControl/);
+  assert.match(mission, /path\.startsWith\('\/api\/marketing\/ledger\/'\)/);
+  assert.match(security, /path\.startsWith\('\/api\/author\/billing\/'\)/);
+  assert.match(security, /path\.startsWith\('\/api\/marketing\/ledger\/'\)/);
   assert.match(wrangler, /https:\/\/author\.ekodi\.kr/);
 });
 
