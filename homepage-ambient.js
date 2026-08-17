@@ -22,4 +22,39 @@
   const keys = ['--ambient-a','--ambient-b','--ambient-c','--ambient-x1','--ambient-y1','--ambient-x2','--ambient-y2','--ambient-x3','--ambient-y3'];
   keys.forEach((key,index) => root.style.setProperty(key,palette[index]));
   root.dataset.ambientTheme = String(palettes.indexOf(palette) + 1);
+
+  const cards = [...document.querySelectorAll('.service-card[data-service-status]')];
+  const groups = [...document.querySelectorAll('.service-group')];
+  const filters = [...document.querySelectorAll('[data-status-filter]')];
+  const statuses = ['live', 'beta', 'preparing', 'planned'];
+
+  function updateStatusCounts() {
+    for (const status of statuses) {
+      const count = cards.filter(card => card.dataset.serviceStatus === status).length;
+      document.querySelectorAll(`[data-status-count="${status}"]`).forEach(node => { node.textContent = String(count); });
+    }
+  }
+
+  function applyFilter(status) {
+    const selected = statuses.includes(status) ? status : 'all';
+    for (const card of cards) card.hidden = selected !== 'all' && card.dataset.serviceStatus !== selected;
+
+    for (const group of groups) {
+      const groupCards = [...group.querySelectorAll('.service-card[data-service-status]')];
+      const visible = groupCards.filter(card => !card.hidden).length;
+      group.hidden = visible === 0;
+      const count = group.querySelector('[data-service-count]');
+      if (count) count.textContent = String(visible);
+    }
+
+    for (const button of filters) button.setAttribute('aria-pressed', String(button.dataset.statusFilter === selected));
+    root.dataset.serviceFilter = selected;
+  }
+
+  for (const button of filters) {
+    button.addEventListener('click', () => applyFilter(button.dataset.statusFilter || 'all'));
+  }
+
+  updateStatusCounts();
+  applyFilter('all');
 })();
