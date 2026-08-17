@@ -46,6 +46,12 @@ export function normalizeManifest(raw, manifestPath = process.cwd(), { verifyFil
     bookId: { mode: idMode, isbn },
     epubPath: verifyFiles ? resolveFile(baseDir, raw.epubPath, 'epubPath') : path.resolve(baseDir, requiredText(raw.epubPath, 'epubPath')),
     coverPath: verifyFiles ? resolveFile(baseDir, raw.coverPath, 'coverPath') : path.resolve(baseDir, requiredText(raw.coverPath, 'coverPath')),
+    kdp: {
+      aiGeneratedTranslation: Boolean(raw.kdp?.aiGeneratedTranslation),
+      aiGeneratedText: raw.kdp?.aiGeneratedText === true,
+      aiGeneratedImages: raw.kdp?.aiGeneratedImages === true,
+      rightsOwned: raw.kdp?.rightsOwned === true,
+    },
   };
 
   if (!/\.epub$/i.test(normalized.epubPath)) throw new Error('epubPath must point to an .epub file.');
