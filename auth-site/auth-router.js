@@ -24,7 +24,7 @@ document.documentElement.dataset.identityManage=params.get('manage')==='1'?'1':'
 const site=params.get('site');
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));
 async function loadMarketingAuth(){
-  try{return await import('./marketing-auth-hotfix.js?v=20260815-fedcm-cache-2')}
+  try{return await import('./marketing-auth-hotfix.js?v=20260817-workspace-entry-1')}
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 if(site==='admin')await import('./admin-auth.js?v=20260816-fedcm-button-1');
@@ -35,6 +35,6 @@ else{
   if(site==='marketing'&&params.get('review')!=='1')await loadMarketingAuth();
   else await import('./auth.js');
   if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
-  if(site==='marketing')await import('./marketing-onboarding.js');
+  if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
   await import('./membership-ui.js');
 }

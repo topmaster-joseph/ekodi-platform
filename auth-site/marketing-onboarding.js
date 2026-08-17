@@ -8,6 +8,7 @@ if(marketing&&!reviewMode){
   const requestActions=document.getElementById('requestActions');
   const freeActions=document.getElementById('freeActions');
   const continueFree=document.getElementById('continueFree');
+  const workspaceList=document.getElementById('workspaceList');
 
   const freeTarget=()=>{
     try{
@@ -33,6 +34,19 @@ if(marketing&&!reviewMode){
     },true);
   }
 
+  const polishWorkspaceLabels=()=>{
+    workspaceList?.querySelectorAll('.workspace-card').forEach(button=>{
+      const name=button.querySelector('.workspace-copy strong');
+      const meta=button.querySelector('.workspace-meta');
+      if(name)name.classList.add('workspace-name');
+      if(meta){
+        const parts=String(meta.textContent||'').split('·').map(value=>value.trim()).filter(Boolean);
+        if(parts.length>2)meta.textContent=parts.slice(0,2).join(' · ');
+      }
+      if(name&&meta)button.setAttribute('aria-label',`${name.textContent||'내 공간'}, ${meta.textContent||''}`.trim());
+    });
+  };
+
   const applyFreeFirstExperience=()=>{
     if(badge?.textContent.trim()!=='무료회원')return;
     requestActions?.classList.add('hide');
@@ -44,8 +58,13 @@ if(marketing&&!reviewMode){
     }
   };
 
-  const observer=new MutationObserver(applyFreeFirstExperience);
+  const observer=new MutationObserver(()=>{
+    applyFreeFirstExperience();
+    polishWorkspaceLabels();
+  });
   if(badge)observer.observe(badge,{childList:true,subtree:true,characterData:true});
   if(accessStatus)observer.observe(accessStatus,{childList:true,subtree:true,characterData:true});
+  if(workspaceList)observer.observe(workspaceList,{childList:true,subtree:true,characterData:true});
   applyFreeFirstExperience();
+  polishWorkspaceLabels();
 }

@@ -18,6 +18,7 @@ const clientAuth=read('auth-site/client-auth.js');
 const authTarget=read('auth-site/auth-workspace-target.js');
 const authRouter=read('auth-site/auth-router.js');
 const authHtml=read('auth-site/index.html');
+const marketingOnboarding=read('auth-site/marketing-onboarding.js');
 const myHtml=read('my/index.html');
 const myApp=read('my/app.js');
 
@@ -56,7 +57,7 @@ test('legacy Mall seller login is normalized back to Seller Studio',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1&workspace=20260817-sso-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1&workspace=20260817-sso-1&entry=20260817-workspace-entry-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -108,6 +109,15 @@ test('auth center is workspace-first and hides linked login identities outside a
   assert.match(authJs,/workspace_key/);
 });
 
+test('Marketing workspace labels are separated and stale assets are force-refreshed',()=>{
+  assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
+  assert.match(authHtml,/entry=20260817-workspace-entry-1/);
+  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260817-workspace-entry-1/);
+  assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
+  assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
+  assert.match(marketingOnboarding,/workspace-name/);
+});
+
 test('central auth directly honors a requested verified Social or Energy workspace',()=>{
   assert.match(authJs,/social:\{name:'EKODI Social'/);
   assert.match(authJs,/energy:\{name:'EKODI Energy AI'/);
@@ -148,7 +158,7 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
 });
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
-  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','my/app.js']){
+  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js']){
     const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
