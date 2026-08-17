@@ -286,7 +286,9 @@ function showApp(email) {
   profileEmail.textContent = email;
   profileName.textContent = email.split('@')[0];
   applyScope();
-  loadOperationsOverview();
+  // AI Ops owns the human-facing operations summary. Do not eagerly fetch and
+  // render the retired Operations service-card grid during every login.
+  serviceControlGrid.replaceChildren(statusMessage('상세 운영정보는 AI Ops가 필요할 때 불러옵니다.'));
 }
 
 async function restoreSession() {
