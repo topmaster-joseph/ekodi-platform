@@ -21,10 +21,12 @@ test('pre-auth admin HTML uses only the authenticated shell loader', () => {
 
 test('post-auth loader refuses to start Campus before a validated session reveals app', () => {
   assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
-  assert.match(shell, /if \(started \|\| !authenticated\(\)\) return/);
+  const guard = shell.indexOf('if (started || !authenticated()) return');
+  const criticalLoad = shell.indexOf('await Promise.all(criticalPostAuthScripts.map(loadScript))');
+  assert.ok(guard >= 0, 'authenticated shell guard must exist');
+  assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
   assert.match(shell, /observer\.observe\(app, \{ attributes:true, attributeFilter:\['hidden'\] \}\)/);
-  assert.equal(shell.includes('history.replaceState'), false, 'post-auth loader must never create #campus before authentication');
-  assert.ok(shell.indexOf('for (const src of postAuthScripts) await loadScript(src)') > shell.indexOf('if (started || !authenticated()) return'));
+  assert.equal(shell.includes('history.replaceState'), false, 'post-auth loader must never create a navigation hash before authentication');
 });
 
 test('minimal login shell keeps the central auth link interactive while app is hidden', () => {
@@ -34,13 +36,19 @@ test('minimal login shell keeps the central auth link interactive while app is h
   assert.equal(scriptTag('compact-control-center.js'), '<script src="compact-control-center.js"');
 });
 
-test('authenticated feature scripts remain available after login in deterministic order', () => {
-  const compact = shell.indexOf("'compact-control-center.js'");
-  const features = shell.indexOf("'control-center-features.js'");
-  const campus = shell.indexOf("'campus-actions.js'");
-  const lazy = shell.indexOf("'admin-lazy-features.js'");
-  assert.ok(compact >= 0 && compact < features && features < campus && campus < lazy);
-  assert.match(shell, /for \(const src of postAuthScripts\) await loadScript\(src\)/);
+test('authenticated critical features have a deterministic membership and load in parallel', () => {
+  for (const asset of [
+    'compact-control-center.js',
+    'control-center-features.js',
+    'campus-actions.js',
+    'ai-ops-admin.js',
+    'admin-menu-layout.js',
+  ]) {
+    assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
+  }
+  assert.match(shell, /const deferredPostAuthScripts = \['admin-lazy-features\.js'\]/);
+  assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
+  assert.doesNotMatch(shell, /for \(const src of postAuthScripts\) await loadScript\(src\)/);
 });
 
 test('Mall Free Ops is hard-isolated to its own admin section and unloaded elsewhere', () => {
