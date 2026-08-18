@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/admin-availability-watch.yml'
+      - '.github/workflows/admin-monitor-stale-watch.yml'
       - 'test/admin-availability-watch.test.mjs'
       - 'wrangler.site.toml'
       - 'wrangler.admin.staging.toml'
@@ -40,14 +41,15 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Inspect canonical Worker and DNS state
-        id: infra
+      - name: Inspect Cloudflare control-plane state
+        id: control
         shell: bash
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
           api='https://api.cloudflare.com/client/v4'
+
           domains=$(curl -fsS --retry 3 --retry-delay 2 \
             "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
@@ -56,163 +58,229 @@ jobs:
           attached=false
           [ -n "$zone_id" ] && [ "$zone_id" != null ] && attached=true
 
-          dns_ok=false
+          canonical_dns_record=false
           if [ "$attached" = true ]; then
             records=$(curl -fsS --retry 3 --retry-delay 2 \
               "$api/zones/$zone_id/dns_records?name=admin.ekodi.kr&per_page=100" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
             echo "$records" | jq -e '.success == true' >/dev/null
-            if echo "$records" | jq -e '.result[] | select(.name == "admin.ekodi.kr" and .proxied == true)' >/dev/null; then dns_ok=true; fi
+            if echo "$records" | jq -e '.result[] | select(.name == "admin.ekodi.kr" and .proxied == true)' >/dev/null; then
+              canonical_dns_record=true
+            fi
           fi
 
-          needs_repair=false
-          if [ "$attached" != true ] || [ "$dns_ok" != true ]; then needs_repair=true; fi
-          echo "attached=$attached" >> "$GITHUB_OUTPUT"
-          echo "dns_ok=$dns_ok" >> "$GITHUB_OUTPUT"
-          echo "needs_repair=$needs_repair" >> "$GITHUB_OUTPUT"
-          echo "Canonical infra: attached=$attached dns_ok=$dns_ok needs_repair=$needs_repair"
+          canonical_control=false
+          [ "$attached" = true ] && [ "$canonical_dns_record" = true ] && canonical_control=true
 
-      - name: Check independent public DNS resolvers
-        id: resolvers
+          emergency_service=false
+          if curl -fsS --retry 3 --retry-delay 2 -o /dev/null \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/ekodi-admin-staging" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"; then
+            emergency_service=true
+          fi
+
+          canonical_needs_repair=false
+          [ "$canonical_control" != true ] && canonical_needs_repair=true
+
+          echo "canonical_control=$canonical_control" >> "$GITHUB_OUTPUT"
+          echo "canonical_needs_repair=$canonical_needs_repair" >> "$GITHUB_OUTPUT"
+          echo "emergency_service=$emergency_service" >> "$GITHUB_OUTPUT"
+          echo "Control plane: canonical=$canonical_control emergency_service=$emergency_service"
+
+      - name: Check Cloudflare and Google public DNS independently
+        id: dns
         shell: bash
         run: |
           set -euo pipefail
-          resolve_a() {
-            host="$1"
-            cf=$(curl -fsS --retry 3 -H 'accept: application/dns-json' \
-              "https://cloudflare-dns.com/dns-query?name=$host&type=A")
-            google=$(curl -fsS --retry 3 \
-              "https://dns.google/resolve?name=$host&type=A")
+          resolve_host() {
+            prefix="$1"; host="$2"
             cf_ok=false; google_ok=false
-            if echo "$cf" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1 or .type == 5)] | length > 0)' >/dev/null; then cf_ok=true; fi
-            if echo "$google" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1 or .type == 5)] | length > 0)' >/dev/null; then google_ok=true; fi
-            echo "$host resolver health: cloudflare=$cf_ok google=$google_ok"
-            [ "$cf_ok" = true ] && [ "$google_ok" = true ]
+            cf=$(curl -fsS --retry 3 -H 'accept: application/dns-json' \
+              "https://cloudflare-dns.com/dns-query?name=$host&type=A" || true)
+            google=$(curl -fsS --retry 3 \
+              "https://dns.google/resolve?name=$host&type=A" || true)
+            if echo "$cf" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1 or .type == 5)] | length > 0)' >/dev/null 2>&1; then cf_ok=true; fi
+            if echo "$google" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1 or .type == 5)] | length > 0)' >/dev/null 2>&1; then google_ok=true; fi
+            echo "${prefix}_cf=$cf_ok" >> "$GITHUB_OUTPUT"
+            echo "${prefix}_google=$google_ok" >> "$GITHUB_OUTPUT"
+            echo "$host DNS: cloudflare=$cf_ok google=$google_ok"
           }
-          canonical_dns=false
-          emergency_dns=false
-          if resolve_a admin.ekodi.kr; then canonical_dns=true; fi
-          if resolve_a ekodi-admin-staging.topmaster-joseph.workers.dev; then emergency_dns=true; fi
-          echo "canonical_dns=$canonical_dns" >> "$GITHUB_OUTPUT"
-          echo "emergency_dns=$emergency_dns" >> "$GITHUB_OUTPUT"
+          resolve_host canonical admin.ekodi.kr
+          resolve_host emergency ekodi-admin-staging.topmaster-joseph.workers.dev
 
-      - name: Probe primary and independent emergency paths
-        id: endpoints
+      - name: Probe semantic admin responses
+        id: http
         shell: bash
         run: |
           set -euo pipefail
           probe_admin() {
             label="$1"; url="$2"; expected_header="$3"; expected_value="$4"
-            status=000
             for attempt in 1 2 3; do
               status=$(curl -sS -o "/tmp/${label}.body" -D "/tmp/${label}.headers" -w '%{http_code}' \
                 --connect-timeout 5 --max-time 15 "$url" || true)
               if [ "$status" = 200 ] \
                 && grep -Fq 'EKODI Control Center' "/tmp/${label}.body" \
                 && grep -Fiq "$expected_header: $expected_value" "/tmp/${label}.headers"; then
-                echo "$label=ok" >> "$GITHUB_OUTPUT"
-                echo "$url -> 200 ($expected_value)"
                 return 0
               fi
               echo "$url attempt $attempt -> $status"
               sleep 3
             done
-            echo "$label=fail" >> "$GITHUB_OUTPUT"
             return 1
           }
           probe_health() {
-            label="$1"; url="$2"; status=000
+            url="$1"
             for attempt in 1 2 3; do
-              status=$(curl -sS -o "/tmp/${label}.body" -w '%{http_code}' \
+              status=$(curl -sS -o /tmp/emergency-health.body -w '%{http_code}' \
                 --connect-timeout 5 --max-time 15 "$url" || true)
-              if [ "$status" = 200 ] && jq -e '.ok == true and .service == "ekodi-admin-staging"' "/tmp/${label}.body" >/dev/null 2>&1; then
-                echo "$label=ok" >> "$GITHUB_OUTPUT"
-                echo "$url -> 200 (healthy)"
+              if [ "$status" = 200 ] && jq -e '.ok == true and .service == "ekodi-admin-staging"' /tmp/emergency-health.body >/dev/null 2>&1; then
                 return 0
               fi
               echo "$url attempt $attempt -> $status"
               sleep 3
             done
-            echo "$label=fail" >> "$GITHUB_OUTPUT"
             return 1
           }
 
-          probe_admin canonical_root "$CANONICAL_ORIGIN/" 'x-ekodi-route' 'admin-control-center' || true
-          probe_admin canonical_admin "$CANONICAL_ORIGIN/admin" 'x-ekodi-route' 'admin-control-center' || true
-          probe_admin emergency_root "$EMERGENCY_ORIGIN/" 'x-ekodi-staging' 'ekodi-admin-staging' || true
-          probe_health emergency_health "$EMERGENCY_ORIGIN/health" || true
+          canonical_http=false
+          emergency_http=false
+          if probe_admin canonical_root "$CANONICAL_ORIGIN/" 'x-ekodi-route' 'admin-control-center' \
+            && probe_admin canonical_admin "$CANONICAL_ORIGIN/admin" 'x-ekodi-route' 'admin-control-center'; then
+            canonical_http=true
+          fi
+          if probe_admin emergency_root "$EMERGENCY_ORIGIN/" 'x-ekodi-staging' 'ekodi-admin-staging' \
+            && probe_health "$EMERGENCY_ORIGIN/health"; then
+            emergency_http=true
+          fi
+          echo "canonical_http=$canonical_http" >> "$GITHUB_OUTPUT"
+          echo "emergency_http=$emergency_http" >> "$GITHUB_OUTPUT"
+          echo "Semantic HTTP: canonical=$canonical_http emergency=$emergency_http"
 
-      - name: Repair canonical attachment only when infrastructure is incomplete
-        if: steps.infra.outputs.needs_repair == 'true'
+      - name: Pre-repair quorum decision
+        id: quorum
         shell: bash
         run: |
           set -euo pipefail
-          echo 'Canonical Worker/DNS attachment is incomplete. Running one guarded trigger repair.'
+          count_failures() {
+            count=0
+            for value in "$@"; do [ "$value" = true ] || count=$((count+1)); done
+            echo "$count"
+          }
+          canonical_failures=$(count_failures \
+            '${{ steps.control.outputs.canonical_control }}' \
+            '${{ steps.dns.outputs.canonical_cf }}' \
+            '${{ steps.dns.outputs.canonical_google }}' \
+            '${{ steps.http.outputs.canonical_http }}')
+          emergency_failures=$(count_failures \
+            '${{ steps.control.outputs.emergency_service }}' \
+            '${{ steps.dns.outputs.emergency_cf }}' \
+            '${{ steps.dns.outputs.emergency_google }}' \
+            '${{ steps.http.outputs.emergency_http }}')
+
+          canonical_confirmed=false; emergency_confirmed=false
+          canonical_warning=false; emergency_warning=false
+          [ "$canonical_failures" -ge 2 ] && canonical_confirmed=true
+          [ "$emergency_failures" -ge 2 ] && emergency_confirmed=true
+          [ "$canonical_failures" -eq 1 ] && canonical_warning=true
+          [ "$emergency_failures" -eq 1 ] && emergency_warning=true
+
+          echo "canonical_failures=$canonical_failures" >> "$GITHUB_OUTPUT"
+          echo "emergency_failures=$emergency_failures" >> "$GITHUB_OUTPUT"
+          echo "canonical_confirmed=$canonical_confirmed" >> "$GITHUB_OUTPUT"
+          echo "emergency_confirmed=$emergency_confirmed" >> "$GITHUB_OUTPUT"
+          echo "canonical_warning=$canonical_warning" >> "$GITHUB_OUTPUT"
+          echo "emergency_warning=$emergency_warning" >> "$GITHUB_OUTPUT"
+          echo "Quorum: canonical_failures=$canonical_failures emergency_failures=$emergency_failures"
+
+      - name: Repair canonical attachment only after quorum confirmation
+        if: steps.quorum.outputs.canonical_confirmed == 'true' && steps.control.outputs.canonical_needs_repair == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Quorum confirmed canonical incident and Cloudflare attachment is incomplete. Running guarded trigger repair.'
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
           sleep 15
 
-      - name: Repair independent emergency Worker only when unhealthy
-        if: steps.endpoints.outputs.emergency_root != 'ok' || steps.endpoints.outputs.emergency_health != 'ok'
+      - name: Repair emergency Worker only after quorum confirms missing service
+        if: steps.quorum.outputs.emergency_confirmed == 'true' && steps.control.outputs.emergency_service != 'true'
         shell: bash
         run: |
           set -euo pipefail
-          echo 'Independent emergency Worker is unhealthy. Redeploying only the emergency surface.'
+          echo 'Quorum confirmed emergency incident and Worker service is missing. Redeploying only the independent emergency surface.'
           npx --yes wrangler@4.119.0 deploy --config wrangler.admin.staging.toml
           sleep 15
 
-      - name: Final classification and verification
+      - name: Final semantic verification and classification
         id: final
         shell: bash
         run: |
           set -euo pipefail
-          check_code() {
-            curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$1" || true
+          semantic_code() {
+            url="$1"; marker="$2"
+            code=$(curl -sS -o /tmp/final.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            if [ "$code" = 200 ] && grep -Fq "$marker" /tmp/final.body; then echo 200; else echo "$code"; fi
           }
-          canonical_root=$(check_code "$CANONICAL_ORIGIN/")
-          canonical_admin=$(check_code "$CANONICAL_ORIGIN/admin")
-          emergency_root=$(check_code "$EMERGENCY_ORIGIN/")
-          emergency_health=$(check_code "$EMERGENCY_ORIGIN/health")
+          canonical_root=$(semantic_code "$CANONICAL_ORIGIN/" 'EKODI Control Center')
+          canonical_admin=$(semantic_code "$CANONICAL_ORIGIN/admin" 'EKODI Control Center')
+          emergency_root=$(semantic_code "$EMERGENCY_ORIGIN/" 'EKODI Control Center')
+          emergency_health=$(curl -sS -o /tmp/final-health.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$EMERGENCY_ORIGIN/health" || true)
 
-          canonical_healthy=false
-          emergency_healthy=false
-          [ "$canonical_root" = 200 ] && [ "$canonical_admin" = 200 ] && canonical_healthy=true
-          [ "$emergency_root" = 200 ] && [ "$emergency_health" = 200 ] && emergency_healthy=true
+          canonical_http=false; emergency_http=false
+          [ "$canonical_root" = 200 ] && [ "$canonical_admin" = 200 ] && canonical_http=true
+          if [ "$emergency_root" = 200 ] && [ "$emergency_health" = 200 ] \
+            && jq -e '.ok == true and .service == "ekodi-admin-staging"' /tmp/final-health.body >/dev/null 2>&1; then
+            emergency_http=true
+          fi
+
+          # A single observer failure is explicitly not an outage.
+          canonical_outage='${{ steps.quorum.outputs.canonical_confirmed }}'
+          emergency_outage='${{ steps.quorum.outputs.emergency_confirmed }}'
+          [ "$canonical_http" = true ] && canonical_outage=false
+          [ "$emergency_http" = true ] && emergency_outage=false
 
           incident=healthy
-          if [ "$canonical_healthy" != true ] && [ "$emergency_healthy" = true ]; then incident=canonical-only; fi
-          if [ "$canonical_healthy" = true ] && [ "$emergency_healthy" != true ]; then incident=emergency-only; fi
-          if [ "$canonical_healthy" != true ] && [ "$emergency_healthy" != true ]; then incident=full-outage; fi
+          if [ "$canonical_outage" != true ] && [ "$emergency_outage" != true ]; then
+            if [ '${{ steps.quorum.outputs.canonical_warning }}' = true ] || [ '${{ steps.quorum.outputs.emergency_warning }}' = true ]; then
+              incident=observer-warning
+            fi
+          elif [ "$canonical_outage" = true ] && [ "$emergency_outage" != true ]; then
+            incident=canonical-only
+          elif [ "$canonical_outage" != true ] && [ "$emergency_outage" = true ]; then
+            incident=emergency-only
+          else
+            incident=full-outage
+          fi
 
-          echo "canonical_healthy=$canonical_healthy" >> "$GITHUB_OUTPUT"
-          echo "emergency_healthy=$emergency_healthy" >> "$GITHUB_OUTPUT"
           echo "incident=$incident" >> "$GITHUB_OUTPUT"
           echo "canonical_root=$canonical_root" >> "$GITHUB_OUTPUT"
           echo "canonical_admin=$canonical_admin" >> "$GITHUB_OUTPUT"
           echo "emergency_root=$emergency_root" >> "$GITHUB_OUTPUT"
           echo "emergency_health=$emergency_health" >> "$GITHUB_OUTPUT"
           echo "Admin classification: $incident"
-          [ "$incident" = healthy ]
 
-      - name: Open or update admin incident issue
+          # Warnings remain visible in logs but do not create outage incidents.
+          [ "$incident" = healthy ] || [ "$incident" = observer-warning ]
+
+      - name: Open or update confirmed admin incident issue
         if: failure()
         shell: bash
         run: |
           set -euo pipefail
           title='Admin availability incident: admin.ekodi.kr'
           body=$(cat <<EOF
-          Automated Chief AI availability guard detected a persistent admin access failure after retries and safe, isolated repair attempts.
+          EKODI resilience guard confirmed an admin incident using multi-observer quorum. A single DNS/HTTP observer failure is never enough to reach this state.
 
           - classification: ${{ steps.final.outputs.incident }}
           - canonical root: $CANONICAL_ORIGIN/ -> ${{ steps.final.outputs.canonical_root }}
           - canonical admin: $CANONICAL_ORIGIN/admin -> ${{ steps.final.outputs.canonical_admin }}
           - independent emergency: $EMERGENCY_ORIGIN/ -> ${{ steps.final.outputs.emergency_root }}
           - emergency health: $EMERGENCY_ORIGIN/health -> ${{ steps.final.outputs.emergency_health }}
-          - canonical DNS via independent resolvers: ${{ steps.resolvers.outputs.canonical_dns }}
-          - emergency DNS via independent resolvers: ${{ steps.resolvers.outputs.emergency_dns }}
+          - canonical observer failures: ${{ steps.quorum.outputs.canonical_failures }}/4
+          - emergency observer failures: ${{ steps.quorum.outputs.emergency_failures }}/4
           - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          Safety boundary: never delete or recreate DNS records automatically. Canonical and emergency recovery are isolated from one another.
+          Safety boundary: never delete or recreate DNS records automatically. Canonical and emergency recovery stay isolated.
           EOF
           )
           existing=$(gh issue list --state open --search 'Admin availability incident: admin.ekodi.kr in:title' --json number --jq '.[0].number // empty')
