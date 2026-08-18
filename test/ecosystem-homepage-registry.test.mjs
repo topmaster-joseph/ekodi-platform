@@ -5,34 +5,26 @@ import { CATEGORY_DEFINITIONS, STATUS_DEFINITIONS, loadHomepageServices, renderS
 
 const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const releaseManifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+const registry = JSON.parse(await readFile(new URL('../config/ecosystem-services.json', import.meta.url), 'utf8'));
 
 const clickableStatuses = new Set(['live', 'beta']);
 const roadmapStatuses = new Set(['preparing', 'planned']);
 
-test('homepage registry exposes a bilingual lifecycle catalog without opening unverified services', async () => {
+test('homepage registry exposes only production-verified bilingual usable services', async () => {
   const services = await loadHomepageServices();
-  assert.ok(services.length >= 20);
+  assert.ok(services.length > 0);
   assert.ok(services.every(service => service.homepage === true));
   assert.ok(services.every(service => service.url.startsWith('https://')));
   assert.ok(services.every(service => !/staging|preview/i.test(new URL(service.url).hostname)));
   assert.ok(services.every(service => service.nameEn && service.descriptionKo && service.descriptionEn));
   assert.ok(services.every(service => STATUS_DEFINITIONS[service.status]));
-
-  const clickable = services.filter(service => clickableStatuses.has(service.status));
-  assert.ok(clickable.length > 0);
-  assert.ok(clickable.every(service => service.productionVerified === true));
-
-  const roadmap = services.filter(service => roadmapStatuses.has(service.status));
-  assert.ok(roadmap.length > 0);
-  assert.ok(roadmap.every(service => service.productionVerified !== true));
+  assert.ok(services.every(service => clickableStatuses.has(service.status)));
+  assert.ok(services.every(service => service.productionVerified === true));
 
   const ids = services.map(service => service.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const required of ['church', 'biz', 'books', 'lab', 'community', 'mall', 'marketing', 'work']) {
-    assert.ok(ids.includes(required), `missing public homepage service: ${required}`);
-  }
-  for (const upcoming of ['trade', 'pay', 'edu', 'my', 'insurance', 'mail', 'live', 'cloud', 'media']) {
-    assert.ok(ids.includes(upcoming), `missing roadmap service: ${upcoming}`);
+  for (const required of ['church', 'community', 'social', 'biz', 'business', 'mall', 'marketing', 'books', 'author', 'lab', 'work', 'energy']) {
+    assert.ok(ids.includes(required), `missing verified homepage service: ${required}`);
   }
   assert.ok(!ids.includes('mission'), 'legacy mission service must not be published separately');
 
@@ -46,7 +38,7 @@ test('homepage registry exposes a bilingual lifecycle catalog without opening un
   assert.equal(community?.category, 'community-ministry');
 });
 
-test('homepage cards render Korean and English together with lifecycle badges', async () => {
+test('homepage cards render Korean and English together with live or beta badges', async () => {
   const services = await loadHomepageServices();
   const html = renderServiceCards(services);
   for (const service of services) {
@@ -68,20 +60,19 @@ test('homepage cards render Korean and English together with lifecycle badges', 
   }
 });
 
-test('roadmap cards are visible but never become dead public links', async () => {
+test('preparing and planned services remain in the registry but stay hidden from the public root', async () => {
   const services = await loadHomepageServices();
   const html = renderServiceCards(services);
-  for (const service of services.filter(item => roadmapStatuses.has(item.status))) {
-    const match = html.match(new RegExp(`<article[^>]*data-service-id="${service.id}"[^>]*>[\\s\\S]*?</article>`));
-    assert.ok(match, `roadmap service must render as a non-link article: ${service.id}`);
-    assert.doesNotMatch(match[0], /\shref=/, `roadmap service must not expose a clickable URL: ${service.id}`);
-  }
-  for (const service of services.filter(item => clickableStatuses.has(item.status))) {
-    assert.match(html, new RegExp(`<a[^>]*data-service-id="${service.id}"[^>]*href="${service.url.replaceAll('.', '\\.')}"`));
+  const roadmap = registry.services.filter(service => roadmapStatuses.has(service.status));
+  assert.ok(roadmap.length > 0);
+  assert.ok(roadmap.every(service => service.homepage === false));
+  assert.ok(roadmap.every(service => service.productionVerified !== true));
+  for (const service of roadmap) {
+    assert.doesNotMatch(html, new RegExp(`data-service-id="${service.id}"`), `roadmap service must stay hidden: ${service.id}`);
   }
 });
 
-test('homepage navigation, bilingual hero and lifecycle filters remain compact and real', () => {
+test('homepage navigation and bilingual hero remain compact without roadmap lifecycle filters', () => {
   for (const anchor of ['#about', '#services', '#connect', '#contact']) {
     assert.match(homepage, new RegExp(`href="${anchor}"`));
   }
@@ -92,9 +83,7 @@ test('homepage navigation, bilingual hero and lifecycle filters remain compact a
   assert.match(homepage, /One ecosystem\. Many ways to connect\./);
   assert.match(homepage, /class="ecosystem-pulse"/);
   assert.match(homepage, /class="service-grid"/);
-  for (const status of ['all', 'live', 'beta', 'preparing', 'planned']) {
-    assert.match(homepage, new RegExp(`data-status-filter="${status}"`));
-  }
+  assert.doesNotMatch(homepage, /data-status-filter=/);
   assert.doesNotMatch(homepage, /class="[^"]*orbit|ecosystem-orbit|network-orbit/i);
 });
 
@@ -105,6 +94,6 @@ test('guarded release smoke markers stay aligned with the actual EKODI homepage'
   for (const marker of rootCheck.expect) {
     assert.ok(homepage.includes(marker), `release marker drifted from homepage: ${marker}`);
   }
-  assert.ok(rootCheck.expect.includes('BILINGUAL ECOSYSTEM CATALOG'));
+  assert.ok(rootCheck.expect.includes('에코디의 모든 길을 한눈에'));
   assert.ok(rootCheck.expect.includes('One ecosystem. Many ways to connect.'));
 });
