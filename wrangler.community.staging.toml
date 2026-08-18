@@ -1,13 +1,8 @@
-name = "ekodi-community"
+name = "ekodi-community-staging"
 main = "community-worker.js"
-compatibility_date = "2026-08-14"
+compatibility_date = "2026-08-18"
 workers_dev = true
 preview_urls = false
-
-[[routes]]
-pattern = "community.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
 
 [assets]
 directory = "./community"
