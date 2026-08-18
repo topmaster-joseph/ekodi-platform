@@ -18,7 +18,7 @@ test('My worker derives services, SSO, targetability and priority from the canon
   assert.match(worker,/const SSO_SITES=/);
   assert.match(worker,/const TARGETABLE_WORKSPACE_SITES=/);
   assert.match(worker,/const WORKSPACE_ENTRY_PRIORITY=/);
-  assert.match(worker,/x-ekodi-my-services','manifest bridge response marker');
+  assert.match(worker,/x-ekodi-my-services/,'manifest bridge response marker');
 });
 
 test('A future active manifest service requires no hardcoded My app edit',async()=>{
