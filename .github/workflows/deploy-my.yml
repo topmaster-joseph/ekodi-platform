@@ -6,27 +6,32 @@ on:
     paths:
       - 'my/**'
       - 'my-worker.js'
+      - 'ekodi-service-manifest.js'
       - 'wrangler.my.toml'
       - 'wrangler.my.staging.toml'
       - 'deploy/manifests/my.worker.json'
       - 'scripts/validate-my.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'test/my-ekodi-contract.test.mjs'
+      - 'test/my-manifest-services.test.mjs'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
       - '.github/workflows/deploy-my.yml'
+      - 'release/my-manifest-auto-services-20260819.marker'
   push:
     branches: [main]
     paths:
       - 'my/**'
       - 'my-worker.js'
+      - 'ekodi-service-manifest.js'
       - 'wrangler.my.toml'
       - 'wrangler.my.staging.toml'
       - 'deploy/manifests/my.worker.json'
       - 'scripts/validate-my.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'test/my-ekodi-contract.test.mjs'
+      - 'test/my-manifest-services.test.mjs'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -56,11 +61,12 @@ jobs:
           set -euo pipefail
           node --check my-worker.js
           node --check my/app.js
+          node --check ekodi-service-manifest.js
           node --check auth-site/client-auth.js
           node --check auth-site/auth-router.js
           node --check scripts/validate-my.mjs
           node scripts/validate-my.mjs
-          node --test test/my-ekodi-contract.test.mjs
+          node --test test/my-ekodi-contract.test.mjs test/my-manifest-services.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
@@ -80,24 +86,28 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
       - name: Deploy isolated My EKODI staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.staging.toml
-      - name: Verify staging and personal-data isolation
+      - name: Verify staging, manifest-driven services and personal-data isolation
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/my-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             config_code=$(curl -sS -o /tmp/my-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
+            app_code=$(curl -sS -o /tmp/my-stage-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/app.js" || true)
+            manifest_code=$(curl -sS -o /tmp/my-stage-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/service-manifest.json" || true)
             health_code=$(curl -sS -o /tmp/my-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            if [[ "$root_code" == '200' && "$config_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
-              && grep -Fq 'CREATOR PORTFOLIO' /tmp/my-stage.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my-stage.html \
+              && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=1' /tmp/my-stage-app.js \
+              && grep -Fq '["trade","EKODI Global Trading","https://trade.ekodi.kr/"]' /tmp/my-stage-app.js \
+              && grep -Fq '"identityModel":"person-space-role"' /tmp/my-stage-services.json \
+              && grep -Fq '"id":"community"' /tmp/my-stage-services.json \
               && grep -Fq '"dataEnabled":false' /tmp/my-stage-config.js \
-              && grep -Fq '"dataMode":"isolated-staging"' /tmp/my-stage-health.json \
-              && grep -Fq '"creatorPortfolio":true' /tmp/my-stage-health.json \
-              && grep -Fq '"personalBrandMarketing":true' /tmp/my-stage-health.json; then
-              echo 'My EKODI staging verified with personal brand entry and production personal data disabled.'
+              && grep -Fq '"manifestDrivenServices":true' /tmp/my-stage-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/my-stage-health.json; then
+              echo 'My EKODI staging verified with manifest-driven services and production personal data disabled.'
               exit 0
             fi
             sleep 4
@@ -108,7 +118,8 @@ jobs:
     if: >-
       always() && needs.validate.result == 'success' &&
       (github.event_name != 'pull_request' ||
-       (github.event.pull_request.head.ref == 'release/marketing-personal-brand-20260818' && needs.staging.result == 'success'))
+       ((github.event.pull_request.head.ref == 'release/marketing-personal-brand-20260818' ||
+         github.event.pull_request.head.ref == 'release/my-manifest-auto-services-20260819') && needs.staging.result == 'success'))
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 22
@@ -165,19 +176,17 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/my-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
             if [[ "$health_code" == '200' && "$root_code" == '200' ]] \
               && grep -Fq '"service":"ekodi-my"' /tmp/my-live-health.json \
-              && grep -Fq 'MY PLATFORMS' /tmp/my-live.html \
-              && grep -Fq 'CREATOR PORTFOLIO' /tmp/my-live.html; then
-              echo 'Existing production already satisfies the current My EKODI hub contract; using guarded candidate release.'
+              && grep -Fq 'MY PLATFORMS' /tmp/my-live.html; then
+              echo 'Existing production satisfies the My EKODI hub contract; using guarded candidate release.'
               node scripts/guarded-worker-release.mjs --manifest deploy/manifests/my.worker.json
             else
-              echo "Existing Worker is missing the current My EKODI hub contract (root HTTP $root_code, health HTTP $health_code); performing one-time direct migration from staging-validated source."
+              echo 'Existing Worker is missing the My EKODI hub contract; performing one-time direct migration from staging-validated source.'
               npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.toml
             fi
           elif grep -Eq 'has no deployments|This Worker does not exist|does not exist on your account|code: 10007' /tmp/my-deployments.log; then
             echo 'No active My EKODI production deployment exists; performing one-time bootstrap from staging-validated source.'
             npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.toml
           else
-            echo 'Unable to determine My EKODI deployment state.'
             cat /tmp/my-deployments.log
             exit 1
           fi
@@ -188,17 +197,21 @@ jobs:
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
             config_code=$(curl -sS -o /tmp/my-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/config.js' || true)
+            app_code=$(curl -sS -o /tmp/my-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/app.js' || true)
+            manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/service-manifest.json' || true)
             health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
-            if [[ "$root_code" == '200' && "$config_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
-              && grep -Fq 'CREATOR PORTFOLIO' /tmp/my.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my.html \
+              && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=1' /tmp/my-app.js \
+              && grep -Fq '["trade","EKODI Global Trading","https://trade.ekodi.kr/"]' /tmp/my-app.js \
+              && grep -Fq '"identityModel":"person-space-role"' /tmp/my-services.json \
               && grep -Fq '"dataEnabled":true' /tmp/my-config.js \
               && grep -Fq '"dataMode":"production"' /tmp/my-health.json \
-              && grep -Fq '"service":"ekodi-my"' /tmp/my-health.json \
-              && grep -Fq '"personalBrandMarketing":true' /tmp/my-health.json; then
-              echo 'My EKODI production verified with personal brand marketing entry.'
+              && grep -Fq '"manifestDrivenServices":true' /tmp/my-health.json \
+              && grep -Fq '"ekodiShell":true' /tmp/my-health.json; then
+              echo 'My EKODI production verified with manifest-driven service registry.'
               exit 0
             fi
             sleep 5
