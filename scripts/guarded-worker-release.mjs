@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -9,6 +10,7 @@ const readArg = (name, fallback = '') => {
 };
 
 const root = path.resolve(readArg('--root', '.'));
+const policyRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestArg = readArg('--manifest');
 const manifestPath = manifestArg ? path.resolve(manifestArg) : '';
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
@@ -45,6 +47,23 @@ const tag = `ekodi-${runId}-${attempt}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'
 let previousVersion = '';
 let candidateVersion = '';
 let candidateAttached = false;
+
+function runProviderIndependenceGate() {
+  const env = { ...process.env, AI_PROVIDER: 'NONE' };
+  for (const argv of [
+    ['scripts/validate-ai-provider-independence.mjs'],
+    ['--test', 'test/ai-provider-none.test.mjs'],
+  ]) {
+    const result = spawnSync(process.execPath, argv, {
+      cwd: policyRoot,
+      env,
+      encoding: 'utf8',
+      stdio: 'inherit',
+    });
+    if (result.status !== 0) throw new Error(`AI_PROVIDER=NONE release gate failed: node ${argv.join(' ')}`);
+  }
+  console.log('✅ AI_PROVIDER=NONE release gate passed.');
+}
 
 function command(argv, { json = false } = {}) {
   const result = spawnSync('npx', ['--yes', `wrangler@${wranglerVersion}`, ...argv], {
@@ -205,6 +224,7 @@ function appendSummary(lines) {
 
 try {
   console.log(`Worker guarded release: ${worker.name}`);
+  runProviderIndependenceGate();
   if (secretsFilePath) console.log('Candidate will include the supplied secret set without printing secret values.');
   previousVersion = currentSingleVersion();
   console.log(`Stable production version: ${previousVersion}`);
@@ -232,6 +252,7 @@ try {
     `- Previous stable: \`${previousVersion}\``,
     `- Candidate: \`${candidateVersion}\``,
     `- Candidate secret file: ${secretsFilePath ? 'supplied securely' : 'not supplied; existing Worker secrets preserved by Wrangler'}`,
+    '- AI_PROVIDER=NONE resilience gate passed before any production candidate was attached.',
     '- Candidate was attached at 0% traffic, verified with version overrides, then promoted to 100%.',
     '- Production smoke verification passed after promotion.',
   ]);
