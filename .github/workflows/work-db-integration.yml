@@ -9,7 +9,9 @@ on:
       - 'supabase/work-schema.sql'
       - 'supabase/work-anon-hardening.sql'
       - 'supabase/work-performance.sql'
+      - 'supabase/work-workforce-os.sql'
       - 'tests/work-db-integration.sql'
+      - 'tests/work-workforce-os.sql'
       - '.github/workflows/work-db-integration.yml'
   workflow_dispatch:
 
@@ -46,14 +48,20 @@ jobs:
           set -euo pipefail
           node --check work-worker.js
           node --check work/app.js
+          node --check work/opportunities.js
+          node --check work/workforce-os.js
           grep -Fq '/config.js' work/index.html
+          grep -Fq '/workforce-os.js' work/index.html
           grep -Fq 'work_employer_applications' work/app.js
           grep -Fq 'security definer' supabase/work-schema.sql
           grep -Fq 'from anon' supabase/work-anon-hardening.sql
           grep -Fq '(select auth.uid())' supabase/work-performance.sql
+          grep -Fq 'work_passports' supabase/work-workforce-os.sql
+          grep -Fq 'work_relationships' supabase/work-workforce-os.sql
       - name: Run isolated PostgreSQL 17 integration
         env:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/work-db-integration.sql
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/work-workforce-os.sql
