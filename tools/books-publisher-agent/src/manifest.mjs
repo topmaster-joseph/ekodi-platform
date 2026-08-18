@@ -31,6 +31,9 @@ export function normalizeManifest(raw, manifestPath = process.cwd(), { verifyFil
   const isbn = String(raw.bookId?.isbn || '').replace(/[-\s]/g, '');
   if (idMode === 'isbn' && !/^\d{10}(\d{3})?$/.test(isbn)) throw new Error('A 10- or 13-digit ISBN is required when bookId.mode is "isbn".');
 
+  const ggkey = String(raw.bookId?.ggkey || raw.bookId?.value || '').trim().replace(/^GGKEY:/i, '');
+  if (ggkey && !/^[A-Za-z0-9_-]+$/.test(ggkey)) throw new Error('bookId.ggkey contains unsupported characters.');
+
   const price = Number(raw.price);
   if (!Number.isFinite(price) || price <= 0) throw new Error('price must be a positive number.');
 
@@ -52,7 +55,7 @@ export function normalizeManifest(raw, manifestPath = process.cwd(), { verifyFil
     currency: requiredText(raw.currency, 'currency').toUpperCase(),
     price,
     territory: String(raw.territory || 'WORLD').trim().toUpperCase(),
-    bookId: { mode: idMode, isbn },
+    bookId: { mode: idMode, isbn, ggkey },
     epubPath: verifyFiles ? resolveFile(baseDir, raw.epubPath, 'epubPath') : path.resolve(baseDir, requiredText(raw.epubPath, 'epubPath')),
     coverPath: verifyFiles ? resolveFile(baseDir, raw.coverPath, 'coverPath') : path.resolve(baseDir, requiredText(raw.coverPath, 'coverPath')),
     kdp: {
