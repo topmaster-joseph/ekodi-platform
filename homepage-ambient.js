@@ -1,11 +1,9 @@
 (() => {
   const palettes = [
-    ['#2c8fff66','#1bd6ba44','#8a63ff3d','18%','18%','82%','30%','55%','82%'],
-    ['#3a7cff5c','#00c6d84a','#4ee0a93a','24%','24%','76%','22%','68%','78%'],
-    ['#7b61ff52','#2e9fff55','#19c9a43b','20%','30%','84%','18%','48%','84%'],
-    ['#1f8fe75c','#4fd7c642','#6d78ff46','14%','22%','78%','38%','62%','86%'],
-    ['#3d8cff5f','#17b6d94a','#9b6cff38','32%','16%','88%','34%','46%','76%'],
-    ['#2187ff58','#20d0a945','#5fa1ff40','16%','34%','72%','16%','80%','78%'],
+    ['#f3c69d66','#a9d6b966','#c6b6e552','18%','18%','82%','30%','55%','82%'],
+    ['#f1d6aa5c','#b6dcbf5c','#b9cae65c','24%','24%','76%','22%','68%','78%'],
+    ['#e8c4ad5c','#b7d8c85c','#d5c3e052','20%','30%','84%','18%','48%','84%'],
+    ['#f5d1a95c','#a9d0c65c','#c5c8e252','14%','22%','78%','38%','62%','86%'],
   ];
 
   function randomIndex(max) {
@@ -24,37 +22,10 @@
   root.dataset.ambientTheme = String(palettes.indexOf(palette) + 1);
 
   const cards = [...document.querySelectorAll('.service-card[data-service-status]')];
-  const groups = [...document.querySelectorAll('.service-group')];
-  const filters = [...document.querySelectorAll('[data-status-filter]')];
-  const statuses = ['live', 'beta', 'preparing', 'planned'];
-
-  function updateStatusCounts() {
-    for (const status of statuses) {
-      const count = cards.filter(card => card.dataset.serviceStatus === status).length;
-      document.querySelectorAll(`[data-status-count="${status}"]`).forEach(node => { node.textContent = String(count); });
-    }
+  for (const status of ['live', 'beta']) {
+    const count = cards.filter(card => card.dataset.serviceStatus === status).length;
+    document.querySelectorAll(`[data-status-count="${status}"]`).forEach(node => {
+      node.textContent = String(count);
+    });
   }
-
-  function applyFilter(status) {
-    const selected = statuses.includes(status) ? status : 'all';
-    for (const card of cards) card.hidden = selected !== 'all' && card.dataset.serviceStatus !== selected;
-
-    for (const group of groups) {
-      const groupCards = [...group.querySelectorAll('.service-card[data-service-status]')];
-      const visible = groupCards.filter(card => !card.hidden).length;
-      group.hidden = visible === 0;
-      const count = group.querySelector('[data-service-count]');
-      if (count) count.textContent = String(visible);
-    }
-
-    for (const button of filters) button.setAttribute('aria-pressed', String(button.dataset.statusFilter === selected));
-    root.dataset.serviceFilter = selected;
-  }
-
-  for (const button of filters) {
-    button.addEventListener('click', () => applyFilter(button.dataset.statusFilter || 'all'));
-  }
-
-  updateStatusCounts();
-  applyFilter('all');
 })();
