@@ -35,7 +35,7 @@ async function canonicalHealthy() {
   }
 }
 
-async function serveEmergency(request, env) {
+async function localEmergencyResponse(request, env, mode = 'emergency-local') {
   const adminUrl = new URL(request.url);
   adminUrl.protocol = 'https:';
   adminUrl.hostname = 'admin.ekodi.kr';
@@ -43,7 +43,21 @@ async function serveEmergency(request, env) {
   adminUrl.pathname = '/';
   const stagedRequest = new Request(adminUrl, request);
   const response = await siteWorker.fetch(stagedRequest, env);
-  return withStagingHeaders(response, 'emergency-local');
+  return withStagingHeaders(response, mode);
+}
+
+function addPrimaryAutoEntry(response) {
+  const transformed = new HTMLRewriter()
+    .on('head', {
+      element(element) {
+        element.prepend(
+          `<meta http-equiv="refresh" content="0;url=${CANONICAL_ENTRY}">`,
+          { html: true },
+        );
+      },
+    })
+    .transform(response);
+  return withStagingHeaders(transformed, 'primary-auto');
 }
 
 export default {
@@ -68,17 +82,15 @@ export default {
     }
 
     if (incoming.pathname === EMERGENCY_PATH || incoming.pathname === '/emergency/') {
-      return serveEmergency(request, env);
+      return localEmergencyResponse(request, env, 'emergency-forced');
     }
 
     if (incoming.pathname === '/' || incoming.pathname === '/ekodi.index') {
-      if (await canonicalHealthy()) {
-        const response = Response.redirect(CANONICAL_ENTRY, 302);
-        return withStagingHeaders(response, 'primary');
-      }
-      return serveEmergency(request, env);
+      const local = await localEmergencyResponse(request, env);
+      if (await canonicalHealthy()) return addPrimaryAutoEntry(local);
+      return local;
     }
 
-    return serveEmergency(request, env);
+    return localEmergencyResponse(request, env);
   },
 };
