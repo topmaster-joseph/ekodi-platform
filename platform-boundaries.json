@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "principle": "A platform change deploys only that platform unless a declared shared dependency changes.",
   "platforms": {
     "ekodi-shell": {"kind":"shared-person-context-layer","source":["ekodi-service-manifest.js","ekodi-shell-worker.js","ekodi-shell-injector.js","shell/**","wrangler.shell.toml","wrangler.shell.staging.toml","test/ekodi-shell.test.mjs"],"domains":["shell.ekodi.kr","ekodi-shell-staging.topmaster-joseph.workers.dev"],"deployWorkflow":".github/workflows/deploy-ekodi-shell.yml","sharedDependencies":["My EKODI workspace selection","central auth workspace handoff"],"database":"none","note":"Public service manifest plus navigation context only. Authorization remains server-side in each owning service."},
