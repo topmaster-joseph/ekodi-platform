@@ -107,4 +107,15 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated Mission Control/Campus/Chief AI/Device Control/Creator billing modules, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+// GitHub-backed System Timeline and governance System hub extend the authenticated
+// Deployments surface. The existing operations console remains available as detail.
+const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
+  readFile(`${output}release-control-admin.css`, 'utf8'),
+  readFile(`${output}release-control-admin.js`, 'utf8'),
+  readFile(`${root}system-timeline-admin.css`, 'utf8'),
+  readFile(`${root}system-timeline-admin.js`, 'utf8'),
+]);
+await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
+await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
+
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated AI Governance Cockpit/Chief AI/Campus detail/Device Control/Creator billing modules, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
