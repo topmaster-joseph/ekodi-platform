@@ -1,0 +1,83 @@
+name: Admin Monitor Stale Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-admin-monitor-stale-watch
+  cancel-in-progress: true
+
+jobs:
+  stale-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      STALE_AFTER_SECONDS: 2400
+    steps:
+      - name: Inspect last successful admin availability run
+        id: stale
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/admin-availability-watch.yml/runs?branch=main&status=success&per_page=1"
+          payload=$(curl -fsS --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "$api")
+          last=$(echo "$payload" | jq -r '.workflow_runs[0].run_started_at // empty')
+          stale=true
+          age=-1
+          if [ -n "$last" ]; then
+            last_epoch=$(date -u -d "$last" +%s)
+            now_epoch=$(date -u +%s)
+            age=$((now_epoch-last_epoch))
+            [ "$age" -le "$STALE_AFTER_SECONDS" ] && stale=false
+          fi
+          echo "stale=$stale" >> "$GITHUB_OUTPUT"
+          echo "age_seconds=$age" >> "$GITHUB_OUTPUT"
+          echo "last_success=$last" >> "$GITHUB_OUTPUT"
+          echo "Admin monitor freshness: stale=$stale age=${age}s last=$last"
+
+      - name: Open or update MONITOR STALE issue
+        if: steps.stale.outputs.stale == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='MONITOR STALE: admin-availability-watch'
+          body=$(cat <<EOF
+          The admin service has NOT been declared down. The monitoring plane itself has stopped producing recent successful checks.
+
+          - last successful admin watch: ${{ steps.stale.outputs.last_success }}
+          - age: ${{ steps.stale.outputs.age_seconds }} seconds
+          - stale threshold: $STALE_AFTER_SECONDS seconds
+          - watchdog: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          Classification: MONITOR STALE. Do not change DNS or redeploy production solely because of this alert.
+          EOF
+          )
+          existing=$(gh issue list --state open --search 'MONITOR STALE: admin-availability-watch in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      - name: Close recovered MONITOR STALE issue
+        if: steps.stale.outputs.stale != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing=$(gh issue list --state open --search 'MONITOR STALE: admin-availability-watch in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Monitoring freshness recovered at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Latest successful admin watch is within the ${STALE_AFTER_SECONDS}s threshold."
+            gh issue close "$existing" --reason completed
+          fi

@@ -1,31 +1,96 @@
 import siteWorker from './site-worker.js';
 
-const STAGING_SERVICE='ekodi-admin-staging';
+const STAGING_SERVICE = 'ekodi-admin-staging';
+const CANONICAL_ENTRY = 'https://admin.ekodi.kr/ekodi.index';
+const EMERGENCY_PATH = '/emergency';
 
-function withStagingHeaders(response){
-  const headers=new Headers(response.headers);
-  headers.set('X-EKODI-Staging',STAGING_SERVICE);
-  headers.set('Cache-Control','no-store');
-  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+function withStagingHeaders(response, mode = 'emergency') {
+  const headers = new Headers(response.headers);
+  headers.set('X-EKODI-Staging', STAGING_SERVICE);
+  headers.set('X-EKODI-Failover', mode);
+  headers.set('Cache-Control', 'no-store');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
-export default{
-  async fetch(request,env){
-    const incoming=new URL(request.url);
-    if(incoming.pathname==='/health'){
-      return new Response(JSON.stringify({ok:true,service:STAGING_SERVICE,mode:'isolated-pr-staging',productionTraffic:false}),{
-        headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-ekodi-staging':STAGING_SERVICE}
+async function canonicalHealthy() {
+  try {
+    const response = await fetch(CANONICAL_ENTRY, {
+      method: 'GET',
+      redirect: 'manual',
+      headers: {
+        'cache-control': 'no-cache',
+        'user-agent': 'EKODI-Smart-Admin-Gateway/1.0',
+      },
+      signal: AbortSignal.timeout(3500),
+    });
+    return response.status === 200
+      && response.headers.get('x-ekodi-route') === 'admin-control-center'
+      && response.headers.get('x-ekodi-entry') === 'ekodi.index';
+  } catch {
+    return false;
+  }
+}
+
+async function localEmergencyResponse(request, env, mode = 'emergency-local') {
+  const adminUrl = new URL(request.url);
+  adminUrl.protocol = 'https:';
+  adminUrl.hostname = 'admin.ekodi.kr';
+  adminUrl.port = '';
+  adminUrl.pathname = '/';
+  const stagedRequest = new Request(adminUrl, request);
+  const response = await siteWorker.fetch(stagedRequest, env);
+  return withStagingHeaders(response, mode);
+}
+
+function addPrimaryAutoEntry(response) {
+  const transformed = new HTMLRewriter()
+    .on('head', {
+      element(element) {
+        element.prepend(
+          `<meta http-equiv="refresh" content="0;url=${CANONICAL_ENTRY}">`,
+          { html: true },
+        );
+      },
+    })
+    .transform(response);
+  return withStagingHeaders(transformed, 'primary-auto');
+}
+
+export default {
+  async fetch(request, env) {
+    const incoming = new URL(request.url);
+
+    if (incoming.pathname === '/health') {
+      return new Response(JSON.stringify({
+        ok: true,
+        service: STAGING_SERVICE,
+        mode: 'smart-gateway-emergency',
+        productionTraffic: false,
+        canonicalEntry: CANONICAL_ENTRY,
+        emergencyPath: EMERGENCY_PATH,
+      }), {
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-ekodi-staging': STAGING_SERVICE,
+        },
       });
     }
 
-    // Reuse the exact production admin routing/security contract while keeping the
-    // deployment on a workers.dev staging hostname with no production custom domains.
-    const adminUrl=new URL(request.url);
-    adminUrl.protocol='https:';
-    adminUrl.hostname='admin.ekodi.kr';
-    adminUrl.port='';
-    const stagedRequest=new Request(adminUrl,request);
-    const response=await siteWorker.fetch(stagedRequest,env);
-    return withStagingHeaders(response);
-  }
+    if (incoming.pathname === EMERGENCY_PATH || incoming.pathname === '/emergency/') {
+      return localEmergencyResponse(request, env, 'emergency-forced');
+    }
+
+    if (incoming.pathname === '/' || incoming.pathname === '/ekodi.index') {
+      const local = await localEmergencyResponse(request, env);
+      if (await canonicalHealthy()) return addPrimaryAutoEntry(local);
+      return local;
+    }
+
+    return localEmergencyResponse(request, env);
+  },
 };

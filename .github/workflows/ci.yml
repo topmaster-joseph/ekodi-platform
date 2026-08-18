@@ -20,4 +20,5 @@ jobs:
         with:
           node-version: "24"
       - run: npm run check
+      - run: node --check admin-entry-worker.js && node --check admin-staging-worker.js
       - run: npm test
