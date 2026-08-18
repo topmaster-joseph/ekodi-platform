@@ -4,7 +4,18 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const HANDOFF=`${SUPABASE_URL}/functions/v1/business-handoff-api`;
-const RETURN_TO='https://business.ekodi.kr/';
+const BUSINESS_HOME='https://business.ekodi.kr/';
+const params=new URLSearchParams(location.search);
+function safeReturn(raw){
+  if(!raw)return BUSINESS_HOME;
+  try{
+    const target=new URL(raw);
+    if(target.protocol!=='https:'||target.origin!=='https://business.ekodi.kr')return BUSINESS_HOME;
+    target.hash='';
+    return target.href;
+  }catch{return BUSINESS_HOME}
+}
+const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
@@ -34,7 +45,7 @@ async function issueHandoff(s){
   const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
   if(response.status===403){notice('accessStatus','이 계정에는 아직 EKODIBIZ 또는 연결 점포의 Business OS 권한이 없습니다. 조직 관리자에게 권한을 요청해 주세요.','warn');return}
   if(!response.ok||!data.tokenHash)throw new Error(data.error||`handoff_${response.status}`);
-  const target=new URL(data.returnTo||RETURN_TO);target.hash=new URLSearchParams({ekodi_token:data.tokenHash,ekodi_type:data.type||'email',ekodi_workspace:data.workspace||'ekodibiz'}).toString();location.assign(target.href);
+  const target=new URL(RETURN_TO);target.hash=new URLSearchParams({ekodi_token:data.tokenHash,ekodi_type:data.type||'email',ekodi_workspace:data.workspace||'ekodibiz'}).toString();location.assign(target.href);
 }
 async function handleGoogleCredential(response,challenge){
   if(!response?.credential){notice('authStatus','Google 인증이 완료되지 않았습니다. 다시 시도해 주세요.','error');return}
