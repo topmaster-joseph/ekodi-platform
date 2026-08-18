@@ -10,6 +10,7 @@ on:
       - 'wrangler.service-proxy.staging.toml'
       - 'deploy/manifests/service-proxy.worker.json'
       - 'test/service-proxy-shell.test.mjs'
+      - 'test/static-app.test.mjs'
       - '.github/workflows/release-service-proxy-shell.yml'
       - 'release/service-proxy-shell-20260819.marker'
 
@@ -38,7 +39,7 @@ jobs:
           set -euo pipefail
           node --check service-proxy.js
           node --check ekodi-shell-injector.js
-          node --test test/service-proxy-shell.test.mjs
+          node --test test/service-proxy-shell.test.mjs test/static-app.test.mjs
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/service-proxy.worker.json
 
@@ -79,7 +80,7 @@ jobs:
               && verify_html 'mall.ekodi.kr' ''; then
               redirect=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 \
                 -H 'x-ekodi-staging-host: live.church.ekodi.kr' "$STAGING_URL/" || true)
-              echo "$redirect" | grep -Eiq '^location: https://www\.youtube\.com/@ekodichurch/live'
+              echo "$redirect" | tr -d '\r' | grep -Fqi 'location: https://www.youtube.com/@ekodichurch/live'
               echo 'Shared proxy staging verified across Biz, Church, Lab, Mall and Live redirect.'
               exit 0
             fi
@@ -119,13 +120,16 @@ jobs:
             grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/proxy-live.html
             grep -Fiq 'x-ekodi-shell: v1' /tmp/proxy-live.headers
           }
+          verify_redirect() {
+            url="$1"; needle="$2"
+            headers=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 "$url" || true)
+            echo "$headers" | tr -d '\r' | grep -Fqi "location: $needle"
+          }
           verify_live 'https://biz.ekodi.kr/'
           verify_live 'https://church.ekodi.kr/'
           verify_live 'https://lab.ekodi.kr/'
           verify_live 'https://mall.ekodi.kr/'
           verify_live 'https://mall.biz.ekodi.kr/'
-          live_location=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 'https://live.church.ekodi.kr/' || true)
-          echo "$live_location" | grep -Eiq '^location: https://www\.youtube\.com/@ekodichurch/live'
-          mail_location=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 'https://mail.church.ekodi.kr/' || true)
-          echo "$mail_location" | grep -Eiq '^location: https://mail\.google\.com/'
+          verify_redirect 'https://live.church.ekodi.kr/' 'https://www.youtube.com/@ekodichurch/live'
+          verify_redirect 'https://mail.church.ekodi.kr/' 'https://mail.google.com/'
           echo 'Shared proxy production routes verified after Shell promotion.'
