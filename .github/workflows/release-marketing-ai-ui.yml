@@ -69,7 +69,7 @@ jobs:
           grep -Fq 'id="publishRecurrence"' "$hub"
           grep -Fq 'id="publishJobList"' "$hub"
           grep -Fq 'https://marketing-publish-api.ekodi.kr' "$hub"
-          grep -Fq 'mode')\=\=\='personal-brand' "$hub" || grep -Fq "mode')==='personal-brand'" "$hub"
+          grep -Fq "mode')==='personal-brand'" "$hub"
           grep -Fq 'credentials_required' "$hub"
           grep -Fq 'Google로 무료 시작' "$hub"
           if grep -Fq 'href="https://pay.ekodi.kr' "$hub"; then
