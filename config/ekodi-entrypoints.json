@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "logicalEntry": "ekodi.index",
+  "externalDefaultPath": "/",
+  "principles": {
+    "logicalNotPhysicalFile": true,
+    "keepPublicUrlsSimple": true,
+    "primaryAndEmergencyShareMentalModel": true,
+    "primaryAndEmergencyMustNotShareCriticalFailureDependencies": true,
+    "emergencyIsReducedCapability": true,
+    "lastKnownGoodIsVerifiedRelease": true
+  },
+  "roles": {
+    "primary": "normal service entry",
+    "emergency": "independent reduced-capability entry",
+    "lastKnownGood": "most recent verified releasable state"
+  },
+  "services": {
+    "public": {
+      "host": "ekodi.kr",
+      "entry": "ekodi.index",
+      "path": "/",
+      "primary": "https://ekodi.kr/",
+      "emergency": null,
+      "lastKnownGood": "release-ledger"
+    },
+    "admin": {
+      "host": "admin.ekodi.kr",
+      "entry": "ekodi.index",
+      "path": "/",
+      "primary": "https://admin.ekodi.kr/",
+      "emergency": "https://ekodi-admin-staging.topmaster-joseph.workers.dev/",
+      "lastKnownGood": "release-ledger",
+      "emergencyMode": "reduced-capability"
+    },
+    "auth": {
+      "host": "auth.ekodi.kr",
+      "entry": "ekodi.index",
+      "path": "/",
+      "primary": "https://auth.ekodi.kr/",
+      "emergency": null,
+      "lastKnownGood": "release-ledger"
+    }
+  }
+}
