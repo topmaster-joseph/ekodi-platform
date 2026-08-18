@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "EKODI AI Mission Governance",
   "mission": "EKODI uses delegated human authority and diverse specialist agentic AI to help each person become more independent, responsible, free, holy, and able to live a Jubilee-oriented life before God and in community.",
   "authorityModel": {
@@ -34,7 +34,9 @@
     "no_hidden_high_impact_automation",
     "no_cross_tenant_private_data_access_without_explicit_contract_and_authority",
     "no_optimization_of_engagement_or_revenue_over_personal_agency",
-    "no_irreversible_action_when_a_reversible_path_is_reasonably_available"
+    "no_irreversible_action_when_a_reversible_path_is_reasonably_available",
+    "no_ai_provider_dependency_for_core_service",
+    "provider_failure_must_degrade_not_disable_service"
   ],
   "userRights": [
     "know_when_ai_materially_influences_a_decision",
