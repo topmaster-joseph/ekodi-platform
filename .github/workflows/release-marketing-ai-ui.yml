@@ -1,0 +1,108 @@
+name: Release Marketing AI UI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/release-marketing-ai-ui.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-marketing-ai-ui
+  cancel-in-progress: false
+
+env:
+  RELEASE_BRANCH: release/marketing-ui-20260818
+
+jobs:
+  release:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'release/marketing-ui-20260818'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout EKODI release controller
+        uses: actions/checkout@v7
+        with:
+          path: controller
+
+      - name: Checkout latest Marketing AI source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/jadam-maru
+          ref: main
+          path: source
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Verify release controller and Cloudflare credentials
+        run: |
+          set -euo pipefail
+          node --check controller/scripts/guarded-pages-release.mjs
+          test -f controller/deploy/manifests/marketing-ai.pages.json
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Build and validate Marketing publishing workspace
+        working-directory: source
+        run: |
+          set -euo pipefail
+          npm run build
+          hub='dist/marketing-ai/index.html'
+          test -f "$hub"
+          grep -Fq 'id="freeTrialForm"' "$hub"
+          grep -Fq 'class="member-workspace"' "$hub"
+          grep -Fq 'class="publication-ops"' "$hub"
+          grep -Fq 'PUBLISHING & SCHEDULE' "$hub"
+          grep -Fq 'id="brandProfileForm"' "$hub"
+          grep -Fq 'id="publishChannelList"' "$hub"
+          grep -Fq 'id="publishNow"' "$hub"
+          grep -Fq 'id="publishSchedule"' "$hub"
+          grep -Fq 'id="publishRecurrence"' "$hub"
+          grep -Fq 'id="publishJobList"' "$hub"
+          grep -Fq 'https://marketing-publish-api.ekodi.kr' "$hub"
+          grep -Fq "mode')==='personal-brand'" "$hub"
+          grep -Fq 'credentials_required' "$hub"
+          grep -Fq 'Google로 무료 시작' "$hub"
+          if grep -Fq 'href="https://pay.ekodi.kr' "$hub"; then
+            echo 'Live checkout must remain disabled during beta pricing QA'
+            exit 1
+          fi
+
+      - name: Preview gate and production promotion
+        run: |
+          set -euo pipefail
+          node controller/scripts/guarded-pages-release.mjs \
+            --root source \
+            --manifest controller/deploy/manifests/marketing-ai.pages.json
+
+      - name: Verify real Marketing AI production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -L -o /tmp/marketing-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/' || true)
+            api_code=$(curl -sS -o /tmp/marketing-publish-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-publish-api.ekodi.kr/health' || true)
+            if [[ "$code" == '200' && "$api_code" == '200' ]] \
+              && grep -Fq 'class="publication-ops"' /tmp/marketing-live.html \
+              && grep -Fq 'id="publishNow"' /tmp/marketing-live.html \
+              && grep -Fq 'id="publishSchedule"' /tmp/marketing-live.html \
+              && grep -Fq 'id="publishJobList"' /tmp/marketing-live.html \
+              && grep -Fq 'https://marketing-publish-api.ekodi.kr' /tmp/marketing-live.html \
+              && grep -Fq '"service":"ekodi-marketing-publishing"' /tmp/marketing-publish-health.json \
+              && grep -Fq '"scheduler":true' /tmp/marketing-publish-health.json \
+              && grep -Fq '"personalBrand":true' /tmp/marketing-publish-health.json; then
+              echo 'Marketing AI publishing UI and backend verified in production.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
