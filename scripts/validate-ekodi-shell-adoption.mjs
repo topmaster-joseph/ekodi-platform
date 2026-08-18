@@ -51,7 +51,7 @@ for(const service of ecosystem.services||[]){
   if(['live','beta'].includes(service.status)&&service.productionVerified===true&&manifestService.state==='planned')fail(`${service.id} is production verified but planned in service manifest`);
 }
 
-for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Future-site onboarding','Browser workspace context contract','Security boundaries']){
+for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Future-site onboarding','Browser context contract','Security boundaries']){
   if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 }
 
