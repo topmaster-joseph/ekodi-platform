@@ -87,7 +87,8 @@ test('nested EKODI BIZ service domains follow the organization hierarchy', () =>
 test('biz.ekodi.kr is independent and links all business services', () => {
   hasRoute(proxyToml, 'biz.ekodi.kr');
   hasRoute(proxyToml, 'mall.biz.ekodi.kr');
-  assert.match(proxy, /incoming\.hostname === 'biz\.ekodi\.kr'/);
+  assert.match(proxy, /host === 'biz\.ekodi\.kr'/);
+  assert.match(proxy, /requestHost\(request, env, incoming\)/);
   assert.doesNotMatch(proxy, /'biz\.ekodi\.kr': 'https:\/\/ekodibiz\.kr'/);
   for (const d of ['trade.biz.ekodi.kr','mall.biz.ekodi.kr','pay.biz.ekodi.kr','mail.biz.ekodi.kr','live.biz.ekodi.kr']) hasDomain(proxy, d);
 });
