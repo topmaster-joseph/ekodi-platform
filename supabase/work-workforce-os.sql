@@ -66,8 +66,10 @@ create table if not exists public.work_relationships (
 create index if not exists work_networks_public_idx on public.work_networks(is_public,status,region);
 create index if not exists work_network_requests_user_idx on public.work_network_requests(requester_user_id,created_at desc);
 create index if not exists work_quick_hire_owner_idx on public.work_quick_hire_requests(created_by,created_at desc);
+create index if not exists work_quick_hire_org_idx on public.work_quick_hire_requests(organization_id,created_at desc);
 create index if not exists work_relationships_worker_idx on public.work_relationships(worker_user_id,connected_at desc);
 create index if not exists work_relationships_org_idx on public.work_relationships(organization_id,connected_at desc);
+create index if not exists work_relationships_job_idx on public.work_relationships(job_id,connected_at desc);
 
 alter table public.work_passports enable row level security;
 alter table public.work_networks enable row level security;
@@ -78,9 +80,9 @@ alter table public.work_relationships enable row level security;
 drop policy if exists work_passports_own_select on public.work_passports;
 drop policy if exists work_passports_own_insert on public.work_passports;
 drop policy if exists work_passports_own_update on public.work_passports;
-create policy work_passports_own_select on public.work_passports for select to authenticated using (user_id = auth.uid());
-create policy work_passports_own_insert on public.work_passports for insert to authenticated with check (user_id = auth.uid());
-create policy work_passports_own_update on public.work_passports for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy work_passports_own_select on public.work_passports for select to authenticated using (user_id = (select auth.uid()));
+create policy work_passports_own_insert on public.work_passports for insert to authenticated with check (user_id = (select auth.uid()));
+create policy work_passports_own_update on public.work_passports for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
 drop policy if exists work_networks_public_select on public.work_networks;
 create policy work_networks_public_select on public.work_networks for select to anon, authenticated using (
@@ -89,23 +91,23 @@ create policy work_networks_public_select on public.work_networks for select to 
 
 drop policy if exists work_network_requests_own_select on public.work_network_requests;
 drop policy if exists work_network_requests_own_insert on public.work_network_requests;
-create policy work_network_requests_own_select on public.work_network_requests for select to authenticated using (requester_user_id = auth.uid());
+create policy work_network_requests_own_select on public.work_network_requests for select to authenticated using (requester_user_id = (select auth.uid()));
 create policy work_network_requests_own_insert on public.work_network_requests for insert to authenticated with check (
-  requester_user_id = auth.uid() and status = 'submitted'
+  requester_user_id = (select auth.uid()) and status = 'submitted'
 );
 
 drop policy if exists work_quick_hire_own_select on public.work_quick_hire_requests;
 drop policy if exists work_quick_hire_own_insert on public.work_quick_hire_requests;
 create policy work_quick_hire_own_select on public.work_quick_hire_requests for select to authenticated using (
-  created_by = auth.uid() and public.work_owns_organization(organization_id)
+  created_by = (select auth.uid()) and public.work_owns_organization(organization_id)
 );
 create policy work_quick_hire_own_insert on public.work_quick_hire_requests for insert to authenticated with check (
-  created_by = auth.uid() and status = 'submitted' and public.work_owns_organization(organization_id)
+  created_by = (select auth.uid()) and status = 'submitted' and public.work_owns_organization(organization_id)
 );
 
 drop policy if exists work_relationships_parties_select on public.work_relationships;
 create policy work_relationships_parties_select on public.work_relationships for select to authenticated using (
-  worker_user_id = auth.uid() or public.work_owns_organization(organization_id)
+  worker_user_id = (select auth.uid()) or public.work_owns_organization(organization_id)
 );
 
 -- Safe projection for the individual's relationship ledger. It intentionally exposes no employer/worker UUIDs.
@@ -127,7 +129,7 @@ as $$
   from public.work_relationships r
   join public.work_jobs j on j.id = r.job_id
   join public.work_organizations o on o.id = r.organization_id
-  where r.worker_user_id = auth.uid()
+  where r.worker_user_id = (select auth.uid())
   order by r.connected_at desc
 $$;
 
