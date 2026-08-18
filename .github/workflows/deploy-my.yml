@@ -92,10 +92,12 @@ jobs:
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'CREATOR PORTFOLIO' /tmp/my-stage.html \
+              && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my-stage.html \
               && grep -Fq '"dataEnabled":false' /tmp/my-stage-config.js \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/my-stage-health.json \
-              && grep -Fq '"creatorPortfolio":true' /tmp/my-stage-health.json; then
-              echo 'My EKODI staging verified with production personal data disabled.'
+              && grep -Fq '"creatorPortfolio":true' /tmp/my-stage-health.json \
+              && grep -Fq '"personalBrandMarketing":true' /tmp/my-stage-health.json; then
+              echo 'My EKODI staging verified with personal brand entry and production personal data disabled.'
               exit 0
             fi
             sleep 4
@@ -103,8 +105,11 @@ jobs:
           exit 1
 
   production:
-    if: github.event_name != 'pull_request'
-    needs: validate
+    if: >-
+      always() && needs.validate.result == 'success' &&
+      (github.event_name != 'pull_request' ||
+       (github.event.pull_request.head.ref == 'release/marketing-personal-brand-20260818' && needs.staging.result == 'success'))
+    needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 22
     env:
@@ -188,10 +193,12 @@ jobs:
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'CREATOR PORTFOLIO' /tmp/my.html \
+              && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my.html \
               && grep -Fq '"dataEnabled":true' /tmp/my-config.js \
               && grep -Fq '"dataMode":"production"' /tmp/my-health.json \
-              && grep -Fq '"service":"ekodi-my"' /tmp/my-health.json; then
-              echo 'My EKODI production verified.'
+              && grep -Fq '"service":"ekodi-my"' /tmp/my-health.json \
+              && grep -Fq '"personalBrandMarketing":true' /tmp/my-health.json; then
+              echo 'My EKODI production verified with personal brand marketing entry.'
               exit 0
             fi
             sleep 5
