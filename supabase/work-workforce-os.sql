@@ -172,8 +172,8 @@ end
 $$;
 
 revoke all on public.work_passports, public.work_networks, public.work_network_requests, public.work_quick_hire_requests, public.work_relationships from anon, authenticated;
-revoke all on function public.work_my_relationships() from public;
-revoke all on function public.work_update_application_status(uuid,text) from public;
+revoke all on function public.work_my_relationships() from public, anon;
+revoke all on function public.work_update_application_status(uuid,text) from public, anon;
 
 grant select (id,slug,name,network_type,operator_name,region,description,status,created_at,updated_at) on public.work_networks to anon, authenticated;
 
