@@ -12,8 +12,20 @@ const realms={
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ekodi.kr/'},
   'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ekodi.kr/'},
 };
-const site=new URLSearchParams(location.search).get('site');
+const params=new URLSearchParams(location.search);
+const site=params.get('site');
 const config=realms[site]||realms['cgma-client'];
+function safeReturn(raw){
+  const fallback=new URL(config.returnTo);
+  if(!raw)return fallback.href;
+  try{
+    const target=new URL(raw);
+    if(target.protocol!=='https:'||target.origin!==fallback.origin)return fallback.href;
+    target.hash='';
+    return target.href;
+  }catch{return fallback.href}
+}
+const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
 let routing=false;
@@ -60,11 +72,11 @@ async function handoffExistingSession(){
   const s=await session();
   if(!s)return false;
   routing=true;
-  notice('기존 EKODI 로그인을 확인했습니다. 요청한 공간으로 바로 연결합니다.');
+  notice('기존 EKODI 로그인을 확인했습니다. 요청한 서비스로 바로 연결합니다.');
   try{
     const proof=await identity('/session/handoff',{method:'POST',authenticated:true});
     if(!proof.tokenHash)throw new Error('identity_handoff_missing');
-    const target=new URL(config.returnTo);
+    const target=new URL(RETURN_TO);
     target.hash=new URLSearchParams({ekodi_token:proof.tokenHash,ekodi_type:proof.type||'email'}).toString();
     location.assign(target.href);
     return true;
