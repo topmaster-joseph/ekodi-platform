@@ -68,7 +68,7 @@ const sample={solarNow:3.8,solarToday:14.2,homeNow:2.4,essSoc:68,essFlow:0.9,gri
 const $=(id)=>document.getElementById(id);
 function money(value){return new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(value)}
 function renderSample(){
-  $('solarNow').textContent=sample.solarNow.toFixed(1);$('solarToday').textContent=sample.solarToday.toFixed(1);$('homeNow').textContent=sample.homeNow.toFixed(1);
+  $('solarNow').textContent=sample.solarNow.toFixed(1);$('headerSolarNow').textContent=sample.solarNow.toFixed(1);$('solarToday').textContent=sample.solarToday.toFixed(1);$('homeNow').textContent=sample.homeNow.toFixed(1);
   $('selfUse').textContent=Math.round(Math.min(100,sample.homeNow/sample.solarNow*100));$('essSoc').textContent=sample.essSoc;$('essFlow').textContent=`+${sample.essFlow.toFixed(1)}`;$('gridFlow').textContent=sample.gridFlow.toFixed(1);
   $('forecastToday').textContent=`${sample.forecastToday.toFixed(1)} kWh`;$('forecastSelf').textContent=`${sample.forecastSelf}%`;$('savingEstimate').textContent=money(sample.saving);$('healthScore').textContent=sample.health;
   $('updatedAt').textContent=`샘플 갱신 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;

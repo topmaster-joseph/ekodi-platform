@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1720">
-  <meta name="description" content="EKODI Energy AI는 전기·태양광·ESS·EV를 함께 관찰하고 더 안전하고 지혜로운 에너지 사용을 돕습니다.">
-  <title>EKODI Energy AI · 햇빛에서 생활까지</title>
+  <meta name="theme-color" content="#07131f">
+  <meta name="description" content="EKODI Energy AI는 햇빛부터 전기차까지 에너지의 흐름을 읽고 더 안전하고 지혜로운 사용을 돕습니다.">
+  <title>EKODI Energy AI · Energy Flow OS</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
   <script src="/config.js" defer></script>
@@ -13,51 +13,107 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="/">EKODI <b>ENERGY AI</b></a>
+  <a class="brand" href="/" aria-label="EKODI Energy AI 홈">
+    <span class="brand-mark" aria-hidden="true">☀</span>
+    <span>EKODI <b>ENERGY AI</b></span>
+  </a>
   <nav aria-label="주요 메뉴">
     <button class="nav-link active" data-view="overview">Flow</button>
     <button class="nav-link" data-view="solar">Solar</button>
-    <button class="nav-link" data-view="devices">Devices</button>
-    <button class="nav-link" data-view="manager">AI Manager</button>
+    <button class="nav-link" data-view="storage">Storage</button>
+    <button class="nav-link" data-view="ev">EV</button>
+    <button class="nav-link" data-view="insights">Insights</button>
   </nav>
+  <div class="live-chip" title="현재 샘플 태양광 발전량">
+    <span class="live-dot" aria-hidden="true"></span>
+    <small>현재 발전</small>
+    <strong><b id="headerSolarNow">3.8</b> kW</strong>
+  </div>
   <a id="workspaceSwitch" class="workspace-switch" href="https://my.ekodi.kr/#workspaces">Workspace 선택 ▾</a>
-  <a class="home-link" href="https://ekodi.kr">EKODI ↗</a>
+  <a class="home-link" href="https://ekodi.kr" aria-label="EKODI 메인으로 이동">EKODI ↗</a>
 </header>
 
 <main>
-  <section class="hero">
-    <div>
-      <span class="eyebrow">SUNLIGHT · HOME · STORAGE · MOBILITY</span>
-      <h1>햇빛이 들어오면,<br><em>에너지가 어디로 흐를지</em> 먼저 읽습니다.</h1>
-      <p>전기 사용, 태양광 생산, ESS, 전기차 충전을 한 화면에서 봅니다. AI는 관찰하고 제안하며, 실제 설비 제어는 허용된 범위 안에서만 진행합니다.</p>
-    </div>
-    <div class="mode-card">
-      <div class="mode-head"><span>AI CONTROL MODE</span><strong id="modeLabel">제안형</strong></div>
-      <input id="modeRange" type="range" min="0" max="3" step="1" value="1" aria-label="AI 제어 단계">
-      <div class="mode-scale"><span>관찰</span><span>제안</span><span>승인형</span><span>제한자동</span></div>
-      <p id="modeHelp">AI가 최적화안을 제안합니다. 설비를 직접 조작하지 않습니다.</p>
-    </div>
+  <section id="stageNotice" class="stage-notice">
+    <span aria-hidden="true">◉</span>
+    <span>읽기 전용 MVP · 현재 값은 연동 전 샘플 데이터입니다. 실제 인버터·계량기·ESS 제어는 비활성화되어 있습니다.</span>
   </section>
 
-  <section id="stageNotice" class="stage-notice">읽기 전용 MVP · 현재 값은 연동 전 샘플 데이터입니다. 실제 인버터·계량기·ESS 제어는 비활성화되어 있습니다.</section>
-
   <section id="overviewView" class="view active">
-    <div class="section-head"><div><span class="eyebrow">LIVE ENERGY FLOW</span><h2>지금 우리 집의 전력 흐름</h2></div><span id="updatedAt" class="stamp"></span></div>
-    <div class="flow-grid">
-      <article class="flow-card solar"><span>☀</span><small>태양광 생산</small><strong><b id="solarNow">3.8</b> kW</strong><i>오늘 <b id="solarToday">14.2</b> kWh</i></article>
-      <div class="flow-arrow">→</div>
-      <article class="flow-card home"><span>⌂</span><small>현재 소비</small><strong><b id="homeNow">2.4</b> kW</strong><i>자가소비 <b id="selfUse">63</b>%</i></article>
-      <div class="flow-arrow">↘</div>
-      <article class="flow-card battery"><span>▰</span><small>ESS</small><strong><b id="essSoc">68</b>%</strong><i><b id="essFlow">+0.9</b> kW 충전</i></article>
-      <div class="flow-arrow">↘</div>
-      <article class="flow-card grid"><span>⚡</span><small>계통</small><strong><b id="gridFlow">0.5</b> kW</strong><i>잉여전력</i></article>
+    <div class="flow-intro">
+      <span class="eyebrow">ENERGY FLOW OS</span>
+      <h1>햇빛부터 전기차까지,<br><em>에너지의 흐름을 AI가 읽습니다.</em></h1>
+      <p>발전량을 보는 데서 멈추지 않고, 지금 어디서 에너지가 들어오고 어디로 흘러가는지 한눈에 보여줍니다.</p>
     </div>
+
+    <article class="energy-map" aria-label="실시간 에너지 흐름">
+      <div class="map-head">
+        <div><span class="eyebrow">LIVE ENERGY FLOW</span><h2>지금 우리 집의 전력 흐름</h2></div>
+        <span id="updatedAt" class="stamp"></span>
+      </div>
+
+      <div class="flow-canvas">
+        <svg class="flow-lines" viewBox="0 0 1000 420" preserveAspectRatio="none" aria-hidden="true">
+          <path class="flow-base" d="M170 105 C270 105 315 150 410 182"/>
+          <path class="flow-active solar-path" d="M170 105 C270 105 315 150 410 182"/>
+          <path class="flow-base" d="M590 182 C690 150 730 105 830 105"/>
+          <path class="flow-active grid-path" d="M590 182 C690 150 730 105 830 105"/>
+          <path class="flow-base" d="M455 230 C410 275 360 310 305 325"/>
+          <path class="flow-active storage-path" d="M455 230 C410 275 360 310 305 325"/>
+          <path class="flow-base" d="M555 230 C610 270 685 310 790 330"/>
+          <path class="flow-active ev-path" d="M555 230 C610 270 685 310 790 330"/>
+        </svg>
+
+        <article class="energy-node node-solar">
+          <div class="node-icon" aria-hidden="true">☀</div>
+          <small>태양광 생산</small>
+          <strong><b id="solarNow">3.8</b> <span>kW</span></strong>
+          <i>오늘 <b id="solarToday">14.2</b> kWh</i>
+        </article>
+
+        <article class="energy-node node-home">
+          <div class="node-icon" aria-hidden="true">⌂</div>
+          <small>우리 집 소비</small>
+          <strong><b id="homeNow">2.4</b> <span>kW</span></strong>
+          <i>자가소비 <b id="selfUse">63</b>%</i>
+        </article>
+
+        <article class="energy-node node-grid">
+          <div class="node-icon" aria-hidden="true">⚡</div>
+          <small>계통 연계</small>
+          <strong><b id="gridFlow">0.5</b> <span>kW</span></strong>
+          <i>잉여전력 흐름</i>
+        </article>
+
+        <article class="energy-node node-battery">
+          <div class="node-icon" aria-hidden="true">▰</div>
+          <small>ESS 저장</small>
+          <strong><b id="essSoc">68</b><span>%</span></strong>
+          <i><b id="essFlow">+0.9</b> kW 충전</i>
+        </article>
+
+        <article class="energy-node node-ev">
+          <div class="node-icon ev-icon" aria-hidden="true">EV</div>
+          <small>전기차</small>
+          <strong>충전 대기</strong>
+          <i>태양광 우선</i>
+        </article>
+      </div>
+
+      <div class="flow-legend" aria-label="에너지 흐름 색상 범례">
+        <span><i class="legend-dot solar-dot"></i>태양광</span>
+        <span><i class="legend-dot grid-dot"></i>소비·계통</span>
+        <span><i class="legend-dot storage-dot"></i>ESS</span>
+      </div>
+    </article>
+
     <div class="metric-grid">
       <article><small>오늘 예상 발전</small><strong id="forecastToday">19.6 kWh</strong><span>일사량·최근 출력 기반</span></article>
       <article><small>예상 자가소비율</small><strong id="forecastSelf">72%</strong><span>부하 이동 시 개선 가능</span></article>
       <article><small>이번 달 절감 추정</small><strong id="savingEstimate">₩38,400</strong><span>샘플 요금 모델</span></article>
       <article><small>설비 건강도</small><strong id="healthScore">96</strong><span>정상 범위</span></article>
     </div>
+
     <article class="recommendation primary-rec">
       <div><span class="eyebrow">NEXT BEST ENERGY MOVE</span><h3 id="nextActionTitle">11:30~14:00에 가전 사용을 옮겨 보세요.</h3><p id="nextActionBody">오늘 정오 무렵 잉여 태양광이 예상됩니다. 세탁·건조·온수·EV 충전을 이 시간대로 옮기면 계통 구매 전력을 줄일 수 있습니다.</p></div>
       <button id="refreshInsight">AI 다시 판단</button>
@@ -73,24 +129,39 @@
     <article class="panel"><div class="panel-head"><h3>이상 감지 규칙</h3><span>감지 → 설명 → 확인 요청</span></div><div class="rule-grid"><div><b>발전 급락</b><span>예측 대비 25% 이상 하락</span></div><div><b>스트링 편차</b><span>동일 조건 출력 편차 감지</span></div><div><b>인버터 이상</b><span>오류코드·온도·효율 분석</span></div><div><b>장기 열화</b><span>계절 보정 추세 비교</span></div></div></article>
   </section>
 
-  <section id="devicesView" class="view">
-    <div class="section-head"><div><span class="eyebrow">CONNECTED ENERGY</span><h2>ESS · EV · Smart Home</h2></div></div>
+  <section id="storageView" class="view">
+    <div class="section-head"><div><span class="eyebrow">STORAGE</span><h2>남는 햇빛을 필요한 시간으로</h2></div><span class="status good">ESS 연동 준비</span></div>
     <div class="device-grid">
-      <article class="device"><div class="device-icon">▰</div><div><h3>ESS</h3><p>68% · 충전 대기</p></div><span class="pill ready">연동 준비</span></article>
-      <article class="device"><div class="device-icon">EV</div><div><h3>전기차 충전</h3><p>태양광 우선 충전 규칙</p></div><span class="pill">미연결</span></article>
-      <article class="device"><div class="device-icon">⌂</div><div><h3>Smart Home</h3><p>세탁·건조·온수·냉난방</p></div><span class="pill">미연결</span></article>
+      <article class="device feature-device"><div class="device-icon storage-icon">▰</div><div><h3>ESS</h3><p>68% · +0.9 kW 충전 중</p></div><span class="pill ready">연동 준비</span></article>
+      <article class="device"><div class="device-icon">⌂</div><div><h3>Smart Home</h3><p>세탁·건조·온수·냉난방 부하 이동</p></div><span class="pill">미연결</span></article>
+    </div>
+    <article class="panel storage-policy"><h3>저장 우선순위</h3><div class="policy-strip"><span><b>1</b>자가소비</span><span><b>2</b>ESS 충전</span><span><b>3</b>EV 충전</span><span><b>4</b>계통 연계</span></div><p class="muted">현재는 제안만 제공합니다. 실제 충·방전 명령은 활성화되어 있지 않습니다.</p></article>
+  </section>
+
+  <section id="evView" class="view">
+    <div class="section-head"><div><span class="eyebrow">E-MOBILITY</span><h2>전기차도 햇빛이 많은 시간에</h2></div></div>
+    <div class="device-grid">
+      <article class="device feature-device"><div class="device-icon ev-device-icon">EV</div><div><h3>전기차 충전</h3><p>태양광 우선 충전 규칙</p></div><span class="pill">미연결</span></article>
       <article class="device"><div class="device-icon">⚡</div><div><h3>Smart Meter</h3><p>실시간 소비·계통 흐름</p></div><span class="pill">미연결</span></article>
     </div>
     <article class="safety panel"><h3>제어 안전 경계</h3><p>AI는 차단기, 보호계전, 인버터 안전설정 등 전기 안전 핵심 기능을 우회하지 않습니다. 전원 차단·보호설정 변경·비상제어는 일반 자동화 대상에서 제외합니다.</p></article>
   </section>
 
-  <section id="managerView" class="view">
-    <div class="section-head"><div><span class="eyebrow">AI MANAGER</span><h2>알아서 살피되, 권한은 좁게</h2></div></div>
+  <section id="insightsView" class="view">
+    <div class="section-head"><div><span class="eyebrow">AI MANAGER · INSIGHTS</span><h2>알아서 살피되, 권한은 좁게</h2></div></div>
     <div class="manager-grid">
-      <article class="panel"><h3>오늘의 판단</h3><div id="aiTimeline" class="timeline"><div><time>06:10</time><p>오늘 태양광 발전량을 19.6 kWh로 예측했습니다.</p></div><div><time>09:20</time><p>오전 출력은 예상 범위 안입니다.</p></div><div><time>11:00</time><p>정오 잉여전력을 활용하도록 가전 사용시간 이동을 제안합니다.</p></div></div></article>
-      <article class="panel permission-panel"><h3>AI 권한표</h3><ul><li><span>발전·소비 관찰</span><b>허용</b></li><li><span>절감안 제안</span><b>허용</b></li><li><span>예약 실행</span><b id="permissionSchedule">승인 필요</b></li><li><span>설비 직접 제어</span><b id="permissionControl">차단</b></li><li><span>안전장치 우회</span><b class="danger">영구 금지</b></li></ul></article>
+      <article class="panel"><h3>오늘의 AI Manager 판단</h3><div id="aiTimeline" class="timeline"><div><time>06:10</time><p>오늘 태양광 발전량을 19.6 kWh로 예측했습니다.</p></div><div><time>09:20</time><p>오전 출력은 예상 범위 안입니다.</p></div><div><time>11:00</time><p>정오 잉여전력을 활용하도록 가전 사용시간 이동을 제안합니다.</p></div></div></article>
+      <article class="mode-card">
+        <div class="mode-head"><span>AI CONTROL MODE</span><strong id="modeLabel">제안형</strong></div>
+        <input id="modeRange" type="range" min="0" max="3" step="1" value="1" aria-label="AI 제어 단계">
+        <div class="mode-scale"><span>관찰</span><span>제안</span><span>승인형</span><span>제한자동</span></div>
+        <p id="modeHelp">AI가 최적화안을 제안합니다. 설비를 직접 조작하지 않습니다.</p>
+      </article>
     </div>
-    <article class="panel report"><h3>월간 Energy Report 준비 항목</h3><div class="report-grid"><span>발전량·자가소비율</span><span>전기요금 절감 추정</span><span>피크 사용 분석</span><span>설비 이상 이력</span><span>ESS·EV 활용도</span><span>다음 달 개선 제안</span></div></article>
+    <div class="manager-grid second-row">
+      <article class="panel permission-panel"><h3>AI 권한표</h3><ul><li><span>발전·소비 관찰</span><b>허용</b></li><li><span>절감안 제안</span><b>허용</b></li><li><span>예약 실행</span><b id="permissionSchedule">승인 필요</b></li><li><span>설비 직접 제어</span><b id="permissionControl">차단</b></li><li><span>안전장치 우회</span><b class="danger">영구 금지</b></li></ul></article>
+      <article class="panel report"><h3>월간 Energy Report</h3><div class="report-grid"><span>발전량·자가소비율</span><span>전기요금 절감 추정</span><span>피크 사용 분석</span><span>설비 이상 이력</span><span>ESS·EV 활용도</span><span>다음 달 개선 제안</span></div></article>
+    </div>
   </section>
 </main>
 <footer>EKODI Energy AI · 햇빛을 더 많이 소유하는 것이 아니라, 필요한 곳에 더 지혜롭게 흐르게 합니다.</footer>
