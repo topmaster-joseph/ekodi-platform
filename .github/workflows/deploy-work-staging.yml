@@ -36,9 +36,12 @@ jobs:
           node --check work-worker.js
           node --check work/app.js
           node --check work/opportunities.js
+          node --check work/workforce-os.js
           grep -Fq 'AI recommends · Human decides' work/index.html
+          grep -Fq 'LOCAL WORKFORCE OS' work/index.html
           grep -Fq '/config.js' work/index.html
           grep -Fq '/opportunities.js' work/index.html
+          grep -Fq '/workforce-os.js' work/index.html
           grep -Fq '/api/opportunities' work-worker.js
           grep -Fq 'DATA_ENABLED = "false"' wrangler.work-staging.toml
       - name: Deploy isolated staging Worker
@@ -54,13 +57,16 @@ jobs:
             config_code=$(curl -sS -o /tmp/work-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             health_code=$(curl -sS -o /tmp/work-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             feed_code=$(curl -sS -o /tmp/work-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/opportunities?limit=4" || true)
-            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
+            os_code=$(curl -sS -o /tmp/work-stage-os.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/workforce-os.js" || true)
+            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] && [[ "$os_code" == "200" ]] \
               && grep -Fq 'EKODI Work' /tmp/work-stage.html \
+              && grep -Fq 'LOCAL WORKFORCE OS' /tmp/work-stage.html \
               && grep -Fq '"dataEnabled":false' /tmp/work-stage-config.js \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/work-stage-health.json \
               && grep -Fq '"dataEnabled":false' /tmp/work-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/work-stage-feed.json \
-              && grep -Fq '"id":"work24"' /tmp/work-stage-feed.json; then
+              && grep -Fq '"id":"work24"' /tmp/work-stage-feed.json \
+              && grep -Fq 'work_passports' /tmp/work-stage-os.js; then
               echo "EKODI Work staging verified and isolated at $STAGING_URL"
               exit 0
             fi

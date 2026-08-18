@@ -4,16 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101828">
-  <meta name="description" content="EKODI Work는 실제 일자리 정보를 먼저 보여주고, 필요한 조건을 AI에게 요청할 수 있는 지역 일·인재 연결 허브입니다.">
-  <title>EKODI Work · 실제 기회부터 연결까지</title>
+  <meta name="description" content="EKODI Work는 실제 일자리 정보와 Work Passport, Quick Hire, 지역 Work Network를 연결하는 지역 인력 운영 플랫폼입니다.">
+  <title>EKODI Work · Local Workforce OS</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/ui-workbench.css">
   <link rel="stylesheet" href="/opportunity-stream.css">
+  <link rel="stylesheet" href="/workforce-os.css">
   <script src="/config.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="/app.js" defer></script>
   <script src="/opportunities.js" defer></script>
+  <script src="/workforce-os.js" defer></script>
 </head>
 <body>
 <header class="topbar">
@@ -22,6 +24,7 @@
     <button class="nav-link active" data-view="jobs">기회 찾기</button>
     <button class="nav-link" data-view="employer">사람 찾기</button>
     <button class="nav-link" data-view="me">My Work</button>
+    <button class="nav-link" data-view="network">지역 네트워크</button>
   </nav>
   <button id="loginBtn" class="login">Google로 시작</button>
 </header>
@@ -31,7 +34,7 @@
     <div class="hero-copy">
       <span class="eyebrow">LIVE LOCAL OPPORTUNITIES</span>
       <h1>먼저 보여주고,<br><em>필요하면 찾아드립니다.</em></h1>
-      <p>실제 공개 일자리와 EKODI에 직접 등록된 기회를 한곳에 모으고, 원하는 조건이 없으면 AI에게 그대로 요청할 수 있습니다. 검색보다 먼저 기회가 흐르는 화면을 만듭니다.</p>
+      <p>실제 공개 일자리와 EKODI에 직접 등록된 기회를 한곳에 모으고, 원하는 조건이 없으면 AI에게 그대로 요청할 수 있습니다. 개인·사업장·지역기관의 연결이 시간이 지날수록 Work Network에 축적됩니다.</p>
       <div class="hero-actions">
         <button id="focusSearchBtn" type="button">원하는 조건 말하기</button>
         <button id="needPersonBtn" type="button" class="secondary">사람이 필요해요</button>
@@ -81,6 +84,15 @@
     </div>
   </section>
 
+  <section class="workforce-intro">
+    <div>
+      <span class="eyebrow">LOCAL WORKFORCE OS</span>
+      <h3>채용공고를 쌓는 대신, <strong>지역의 연결을 쌓습니다.</strong></h3>
+      <p>개인은 Work Passport를 무료로 유지하고, 사업장은 필요할 때 Quick Hire를 요청하며, 대학·상인회·지자체·기관은 별도의 Work Network로 지역 연결을 운영할 수 있습니다.</p>
+    </div>
+    <button id="networkStartBtn" type="button">지역 Work Network 보기</button>
+  </section>
+
   <section id="jobsView" class="view active">
     <div class="section-head">
       <div><span class="eyebrow">OPPORTUNITY STREAM</span><h2>실시간 통합 기회</h2><p class="section-copy">공식·허용된 외부 출처와 EKODI 직접 등록 정보를 구분해 보여줍니다. 원문과 출처를 항상 확인할 수 있습니다.</p></div>
@@ -113,6 +125,21 @@
       <div><span class="eyebrow">FOR EMPLOYERS</span><h2>필요한 사람을 말로 요청하세요</h2><p class="section-copy">복잡한 공고 양식을 먼저 채우지 않아도 됩니다. 상황을 적으면 구조화하고, 사람이 확인한 뒤 게시합니다.</p></div>
       <span class="human-rule">AI recommends · Human decides</span>
     </div>
+
+    <article class="panel quick-hire-panel" data-work-private>
+      <div class="quick-hire-head">
+        <div><span class="eyebrow">QUICK HIRE</span><h3>매달 구독하지 않고, 필요할 때 요청</h3><p class="muted">반복 채용이 많지 않은 작은 사업장을 위한 건별 운영 흐름입니다. 현재는 요청을 저장하고, 과금은 연결하지 않습니다.</p></div>
+        <span class="passport-badge">ONE-OFF</span>
+      </div>
+      <form id="quickHireForm" class="quick-hire-form">
+        <select name="urgency" aria-label="긴급도"><option value="normal">일반</option><option value="this_week">이번 주</option><option value="urgent">긴급</option></select>
+        <input name="target_date" type="date" aria-label="필요 날짜">
+        <textarea name="brief" rows="2" required placeholder="예: 이번 토요일 17~23시 매장 보조 1명이 필요해요. 초보 가능."></textarea>
+        <button type="submit">빠른 채용 요청</button>
+      </form>
+      <div id="quickHireList" class="request-ledger private-only"></div>
+    </article>
+
     <div class="two-col">
       <article class="panel">
         <h3>1. 사업장</h3>
@@ -159,10 +186,10 @@
   </section>
 
   <section id="meView" class="view">
-    <div class="section-head"><div><span class="eyebrow">MY WORK</span><h2>내 프로필과 지원</h2></div></div>
+    <div class="section-head"><div><span class="eyebrow">MY WORK</span><h2>내 Work Passport와 지원</h2><p class="section-copy">단순 이력서가 아니라 언제, 어디서, 무엇을 할 수 있는지와 실제 연결 이력을 개인에게 축적합니다.</p></div></div>
     <div class="two-col">
       <article class="panel">
-        <h3>나의 Work Profile</h3>
+        <h3>기본 프로필</h3>
         <form id="profileForm" class="stack">
           <input name="display_name" required placeholder="이름 또는 표시명">
           <select name="role"><option value="seeker">일을 찾고 있어요</option><option value="employer">사람을 찾고 있어요</option><option value="both">둘 다</option></select>
@@ -180,11 +207,77 @@
         <div id="applicationEmpty" class="empty compact">로그인하면 내가 지원한 일자리를 확인할 수 있습니다.</div>
       </article>
     </div>
+
+    <div class="passport-grid" data-work-private>
+      <article class="panel passport-panel">
+        <h3>Work Passport <span class="passport-badge">PRIVATE</span></h3>
+        <form id="passportForm" class="stack private-only">
+          <textarea name="availability_text" rows="2" placeholder="가능 시간 예: 평일 18시 이후, 토요일 종일"></textarea>
+          <input name="preferred_types" placeholder="원하는 일 형태, 쉼표로 구분: 단기, 프로젝트, 인턴">
+          <input name="mobility_text" placeholder="이동 가능 범위 예: 목포·무안, 버스 30분 이내">
+          <textarea name="experience_summary" rows="4" placeholder="경험 요약 예: 매장 보조 3회, SNS 콘텐츠 제작 프로젝트 2회"></textarea>
+          <label class="check"><input type="checkbox" name="alerts_opt_in"> 내 조건에 맞는 새 기회 알림 준비 <small>(알림 채널 연결 전까지 저장만 합니다)</small></label>
+          <button type="submit">Work Passport 저장</button>
+        </form>
+        <div class="passport-note">Work Passport는 기본적으로 비공개입니다. 공개 인재검색과 기관 통계에는 개인 민감정보를 그대로 노출하지 않는 구조를 유지합니다.</div>
+      </article>
+      <article class="panel">
+        <h3>나의 연결 이력</h3>
+        <div id="relationshipList" class="relationship-list private-only"></div>
+        <div id="relationshipEmpty" class="empty compact">로그인하면 확정된 연결 이력을 확인할 수 있습니다.</div>
+      </article>
+    </div>
+
     <article class="panel guide-panel">
       <h3>외국인·유학생 안내</h3>
       <p>EKODI Work는 체류자격을 대신 판단하거나 취업허가를 보장하지 않습니다. 실제 취업 전 본인의 체류자격·근로가능 범위와 사업주의 공식 고용절차를 고용24·EPS·관할 기관에서 확인하세요.</p>
       <div class="guide-links"><a href="https://www.work24.go.kr" target="_blank" rel="noopener">고용24</a><a href="https://www.eps.go.kr" target="_blank" rel="noopener">EPS</a></div>
     </article>
+  </section>
+
+  <section id="networkView" class="view">
+    <div class="network-hero">
+      <span class="eyebrow">LOCAL WORK NETWORK</span>
+      <h2>지역 전체가 함께 쓰는 인력 인프라</h2>
+      <p>구직자에게 이용료를 받는 구조보다, 지역의 연결 문제를 해결해야 하는 대학·상인회·지자체·기관이 Network 운영 주체가 되는 B2B2C/B2G2C 구조를 우선합니다.</p>
+      <div class="network-economy">
+        <div class="economy-card"><b>개인</b><span>기회 탐색과 Work Passport 기본 이용은 무료 중심</span></div>
+        <div class="economy-card"><b>사업장</b><span>기본 등록 + 필요할 때 Quick Hire, 반복채용은 향후 Pro</span></div>
+        <div class="economy-card"><b>기관·지역</b><span>별도 Work Network 운영·성과·수요관리 계약</span></div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div><span class="eyebrow">NETWORK MODEL</span><h2>한 시스템, 여러 지역 운영망</h2><p class="section-copy">각 Network는 데이터와 운영주체를 구분하되, 사용자는 같은 EKODI Work 안에서 자신의 Passport와 기회를 이어갑니다.</p></div>
+    </div>
+    <div id="networkModelGrid" class="network-model-grid"></div>
+
+    <div class="stream-title"><div><span class="source-kicker">PUBLIC NETWORKS</span><h3>공개 운영 Network</h3></div><span class="stream-note">실제 공개 상태만 표시</span></div>
+    <div id="networkGrid" class="network-grid"></div>
+    <div id="networkEmpty" class="empty">공개 운영 중인 Work Network를 확인하고 있습니다.</div>
+
+    <div class="network-request-wrap">
+      <article class="panel">
+        <span class="eyebrow">SUSTAINABLE RULES</span><h3>지속가능성을 위한 운영 원칙</h3>
+        <div class="network-principles">
+          <div class="principle"><strong>외부 공고는 유입, Work Graph는 자산</strong><span>공식 외부정보는 출처를 유지하고, 실제 EKODI 연결 이력만 장기 자산으로 축적합니다.</span></div>
+          <div class="principle"><strong>무료 → 건별 → 반복사용 구독</strong><span>작은 사업장에 불필요한 월정액을 강요하지 않고 실제 수요가 생길 때부터 유료화할 수 있게 설계합니다.</span></div>
+          <div class="principle"><strong>기관은 운영 인프라에 지불</strong><span>개별 구직자를 과금하기보다 대학·상권·지역기관이 연결 운영과 성과관리에 비용을 지불하는 모델을 우선합니다.</span></div>
+        </div>
+      </article>
+      <article class="panel" data-work-private>
+        <span class="eyebrow">START A NETWORK</span><h3>기관·지역 Work Network 도입 요청</h3>
+        <p class="muted">실제 계약이나 제휴를 자동으로 확정하지 않습니다. 로그인 후 요청을 남기면 검토 상태만 기록합니다.</p>
+        <form id="networkRequestForm" class="stack private-only">
+          <input name="organization_name" required placeholder="기관·단체·상권명">
+          <select name="network_type"><option value="university">대학</option><option value="merchant_association">상인회·상권</option><option value="municipality">지자체</option><option value="institution">기관</option><option value="community">지역 커뮤니티</option></select>
+          <input name="region" placeholder="지역 예: 전남 무안군">
+          <textarea name="note" rows="4" placeholder="연결하고 싶은 대상과 현재의 인력 문제를 적어 주세요."></textarea>
+          <button type="submit">도입 검토 요청</button>
+        </form>
+        <div id="networkRequestList" class="request-ledger private-only"></div>
+      </article>
+    </div>
   </section>
 </main>
 
@@ -196,6 +289,6 @@
   </div>
 </div>
 <div id="toast" class="toast" role="status"></div>
-<footer>EKODI Work · 실제 정보를 먼저 보여주고, 연결과 결정은 사람에게 남깁니다.</footer>
+<footer>EKODI Work · 기회를 모으고, 연결을 기억하며, 최종 결정은 사람에게 남깁니다.</footer>
 </body>
 </html>
