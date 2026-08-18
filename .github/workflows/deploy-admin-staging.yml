@@ -25,7 +25,10 @@ on:
       - 'release-control-admin.js'
       - 'release-control-admin.css'
       - 'scripts/build.mjs'
+      - 'config/ekodi-entrypoints.json'
+      - 'docs/architecture/ekodi-entrypoint-standard.md'
       - 'test/mission-control-admin.test.mjs'
+      - 'test/ekodi-entrypoint-standard.test.mjs'
 
 permissions:
   contents: read
@@ -51,7 +54,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate Governance Cockpit and admin routing
+      - name: Validate Governance Cockpit, ekodi.index policy and admin routing
         run: |
           set -euo pipefail
           node --check admin-staging-worker.js
@@ -59,6 +62,7 @@ jobs:
           node --check mission-control-admin.js
           node --check system-timeline-admin.js
           node --test test/mission-control-admin.test.mjs
+          node --test test/ekodi-entrypoint-standard.test.mjs
           npm run build
           test -f dist/mission-control-admin.js
           test -f dist/mission-control-admin.css
@@ -99,7 +103,7 @@ jobs:
               && grep -Fq 'DECISION QUEUE' /tmp/admin-stage.js \
               && grep -Fq 'AI COUNCIL' /tmp/admin-stage.js \
               && grep -Fq '.mission-dashboard' /tmp/admin-stage.css; then
-              echo 'Admin PR staging verified: isolated hostname, Governance Cockpit assets and zero production traffic.'
+              echo 'Admin PR staging verified: isolated hostname, Governance Cockpit assets, ekodi.index policy and zero production traffic.'
               exit 0
             fi
             echo "Admin PR staging verification pending (attempt $attempt/18)."
