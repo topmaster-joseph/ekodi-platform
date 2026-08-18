@@ -1,0 +1,4 @@
+EKODI Shell v1 production release marker
+Date: 2026-08-19 KST
+Scope: shell.ekodi.kr only
+Prerequisite: feature PR staging and repository CI passed
