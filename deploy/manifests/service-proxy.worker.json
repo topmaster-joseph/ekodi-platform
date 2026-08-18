@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-service-proxy",
+    "config": "wrangler.service-proxy.toml",
+    "requests": [
+      {"url":"https://biz.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI BIZ","https://shell.ekodi.kr/shell.js"]},
+      {"url":"https://church.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["https://shell.ekodi.kr/shell.js"]},
+      {"url":"https://lab.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["https://shell.ekodi.kr/shell.js"]},
+      {"url":"https://mall.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["https://shell.ekodi.kr/shell.js"]}
+    ]
+  }
+}
