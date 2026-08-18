@@ -38,6 +38,19 @@ test('personal brand subject resolves to authenticated person without tenant mem
   assert.match(worker, /AI_PUBLISH_REQUIRES_DELEGATION/);
 });
 
+test('server-side D1 triggers enforce plan gates on both queue creation and execution', async () => {
+  const migration = await read('migrations/0027_marketing_publication_entitlements.sql');
+  assert.match(migration, /BEFORE INSERT ON marketing_publication_jobs/);
+  assert.match(migration, /BEFORE UPDATE OF status ON marketing_publication_jobs/);
+  assert.match(migration, /NEW\.status='publishing'/);
+  assert.match(migration, /MARKETING_PLAN_IMMEDIATE_REQUIRED/);
+  assert.match(migration, /MARKETING_PLAN_SCHEDULE_REQUIRED/);
+  assert.match(migration, /MARKETING_PLAN_REPEAT_REQUIRED/);
+  assert.match(migration, /MARKETING_PLAN_AI_AUTOMATION_REQUIRED/);
+  assert.match(migration, /s\.plan_id IN \('auto','enterprise'\)/);
+  assert.match(migration, /marketing_store_workspaces/);
+});
+
 test('scheduler helpers preserve recurrence and bounded retry behavior', () => {
   assert.equal(nextRecurrence('2026-08-18T03:00:00.000Z','daily'),'2026-08-19T03:00:00.000Z');
   assert.equal(nextRecurrence('2026-08-18T03:00:00.000Z','weekly'),'2026-08-25T03:00:00.000Z');
