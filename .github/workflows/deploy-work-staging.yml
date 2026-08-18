@@ -35,8 +35,11 @@ jobs:
           set -euo pipefail
           node --check work-worker.js
           node --check work/app.js
+          node --check work/opportunities.js
           grep -Fq 'AI recommends · Human decides' work/index.html
           grep -Fq '/config.js' work/index.html
+          grep -Fq '/opportunities.js' work/index.html
+          grep -Fq '/api/opportunities' work-worker.js
           grep -Fq 'DATA_ENABLED = "false"' wrangler.work-staging.toml
       - name: Deploy isolated staging Worker
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
@@ -50,11 +53,14 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/work-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             config_code=$(curl -sS -o /tmp/work-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             health_code=$(curl -sS -o /tmp/work-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] \
+            feed_code=$(curl -sS -o /tmp/work-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/opportunities?limit=4" || true)
+            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
               && grep -Fq 'EKODI Work' /tmp/work-stage.html \
               && grep -Fq '"dataEnabled":false' /tmp/work-stage-config.js \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/work-stage-health.json \
-              && grep -Fq '"dataEnabled":false' /tmp/work-stage-health.json; then
+              && grep -Fq '"dataEnabled":false' /tmp/work-stage-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/work-stage-feed.json \
+              && grep -Fq '"id":"work24"' /tmp/work-stage-feed.json; then
               echo "EKODI Work staging verified and isolated at $STAGING_URL"
               exit 0
             fi
