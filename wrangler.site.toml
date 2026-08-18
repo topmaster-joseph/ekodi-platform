@@ -1,6 +1,6 @@
-# Admin site rollout: password recovery interface
+# Static site and admin edge router
 name = "shy-thunder-39a4"
-main = "site-worker.js"
+main = "admin-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = false
 preview_urls = false
