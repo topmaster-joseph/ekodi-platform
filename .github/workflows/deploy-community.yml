@@ -59,7 +59,7 @@ jobs:
           grep -Fq 'community-api' community/app.js
           grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
           grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
-          grep -Fq "'community':{name:'EKODI Community'" auth-site/client-auth.js
+          grep -Fq "community:{name:'EKODI Community'" auth-site/client-auth.js
           grep -Fq "returnTo:'https://community.ekodi.kr/'" auth-site/client-auth.js
           grep -Fq "open:true,kind:'community'" auth-site/client-auth.js
           grep -Fq "site==='community'" auth-site/auth-router.js
@@ -160,7 +160,7 @@ jobs:
             client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
             router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
             if [[ "$client_code" == '200' && "$router_code" == '200' ]] \
-              && grep -Fq "'community':{name:'EKODI Community'" /tmp/community-client-auth.js \
+              && grep -Fq "community:{name:'EKODI Community'" /tmp/community-client-auth.js \
               && grep -Fq "returnTo:'https://community.ekodi.kr/'" /tmp/community-client-auth.js \
               && grep -Fq "open:true,kind:'community'" /tmp/community-client-auth.js \
               && grep -Fq "site==='community'" /tmp/community-auth-router.js; then
