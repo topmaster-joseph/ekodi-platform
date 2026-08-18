@@ -1,3 +1,5 @@
+import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js';
+
 const ORIGINS = Object.freeze({
   'church.ekodi.kr': 'ekodi-church.pages.dev',
   'lab.ekodi.kr': 'ekodilab.pages.dev',
@@ -71,7 +73,7 @@ export default {
     const incoming = new URL(request.url);
 
     if (incoming.hostname === 'biz.ekodi.kr' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
-      return businessHub();
+      return injectEkodiShell(businessHub(), 'biz');
     }
 
     const redirectTarget = REDIRECTS[incoming.hostname];
@@ -106,10 +108,11 @@ export default {
     }
 
     headers.set('x-ekodi-edge', 'service-proxy');
-    return new Response(upstreamResponse.body, {
+    const response=new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
       statusText: upstreamResponse.statusText,
       headers
     });
+    return injectEkodiShell(response,shellServiceForHost(incoming.hostname));
   }
 };

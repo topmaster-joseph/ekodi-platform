@@ -1,3 +1,5 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
@@ -8,8 +10,8 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
-    if(url.pathname==='/health')return new Response(JSON.stringify({ok:true,service:'ekodi-community',socialRegistry:true}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
+    if(url.pathname==='/health')return new Response(JSON.stringify({ok:true,service:'ekodi-community',socialRegistry:true,ekodiShell:true,contextModel:'person-space-role'}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/community',307);
-    return withHeaders(await env.ASSETS.fetch(request));
+    return injectEkodiShell(withHeaders(await env.ASSETS.fetch(request)),'community');
   }
 };
