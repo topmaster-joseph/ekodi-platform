@@ -7,6 +7,7 @@ on:
     paths:
       - 'work/**'
       - 'work-worker.js'
+      - 'supabase/work-workforce-os.sql'
       - 'wrangler.work.toml'
       - 'deploy/manifests/work.worker.json'
       - 'scripts/guarded-worker-release.mjs'
@@ -39,12 +40,17 @@ jobs:
           node --check work-worker.js
           node --check work/app.js
           node --check work/opportunities.js
+          node --check work/workforce-os.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/work.worker.json
+          test -f supabase/work-workforce-os.sql
           grep -Fq 'EKODI Work' work/index.html
+          grep -Fq 'LOCAL WORKFORCE OS' work/index.html
           grep -Fq '/config.js' work/index.html
           grep -Fq '/opportunities.js' work/index.html
+          grep -Fq '/workforce-os.js' work/index.html
           grep -Fq '/api/opportunities' work-worker.js
+          grep -Fq 'work_passports' supabase/work-workforce-os.sql
           grep -Fq 'DATA_ENABLED = "true"' wrangler.work.toml
           grep -Fq "'work':{name:'EKODI Work'" auth-site/client-auth.js
           grep -Fq "site==='work'" auth-site/auth-router.js
@@ -73,15 +79,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/work-db.json -w '%{http_code}' --connect-timeout 5 --max-time 15 \
+          jobs_code=$(curl -sS -o /tmp/work-db.json -w '%{http_code}' --connect-timeout 5 --max-time 15 \
             "$WORK_SUPABASE_URL/rest/v1/work_jobs?select=id&limit=1" \
             -H "apikey: $WORK_SUPABASE_PUBLISHABLE_KEY" || true)
-          if [[ "$code" != "200" ]]; then
-            echo "Work database schema is not ready (HTTP $code). Production deploy blocked."
+          network_code=$(curl -sS -o /tmp/work-network-db.json -w '%{http_code}' --connect-timeout 5 --max-time 15 \
+            "$WORK_SUPABASE_URL/rest/v1/work_networks?select=id&limit=1" \
+            -H "apikey: $WORK_SUPABASE_PUBLISHABLE_KEY" || true)
+          if [[ "$jobs_code" != "200" ]] || [[ "$network_code" != "200" ]]; then
+            echo "Work database schema is not ready (jobs HTTP $jobs_code, networks HTTP $network_code). Production deploy blocked."
             cat /tmp/work-db.json || true
+            cat /tmp/work-network-db.json || true
             exit 1
           fi
-          echo 'Work database schema is reachable through the public RLS contract.'
+          echo 'Work database schema and Local Workforce OS contract are reachable through public RLS.'
       - name: Bootstrap first Worker or run guarded release
         shell: bash
         run: |
@@ -105,14 +115,17 @@ jobs:
             config_code=$(curl -sS -o /tmp/work-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/config.js' || true)
             health_code=$(curl -sS -o /tmp/work-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/health' || true)
             feed_code=$(curl -sS -o /tmp/work-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/api/opportunities?limit=4' || true)
-            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
+            os_code=$(curl -sS -o /tmp/work-os.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/workforce-os.js' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] && [[ "$os_code" == "200" ]] \
               && grep -Fq 'EKODI Work' /tmp/work.html \
+              && grep -Fq 'LOCAL WORKFORCE OS' /tmp/work.html \
               && grep -Fq '"dataEnabled":true' /tmp/work-config.js \
               && grep -Fq '"dataMode":"production"' /tmp/work-health.json \
               && grep -Fq '"service":"ekodi-work"' /tmp/work-health.json \
               && grep -Fq '"dataMode":"production"' /tmp/work-feed.json \
-              && grep -Fq '"id":"ekodi"' /tmp/work-feed.json; then
-              echo 'EKODI Work production verified.'
+              && grep -Fq '"id":"ekodi"' /tmp/work-feed.json \
+              && grep -Fq 'work_passports' /tmp/work-os.js; then
+              echo 'EKODI Work Local Workforce OS production verified.'
               exit 0
             fi
             sleep 5
