@@ -4,20 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101828">
-  <meta name="description" content="EKODI Work는 지역의 일과 사람을 연결하고 성장까지 돕는 일·인재 허브입니다.">
-  <title>EKODI Work · 사람과 일을 잇다</title>
+  <meta name="description" content="EKODI Work는 실제 일자리 정보를 먼저 보여주고, 필요한 조건을 AI에게 요청할 수 있는 지역 일·인재 연결 허브입니다.">
+  <title>EKODI Work · 실제 기회부터 연결까지</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/ui-workbench.css">
+  <link rel="stylesheet" href="/opportunity-stream.css">
   <script src="/config.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="/app.js" defer></script>
+  <script src="/opportunities.js" defer></script>
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="/">EKODI <b>WORK</b></a>
   <nav aria-label="주요 메뉴">
-    <button class="nav-link active" data-view="jobs">일자리</button>
+    <button class="nav-link active" data-view="jobs">기회 찾기</button>
     <button class="nav-link" data-view="employer">사람 찾기</button>
     <button class="nav-link" data-view="me">My Work</button>
   </nav>
@@ -25,14 +27,50 @@
 </header>
 
 <main>
-  <section class="hero">
-    <div>
-      <span class="eyebrow">LOCAL TALENT · REAL WORK · GROWTH</span>
-      <h1>사람과 일을 잇고,<br><em>다음 가능성</em>까지.</h1>
-      <p>지역 소상공인, 대학생·졸업생, 지역주민과 합법적으로 일할 수 있는 외국인을 연결합니다. AI는 추천하고, 최종 결정은 사람이 합니다.</p>
+  <section class="hero hero-live">
+    <div class="hero-copy">
+      <span class="eyebrow">LIVE LOCAL OPPORTUNITIES</span>
+      <h1>먼저 보여주고,<br><em>필요하면 찾아드립니다.</em></h1>
+      <p>실제 공개 일자리와 EKODI에 직접 등록된 기회를 한곳에 모으고, 원하는 조건이 없으면 AI에게 그대로 요청할 수 있습니다. 검색보다 먼저 기회가 흐르는 화면을 만듭니다.</p>
+      <div class="hero-actions">
+        <button id="focusSearchBtn" type="button">원하는 조건 말하기</button>
+        <button id="needPersonBtn" type="button" class="secondary">사람이 필요해요</button>
+      </div>
+      <div id="sourceStrip" class="source-strip" aria-label="정보 출처">
+        <span class="source-pill"><b>EKODI</b> 직접 등록</span>
+        <span class="source-pill" id="work24SourcePill"><b>고용24</b> 공식 API 연결 확인 중</span>
+        <span class="source-rule">AI recommends · Human decides</span>
+      </div>
     </div>
-    <div class="ask-card">
-      <label for="naturalSearch">어떤 일을 찾고 계세요?</label>
+
+    <aside class="live-board" aria-labelledby="liveBoardTitle">
+      <div class="live-board-head">
+        <div>
+          <span class="eyebrow">NOW</span>
+          <h2 id="liveBoardTitle">지금 들어온 기회</h2>
+        </div>
+        <button id="refreshFeedBtn" type="button" class="ghost-button" aria-label="새로고침">새로고침</button>
+      </div>
+      <div class="region-chips" aria-label="지역 빠른 선택">
+        <button type="button" data-op-query="목포">목포</button>
+        <button type="button" data-op-query="무안">무안</button>
+        <button type="button" data-op-query="청계">청계</button>
+        <button type="button" data-op-query="전남">전남</button>
+      </div>
+      <div id="featuredOpportunities" class="featured-opportunities" aria-live="polite"></div>
+      <div id="featuredEmpty" class="feed-empty">연결 가능한 기회를 확인하고 있습니다.</div>
+      <div class="live-board-foot"><span id="feedStatus">실시간 정보 확인 중</span><span id="feedUpdatedAt"></span></div>
+    </aside>
+  </section>
+
+  <section class="request-bar" aria-labelledby="requestTitle">
+    <div class="request-copy">
+      <span class="eyebrow">ASK EKODI WORK</span>
+      <h2 id="requestTitle">찾는 조건이 따로 있나요?</h2>
+      <p>지역, 시간, 가능한 업무를 자연스럽게 적어 주세요. 현재 기회에서 먼저 찾고, 연결 가능한 출처까지 확장합니다.</p>
+    </div>
+    <div class="ask-card compact-ask">
+      <label for="naturalSearch">원하는 일을 그대로 말해보세요</label>
       <div class="ask-row">
         <input id="naturalSearch" placeholder="예: 목포대 근처, 오후 5시 이후 주말 알바">
         <button id="naturalSearchBtn">찾기</button>
@@ -45,20 +83,34 @@
 
   <section id="jobsView" class="view active">
     <div class="section-head">
-      <div><span class="eyebrow">FIND WORK</span><h2>지금 연결 가능한 일</h2></div>
+      <div><span class="eyebrow">OPPORTUNITY STREAM</span><h2>실시간 통합 기회</h2><p class="section-copy">공식·허용된 외부 출처와 EKODI 직접 등록 정보를 구분해 보여줍니다. 원문과 출처를 항상 확인할 수 있습니다.</p></div>
       <div class="filters">
         <input id="jobSearch" type="search" placeholder="직무·지역·기술 검색">
         <select id="jobType"><option value="">전체 형태</option><option>정규직</option><option>계약직</option><option>아르바이트</option><option>인턴</option><option>프로젝트</option><option>봉사</option></select>
       </div>
     </div>
-    <div id="dataNotice" class="notice hide"></div>
-    <div id="jobGrid" class="job-grid"></div>
-    <div id="jobEmpty" class="empty">아직 공개된 일자리가 없습니다. 첫 채용공고를 등록해 보세요.</div>
+
+    <div class="stream-block external-stream">
+      <div class="stream-title"><div><span class="source-kicker">PUBLIC SOURCES</span><h3>외부 공개 기회</h3></div><span id="externalCount" class="stream-count">0건</span></div>
+      <div id="externalNotice" class="notice hide"></div>
+      <div id="externalGrid" class="job-grid external-grid"></div>
+      <div id="externalEmpty" class="empty">공식 연동 데이터를 불러오는 중입니다.</div>
+      <p class="source-credit">고용24 정보가 표시될 경우 각 카드에서 출처와 원문 링크를 함께 제공합니다. 외부 정보는 원문을 최종 기준으로 확인하세요.</p>
+    </div>
+
+    <div class="stream-divider"></div>
+
+    <div class="stream-block native-stream">
+      <div class="stream-title"><div><span class="source-kicker">EKODI DIRECT</span><h3>EKODI 직접 등록</h3></div><span class="stream-note">지역 사업장·기관이 직접 게시</span></div>
+      <div id="dataNotice" class="notice hide"></div>
+      <div id="jobGrid" class="job-grid"></div>
+      <div id="jobEmpty" class="empty">아직 EKODI에 직접 공개된 일자리가 없습니다. 필요한 사람이 있다면 첫 공고를 등록해 보세요.</div>
+    </div>
   </section>
 
   <section id="employerView" class="view">
     <div class="section-head">
-      <div><span class="eyebrow">FOR EMPLOYERS</span><h2>필요한 사람을 더 쉽게</h2></div>
+      <div><span class="eyebrow">FOR EMPLOYERS</span><h2>필요한 사람을 말로 요청하세요</h2><p class="section-copy">복잡한 공고 양식을 먼저 채우지 않아도 됩니다. 상황을 적으면 구조화하고, 사람이 확인한 뒤 게시합니다.</p></div>
       <span class="human-rule">AI recommends · Human decides</span>
     </div>
     <div class="two-col">
@@ -144,6 +196,6 @@
   </div>
 </div>
 <div id="toast" class="toast" role="status"></div>
-<footer>EKODI Work · 사람을 점수로 심판하지 않고, 사실과 가능성을 연결합니다.</footer>
+<footer>EKODI Work · 실제 정보를 먼저 보여주고, 연결과 결정은 사람에게 남깁니다.</footer>
 </body>
 </html>
