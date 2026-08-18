@@ -83,7 +83,8 @@ test('access api resolves and revalidates workspace-scoped handoff',()=>{
   assert.match(accessApi,/\/workspaces/);
   assert.match(accessApi,/current_site_workspaces/);
   assert.match(accessApi,/workspace_key/);
-  assert.match(accessApi,/selected\.requires_handoff/);
+  assert.match(accessApi,/handoffAllowed=site==="marketing"\|\|selected\?\.requires_handoff===true/);
+  assert.match(accessApi,/\["active","pre_registered","free"\]\.includes\(status\)/);
   assert.match(accessApi,/ekodi|tenant|store/i);
 });
 

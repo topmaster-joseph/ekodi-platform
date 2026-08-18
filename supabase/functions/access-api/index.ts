@@ -21,7 +21,7 @@ const anon=Deno.env.get("SUPABASE_ANON_KEY")!;
 const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin=createClient(url,service,{auth:{persistSession:false}});
 const clip=(v:unknown,n:number)=>String(v??"").trim().slice(0,n);
-const plans=new Set(["standard","basic","pro","enterprise"]);
+const plans=new Set(["free","flex","plus","pro","auto","standard","basic","enterprise"]);
 
 async function authClient(req:Request){
   const authorization=req.headers.get("Authorization");
@@ -179,8 +179,14 @@ Deno.serve(async(req)=>{
       const workspaces=Array.isArray(workspaceData)?workspaceData:[];
       const selected=workspaceKey
         ?workspaces.find((item:any)=>item?.workspace_key===workspaceKey)
-        :workspaces.find((item:any)=>item?.source==="registry"&&item?.requires_handoff===true);
-      if(!selected||selected.requires_handoff!==true||!["active","pre_registered"].includes(String(selected.status||""))){
+        :workspaces.find((item:any)=>item?.source==="registry"&&item?.requires_handoff===true)
+          ??(site==="marketing"?workspaces.find((item:any)=>item?.workspace_kind==="personal"):undefined);
+      const status=String(selected?.status||"");
+      const statusAllowed=site==="marketing"
+        ?["active","pre_registered","free"].includes(status)
+        :["active","pre_registered"].includes(status);
+      const handoffAllowed=site==="marketing"||selected?.requires_handoff===true;
+      if(!selected||!statusAllowed||!handoffAllowed){
         return json(req,{error:"site_access_required"},403);
       }
 
@@ -190,7 +196,7 @@ Deno.serve(async(req)=>{
         console.error("handoff generateLink",error?.message||"missing_hashed_token");
         return json(req,{error:"handoff_token_issue_failed"},503);
       }
-      return json(req,{ok:true,tokenHash,type:"email",returnTo,expiresFor:"single_use",plan:selected.plan||"standard",workspace:selected});
+      return json(req,{ok:true,tokenHash,type:"email",returnTo,expiresFor:"single_use",plan:selected.plan||"free",workspace:selected});
     }
 
     if(req.method==="GET"&&path==="/pending"){

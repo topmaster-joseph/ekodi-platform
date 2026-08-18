@@ -62,58 +62,49 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
     assert.equal(String(url).endsWith('/functions/v1/access-api/handoff'), true);
     assert.equal(options.headers.authorization, 'Bearer session-token');
     return new Response(JSON.stringify({
-      tokenHash: 'otp-token-hash',
-      type: 'email',
-      returnTo: 'https://marketing.ekodi.kr/',
+      tokenHash: 'otp-token-hash', type: 'email', returnTo: 'https://marketing.ekodi.kr/',
       workspace: { workspace_key: 'store:123', tenant_id: 'tenant-1', store_id: 'store-1' },
     }), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   try {
     const env = { DB: new MemoryD1(), ALLOWED_ORIGINS: 'https://marketing.ekodi.kr,https://auth.ekodi.kr' };
     const start = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/start', {
-      method: 'POST',
-      headers: {
-        origin: 'https://auth.ekodi.kr',
-        authorization: 'Bearer session-token',
-        'content-type': 'application/json',
-      },
+      method: 'POST', headers: { origin: 'https://auth.ekodi.kr', authorization: 'Bearer session-token', 'content-type': 'application/json' },
       body: JSON.stringify({ return_to: 'https://marketing.ekodi.kr/', workspace_key: 'store:123' }),
     }), env);
     assert.equal(start.status, 200);
     assert.equal(start.headers.get('access-control-allow-credentials'), 'true');
     const setCookie = start.headers.get('set-cookie');
     assert.match(setCookie, /^__Host-ekodi_handoff=[a-f0-9]{64};/i);
-    assert.match(setCookie, /HttpOnly/i);
-    assert.match(setCookie, /Secure/i);
-    assert.match(setCookie, /SameSite=Lax/i);
-    assert.doesNotMatch(setCookie, /Domain=/i);
+    assert.match(setCookie, /HttpOnly/i); assert.match(setCookie, /Secure/i); assert.match(setCookie, /SameSite=Lax/i); assert.doesNotMatch(setCookie, /Domain=/i);
     const startBody = await start.json();
     assert.equal(startBody.returnTo, 'https://marketing.ekodi.kr/');
-    assert.equal('tokenHash' in startBody, false);
-    assert.equal(JSON.stringify(startBody).includes('otp-token-hash'), false);
-
+    assert.equal('tokenHash' in startBody, false); assert.equal(JSON.stringify(startBody).includes('otp-token-hash'), false);
     const cookiePair = setCookie.split(';', 1)[0];
-    const consume = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', {
-      method: 'POST',
-      headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair },
-    }), env);
+    const consume = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', { method: 'POST', headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair } }), env);
     assert.equal(consume.status, 200);
     const payload = await consume.json();
-    assert.equal(payload.tokenHash, 'otp-token-hash');
-    assert.equal(payload.workspace.workspace_key, 'store:123');
-    assert.match(consume.headers.get('set-cookie'), /Max-Age=0/);
-
-    const replay = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', {
-      method: 'POST',
-      headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair },
-    }), env);
+    assert.equal(payload.tokenHash, 'otp-token-hash'); assert.equal(payload.workspace.workspace_key, 'store:123'); assert.match(consume.headers.get('set-cookie'), /Max-Age=0/);
+    const replay = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', { method: 'POST', headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair } }), env);
     assert.equal(replay.status, 410);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+  } finally { globalThis.fetch = originalFetch; }
 });
 
-test('auth UI no longer constructs an ekodi_token URL fragment', () => {
+test('Marketing FREE personal workspace also uses secure one-time handoff', () => {
+  const authSource = fs.readFileSync(new URL('../auth-site/marketing-auth-hotfix.js', import.meta.url), 'utf8');
+  const accessSource = fs.readFileSync(new URL('../supabase/functions/access-api/index.ts', import.meta.url), 'utf8');
+  assert.match(authSource, /continueFreeWorkspace/);
+  assert.match(authSource, /handoffToService\(item\.workspace_key\)/);
+  assert.match(authSource, /\['active','pre_registered','free'\]/);
+  assert.doesNotMatch(authSource, /welcome=free/);
+  assert.match(accessSource, /current_site_workspaces/);
+  assert.match(accessSource, /site==="marketing"\?workspaces\.find/);
+  assert.match(accessSource, /\["active","pre_registered","free"\]\.includes\(status\)/);
+  assert.match(accessSource, /handoffAllowed=site==="marketing"\|\|selected\?\.requires_handoff===true/);
+  assert.match(accessSource, /plan:selected\.plan\|\|"free"/);
+});
+
+test('auth UI never constructs credential URL fragments', () => {
   const source = fs.readFileSync(new URL('../auth-site/marketing-auth-hotfix.js', import.meta.url), 'utf8');
   assert.match(source, /\/api\/marketing\/handoff\/start/);
   assert.match(source, /credentials:'include'/);
