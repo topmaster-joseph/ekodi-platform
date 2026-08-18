@@ -52,12 +52,12 @@ async function fill(page, names, value, audit, event, { required = false } = {})
 
 async function waitForAdmin(page, audit) {
   await page.goto(UPAPER_ADMIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const ready = async () => Boolean(await findText(page, ['콘텐츠관리', '회원관리', '매출관리', '정산관리']));
+  const ready = async () => Boolean(await findText(page, ['설정', '콘텐츠등록', '콘텐츠관리', '회원관리', '매출관리', '정산관리']));
   if (await ready()) return;
 
   audit('upaper.wait_for_manual_auth_or_seller', { status: 'waiting' });
   console.log('\n유페이퍼 판매자 로그인이 필요합니다. 자동화 전용 Chrome 창에서 로그인하세요.');
-  console.log('판매자 전환이 아직 안 된 계정이면 유페이퍼의 판매자 등록/정산정보 설정이 먼저 필요합니다.');
+  console.log('판매자 전환이 아직 안 된 계정이면 회원가입 후 판매자 등록 화면의 필수 정보 입력이 먼저 필요합니다.');
   const deadline = Date.now() + 10 * 60 * 1000;
   while (Date.now() < deadline) {
     await page.waitForTimeout(1500);
@@ -69,15 +69,48 @@ async function waitForAdmin(page, audit) {
   throw new Error('유페이퍼 판매자 관리자 로그인이 10분 안에 완료되지 않았습니다.');
 }
 
-async function prepareContent(page, book, audit) {
-  await clickText(page, ['콘텐츠관리'], audit, 'upaper.content.open');
-  await page.waitForTimeout(500);
-  const added = await clickText(page, ['신규등록', '신규 콘텐츠', '콘텐츠등록', '전자책 등록'], audit, 'upaper.content.add', { required: false });
-  if (!added) {
-    audit('upaper.content.add', { status: 'blocked', reason: '신규 콘텐츠 등록 버튼을 찾지 못함' });
-    throw new Error('유페이퍼 신규 콘텐츠 등록 화면을 찾지 못했습니다.');
+async function openOfficialEpubRegistration(page, audit) {
+  // 2026-08-18 유페이퍼 고객지원 공식 안내:
+  // 회원가입 → 판매자 등록 → 설정 → 콘텐츠등록 → 유페이퍼 EPUB 웹에디터 → 도서등록
+  const settingsOpened = await clickText(page, ['설정'], audit, 'upaper.settings.open', { required: false });
+  if (settingsOpened) await page.waitForTimeout(400);
+
+  let contentOpened = await clickText(page, ['콘텐츠등록'], audit, 'upaper.content_registration.open', { required: false });
+  if (!contentOpened) {
+    // 기존 관리자 UI를 위한 호환 경로
+    contentOpened = await clickText(page, ['콘텐츠관리'], audit, 'upaper.content_management.open', { required: false });
+  }
+  if (!contentOpened) {
+    audit('upaper.content_registration.open', { status: 'blocked', reason: '설정/콘텐츠등록 또는 콘텐츠관리 메뉴를 찾지 못함' });
+    throw new Error('유페이퍼 콘텐츠등록 메뉴를 찾지 못했습니다.');
   }
   await page.waitForTimeout(500);
+
+  const editorOpened = await clickText(
+    page,
+    ['유페이퍼 epub웹에디터', '유페이퍼 EPUB 웹에디터', 'EPUB 웹에디터', 'epub웹에디터'],
+    audit,
+    'upaper.epub_editor.open',
+    { required: false },
+  );
+  if (editorOpened) await page.waitForTimeout(500);
+
+  const added = await clickText(
+    page,
+    ['도서등록', '신규등록', '신규 콘텐츠', '전자책 등록'],
+    audit,
+    'upaper.book.add',
+    { required: false },
+  );
+  if (!added) {
+    audit('upaper.book.add', { status: 'blocked', reason: 'EPUB 웹에디터의 도서등록 버튼을 찾지 못함' });
+    throw new Error('유페이퍼 EPUB 웹에디터 도서등록 화면을 찾지 못했습니다.');
+  }
+  await page.waitForTimeout(500);
+}
+
+async function prepareContent(page, book, audit) {
+  await openOfficialEpubRegistration(page, audit);
 
   await fill(page, ['도서명', '제목', '콘텐츠명'], book.title, audit, 'upaper.metadata.title', { required: true });
   await fill(page, ['부제', '부제목'], book.subtitle, audit, 'upaper.metadata.subtitle');
@@ -100,10 +133,17 @@ async function prepareContent(page, book, audit) {
     audit('upaper.content.upload', { status: 'needs_review', reason: '업로드 입력란을 자동 식별하지 못함' });
   }
 
-  // 유페이퍼는 판매 신청 뒤 검수와 ISBN/UCI 신청 절차가 이어질 수 있다.
-  // 자동화는 현재 최종 판매신청을 누르지 않고 등록 초안 단계에서 멈춘다.
+  // ISBN 발급비는 유페이퍼 안내상 설정 → U캐쉬충전에서 선충전이 필요하다.
+  // 결제/충전은 금전 거래이므로 자동 집행하지 않는다.
+  audit('upaper.isbn_ucash', {
+    status: 'needs_review',
+    reason: 'ISBN 발급이 필요한 시점에 설정 → U캐쉬충전에서 금액 확인 및 승인 필요',
+  });
+
+  // 판매 신청 뒤 검수와 ISBN/UCI 절차가 이어질 수 있다.
+  // 자동화는 최종 판매신청을 누르지 않고 등록 초안 단계에서 멈춘다.
   audit('upaper.sale_application', { status: 'not_submitted', reason: '판매자/정산/식별번호 상태를 확인한 뒤 제출해야 함' });
-  console.log('\n유페이퍼 콘텐츠 등록 초안을 준비했습니다. 판매신청 직전에서 멈췄습니다.');
+  console.log('\n유페이퍼 EPUB 웹에디터에 콘텐츠 등록 초안을 준비했습니다. 판매신청 직전에서 멈췄습니다.');
   return { status: 'draft_ready', url: page.url() };
 }
 
