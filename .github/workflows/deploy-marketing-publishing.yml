@@ -8,6 +8,7 @@ on:
       - 'wrangler.marketing-publishing.toml'
       - 'wrangler.marketing-publishing.staging.toml'
       - 'migrations/0026_marketing_publication_queue.sql'
+      - 'migrations/0027_marketing_publication_entitlements.sql'
       - 'test/marketing-publishing.test.mjs'
       - 'deploy/manifests/marketing-publishing.worker.json'
       - 'platform-boundaries.json'
@@ -19,6 +20,7 @@ on:
       - 'wrangler.marketing-publishing.toml'
       - 'wrangler.marketing-publishing.staging.toml'
       - 'migrations/0026_marketing_publication_queue.sql'
+      - 'migrations/0027_marketing_publication_entitlements.sql'
       - 'test/marketing-publishing.test.mjs'
       - 'deploy/manifests/marketing-publishing.worker.json'
       - 'platform-boundaries.json'
@@ -50,6 +52,8 @@ jobs:
           node --test test/marketing-publishing.test.mjs
           grep -Fq "subject_type IN ('person','tenant','store')" migrations/0026_marketing_publication_queue.sql
           grep -Fq 'credential_ref' migrations/0026_marketing_publication_queue.sql
+          grep -Fq 'MARKETING_PLAN_SCHEDULE_REQUIRED' migrations/0027_marketing_publication_entitlements.sql
+          grep -Fq 'BEFORE UPDATE OF status ON marketing_publication_jobs' migrations/0027_marketing_publication_entitlements.sql
           if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0026_marketing_publication_queue.sql; then
             echo 'Provider tokens must not be persisted in D1.'
             exit 1
