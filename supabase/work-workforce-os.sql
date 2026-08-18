@@ -159,12 +159,12 @@ begin
     from public.work_applications a
     join public.work_jobs j on j.id = a.job_id
     where a.id = p_application_id
-    on conflict (application_id) do update
+    on conflict on constraint work_relationships_application_id_key do update
       set status='accepted', updated_at=excluded.updated_at;
   elsif p_status = 'rejected' then
     update public.work_relationships
        set status='cancelled', updated_at=now()
-     where application_id=p_application_id and status='accepted';
+     where work_relationships.application_id=p_application_id and work_relationships.status='accepted';
   end if;
 
   return next;
