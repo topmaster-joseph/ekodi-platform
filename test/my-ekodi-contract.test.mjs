@@ -109,9 +109,19 @@ test('Creator portfolio stays person-scoped and private by default',async()=>{
     read('supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql')
   ]);
   assert.match(migration,/visibility text not null default 'private'/);
-  assert.match(migration,/workspace_key text not null/);
   assert.match(privateHelper,/private\.current_person_id/);
   assert.match(optimized,/\(select private\.current_person_id\(\)\)/);
+});
+
+test('Personal users can enter personal-brand Marketing without a tenant or store workspace',async()=>{
+  const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
+  assert.match(html,/PERSONAL BRAND MARKETING/);
+  assert.match(html,/소속이 없어도, 내가 브랜드입니다/);
+  assert.match(html,/mode%3Dpersonal-brand/);
+  assert.match(worker,/personalBrandMarketing:true/);
+  assert.match(worker,/pathname==='\/personal-brand'/);
+  assert.match(worker,/site=marketing/);
+  assert.match(worker,/mode=personal-brand/);
 });
 
 test('Production rollout migrates legacy My EKODI before future guarded promotions',async()=>{
