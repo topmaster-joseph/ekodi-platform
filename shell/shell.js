@@ -32,11 +32,11 @@ function mergeContext(next={}){
   state={
     ...state,
     workspaceKey,
-    workspaceName:String(next.workspaceName??next.workspace_name??state.workspaceName||'').trim().slice(0,120),
-    role:String(next.role??state.role||'').trim().slice(0,80),
-    personName:String(next.personName??next.person_name??state.personName||'').trim().slice(0,120),
-    tenantId:String(next.tenantId??next.tenant_id??state.tenantId||'').trim().slice(0,120),
-    storeId:String(next.storeId??next.store_id??state.storeId||'').trim().slice(0,120),
+    workspaceName:String(next.workspaceName??next.workspace_name??state.workspaceName??'').trim().slice(0,120),
+    role:String(next.role??state.role??'').trim().slice(0,80),
+    personName:String(next.personName??next.person_name??state.personName??'').trim().slice(0,120),
+    tenantId:String(next.tenantId??next.tenant_id??state.tenantId??'').trim().slice(0,120),
+    storeId:String(next.storeId??next.store_id??state.storeId??'').trim().slice(0,120),
   };
   if(!state.workspaceName&&state.workspaceKey)state.workspaceName=inferredWorkspaceName(state.workspaceKey);
   writeStored();render();
