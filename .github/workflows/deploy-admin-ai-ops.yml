@@ -17,7 +17,10 @@ on:
       - 'admin-lazy-features.js'
       - 'site-worker.js'
       - 'scripts/build.mjs'
+      - 'config/ekodi-entrypoints.json'
+      - 'docs/architecture/ekodi-entrypoint-standard.md'
       - 'test/mission-control-admin.test.mjs'
+      - 'test/ekodi-entrypoint-standard.test.mjs'
 
 permissions:
   contents: read
@@ -39,12 +42,13 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate repository, AI Ops and Governance Cockpit contracts
+      - name: Validate repository, AI Ops, Governance Cockpit and ekodi.index contracts
         run: |
           npm run check
           node --check mission-control-admin.js
           node --check system-timeline-admin.js
           node --test test/mission-control-admin.test.mjs
+          node --test test/ekodi-entrypoint-standard.test.mjs
           node --test test/ai-ops-admin.test.js
 
       - name: Build shared admin assets
@@ -115,7 +119,7 @@ jobs:
               && verify_asset 'mission-control-admin.js' 'DECISION QUEUE' \
               && verify_asset 'mission-control-admin.js' 'AI COUNCIL' \
               && verify_asset 'mission-control-admin.css' '.mission-dashboard'; then
-              echo 'Admin AI Governance Cockpit, status-first AI Ops and Chief AI command surface verified on production.'
+              echo 'Admin AI Governance Cockpit, ekodi.index policy, status-first AI Ops and Chief AI command surface verified on production.'
               exit 0
             fi
             echo "Admin Governance Cockpit verification pending (attempt $attempt/18)."
