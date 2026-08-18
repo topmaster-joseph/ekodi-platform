@@ -57,6 +57,15 @@ if (!String(packageJson.scripts?.check || '').includes('validate:ai-resilience')
 const ciFile = '.github/workflows/ci.yml';
 requireText(ciFile, ['AI_PROVIDER: NONE', 'npm run test:ai-none', 'npm run validate:ai-resilience']);
 
+for (const releaseFile of ['scripts/guarded-worker-release.mjs', 'scripts/guarded-pages-release.mjs']) {
+  requireText(releaseFile, [
+    'runProviderIndependenceGate',
+    "AI_PROVIDER: 'NONE'",
+    'validate-ai-provider-independence.mjs',
+    'ai-provider-none.test.mjs',
+  ]);
+}
+
 const governanceFile = 'ai-governance-runtime.js';
 requireText(governanceFile, [
   'no_ai_provider_dependency_for_core_service',
@@ -75,4 +84,4 @@ if (failed) {
   process.exit(1);
 }
 
-console.log('✅ AI provider-independence audit passed: every EKODI surface is governed by Service-first, AI-enhanced release policy.');
+console.log('✅ AI provider-independence audit passed: every EKODI surface is governed by Service-first, AI-enhanced release policy and guarded promotion.');
