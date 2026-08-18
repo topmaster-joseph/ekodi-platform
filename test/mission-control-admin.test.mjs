@@ -4,35 +4,40 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('Mission Control browser module parses and exposes six stable primary perspectives',async()=>{
+test('Governance Cockpit exposes five human-facing primary perspectives',async()=>{
   const source=await read('mission-control-admin.js');
   assert.doesNotThrow(()=>new Function(source));
-  for(const label of ['Campus','Today','People','Money','AI','More']) assert.match(source,new RegExp(`label:'${label}'`));
+  for(const label of ['Overview','Decisions','Ecosystem','AI Council','System']) assert.match(source,new RegExp(`label:'${label}'`));
   assert.match(source,/mission-primary-nav/);
-  assert.match(source,/mission-secondary-nav/);
+  assert.match(source,/governance-system-open/);
+  assert.doesNotMatch(source,/label:'Campus'/);
+  assert.doesNotMatch(source,/label:'More'/);
 });
 
-test('Mission Control centers today brief, human decisions, timeline and AI crew',async()=>{
+test('Governance Cockpit centers Chief AI brief, decisions, ecosystem and AI council',async()=>{
   const source=await read('mission-control-admin.js');
-  assert.match(source,/TODAY BRIEF/);
-  assert.match(source,/DECISION INBOX/);
-  assert.match(source,/TIME MACHINE/);
-  assert.match(source,/AI CREW/);
-  assert.match(source,/LIVE ECOSYSTEM/);
-  assert.match(source,/Mission Control/);
+  assert.match(source,/CHIEF AI BRIEF/);
+  assert.match(source,/DECISION QUEUE/);
+  assert.match(source,/LIVE SIGNALS/);
+  assert.match(source,/AI COUNCIL/);
+  assert.match(source,/ECOSYSTEM · DELEGATED OPERATIONS/);
+  assert.match(source,/Chief AI Control Room/);
+  for(const agent of ['Chief AI','Platform AI','Site AI','Workspace AI','Security AI','Release AI','Finance AI']) assert.match(source,new RegExp(agent));
 });
 
-test('Mission Control remains observation-first and routes risky actions to the existing Chief AI gate',async()=>{
+test('Governance Cockpit remains observation-first and routes important choices to Chief AI',async()=>{
   const source=await read('mission-control-admin.js');
   assert.match(source,/\/api\/control\/overview/);
   assert.match(source,/\/api\/control\/check/);
   assert.match(source,/CORE_DOMAINS/);
-  assert.match(source,/Chief AI와 검토/);
+  assert.match(source,/Chief AI에게 선택지 요청/);
+  assert.match(source,/governanceCommandBar/);
+  assert.match(source,/방향 설정이나 중요한 결정을 지시하세요/);
   assert.doesNotMatch(source,/fetch\([^\n]*(delete|destroy|drop|dns\/update|billing\/charge)/i);
   assert.doesNotMatch(source,/service[_-]?role/i);
 });
 
-test('Mission Control is shipped only through the authenticated admin shell and secured asset route',async()=>{
+test('Governance Cockpit is shipped only through the authenticated admin shell and secured asset route',async()=>{
   const [build,html,worker]=await Promise.all([read('scripts/build.mjs'),read('control-center.html'),read('site-worker.js')]);
   assert.match(build,/'mission-control-admin\.css'/);
   assert.match(build,/'mission-control-admin\.js'/);
@@ -44,7 +49,19 @@ test('Mission Control is shipped only through the authenticated admin shell and 
   assert.match(worker,/'admin-asset'/);
 });
 
-test('Mission Control keeps existing AI Ops and Chief AI contracts instead of duplicating privileged control',async()=>{
+test('System hub preserves existing technical operations behind governance navigation',async()=>{
+  const [mission,timeline,build]=await Promise.all([read('mission-control-admin.js'),read('system-timeline-admin.js'),read('scripts/build.mjs')]);
+  assert.match(mission,/key:'system'/);
+  assert.match(timeline,/governanceSystemHub/);
+  assert.match(timeline,/System · Operations/);
+  assert.match(timeline,/raw === 'campus'/);
+  assert.match(timeline,/#overview/);
+  assert.match(timeline,/#system/);
+  assert.match(build,/system-timeline-admin\.js/);
+  assert.match(build,/system-timeline-admin\.css/);
+});
+
+test('Governance Cockpit keeps existing AI Ops and Chief AI contracts instead of duplicating privileged control',async()=>{
   const [mission,aiOps,lazy]=await Promise.all([read('mission-control-admin.js'),read('ai-ops-admin.js'),read('admin-lazy-features.js')]);
   assert.match(mission,/routeSection\('aiops'\)/);
   assert.match(aiOps,/Decision Gate/);
@@ -53,12 +70,12 @@ test('Mission Control keeps existing AI Ops and Chief AI contracts instead of du
   assert.match(lazy,/installChiefChat/);
 });
 
-test('Mission Control has an explicit guarded production trigger and post-deploy verification contract',async()=>{
+test('Governance production workflow verifies new cockpit markers',async()=>{
   const workflow=await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow,/mission-control-admin\.js/);
   assert.match(workflow,/mission-control-admin\.css/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
-  assert.match(workflow,/Verify production Admin Mission Control boundary/);
-  assert.match(workflow,/DECISION INBOX/);
-  assert.match(workflow,/TIME MACHINE/);
+  assert.match(workflow,/Verify production Admin Governance Cockpit boundary/);
+  assert.match(workflow,/DECISION QUEUE/);
+  assert.match(workflow,/AI COUNCIL/);
 });
