@@ -29,6 +29,13 @@ const BIZ_CSP = [
   "object-src 'none'"
 ].join('; ');
 
+const STAGING_HOSTS = new Set(['biz.ekodi.kr', ...Object.keys(ORIGINS), ...Object.keys(REDIRECTS)]);
+function requestHost(request, env, incoming) {
+  if (env?.ENVIRONMENT !== 'staging') return incoming.hostname;
+  const requested = String(request.headers.get('x-ekodi-staging-host') || '').trim().toLowerCase();
+  return STAGING_HOSTS.has(requested) ? requested : incoming.hostname;
+}
+
 function businessHub() {
   const html = `<!doctype html>
 <html lang="ko">
@@ -69,19 +76,18 @@ function businessHub() {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env = {}) {
     const incoming = new URL(request.url);
+    const host = requestHost(request, env, incoming);
 
-    if (incoming.hostname === 'biz.ekodi.kr' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
+    if (host === 'biz.ekodi.kr' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
       return injectEkodiShell(businessHub(), 'biz');
     }
 
-    const redirectTarget = REDIRECTS[incoming.hostname];
-    if (redirectTarget) {
-      return Response.redirect(redirectTarget, 302);
-    }
+    const redirectTarget = REDIRECTS[host];
+    if (redirectTarget) return Response.redirect(redirectTarget, 302);
 
-    const originHost = ORIGINS[incoming.hostname];
+    const originHost = ORIGINS[host];
     if (!originHost) return new Response('Not found', { status: 404 });
 
     const upstreamUrl = new URL(incoming);
@@ -90,6 +96,7 @@ export default {
     upstreamUrl.port = '';
 
     const upstreamRequest = new Request(upstreamUrl, request);
+    upstreamRequest.headers.delete('x-ekodi-staging-host');
     const upstreamResponse = await fetch(upstreamRequest);
     const headers = new Headers(upstreamResponse.headers);
 
@@ -98,7 +105,7 @@ export default {
       try {
         const redirect = new URL(location, upstreamUrl);
         if (redirect.hostname === originHost) {
-          redirect.hostname = incoming.hostname;
+          redirect.hostname = host;
           redirect.protocol = 'https:';
           headers.set('location', redirect.toString());
         }
@@ -113,6 +120,6 @@ export default {
       statusText: upstreamResponse.statusText,
       headers
     });
-    return injectEkodiShell(response,shellServiceForHost(incoming.hostname));
+    return injectEkodiShell(response,shellServiceForHost(host));
   }
 };

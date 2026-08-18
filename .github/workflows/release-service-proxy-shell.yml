@@ -1,0 +1,143 @@
+name: Release Service Proxy Shell
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'service-proxy.js'
+      - 'ekodi-shell-injector.js'
+      - 'wrangler.service-proxy.toml'
+      - 'wrangler.service-proxy.staging.toml'
+      - 'deploy/manifests/service-proxy.worker.json'
+      - 'test/service-proxy-shell.test.mjs'
+      - 'test/static-app.test.mjs'
+      - '.github/workflows/release-service-proxy-shell.yml'
+      - 'release/service-proxy-shell-20260819.marker'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-service-proxy-shell
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'release/service-proxy-shell-20260819'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate shared proxy and Shell boundary
+        run: |
+          set -euo pipefail
+          node --check service-proxy.js
+          node --check ekodi-shell-injector.js
+          node --test test/service-proxy-shell.test.mjs test/static-app.test.mjs
+          node --check scripts/guarded-worker-release.mjs
+          test -f deploy/manifests/service-proxy.worker.json
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-service-proxy-shell-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy no-route proxy staging Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.service-proxy.staging.toml
+      - name: Verify simulated routed domains in staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_html() {
+            host="$1"; marker="$2"
+            code=$(curl -sS -L -D /tmp/proxy-stage.headers -o /tmp/proxy-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 20 \
+              -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
+            echo "$host -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/proxy-stage.html
+            grep -Fiq 'x-ekodi-shell: v1' /tmp/proxy-stage.headers
+            if [[ -n "$marker" ]]; then grep -Fq "$marker" /tmp/proxy-stage.html; fi
+          }
+          for attempt in $(seq 1 12); do
+            if verify_html 'biz.ekodi.kr' 'EKODI BIZ' \
+              && verify_html 'church.ekodi.kr' '' \
+              && verify_html 'lab.ekodi.kr' '' \
+              && verify_html 'mall.ekodi.kr' ''; then
+              redirect=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 \
+                -H 'x-ekodi-staging-host: live.church.ekodi.kr' "$STAGING_URL/" || true)
+              echo "$redirect" | tr -d '\r' | grep -Fqi 'location: https://www.youtube.com/@ekodichurch/live'
+              echo 'Shared proxy staging verified across Biz, Church, Lab, Mall and Live redirect.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  production:
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify shared Shell production dependency
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/shell.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
+          [[ "$code" == '200' ]]
+          grep -Fq '"identityModel":"person-space-role"' /tmp/shell.json
+      - name: Guarded 0-percent candidate release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/service-proxy.worker.json
+      - name: Verify shared user-facing production routes after promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_live() {
+            url="$1"
+            code=$(curl -sS -L -D /tmp/proxy-live.headers -o /tmp/proxy-live.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$url" || true)
+            echo "$url -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/proxy-live.html
+            grep -Fiq 'x-ekodi-shell: v1' /tmp/proxy-live.headers
+          }
+          verify_live 'https://biz.ekodi.kr/'
+          verify_live 'https://church.ekodi.kr/'
+          verify_live 'https://lab.ekodi.kr/'
+          verify_live 'https://mall.ekodi.kr/'
+          verify_live 'https://mall.biz.ekodi.kr/'
+          echo 'Shared user-facing proxy routes verified after Shell promotion.'
+      - name: Observe legacy external redirect routes without blocking Shell promotion
+        shell: bash
+        run: |
+          set -u
+          observe_redirect() {
+            url="$1"; needle="$2"
+            headers=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 "$url" || true)
+            if echo "$headers" | tr -d '\r' | grep -Fqi "location: $needle"; then
+              echo "redirect verified: $url -> $needle"
+            else
+              echo "::warning::Legacy redirect did not expose the expected Location header during Shell release verification: $url"
+            fi
+          }
+          observe_redirect 'https://live.church.ekodi.kr/' 'https://www.youtube.com/@ekodichurch/live'
+          observe_redirect 'https://mail.church.ekodi.kr/' 'https://mail.google.com/'
