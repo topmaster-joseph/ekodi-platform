@@ -38,10 +38,13 @@ jobs:
           set -euo pipefail
           node --check work-worker.js
           node --check work/app.js
+          node --check work/opportunities.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/work.worker.json
           grep -Fq 'EKODI Work' work/index.html
           grep -Fq '/config.js' work/index.html
+          grep -Fq '/opportunities.js' work/index.html
+          grep -Fq '/api/opportunities' work-worker.js
           grep -Fq 'DATA_ENABLED = "true"' wrangler.work.toml
           grep -Fq "'work':{name:'EKODI Work'" auth-site/client-auth.js
           grep -Fq "site==='work'" auth-site/auth-router.js
@@ -101,11 +104,14 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/' || true)
             config_code=$(curl -sS -o /tmp/work-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/config.js' || true)
             health_code=$(curl -sS -o /tmp/work-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/health' || true)
-            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] \
+            feed_code=$(curl -sS -o /tmp/work-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/api/opportunities?limit=4' || true)
+            if [[ "$root_code" == "200" ]] && [[ "$config_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
               && grep -Fq 'EKODI Work' /tmp/work.html \
               && grep -Fq '"dataEnabled":true' /tmp/work-config.js \
               && grep -Fq '"dataMode":"production"' /tmp/work-health.json \
-              && grep -Fq '"service":"ekodi-work"' /tmp/work-health.json; then
+              && grep -Fq '"service":"ekodi-work"' /tmp/work-health.json \
+              && grep -Fq '"dataMode":"production"' /tmp/work-feed.json \
+              && grep -Fq '"id":"ekodi"' /tmp/work-feed.json; then
               echo 'EKODI Work production verified.'
               exit 0
             fi
