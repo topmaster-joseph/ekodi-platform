@@ -18,25 +18,14 @@ if(!params.get('return_to')&&params.get('returnTo')){
   params.delete('returnTo');
   changed=true;
 }
-
-const normalizedSite=params.get('site');
-const marketingHomeMode=normalizedSite==='marketing'
-  && params.get('review')!=='1'
-  && !params.get('workspace')
-  && !params.get('plan')
-  && !params.get('intent');
-if(marketingHomeMode){
-  // Keep the authenticated Marketing entry on the workspace dashboard instead
-  // of immediately handing off to a single workspace. `manage=1` is an
-  // internal compatibility switch consumed by the current Marketing auth
-  // module; the visual account-management controls stay hidden in home mode.
-  params.set('manage','1');
-  document.documentElement.dataset.ekodiDashboard='1';
-  changed=true;
-}
 if(changed)history.replaceState({},document.title,url.href);
 
-document.documentElement.dataset.identityManage=params.get('manage')==='1'&&!marketingHomeMode?'1':'0';
+// Normal user sign-in is a pass-through. The Auth Center becomes interactive
+// only when account management, review, or another explicit high-touch flow is
+// requested. Workspace ambiguity is handled by the service auth module rather
+// than forcing every successful login to stop on the Auth Center dashboard.
+document.documentElement.dataset.identityManage=params.get('manage')==='1'?'1':'0';
+document.documentElement.dataset.seamlessSso=params.get('manage')==='1'||params.get('review')==='1'?'0':'1';
 const site=params.get('site');
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));
 async function loadMarketingAuth(){
