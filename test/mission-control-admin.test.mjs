@@ -53,7 +53,7 @@ test('System hub preserves existing technical operations behind governance navig
   const [mission,timeline,build]=await Promise.all([read('mission-control-admin.js'),read('system-timeline-admin.js'),read('scripts/build.mjs')]);
   assert.match(mission,/key:'system'/);
   assert.match(timeline,/governanceSystemHub/);
-  assert.match(timeline,/System · Operations/);
+  assert.match(timeline,/key:'operations', label:'Operations'/);
   assert.match(timeline,/raw === 'campus'/);
   assert.match(timeline,/#overview/);
   assert.match(timeline,/#system/);
