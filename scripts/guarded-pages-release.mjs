@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -9,6 +10,7 @@ const readArg = (name, fallback = '') => {
 };
 
 const root = path.resolve(readArg('--root', '.'));
+const policyRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.resolve(readArg('--manifest'));
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
 
@@ -36,6 +38,23 @@ const runId = String(process.env.GITHUB_RUN_ID || Date.now());
 const attempt = String(process.env.GITHUB_RUN_ATTEMPT || '1');
 const previewBranch = `staging-${runId}-${attempt}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 48);
 const previewResults = [];
+
+function runProviderIndependenceGate() {
+  const env = { ...process.env, AI_PROVIDER: 'NONE' };
+  for (const argv of [
+    ['scripts/validate-ai-provider-independence.mjs'],
+    ['--test', 'test/ai-provider-none.test.mjs'],
+  ]) {
+    const result = spawnSync(process.execPath, argv, {
+      cwd: policyRoot,
+      env,
+      encoding: 'utf8',
+      stdio: 'inherit',
+    });
+    if (result.status !== 0) throw new Error(`AI_PROVIDER=NONE release gate failed: node ${argv.join(' ')}`);
+  }
+  console.log('✅ AI_PROVIDER=NONE release gate passed.');
+}
 
 function command(bin, argv, options = {}) {
   const result = spawnSync(bin, argv, {
@@ -124,6 +143,7 @@ function appendSummary(lines) {
   fs.appendFileSync(summary, `${lines.join('\n')}\n`);
 }
 
+runProviderIndependenceGate();
 console.log(`Release gate preview branch: ${previewBranch}`);
 console.log('Phase 1/3: deploy every target to isolated Cloudflare Pages previews.');
 for (const target of targets) {
@@ -154,6 +174,8 @@ appendSummary([
   '',
   `Preview gate: \`${previewBranch}\``,
   '',
+  '- AI_PROVIDER=NONE resilience gate passed before any preview or production deployment.',
+  '',
   '| Target | Preview | Production |',
   '|---|---|---|',
   ...previewResults.map(({ target, previewUrl }) => `| ${target.name || target.project} | ${previewUrl} | ${target.productionUrl} |`),
@@ -161,4 +183,4 @@ appendSummary([
   '✅ All preview checks passed before production promotion, and all production smoke checks passed after promotion.',
 ]);
 
-console.log('✅ Guarded release complete: preview gate passed, production promoted, production verified.');
+console.log('✅ Guarded release complete: no-provider gate passed, preview gate passed, production promoted, production verified.');

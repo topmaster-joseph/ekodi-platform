@@ -20,4 +20,10 @@ jobs:
         with:
           node-version: "24"
       - run: npm run check
+      - name: Validate AI provider independence
+        run: npm run validate:ai-resilience
+      - name: Verify no-provider survival
+        env:
+          AI_PROVIDER: NONE
+        run: npm run test:ai-none
       - run: npm test

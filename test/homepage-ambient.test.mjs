@@ -22,17 +22,17 @@ test('ambient layer stays visible above the opaque body background and below con
   assert.doesNotMatch(css, /body::before,[\s\S]*?z-index:-1/);
 });
 
-test('homepage lifecycle controls filter cards and keep category counts in sync', () => {
-  assert.match(js, /data-status-filter/);
+test('homepage ambient script keeps live and beta counts in sync without roadmap filters', () => {
   assert.match(js, /data-service-status/);
   assert.match(js, /data-status-count/);
-  assert.match(js, /function applyFilter/);
-  assert.match(js, /card\.hidden/);
-  assert.match(js, /group\.hidden/);
-  assert.match(js, /aria-pressed/);
-  for (const status of ['live', 'beta', 'preparing', 'planned']) {
+  assert.match(js, /cards\.filter/);
+  assert.match(js, /node\.textContent/);
+  for (const status of ['live', 'beta']) {
     assert.match(js, new RegExp(`['"]${status}['"]`));
   }
+  assert.doesNotMatch(js, /data-status-filter/);
+  assert.doesNotMatch(js, /function applyFilter/);
+  assert.doesNotMatch(js, /card\.hidden|group\.hidden|aria-pressed/);
 });
 
 test('ambient assets are shipped and injected into the EKODI homepage build', () => {

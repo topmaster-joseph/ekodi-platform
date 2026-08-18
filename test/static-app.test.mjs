@@ -3,9 +3,9 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [portal, admin, control, controlJs, controlFeatures, financeJs, hub, registryText, headers, build, siteToml, siteWorker, financeToml, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
+const [portal, admin, control, controlJs, controlFeatures, financeJs, hub, registryText, ecosystemRegistryText, headers, build, siteToml, siteWorker, financeToml, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
   read('../index.html'), read('../admin.html'), read('../control-center.html'), read('../control-center.js'), read('../control-center-features.js'),
-  read('../finance-monitor.js'), read('../hub.html'), read('../service-registry.json'), read('../_headers'),
+  read('../finance-monitor.js'), read('../hub.html'), read('../service-registry.json'), read('../config/ecosystem-services.json'), read('../_headers'),
   read('../scripts/build.mjs'), read('../wrangler.site.toml'), read('../site-worker.js'), read('../wrangler.finance.toml'),
   read('../service-proxy.js'), read('../wrangler.service-proxy.toml'), read('../biz-legacy-redirect.js'), read('../wrangler.biz-legacy.toml')
 ]);
@@ -24,11 +24,19 @@ function hasRoute(toml, domain) {
   assert.match(block, /custom_domain = true/, `${domain} route must be a custom domain`);
 }
 
-test('root portal stays zero-JavaScript and direct verified links remain', () => {
+test('root portal stays zero-JavaScript while verified public links remain registry-backed', () => {
   uniqueIds(portal, 'portal');
   assert.doesNotMatch(portal, /<script\b|\bfetch\s*\(/i);
   assert.match(portal, /<style>/);
-  for (const d of ['church.ekodi.kr','mall.ekodi.kr','lab.ekodi.kr','books.ekodi.kr']) hasDomain(portal, d);
+  const ecosystem = JSON.parse(ecosystemRegistryText);
+  for (const id of ['church', 'mall', 'lab', 'books']) {
+    const service = ecosystem.services.find(item => item.id === id);
+    assert.ok(service, `missing service registry entry: ${id}`);
+    assert.equal(service.homepage, true, `${id} must remain eligible for the public homepage`);
+    assert.equal(service.productionVerified, true, `${id} must be production verified`);
+    assert.ok(['live', 'beta'].includes(service.status), `${id} must be usable before homepage exposure`);
+    assert.match(service.url, /^https:\/\//);
+  }
 });
 
 test('production build and Control Center retain required assets and APIs', () => {

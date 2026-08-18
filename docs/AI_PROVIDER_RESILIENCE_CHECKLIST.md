@@ -1,0 +1,6 @@
+- Core survives without model provider
+- Free Assist is deterministic and zero-provider
+- Provider errors do not leak to normal UX
+- Browser never receives provider secrets
+- AI_PROVIDER=NONE is tested in CI
+- Worker/Pages guarded release runs resilience gate before promotion
