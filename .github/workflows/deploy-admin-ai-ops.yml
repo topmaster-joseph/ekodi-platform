@@ -42,10 +42,10 @@ jobs:
       - name: Validate repository, AI Ops and Governance Cockpit contracts
         run: |
           npm run check
-          npm test
           node --check mission-control-admin.js
           node --check system-timeline-admin.js
           node --test test/mission-control-admin.test.mjs
+          node --test test/ai-ops-admin.test.js
 
       - name: Build shared admin assets
         run: |
