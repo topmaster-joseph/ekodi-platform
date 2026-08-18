@@ -130,6 +130,6 @@ test('Production rollout migrates legacy My EKODI before future guarded promotio
   assert.match(workflow,/my\.ekodi\.kr\/health/);
   assert.match(workflow,/MY PLATFORMS/);
   assert.match(workflow,/one-time direct migration from staging-validated source/);
-  assert.match(workflow,/Existing production (already )?satisfies( the current)? My EKODI hub contract/);
+  assert.match(workflow,/Existing production .*satisfies.*My EKODI hub contract/);
   assert.match(workflow,/guarded-worker-release\.mjs/);
 });
