@@ -7,14 +7,15 @@ async function read(path) {
 }
 
 test('guarded Worker and Pages releases execute the no-provider gate before promotion', async () => {
-  for (const file of ['scripts/guarded-worker-release.mjs', 'scripts/guarded-pages-release.mjs']) {
+  const cases = [
+    ['scripts/guarded-worker-release.mjs', 'candidateVersion = uploadCandidate();'],
+    ['scripts/guarded-pages-release.mjs', "deploy(target, 'main');"],
+  ];
+
+  for (const [file, promotionMarker] of cases) {
     const source = await read(file);
     const gate = source.indexOf('runProviderIndependenceGate();');
-    const promotion = Math.min(
-      ...['uploadCandidate()', "deploy(target, 'main')"]
-        .map(marker => source.indexOf(marker))
-        .filter(index => index >= 0),
-    );
+    const promotion = source.indexOf(promotionMarker);
     assert.ok(gate >= 0, `${file} must run provider independence gate`);
     assert.ok(promotion >= 0, `${file} must contain a production promotion path`);
     assert.ok(gate < promotion, `${file} must run the provider independence gate before production promotion`);
