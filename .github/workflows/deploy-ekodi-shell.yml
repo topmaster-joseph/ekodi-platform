@@ -12,7 +12,7 @@ on:
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
       - '.github/workflows/deploy-ekodi-shell.yml'
-      - 'release/ekodi-shell-20260819.marker'
+      - 'release/ekodi-shell-*.marker'
   push:
     branches: [main]
     paths:
@@ -51,6 +51,7 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check shell/shell.js
           node --test test/ekodi-shell.test.mjs
+          node scripts/validate-ekodi-shell-adoption.mjs
 
   staging:
     if: github.event_name == 'pull_request'
@@ -78,8 +79,10 @@ jobs:
             script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/shell.js" || true)
             if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json \
+              && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-manifest.json \
               && grep -Fq '"id":"church"' /tmp/shell-manifest.json \
               && grep -Fq '"id":"community"' /tmp/shell-manifest.json \
+              && grep -Fq '"id":"insurance"' /tmp/shell-manifest.json \
               && grep -Fq 'window.EKODIShell' /tmp/shell.js; then
               echo 'EKODI Shell staging verified.'
               exit 0
@@ -92,7 +95,7 @@ jobs:
     if: >-
       always() && needs.validate.result == 'success' &&
       (github.event_name != 'pull_request' ||
-       (github.event.pull_request.head.ref == 'release/ekodi-shell-20260819' && needs.staging.result == 'success'))
+       (startsWith(github.event.pull_request.head.ref, 'release/ekodi-shell-') && needs.staging.result == 'success'))
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -112,7 +115,9 @@ jobs:
             script=$(curl -sS -o /tmp/shell-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/shell.js' || true)
             if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-live-health.json \
+              && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-live-manifest.json \
               && grep -Fq '"id":"my"' /tmp/shell-live-manifest.json \
+              && grep -Fq '"id":"insurance"' /tmp/shell-live-manifest.json \
               && grep -Fq '공간 전환 · My EKODI' /tmp/shell-live.js; then
               echo 'EKODI Shell production verified.'
               exit 0
