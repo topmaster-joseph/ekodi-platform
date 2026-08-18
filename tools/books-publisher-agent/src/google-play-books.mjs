@@ -98,6 +98,16 @@ async function waitForPartnerCenter(page, audit) {
   throw new Error('Google Partner Center login was not completed within 10 minutes.');
 }
 
+async function catalogSearch(page) {
+  return firstVisible([
+    page.getByLabel(rx('Search')),
+    page.getByLabel(rx('검색')),
+    page.getByPlaceholder(rx('Search')),
+    page.getByPlaceholder(rx('검색')),
+    page.locator('input[type="search"]'),
+  ], 1200);
+}
+
 async function openExistingBook(page, book, audit) {
   const ggkey = String(book.bookId?.ggkey || '').trim();
   if (!ggkey) return false;
@@ -105,14 +115,7 @@ async function openExistingBook(page, book, audit) {
   await clickText(page, ['Book Catalog', '도서 카탈로그'], audit, 'google.catalog.open');
   await page.waitForTimeout(700);
 
-  const search = await firstVisible([
-    page.getByLabel(rx('Search')),
-    page.getByLabel(rx('검색')),
-    page.getByPlaceholder(rx('Search')),
-    page.getByPlaceholder(rx('검색')),
-    page.locator('input[type="search"]'),
-  ], 1200);
-
+  const search = await catalogSearch(page);
   if (search) {
     await search.fill(ggkey);
     await page.waitForTimeout(900);
@@ -121,19 +124,29 @@ async function openExistingBook(page, book, audit) {
     audit('google.catalog.search_existing_id', { status: 'needs_review', reason: 'Catalog search field not found', ggkey });
   }
 
-  const existing = await firstVisible([
+  let existing = await firstVisible([
     page.locator(`a[href*="${ggkey}"]`),
     page.getByText(rx(ggkey), { exact: false }),
   ], 2500);
 
+  if (!existing && search) {
+    await search.fill(book.title);
+    await page.waitForTimeout(900);
+    audit('google.catalog.search_existing_title', { status: 'ok', title: book.title });
+    existing = await firstVisible([
+      page.getByRole('link', { name: rx(book.title) }),
+      page.getByText(rx(book.title), { exact: false }),
+    ], 2500);
+  }
+
   if (!existing) {
     audit('google.catalog.existing_book', {
-      status: 'blocked',
+      status: 'not_found',
       ggkey,
       title: book.title,
-      reason: 'Existing Google book ID not found in the current Partner Center account; duplicate creation refused',
+      reason: 'Existing ID/title not visible in current Partner Center; new registration fallback allowed by publisher',
     });
-    throw new Error(`기존 Google 도서 ID ${ggkey}를 현재 파트너 계정에서 찾지 못했습니다. 중복 도서 생성을 막기 위해 새 GGKEY 발급을 중단합니다.`);
+    return false;
   }
 
   await existing.click();
@@ -253,9 +266,16 @@ export async function publishGooglePlayBook({ chromium, book, profileDir, audit,
   const page = pages[0] || await context.newPage();
   try {
     await waitForPartnerCenter(page, audit);
+    let existingOpened = false;
     if (book.bookId.mode === 'ggkey' && book.bookId.ggkey) {
-      await openExistingBook(page, book, audit);
-    } else {
+      existingOpened = await openExistingBook(page, book, audit);
+    }
+    if (!existingOpened) {
+      audit('google.catalog.new_registration_fallback', {
+        status: 'ok',
+        previousGgkey: book.bookId.ggkey || '',
+        title: book.title,
+      });
       await addBook(page, book, audit);
     }
     await fillMetadata(page, book, audit);
