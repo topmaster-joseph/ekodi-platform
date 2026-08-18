@@ -1,5 +1,5 @@
 export const AI_MISSION_RUNTIME = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   authorityModel: Object.freeze({
     humanRole: 'steward_delegate',
     chiefAiRole: 'orchestrator_not_sovereign',
@@ -42,6 +42,8 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     'no_cross_tenant_private_data_access_without_explicit_contract_and_authority',
     'no_optimization_of_engagement_or_revenue_over_personal_agency',
     'no_irreversible_action_when_a_reversible_path_is_reasonably_available',
+    'no_ai_provider_dependency_for_core_service',
+    'provider_failure_must_degrade_not_disable_service',
   ]),
   agents: Object.freeze({
     chief: Object.freeze({ name: 'Chief AI', mustEscalate: ['human_gate_actions', 'principle_conflicts', 'material_uncertainty', 'cross_tenant_private_data_requests'], mustNot: ['override_human_gate', 'expand_its_own_authority', 'suppress_specialist_dissent', 'optimize_revenue_over_user_agency'] }),
