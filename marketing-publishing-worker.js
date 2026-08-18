@@ -1,0 +1,454 @@
+import { evaluateMissionAction } from './ai-governance-runtime.js';
+
+const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
+const SUBJECT_TYPES = new Set(['person','tenant','store']);
+const JOB_STATES = new Set(['scheduled','queued','publishing','published','retrying','failed','cancelled','credentials_required']);
+const MAX_CAPTION = 12000;
+
+function cors(request, env) {
+  const origin = String(request.headers.get('origin') || '');
+  const configured = String(env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean);
+  let allowed = !origin || configured.includes(origin);
+  if (!allowed) {
+    try {
+      const host = new URL(origin).hostname;
+      allowed = host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
+    } catch {}
+  }
+  const headers = {
+    'access-control-allow-headers':'content-type, authorization, idempotency-key',
+    'access-control-allow-methods':'GET, POST, PUT, DELETE, OPTIONS',
+    'access-control-max-age':'86400',
+    vary:'Origin',
+  };
+  if (origin && allowed) headers['access-control-allow-origin'] = origin;
+  return { allowed, headers };
+}
+
+function json(request, env, data, status = 200) {
+  const { allowed, headers } = cors(request, env);
+  return new Response(JSON.stringify(data), {
+    status,
+    headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...headers},
+  });
+}
+
+async function readJson(request) { try { return await request.json(); } catch { return null; } }
+const clean = (v, max = 240) => String(v || '').trim().slice(0, max);
+const nowIso = () => new Date().toISOString();
+function safeParse(value, fallback = {}) { try { return JSON.parse(value || ''); } catch { return fallback; } }
+function safeJson(value, fallback = {}) { try { return JSON.stringify(value ?? fallback); } catch { return JSON.stringify(fallback); } }
+function safeUrl(value) {
+  const raw = clean(value, 2048);
+  if (!raw) return '';
+  try { const u = new URL(raw); return u.protocol === 'https:' ? u.href : ''; } catch { return ''; }
+}
+
+async function identityFromRequest(request) {
+  const auth = String(request.headers.get('authorization') || '');
+  const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
+  if (!token || token.length > 8192) return null;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`} });
+  if (!response.ok) return null;
+  const user = await response.json().catch(() => null);
+  const email = String(user?.email || '').trim().toLowerCase();
+  if (!user?.id || !email || !user?.email_confirmed_at) return null;
+  return { id:String(user.id), email };
+}
+
+async function resolveSubject(env, identity, type, key) {
+  const subjectType = SUBJECT_TYPES.has(String(type || '').toLowerCase()) ? String(type).toLowerCase() : 'person';
+  if (subjectType === 'person') return { type:'person', key:identity.id, role:'owner', tenant:null, writable:true };
+
+  if (subjectType === 'tenant') {
+    const tenantKey = clean(key, 80).toLowerCase();
+    if (!tenantKey) return null;
+    const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(tenantKey).first();
+    if (!tenant || tenant.status !== 'active') return null;
+    const grant = await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id, identity.email).first();
+    if (!grant || Number(grant.enabled) !== 1) return null;
+    const role = String(grant.role || '');
+    return { type:'tenant', key:String(tenant.slug), role, tenant:String(tenant.slug), writable:WRITE_ROLES.has(role) };
+  }
+
+  const storeId = clean(key, 100);
+  if (!storeId) return null;
+  const store = await env.DB.prepare('SELECT store_id,tenant_slug,status FROM marketing_store_workspaces WHERE store_id=?').bind(storeId).first();
+  if (!store || store.status !== 'active' || !store.tenant_slug) return null;
+  const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(store.tenant_slug).first();
+  if (!tenant || tenant.status !== 'active') return null;
+  const grant = await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id, identity.email).first();
+  if (!grant || Number(grant.enabled) !== 1) return null;
+  const role = String(grant.role || '');
+  return { type:'store', key:String(store.store_id), role, tenant:String(store.tenant_slug), writable:WRITE_ROLES.has(role) };
+}
+
+function subjectParams(url) {
+  return { type:url.searchParams.get('subject_type') || 'person', key:url.searchParams.get('subject_key') || '' };
+}
+
+async function authSubject(request, env, { write = false } = {}) {
+  const identity = await identityFromRequest(request);
+  if (!identity) return { error:'AUTH_REQUIRED', status:401 };
+  const url = new URL(request.url);
+  const params = subjectParams(url);
+  const subject = await resolveSubject(env, identity, params.type, params.key);
+  if (!subject) return { error:'SUBJECT_FORBIDDEN', status:403 };
+  if (write && !subject.writable) return { error:'SUBJECT_READ_ONLY', status:403 };
+  return { identity, subject };
+}
+
+async function schemaReady(env) {
+  if (!env.DB) return false;
+  try {
+    const row = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='marketing_publication_jobs'").first();
+    return Boolean(row?.name);
+  } catch { return false; }
+}
+
+async function audit(env, subject, jobId, action, detail = '', actor = '') {
+  await env.DB.prepare(`INSERT INTO marketing_publication_audit(subject_type,subject_key,job_id,action,detail,actor,created_at)
+    VALUES(?,?,?,?,?,?,?)`).bind(subject.type, subject.key, jobId || null, clean(action,80), clean(detail,1000), clean(actor,160), nowIso()).run();
+}
+
+async function getPolicy(env, subject) {
+  const row = await env.DB.prepare('SELECT mode,max_daily_posts,allowed_providers_json,quiet_hours_json FROM marketing_publish_policies WHERE subject_type=? AND subject_key=?')
+    .bind(subject.type, subject.key).first();
+  return row || { mode:'review', max_daily_posts:5, allowed_providers_json:'[]', quiet_hours_json:'{}' };
+}
+
+async function upsertBrand(request, env, identity, subject) {
+  const body = await readJson(request);
+  if (!body) return json(request, env, {error:'INVALID_JSON'}, 400);
+  const brandName = clean(body.brandName, 120);
+  if (!brandName) return json(request, env, {error:'BRAND_NAME_REQUIRED'}, 400);
+  const now = nowIso();
+  await env.DB.prepare(`INSERT INTO marketing_brand_profiles(subject_type,subject_key,brand_name,tagline,audience_summary,voice_json,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?)
+    ON CONFLICT(subject_type,subject_key) DO UPDATE SET brand_name=excluded.brand_name,tagline=excluded.tagline,audience_summary=excluded.audience_summary,voice_json=excluded.voice_json,updated_at=excluded.updated_at`)
+    .bind(subject.type, subject.key, brandName, clean(body.tagline,240), clean(body.audienceSummary,1200), safeJson(body.voice || {}), now, now).run();
+  await audit(env, subject, null, 'brand_profile_updated', brandName, identity.email);
+  return json(request, env, {ok:true,subject:{type:subject.type,key:subject.key},brandName});
+}
+
+async function readBrand(request, env, subject) {
+  const row = await env.DB.prepare('SELECT brand_name,tagline,audience_summary,voice_json,created_at,updated_at FROM marketing_brand_profiles WHERE subject_type=? AND subject_key=?')
+    .bind(subject.type, subject.key).first();
+  return json(request, env, {subject:{type:subject.type,key:subject.key},brand:row ? {...row,voice:safeParse(row.voice_json,{})} : null});
+}
+
+async function upsertPolicy(request, env, identity, subject) {
+  const body = await readJson(request);
+  if (!body) return json(request, env, {error:'INVALID_JSON'}, 400);
+  const mode = ['review','assisted','autonomous'].includes(body.mode) ? body.mode : 'review';
+  const maxDaily = Math.max(1, Math.min(100, Number(body.maxDailyPosts || 5)));
+  const providers = Array.isArray(body.allowedProviders) ? body.allowedProviders.map(v=>clean(v,80)).filter(Boolean).slice(0,30) : [];
+  const now = nowIso();
+  await env.DB.prepare(`INSERT INTO marketing_publish_policies(subject_type,subject_key,mode,max_daily_posts,allowed_providers_json,quiet_hours_json,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(subject_type,subject_key) DO UPDATE SET mode=excluded.mode,max_daily_posts=excluded.max_daily_posts,allowed_providers_json=excluded.allowed_providers_json,quiet_hours_json=excluded.quiet_hours_json,updated_at=excluded.updated_at`)
+    .bind(subject.type, subject.key, mode, maxDaily, safeJson(providers,[]), safeJson(body.quietHours || {}), now, now).run();
+  await audit(env, subject, null, 'publish_policy_updated', `${mode}:${maxDaily}`, identity.email);
+  return json(request, env, {ok:true,mode,maxDailyPosts:maxDaily,allowedProviders:providers});
+}
+
+async function listChannels(request, env, subject) {
+  const result = await env.DB.prepare(`SELECT id,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,last_check_at,last_error,created_at,updated_at
+    FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? ORDER BY id DESC`).bind(subject.type,subject.key).all();
+  const channels = (result.results || []).map(row => ({...row,credential_ref:row.credential_ref ? 'configured' : '',config:safeParse(row.config_json,{})}));
+  return json(request, env, {subject:{type:subject.type,key:subject.key},channels});
+}
+
+async function connectChannel(request, env, identity, subject) {
+  const body = await readJson(request);
+  if (!body) return json(request, env, {error:'INVALID_JSON'}, 400);
+  const provider = clean(body.provider,50).toLowerCase();
+  const channelType = clean(body.channelType,50).toLowerCase();
+  const displayName = clean(body.displayName,120);
+  const externalId = clean(body.externalAccountId,160);
+  const credentialRef = clean(body.credentialRef,80).toUpperCase();
+  if (!provider || !channelType || !displayName) return json(request, env, {error:'CHANNEL_FIELDS_REQUIRED'}, 400);
+  if (credentialRef && !/^[A-Z0-9_]{3,80}$/.test(credentialRef)) return json(request, env, {error:'INVALID_CREDENTIAL_REF'}, 400);
+  const hasCredential = Boolean(credentialRef && env[credentialRef]);
+  const status = hasCredential ? 'active' : 'credentials_required';
+  const now = nowIso();
+  await env.DB.prepare(`INSERT INTO marketing_publish_channels(subject_type,subject_key,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET display_name=excluded.display_name,credential_ref=excluded.credential_ref,status=excluded.status,config_json=excluded.config_json,updated_at=excluded.updated_at`)
+    .bind(subject.type,subject.key,provider,channelType,displayName,externalId,credentialRef,status,safeJson(body.config || {}),now,now).run();
+  await audit(env, subject, null, 'channel_connected', `${provider}:${channelType}:${status}`, identity.email);
+  return json(request, env, {ok:true,status,credentialConfigured:hasCredential});
+}
+
+function normalizeScheduledAt(value) {
+  if (!value) return nowIso();
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) return '';
+  return new Date(ms).toISOString();
+}
+
+async function queuePublish(request, env, identity, subject) {
+  const body = await readJson(request);
+  if (!body || !body.content || !Array.isArray(body.channelIds) || !body.channelIds.length) return json(request, env, {error:'CONTENT_AND_CHANNELS_REQUIRED'}, 400);
+  const scheduledAt = normalizeScheduledAt(body.scheduledAt);
+  if (!scheduledAt) return json(request, env, {error:'INVALID_SCHEDULE'}, 400);
+  const recurrence = ['', 'daily','weekly','monthly'].includes(String(body.recurrenceRule || '')) ? String(body.recurrenceRule || '') : '';
+  const scheduleKind = recurrence ? 'repeating' : Date.parse(scheduledAt) <= Date.now() + 5000 ? 'immediate' : 'scheduled';
+  const policy = await getPolicy(env, subject);
+  const requestedBy = body.requestedBy === 'ai' ? 'ai' : 'human';
+  if (requestedBy === 'ai') {
+    const delegated = policy.mode === 'autonomous';
+    const decision = evaluateMissionAction({agentId:'marketing',area:'social_content_publish',reversible:true,delegated,logged:true,preflightVerified:true});
+    if (decision.tier !== 'execute_reversible') return json(request, env, {error:'AI_PUBLISH_REQUIRES_DELEGATION',decision}, 409);
+  }
+  const content = body.content;
+  const caption = clean(content.caption, MAX_CAPTION);
+  const title = clean(content.title,240);
+  if (!caption && !title) return json(request, env, {error:'EMPTY_CONTENT'}, 400);
+  const contentType = ['social_post','card_news','short_video','article','notice'].includes(content.contentType) ? content.contentType : 'social_post';
+  const source = ['human','ai','imported'].includes(content.source) ? content.source : requestedBy;
+  const approvalState = requestedBy === 'human' ? 'approved' : 'auto_approved';
+  const now = nowIso();
+  const insertContent = await env.DB.prepare(`INSERT INTO marketing_content_items(subject_type,subject_key,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(subject.type,subject.key,title,contentType,caption,safeUrl(content.assetUrl),safeUrl(content.linkUrl),safeJson(content.data || {}),source,approvalState,identity.email,now,now).run();
+  const contentId = Number(insertContent.meta?.last_row_id || 0);
+  if (!contentId) return json(request, env, {error:'CONTENT_INSERT_FAILED'}, 500);
+
+  const ids = [...new Set(body.channelIds.map(Number).filter(Number.isInteger))].slice(0,20);
+  const placeholders = ids.map(()=>'?').join(',');
+  const channelResult = await env.DB.prepare(`SELECT id,provider,channel_type,status,credential_ref FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND id IN (${placeholders})`)
+    .bind(subject.type,subject.key,...ids).all();
+  const channels = channelResult.results || [];
+  const jobs = [];
+  for (const channel of channels) {
+    const credentialReady = channel.status === 'active' && channel.credential_ref && env[channel.credential_ref];
+    const initial = credentialReady ? (scheduleKind === 'immediate' ? 'queued' : 'scheduled') : 'credentials_required';
+    const insert = await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,0,5,?,?)`).bind(subject.type,subject.key,contentId,channel.id,scheduleKind,scheduledAt,recurrence,initial,requestedBy,now,now).run();
+    const jobId = Number(insert.meta?.last_row_id || 0);
+    jobs.push({id:jobId,channelId:Number(channel.id),status:initial});
+    await audit(env, subject, jobId, 'publication_queued', `${channel.provider}:${channel.channel_type}:${scheduledAt}`, identity.email);
+  }
+  if (!jobs.length) return json(request, env, {error:'NO_OWNED_CHANNELS'}, 400);
+  return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs}, 201);
+}
+
+async function listJobs(request, env, subject) {
+  const result = await env.DB.prepare(`SELECT j.id,j.content_id,j.channel_id,j.schedule_kind,j.scheduled_at,j.recurrence_rule,j.status,j.requested_by,j.attempt_count,j.max_attempts,j.next_attempt_at,j.external_post_id,j.external_post_url,j.last_error,j.published_at,j.created_at,j.updated_at,
+    c.title,c.content_type,c.caption,ch.provider,ch.channel_type,ch.display_name
+    FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
+    WHERE j.subject_type=? AND j.subject_key=? ORDER BY j.created_at DESC LIMIT 200`).bind(subject.type,subject.key).all();
+  return json(request, env, {jobs:result.results || []});
+}
+
+async function mutateJob(request, env, identity, subject, id, action) {
+  const job = await env.DB.prepare('SELECT id,status FROM marketing_publication_jobs WHERE id=? AND subject_type=? AND subject_key=?').bind(id,subject.type,subject.key).first();
+  if (!job) return json(request, env, {error:'JOB_NOT_FOUND'}, 404);
+  if (action === 'cancel') {
+    if (['published','cancelled'].includes(job.status)) return json(request, env, {error:'JOB_NOT_CANCELLABLE'}, 409);
+    await env.DB.prepare("UPDATE marketing_publication_jobs SET status='cancelled',updated_at=? WHERE id=?").bind(nowIso(),id).run();
+    await audit(env, subject, id, 'publication_cancelled', '', identity.email);
+    return json(request, env, {ok:true,status:'cancelled'});
+  }
+  if (action === 'retry') {
+    if (!['failed','credentials_required'].includes(job.status)) return json(request, env, {error:'JOB_NOT_RETRYABLE'}, 409);
+    await env.DB.prepare("UPDATE marketing_publication_jobs SET status='queued',next_attempt_at=NULL,last_error='',updated_at=? WHERE id=?").bind(nowIso(),id).run();
+    await audit(env, subject, id, 'publication_manual_retry', '', identity.email);
+    return json(request, env, {ok:true,status:'queued'});
+  }
+  return json(request, env, {error:'UNKNOWN_ACTION'}, 404);
+}
+
+function secretConfig(env, ref) {
+  const raw = ref ? env[ref] : null;
+  if (!raw) throw Object.assign(new Error('채널 인증정보가 연결되지 않았습니다.'),{code:'CREDENTIALS_REQUIRED'});
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(String(raw)); } catch { throw Object.assign(new Error('채널 인증정보 형식이 올바르지 않습니다.'),{code:'INVALID_CREDENTIAL_CONFIG'}); }
+}
+
+async function formPost(url, fields) {
+  const body = new URLSearchParams();
+  for (const [key,value] of Object.entries(fields)) if (value !== undefined && value !== null && value !== '') body.set(key,String(value));
+  const response = await fetch(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok || data.error) throw Object.assign(new Error(data?.error?.message || `Provider HTTP ${response.status}`),{code:'PROVIDER_ERROR',status:response.status});
+  return data;
+}
+
+async function publishWebhook(job, content, channel, secret) {
+  const endpoint = safeUrl(secret.url || secret.endpoint);
+  if (!endpoint) throw Object.assign(new Error('Webhook endpoint가 없습니다.'),{code:'INVALID_CREDENTIAL_CONFIG'});
+  const headers = {'content-type':'application/json'};
+  if (secret.bearerToken) headers.authorization = `Bearer ${secret.bearerToken}`;
+  if (secret.headers && typeof secret.headers === 'object') for (const [k,v] of Object.entries(secret.headers)) headers[String(k)] = String(v);
+  const response = await fetch(endpoint,{method:'POST',headers,body:JSON.stringify({job:{id:job.id,scheduledAt:job.scheduled_at},content:{title:content.title,type:content.content_type,caption:content.caption,assetUrl:content.asset_url,linkUrl:content.link_url,data:safeParse(content.content_json,{})},channel:{provider:channel.provider,type:channel.channel_type,externalAccountId:channel.external_account_id}})});
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) throw Object.assign(new Error(data?.error || `Webhook HTTP ${response.status}`),{code:'PROVIDER_ERROR',status:response.status});
+  return {id:clean(data.id || data.post_id,240),url:safeUrl(data.url || data.permalink),response:data};
+}
+
+async function publishFacebook(content, secret) {
+  const version = clean(secret.graphVersion,20);
+  const pageId = clean(secret.pageId,160);
+  const accessToken = String(secret.accessToken || '');
+  if (!version || !pageId || !accessToken) throw Object.assign(new Error('Meta Page 인증정보가 불완전합니다.'),{code:'INVALID_CREDENTIAL_CONFIG'});
+  const base = `https://graph.facebook.com/${encodeURIComponent(version)}/${encodeURIComponent(pageId)}`;
+  const payload = safeParse(content.content_json,{});
+  const assets = Array.isArray(payload.assets) ? payload.assets.map(safeUrl).filter(Boolean).slice(0,10) : [];
+  let data;
+  if (assets.length > 1) {
+    const media = [];
+    for (const url of assets) {
+      const uploaded = await formPost(`${base}/photos`,{url,published:'false',access_token:accessToken});
+      if (uploaded.id) media.push(uploaded.id);
+    }
+    const fields = {message:content.caption,access_token:accessToken};
+    media.forEach((id,index)=>{ fields[`attached_media[${index}]`] = JSON.stringify({media_fbid:id}); });
+    data = await formPost(`${base}/feed`,fields);
+  } else if (content.asset_url || assets[0]) {
+    data = await formPost(`${base}/photos`,{url:content.asset_url || assets[0],caption:content.caption,access_token:accessToken});
+  } else {
+    data = await formPost(`${base}/feed`,{message:content.caption,link:content.link_url,access_token:accessToken});
+  }
+  return {id:clean(data.id || data.post_id,240),url:'',response:data};
+}
+
+async function publishInstagram(content, secret) {
+  const version = clean(secret.graphVersion,20);
+  const accountId = clean(secret.instagramAccountId,160);
+  const accessToken = String(secret.accessToken || '');
+  if (!version || !accountId || !accessToken) throw Object.assign(new Error('Instagram Business 인증정보가 불완전합니다.'),{code:'INVALID_CREDENTIAL_CONFIG'});
+  const base = `https://graph.facebook.com/${encodeURIComponent(version)}/${encodeURIComponent(accountId)}`;
+  const payload = safeParse(content.content_json,{});
+  let assets = Array.isArray(payload.assets) ? payload.assets.map(safeUrl).filter(Boolean).slice(0,10) : [];
+  if (!assets.length && content.asset_url) assets = [content.asset_url];
+  if (!assets.length) throw Object.assign(new Error('Instagram 게시에는 공개 HTTPS 이미지가 필요합니다.'),{code:'ASSET_REQUIRED'});
+  let creationId;
+  if (assets.length === 1) {
+    const created = await formPost(`${base}/media`,{image_url:assets[0],caption:content.caption,access_token:accessToken});
+    creationId = created.id;
+  } else {
+    const children = [];
+    for (const url of assets) {
+      const child = await formPost(`${base}/media`,{image_url:url,is_carousel_item:'true',access_token:accessToken});
+      if (child.id) children.push(child.id);
+    }
+    const parent = await formPost(`${base}/media`,{media_type:'CAROUSEL',children:children.join(','),caption:content.caption,access_token:accessToken});
+    creationId = parent.id;
+  }
+  if (!creationId) throw Object.assign(new Error('Instagram media container 생성에 실패했습니다.'),{code:'PROVIDER_ERROR'});
+  const published = await formPost(`${base}/media_publish`,{creation_id:creationId,access_token:accessToken});
+  let permalink = '';
+  if (published.id) {
+    const response = await fetch(`https://graph.facebook.com/${encodeURIComponent(version)}/${encodeURIComponent(published.id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`);
+    const detail = await response.json().catch(()=>({}));
+    if (response.ok) permalink = safeUrl(detail.permalink);
+  }
+  return {id:clean(published.id,240),url:permalink,response:published};
+}
+
+async function executeProvider(env, job, content, channel) {
+  const secret = secretConfig(env, channel.credential_ref);
+  if (channel.provider === 'webhook') return publishWebhook(job,content,channel,secret);
+  if (channel.provider === 'meta' && channel.channel_type === 'facebook_page') return publishFacebook(content,secret);
+  if (channel.provider === 'meta' && channel.channel_type === 'instagram_business') return publishInstagram(content,secret);
+  throw Object.assign(new Error(`${channel.provider}/${channel.channel_type} 자동 게시 어댑터가 아직 활성화되지 않았습니다.`),{code:'PROVIDER_NOT_READY'});
+}
+
+function safeProviderResult(result) {
+  return {id:clean(result?.id,240),url:safeUrl(result?.url),ok:true};
+}
+function backoffMinutes(attempt) { return [5,15,60,360,1440][Math.min(Math.max(attempt-1,0),4)]; }
+function nextRecurrence(value, rule) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  if (rule === 'daily') d.setUTCDate(d.getUTCDate()+1);
+  else if (rule === 'weekly') d.setUTCDate(d.getUTCDate()+7);
+  else if (rule === 'monthly') d.setUTCMonth(d.getUTCMonth()+1);
+  else return null;
+  return d.toISOString();
+}
+
+async function processJob(env, row) {
+  const subject = {type:row.subject_type,key:row.subject_key};
+  const claimed = await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='publishing',attempt_count=attempt_count+1,updated_at=?
+    WHERE id=? AND status IN ('scheduled','queued','retrying')`).bind(nowIso(),row.id).run();
+  if (!claimed.meta?.changes) return;
+  const current = await env.DB.prepare('SELECT attempt_count,max_attempts FROM marketing_publication_jobs WHERE id=?').bind(row.id).first();
+  try {
+    const policy = await getPolicy(env, subject);
+    const allowed = safeParse(policy.allowed_providers_json,[]);
+    if (Array.isArray(allowed) && allowed.length && !allowed.includes(row.provider)) throw Object.assign(new Error('게시 정책에서 허용되지 않은 채널입니다.'),{code:'POLICY_PROVIDER_BLOCKED'});
+    const cutoff = new Date(Date.now()-24*60*60*1000).toISOString();
+    const count = await env.DB.prepare("SELECT count(*) AS n FROM marketing_publication_jobs WHERE subject_type=? AND subject_key=? AND status='published' AND published_at>=?").bind(subject.type,subject.key,cutoff).first();
+    if (Number(count?.n || 0) >= Number(policy.max_daily_posts || 5)) throw Object.assign(new Error('일일 자동 게시 한도에 도달했습니다.'),{code:'DAILY_LIMIT'});
+    const result = await executeProvider(env,row,row,row);
+    const publishedAt = nowIso();
+    await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='published',external_post_id=?,external_post_url=?,provider_response_json=?,last_error='',published_at=?,updated_at=? WHERE id=?`)
+      .bind(clean(result.id,240),safeUrl(result.url),safeJson(safeProviderResult(result)),publishedAt,publishedAt,row.id).run();
+    await audit(env,subject,row.id,'publication_published',`${row.provider}:${row.channel_type}:${result.id || 'ok'}`,'scheduler');
+    const nextAt = nextRecurrence(row.scheduled_at,row.recurrence_rule);
+    if (nextAt) {
+      const now = nowIso();
+      await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,governance_action_id,attempt_count,max_attempts,created_at,updated_at)
+        VALUES(?,?,?,?, 'repeating',?,?, 'scheduled',?,?,0,?,?,?)`)
+        .bind(subject.type,subject.key,row.content_id,row.channel_id,nextAt,row.recurrence_rule,row.requested_by,row.governance_action_id || null,row.max_attempts || 5,now,now).run();
+    }
+  } catch (error) {
+    const code = String(error?.code || 'PUBLISH_FAILED');
+    const attempt = Number(current?.attempt_count || 1);
+    const max = Number(current?.max_attempts || 5);
+    const credential = ['CREDENTIALS_REQUIRED','INVALID_CREDENTIAL_CONFIG'].includes(code);
+    const retryable = !credential && attempt < max && !['PROVIDER_NOT_READY','POLICY_PROVIDER_BLOCKED'].includes(code);
+    const status = credential ? 'credentials_required' : retryable ? 'retrying' : 'failed';
+    const next = retryable ? new Date(Date.now()+backoffMinutes(attempt)*60*1000).toISOString() : null;
+    await env.DB.prepare('UPDATE marketing_publication_jobs SET status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE id=?')
+      .bind(status,next,clean(`${code}: ${error?.message || 'publish failed'}`,1000),nowIso(),row.id).run();
+    await audit(env,subject,row.id,'publication_failed',`${code}:${status}`,'scheduler');
+  }
+}
+
+async function runScheduler(env) {
+  if (!(await schemaReady(env))) return {processed:0,schemaReady:false};
+  const now = nowIso();
+  const result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.status AS channel_status
+    FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
+    WHERE j.status IN ('scheduled','queued','retrying') AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
+    ORDER BY j.scheduled_at ASC LIMIT 25`).bind(now,now).all();
+  const rows = result.results || [];
+  for (const row of rows) await processJob(env,row);
+  return {processed:rows.length,schemaReady:true};
+}
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const corsInfo = cors(request,env);
+    if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
+    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:await schemaReady(env),scheduler:true,personalBrand:true,mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
+    if (!(await schemaReady(env))) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
+
+    const write = ['POST','PUT','DELETE'].includes(request.method);
+    if (write && String(env.ALLOW_MUTATIONS || 'true') === 'false') return json(request,env,{error:'STAGING_READ_ONLY'},403);
+    const auth = await authSubject(request,env,{write});
+    if (auth.error) return json(request,env,{error:auth.error},auth.status);
+    const {identity,subject} = auth;
+
+    if (url.pathname === '/v1/brand' && request.method === 'GET') return readBrand(request,env,subject);
+    if (url.pathname === '/v1/brand' && request.method === 'PUT') return upsertBrand(request,env,identity,subject);
+    if (url.pathname === '/v1/policy' && request.method === 'PUT') return upsertPolicy(request,env,identity,subject);
+    if (url.pathname === '/v1/channels' && request.method === 'GET') return listChannels(request,env,subject);
+    if (url.pathname === '/v1/channels' && request.method === 'POST') return connectChannel(request,env,identity,subject);
+    if (url.pathname === '/v1/jobs' && request.method === 'GET') return listJobs(request,env,subject);
+    if (url.pathname === '/v1/publish' && request.method === 'POST') return queuePublish(request,env,identity,subject);
+    const jobMatch = url.pathname.match(/^\/v1\/jobs\/(\d+)\/(cancel|retry)$/);
+    if (jobMatch && request.method === 'POST') return mutateJob(request,env,identity,subject,Number(jobMatch[1]),jobMatch[2]);
+    return json(request,env,{error:'NOT_FOUND'},404);
+  },
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(runScheduler(env));
+  },
+};
+
+export { runScheduler, nextRecurrence, backoffMinutes, safeUrl };

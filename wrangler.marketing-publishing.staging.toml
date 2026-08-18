@@ -1,0 +1,20 @@
+name = "ekodi-marketing-publishing-staging"
+main = "marketing-publishing-worker.js"
+compatibility_date = "2026-08-18"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "staging"
+ALLOW_MUTATIONS = "false"
+ALLOWED_ORIGINS = "https://ekodi-my-staging.topmaster-joseph.workers.dev,https://marketing.ekodi.kr,https://my.ekodi.kr"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"

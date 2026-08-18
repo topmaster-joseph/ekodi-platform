@@ -1,0 +1,164 @@
+name: Deploy Marketing Publishing
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'marketing-publishing-worker.js'
+      - 'wrangler.marketing-publishing.toml'
+      - 'wrangler.marketing-publishing.staging.toml'
+      - 'migrations/0026_marketing_publication_queue.sql'
+      - 'migrations/0027_marketing_publication_entitlements.sql'
+      - 'test/marketing-publishing.test.mjs'
+      - 'deploy/manifests/marketing-publishing.worker.json'
+      - 'platform-boundaries.json'
+      - '.github/workflows/deploy-marketing-publishing.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-publishing-worker.js'
+      - 'wrangler.marketing-publishing.toml'
+      - 'wrangler.marketing-publishing.staging.toml'
+      - 'migrations/0026_marketing_publication_queue.sql'
+      - 'migrations/0027_marketing_publication_entitlements.sql'
+      - 'test/marketing-publishing.test.mjs'
+      - 'deploy/manifests/marketing-publishing.worker.json'
+      - 'platform-boundaries.json'
+      - '.github/workflows/deploy-marketing-publishing.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-marketing-publishing-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate publication engine
+        run: |
+          set -euo pipefail
+          node --check marketing-publishing-worker.js
+          node --test test/marketing-publishing.test.mjs
+          grep -Fq "subject_type IN ('person','tenant','store')" migrations/0026_marketing_publication_queue.sql
+          grep -Fq 'credential_ref' migrations/0026_marketing_publication_queue.sql
+          grep -Fq 'MARKETING_PLAN_SCHEDULE_REQUIRED' migrations/0027_marketing_publication_entitlements.sql
+          grep -Fq 'BEFORE UPDATE OF status ON marketing_publication_jobs' migrations/0027_marketing_publication_entitlements.sql
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0026_marketing_publication_queue.sql; then
+            echo 'Provider tokens must not be persisted in D1.'
+            exit 1
+          fi
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-marketing-publishing-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Deploy read-only isolated staging worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-publishing.staging.toml
+      - name: Verify staging contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/publish-stage.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$code" == '200' ]] \
+              && grep -Fq '"service":"ekodi-marketing-publishing"' /tmp/publish-stage.json \
+              && grep -Fq '"scheduler":true' /tmp/publish-stage.json \
+              && grep -Fq '"personalBrand":true' /tmp/publish-stage.json \
+              && grep -Fq '"mutations":false' /tmp/publish-stage.json; then
+              echo 'Marketing publishing staging verified as read-only.'
+              exit 0
+            fi
+            sleep 4
+          done
+          cat /tmp/publish-stage.json || true
+          exit 1
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Wait for shared D1 migration gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='marketing_publication_jobs';" --json > /tmp/schema.json 2>/tmp/schema.err; then
+              if grep -Fq 'marketing_publication_jobs' /tmp/schema.json; then
+                echo 'Shared Marketing publication schema is ready.'
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+          echo 'Publication schema was not applied by the shared migration workflow; production release blocked.'
+          cat /tmp/schema.err || true
+          exit 1
+      - name: Bootstrap or guarded production release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.marketing-publishing.toml --json > /tmp/publishing-deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/marketing-publishing.worker.json
+          elif grep -Eq 'has no deployments|This Worker does not exist|does not exist on your account|code: 10007' /tmp/publishing-deployments.log; then
+            echo 'No production deployment exists; bootstrapping from PR-staging-validated source.'
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-publishing.toml
+          else
+            cat /tmp/publishing-deployments.log
+            exit 1
+          fi
+      - name: Verify real production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/publishing-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-publish-api.ekodi.kr/health' || true)
+            if [[ "$code" == '200' ]] \
+              && grep -Fq '"service":"ekodi-marketing-publishing"' /tmp/publishing-health.json \
+              && grep -Fq '"schemaReady":true' /tmp/publishing-health.json \
+              && grep -Fq '"scheduler":true' /tmp/publishing-health.json \
+              && grep -Fq '"personalBrand":true' /tmp/publishing-health.json \
+              && grep -Fq '"mutations":true' /tmp/publishing-health.json; then
+              echo 'Marketing publishing production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/publishing-health.json || true
+          exit 1
+
+# Release policy: validate -> read-only PR staging -> shared migration gate -> 0% candidate -> verify -> promote -> verify.

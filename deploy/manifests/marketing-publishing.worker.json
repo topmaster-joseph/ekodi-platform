@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-marketing-publishing-api",
+    "config": "wrangler.marketing-publishing.toml",
+    "requests": [
+      {"url":"https://marketing-publish-api.ekodi.kr/health","statuses":[200],"expect":["ekodi-marketing-publishing","\"scheduler\":true","\"personalBrand\":true","\"mutations\":true"]}
+    ]
+  }
+}
