@@ -1,3 +1,5 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net'];
   if(env.SUPABASE_URL){try{connect.push(new URL(env.SUPABASE_URL).origin)}catch{}}
@@ -24,10 +26,11 @@ export default{
     }
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,ekodiShell:true,contextModel:'person-space-role',privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/creator'||url.pathname==='/creator/')return Response.redirect('https://author.ekodi.kr/',307);
     if(url.pathname==='/personal-brand'||url.pathname==='/personal-brand/')return Response.redirect(personalBrandUrl(),307);
-    return withHeaders(env,await env.ASSETS.fetch(request));
+    const response=withHeaders(env,await env.ASSETS.fetch(request));
+    return injectEkodiShell(response,'my');
   }
 };
