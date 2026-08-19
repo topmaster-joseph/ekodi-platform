@@ -16,7 +16,8 @@ test('EKODI public homepage is an explicit secured Worker route', () => {
   assert.match(worker, /'no-store', 'public-home'/);
 });
 
-test('Chief AI lazy admin bootstrap is served through the secured admin asset route', () => {
+test('Chief AI lazy admin bootstrap is served through the secured version-aware admin asset route', () => {
   assert.match(worker, /'\/admin-lazy-features\.js'/);
-  assert.match(worker, /ADMIN_ASSETS[\s\S]*withHostSecurity\(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-asset'\)/);
+  assert.match(worker, /function adminAssetCacheControl\(url\)/);
+  assert.match(worker, /ADMIN_ASSETS[\s\S]*withHostSecurity\(response, ADMIN_CSP, adminAssetCacheControl\(url\), 'admin-asset'\)/);
 });
