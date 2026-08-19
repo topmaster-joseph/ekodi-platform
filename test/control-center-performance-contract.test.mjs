@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [features, compact, handoff, finance, build] = await Promise.all([
+const [features, compact, handoff, finance, billing, loader, build] = await Promise.all([
   readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
   readFile(new URL('../compact-control-center.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
   readFile(new URL('../finance-monitor.js', import.meta.url), 'utf8'),
+  readFile(new URL('../author-billing-admin.js', import.meta.url), 'utf8'),
+  readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
 ]);
 
@@ -18,7 +20,6 @@ test('heavy Control Center features are click-loaded rather than idle-preloaded'
   for (const section of ['clients', 'admins', 'affiliates']) {
     assert.match(features, new RegExp(`placeholder\\('${section}'`));
   }
-  // Books is deliberately a stable sidebar entry, but its heavy modules remain click-loaded.
   assert.match(features, /installStaticBooksNavigation/);
   assert.match(features, /await loadBooks\(\)/);
   assert.match(features, /loadModule\('books-admin\.js'\)/);
@@ -34,12 +35,13 @@ test('dynamic navigation stays event-driven and the simple Campus table needs no
   assert.match(compact, /campusServiceRow/);
 });
 
-test('payment readiness reuses the Finance overview response instead of refetching it', () => {
-  assert.doesNotMatch(handoff, /FINANCE_API/);
-  assert.doesNotMatch(handoff, /api\/finance\/overview/);
+test('payment readiness stays off the first path and reuses the Finance overview response', () => {
+  assert.doesNotMatch(handoff, /FINANCE_API|api\/finance\/overview|ekodi-finance-overview/);
   assert.doesNotMatch(handoff, /setInterval/);
-  assert.match(handoff, /ekodi-finance-overview/);
   assert.match(finance, /new CustomEvent\('ekodi-finance-overview'/);
+  assert.match(billing, /window\.addEventListener\('ekodi-finance-overview'/);
+  assert.match(loader, /await loadScript\('author-billing-admin\.js'\);\s*\n\s*await loadScript\('finance-monitor\.js'\);/);
+  assert.doesNotMatch(billing, /api\/finance\/overview|FINANCE_API/);
 });
 
 test('Finance keeps a short in-memory freshness window while explicit refresh bypasses it', () => {
@@ -50,9 +52,11 @@ test('Finance keeps a short in-memory freshness window while explicit refresh by
   assert.match(finance, /cache: 'default'/);
 });
 
-test('production build still ships only the lightweight feature loader eagerly', () => {
+test('production build still ships optional modules as standalone assets rather than eager scripts', () => {
   assert.match(build, /'control-center-features\.js'/);
+  assert.match(build, /'author-billing-admin\.js'/);
   assert.doesNotMatch(build, /<script src="client-access\.js" defer><\/script>/);
   assert.doesNotMatch(build, /<script src="books-admin\.js" defer><\/script>/);
   assert.doesNotMatch(build, /<script src="finance-monitor\.js" defer><\/script>/);
+  assert.doesNotMatch(build, /<script src="author-billing-admin\.js" defer><\/script>/);
 });
