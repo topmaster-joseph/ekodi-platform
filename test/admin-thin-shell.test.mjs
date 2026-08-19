@@ -19,12 +19,12 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
 test('Campus and Device Control are explicit demand-loaded features', async () => {
   const loader = await read('admin-demand-loader.js');
   assert.match(loader, /campus:\s*\{/);
-  assert.match(loader, /styles: \['campus-actions\.css'\]/);
-  assert.match(loader, /scripts: \['campus-actions\.js'\]/);
+  assert.match(loader, /styles:\s*\['campus-actions\.css'\]/);
+  assert.match(loader, /scripts:\s*\['campus-actions\.js'\]/);
   assert.match(loader, /devices:\s*\{/);
-  assert.match(loader, /styles: \['device-control-admin\.css'\]/);
-  assert.match(loader, /scripts: \['device-control-admin\.js'\]/);
-  assert.match(loader, /hashes: \['#devices'\]/);
+  assert.match(loader, /styles:\s*\['device-control-admin\.css'\]/);
+  assert.match(loader, /scripts:\s*\['device-control-admin\.js'\]/);
+  assert.match(loader, /hashes:\s*\['#devices'\]/);
 });
 
 test('admin menu does not auto-open heavy workspaces on a normal login', async () => {
