@@ -310,7 +310,8 @@ jobs:
       - name: Record recovery point
         env:
           BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
-        run: echo "D1 recovery bookmark before Conversation release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "D1 recovery bookmark before Conversation release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
 
   production-control:
     needs: production-workspace
