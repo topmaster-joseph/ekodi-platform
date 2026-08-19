@@ -1,0 +1,186 @@
+name: Verify Shared Shell Production
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-shared-shell-production.yml'
+      - 'ekodi-service-manifest.js'
+      - 'scripts/validate-ekodi-shell-adoption.mjs'
+      - 'test/ekodi-shell.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-shared-shell-production-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  shell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify Shell service and canonical production manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
+            manifest=$(curl -sS -o /tmp/shell-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            echo "Shell health=$health manifest=$manifest attempt=$attempt"
+            if [[ "$health" == '200' && "$manifest" == '200' ]] \
+              && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json \
+              && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-manifest.json; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+  worker-services:
+    needs: shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: business
+            url: https://business.ekodi.kr/
+            needle: BUSINESS OS
+          - service: work
+            url: https://work.ekodi.kr/
+            needle: EKODI Work
+          - service: author
+            url: https://author.ekodi.kr/
+            needle: EKODI Creator AI
+          - service: books
+            url: https://books.ekodi.kr/
+            needle: https://ekodi.kr/
+          - service: social
+            url: https://social.ekodi.kr/
+            needle: EKODI Social
+          - service: energy
+            url: https://energy.ekodi.kr/
+            needle: EKODI Energy AI
+          - service: trade
+            url: https://trade.biz.ekodi.kr/
+            needle: EKODI Global Trading
+          - service: pay
+            url: https://pay.ekodi.kr/
+            needle: EKODI Hub
+    steps:
+      - name: Verify ${{ matrix.service }} production Shell
+        shell: bash
+        env:
+          URL: ${{ matrix.url }}
+          NEEDLE: ${{ matrix.needle }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code=$(curl -L -sS -D /tmp/service.headers -o /tmp/service.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$URL" || true)
+            echo "$URL -> $code attempt=$attempt"
+            if [[ "$code" == '200' ]] \
+              && grep -Fq "$NEEDLE" /tmp/service.html \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/service.html \
+              && grep -Fiq 'x-ekodi-shell: v1' /tmp/service.headers; then exit 0; fi
+            sleep 5
+          done
+          echo "Shared Shell production audit failed for $URL" >&2
+          exit 1
+
+  existing-services:
+    needs: shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: my
+            url: https://my.ekodi.kr/
+            needle: My EKODI
+          - service: community
+            url: https://community.ekodi.kr/
+            needle: EKODI Community
+          - service: church
+            url: https://church.ekodi.kr/
+            needle: EKODI
+          - service: biz
+            url: https://biz.ekodi.kr/
+            needle: EKODI BIZ
+          - service: lab
+            url: https://lab.ekodi.kr/
+            needle: <html
+          - service: mall
+            url: https://mall.ekodi.kr/
+            needle: EKODI
+    steps:
+      - name: Regression verify ${{ matrix.service }}
+        shell: bash
+        env:
+          URL: ${{ matrix.url }}
+          NEEDLE: ${{ matrix.needle }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -L -sS -o /tmp/shared.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$URL" || true)
+            echo "$URL -> $code attempt=$attempt"
+            if [[ "$code" == '200' ]] && grep -Fq "$NEEDLE" /tmp/shared.html && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared.html; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+
+  marketing-services:
+    needs: shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: marketing
+            url: https://marketing.ekodi.kr/
+            needle: 마케팅AI
+          - service: jadam-public
+            url: https://jadam.ekodi.kr/
+            needle: 자담치킨
+          - service: pizzamaru-public
+            url: https://pizzamaru.ekodi.kr/
+            needle: 피자마루
+          - service: yogurt-public
+            url: https://yogurt.ekodi.kr/
+            needle: 요거트퍼플
+          - service: jadam-ai
+            url: https://jadam.ai.ekodi.kr/
+            needle: 자담치킨
+          - service: pizzamaru-ai
+            url: https://pizzamaru.ai.ekodi.kr/
+            needle: 피자마루
+          - service: yogurt-ai
+            url: https://yogurt.ai.ekodi.kr/
+            needle: 요거트퍼플
+    steps:
+      - name: Verify ${{ matrix.service }} Marketing Shell
+        shell: bash
+        env:
+          URL: ${{ matrix.url }}
+          NEEDLE: ${{ matrix.needle }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code=$(curl -L -sS -o /tmp/marketing.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$URL" || true)
+            echo "$URL -> $code attempt=$attempt"
+            if [[ "$code" == '200' ]] \
+              && grep -Fq "$NEEDLE" /tmp/marketing.html \
+              && grep -Fq 'data-ekodi-shell="v1"' /tmp/marketing.html \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/marketing.html \
+              && grep -Fq 'data-ekodi-service="marketing"' /tmp/marketing.html \
+              && grep -Fq 'data-ekodi-workspace-handoff' /tmp/marketing.html; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+  summary:
+    needs: [shell, worker-services, existing-services, marketing-services]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'All active EKODI production surfaces verified with the shared My/Shell contract.'
