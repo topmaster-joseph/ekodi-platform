@@ -5,6 +5,7 @@ import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
+import { handleSystemHealthControl } from './system-health-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -69,6 +70,18 @@ export default {
       } catch (error) {
         console.error('Marketing ledger control error', error);
         return errorResponse('Marketing CRM 원장 처리 중 오류가 발생했습니다.', 'MARKETING_LEDGER_CONTROL_ERROR');
+      }
+    }
+
+    // Read-only admin System Health. Collection runs out-of-band in GitHub Actions,
+    // so this route only reads tiny daily aggregate rows from D1.
+    if (path === '/api/control/system-health') {
+      try {
+        const response = await handleSystemHealthControl(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('System Health control error', error);
+        return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR');
       }
     }
 
