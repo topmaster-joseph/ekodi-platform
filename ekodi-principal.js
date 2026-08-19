@@ -1,5 +1,5 @@
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5R7A_xUkXyOY_';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const SUBJECT_TYPES=new Set(['person','tenant']);
 const WRITE_ROLES=new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
 const ADMIN_ROLES=new Set(['super_admin','admin','owner','manager']);
