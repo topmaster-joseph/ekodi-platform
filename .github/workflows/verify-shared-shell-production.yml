@@ -100,7 +100,7 @@ jobs:
             needle: My EKODI
           - service: community
             url: https://community.ekodi.kr/
-            needle: 에코디커뮤니티
+            needle: EKODI Community
           - service: church
             url: https://church.ekodi.kr/
             needle: EKODI
@@ -109,7 +109,7 @@ jobs:
             needle: EKODI BIZ
           - service: lab
             url: https://lab.ekodi.kr/
-            needle: EKODI
+            needle: <html
           - service: mall
             url: https://mall.ekodi.kr/
             needle: EKODI
