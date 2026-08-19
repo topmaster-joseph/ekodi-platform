@@ -42,14 +42,18 @@ test('AI Ops no longer auto-hydrates Governance cockpit or Deployments', async (
   assert.match(loader, /scripts: \['release-control-admin\.js'\]/);
 });
 
-test('readable orchestration layer remains in the authenticated lazy bundle', async () => {
+test('readable orchestration layer remains lazy and the final performance guard runs last', async () => {
   const [pkg, postbuild] = await Promise.all([
     read('package.json'),
     read('scripts/admin-readable-command-postbuild.mjs'),
   ]);
   const parsed = JSON.parse(pkg);
-  assert.match(parsed.scripts.build, /admin-readable-command-postbuild\.mjs$/);
-  assert.match(postbuild, /compact-control-center\.css/);
+  const build = parsed.scripts.build;
+  const readableIndex = build.indexOf('admin-readable-command-postbuild.mjs');
+  const performanceIndex = build.indexOf('admin-performance-postbuild.mjs');
+  assert.ok(readableIndex >= 0 && performanceIndex > readableIndex);
+  assert.match(postbuild, /ai-ops-admin\.css/);
   assert.match(postbuild, /admin-lazy-features\.js/);
+  assert.doesNotMatch(postbuild, /compact-control-center\.css/);
   assert.doesNotMatch(postbuild, /control-center\.html/);
 });

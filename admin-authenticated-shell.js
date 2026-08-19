@@ -2,6 +2,7 @@
   'use strict';
 
   const TOKEN_KEY = 'ekodi-auth-token';
+  const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const loginLink = document.querySelector('#centralAdminLogin');
@@ -21,6 +22,11 @@
     return Boolean(token() && app && !app.hidden);
   }
 
+  function assetUrl(path) {
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
+  }
+
   function keepLoginInteractive() {
     if (!loginScreen || authenticated()) return;
     loginScreen.style.position = 'relative';
@@ -34,19 +40,19 @@
   }
 
   function loadStyle(href) {
-    if (document.querySelector(`link[data-ekodi-postauth-style="${href}"],link[href="${href}"]`)) return;
+    if (document.querySelector(`link[data-ekodi-postauth-style="${href}"]`)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = href;
+    link.href = assetUrl(href);
     link.dataset.ekodiPostauthStyle = href;
     document.head.appendChild(link);
   }
 
   function loadScript(src) {
     return new Promise(resolve => {
-      if (document.querySelector(`script[data-ekodi-postauth-script="${src}"],script[src="${src}"]`)) return resolve();
+      if (document.querySelector(`script[data-ekodi-postauth-script="${src}"]`)) return resolve();
       const script = document.createElement('script');
-      script.src = src;
+      script.src = assetUrl(src);
       script.dataset.ekodiPostauthScript = src;
       script.addEventListener('load', resolve, { once:true });
       script.addEventListener('error', () => {
@@ -100,8 +106,6 @@
     started = true;
     document.documentElement.dataset.ekodiAdminReady = 'loading';
 
-    // Advanced legacy tools retain their previous runtime, but only on /legacy. The normal
-    // admin route never downloads/parses this historical operations bundle.
     if (location.pathname.startsWith('/legacy')) {
       loadStyle('control-center-ops.css');
       loadStyle('control-center-finance.css');

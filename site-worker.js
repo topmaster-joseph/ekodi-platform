@@ -62,6 +62,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-demand-loader.js',
+  '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
   '/finance-monitor.js',
@@ -70,6 +71,8 @@ const ADMIN_ASSETS = new Set([
   '/ekodi-device-bootstrap.cmd',
   '/campus-actions.css',
   '/campus-actions.js',
+  '/device-control-admin.css',
+  '/device-control-admin.js',
   '/ai-ops-admin.css',
   '/ai-ops-admin.js',
   '/mission-control-admin.css',
@@ -175,6 +178,12 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   return secured;
 }
 
+function adminAssetCacheControl(url) {
+  return url.searchParams.has('v')
+    ? 'public, max-age=31536000, immutable'
+    : 'public, max-age=0, must-revalidate';
+}
+
 function redirectToPublicCanonical(url) {
   const next = new URL(url);
   next.protocol = 'https:';
@@ -254,7 +263,7 @@ export default {
       }
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
-        return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-fallback-asset');
+        return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-fallback-asset');
       }
       if (PUBLIC_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
@@ -288,7 +297,7 @@ export default {
       }
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
-        return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-asset');
+        return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-asset');
       }
     }
 
