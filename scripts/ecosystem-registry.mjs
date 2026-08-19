@@ -15,6 +15,8 @@ const ICONS = {
   marketing: '<path d="M7 30V18M16 30V10M25 30V15M34 30V6M5 34h31"></path><path d="m7 14 9-7 9 4 9-8"></path>',
   trade: '<path d="M5 20h30M20 5c5 5 7 10 7 15s-2 10-7 15M20 5c-5 5-7 10-7 15s2 10 7 15"></path><path d="m28 11 7 3-7 3M12 29l-7-3 7-3"></path>',
   pay: '<rect x="5" y="9" width="30" height="22" rx="4"></rect><path d="M5 16h30M11 24h8M28 23v5M25.5 25.5h5"></path>',
+  investment: '<path d="M6 32V18M14 32V13M22 32V21M30 32V8M4 35h31"></path><path d="m7 15 8-6 8 5 10-9M28 5h5v5"></path>',
+  messenger: '<path d="M6 8h28v20H18l-8 7v-7H6V8Z"></path><path d="M12 15h16M12 21h11"></path>',
   education: '<path d="m4 14 16-8 16 8-16 8-16-8Z"></path><path d="M10 18v9c6 5 14 5 20 0v-9M36 14v10"></path>',
   my: '<circle cx="20" cy="13" r="6"></circle><path d="M8 34c1-8 5-12 12-12s11 4 12 12"></path><circle cx="31" cy="9" r="3"></circle>',
   insurance: '<path d="M20 5 33 10v9c0 8-5 13-13 16C12 32 7 27 7 19v-9l13-5Z"></path><path d="M20 13v13M14 19.5h12"></path>',
