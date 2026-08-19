@@ -1,0 +1,85 @@
+name: Diagnose Admin Thin Production Final
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-admin-thin-production-final.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify DNS and wait for standalone Device assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== DNS ==='
+          getent ahostsv4 admin.ekodi.kr || true
+          getent ahostsv4 api.ekodi.kr || true
+          ready=''
+          for i in $(seq 1 24); do
+            js=$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/device.js -w '%{http_code}' https://admin.ekodi.kr/device-control-admin.js || true)
+            css=$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/device.css -w '%{http_code}' https://admin.ekodi.kr/device-control-admin.css || true)
+            echo "probe=$i device_js=$js device_css=$css"
+            if [[ "$js" == '200' && "$css" == '200' ]] && grep -Fq 'WINDOWS_AGENT_URL' /tmp/device.js && grep -Fq '.ekodi-device-panel' /tmp/device.css; then
+              ready=yes
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = yes
+
+      - name: Verify live thin startup contract and edge timing
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS --connect-timeout 5 --max-time 15 -D /tmp/admin.headers -o /tmp/admin.html \
+            -w 'ADMIN status=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://admin.ekodi.kr/
+          grep -Ei '^(HTTP/|server:|cf-ray:|cache-control:|content-type:|etag:)' /tmp/admin.headers || true
+          grep -Fq 'admin-authenticated-shell.js?v=20260819-thin-shell-2' /tmp/admin.html
+          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin.html
+          echo 'PASS: production HTML uses the three-asset thin shell'
+
+      - name: Verify Campus and Devices are demand-only in live assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -o /tmp/shell.js https://admin.ekodi.kr/admin-authenticated-shell.js
+          curl -fsS -o /tmp/demand.js https://admin.ekodi.kr/admin-demand-loader.js
+          curl -fsS -o /tmp/compact.js https://admin.ekodi.kr/compact-control-center.js
+          curl -fsS -o /tmp/compact.css https://admin.ekodi.kr/compact-control-center.css
+          for forbidden in campus-actions.js device-control-admin.js control-center-features.js ai-ops-admin.js; do
+            if grep -Fq "$forbidden" /tmp/shell.js; then echo "FAIL: $forbidden remains in critical shell"; exit 1; fi
+          done
+          grep -Fq "scripts: ['campus-actions.js']" /tmp/demand.js
+          grep -Fq "scripts: ['device-control-admin.js']" /tmp/demand.js
+          for forbidden in WINDOWS_AGENT_URL ekodiDevicePanel CAMPUS_SERVICES 'function installCampus('; do
+            if grep -Fq "$forbidden" /tmp/compact.js; then echo "FAIL: $forbidden leaked into compact JS"; exit 1; fi
+          done
+          if grep -Fq '.ekodi-device-panel' /tmp/compact.css; then echo 'FAIL: Device CSS leaked into compact CSS'; exit 1; fi
+          echo "SHELL bytes=$(wc -c < /tmp/shell.js) DEMAND bytes=$(wc -c < /tmp/demand.js) COMPACT_JS bytes=$(wc -c < /tmp/compact.js) COMPACT_CSS bytes=$(wc -c < /tmp/compact.css)"
+          echo 'PASS: Campus and Devices are demand-only in production'
+
+      - name: Verify standalone assets and API health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in campus-actions.js campus-actions.css device-control-admin.js device-control-admin.css; do
+            code=$(curl -sS --connect-timeout 5 --max-time 15 -o "/tmp/${asset}" -w '%{http_code}' "https://admin.ekodi.kr/$asset")
+            echo "$asset status=$code bytes=$(wc -c < "/tmp/${asset}")"
+            test "$code" = 200
+          done
+          grep -Fq "section.id = 'campusPanel'" /tmp/campus-actions.js
+          grep -Fq 'WINDOWS_AGENT_URL' /tmp/device-control-admin.js
+          grep -Fq '.ekodi-device-panel' /tmp/device-control-admin.css
+          curl -sS --connect-timeout 5 --max-time 15 -o /tmp/api.body \
+            -w 'API status=%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://api.ekodi.kr/health
+          grep -Fq '"ok":true' /tmp/api.body
+          echo 'PASS: standalone demand assets and API are healthy'
