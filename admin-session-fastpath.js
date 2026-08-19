@@ -1,4 +1,3 @@
-const DEFAULT_ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
 const encoder = new TextEncoder();
 
 function bytesToHex(bytes) {
@@ -9,17 +8,13 @@ async function sha256(value) {
   return bytesToHex(await crypto.subtle.digest('SHA-256', encoder.encode(String(value || ''))));
 }
 
-function configuredOrigins(env = {}) {
-  const allowed = String(env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGIN)
+function allowedOrigin(origin, env = {}) {
+  if (!origin) return true;
+  const allowed = String(env.ALLOWED_ORIGINS || '')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean);
-  if (env.ENVIRONMENT !== 'production') allowed.push('http://localhost:3000', 'http://localhost:8788');
-  return new Set(allowed);
-}
-
-function allowedOrigin(origin, env = {}) {
-  return !origin || configuredOrigins(env).has(origin);
+  return allowed.includes(origin);
 }
 
 function json(request, env, data, status = 200) {
