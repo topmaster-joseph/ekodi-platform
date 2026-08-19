@@ -86,9 +86,10 @@ test('guarded production release contracts require the shared Shell on migrated 
   for(const manifest of manifests)assert.match(manifest,/x-ekodi-shell: v1/);
 });
 
-test('all active services except the separately built Marketing UI have concrete Shell integration',()=>{
+test('all active services have concrete Shell integration',()=>{
   const pending=EKODI_SERVICE_MANIFEST.services.filter(service=>service.state!=='planned'&&service.shellIntegration==='pending').map(service=>service.id);
-  assert.deepEqual(pending,['marketing']);
+  assert.deepEqual(pending,[]);
+  assert.equal(serviceForId('marketing')?.shellIntegration,'static-script');
 });
 
 test('shell service exposes public manifest and health without account data',async()=>{
