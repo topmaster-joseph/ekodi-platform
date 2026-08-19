@@ -33,11 +33,24 @@ jobs:
           [[ "$inbox" == '401' ]]
           cat /tmp/control.json
           cat /tmp/inbox.json
-      - name: Verify Messenger UI and async client
+      - name: Diagnose and verify Messenger UI and async client
         run: |
           set -euo pipefail
-          root=$(curl -sS -D /tmp/headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://messenger.ekodi.kr/')
-          app=$(curl -sS -o /tmp/app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://messenger.ekodi.kr/app.js')
+          stamp=$(date +%s)
+          root=$(curl -sS -D /tmp/headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://messenger.ekodi.kr/?verify=$stamp")
+          app=$(curl -sS -D /tmp/app-headers -o /tmp/app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://messenger.ekodi.kr/app.js?verify=$stamp")
+          echo "root_status=$root app_status=$app"
+          for marker in 'EKODI Messenger'; do
+            if grep -Fq "$marker" /tmp/root.html; then echo "ROOT_MARKER_OK: $marker"; else echo "ROOT_MARKER_MISSING: $marker"; fi
+          done
+          for marker in 'refreshAssistantUntilSettled' 'EKODI AI' '담당자 연결 대기' 'https://workspace-api.ekodi.kr'; do
+            if grep -Fq "$marker" /tmp/app.js; then echo "APP_MARKER_OK: $marker"; else echo "APP_MARKER_MISSING: $marker"; fi
+          done
+          if grep -Fiq 'x-ekodi-shell: v1' /tmp/headers; then echo 'SHELL_HEADER_OK'; else echo 'SHELL_HEADER_MISSING'; fi
+          echo '--- root headers ---'
+          cat /tmp/headers
+          echo '--- app headers ---'
+          cat /tmp/app-headers
           [[ "$root" == '200' && "$app" == '200' ]]
           grep -Fq 'EKODI Messenger' /tmp/root.html
           grep -Fq 'refreshAssistantUntilSettled' /tmp/app.js
