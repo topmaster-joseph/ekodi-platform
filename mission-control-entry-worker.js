@@ -88,7 +88,8 @@ export default {
 
     // Canonical EKODI Messenger operator surface. User conversations live only in
     // messenger_threads/messages/handoffs; this control plane provides admin oversight,
-    // human takeover and channel-adapter requests over that same ledger.
+    // human takeover and channel-adapter requests over that same ledger. The isolated
+    // staging path is re-verified after additive Messenger migrations settle.
     if (path.startsWith('/api/control/messenger')) {
       try {
         const response = await handleMessengerOperatorControl(request, env);
