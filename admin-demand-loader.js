@@ -22,11 +22,19 @@
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
       scripts: ['ai-ops-admin.js'],
-      secondaryStyles: ['mission-control-admin.css', 'release-control-admin.css', 'system-health-admin.css'],
-      secondaryScripts: ['mission-control-admin.js', 'release-control-admin.js', 'admin-lazy-features.js', 'system-health-admin.js'],
+      secondaryStyles: ['system-health-admin.css'],
+      secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js'],
       real: '[data-section="aiops"]',
-      hashes: ['#ai-ops', '#aiops', '#deployments', '#release'],
+      hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
+    },
+    deployments: {
+      label: 'Deployments', icon: '↑',
+      styles: ['release-control-admin.css'],
+      scripts: ['release-control-admin.js'],
+      real: '[data-section="deployments"]',
+      hashes: ['#deployments', '#release'],
+      insert: 'after-aiops',
     },
     work: {
       label: 'WORK', icon: 'W',
@@ -125,6 +133,10 @@
     if (feature.insert === 'first') return nav.prepend(button);
     if (feature.insert === 'after-campus') {
       const anchor = nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');
+      if (anchor) return anchor.insertAdjacentElement('afterend', button);
+    }
+    if (feature.insert === 'after-aiops') {
+      const anchor = nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
     if (feature.insert === 'after-services') {
@@ -242,7 +254,6 @@
         loadStyle('control-center-finance.css'),
         loadStyle('author-billing-admin.css'),
       ]).then(async () => {
-        // Attach the readiness consumer before Finance Monitor can emit the overview event.
         await loadScript('author-billing-admin.js');
         await loadScript('finance-monitor.js');
       }).catch(error => {

@@ -15,19 +15,29 @@ test('Chief AI chat stays guarded, contextual and grounded in Control API', asyn
   assert.match(source, /DECISION_RULES/);
   assert.match(source, /SECRET_RE/);
   assert.match(source, /Decision Gate/);
-  assert.match(source, /Council Review/);
   assert.match(source, /Marketing AI/);
   assert.match(source, /sessionStorage\.setItem\(CHAT_STATE_KEY/);
   assert.doesNotMatch(source, /localStorage\.setItem\(CHAT_STATE_KEY/);
   assert.match(source, /staging → CI → guarded release/);
 });
 
-test('Chief AI chat is shipped but loads only as a secondary AI Ops enhancement', async () => {
-  const [pkg, build, shell, demand] = await Promise.all([read('package.json'), read('scripts/build.mjs'), read('admin-authenticated-shell.js'), read('admin-demand-loader.js')]);
+test('Chief AI chat loads only after AI Ops opens without hydrating unrelated cockpits', async () => {
+  const [pkg, build, shell, demand, patch] = await Promise.all([
+    read('package.json'),
+    read('scripts/build.mjs'),
+    read('admin-authenticated-shell.js'),
+    read('admin-demand-loader.js'),
+    read('admin-readable-command.js'),
+  ]);
   assert.match(pkg, /node --check admin-lazy-features\.js/);
   assert.match(build, /'admin-lazy-features\.js'/);
   assert.match(build, /minimal pre-auth Control Center/);
   assert.doesNotMatch(shell, /'admin-lazy-features\.js'/);
-  assert.match(demand, /secondaryScripts: \['mission-control-admin\.js', 'release-control-admin\.js', 'admin-lazy-features\.js', 'system-health-admin\.js'\]/);
+  assert.match(demand, /secondaryScripts: \['admin-lazy-features\.js', 'system-health-admin\.js'\]/);
+  assert.doesNotMatch(demand.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*deployments:/)?.[1] || '', /mission-control-admin|release-control-admin/);
+  assert.match(demand, /deployments:\s*\{/);
+  assert.match(demand, /scripts: \['release-control-admin\.js'\]/);
+  assert.match(patch, /ROLE_HANDOFF_RE/);
+  assert.match(patch, /actionType:'ui\.change_request'/);
   assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
 });

@@ -5,6 +5,15 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     chiefAiRole: 'orchestrator_not_sovereign',
     defaultAuthority: 'least_privilege',
   }),
+  orchestrationContract: Object.freeze({
+    requestOwner: 'current_conversation_ai',
+    specialistRouting: 'internal',
+    requireUserToChooseSpecialist: false,
+    roleRefusalForDelegatedSolvableRequest: false,
+    safeActionDefault: 'observe_consult_act_verify_report',
+    missingExecutorBehavior: 'queue_and_disclose_without_false_completion',
+    humanGateOnlyForHighImpact: true,
+  }),
   policyPriority: Object.freeze([
     'mission_and_human_dignity',
     'safety_legality_and_privacy',
@@ -67,6 +76,16 @@ const NON_NEGOTIABLE = new Set(AI_MISSION_RUNTIME.nonNegotiables);
 
 export function getRuntimeAgentPolicy(agentId) {
   return AI_MISSION_RUNTIME.agents[String(agentId || '').trim()] || null;
+}
+
+export function getOrchestrationContract() {
+  return AI_MISSION_RUNTIME.orchestrationContract;
+}
+
+export function mustOwnAndRouteRequest({ highImpact = false, forbidden = false } = {}) {
+  if (forbidden || highImpact) return false;
+  return AI_MISSION_RUNTIME.orchestrationContract.requestOwner === 'current_conversation_ai'
+    && AI_MISSION_RUNTIME.orchestrationContract.specialistRouting === 'internal';
 }
 
 export function evaluateMissionAction(action = {}) {
