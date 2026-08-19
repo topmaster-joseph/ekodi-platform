@@ -6,7 +6,7 @@ const docs=await readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.
 const manifest=EKODI_SERVICE_MANIFEST;
 const allowedKinds=new Set(['person','business','organization','church','community','project']);
 const allowedIntegrations=new Set(['worker-injected','shared-proxy','static-script','external-build','pending','planned']);
-const legacyPending=new Set(['marketing']);
+const legacyPending=new Set();
 
 function fail(message){console.error(`❌ EKODI Shell adoption: ${message}`);process.exitCode=1;}
 
@@ -34,7 +34,7 @@ for(const service of manifest.services||[]){
   const planned=service.state==='planned';
   if(planned&&service.shellIntegration!=='planned')fail(`${service.id} is planned and must use shellIntegration=planned`);
   if(!planned&&service.shellIntegration==='planned')fail(`${service.id} is active but still marked shellIntegration=planned`);
-  if(!planned&&service.shellIntegration==='pending'&&!legacyPending.has(service.id))fail(`${service.id} is a new active service without Shell integration`);
+  if(!planned&&service.shellIntegration==='pending'&&!legacyPending.has(service.id))fail(`${service.id} is an active service without Shell integration`);
 }
 
 for(const service of ecosystem.services||[]){
@@ -54,4 +54,4 @@ for(const required of ['Person + Space + Role + Capability','My EKODI responsibi
 }
 
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell adoption policy passed: ${manifest.services.length} services covered; only ${[...legacyPending].join(', ')||'no'} legacy service remains pending.`);
+console.log(`✅ EKODI Shell adoption policy passed: ${manifest.services.length} services covered; zero legacy services remain pending.`);
