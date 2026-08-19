@@ -14,6 +14,7 @@ AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusines
 [assets]
 directory = "./business"
 binding = "ASSETS"
+run_worker_first = true
 
 [observability.logs]
 enabled = true
