@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - '.github/workflows/deploy-admin-staging.yml'
+      - 'package.json'
       - 'admin-staging-worker.js'
       - 'wrangler.admin.staging.toml'
       - 'site-worker.js'
       - 'control-center.html'
       - 'control-center.js'
+      - 'control-center.css'
+      - 'control-center-ops.css'
+      - 'control-center-finance.css'
       - 'control-center-features.js'
       - 'compact-control-center.js'
       - 'compact-control-center.css'
@@ -16,10 +20,12 @@ on:
       - 'campus-actions.css'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
       - 'admin-lazy-features.js'
       - 'admin-menu-layout.js'
+      - 'finance-monitor.js'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
       - 'mission-control-admin.js'
@@ -32,11 +38,14 @@ on:
       - 'release-control-admin.css'
       - 'scripts/build.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
+      - 'scripts/admin-performance-postbuild.mjs'
       - 'config/ekodi-entrypoints.json'
       - 'docs/architecture/ekodi-entrypoint-standard.md'
       - 'test/mission-control-admin.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
+      - 'test/admin-preauth-shell.test.mjs'
+      - 'test/admin-performance-hardening.test.mjs'
       - 'test/ekodi-entrypoint-standard.test.mjs'
 
 permissions:
@@ -63,39 +72,49 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate Governance Cockpit, thin lazy startup, ekodi.index policy and admin routing
+      - name: Validate end-to-end performance, governance and admin routing
         run: |
           set -euo pipefail
           node --check admin-staging-worker.js
           node --check site-worker.js
+          node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
+          node --check admin-menu-layout.js
           node --check device-control-admin.js
           node --check scripts/admin-thin-postbuild.mjs
+          node --check scripts/admin-performance-postbuild.mjs
           node --check mission-control-admin.js
           node --check system-health-admin.js
           node --check system-timeline-admin.js
           node --test test/admin-true-lazy.test.mjs
           node --test test/admin-thin-shell.test.mjs
+          node --test test/admin-preauth-shell.test.mjs
+          node --test test/admin-performance-hardening.test.mjs
           node --test test/mission-control-admin.test.mjs
           node --test test/ekodi-entrypoint-standard.test.mjs
           npm run build
+          test -f dist/admin-central-handoff.js
           test -f dist/admin-demand-loader.js
           test -f dist/device-control-admin.js
           test -f dist/device-control-admin.css
           test -f dist/mission-control-admin.js
           test -f dist/mission-control-admin.css
           test -f dist/system-health-admin.js
-          grep -Fq 'admin-demand-loader.js' dist/control-center.html
-          grep -Fq '20260819-thin-shell-2' dist/control-center.html
+          grep -Fq '20260819-e2e-perf-1' dist/control-center.html
           grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
+          ! grep -Fq '<script src="control-center.js"' dist/control-center.html
+          ! grep -Fq 'control-center-ops.css' dist/control-center.html
+          ! grep -Fq 'control-center-finance.css' dist/control-center.html
           ! grep -Fq 'ai-ops-admin.js" defer' dist/control-center.html
           ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
           ! grep -Fq 'CAMPUS_SERVICES' dist/compact-control-center.js
+          ! grep -Fq 'setInterval(' dist/finance-monitor.js
           grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
           grep -Fq '.ekodi-device-panel' dist/device-control-admin.css
           grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "loadScript('finance-monitor.js')" dist/admin-demand-loader.js
           grep -Fq "secondaryScripts: ['mission-control-admin.js', 'release-control-admin.js', 'admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
           grep -Fq 'CHIEF AI BRIEF' dist/mission-control-admin.js
           grep -Fq 'DECISION QUEUE' dist/mission-control-admin.js
@@ -112,29 +131,36 @@ jobs:
       - name: Deploy isolated admin staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
 
-      - name: Verify staging shell, Device demand assets, security route and on-demand Governance assets
+      - name: Verify staging performance shell, Device demand assets and Governance
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -D /tmp/admin-stage-headers -o /tmp/admin-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -D /tmp/admin-stage-health-headers -o /tmp/admin-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            handoff_code=$(curl -sS -D /tmp/admin-stage-handoff-headers -o /tmp/admin-stage-handoff.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-central-handoff.js" || true)
             demand_code=$(curl -sS -D /tmp/admin-stage-demand-headers -o /tmp/admin-stage-demand.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-demand-loader.js" || true)
+            compact_code=$(curl -sS -D /tmp/admin-stage-compact-headers -o /tmp/admin-stage-compact.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/compact-control-center.js" || true)
             device_js_code=$(curl -sS -D /tmp/admin-stage-device-js-headers -o /tmp/admin-stage-device.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/device-control-admin.js" || true)
             device_css_code=$(curl -sS -D /tmp/admin-stage-device-css-headers -o /tmp/admin-stage-device.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/device-control-admin.css" || true)
             js_code=$(curl -sS -D /tmp/admin-stage-js-headers -o /tmp/admin-stage.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/mission-control-admin.js" || true)
             css_code=$(curl -sS -D /tmp/admin-stage-css-headers -o /tmp/admin-stage.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/mission-control-admin.css" || true)
 
-            if [[ "$root_code" == '200' && "$health_code" == '200' && "$demand_code" == '200' && "$device_js_code" == '200' && "$device_css_code" == '200' && "$js_code" == '200' && "$css_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$health_code" == '200' && "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$device_js_code" == '200' && "$device_css_code" == '200' && "$js_code" == '200' && "$css_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
               && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
-              && grep -Fq '20260819-thin-shell-2' /tmp/admin-stage.html \
+              && grep -Fq '20260819-e2e-perf-1' /tmp/admin-stage.html \
               && grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin-stage.html \
+              && ! grep -Fq '<script src="control-center.js"' /tmp/admin-stage.html \
+              && ! grep -Fq 'control-center-ops.css' /tmp/admin-stage.html \
+              && ! grep -Fq 'control-center-finance.css' /tmp/admin-stage.html \
               && ! grep -Fq 'ai-ops-admin.js" defer' /tmp/admin-stage.html \
               && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
-              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-demand-headers \
+              && grep -Fq 'AbortController' /tmp/admin-stage-handoff.js \
               && grep -Fq "scripts: ['ai-ops-admin.js']" /tmp/admin-stage-demand.js \
               && grep -Fq "scripts: ['device-control-admin.js']" /tmp/admin-stage-demand.js \
+              && grep -Fq "loadScript('finance-monitor.js')" /tmp/admin-stage-demand.js \
+              && ! grep -Fq 'WINDOWS_AGENT_URL' /tmp/admin-stage-compact.js \
               && grep -Fq 'WINDOWS_AGENT_URL' /tmp/admin-stage-device.js \
               && grep -Fq '.ekodi-device-panel' /tmp/admin-stage-device.css \
               && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-js-headers \
@@ -143,7 +169,7 @@ jobs:
               && grep -Fq 'DECISION QUEUE' /tmp/admin-stage.js \
               && grep -Fq 'AI COUNCIL' /tmp/admin-stage.js \
               && grep -Fq '.mission-dashboard' /tmp/admin-stage.css; then
-              echo 'Admin PR staging verified: thin authenticated shell, standalone Device demand assets, on-demand Governance assets, isolated hostname and zero production traffic.'
+              echo "Admin PR staging verified: e2e performance shell, demand-only operations and zero production traffic. handoff=$(wc -c < /tmp/admin-stage-handoff.js) compact=$(wc -c < /tmp/admin-stage-compact.js) demand=$(wc -c < /tmp/admin-stage-demand.js)"
               exit 0
             fi
             echo "Admin PR staging verification pending (attempt $attempt/18)."
