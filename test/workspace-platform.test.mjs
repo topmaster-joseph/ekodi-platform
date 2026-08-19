@@ -33,6 +33,7 @@ test('EKODI principal normalizes identity, workspace role and capabilities',asyn
   assert.match(source,/customer_tenants/);
   assert.match(source,/customer_access_grants/);
   assert.match(source,/messenger_identity_audit/);
+  assert.match(source,/\.bind\(principal\.id,principal\.kind,principal\.provider,''/);
   assert.doesNotMatch(source,/SUPABASE_SERVICE_ROLE_KEY/);
 });
 
@@ -60,11 +61,14 @@ test('Messenger V2 persists first, then queues assistant work without awaiting p
   assert.doesNotMatch(worker,/runAiEnhancedTask/);
 });
 
-test('outbox owns AI provider calls, human suppression and bounded retry',async()=>{
+test('outbox owns AI provider calls, rechecks human takeover and uses bounded retry',async()=>{
   const outbox=await read('messenger-outbox.js');
   assert.match(outbox,/runAiEnhancedTask/);
   assert.match(outbox,/MESSENGER_AI_URL/);
-  assert.match(outbox,/human_operator_active/);
+  assert.match(outbox,/acceptedHandoff/);
+  assert.match(outbox,/before_generation/);
+  assert.match(outbox,/before_write/);
+  assert.match(outbox,/assistant\.suppressed/);
   assert.match(outbox,/CHANNEL_ADAPTER_NOT_CONFIGURED|dispatchChannelEnvelope/);
   assert.match(outbox,/attempts<8/);
   assert.match(outbox,/status='processing'/);
@@ -129,7 +133,7 @@ test('workspace configs use V2 entrypoint, production cron recovery and read-onl
   assert.match(manifest,/conversationSchemaReady/);
 });
 
-test('functional platform pages still consume central identity handoff and workspace API',async()=>{
+test('functional Messenger UI understands asynchronous assistant and human takeover',async()=>{
   const router=await read('platform-router-worker.js');
   assert.match(router,/FUNCTIONAL BETA/);
   assert.match(router,/workspace-api\.ekodi\.kr/);
@@ -141,16 +145,30 @@ test('functional platform pages still consume central identity handoff and works
   assert.match(router,/subject_key/);
   assert.match(router,/newThreadForm/);
   assert.match(router,/newOpportunityForm/);
+  assert.match(router,/refreshAssistantUntilSettled/);
+  assert.match(router,/EKODI가 답변을 준비하고 있습니다/);
+  assert.match(router,/담당자 연결 대기/);
+  assert.match(router,/담당자 응답 중/);
+  assert.match(router,/EKODI AI/);
 });
 
-test('release pipeline remains additive, staged and guarded',async()=>{
+test('Conversation release is additive, isolated, ordered and guarded',async()=>{
   const [workflow,helper]=await Promise.all([
     read('.github/workflows/release-messenger-investment-functional.yml'),
     read('scripts/apply-d1-migrations-with-retry.sh')
   ]);
+  assert.match(workflow,/name: Release EKODI Conversation Foundation/);
+  assert.match(workflow,/workspace-staging:/);
+  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
+  assert.match(workflow,/production-workspace:/);
+  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
+  assert.match(workflow,/production-ui:\n\s+needs: production-control/);
+  assert.match(workflow,/ekodi-workspace-staging/);
+  assert.match(workflow,/ekodi-conversation-control-staging/);
   assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
   assert.match(helper,/d1 migrations apply/);
   assert.match(helper,/UNIQUE constraint failed: d1_migrations\\\.name|d1_migrations\.name/);
-  assert.match(workflow,/wrangler\.workspace-platform-staging\.toml/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
+  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
+  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
 });
