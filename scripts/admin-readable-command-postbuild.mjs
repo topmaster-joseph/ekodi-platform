@@ -30,9 +30,11 @@ for (const marker of jsMarkers) {
   if (!js.includes(marker)) throw new Error(`Admin readable JS contract missing: ${marker}`);
 }
 
+// The readable command layer belongs to AI Ops. Keep its CSS out of the always-loaded
+// compact shell and ship it with the AI Ops stylesheet that is fetched only on activation.
 await Promise.all([
-  appendFile(`${output}compact-control-center.css`, `\n/* admin-readable-command.css */\n${css}\n`),
+  appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
 ]);
 
-console.log('Applied EKODI readable, light, command-first admin layer without adding runtime asset requests.');
+console.log('Applied EKODI readable, light, command-first layer only inside on-demand AI Ops assets.');
