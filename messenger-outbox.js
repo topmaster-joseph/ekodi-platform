@@ -29,9 +29,20 @@ function aiProviders(env,context){
   return providers;
 }
 
+async function acceptedHandoff(env,threadId){
+  return env.DB.prepare(`SELECT id,status,assigned_to_user_id FROM messenger_handoffs WHERE thread_id=? AND status='accepted' ORDER BY id DESC LIMIT 1`).bind(threadId).first();
+}
+
+async function recordSuppressedAssistant(env,threadId,handoffId,phase){
+  try{
+    await env.DB.prepare(`INSERT INTO messenger_events(thread_id,event_type,actor_kind,actor_id,detail_json,created_at) VALUES(?,?,?,?,?,?)`)
+      .bind(threadId,'assistant.suppressed','system','ekodi-assistant',safeJson({reason:'human_operator_active',handoffId,phase}),nowIso()).run();
+  }catch{}
+}
+
 async function processAssistant(env,row,payload){
-  const handoff=await env.DB.prepare(`SELECT id,status,assigned_to_user_id FROM messenger_handoffs WHERE thread_id=? AND status IN ('requested','accepted') ORDER BY id DESC LIMIT 1`).bind(row.thread_id).first();
-  if(handoff?.status==='accepted')return {ok:true,result:{suppressed:true,reason:'human_operator_active',handoffId:handoff.id}};
+  const before=await acceptedHandoff(env,row.thread_id);
+  if(before){await recordSuppressedAssistant(env,row.thread_id,before.id,'before_generation');return {ok:true,result:{suppressed:true,reason:'human_operator_active',handoffId:before.id}}}
   const thread=await env.DB.prepare(`SELECT id,target_service,subject_type,subject_key FROM messenger_threads WHERE id=?`).bind(row.thread_id).first();
   if(!thread)return {ok:true,result:{suppressed:true,reason:'thread_missing'}};
   const sourceMessage=row.message_id?await env.DB.prepare(`SELECT id,body FROM messenger_messages WHERE id=? AND thread_id=?`).bind(row.message_id,row.thread_id).first():null;
@@ -40,6 +51,13 @@ async function processAssistant(env,row,payload){
   const triage=payload.triage&&typeof payload.triage==='object'?payload.triage:{};
   const context={threadId:row.thread_id,subject:{type:thread.subject_type,key:thread.subject_key},targetService:thread.target_service||'',message,triage};
   const result=await runAiEnhancedTask({env,providers:aiProviders(env,context),taskName:'messenger_reply',timeoutMs:4000,fallback:async()=>({reply:freeAssistReply(triage)})});
+
+  // Human takeover may happen while a provider is generating. Re-check immediately
+  // before persisting the assistant message so a late model response cannot speak over
+  // an accepted human operator.
+  const after=await acceptedHandoff(env,row.thread_id);
+  if(after){await recordSuppressedAssistant(env,row.thread_id,after.id,'before_write');return {ok:true,result:{suppressed:true,reason:'human_operator_active',handoffId:after.id}}}
+
   const reply=clean(result.value?.reply||freeAssistReply(triage));const now=nowIso();const authorKind=result.mode==='ai'?'ai':'agent';
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO messenger_messages(thread_id,author_user_id,author_kind,body,metadata_json,created_at) VALUES(?,?,?,?,?,?)`).bind(row.thread_id,'ekodi-assistant',authorKind,reply,safeJson({mode:result.mode,degraded:Boolean(result.degraded),provider:result.provider||null,priority:triage.priority||'normal',triage}),now),
