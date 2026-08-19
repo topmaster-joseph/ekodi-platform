@@ -5,6 +5,7 @@
   const API = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const EMAIL_KEY = 'ekodi-admin-email';
+  const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const apiState = document.querySelector('#apiState');
@@ -44,18 +45,16 @@
     document.body.dataset.scope = scope.toLowerCase();
   }
   function ensureCentralLoginFallback() {
-    if (!loginScreen) return;
-    if (!document.querySelector('#centralAdminLogin')) {
-      const link=document.createElement('a');
-      link.id='centralAdminLogin';
-      link.className='primary-login';
-      link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
-      link.textContent='Google 통합인증으로 계속';
-      const form=document.querySelector('#loginForm');
-      if (form) form.hidden=true;
-      loginScreen.append(link);
-      loginLink=link;
-    }
+    if (!loginScreen || document.querySelector('#centralAdminLogin')) return;
+    const link=document.createElement('a');
+    link.id='centralAdminLogin';
+    link.className='primary-login';
+    link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+    link.textContent='Google 통합인증으로 계속';
+    const form=document.querySelector('#loginForm');
+    if (form) form.hidden=true;
+    loginScreen.append(link);
+    loginLink=link;
   }
   function setProfile(email) {
     const safeEmail = String(email || '').trim();
@@ -91,18 +90,22 @@
     const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
     const value = hash.get('ekodi_admin_token');
     if (!value) return false;
-    try { sessionStorage.setItem('ekodi-auth-token', value); }
-    catch { safeSession.set(TOKEN_KEY, value); }
+    safeSession.set(TOKEN_KEY, value);
     history.replaceState({}, document.title, location.pathname + location.search);
     mark('ekodi-admin-token-handoff');
     return true;
+  }
+  function loadPerfDiagnostics() {
+    if (!new URLSearchParams(location.search).has('perf')) return;
+    const script = document.createElement('script');
+    script.src = `admin-perf-diagnostics.js?v=${encodeURIComponent(ASSET_VERSION)}`;
+    script.dataset.ekodiPerfDiagnostics = 'true';
+    document.body.appendChild(script);
   }
   async function validateSession() {
     const value = token();
     if (!value) return showLogin();
 
-    // Reveal only the static shell immediately. Privileged APIs still validate the bearer
-    // token server-side, while a slow session endpoint never blocks first interaction.
     showApp(safeSession.get(EMAIL_KEY), '인증 세션 확인 중');
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 5000);
@@ -137,45 +140,6 @@
     if (!response.ok) throw new Error(data.error || `API 요청 실패 (${response.status})`);
     return data;
   }
-  function installPerfDiagnostics() {
-    if (!new URLSearchParams(location.search).has('perf')) return;
-    const state = window.__EKODI_PERF__ = {
-      longTasks: [], resources: [], paints: [], layoutShifts: [], events: [], navigation: null,
-      snapshot() {
-        const resources = this.resources;
-        return {
-          navigation: this.navigation,
-          longTasks: [...this.longTasks],
-          paints: [...this.paints],
-          layoutShifts: [...this.layoutShifts],
-          events: [...this.events],
-          resourceCount: resources.length,
-          transferBytes: resources.reduce((sum, item) => sum + Number(item.transferSize || 0), 0),
-          resourceDurationMs: resources.reduce((sum, item) => sum + Number(item.duration || 0), 0),
-          marks: performance.getEntriesByType('mark').map(entry => ({ name:entry.name, start:entry.startTime })),
-        };
-      },
-    };
-    try {
-      state.navigation = performance.getEntriesByType('navigation')[0]?.toJSON?.() || null;
-      for (const entry of performance.getEntriesByType('paint')) state.paints.push({ name:entry.name, start:entry.startTime });
-      const observer = new PerformanceObserver(list => {
-        for (const entry of list.getEntries()) {
-          if (entry.entryType === 'longtask') state.longTasks.push({ start: entry.startTime, duration: entry.duration });
-          if (entry.entryType === 'resource') state.resources.push({ name: entry.name, start: entry.startTime, duration: entry.duration, transferSize: entry.transferSize || 0 });
-          if (entry.entryType === 'layout-shift' && !entry.hadRecentInput) state.layoutShifts.push({ start:entry.startTime, value:entry.value });
-          if (entry.entryType === 'event' && entry.duration >= 16) state.events.push({ name:entry.name, start:entry.startTime, duration:entry.duration, interactionId:entry.interactionId || 0 });
-        }
-      });
-      const types = [];
-      for (const type of ['longtask', 'resource', 'layout-shift', 'event']) {
-        if (PerformanceObserver.supportedEntryTypes?.includes(type)) types.push(type);
-      }
-      if (types.length) observer.observe({ entryTypes: types, buffered:true, durationThreshold:16 });
-      window.EKODIAdminPerf = Object.freeze({ snapshot: () => state.snapshot() });
-      window.addEventListener('ekodi-admin-ready', () => queueMicrotask(() => console.info('[EKODI perf]', state.snapshot())), { once: true });
-    } catch {}
-  }
 
   mark('ekodi-admin-entry-start');
   acceptCentralHandoff();
@@ -193,6 +157,6 @@
   });
 
   window.EKODIAdminCore = Object.freeze({ token, authHeaders, request, showApp, showLogin });
-  installPerfDiagnostics();
+  loadPerfDiagnostics();
   validateSession();
 })();
