@@ -5,14 +5,14 @@ import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.m
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
-  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','admin-authenticated-shell.js','admin-menu-layout.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
+  'index.html','homepage-ambient.css','homepage-ambient.js','admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','control-center-features.js','admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','compact-control-center.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','author-billing-admin.css','author-billing-admin.js','system-health-admin.css','system-health-admin.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
 ];
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
-// MarketingAI admin keeps one authenticated lazy asset, while live operations views
+// MarketingAI admin keeps one authenticated on-demand asset, while live operations views
 // remain independently maintainable source modules. Bundle them after the base console.
 const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] = await Promise.all([
   readFile(`${output}marketing-ai-admin.css`, 'utf8'),
@@ -23,20 +23,24 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] =
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
 await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
 
-// Device Control and Creator billing pricing are privileged post-auth functionality.
-// Bundle them into already-served authenticated assets to keep the admin route surface small.
-const [compactCss, compactJs, deviceControlCss, deviceControlJs, authorBillingCss, lazyJs, authorBillingJs] = await Promise.all([
+// Device Control stays in the compact authenticated shell for now. Creator billing is
+// deliberately separate so it can load only when Finance is opened.
+const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'),
   readFile(`${output}compact-control-center.js`, 'utf8'),
   readFile(`${root}device-control-admin.css`, 'utf8'),
   readFile(`${root}device-control-admin.js`, 'utf8'),
-  readFile(`${root}author-billing-admin.css`, 'utf8'),
-  readFile(`${output}admin-lazy-features.js`, 'utf8'),
-  readFile(`${root}author-billing-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n${authorBillingCss}\n`);
+await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n`);
 await writeFile(`${output}compact-control-center.js`, `${compactJs}\n${deviceControlJs}\n`);
-await writeFile(`${output}admin-lazy-features.js`, `${lazyJs}\n${authorBillingJs}\n`);
+
+// Chief AI chat is loaded only after AI Ops is explicitly opened. Strip its historical
+// secondary-module autoload list and document-wide observer from the served asset.
+const lazyJs = await readFile(`${output}admin-lazy-features.js`, 'utf8');
+const lazyOnDemandJs = lazyJs
+  .replace(/  const styles = \[[\s\S]*?\n  \];\n  const scripts = \[[\s\S]*?\n  \];/, '  const styles = [];\n  const scripts = [];')
+  .replace(/  const observer = new MutationObserver\(\(\) => \{\n    if \(document\.querySelector\('#aiOpsPanel'\)\) installChiefChat\(\);\n  \}\);\n  observer\.observe\(document\.documentElement, \{ childList:true, subtree:true \}\);\n\n/, '');
+await writeFile(`${output}admin-lazy-features.js`, lazyOnDemandJs);
 
 // Books finance, distribution, lifecycle pipeline and royalties share one secured lazy asset.
 // This keeps the first paint small while ensuring all Books operations load together.
@@ -95,29 +99,26 @@ for (const asset of htmlAssets) {
   }
   if (asset === 'control-center.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
-    // Pre-auth must stay a tiny, dependable login shell. Campus, Mission Control,
-    // Chief AI and other admin modules are loaded only after control-center.js has
-    // validated a real administrator session and revealed #app.
+    // Pre-auth stays tiny. After authentication only the shell and demand loader start;
+    // operational workspaces are fetched when their menu item is opened.
     html = html.replace(/\s*<link rel="stylesheet" href="(?:compact-control-center|campus-actions)\.css">\s*/g, '\n');
     html = html.replace(/\s*<script src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
     if (!html.includes('admin-authenticated-shell.js')) {
-      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260816-preauth-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-lazy-features.js mission-control-admin.css mission-control-admin.js admin-menu-layout.js ai-ops-admin.js ai-ops-admin.css release-control-admin.js release-control-admin.css work-admin.js work-admin.css marketing-ai-admin.js marketing-ai-admin.css"></script>\n</body>');
+      html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260819-true-lazy-1" defer data-ekodi-postauth="compact-control-center.js control-center-features.js campus-actions.js admin-menu-layout.js admin-demand-loader.js"></script>\n</body>');
     }
   }
   await writeFile(path, html);
 }
 
-// GitHub-backed System Timeline, governance System hub and System Health extend the authenticated
-// Deployments surface. System Health stays library-free and reads only daily aggregate rows.
-const [releaseCss, releaseJs, timelineCss, timelineJs, systemHealthCss, systemHealthJs] = await Promise.all([
+// GitHub-backed System Timeline stays with Deployments. System Health is a separate
+// Services enhancement so opening Deployments is not required to see traffic trends.
+const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
   readFile(`${output}release-control-admin.css`, 'utf8'),
   readFile(`${output}release-control-admin.js`, 'utf8'),
   readFile(`${root}system-timeline-admin.css`, 'utf8'),
   readFile(`${root}system-timeline-admin.js`, 'utf8'),
-  readFile(`${root}system-health-admin.css`, 'utf8'),
-  readFile(`${root}system-health-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n${systemHealthCss}\n`);
-await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n${systemHealthJs}\n`);
+await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
+await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, authenticated AI Governance Cockpit/Chief AI/Campus detail/Device Control/Creator billing modules, GitHub-backed System Timeline, lightweight System Health, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/Deployments/Work/MarketingAI/Creator billing/System Health, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
