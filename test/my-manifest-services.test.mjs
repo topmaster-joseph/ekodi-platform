@@ -33,9 +33,14 @@ test('A future active manifest service requires no hardcoded My app edit',async(
   assert.match(app,/const SERVICES=/);
 });
 
-test('Open SSO is declared centrally instead of being a My-only special case',()=>{
-  const open=EKODI_SERVICE_MANIFEST.services.filter(service=>service.openSso).map(service=>service.id).sort();
-  assert.deepEqual(open,['energy','social']);
+test('Open SSO is declared centrally and can grow without a My-only allowlist edit',()=>{
+  const open=EKODI_SERVICE_MANIFEST.services.filter(service=>service.openSso===true);
+  const ids=open.map(service=>service.id).sort();
+  for(const required of ['energy','messenger','social'])assert.ok(ids.includes(required),required);
+  for(const service of open){
+    assert.equal(service.sso,true,`${service.id} openSso requires central SSO`);
+    assert.notEqual(service.state,'planned',`${service.id} openSso cannot be planned`);
+  }
 });
 
 test('Planned services stay out of My until their manifest state becomes active',()=>{

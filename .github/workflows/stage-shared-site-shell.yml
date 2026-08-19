@@ -5,6 +5,7 @@ on:
     paths:
       - 'site-worker.js'
       - 'site-shell-worker.js'
+      - 'platform-router-worker.js'
       - 'ekodi-shell-injector.js'
       - 'trade.html'
       - 'hub.html'
@@ -36,11 +37,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate wrapper and build
+      - name: Validate shared router and build
         run: |
           set -euo pipefail
           node --check site-worker.js
           node --check site-shell-worker.js
+          node --check platform-router-worker.js
           node --check ekodi-shell-injector.js
           npm run build
           test -f dist/trade.html
@@ -51,7 +53,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy no-route staging Worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
-      - name: Verify Trade and Pay Shell without touching production routes
+      - name: Verify all shared platform hosts without touching production routes
         shell: bash
         run: |
           set -euo pipefail
@@ -65,8 +67,12 @@ jobs:
             grep -Fiq 'x-ekodi-shell: v1' /tmp/shared-stage.headers
           }
           for attempt in $(seq 1 18); do
-            if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' && verify_shell 'pay.ekodi.kr' 'EKODI Pay' && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay'; then
-              echo 'Shared-site Trade and Pay Shell staging verified.'
+            if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
+              && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
+              && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
+              && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
+              && verify_shell 'invest.ekodi.kr' 'EKODI Investment'; then
+              echo 'Shared-site Trade, Pay, Messenger and Investment staging verified.'
               exit 0
             fi
             sleep 4

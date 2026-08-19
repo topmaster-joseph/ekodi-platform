@@ -7,6 +7,8 @@ const realms={
   'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
   community:{name:'EKODI Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
+  messenger:{name:'EKODI Messenger',returnTo:'https://messenger.ekodi.kr/',open:true,kind:'messenger'},
+  invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ekodi.kr/'},
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ekodi.kr/'},
@@ -14,7 +16,18 @@ const realms={
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site');
-const config=realms[site]||realms['cgma-client'];
+async function manifestRealm(id){
+  if(!id)return null;
+  try{
+    const response=await fetch('https://shell.ekodi.kr/manifest.json',{cache:'no-store'});
+    if(!response.ok)return null;
+    const manifest=await response.json();
+    const service=manifest?.services?.find(item=>item.id===id);
+    if(!service||service.sso!==true||service.authMode!=='client')return null;
+    return {name:service.name||service.shortName||id,returnTo:service.url,open:true,kind:id};
+  }catch{return null}
+}
+const config=realms[site]||await manifestRealm(site)||realms['cgma-client'];
 function safeReturn(raw){
   const fallback=new URL(config.returnTo);
   if(!raw)return fallback.href;
@@ -31,7 +44,8 @@ const $=id=>document.getElementById(id);
 let routing=false;
 
 $('serviceName').textContent=config.name;
-$('serviceBadge').textContent=config.kind==='my'?'나의 에코디':config.kind==='work'?'일·인재':config.open?'커뮤니티':'Google 로그인';
+const badgeByKind={my:'나의 에코디',work:'일·인재',messenger:'메시지·AI',invest:'투자·분석'};
+$('serviceBadge').textContent=badgeByKind[config.kind]||(config.open?'EKODI 서비스':'Google 로그인');
 const introTitle=document.querySelector('.intro h1');
 const introCopy=document.querySelector('.intro p');
 if(config.kind==='my'){
@@ -42,6 +56,14 @@ if(config.kind==='my'){
   if(introTitle)introTitle.innerHTML='한 번 로그인하고,<br>내 일과 채용을 이어가세요.';
   if(introCopy)introCopy.textContent='EKODI 통합 로그인 상태를 재사용합니다. 로그인 후 Work Profile, 지원 현황, 사업장과 채용 기능을 안전하게 연결합니다.';
   $('signedOutCopy').textContent='EKODI 통합 로그인으로 Work에 연결합니다. 구직자와 사업주 역할과 권한은 로그인 후 자동으로 적용됩니다.';
+}else if(config.kind==='messenger'){
+  if(introTitle)introTitle.innerHTML='한 번 로그인하고,<br>내 대화를 모든 공간과 이어가세요.';
+  if(introCopy)introCopy.textContent='개인·교회·커뮤니티·사업장·프로젝트의 대화가 같은 EKODI Identity를 사용합니다. 현재 Space는 Shell과 함께 이어집니다.';
+  $('signedOutCopy').textContent='EKODI 통합 로그인으로 Messenger에 연결합니다. 대화 권한과 Workspace 접근권한은 서버의 실제 권한을 기준으로 적용됩니다.';
+}else if(config.kind==='invest'){
+  if(introTitle)introTitle.innerHTML='한 번 로그인하고,<br>내 투자 검토를 안전하게 이어가세요.';
+  if(introCopy)introCopy.textContent='개인·사업·조직·프로젝트 Space별 투자 검토 흐름을 같은 EKODI Identity로 연결합니다.';
+  $('signedOutCopy').textContent='EKODI Investment는 정보 정리와 의사결정 지원을 중심으로 하며 실제 거래 실행 권한을 로그인만으로 부여하지 않습니다.';
 }else if(config.open){
   if(introTitle)introTitle.innerHTML='한 번 로그인하고,<br>내 활동을 이어가세요.';
   if(introCopy)introCopy.textContent='EKODI 통합 로그인 상태를 재사용하고, 서비스별 역할과 권한은 로그인 후 자동으로 적용합니다.';

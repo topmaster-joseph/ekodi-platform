@@ -2,240 +2,49 @@
   "version": "1.0.0",
   "timezone": "Asia/Seoul",
   "purpose": "Allow EKODI Chief AI to observe seasonal and event context, propose visual refreshes, stage reversible changes, verify them, and report results without allowing seasonal decoration to override service identity, accessibility, reliability, or human authority.",
-  "principles": [
-    "service_identity_before_season",
-    "season_is_a_thin_visual_layer_not_a_redesign",
-    "accessibility_before_aesthetic_novelty",
-    "reversible_changes_before_irreversible_changes",
-    "staging_before_production",
-    "production_requires_post_release_verification",
-    "no_ai_provider_dependency_for_core_service",
-    "report_what_changed_and_how_to_roll_back"
-  ],
-  "decisionLoop": [
-    "observe_context",
-    "compare_current_surface",
-    "propose",
-    "classify_change",
-    "policy_check",
-    "generate_or_select_assets",
-    "stage",
-    "verify",
-    "promote_if_authorized",
-    "verify_public_host",
-    "report",
-    "measure",
-    "rollback_if_needed"
-  ],
-  "signals": {
-    "calendarSeason": true,
-    "localTimezone": "Asia/Seoul",
-    "liturgicalCalendar": "service_specific_and_human_maintained_when_used",
-    "organizationEvents": "optional",
-    "campaignCalendar": "optional",
-    "manualOverride": true,
-    "manualOverridePrecedence": "highest"
-  },
+  "principles": ["service_identity_before_season","season_is_a_thin_visual_layer_not_a_redesign","accessibility_before_aesthetic_novelty","reversible_changes_before_irreversible_changes","staging_before_production","production_requires_post_release_verification","no_ai_provider_dependency_for_core_service","report_what_changed_and_how_to_roll_back"],
+  "decisionLoop": ["observe_context","compare_current_surface","propose","classify_change","policy_check","generate_or_select_assets","stage","verify","promote_if_authorized","verify_public_host","report","measure","rollback_if_needed"],
+  "signals": {"calendarSeason":true,"localTimezone":"Asia/Seoul","liturgicalCalendar":"service_specific_and_human_maintained_when_used","organizationEvents":"optional","campaignCalendar":"optional","manualOverride":true,"manualOverridePrecedence":"highest"},
   "calendarSeasons": {
-    "spring": {"months": [3, 4, 5], "intent": "renewal, openness, gentle vitality"},
-    "summer": {"months": [6, 7, 8], "intent": "clarity, lightness, spacious energy"},
-    "autumn": {"months": [9, 10, 11], "intent": "maturity, harvest, warmth, reflection"},
-    "winter": {"months": [12, 1, 2], "intent": "stillness, warmth, focus, durable hope"}
+    "spring":{"months":[3,4,5],"intent":"renewal, openness, gentle vitality"},
+    "summer":{"months":[6,7,8],"intent":"clarity, lightness, spacious energy"},
+    "autumn":{"months":[9,10,11],"intent":"maturity, harvest, warmth, reflection"},
+    "winter":{"months":[12,1,2],"intent":"stillness, warmth, focus, durable hope"}
   },
   "changeClasses": {
-    "minor_reversible": {
-      "examples": [
-        "hero_background_asset",
-        "seasonal_illustration",
-        "ambient_background_texture",
-        "small_decorative_accent",
-        "seasonal_microcopy",
-        "non_structural_color_accent_within_service_dna"
-      ],
-      "autonomy": "guarded_auto_when_service_policy_allows",
-      "requirements": [
-        "staging_verified",
-        "responsive_verified",
-        "contrast_verified",
-        "performance_budget_passed",
-        "rollback_reference_recorded",
-        "post_release_public_host_verified"
-      ]
-    },
-    "material_brand_change": {
-      "examples": [
-        "logo_change",
-        "primary_brand_palette_change",
-        "headline_typography_change",
-        "navigation_structure_change",
-        "information_architecture_change",
-        "core_homepage_message_change",
-        "major_motion_system_change",
-        "service_visual_family_change"
-      ],
-      "autonomy": "human_gate",
-      "requirements": ["administrator_approval", "staging_verified", "rollback_plan"]
-    },
-    "forbidden_automatic": {
-      "examples": [
-        "remove_accessibility_controls",
-        "reduce_contrast_below_policy",
-        "hide_service_identity",
-        "replace_religious_or_organizational_identity_with_generic_seasonal_branding",
-        "publish_unverified_ai_generated_claims",
-        "production_change_without_rollback_path"
-      ],
-      "autonomy": "never"
-    }
+    "minor_reversible":{"examples":["hero_background_asset","seasonal_illustration","ambient_background_texture","small_decorative_accent","seasonal_microcopy","non_structural_color_accent_within_service_dna"],"autonomy":"guarded_auto_when_service_policy_allows","requirements":["staging_verified","responsive_verified","contrast_verified","performance_budget_passed","rollback_reference_recorded","post_release_public_host_verified"]},
+    "material_brand_change":{"examples":["logo_change","primary_brand_palette_change","headline_typography_change","navigation_structure_change","information_architecture_change","core_homepage_message_change","major_motion_system_change","service_visual_family_change"],"autonomy":"human_gate","requirements":["administrator_approval","staging_verified","rollback_plan"]},
+    "forbidden_automatic":{"examples":["remove_accessibility_controls","reduce_contrast_below_policy","hide_service_identity","replace_religious_or_organizational_identity_with_generic_seasonal_branding","publish_unverified_ai_generated_claims","production_change_without_rollback_path"],"autonomy":"never"}
   },
   "verification": {
-    "required": [
-      "desktop_layout",
-      "mobile_layout",
-      "keyboard_focus",
-      "text_contrast",
-      "text_over_image_readability",
-      "asset_loading",
-      "layout_shift",
-      "broken_links",
-      "service_identity_markers",
-      "public_host_smoke_test"
-    ],
-    "performance": {
-      "preferOptimizedAssets": true,
-      "avoidHeroAssetRegression": true,
-      "lazyLoadBelowFold": true
-    }
+    "required":["desktop_layout","mobile_layout","keyboard_focus","text_contrast","text_over_image_readability","asset_loading","layout_shift","broken_links","service_identity_markers","public_host_smoke_test"],
+    "performance":{"preferOptimizedAssets":true,"avoidHeroAssetRegression":true,"lazyLoadBelowFold":true}
   },
-  "reporting": {
-    "administratorReportRequired": true,
-    "fields": [
-      "reason",
-      "service",
-      "season_or_event",
-      "change_class",
-      "before_reference",
-      "after_reference",
-      "staging_result",
-      "production_result",
-      "public_host_result",
-      "rollback_reference",
-      "metric_watch",
-      "exceptions"
-    ],
-    "reportEvenWhenNoChange": false
-  },
+  "reporting": {"administratorReportRequired":true,"fields":["reason","service","season_or_event","change_class","before_reference","after_reference","staging_result","production_result","public_host_result","rollback_reference","metric_watch","exceptions"],"reportEvenWhenNoChange":false},
   "servicePolicies": {
-    "default": {
-      "seasonWeight": "low",
-      "eventWeight": "medium",
-      "autoStage": true,
-      "autoProductionMinor": false,
-      "notes": "Propose and stage minor reversible changes, but require administrator approval for production unless the service has an explicit exception below."
-    },
-    "church": {
-      "seasonWeight": "medium",
-      "eventWeight": "high",
-      "priorityContext": "liturgical_calendar_before_meteorological_season",
-      "autoStage": true,
-      "autoProductionMinor": true,
-      "protected": ["worship_readability", "scripture_prominence", "sacred_tone", "church_identity"],
-      "notes": "Seasonal imagery may support worship, but liturgical and ministry context outrank generic seasonal decoration."
-    },
-    "community": {
-      "seasonWeight": "high",
-      "eventWeight": "high",
-      "priorityContext": "participation_and_real_world_gathering",
-      "autoStage": true,
-      "autoProductionMinor": true,
-      "protected": ["relational_warmth", "participation_clarity", "community_identity"]
-    },
-    "social": {
-      "seasonWeight": "medium",
-      "eventWeight": "high",
-      "priorityContext": "current_stream_and_media_context",
-      "autoStage": true,
-      "autoProductionMinor": true
-    },
-    "biz": {
-      "seasonWeight": "low",
-      "eventWeight": "medium",
-      "priorityContext": "trust_and_business_clarity",
-      "autoStage": true,
-      "autoProductionMinor": false,
-      "notes": "Do not trade executive credibility for decorative seasonality."
-    },
-    "business": {
-      "seasonWeight": "low",
-      "eventWeight": "medium",
-      "priorityContext": "operational_clarity",
-      "autoStage": true,
-      "autoProductionMinor": false
-    },
-    "marketing": {
-      "seasonWeight": "high",
-      "eventWeight": "high",
-      "priorityContext": "campaign_relevance_without_deceptive_urgency",
-      "autoStage": true,
-      "autoProductionMinor": true
-    },
-    "mall": {
-      "seasonWeight": "high",
-      "eventWeight": "high",
-      "priorityContext": "discovery_and_merchandising",
-      "autoStage": true,
-      "autoProductionMinor": true
-    },
-    "books": {
-      "seasonWeight": "medium",
-      "eventWeight": "medium",
-      "priorityContext": "editorial_curation",
-      "autoStage": true,
-      "autoProductionMinor": false
-    },
-    "author": {
-      "seasonWeight": "low",
-      "eventWeight": "medium",
-      "priorityContext": "creative_focus",
-      "autoStage": true,
-      "autoProductionMinor": false
-    },
-    "lab": {
-      "seasonWeight": "low",
-      "eventWeight": "low",
-      "priorityContext": "evidence_and_research_clarity",
-      "autoStage": true,
-      "autoProductionMinor": false
-    },
-    "work": {
-      "seasonWeight": "low",
-      "eventWeight": "low",
-      "priorityContext": "task_efficiency",
-      "autoStage": true,
-      "autoProductionMinor": false
-    },
-    "energy": {
-      "seasonWeight": "medium",
-      "eventWeight": "medium",
-      "priorityContext": "energy_conditions_and_stewardship",
-      "autoStage": true,
-      "autoProductionMinor": false
-    },
-    "my": {
-      "seasonWeight": "medium",
-      "eventWeight": "medium",
-      "priorityContext": "personal_calm_and_orientation",
-      "autoStage": true,
-      "autoProductionMinor": true,
-      "notes": "Seasonal ambience may change automatically but navigation, workspace visibility, account state, and service access must not move."
-    },
-    "trade": {"seasonWeight": "low", "eventWeight": "medium", "autoStage": true, "autoProductionMinor": false},
-    "pay": {"seasonWeight": "none", "eventWeight": "low", "autoStage": false, "autoProductionMinor": false},
-    "insurance": {"seasonWeight": "low", "eventWeight": "low", "autoStage": true, "autoProductionMinor": false},
-    "edu": {"seasonWeight": "medium", "eventWeight": "high", "autoStage": true, "autoProductionMinor": false},
-    "media": {"seasonWeight": "medium", "eventWeight": "high", "autoStage": true, "autoProductionMinor": true},
-    "mail": {"seasonWeight": "none", "eventWeight": "low", "autoStage": false, "autoProductionMinor": false},
-    "live": {"seasonWeight": "low", "eventWeight": "high", "autoStage": true, "autoProductionMinor": false},
-    "cloud": {"seasonWeight": "none", "eventWeight": "low", "autoStage": false, "autoProductionMinor": false}
+    "default":{"seasonWeight":"low","eventWeight":"medium","autoStage":true,"autoProductionMinor":false,"notes":"Propose and stage minor reversible changes, but require administrator approval for production unless the service has an explicit exception below."},
+    "church":{"seasonWeight":"medium","eventWeight":"high","priorityContext":"liturgical_calendar_before_meteorological_season","autoStage":true,"autoProductionMinor":true,"protected":["worship_readability","scripture_prominence","sacred_tone","church_identity"],"notes":"Seasonal imagery may support worship, but liturgical and ministry context outrank generic seasonal decoration."},
+    "community":{"seasonWeight":"high","eventWeight":"high","priorityContext":"participation_and_real_world_gathering","autoStage":true,"autoProductionMinor":true,"protected":["relational_warmth","participation_clarity","community_identity"]},
+    "social":{"seasonWeight":"medium","eventWeight":"high","priorityContext":"current_stream_and_media_context","autoStage":true,"autoProductionMinor":true},
+    "messenger":{"seasonWeight":"low","eventWeight":"high","priorityContext":"conversation_clarity_and_urgent_context","autoStage":true,"autoProductionMinor":false,"protected":["message_readability","presence_state","handoff_clarity","workspace_context"],"notes":"Seasonal ambience may be staged, but threads, unread state, alerts and human handoff cues must remain visually stable."},
+    "biz":{"seasonWeight":"low","eventWeight":"medium","priorityContext":"trust_and_business_clarity","autoStage":true,"autoProductionMinor":false,"notes":"Do not trade executive credibility for decorative seasonality."},
+    "business":{"seasonWeight":"low","eventWeight":"medium","priorityContext":"operational_clarity","autoStage":true,"autoProductionMinor":false},
+    "marketing":{"seasonWeight":"high","eventWeight":"high","priorityContext":"campaign_relevance_without_deceptive_urgency","autoStage":true,"autoProductionMinor":true},
+    "mall":{"seasonWeight":"high","eventWeight":"high","priorityContext":"discovery_and_merchandising","autoStage":true,"autoProductionMinor":true},
+    "books":{"seasonWeight":"medium","eventWeight":"medium","priorityContext":"editorial_curation","autoStage":true,"autoProductionMinor":false},
+    "author":{"seasonWeight":"low","eventWeight":"medium","priorityContext":"creative_focus","autoStage":true,"autoProductionMinor":false},
+    "lab":{"seasonWeight":"low","eventWeight":"low","priorityContext":"evidence_and_research_clarity","autoStage":true,"autoProductionMinor":false},
+    "work":{"seasonWeight":"low","eventWeight":"low","priorityContext":"task_efficiency","autoStage":true,"autoProductionMinor":false},
+    "energy":{"seasonWeight":"medium","eventWeight":"medium","priorityContext":"energy_conditions_and_stewardship","autoStage":true,"autoProductionMinor":false},
+    "my":{"seasonWeight":"medium","eventWeight":"medium","priorityContext":"personal_calm_and_orientation","autoStage":true,"autoProductionMinor":true,"notes":"Seasonal ambience may change automatically but navigation, workspace visibility, account state, and service access must not move."},
+    "trade":{"seasonWeight":"low","eventWeight":"medium","autoStage":true,"autoProductionMinor":false},
+    "invest":{"seasonWeight":"none","eventWeight":"low","priorityContext":"evidence_risk_and_decision_clarity","autoStage":true,"autoProductionMinor":false,"protected":["risk_language","evidence_status","diligence_state","regulatory_scope"],"notes":"Do not use seasonal urgency, scarcity or celebratory styling to influence investment judgment."},
+    "pay":{"seasonWeight":"none","eventWeight":"low","autoStage":false,"autoProductionMinor":false},
+    "insurance":{"seasonWeight":"low","eventWeight":"low","autoStage":true,"autoProductionMinor":false},
+    "edu":{"seasonWeight":"medium","eventWeight":"high","autoStage":true,"autoProductionMinor":false},
+    "media":{"seasonWeight":"medium","eventWeight":"high","autoStage":true,"autoProductionMinor":true},
+    "mail":{"seasonWeight":"none","eventWeight":"low","autoStage":false,"autoProductionMinor":false},
+    "live":{"seasonWeight":"low","eventWeight":"high","autoStage":true,"autoProductionMinor":false},
+    "cloud":{"seasonWeight":"none","eventWeight":"low","autoStage":false,"autoProductionMinor":false}
   }
 }
