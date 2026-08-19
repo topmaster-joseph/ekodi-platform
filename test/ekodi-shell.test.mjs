@@ -54,6 +54,28 @@ test('My, Community and shared service proxy all consume the same shell contract
   assert.match(proxy,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
 });
 
+test('remaining Worker services use thin shared Shell adapters without moving domain logic',async()=>{
+  const [business,work,author,books,social,energy,site,workToml,socialToml,energyToml,siteToml]=await Promise.all([
+    read('business-live-worker.js'),read('work-shell-worker.js'),read('author-worker.js'),read('books-worker.js'),read('social-shell-worker.js'),read('energy-shell-worker.js'),read('site-shell-worker.js'),read('wrangler.work.toml'),read('wrangler.social.toml'),read('wrangler.energy.toml'),read('wrangler.site.toml')
+  ]);
+  assert.match(business,/injectEkodiShell\(await baseWorker\.fetch\(request,env,ctx\),'business'\)/);
+  assert.match(work,/workWorker\.fetch/); assert.match(work,/,'work'\)/);
+  assert.match(author,/injectEkodiShell\(await authorHtml\(response\), 'author'\)/);
+  assert.match(books,/injectEkodiShell\(await env\.ASSETS\.fetch\(request\), 'books'\)/);
+  assert.match(social,/socialWorker\.fetch/); assert.match(social,/,'social'\)/);
+  assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,'energy'\)/);
+  assert.match(site,/trade\.biz\.ekodi\.kr/); assert.match(site,/pay\.ekodi\.kr/); assert.match(site,/shellServiceForHost/);
+  assert.match(workToml,/main = "work-shell-worker\.js"/);
+  assert.match(socialToml,/main = "social-shell-worker\.js"/);
+  assert.match(energyToml,/main = "energy-shell-worker\.js"/);
+  assert.match(siteToml,/main = "site-shell-worker\.js"/);
+});
+
+test('all active services except the separately built Marketing UI have concrete Shell integration',()=>{
+  const pending=EKODI_SERVICE_MANIFEST.services.filter(service=>service.state!=='planned'&&service.shellIntegration==='pending').map(service=>service.id);
+  assert.deepEqual(pending,['marketing']);
+});
+
 test('shell service exposes public manifest and health without account data',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/\/manifest\.json/);
