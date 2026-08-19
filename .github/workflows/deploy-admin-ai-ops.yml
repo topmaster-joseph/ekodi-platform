@@ -8,19 +8,22 @@ on:
       - '.github/workflows/deploy-admin-ai-ops.yml'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
-      - 'mission-control-admin.js'
-      - 'mission-control-admin.css'
-      - 'system-timeline-admin.js'
-      - 'system-timeline-admin.css'
+      - 'admin-demand-loader.js'
+      - 'admin-lazy-features.js'
+      - 'admin-readable-command.js'
+      - 'admin-readable-command.css'
+      - 'system-health-admin.js'
+      - 'system-health-admin.css'
       - 'release-control-admin.js'
       - 'release-control-admin.css'
-      - 'admin-lazy-features.js'
       - 'site-worker.js'
+      - 'package.json'
       - 'scripts/build.mjs'
-      - 'config/ekodi-entrypoints.json'
-      - 'docs/architecture/ekodi-entrypoint-standard.md'
-      - 'test/mission-control-admin.test.mjs'
-      - 'test/ekodi-entrypoint-standard.test.mjs'
+      - 'scripts/admin-readable-command-postbuild.mjs'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'test/admin-readable-command.test.mjs'
+      - 'test/admin-true-lazy.test.mjs'
 
 permissions:
   contents: read
@@ -42,36 +45,37 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate repository, AI Ops, Governance Cockpit and ekodi.index contracts
+      - name: Validate flat AI Ops and orchestration contracts
         run: |
+          set -euo pipefail
+          node --check admin-demand-loader.js
+          node --check admin-lazy-features.js
+          node --check admin-readable-command.js
+          node --check ai-ops-admin.js
+          node --check release-control-admin.js
+          node --check system-health-admin.js
+          node --test test/admin-readable-command.test.mjs
+          node --test test/admin-true-lazy.test.mjs
           npm run check
-          node --check mission-control-admin.js
-          node --check system-timeline-admin.js
-          node --test test/mission-control-admin.test.mjs
-          node --test test/ekodi-entrypoint-standard.test.mjs
-          node --test test/ai-ops-admin.test.js
 
       - name: Build shared admin assets
         run: |
+          set -euo pipefail
           npm run build
           test -f dist/ai-ops-admin.js
           test -f dist/ai-ops-admin.css
+          test -f dist/admin-demand-loader.js
           test -f dist/admin-lazy-features.js
-          test -f dist/mission-control-admin.js
-          test -f dist/mission-control-admin.css
-          grep -Fq 'SITE FLEET' dist/ai-ops-admin.js
-          grep -Fq 'SELECTED SITE DETAIL' dist/ai-ops-admin.js
-          grep -Fq '.ai-fleet-scroll' dist/ai-ops-admin.css
-          grep -Fq '#aiOpsPanel .ai-chief-chat' dist/ai-ops-admin.css
-          grep -Fq 'CHIEF AI CONVERSATION' dist/admin-lazy-features.js
-          grep -Fq 'CHIEF AI BRIEF' dist/mission-control-admin.js
-          grep -Fq 'DECISION QUEUE' dist/mission-control-admin.js
-          grep -Fq 'AI COUNCIL' dist/mission-control-admin.js
-          grep -Fq 'governanceCommandBar' dist/mission-control-admin.js
-          grep -Fq 'governanceSystemHub' dist/release-control-admin.js
-          grep -Fq 'System Timeline' dist/release-control-admin.js
-          grep -Fq '.mission-dashboard' dist/mission-control-admin.css
-          grep -Fq 'mission-control-admin.css mission-control-admin.js' dist/control-center.html
+          test -f dist/compact-control-center.css
+          grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
+          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
+          grep -Fq 'deployments:' dist/admin-demand-loader.js
+          grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
+          grep -Fq '재구성' dist/admin-lazy-features.js
+          grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
+          grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/compact-control-center.css
+          grep -Fq '#aiOpsPanel .ai-ops-side' dist/compact-control-center.css
 
       - name: Verify Cloudflare credentials
         run: |
@@ -83,7 +87,7 @@ jobs:
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
-      - name: Verify production Admin Governance Cockpit boundary
+      - name: Verify production flat Admin AI Ops
         shell: bash
         run: |
           set -euo pipefail
@@ -94,7 +98,6 @@ jobs:
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
             grep -Fiq 'cache-control: no-store' /tmp/admin-headers || return 1
-            grep -Fq 'mission-control-admin.css mission-control-admin.js' /tmp/admin-body || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then return 1; fi
           }
 
@@ -110,19 +113,15 @@ jobs:
 
           for attempt in $(seq 1 18); do
             if verify_admin \
-              && verify_asset 'ai-ops-admin.js' 'SITE FLEET' \
-              && verify_asset 'ai-ops-admin.js' 'SELECTED SITE DETAIL' \
-              && verify_asset 'ai-ops-admin.css' '.ai-fleet-scroll' \
-              && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-chief-chat' \
-              && verify_asset 'admin-lazy-features.js' 'CHIEF AI CONVERSATION' \
-              && verify_asset 'mission-control-admin.js' 'CHIEF AI BRIEF' \
-              && verify_asset 'mission-control-admin.js' 'DECISION QUEUE' \
-              && verify_asset 'mission-control-admin.js' 'AI COUNCIL' \
-              && verify_asset 'mission-control-admin.css' '.mission-dashboard'; then
-              echo 'Admin AI Governance Cockpit, ekodi.index policy, status-first AI Ops and Chief AI command surface verified on production.'
+              && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" \
+              && verify_asset 'admin-lazy-features.js' "actionType:'ui.change_request'" \
+              && verify_asset 'admin-lazy-features.js' '재구성' \
+              && verify_asset 'compact-control-center.css' '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' \
+              && verify_asset 'compact-control-center.css' '#aiOpsPanel .ai-ops-side'; then
+              echo 'Production Admin verified: flat AI Ops, internal specialist routing, action-first Chief AI and guarded release.'
               exit 0
             fi
-            echo "Admin Governance Cockpit verification pending (attempt $attempt/18)."
+            echo "Admin flat AI Ops production verification pending (attempt $attempt/18)."
             sleep 4
           done
           exit 1
