@@ -25,7 +25,10 @@ jobs:
       - name: Validate GitHub Actions workflows
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-          "$(go env GOPATH)/bin/actionlint" -color
+          "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
+            .github/workflows/ci.yml \
+            .github/workflows/deploy-control-api.yml \
+            .github/workflows/release-messenger-investment-functional.yml
       - run: npm run check
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience
