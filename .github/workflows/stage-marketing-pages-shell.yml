@@ -69,27 +69,31 @@ jobs:
           branch="shell-pr-${{ github.event.pull_request.number }}"
           sha='${{ steps.source.outputs.sha }}'
           deploy_preview() {
-            project="$1"; dir="$2"
+            project="$1"; dir="$2"; env_name="$3"
+            log="/tmp/${project}.log"
             npx --yes wrangler@$WRANGLER_VERSION pages deploy "$dir" \
               --project-name "$project" \
               --branch "$branch" \
               --commit-hash "$sha" \
-              --commit-message "EKODI Marketing Shell preview $sha" | tee "/tmp/${project}.log"
+              --commit-message "EKODI Marketing Shell preview $sha" | tee "$log"
+            url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' "$log" | tail -1 || true)
+            test -n "$url"
+            echo "$env_name=$url" >> "$GITHUB_ENV"
+            echo "$project preview: $url"
           }
-          deploy_preview marketing-ai marketing-source/dist/marketing-ai
-          deploy_preview marketing-ai-jadam marketing-source/dist/marketing-ai/jadam
-          deploy_preview marketing-ai-pizzamaru marketing-source/dist/marketing-ai/pizzamaru
-          deploy_preview marketing-ai-yogurtpurple marketing-source/dist/marketing-ai/yogurtpurple
+          deploy_preview marketing-ai marketing-source/dist/marketing-ai MARKETING_PREVIEW
+          deploy_preview marketing-ai-jadam marketing-source/dist/marketing-ai/jadam JADAM_PREVIEW
+          deploy_preview marketing-ai-pizzamaru marketing-source/dist/marketing-ai/pizzamaru PIZZAMARU_PREVIEW
+          deploy_preview marketing-ai-yogurtpurple marketing-source/dist/marketing-ai/yogurtpurple YOGURT_PREVIEW
       - name: Verify preview deployments contain Shell and existing contracts
         shell: bash
         run: |
           set -euo pipefail
-          branch="shell-pr-${{ github.event.pull_request.number }}"
           for spec in \
-            "https://${branch}.marketing-ai.pages.dev/|마케팅AI" \
-            "https://${branch}.marketing-ai-jadam.pages.dev/|자담치킨" \
-            "https://${branch}.marketing-ai-pizzamaru.pages.dev/|피자마루" \
-            "https://${branch}.marketing-ai-yogurtpurple.pages.dev/|요거트퍼플"; do
+            "$MARKETING_PREVIEW|마케팅AI" \
+            "$JADAM_PREVIEW|자담치킨" \
+            "$PIZZAMARU_PREVIEW|피자마루" \
+            "$YOGURT_PREVIEW|요거트퍼플"; do
             url="${spec%%|*}"; needle="${spec#*|}"
             verified=0
             for attempt in $(seq 1 18); do
