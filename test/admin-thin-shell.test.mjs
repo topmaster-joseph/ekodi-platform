@@ -35,10 +35,14 @@ test('admin menu does not auto-open heavy workspaces on a normal login', async (
   assert.doesNotMatch(menu, /window\.setTimeout\(\(\) => applyExclusivePanel\(\), 180\)/);
 });
 
-test('build postprocess removes Campus and Device code from served compact assets', async () => {
+test('build postprocess removes Campus and Device code from compact assets and materializes standalone Device assets', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');
   assert.match(pkg.scripts.build, /admin-thin-postbuild\.mjs/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.js`/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
+  assert.match(postbuild, /Standalone Device Control JavaScript was not materialized/);
+  assert.match(postbuild, /Standalone Device Control CSS was not materialized/);
   assert.match(postbuild, /Device Control leaked into compact-control-center\.js/);
   assert.match(postbuild, /Campus constructor leaked into compact-control-center\.js/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
