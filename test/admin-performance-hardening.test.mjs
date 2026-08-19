@@ -28,8 +28,8 @@ test('authenticated startup is observer-free and isolates legacy console runtime
   assert.match(shell, /loadStyle\('control-center-finance\.css'\)/);
   assert.match(shell, /await loadScript\('control-center\.js'\)/);
   const critical = shell.match(/const criticalPostAuthScripts = \[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(asset.replaceAll('.', '\\.')));
-  for (const asset of ['control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(asset.replaceAll('.', '\\.')));
+  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
 });
 
 test('menu routing is event-driven with no persistent mutation observer', async () => {
