@@ -14,7 +14,7 @@
   const sidebar = document.querySelector('.sidebar');
   const loginForm = document.querySelector('#loginForm');
   const legacyLink = document.querySelector('.login-screen .legacy-link');
-  const loginLink = document.querySelector('#centralAdminLogin');
+  let loginLink = document.querySelector('#centralAdminLogin');
   const logoutButton = document.querySelector('#logoutButton');
   const menuButton = document.querySelector('#menuButton');
 
@@ -43,6 +43,18 @@
     if (scopeBadge) scopeBadge.textContent = scope;
     document.body.dataset.scope = scope.toLowerCase();
   }
+  function ensureCentralLoginFallback() {
+    if (!loginScreen || document.querySelector('#centralAdminLogin')) return;
+    const link=document.createElement('a');
+    link.id='centralAdminLogin';
+    link.className='primary-login';
+    link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+    link.textContent='Google 통합인증으로 계속';
+    const form=document.querySelector('#loginForm');
+    if (form) form.hidden=true;
+    loginScreen.append(link);
+    loginLink=link;
+  }
   function setProfile(email) {
     const safeEmail = String(email || '').trim();
     if (profileEmail) profileEmail.textContent = safeEmail;
@@ -65,6 +77,7 @@
     if (apiState) apiState.textContent = message || '통합인증 필요';
     safeSession.remove(TOKEN_KEY);
     safeSession.remove(EMAIL_KEY);
+    ensureCentralLoginFallback();
   }
   function acceptCentralHandoff() {
     const params = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -137,6 +150,7 @@
 
   mark('ekodi-admin-entry-start');
   acceptCentralHandoff();
+  ensureCentralLoginFallback();
   if (loginForm) loginForm.hidden = true;
   if (legacyLink) legacyLink.hidden = true;
   if (loginLink) loginLink.style.pointerEvents = 'auto';
