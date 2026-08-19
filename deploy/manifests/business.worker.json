@@ -4,7 +4,7 @@
     "name": "ekodi-business",
     "config": "wrangler.business.toml",
     "requests": [
-      {"url":"https://business.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI","BUSINESS OS","SAFE OPERATIONS"]},
+      {"url":"https://business.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI","BUSINESS OS","SAFE OPERATIONS","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v1"]},
       {"url":"https://business.ekodi.kr/health","statuses":[200],"expect":["ekodi-business-os","production-readonly-mvp","\"executionEnabled\":false","\"integrationsEnabled\":true"]},
       {"url":"https://business.ekodi.kr/api/workspaces","statuses":[200],"expect":["ekodibiz","jadam","자담치킨 목포대점"]}
     ]
