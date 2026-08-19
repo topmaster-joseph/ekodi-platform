@@ -1,0 +1,134 @@
+name: Release Messenger & Investment
+
+on:
+  pull_request:
+    paths:
+      - 'platform-router-worker.js'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'auth-site/auth-router.js'
+      - 'auth-site/client-auth.js'
+      - 'ekodi-service-manifest.js'
+      - 'config/ecosystem-services.json'
+      - 'scripts/ecosystem-registry.mjs'
+      - 'scripts/validate-ekodi-shell-adoption.mjs'
+      - '.github/workflows/release-messenger-investment.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-messenger-investment-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate automatic onboarding contracts
+        run: |
+          set -euo pipefail
+          node --check platform-router-worker.js
+          node --check auth-site/auth-router.js
+          node --check auth-site/client-auth.js
+          node scripts/validate-ekodi-shell-adoption.mjs
+          npm run build
+          grep -Fq 'data-service-id="messenger"' dist/index.html
+          grep -Fq 'data-service-id="invest"' dist/index.html
+          grep -Fq 'messenger.ekodi.kr' wrangler.site.toml
+          grep -Fq 'invest.ekodi.kr' wrangler.site.toml
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Build and deploy isolated staging
+        run: |
+          npm run build
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
+      - name: Verify Messenger and Investment staging surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify() {
+            host="$1"; marker="$2"
+            code=$(curl -sS -D /tmp/h -o /tmp/b -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
+            [[ "$code" == '200' ]] && grep -Fq "$marker" /tmp/b && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/b && grep -Fiq 'x-ekodi-shell: v1' /tmp/h
+          }
+          for attempt in $(seq 1 18); do
+            if verify 'messenger.ekodi.kr' 'EKODI Messenger' && verify 'invest.ekodi.kr' 'EKODI Investment'; then
+              echo 'Messenger and Investment isolated staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: >-
+      startsWith(github.event.pull_request.head.ref, 'release/messenger-investment-') &&
+      needs.staging.result == 'success'
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Build production assets
+        run: npm run build
+      - name: Attach new custom-domain triggers to current stable Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.site.toml
+      - name: Guarded 0-percent candidate, smoke, promote or auto-rollback
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+      - name: Verify real Messenger and Investment hostnames and central auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            m=$(curl -sS -D /tmp/mh -o /tmp/mb -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://messenger.ekodi.kr/' || true)
+            i=$(curl -sS -D /tmp/ih -o /tmp/ib -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://invest.ekodi.kr/' || true)
+            a=$(curl -sS -o /tmp/auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+            c=$(curl -sS -o /tmp/client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            if [[ "$m" == '200' && "$i" == '200' && "$a" == '200' && "$c" == '200' ]] \
+              && grep -Fq 'EKODI Messenger' /tmp/mb \
+              && grep -Fq 'EKODI Investment' /tmp/ib \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/mb \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/ib \
+              && grep -Fiq 'x-ekodi-shell: v1' /tmp/mh \
+              && grep -Fiq 'x-ekodi-shell: v1' /tmp/ih \
+              && grep -Fq "manifestRealm?.authMode==='client'" /tmp/auth-router.js \
+              && grep -Fq 'EKODI Messenger' /tmp/client-auth.js \
+              && grep -Fq 'EKODI Investment' /tmp/client-auth.js; then
+              echo 'Messenger and Investment production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
