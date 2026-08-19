@@ -47,7 +47,6 @@
       if (document.querySelector(`script[data-ekodi-postauth-script="${src}"],script[src="${src}"]`)) return resolve();
       const script = document.createElement('script');
       script.src = src;
-      script.defer = true;
       script.dataset.ekodiPostauthScript = src;
       script.addEventListener('load', resolve, { once:true });
       script.addEventListener('error', () => {
@@ -73,7 +72,6 @@
     const nav = document.querySelector('.sidebar nav');
     if (!nav || nav.dataset.mallFreeOpsIsolationBound) return;
     nav.dataset.mallFreeOpsIsolationBound = 'true';
-
     nav.addEventListener('click', event => {
       const item = event.target?.closest?.('.nav');
       if (!item) return;
@@ -85,26 +83,37 @@
       }
       deactivateMallFreeOps();
     }, true);
-
     window.addEventListener('hashchange', () => {
       if (location.hash !== '#mall-free-ops') deactivateMallFreeOps();
     });
-
     if (location.hash !== '#mall-free-ops') deactivateMallFreeOps();
+  }
+
+  function announceReady() {
+    document.documentElement.dataset.ekodiAdminReady = 'true';
+    try { performance.mark('ekodi-admin-ready'); } catch {}
+    window.dispatchEvent(new CustomEvent('ekodi-admin-ready'));
   }
 
   async function startAuthenticatedShell() {
     if (started || !authenticated()) return;
     started = true;
     document.documentElement.dataset.ekodiAdminReady = 'loading';
+
+    // Advanced legacy tools retain their previous runtime, but only on /legacy. The normal
+    // admin route never downloads/parses this historical operations bundle.
+    if (location.pathname.startsWith('/legacy')) {
+      loadStyle('control-center-ops.css');
+      loadStyle('control-center-finance.css');
+      await loadScript('control-center.js');
+      announceReady();
+      return;
+    }
+
     for (const href of postAuthStyles) loadStyle(href);
-
     await Promise.all(criticalPostAuthScripts.map(loadScript));
-
     installMallFreeOpsIsolation();
-    document.documentElement.dataset.ekodiAdminReady = 'true';
-    try { performance.mark('ekodi-admin-ready'); } catch {}
-    window.dispatchEvent(new CustomEvent('ekodi-admin-ready'));
+    announceReady();
   }
 
   function onStateChange() {
@@ -120,8 +129,5 @@
 
   keepLoginInteractive();
   onStateChange();
-  // The central handoff executes immediately before this loader in production HTML, so a
-  // persistent MutationObserver is unnecessary. This event covers any future in-page auth
-  // transition without keeping an observer alive for the whole admin session.
   window.addEventListener('ekodi-authenticated', onStateChange);
 })();
