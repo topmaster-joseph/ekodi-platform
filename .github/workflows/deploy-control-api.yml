@@ -242,4 +242,5 @@ jobs:
       - name: Record recovery point
         env:
           BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
-        run: echo "D1 recovery bookmark before Control release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "D1 recovery bookmark before Control release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
