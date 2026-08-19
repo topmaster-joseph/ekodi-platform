@@ -87,11 +87,10 @@
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
-      script.defer = true;
       script.dataset.ekodiDemandScript = src;
       script.addEventListener('load', () => resolve(script), { once:true });
       script.addEventListener('error', () => reject(new Error(`${src} 로딩 실패`)), { once:true });
-      document.body.append(script);
+      document.body.appendChild(script);
     }).catch(error => {
       loadedScripts.delete(src);
       throw error;
@@ -104,17 +103,20 @@
     const existing = document.querySelector(selector);
     if (existing) return Promise.resolve(existing);
     return new Promise((resolve, reject) => {
-      const started = Date.now();
-      const timer = window.setInterval(() => {
+      let settled = false;
+      const finish = (node, error) => {
+        if (settled) return;
+        settled = true;
+        observer.disconnect();
+        clearTimeout(timer);
+        if (error) reject(error); else resolve(node);
+      };
+      const observer = new MutationObserver(() => {
         const node = document.querySelector(selector);
-        if (node) {
-          clearInterval(timer);
-          resolve(node);
-        } else if (Date.now() - started >= timeout) {
-          clearInterval(timer);
-          reject(new Error('관리 메뉴 준비 시간이 초과되었습니다.'));
-        }
-      }, 60);
+        if (node) finish(node);
+      });
+      if (nav) observer.observe(nav, { childList:true, subtree:true });
+      const timer = window.setTimeout(() => finish(null, new Error('관리 메뉴 준비 시간이 초과되었습니다.')), timeout);
     });
   }
 
@@ -140,21 +142,36 @@
     nav.append(button);
   }
 
+  function onIdle(callback, timeout = 1200) {
+    if ('requestIdleCallback' in window) return window.requestIdleCallback(callback, { timeout });
+    return window.setTimeout(() => callback({ didTimeout:true, timeRemaining:() => 0 }), 180);
+  }
+
   function scheduleSecondary(key, feature) {
     if (secondaryScheduled.has(key)) return;
-    if (!(feature.secondaryStyles?.length || feature.secondaryScripts?.length)) return;
+    const styles = feature.secondaryStyles || [];
+    const scripts = feature.secondaryScripts || [];
+    if (!(styles.length || scripts.length)) return;
     secondaryScheduled.add(key);
-    const hydrate = async () => {
+
+    const begin = async () => {
       if (!authenticated()) return;
-      try {
-        await Promise.all((feature.secondaryStyles || []).map(loadStyle));
-        for (const src of feature.secondaryScripts || []) await loadScript(src);
-      } catch (error) {
-        console.warn(`[EKODI Admin] ${key} secondary load failed`, error);
+      if (document.visibilityState === 'hidden') {
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') scheduleStep(0); }, { once:true });
+        return;
       }
+      await Promise.all(styles.map(loadStyle));
+      scheduleStep(0);
     };
-    if ('requestIdleCallback' in window) window.requestIdleCallback(() => hydrate(), { timeout:1200 });
-    else window.setTimeout(hydrate, 350);
+    const scheduleStep = index => {
+      if (index >= scripts.length || !authenticated()) return;
+      onIdle(async () => {
+        try { await loadScript(scripts[index]); }
+        catch (error) { console.warn(`[EKODI Admin] ${key} secondary load failed`, error); }
+        scheduleStep(index + 1);
+      }, 1800);
+    };
+    onIdle(begin, 1500);
   }
 
   async function activateFeature(key, placeholder, auto = false) {
@@ -173,6 +190,7 @@
         for (const src of feature.scripts || []) await loadScript(src);
         const real = await waitFor(feature.real);
         if (placeholder?.isConnected) placeholder.remove();
+        window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
           queueMicrotask(() => real.click());
         }
@@ -215,15 +233,23 @@
 
   function bindBaseEnhancements() {
     const finance = nav?.querySelector('[data-section="finance"]');
-    if (finance && finance.dataset.authorBillingLazy !== 'true') {
-      finance.dataset.authorBillingLazy = 'true';
-      finance.addEventListener('click', () => {
-        Promise.all([
-          loadStyle('author-billing-admin.css'),
-          loadScript('author-billing-admin.js'),
-        ]).catch(error => console.warn('[EKODI Admin] Creator billing lazy load failed', error));
-      }, { once:true });
-    }
+    if (!finance || finance.dataset.financeDemandBound === 'true') return;
+    finance.dataset.financeDemandBound = 'true';
+    finance.addEventListener('click', () => {
+      if (finance.dataset.financeAssetsRequested === 'true') return;
+      finance.dataset.financeAssetsRequested = 'true';
+      Promise.all([
+        loadStyle('control-center-finance.css'),
+        loadStyle('author-billing-admin.css'),
+      ]).then(async () => {
+        // Attach the readiness consumer before Finance Monitor can emit the overview event.
+        await loadScript('author-billing-admin.js');
+        await loadScript('finance-monitor.js');
+      }).catch(error => {
+        finance.dataset.financeAssetsRequested = 'false';
+        console.warn('[EKODI Admin] Finance lazy load failed', error);
+      });
+    }, true);
   }
 
   function requestedFeature() {
@@ -236,6 +262,7 @@
     if (!authenticated() || !nav) return;
     Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
     bindBaseEnhancements();
+    window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
     if (requested) {
       const button = nav.querySelector(`[data-demand-feature="${requested}"]`);
@@ -243,12 +270,10 @@
     }
   }
 
-  function onAuthState() {
-    if (authenticated()) install();
-  }
-
   onAuthState();
+  function onAuthState() { if (authenticated()) install(); }
   window.addEventListener('ekodi-admin-ready', install);
+  window.addEventListener('ekodi-authenticated', onAuthState);
   window.addEventListener('hashchange', () => {
     const requested = requestedFeature();
     if (!requested || !authenticated()) return;
@@ -256,8 +281,9 @@
     if (button) activateFeature(requested, button, true);
   });
 
-  if (app) {
-    const observer = new MutationObserver(onAuthState);
-    observer.observe(app, { attributes:true, attributeFilter:['hidden'] });
-  }
+  window.EKODIAdminDemand = Object.freeze({
+    activate: key => activateFeature(key, nav?.querySelector(`[data-demand-feature="${key}"]`), false),
+    loadScript,
+    loadStyle,
+  });
 })();

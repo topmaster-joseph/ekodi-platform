@@ -29,8 +29,11 @@ test('Campus and Device Control are explicit demand-loaded features', async () =
 
 test('admin menu does not auto-open heavy workspaces on a normal login', async () => {
   const menu = await read('admin-menu-layout.js');
-  assert.match(menu, /No hash: deliberately keep the already-rendered lightweight overview shell/);
+  assert.match(menu, /let requestedSection = ''/);
+  assert.match(menu, /const initialHash = explicitHashSection\(\)/);
+  assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
   assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
+  assert.doesNotMatch(menu, /setInterval\(/);
   assert.doesNotMatch(menu, /window\.setTimeout\(\(\) => applyExclusivePanel\(\), 40\)/);
   assert.doesNotMatch(menu, /window\.setTimeout\(\(\) => applyExclusivePanel\(\), 180\)/);
 });

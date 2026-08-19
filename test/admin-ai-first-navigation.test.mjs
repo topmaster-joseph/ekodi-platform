@@ -21,9 +21,11 @@ test('retired Operations and Services explicitly route to demand-loaded AI Ops w
   assert.match(layout, /#ai-ops/);
   assert.match(layout, /\['#operations', 'overview'\]/);
   assert.match(layout, /\['#services', 'services'\]/);
-  assert.match(layout, /No hash: deliberately keep the already-rendered lightweight overview shell/);
-  assert.match(layout, /Do not auto-open Campus, AI Ops, Devices, Finance/);
+  assert.match(layout, /let requestedSection = ''/);
+  assert.match(layout, /const initialHash = explicitHashSection\(\)/);
+  assert.match(layout, /else if \(initialHash\) requestedSection = initialHash/);
   assert.doesNotMatch(layout, /preferAiOpsOnReady/);
+  assert.doesNotMatch(layout, /setInterval\(/);
 });
 
 test('Devices participates in the central panel router even though its menu is installed dynamically', () => {
