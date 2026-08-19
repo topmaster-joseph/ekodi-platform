@@ -1,5 +1,6 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
+import { handleConversationControl } from './conversation-control.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
@@ -82,6 +83,19 @@ export default {
       } catch (error) {
         console.error('System Health control error', error);
         return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR');
+      }
+    }
+
+    // EKODI Conversation Core keeps user chat, AI-first assistance and human takeover
+    // on the same shared control plane. It remains provider-independent and can degrade
+    // to free_assist without breaking the underlying messaging path.
+    if (path.startsWith('/api/conversations') || path.startsWith('/api/control/conversations')) {
+      try {
+        const response = await handleConversationControl(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Conversation Control error', error);
+        return errorResponse('EKODI 대화 처리 중 오류가 발생했습니다.', 'CONVERSATION_CONTROL_ERROR');
       }
     }
 
