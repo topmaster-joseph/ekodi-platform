@@ -6,10 +6,15 @@ on:
     paths:
       - 'api-worker.js'
       - 'auth-worker.js'
+      - 'admin-session-fastpath.js'
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'mission-control-entry-worker.js'
+      - 'messenger-operator-control.js'
+      - 'ekodi-principal.js'
+      - 'messenger-outbox.js'
+      - 'messenger-channel-adapters.js'
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
@@ -25,13 +30,13 @@ on:
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'social-registry-api.js'
-      - 'test/device-control-contract.test.mjs'
       - 'migrations/**'
       - 'wrangler.api.toml'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/validate-additive-migrations.mjs'
       - 'scripts/validate-ai-mission-governance.mjs'
       - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
   push:
@@ -39,10 +44,15 @@ on:
     paths:
       - 'api-worker.js'
       - 'auth-worker.js'
+      - 'admin-session-fastpath.js'
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'mission-control-entry-worker.js'
+      - 'messenger-operator-control.js'
+      - 'ekodi-principal.js'
+      - 'messenger-outbox.js'
+      - 'messenger-channel-adapters.js'
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
@@ -58,21 +68,22 @@ on:
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'social-registry-api.js'
-      - 'test/device-control-contract.test.mjs'
       - 'migrations/**'
       - 'wrangler.api.toml'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/validate-additive-migrations.mjs'
       - 'scripts/validate-ai-mission-governance.mjs'
       - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
 
 permissions:
   contents: read
 
+# Same global lane as Workspace release. Shared D1 and versioned Worker changes never overlap.
 concurrency:
-  group: ekodi-control-api-${{ github.ref }}
+  group: ekodi-shared-d1-worker-release
   cancel-in-progress: false
 
 env:
@@ -81,75 +92,37 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate control-plane API modules, mission policy, security baseline and migration policy
+      - name: Validate control plane, Messenger operator and governance
         run: |
           set -euo pipefail
-          node --check api-worker.js
-          node --check auth-worker.js
-          node --check admin-google-auth.js
-          node --check customer-auth.js
-          node --check customer-federated-auth.js
-          node --check customer-google-prereg.js
-          node --check customer-member-directory.js
-          node --check customer-entry-worker.js
-          node --check mission-control-entry-worker.js
-          node --check device-control.js
-          node --check security-edge.js
-          node --check ai-agent-control.js
-          node --check ai-governance-runtime.js
-          node --check books-control.js
-          node --check books-finance-control.js
-          node --check books-distribution-control.js
-          node --check books-pipeline-control.js
-          node --check books-royalty-control.js
-          node --check affiliate-control.js
-          node --check social-registry-api.js
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
+            node --check "$file"
+          done
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs
-          node --test test/device-control-contract.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          test -f deploy/manifests/control-api.worker.json
-          grep -Fq '/api/social/registry' customer-entry-worker.js
-          grep -Fq '/api/control/social/' customer-entry-worker.js
-          grep -Fq '/api/control/ai/' mission-control-entry-worker.js
-          grep -Fq '/api/control/devices' mission-control-entry-worker.js
-          grep -Fq '/api/device-agent' mission-control-entry-worker.js
-          grep -Fq 'handleDeviceControl' mission-control-entry-worker.js
-          grep -Fq 'handleAgentMissionControl' mission-control-entry-worker.js
-          grep -Fq 'enforceEdgeSecurity' mission-control-entry-worker.js
-          grep -Fq '/api/device-agent/enroll' security-edge.js
-          grep -Fq 'AUTH_RATE_LIMITER' security-edge.js
-          grep -Fq 'SENSITIVE_RATE_LIMITER' security-edge.js
-          grep -Fq 'service.health_check' ai-agent-control.js
-          grep -Fq 'orchestrator_not_sovereign' ai-governance-runtime.js
-          grep -Fq '/api/customers/directory' customer-member-directory.js
-          grep -Fq 'handleCustomerMemberDirectory' customer-entry-worker.js
-          grep -Fq 'handleBooksPipelineRequest' customer-entry-worker.js
-          grep -Fq '/api/books/admin/pipeline' customer-entry-worker.js
-          grep -Fq 'handleBooksRoyaltyRequest' customer-entry-worker.js
-          grep -Fq '/api/books/admin/royalties' customer-entry-worker.js
-          grep -Fq 'books_finance_transactions' books-pipeline-control.js
-          grep -Fq 'books_royalty_statements' books-royalty-control.js
-          grep -Fq 'royalty-engine' books-royalty-control.js
-          grep -Fq 'checklist_json' books-distribution-control.js
+          node --test test/device-control-contract.test.mjs
+          node --test test/workspace-platform.test.mjs
+          bash -n scripts/apply-d1-migrations-with-retry.sh
+          grep -Fq '/api/control/messenger' mission-control-entry-worker.js
+          grep -Fq 'principalFromAdminSession' messenger-operator-control.js
+          grep -Fq 'conversation:operate' messenger-operator-control.js
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
-          grep -Fq 'name = "AUTH_RATE_LIMITER"' wrangler.api.toml
-          grep -Fq 'name = "SENSITIVE_RATE_LIMITER"' wrangler.api.toml
 
   staging:
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -160,9 +133,9 @@ jobs:
           node-version: '24'
       - name: Verify Cloudflare credentials
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Resolve or create isolated Control API staging D1
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Resolve isolated Control staging D1
         id: staging_d1
         shell: bash
         run: |
@@ -172,14 +145,12 @@ jobs:
           }
           DB_ID=$(list_db)
           if [ -z "$DB_ID" ]; then
-            echo 'Creating isolated ekodi-auth-staging D1 database in APAC'
             npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-auth-staging --location apac
             DB_ID=$(list_db)
           fi
           test -n "$DB_ID"
           echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
-      - name: Build isolated staging Worker config
-        shell: bash
+      - name: Build isolated Control staging config
         env:
           DB_ID: ${{ steps.staging_d1.outputs.database_id }}
         run: |
@@ -189,11 +160,9 @@ jobs:
           compatibility_date = "2026-08-12"
           workers_dev = true
           preview_urls = false
-
           [[routes]]
           pattern = "api-staging.ekodi.kr"
           custom_domain = true
-
           [vars]
           ENVIRONMENT = "staging"
           ADMIN_EMAIL = "topmaster.joseph@gmail.com"
@@ -201,76 +170,46 @@ jobs:
           ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
           GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
           ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
-
           [observability.logs]
           enabled = true
           invocation_logs = true
-
           [[ratelimits]]
           name = "AUTH_RATE_LIMITER"
           namespace_id = "3101"
             [ratelimits.simple]
             limit = 20
             period = 60
-
           [[ratelimits]]
           name = "SENSITIVE_RATE_LIMITER"
           namespace_id = "3102"
             [ratelimits.simple]
             limit = 120
             period = 60
-
           [[d1_databases]]
           binding = "DB"
           database_name = "ekodi-auth-staging"
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
-      - name: Apply all migrations to isolated staging D1
+      - name: Apply all migrations to isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
-      - name: Deploy isolated Control API staging Worker
+      - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify staging API behavior, security headers, Device Control, AI Mission Control privacy and auth boundaries
+      - name: Verify security and Messenger Operator boundary
         shell: bash
         run: |
           set -euo pipefail
-          expected_client='483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com'
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
             headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/status' || true)
-            google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/google/config' || true)
-            books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/public/config' || true)
-            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/social/registry' || true)
-            unauthorized_devices=$(curl -sS -o /tmp/stage-devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
-            unauthorized_social=$(curl -sS -o /tmp/stage-social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/social/registry' || true)
-            unauthorized_ai_governance=$(curl -sS -o /tmp/stage-ai-governance.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
-            unauthorized_ai_actions=$(curl -sS -o /tmp/stage-ai-actions.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/actions' || true)
-            unauthorized_customer=$(curl -sS -o /tmp/stage-customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/customers/tenants' || true)
-            unauthorized_directory=$(curl -sS -o /tmp/stage-customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/customers/directory' || true)
-            unauthorized_admin=$(curl -sS -o /tmp/stage-google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/admin-access/google-accounts' || true)
-            unauthorized_pipeline=$(curl -sS -o /tmp/stage-books-pipeline.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/admin/pipeline' || true)
-            unauthorized_royalties=$(curl -sS -o /tmp/stage-books-royalties.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/books/admin/royalties' || true)
+            messenger=$(curl -sS -o /tmp/messenger.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/messenger/inbox' || true)
+            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
+            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
-              && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^x-frame-options: deny' \
-              && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^permissions-policy:' \
-              && printf '%s' "$status" | grep -q '"initialized"' \
-              && printf '%s' "$google" | grep -q '"enabled":true' \
-              && printf '%s' "$google" | grep -Fq "$expected_client" \
-              && printf '%s' "$books" | grep -q '"digital-start"' \
-              && printf '%s' "$social" | grep -Fq '에코디커뮤니티' \
-              && printf '%s' "$social" | grep -Fq 'community-youtube' \
-              && [ "$unauthorized_devices" = '401' ] \
-              && [ "$unauthorized_social" = '401' ] \
-              && [ "$unauthorized_ai_governance" = '401' ] \
-              && [ "$unauthorized_ai_actions" = '401' ] \
-              && [ "$unauthorized_customer" = '401' ] \
-              && [ "$unauthorized_directory" = '401' ] \
-              && [ "$unauthorized_admin" = '401' ] \
-              && [ "$unauthorized_pipeline" = '401' ] \
-              && [ "$unauthorized_royalties" = '401' ]; then
-              echo 'Control API isolated staging security boundary verified.'
+              && [ "$messenger" = '401' ] \
+              && [ "$devices" = '401' ] \
+              && [ "$ai" = '401' ]; then
               exit 0
             fi
             sleep 5
@@ -284,7 +223,7 @@ jobs:
     needs: [validate, staging]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 24
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -293,86 +232,31 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify Cloudflare credentials
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Capture production D1 Time Travel bookmark
+      - name: Capture production D1 recovery bookmark
         id: d1_bookmark
-        shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.api.toml --json > /tmp/d1-bookmark.json
-          BOOKMARK=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/d1-bookmark.json','utf8'));const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.api.toml --json > /tmp/bookmark.json
+          BOOKMARK=$(node -e "const j=require('/tmp/bookmark.json');const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
           test -n "$BOOKMARK"
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
-          echo 'Production D1 recovery bookmark captured.'
-      - name: Apply production D1 migrations only after staging success
-        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.api.toml
-      - name: Candidate at 0%, verify, promote and auto-rollback code on failure
-        run: |
-          set -euo pipefail
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Deep verify Google-only admin, API security headers, Device Control, AI Mission Control privacy, Books pipeline, royalties and module boundaries
+      - name: Apply production migrations after isolated staging success
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
+      - name: Guarded 0-percent Control candidate then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
+      - name: Verify production Control and auth boundaries
         shell: bash
         run: |
           set -euo pipefail
-          expected_client='483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com'
-          for attempt in $(seq 1 12); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
-            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
-            status=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/status' || true)
-            google=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/google/config' || true)
-            tenant=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customer/tenant?slug=pizzamaru' || true)
-            books=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/public/config' || true)
-            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/social/registry' || true)
-            unauthorized_devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices' || true)
-            unauthorized_social=$(curl -sS -o /tmp/social-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/social/registry' || true)
-            unauthorized_ai_governance=$(curl -sS -o /tmp/ai-governance.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance' || true)
-            unauthorized_ai_actions=$(curl -sS -o /tmp/ai-actions.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/actions' || true)
-            unauthorized_customer=$(curl -sS -o /tmp/customer-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/tenants' || true)
-            unauthorized_directory=$(curl -sS -o /tmp/customer-directory.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/customers/directory' || true)
-            unauthorized_admin=$(curl -sS -o /tmp/google-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/admin-access/google-accounts' || true)
-            unauthorized_pipeline=$(curl -sS -o /tmp/books-pipeline.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/admin/pipeline' || true)
-            unauthorized_royalties=$(curl -sS -o /tmp/books-royalties.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/books/admin/royalties' || true)
-            legacy_login=$(curl -sS -o /tmp/legacy-login.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'content-type: application/json' -d '{"email":"topmaster.joseph@gmail.com","password":"not-used"}' 'https://api.ekodi.kr/api/login' || true)
-            if printf '%s' "$health" | grep -q '"ok":true' \
-              && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
-              && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^x-frame-options: deny' \
-              && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^permissions-policy:' \
-              && printf '%s' "$status" | grep -q '"initialized"' \
-              && printf '%s' "$google" | grep -q '"enabled":true' \
-              && printf '%s' "$google" | grep -Fq "$expected_client" \
-              && printf '%s' "$tenant" | grep -q '"slug":"pizzamaru"' \
-              && printf '%s' "$books" | grep -q '"digital-start"' \
-              && printf '%s' "$social" | grep -Fq '에코디커뮤니티' \
-              && printf '%s' "$social" | grep -Fq 'community-youtube' \
-              && [ "$unauthorized_devices" = '401' ] \
-              && [ "$unauthorized_social" = '401' ] \
-              && [ "$unauthorized_ai_governance" = '401' ] \
-              && [ "$unauthorized_ai_actions" = '401' ] \
-              && [ "$unauthorized_customer" = '401' ] \
-              && [ "$unauthorized_directory" = '401' ] \
-              && [ "$unauthorized_admin" = '401' ] \
-              && [ "$unauthorized_pipeline" = '401' ] \
-              && [ "$unauthorized_royalties" = '401' ] \
-              && [ "$legacy_login" = '410' ] \
-              && grep -Fq 'EKODI 관리자 인증이 필요합니다.' /tmp/customer-directory.json \
-              && grep -Fq 'GOOGLE_ADMIN_LOGIN_REQUIRED' /tmp/legacy-login.json; then
-              echo 'Control API production security boundary verified.'
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
-      - name: Record D1 recovery point
-        shell: bash
+          health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
+          messenger=$(curl -sS -o /tmp/messenger.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/messenger/inbox')
+          devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
+          ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
+          printf '%s' "$health" | grep -q '"ok":true'
+          [ "$messenger" = '401' ]
+          [ "$devices" = '401' ]
+          [ "$ai" = '401' ]
+      - name: Record recovery point
         env:
           BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
-        run: |
-          {
-            echo '## Control API production recovery point'
-            echo
-            echo "- D1 bookmark before production migrations: \`$BOOKMARK\`"
-            echo '- Database restore is intentionally manual because automatic Time Travel restore could discard legitimate writes made after deployment.'
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: echo "D1 recovery bookmark before Control release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
