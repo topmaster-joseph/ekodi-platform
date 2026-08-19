@@ -1,5 +1,5 @@
 name = "ekodi-shared-site-staging"
-main = "site-shell-worker.js"
+main = "platform-router-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
