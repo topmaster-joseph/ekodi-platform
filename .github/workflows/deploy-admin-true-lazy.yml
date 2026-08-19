@@ -8,6 +8,8 @@ on:
       - 'admin-demand-loader.js'
       - 'admin-lazy-features.js'
       - 'admin-menu-layout.js'
+      - 'device-control-admin.js'
+      - 'device-control-admin.css'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
       - 'mission-control-admin.js'
@@ -24,9 +26,11 @@ on:
       - 'system-health-admin.css'
       - 'site-worker.js'
       - 'scripts/build.mjs'
+      - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/admin-true-lazy.test.mjs'
+      - 'test/admin-thin-shell.test.mjs'
   push:
     branches: [main]
     paths:
@@ -35,6 +39,8 @@ on:
       - 'admin-demand-loader.js'
       - 'admin-lazy-features.js'
       - 'admin-menu-layout.js'
+      - 'device-control-admin.js'
+      - 'device-control-admin.css'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
       - 'mission-control-admin.js'
@@ -51,9 +57,11 @@ on:
       - 'system-health-admin.css'
       - 'site-worker.js'
       - 'scripts/build.mjs'
+      - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/admin-true-lazy.test.mjs'
+      - 'test/admin-thin-shell.test.mjs'
 
 permissions:
   contents: read
@@ -78,6 +86,7 @@ jobs:
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
           node --check admin-lazy-features.js
+          node --check device-control-admin.js
           node --check ai-ops-admin.js
           node --check mission-control-admin.js
           node --check release-control-admin.js
@@ -86,23 +95,33 @@ jobs:
           node --check author-billing-admin.js
           node --check system-health-admin.js
           node --check site-worker.js
+          node --check scripts/admin-thin-postbuild.mjs
           node --check scripts/guarded-worker-release.mjs
           node --test test/admin-true-lazy.test.mjs
+          node --test test/admin-thin-shell.test.mjs
           npm run build
           test -f dist/admin-authenticated-shell.js
           test -f dist/admin-demand-loader.js
+          test -f dist/device-control-admin.js
+          test -f dist/device-control-admin.css
           test -f dist/ai-ops-admin.js
           test -f dist/mission-control-admin.js
           test -f dist/release-control-admin.js
           test -f dist/work-admin.js
           test -f dist/marketing-ai-admin.js
           test -f dist/system-health-admin.js
-          grep -Fq 'admin-demand-loader.js' dist/control-center.html
+          grep -Fq '20260819-thin-shell-2' dist/control-center.html
+          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
           ! grep -Fq '<script src="ai-ops-admin.js"' dist/control-center.html
           ! grep -Fq '<script src="release-control-admin.js"' dist/control-center.html
           ! grep -Fq '<script src="work-admin.js"' dist/control-center.html
           ! grep -Fq '<script src="marketing-ai-admin.js"' dist/control-center.html
+          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
+          ! grep -Fq 'CAMPUS_SERVICES' dist/compact-control-center.js
+          grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
+          grep -Fq '.ekodi-device-panel' dist/device-control-admin.css
           grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['work-admin.js']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
           grep -Fq "secondaryScripts: ['mission-control-admin.js', 'release-control-admin.js', 'admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
@@ -130,35 +149,46 @@ jobs:
         run: |
           set -euo pipefail
           node --test test/admin-true-lazy.test.mjs
+          node --test test/admin-thin-shell.test.mjs
           npm run build
-          grep -Fq 'admin-demand-loader.js' dist/control-center.html
+          grep -Fq '20260819-thin-shell-2' dist/control-center.html
+          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
           ! grep -Fq '<script src="ai-ops-admin.js"' dist/control-center.html
+          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
+          grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
           grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify production lightweight admin shell and demand assets
+      - name: Verify production thin admin shell and demand assets
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
             demand_code=$(curl -sS -D /tmp/demand-headers -o /tmp/demand-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-demand-loader.js' || true)
+            device_js_code=$(curl -sS -D /tmp/device-js-headers -o /tmp/device-js-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/device-control-admin.js' || true)
+            device_css_code=$(curl -sS -D /tmp/device-css-headers -o /tmp/device-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/device-control-admin.css' || true)
             aiops_code=$(curl -sS -D /tmp/aiops-headers -o /tmp/aiops-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/ai-ops-admin.js' || true)
-            if [[ "$root_code" == '200' && "$demand_code" == '200' && "$aiops_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$demand_code" == '200' && "$device_js_code" == '200' && "$device_css_code" == '200' && "$aiops_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers \
-              && grep -Fq 'admin-demand-loader.js' /tmp/admin-body \
+              && grep -Fq '20260819-thin-shell-2' /tmp/admin-body \
+              && grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin-body \
               && ! grep -Fq '<script src="ai-ops-admin.js"' /tmp/admin-body \
               && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/demand-headers \
               && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/aiops-headers \
               && grep -Fq "scripts: ['ai-ops-admin.js']" /tmp/demand-body \
+              && grep -Fq "scripts: ['device-control-admin.js']" /tmp/demand-body \
+              && grep -Fq 'WINDOWS_AGENT_URL' /tmp/device-js-body \
+              && grep -Fq '.ekodi-device-panel' /tmp/device-css-body \
               && grep -Fq 'Decision Gate' /tmp/aiops-body; then
-              echo 'Production true-lazy admin verified.'
+              echo 'Production thin-shell admin verified with standalone Device demand assets.'
               exit 0
             fi
-            echo "Production true-lazy verification pending (attempt $attempt/18)."
+            echo "Production thin-shell verification pending (attempt $attempt/18)."
             sleep 4
           done
-          echo 'Production true-lazy verification failed.'
+          echo 'Production thin-shell verification failed.'
           exit 1
