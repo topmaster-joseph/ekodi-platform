@@ -224,59 +224,15 @@ function adminApexAuthUrl() {
   return target.toString();
 }
 
-async function fetchStatic(env, request, pathname) {
-  return env.ASSETS.fetch(assetRequest(request, pathname));
-}
-
-async function serveAdminAsset(env, request, pathname) {
-  if (!ADMIN_ASSETS.has(pathname)) return null;
-  const response = await fetchStatic(env, request, pathname);
-  if (!response.ok) return response;
-  return withHostSecurity(response, ADMIN_CSP, 'private, max-age=300', 'admin-asset');
-}
-
-async function serveAuthAsset(env, request, pathname) {
-  if (!AUTH_ASSETS.has(pathname)) return null;
-  const response = await fetchStatic(env, request, pathname);
-  if (!response.ok) return response;
-  const cacheControl = AUTH_CRITICAL_ASSETS.has(pathname) ? 'no-store' : 'private, max-age=300';
-  return withHostSecurity(response, AUTH_CSP, cacheControl, 'central-auth-asset');
-}
-
-async function serveAdmin(env, request, url) {
-  const asset = ADMIN_ASSETS.has(url.pathname) ? await serveAdminAsset(env, request, url.pathname) : null;
-  if (asset) return asset;
-  if (LEGACY_ALIASES.has(url.pathname)) {
-    const response = await fetchStatic(env, request, '/admin');
-    return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-legacy');
-  }
-  if (ADMIN_ALIASES.has(url.pathname)) {
-    const response = await fetchStatic(env, request, '/control-center');
-    return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
-  }
-  return new Response('Not Found', { status: 404 });
-}
-
-async function serveAuth(env, request, url) {
-  if (url.pathname === '/' || url.pathname === '/index.html') {
-    const response = await fetchStatic(env, request, '/auth-center');
-    return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
-  }
-  const asset = await serveAuthAsset(env, request, url.pathname);
-  return asset || new Response('Not Found', { status: 404 });
-}
-
-async function serveHub(env, request, host) {
-  const response = await fetchStatic(env, request, '/hub');
-  const secured = withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'service-hub');
-  secured.headers.set('X-EKODI-Hub-Host', host);
-  return secured;
-}
-
-async function serveTrade(env, request, url) {
-  if (url.pathname !== '/' && url.pathname !== '/index.html') return new Response('Not Found', { status: 404 });
-  const response = await fetchStatic(env, request, '/trade');
-  return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=300', 'trade-canonical');
+function rewriteAdminApexLogin(response) {
+  const loginUrl = adminApexAuthUrl();
+  return new HTMLRewriter()
+    .on('#centralAdminLogin', {
+      element(element) {
+        element.setAttribute('href', loginUrl);
+      },
+    })
+    .transform(response);
 }
 
 export default {
@@ -284,22 +240,75 @@ export default {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
 
-    if (host === PUBLIC_HOST || PUBLIC_ALIAS_HOSTS.has(host)) {
-      if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) return Response.redirect(adminApexAuthUrl(), 302);
-      const asset = PUBLIC_ASSETS.has(url.pathname) ? await fetchStatic(env, request, url.pathname) : null;
-      if (asset) return withHostSecurity(asset, PUBLIC_CSP, 'public, max-age=300', 'public-asset');
-      if (url.pathname !== '/' && url.pathname !== '/index.html') return new Response('Not Found', { status: 404 });
-      if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
-      const response = await fetchStatic(env, request, '/');
-      return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=300', 'public-home');
+    if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
+
+    if (host === PUBLIC_HOST) {
+      if (url.pathname === '/' || url.pathname === '/index.html') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/'));
+        return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+      }
+      if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        const rewritten = rewriteAdminApexLogin(response);
+        return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-fallback');
+      }
+      if (ADMIN_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-fallback-asset');
+      }
+      if (PUBLIC_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-asset');
+      }
     }
 
-    if (ADMIN_HOSTS.has(host)) return serveAdmin(env, request, url);
-    if (host === AUTH_HOST) return serveAuth(env, request, url);
-    if (HUB_HOSTS.has(host)) return serveHub(env, request, host);
     if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
-    if (host === TRADE_CANONICAL_HOST) return serveTrade(env, request, url);
 
-    return new Response('Unknown host', { status: 404 });
+    if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
+      const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
+      return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'trade');
+    }
+
+    if (ADMIN_HOSTS.has(host)) {
+      if (url.pathname === '/auth/start') {
+        if (!['GET', 'HEAD'].includes(request.method)) {
+          const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
+          applyBaseSecurityHeaders(response.headers);
+          return response;
+        }
+        return adminAuthRedirect(url.searchParams.get('return_to'));
+      }
+      if (ADMIN_ALIASES.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+      }
+      if (LEGACY_ALIASES.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+      }
+      if (ADMIN_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        return withHostSecurity(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-asset');
+      }
+    }
+
+    if (host === AUTH_HOST) {
+      if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
+        return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
+      }
+      if (AUTH_ASSETS.has(url.pathname)) {
+        const response = await env.ASSETS.fetch(request);
+        const cacheControl = AUTH_CRITICAL_ASSETS.has(url.pathname) ? 'no-store' : 'public, max-age=300';
+        return withHostSecurity(response, AUTH_CSP, cacheControl, 'central-auth-asset');
+      }
+    }
+
+    if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
+      const response = await env.ASSETS.fetch(assetRequest(request, '/hub'));
+      return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'hub');
+    }
+
+    return env.ASSETS.fetch(request);
   },
 };
