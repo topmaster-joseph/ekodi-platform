@@ -1,3 +1,5 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 const CSP = [
   "default-src 'self'",
   "style-src 'self'",
@@ -66,7 +68,7 @@ export default {
     if (url.pathname === '/my' || url.pathname === '/my/') return Response.redirect('https://my.ekodi.kr/', 307);
     if (url.pathname === '/community' || url.pathname === '/community/') return Response.redirect('https://community.ekodi.kr/', 307);
     const response = await env.ASSETS.fetch(request);
-    if (url.pathname === '/' || url.pathname === '/index.html') return authorHtml(response);
-    return secure(response, 'public, max-age=300');
+    if (url.pathname === '/' || url.pathname === '/index.html') return injectEkodiShell(await authorHtml(response), 'author');
+    return injectEkodiShell(secure(response, 'public, max-age=300'), 'author');
   },
 };
