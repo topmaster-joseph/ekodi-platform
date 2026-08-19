@@ -14,12 +14,16 @@ on:
       - 'compact-control-center.css'
       - 'campus-actions.js'
       - 'campus-actions.css'
+      - 'admin-authenticated-shell.js'
+      - 'admin-demand-loader.js'
       - 'admin-lazy-features.js'
       - 'admin-menu-layout.js'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
       - 'mission-control-admin.js'
       - 'mission-control-admin.css'
+      - 'system-health-admin.js'
+      - 'system-health-admin.css'
       - 'system-timeline-admin.js'
       - 'system-timeline-admin.css'
       - 'release-control-admin.js'
@@ -28,6 +32,7 @@ on:
       - 'config/ekodi-entrypoints.json'
       - 'docs/architecture/ekodi-entrypoint-standard.md'
       - 'test/mission-control-admin.test.mjs'
+      - 'test/admin-true-lazy.test.mjs'
       - 'test/ekodi-entrypoint-standard.test.mjs'
 
 permissions:
@@ -54,25 +59,34 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate Governance Cockpit, ekodi.index policy and admin routing
+      - name: Validate Governance Cockpit, true lazy startup, ekodi.index policy and admin routing
         run: |
           set -euo pipefail
           node --check admin-staging-worker.js
           node --check site-worker.js
+          node --check admin-authenticated-shell.js
+          node --check admin-demand-loader.js
           node --check mission-control-admin.js
+          node --check system-health-admin.js
           node --check system-timeline-admin.js
+          node --test test/admin-true-lazy.test.mjs
           node --test test/mission-control-admin.test.mjs
           node --test test/ekodi-entrypoint-standard.test.mjs
           npm run build
+          test -f dist/admin-demand-loader.js
           test -f dist/mission-control-admin.js
           test -f dist/mission-control-admin.css
+          test -f dist/system-health-admin.js
+          grep -Fq 'admin-demand-loader.js' dist/control-center.html
+          ! grep -Fq 'ai-ops-admin.js" defer' dist/control-center.html
+          grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "secondaryScripts: ['mission-control-admin.js', 'release-control-admin.js', 'admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
           grep -Fq 'CHIEF AI BRIEF' dist/mission-control-admin.js
           grep -Fq 'DECISION QUEUE' dist/mission-control-admin.js
           grep -Fq 'AI COUNCIL' dist/mission-control-admin.js
           grep -Fq 'governanceCommandBar' dist/mission-control-admin.js
           grep -Fq 'governanceSystemHub' dist/release-control-admin.js
           grep -Fq 'System Timeline' dist/release-control-admin.js
-          grep -Fq 'mission-control-admin.css mission-control-admin.js' dist/control-center.html
 
       - name: Verify Cloudflare credentials
         run: |
@@ -82,28 +96,32 @@ jobs:
       - name: Deploy isolated admin staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
 
-      - name: Verify staging shell, security route and Governance Cockpit assets
+      - name: Verify staging shell, security route and on-demand Governance assets
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -D /tmp/admin-stage-headers -o /tmp/admin-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -D /tmp/admin-stage-health-headers -o /tmp/admin-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            demand_code=$(curl -sS -D /tmp/admin-stage-demand-headers -o /tmp/admin-stage-demand.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-demand-loader.js" || true)
             js_code=$(curl -sS -D /tmp/admin-stage-js-headers -o /tmp/admin-stage.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/mission-control-admin.js" || true)
             css_code=$(curl -sS -D /tmp/admin-stage-css-headers -o /tmp/admin-stage.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/mission-control-admin.css" || true)
 
-            if [[ "$root_code" == '200' && "$health_code" == '200' && "$js_code" == '200' && "$css_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$health_code" == '200' && "$demand_code" == '200' && "$js_code" == '200' && "$css_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
               && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
-              && grep -Fq 'mission-control-admin.css mission-control-admin.js' /tmp/admin-stage.html \
+              && grep -Fq 'admin-demand-loader.js' /tmp/admin-stage.html \
+              && ! grep -Fq 'ai-ops-admin.js" defer' /tmp/admin-stage.html \
               && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
+              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-demand-headers \
               && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-js-headers \
               && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/admin-stage-css-headers \
+              && grep -Fq "scripts: ['ai-ops-admin.js']" /tmp/admin-stage-demand.js \
               && grep -Fq 'CHIEF AI BRIEF' /tmp/admin-stage.js \
               && grep -Fq 'DECISION QUEUE' /tmp/admin-stage.js \
               && grep -Fq 'AI COUNCIL' /tmp/admin-stage.js \
               && grep -Fq '.mission-dashboard' /tmp/admin-stage.css; then
-              echo 'Admin PR staging verified: isolated hostname, Governance Cockpit assets, ekodi.index policy and zero production traffic.'
+              echo 'Admin PR staging verified: lightweight authenticated shell, on-demand Governance assets, isolated hostname and zero production traffic.'
               exit 0
             fi
             echo "Admin PR staging verification pending (attempt $attempt/18)."

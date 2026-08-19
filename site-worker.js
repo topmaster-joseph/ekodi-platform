@@ -60,6 +60,8 @@ const ADMIN_ASSETS = new Set([
   '/control-center.js',
   '/control-center-features.js',
   '/admin-central-handoff.js',
+  '/admin-authenticated-shell.js',
+  '/admin-demand-loader.js',
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
   '/finance-monitor.js',
@@ -94,6 +96,10 @@ const ADMIN_ASSETS = new Set([
   '/books-admin.js',
   '/books-finance-admin.css',
   '/books-finance-admin.js',
+  '/author-billing-admin.css',
+  '/author-billing-admin.js',
+  '/system-health-admin.css',
+  '/system-health-admin.js',
 ]);
 
 const PUBLIC_CSP = [

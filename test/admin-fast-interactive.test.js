@@ -4,13 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Admin critical shell loads AI Ops and Device shell without serial waterfall', async () => {
+test('Admin critical shell stays interactive without eager operational modules', async () => {
   const source = await read('admin-authenticated-shell.js');
   assert.match(source, /criticalPostAuthScripts/);
-  assert.match(source, /'ai-ops-admin\.js'/);
+  assert.match(source, /'admin-demand-loader\.js'/);
   assert.match(source, /Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
-  assert.doesNotMatch(source, /for \(const src of criticalPostAuthScripts\) await loadScript/);
-  assert.match(source, /deferredPostAuthScripts = \['admin-lazy-features\.js'\]/);
+  for (const heavy of ['ai-ops-admin.js', 'admin-lazy-features.js', 'release-control-admin.js', 'work-admin.js', 'marketing-ai-admin.js']) {
+    assert.doesNotMatch(source, new RegExp(`'${heavy.replaceAll('.', '\\.')}'`));
+  }
+  assert.doesNotMatch(source, /deferredPostAuthScripts|scheduleDeferredFeatures/);
 });
 
 test('retired Operations grid is not fetched and rendered during every login', async () => {

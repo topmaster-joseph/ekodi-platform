@@ -5,17 +5,15 @@
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const loginLink = document.querySelector('#centralAdminLogin');
-  const postAuthStyles = ['compact-control-center.css', 'campus-actions.css', 'ai-ops-admin.css'];
+  const postAuthStyles = ['compact-control-center.css', 'campus-actions.css'];
   const criticalPostAuthScripts = [
     'compact-control-center.js',
     'control-center-features.js',
     'campus-actions.js',
-    'ai-ops-admin.js',
     'admin-menu-layout.js',
+    'admin-demand-loader.js',
   ];
-  const deferredPostAuthScripts = ['admin-lazy-features.js'];
   let started = false;
-  let deferredScheduled = false;
 
   function token() {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
@@ -62,16 +60,6 @@
     });
   }
 
-  function scheduleDeferredFeatures() {
-    if (deferredScheduled) return;
-    deferredScheduled = true;
-    // Keep the first interaction path clear. Secondary workspaces and Chief AI chat
-    // may hydrate shortly after the primary AI Ops / Devices shell is interactive.
-    window.setTimeout(() => {
-      Promise.all(deferredPostAuthScripts.map(loadScript)).catch(() => {});
-    }, 1600);
-  }
-
   function deactivateMallFreeOps() {
     const panel = document.querySelector('#mallFreeOpsPanel');
     if (!panel) return;
@@ -85,10 +73,11 @@
 
   function installMallFreeOpsIsolation() {
     const nav = document.querySelector('.sidebar nav');
-    const content = document.querySelector('.content');
-    if (!nav || !content || nav.dataset.mallFreeOpsIsolationBound) return;
+    if (!nav || nav.dataset.mallFreeOpsIsolationBound) return;
     nav.dataset.mallFreeOpsIsolationBound = 'true';
 
+    // Keep Mall iframe isolation event-driven. A document-wide MutationObserver used
+    // here previously woke up for unrelated admin rendering and amplified UI churn.
     nav.addEventListener('click', event => {
       const item = event.target?.closest?.('.nav');
       if (!item) return;
@@ -100,24 +89,6 @@
       }
       deactivateMallFreeOps();
     }, true);
-
-    let queued = false;
-    const observer = new MutationObserver(() => {
-      if (queued) return;
-      queued = true;
-      queueMicrotask(() => {
-        queued = false;
-        if (location.hash === '#mall-free-ops') return;
-        const panel = document.querySelector('#mallFreeOpsPanel');
-        const button = document.querySelector('.sidebar [data-admin-link="mall-free-ops"]');
-        if (!panel) return;
-        if (!panel.hidden || !panel.classList.contains('hidden-panel') || button?.classList.contains('active') || panel.querySelector('[data-mall-free-ops-frame]')?.getAttribute('src')) {
-          deactivateMallFreeOps();
-        }
-      });
-    });
-    observer.observe(content, { childList:true, subtree:true, attributes:true, attributeFilter:['class','hidden'] });
-    observer.observe(nav, { subtree:true, attributes:true, attributeFilter:['class'] });
 
     window.addEventListener('hashchange', () => {
       if (location.hash !== '#mall-free-ops') deactivateMallFreeOps();
@@ -132,14 +103,13 @@
     document.documentElement.dataset.ekodiAdminReady = 'loading';
     for (const href of postAuthStyles) loadStyle(href);
 
-    // These modules are independent installers. Fetch them in parallel instead of
-    // serially so AI Ops and Device Control become interactive without a waterfall.
+    // Only the shell/navigation layer starts after login. Heavy operational modules
+    // are installed by admin-demand-loader.js when the administrator actually opens them.
     await Promise.all(criticalPostAuthScripts.map(loadScript));
 
     installMallFreeOpsIsolation();
     document.documentElement.dataset.ekodiAdminReady = 'true';
     window.dispatchEvent(new CustomEvent('ekodi-admin-ready'));
-    scheduleDeferredFeatures();
   }
 
   function onStateChange() {
@@ -148,7 +118,7 @@
       return;
     }
     keepLoginInteractive();
-    if (!started && ['#campus', '#operations', '#policies', '#ai-ops', '#devices'].includes(location.hash)) {
+    if (!started && ['#campus', '#operations', '#policies', '#ai-ops', '#devices', '#work', '#marketing-ai', '#deployments'].includes(location.hash)) {
       document.documentElement.dataset.ekodiAdminPendingHash = location.hash.slice(1);
     }
   }

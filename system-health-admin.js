@@ -8,7 +8,7 @@
   const section = document.createElement('section');
   section.id = MODULE_ID;
   section.className = 'section system-health-section';
-  section.dataset.panel = 'overview services';
+  section.dataset.panel = 'overview services aiops';
   section.innerHTML = `
     <div class="section-head system-health-head">
       <div><p class="kicker">SYSTEM HEALTH</p><h2>트래픽 · 시스템 사용량</h2><p class="operations-copy" data-health-status>Cloudflare 일별 집계를 확인하는 중입니다.</p></div>
