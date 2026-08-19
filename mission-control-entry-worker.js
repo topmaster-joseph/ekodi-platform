@@ -1,4 +1,5 @@
 import customerEntryWorker from './customer-entry-worker.js';
+import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { handleDeviceControl } from './device-control.js';
@@ -26,6 +27,21 @@ export default {
     if (guard) return guard;
 
     const path = new URL(request.url).pathname;
+
+    // Admin shell restore is a read-only hot path. Do not send this request through
+    // the legacy auth router, which performs runtime schema checks before every route.
+    // Migrations own schema creation; this path only hashes the bearer token and reads
+    // the existing sessions/admins rows.
+    if (path === '/api/session' && request.method === 'GET') {
+      try {
+        const response = await handleAdminSessionFastPath(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Admin session fast path error', error);
+        return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR');
+      }
+    }
+
     // Creator AI billing is intentionally isolated from the shared membership router.
     // D1 is the billing source of truth and every paid Creator AI call re-verifies it.
     if (path.startsWith('/api/author/billing/')) {

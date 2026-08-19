@@ -1,4 +1,4 @@
-// Shared admin redeploy marker: Books single-flight hotfix.
+// Shared admin redeploy marker: fast session + deferred finance readiness.
 (()=>{
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));
   const token=hash.get('ekodi_admin_token');
@@ -31,7 +31,7 @@
   if(card&&!hideLegacyReset()){
     const observer=new MutationObserver(()=>{if(hideLegacyReset())observer.disconnect();});
     observer.observe(card,{childList:true,subtree:true});
-    setTimeout(()=>observer.disconnect(),3000);
+    setTimeout(()=>observer.disconnect(),1200);
   }
 
   function keyStatusCell(label,id){
@@ -123,6 +123,7 @@
     if(checked)checked.textContent=`마지막 확인 ${new Date().toLocaleString('ko-KR')}`;
   }
 
-  ensurePaymentKeyPanel();
+  // Do not build Finance-specific DOM during every admin visit. Finance Monitor emits
+  // this event only after the administrator actually opens Finance and data is available.
   window.addEventListener('ekodi-finance-overview',event=>renderPaymentKeyStatus(event.detail));
 })();
