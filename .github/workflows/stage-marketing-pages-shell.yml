@@ -1,0 +1,111 @@
+name: Stage Marketing AI Pages Shell
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-marketing-pages.yml'
+      - '.github/workflows/stage-marketing-pages-shell.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-pages-shell-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_API_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve latest Marketing AI source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha=$(curl -fsS \
+            -H "Authorization: Bearer $GH_API_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            'https://api.github.com/repos/topmaster-joseph/jadam-maru/commits/main' \
+            | python -c "import sys,json; print(json.load(sys.stdin)['sha'])")
+          test ${#sha} -eq 40
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/jadam-maru
+          ref: ${{ steps.source.outputs.sha }}
+          path: marketing-source
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Build Marketing AI with shared Shell
+        working-directory: marketing-source
+        run: |
+          set -euo pipefail
+          npm run build
+          for file in dist/marketing-ai/index.html dist/marketing-ai/jadam/index.html dist/marketing-ai/pizzamaru/index.html dist/marketing-ai/yogurtpurple/index.html; do
+            grep -Fq 'data-ekodi-shell="v1"' "$file"
+            grep -Fq 'https://shell.ekodi.kr/shell.js' "$file"
+            grep -Fq 'data-ekodi-service="marketing"' "$file"
+            grep -Fq 'data-ekodi-workspace-handoff' "$file"
+          done
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy four non-production Pages previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="shell-pr-${{ github.event.pull_request.number }}"
+          sha='${{ steps.source.outputs.sha }}'
+          deploy_preview() {
+            project="$1"; dir="$2"
+            npx --yes wrangler@$WRANGLER_VERSION pages deploy "$dir" \
+              --project-name "$project" \
+              --branch "$branch" \
+              --commit-hash "$sha" \
+              --commit-message "EKODI Marketing Shell preview $sha" | tee "/tmp/${project}.log"
+          }
+          deploy_preview marketing-ai marketing-source/dist/marketing-ai
+          deploy_preview marketing-ai-jadam marketing-source/dist/marketing-ai/jadam
+          deploy_preview marketing-ai-pizzamaru marketing-source/dist/marketing-ai/pizzamaru
+          deploy_preview marketing-ai-yogurtpurple marketing-source/dist/marketing-ai/yogurtpurple
+      - name: Verify preview deployments contain Shell and existing contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="shell-pr-${{ github.event.pull_request.number }}"
+          for spec in \
+            "https://${branch}.marketing-ai.pages.dev/:마케팅AI" \
+            "https://${branch}.marketing-ai-jadam.pages.dev/:자담치킨" \
+            "https://${branch}.marketing-ai-pizzamaru.pages.dev/:피자마루" \
+            "https://${branch}.marketing-ai-yogurtpurple.pages.dev/:요거트퍼플"; do
+            url="${spec%%:*}"; needle="${spec##*:}"
+            verified=0
+            for attempt in $(seq 1 18); do
+              code=$(curl -L -sS -o /tmp/marketing-preview.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+              echo "$url -> $code attempt=$attempt"
+              if [[ "$code" == '200' ]] \
+                && grep -Fq "$needle" /tmp/marketing-preview.html \
+                && grep -Fq 'data-ekodi-shell="v1"' /tmp/marketing-preview.html \
+                && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/marketing-preview.html \
+                && grep -Fq 'data-ekodi-service="marketing"' /tmp/marketing-preview.html \
+                && grep -Fq 'data-ekodi-workspace-handoff' /tmp/marketing-preview.html; then
+                verified=1
+                break
+              fi
+              sleep 4
+            done
+            [[ "$verified" == '1' ]]
+          done
+          echo 'All four Marketing AI Pages previews verified with shared Shell.'
