@@ -1,63 +1,69 @@
-name: Release Messenger & Investment Functional MVP
+name: Release EKODI Conversation Foundation
 
 on:
   pull_request:
     paths:
-      - 'migrations/0028_messenger_investment_workspaces.sql'
-      - 'migrations/0029_messenger_ai_operator_channels.sql'
-      - 'migrations/0030_messenger_event_outbox.sql'
+      - 'migrations/*messenger*.sql'
       - 'ekodi-principal.js'
       - 'messenger-triage.js'
       - 'messenger-outbox.js'
       - 'messenger-channel-adapters.js'
+      - 'messenger-operator-control.js'
       - 'workspace-messenger-v2.js'
       - 'workspace-platform-entry-worker.js'
       - 'workspace-platform-api-worker.js'
+      - 'mission-control-entry-worker.js'
       - 'wrangler.workspace-platform.toml'
       - 'wrangler.workspace-platform-staging.toml'
       - 'wrangler.workspace-platform-bootstrap.toml'
+      - 'wrangler.api.toml'
       - 'deploy/manifests/workspace-platform.worker.json'
+      - 'deploy/manifests/control-api.worker.json'
       - 'platform-router-worker.js'
       - 'deploy/manifests/shared-site.worker.json'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'test/workspace-platform.test.mjs'
+      - 'test/conversation-foundation-release.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
     branches: [main]
     paths:
-      - 'migrations/0028_messenger_investment_workspaces.sql'
-      - 'migrations/0029_messenger_ai_operator_channels.sql'
-      - 'migrations/0030_messenger_event_outbox.sql'
+      - 'migrations/*messenger*.sql'
       - 'ekodi-principal.js'
       - 'messenger-triage.js'
       - 'messenger-outbox.js'
       - 'messenger-channel-adapters.js'
+      - 'messenger-operator-control.js'
       - 'workspace-messenger-v2.js'
       - 'workspace-platform-entry-worker.js'
       - 'workspace-platform-api-worker.js'
+      - 'mission-control-entry-worker.js'
       - 'wrangler.workspace-platform.toml'
       - 'wrangler.workspace-platform-staging.toml'
       - 'wrangler.workspace-platform-bootstrap.toml'
+      - 'wrangler.api.toml'
       - 'deploy/manifests/workspace-platform.worker.json'
+      - 'deploy/manifests/control-api.worker.json'
       - 'platform-router-worker.js'
       - 'deploy/manifests/shared-site.worker.json'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'test/workspace-platform.test.mjs'
+      - 'test/conversation-foundation-release.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
 
 permissions:
   contents: read
 
-# Shared with Deploy Control API. Both workflows touch ekodi-auth and versioned Workers.
-# A single global lane prevents concurrent D1 registry writes and disappearing candidates.
+# All Conversation-related D1 and Worker changes move through one ordered workflow.
 concurrency:
-  group: ekodi-shared-d1-worker-release
+  group: ekodi-conversation-release
   cancel-in-progress: false
 
 env:
   WRANGLER_VERSION: '4.119.0'
   API_STAGING_URL: https://ekodi-workspace-platform-api-staging.topmaster-joseph.workers.dev
   SITE_STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+  CONTROL_STAGING_URL: https://ekodi-conversation-control-staging.topmaster-joseph.workers.dev
 
 jobs:
   validate:
@@ -68,26 +74,23 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Conversation foundation and existing Investment contract
+      - name: Validate Conversation, Operator and Investment boundaries
         run: |
           set -euo pipefail
-          node --check ekodi-principal.js
-          node --check messenger-triage.js
-          node --check messenger-outbox.js
-          node --check messenger-channel-adapters.js
-          node --check workspace-messenger-v2.js
-          node --check workspace-platform-entry-worker.js
-          node --check workspace-platform-api-worker.js
-          node --check platform-router-worker.js
+          for file in ekodi-principal.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js platform-router-worker.js; do
+            node --check "$file"
+          done
           node --test test/workspace-platform.test.mjs
+          node --test test/conversation-foundation-release.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
           grep -Fq 'conversationFoundation' workspace-platform-entry-worker.js
+          grep -Fq '/api/control/messenger' mission-control-entry-worker.js
           grep -Fq 'analysis-and-connection-only' workspace-platform-api-worker.js
           ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
 
-  staging:
+  workspace-staging:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -165,11 +168,10 @@ jobs:
         if: always()
         run: rm -f wrangler.workspace.runtime.toml
 
-  production-api:
-    needs: staging
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  control-staging:
+    needs: workspace-staging
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -178,36 +180,74 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Capture D1 recovery bookmark
-        id: d1_bookmark
+      - name: Resolve isolated Conversation Control D1
+        id: control_d1
+        shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json
-          BOOKMARK=$(node -e "const j=require('/tmp/bookmark.json');const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
-          test -n "$BOOKMARK"
-          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
-      - name: Apply production migration after isolated staging success
-        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml "$WRANGLER_VERSION"
-      - name: Guarded 0-percent Workspace candidate then promote
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
-      - name: Deploy cron trigger after healthy code promotion
-        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.workspace-platform.toml
-      - name: Verify production Conversation foundation
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health')
-          [[ "$code" == '200' ]]
-          grep -Fq '"schemaReady":true' /tmp/live-health.json
-          grep -Fq '"mutations":true' /tmp/live-health.json
-          grep -Fq '"transactionExecution":false' /tmp/live-health.json
-          grep -Fq '"conversationFoundation":"v2"' /tmp/live-health.json
-          grep -Fq '"eventOutbox":true' /tmp/live-health.json
-          grep -Fq '"conversationSchemaReady":true' /tmp/live-health.json
-      - name: Record recovery point
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-conversation-control-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-conversation-control-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated Control config
         env:
-          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+          DB_ID: ${{ steps.control_d1.outputs.database_id }}
         run: |
-          echo "D1 recovery bookmark before Conversation release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
+          cat > wrangler.conversation-control.runtime.toml <<EOF
+          name = "ekodi-conversation-control-staging"
+          main = "mission-control-entry-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          ENVIRONMENT = "staging"
+          ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+          ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
+          GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
+          [[ratelimits]]
+          name = "AUTH_RATE_LIMITER"
+          namespace_id = "3301"
+            [ratelimits.simple]
+            limit = 20
+            period = 60
+          [[ratelimits]]
+          name = "SENSITIVE_RATE_LIMITER"
+          namespace_id = "3302"
+            [ratelimits.simple]
+            limit = 120
+            period = 60
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-conversation-control-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply migrations to isolated Control D1
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.conversation-control.runtime.toml
+      - name: Deploy isolated Conversation Control Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.conversation-control.runtime.toml
+      - name: Verify Operator authentication boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health=$(curl -sS -o /tmp/control-health.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$CONTROL_STAGING_URL/health" || true)
+            inbox=$(curl -sS -o /tmp/control-inbox.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$CONTROL_STAGING_URL/api/control/messenger/inbox" || true)
+            if [[ "$health" == '200' && "$inbox" == '401' ]]; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+      - name: Cleanup Control runtime config
+        if: always()
+        run: rm -f wrangler.conversation-control.runtime.toml
 
   staging-ui:
     needs: validate
@@ -231,8 +271,72 @@ jobs:
             grep -Fq 'FUNCTIONAL BETA' /tmp/root.html
           done
 
+  production-workspace:
+    needs: [control-staging, staging-ui]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Capture shared D1 recovery bookmark
+        id: d1_bookmark
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json
+          BOOKMARK=$(node -e "const j=require('/tmp/bookmark.json');const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          test -n "$BOOKMARK"
+          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
+      - name: Apply production migration once after both staging gates
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml "$WRANGLER_VERSION"
+      - name: Guarded 0-percent Workspace candidate then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
+      - name: Deploy outbox recovery trigger after healthy Workspace promotion
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.workspace-platform.toml
+      - name: Verify production Conversation foundation
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health')
+          [[ "$code" == '200' ]]
+          grep -Fq '"schemaReady":true' /tmp/live-health.json
+          grep -Fq '"mutations":true' /tmp/live-health.json
+          grep -Fq '"conversationFoundation":"v2"' /tmp/live-health.json
+          grep -Fq '"conversationSchemaReady":true' /tmp/live-health.json
+      - name: Record recovery point
+        env:
+          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+        run: echo "D1 recovery bookmark before Conversation release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
+
+  production-control:
+    needs: production-workspace
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Guarded 0-percent Control candidate then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
+      - name: Verify production Operator boundary
+        run: |
+          set -euo pipefail
+          health=$(curl -sS -o /tmp/control-health.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
+          inbox=$(curl -sS -o /tmp/control-inbox.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/messenger/inbox')
+          [[ "$health" == '200' ]]
+          [[ "$inbox" == '401' ]]
+
   production-ui:
-    needs: [production-api, staging-ui]
+    needs: production-control
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 24
@@ -255,5 +359,6 @@ jobs:
           app=$(curl -sS -o /tmp/app.js -w '%{http_code}' 'https://messenger.ekodi.kr/app.js')
           [[ "$root" == '200' && "$app" == '200' ]]
           grep -Fq 'EKODI Messenger' /tmp/root.html
+          grep -Fq 'refreshAssistantUntilSettled' /tmp/app.js
           grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
           grep -Fiq 'x-ekodi-shell: v1' /tmp/headers
