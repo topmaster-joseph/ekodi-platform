@@ -18,8 +18,6 @@ html = html
   .replace('<script src="admin-central-handoff.js"></script>', '<script src="admin-central-handoff.js" defer></script>')
   .replaceAll('20260819-thin-shell-2', '20260819-e2e-perf-1');
 
-// Only the overview hero/architecture participate in first authenticated layout. Existing
-// operational DOM stays present for compatibility but starts display:none.
 mustReplace('<section class="metrics" data-panel="overview services"', '<section class="metrics hidden-panel" data-panel="services"', 'services metrics panel');
 mustReplace('<section class="section operations-section" data-panel="overview services"', '<section class="section operations-section hidden-panel" data-panel="services"', 'services operations panel');
 mustReplace('<section class="section" data-panel="overview finance"', '<section class="section hidden-panel" data-panel="finance"', 'finance panel');
@@ -28,8 +26,6 @@ for (const section of ['communication', 'workspace', 'organization']) {
 }
 await writeFile(path, html);
 
-// Finance is already demand-loaded. Replace its perpetual interval with a visibility-aware
-// one-shot timer that exists only while Finance is the active workspace.
 const financePath = `${dist}finance-monitor.js`;
 let finance = await readFile(financePath, 'utf8');
 const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
@@ -60,8 +56,16 @@ if ((location.hash === '#finance' || financeSectionButton.classList.contains('ac
 }`);
 await writeFile(financePath, finance);
 
-// Mobile browsers pay heavily for backdrop blur and off-screen panel painting. Keep the same
-// visual structure while skipping those costs on small screens and respecting reduced motion.
+// The advanced feature catalog is loaded only after one of its lightweight menu placeholders
+// is clicked. On the normal fast path, Finance already belongs to admin-demand-loader, so the
+// historical catalog must not attach a second Finance loader when it eventually wakes up.
+const featurePath = `${dist}control-center-features.js`;
+let featureCatalog = await readFile(featurePath, 'utf8');
+const financeFeatureListener = "financeButton?.addEventListener('click', () => { loadFinance().catch(error => console.warn('[EKODI finance feature]', error)); });";
+if (!featureCatalog.includes(financeFeatureListener)) throw new Error('advanced catalog Finance listener marker missing');
+featureCatalog = featureCatalog.replace(financeFeatureListener, `if (!window.EKODIAdminDemand) ${financeFeatureListener}`);
+await writeFile(featurePath, featureCatalog);
+
 const cssPath = `${dist}control-center.css`;
 let css = await readFile(cssPath, 'utf8');
 const perfCss = `\n/* admin performance guards */\n.section,.architecture{content-visibility:auto;contain-intrinsic-size:280px}\n@media(max-width:760px){.topbar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#091321f2}.section,.architecture{contain-intrinsic-size:360px}}\n@media(prefers-reduced-motion:reduce){[data-panel],.sidebar{transition:none!important;scroll-behavior:auto!important}}\n`;
@@ -93,5 +97,7 @@ for (const [name, source] of Object.entries(files)) {
 }
 const finalFinance = await readFile(financePath, 'utf8');
 if (finalFinance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
+const finalFeatureCatalog = await readFile(featurePath, 'utf8');
+if (!finalFeatureCatalog.includes('if (!window.EKODIAdminDemand) financeButton?.addEventListener')) throw new Error('Advanced catalog could duplicate Finance lazy loading');
 
 console.log(`Admin performance postbuild: handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B; legacy runtime/operational CSS deferred, persistent polling removed.`);
