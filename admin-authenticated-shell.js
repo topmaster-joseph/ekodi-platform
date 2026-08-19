@@ -5,11 +5,9 @@
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const loginLink = document.querySelector('#centralAdminLogin');
-  const postAuthStyles = ['compact-control-center.css', 'campus-actions.css'];
+  const postAuthStyles = ['compact-control-center.css'];
   const criticalPostAuthScripts = [
     'compact-control-center.js',
-    'control-center-features.js',
-    'campus-actions.js',
     'admin-menu-layout.js',
     'admin-demand-loader.js',
   ];
@@ -76,8 +74,6 @@
     if (!nav || nav.dataset.mallFreeOpsIsolationBound) return;
     nav.dataset.mallFreeOpsIsolationBound = 'true';
 
-    // Keep Mall iframe isolation event-driven. A document-wide MutationObserver used
-    // here previously woke up for unrelated admin rendering and amplified UI churn.
     nav.addEventListener('click', event => {
       const item = event.target?.closest?.('.nav');
       if (!item) return;
@@ -103,8 +99,9 @@
     document.documentElement.dataset.ekodiAdminReady = 'loading';
     for (const href of postAuthStyles) loadStyle(href);
 
-    // Only the shell/navigation layer starts after login. Heavy operational modules
-    // are installed by admin-demand-loader.js when the administrator actually opens them.
+    // First login starts only the visual shell, stable navigation and the demand loader.
+    // Campus, Device Control, AI Ops and other operational modules stay completely asleep
+    // until the administrator explicitly opens them.
     await Promise.all(criticalPostAuthScripts.map(loadScript));
 
     installMallFreeOpsIsolation();
