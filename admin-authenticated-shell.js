@@ -99,13 +99,11 @@
     document.documentElement.dataset.ekodiAdminReady = 'loading';
     for (const href of postAuthStyles) loadStyle(href);
 
-    // First login starts only the visual shell, stable navigation and the demand loader.
-    // Campus, Device Control, AI Ops and other operational modules stay completely asleep
-    // until the administrator explicitly opens them.
     await Promise.all(criticalPostAuthScripts.map(loadScript));
 
     installMallFreeOpsIsolation();
     document.documentElement.dataset.ekodiAdminReady = 'true';
+    try { performance.mark('ekodi-admin-ready'); } catch {}
     window.dispatchEvent(new CustomEvent('ekodi-admin-ready'));
   }
 
@@ -122,9 +120,8 @@
 
   keepLoginInteractive();
   onStateChange();
-
-  if (app) {
-    const observer = new MutationObserver(onStateChange);
-    observer.observe(app, { attributes:true, attributeFilter:['hidden'] });
-  }
+  // The central handoff executes immediately before this loader in production HTML, so a
+  // persistent MutationObserver is unnecessary. This event covers any future in-page auth
+  // transition without keeping an observer alive for the whole admin session.
+  window.addEventListener('ekodi-authenticated', onStateChange);
 })();
