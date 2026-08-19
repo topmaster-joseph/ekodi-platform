@@ -82,9 +82,12 @@ jobs:
               && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-manifest.json \
               && grep -Fq '"id":"church"' /tmp/shell-manifest.json \
               && grep -Fq '"id":"community"' /tmp/shell-manifest.json \
+              && grep -Fq '"id":"marketing"' /tmp/shell-manifest.json \
+              && grep -Fq '"shellIntegration":"static-script"' /tmp/shell-manifest.json \
               && grep -Fq '"id":"insurance"' /tmp/shell-manifest.json \
+              && ! grep -Fq '"shellIntegration":"pending"' /tmp/shell-manifest.json \
               && grep -Fq 'window.EKODIShell' /tmp/shell.js; then
-              echo 'EKODI Shell staging verified.'
+              echo 'EKODI Shell staging verified with zero active pending integrations.'
               exit 0
             fi
             sleep 4
@@ -117,9 +120,12 @@ jobs:
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-live-health.json \
               && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-live-manifest.json \
               && grep -Fq '"id":"my"' /tmp/shell-live-manifest.json \
+              && grep -Fq '"id":"marketing"' /tmp/shell-live-manifest.json \
+              && grep -Fq '"shellIntegration":"static-script"' /tmp/shell-live-manifest.json \
               && grep -Fq '"id":"insurance"' /tmp/shell-live-manifest.json \
+              && ! grep -Fq '"shellIntegration":"pending"' /tmp/shell-live-manifest.json \
               && grep -Fq '공간 전환 · My EKODI' /tmp/shell-live.js; then
-              echo 'EKODI Shell production verified.'
+              echo 'EKODI Shell production verified with zero active pending integrations.'
               exit 0
             fi
             sleep 5
