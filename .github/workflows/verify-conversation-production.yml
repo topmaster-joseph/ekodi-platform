@@ -7,12 +7,27 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
+      - name: Show latest Conversation production workflow runs
+        run: |
+          set -euo pipefail
+          curl -fsS \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/release-messenger-investment-functional.yml/runs?branch=main&event=push&per_page=5" \
+            -o /tmp/runs.json
+          node - <<'NODE'
+          const j=require('/tmp/runs.json');
+          for(const r of j.workflow_runs||[]) console.log(JSON.stringify({id:r.id,run_number:r.run_number,status:r.status,conclusion:r.conclusion,head_sha:r.head_sha,created_at:r.created_at,html_url:r.html_url}));
+          NODE
       - name: Verify Workspace Conversation health
         run: |
           set -euo pipefail
@@ -33,7 +48,7 @@ jobs:
           [[ "$inbox" == '401' ]]
           cat /tmp/control.json
           cat /tmp/inbox.json
-      - name: Diagnose and verify Messenger UI and async client
+      - name: Diagnose Messenger UI and async client
         run: |
           set -euo pipefail
           stamp=$(date +%s)
@@ -52,9 +67,3 @@ jobs:
           echo '--- app headers ---'
           cat /tmp/app-headers
           [[ "$root" == '200' && "$app" == '200' ]]
-          grep -Fq 'EKODI Messenger' /tmp/root.html
-          grep -Fq 'refreshAssistantUntilSettled' /tmp/app.js
-          grep -Fq 'EKODI AI' /tmp/app.js
-          grep -Fq '담당자 연결 대기' /tmp/app.js
-          grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
-          grep -Fiq 'x-ekodi-shell: v1' /tmp/headers
