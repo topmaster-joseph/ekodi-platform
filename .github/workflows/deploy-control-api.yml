@@ -10,11 +10,6 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
-      - 'mission-control-entry-worker.js'
-      - 'messenger-operator-control.js'
-      - 'ekodi-principal.js'
-      - 'messenger-outbox.js'
-      - 'messenger-channel-adapters.js'
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
@@ -31,6 +26,7 @@ on:
       - 'affiliate-control.js'
       - 'social-registry-api.js'
       - 'migrations/**'
+      - '!migrations/*messenger*.sql'
       - 'wrangler.api.toml'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -38,7 +34,6 @@ on:
       - 'scripts/validate-security-baseline.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
-      - '.github/workflows/deploy-control-api.yml'
   push:
     branches: [main]
     paths:
@@ -48,11 +43,6 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
-      - 'mission-control-entry-worker.js'
-      - 'messenger-operator-control.js'
-      - 'ekodi-principal.js'
-      - 'messenger-outbox.js'
-      - 'messenger-channel-adapters.js'
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
@@ -69,6 +59,7 @@ on:
       - 'affiliate-control.js'
       - 'social-registry-api.js'
       - 'migrations/**'
+      - '!migrations/*messenger*.sql'
       - 'wrangler.api.toml'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -76,14 +67,14 @@ on:
       - 'scripts/validate-security-baseline.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
-      - '.github/workflows/deploy-control-api.yml'
 
 permissions:
   contents: read
 
-# Same global lane as Workspace release. Shared D1 and versioned Worker changes never overlap.
+# Generic Control-plane release lane. Conversation changes are owned by the
+# Release EKODI Conversation Foundation orchestrator.
 concurrency:
-  group: ekodi-shared-d1-worker-release
+  group: ekodi-control-api-release
   cancel-in-progress: false
 
 env:
@@ -98,7 +89,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate control plane, Messenger operator and governance
+      - name: Validate control plane and governance
         run: |
           set -euo pipefail
           for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
@@ -112,11 +103,7 @@ jobs:
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
           node --test test/device-control-contract.test.mjs
-          node --test test/workspace-platform.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
-          grep -Fq '/api/control/messenger' mission-control-entry-worker.js
-          grep -Fq 'principalFromAdminSession' messenger-operator-control.js
-          grep -Fq 'conversation:operate' messenger-operator-control.js
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
 
   staging:
@@ -195,19 +182,17 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify security and Messenger Operator boundary
+      - name: Verify security boundaries
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
             headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            messenger=$(curl -sS -o /tmp/messenger.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/messenger/inbox' || true)
             devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
             ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
-              && [ "$messenger" = '401' ] \
               && [ "$devices" = '401' ] \
               && [ "$ai" = '401' ]; then
               exit 0
@@ -244,16 +229,14 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Verify production Control and auth boundaries
+      - name: Verify production Control boundaries
         shell: bash
         run: |
           set -euo pipefail
           health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
-          messenger=$(curl -sS -o /tmp/messenger.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/messenger/inbox')
           devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
           ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
           printf '%s' "$health" | grep -q '"ok":true'
-          [ "$messenger" = '401' ]
           [ "$devices" = '401' ]
           [ "$ai" = '401' ]
       - name: Record recovery point
