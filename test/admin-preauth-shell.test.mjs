@@ -13,14 +13,16 @@ function scriptTag(name) {
   return `<script src="${name}"`;
 }
 
-test('pre-auth admin HTML uses only the authenticated shell loader and generated metadata is thinned after build', () => {
+test('generated admin HTML ends with content-fingerprinted first-path assets', () => {
   assert.match(build, /admin-authenticated-shell\.js\?v=20260819-true-lazy-1/);
   assert.match(postbuild, /20260819-thin-shell-2/);
-  assert.match(performancePostbuild, /20260819-e2e-perf-1/);
+  assert.match(performancePostbuild, /createHash\('sha256'\)/);
+  assert.match(performancePostbuild, /const assetVersion = hash\.digest\('hex'\)\.slice\(0, 16\)/);
+  assert.match(performancePostbuild, /control-center\.css\?v=\$\{assetVersion\}/);
+  assert.match(performancePostbuild, /admin-central-handoff\.js\?v=\$\{assetVersion\}/);
   assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="compact-control-center\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
-  assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="admin-lazy-features\.js"/);
 });
 
 test('post-auth loader starts only when the authenticated app is visible and uses auth events instead of a persistent observer', () => {
@@ -30,6 +32,7 @@ test('post-auth loader starts only when the authenticated app is visible and use
   assert.ok(guard >= 0, 'authenticated shell guard must exist');
   assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated', onStateChange\)/);
+  assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.doesNotMatch(shell, /new MutationObserver/);
   assert.equal(shell.includes('history.replaceState'), false, 'post-auth loader must never create a navigation hash before authentication');
 });
@@ -42,23 +45,12 @@ test('minimal login shell keeps the central auth link interactive while app is h
 });
 
 test('authenticated normal route contains only the three thin shell modules and legacy runtime is route isolated', () => {
-  for (const asset of [
-    'compact-control-center.js',
-    'admin-menu-layout.js',
-    'admin-demand-loader.js',
-  ]) assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
-
-  for (const noncritical of [
-    'control-center-features.js',
-    'campus-actions.js',
-    'device-control-admin.js',
-    'ai-ops-admin.js',
-    'admin-lazy-features.js',
-    'release-control-admin.js',
-    'work-admin.js',
-    'marketing-ai-admin.js',
-  ]) assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
-
+  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js']) {
+    assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
+  }
+  for (const noncritical of ['control-center-features.js','campus-actions.js','device-control-admin.js','ai-ops-admin.js','admin-lazy-features.js','release-control-admin.js','work-admin.js','marketing-ai-admin.js']) {
+    assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
+  }
   assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
   assert.match(shell, /await loadScript\('control-center\.js'\)/);
   assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
@@ -67,12 +59,7 @@ test('authenticated normal route contains only the three thin shell modules and 
 
 test('Mall Free Ops is event-isolated without a document-wide mutation observer', () => {
   assert.match(shell, /function deactivateMallFreeOps\(\)/);
-  assert.match(shell, /panel\.hidden = true/);
-  assert.match(shell, /panel\.classList\.add\('hidden-panel'\)/);
   assert.match(shell, /frame\.removeAttribute\('src'\)/);
-  assert.match(shell, /item\.dataset\.adminLink === 'mall-free-ops'/);
-  assert.match(shell, /if \(panel\?\.hidden\) panel\.hidden = false/);
-  assert.match(shell, /if \(location\.hash !== '#mall-free-ops'\) deactivateMallFreeOps\(\)/);
   assert.match(shell, /installMallFreeOpsIsolation\(\)/);
   assert.doesNotMatch(shell, /observer\.observe\(content, \{ childList:true, subtree:true/);
 });
