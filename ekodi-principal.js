@@ -83,7 +83,9 @@ export async function principalFromAdminSession(request,env,authWorker){
 export async function auditPrincipal(env,principal,capability='conversation:read'){
   if(!env?.DB||!principal)return;
   try{
+    // The audit ledger intentionally does not duplicate raw email. Principal ID, provider,
+    // workspace subject and capability are sufficient to trace authorization decisions.
     await env.DB.prepare(`INSERT INTO messenger_identity_audit(principal_id,principal_kind,auth_provider,email,subject_type,subject_key,role,capability,created_at) VALUES(?,?,?,?,?,?,?,?,?)`)
-      .bind(principal.id,principal.kind,principal.provider,principal.email,principal.subject.type,principal.subject.key,principal.role,clean(capability,120),new Date().toISOString()).run();
+      .bind(principal.id,principal.kind,principal.provider,'',principal.subject.type,principal.subject.key,principal.role,clean(capability,120),new Date().toISOString()).run();
   }catch{}
 }
