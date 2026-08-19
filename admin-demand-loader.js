@@ -253,11 +253,9 @@
       Promise.all([
         loadStyle('control-center-finance.css'),
         loadStyle('author-billing-admin.css'),
-        loadStyle('tax-invoice-admin.css'),
       ]).then(async () => {
         await loadScript('author-billing-admin.js');
         await loadScript('finance-monitor.js');
-        await loadScript('tax-invoice-admin.js');
       }).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
