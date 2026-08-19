@@ -1,0 +1,103 @@
+name: Diagnose Admin Thin Production
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-admin-thin-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Resolve production DNS and wait for thin shell promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== DNS ==='
+          getent ahostsv4 admin.ekodi.kr || true
+          getent ahostsv4 api.ekodi.kr || true
+          found=''
+          for i in $(seq 1 24); do
+            curl -fsS --connect-timeout 5 --max-time 15 -o /tmp/admin.html https://admin.ekodi.kr/ || true
+            if grep -Fq '20260819-thin-shell-2' /tmp/admin.html 2>/dev/null; then
+              found=yes
+              echo "thin-shell production marker observed on probe $i"
+              break
+            fi
+            echo "production still serving previous shell on probe $i"
+            sleep 5
+          done
+          test "$found" = yes
+
+      - name: Verify production HTML and edge timing
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS --connect-timeout 5 --max-time 15 \
+            -D /tmp/admin.headers -o /tmp/admin.html \
+            -w 'ADMIN status=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://admin.ekodi.kr/
+          grep -Ei '^(HTTP/|server:|cf-ray:|cache-control:|content-type:|etag:)' /tmp/admin.headers || true
+          grep -F 'admin-authenticated-shell.js?v=20260819-thin-shell-2' /tmp/admin.html
+          grep -F 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin.html
+          if grep -Eq 'data-ekodi-postauth="[^"]*(campus-actions|device-control-admin|control-center-features)' /tmp/admin.html; then
+            echo 'FAIL: heavyweight module remains in startup metadata'; exit 1
+          fi
+          echo 'PASS: live HTML advertises exactly the thin post-auth shell'
+
+      - name: Verify live authenticated shell contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -o /tmp/shell.js https://admin.ekodi.kr/admin-authenticated-shell.js
+          curl -fsS -o /tmp/demand.js https://admin.ekodi.kr/admin-demand-loader.js
+          echo "SHELL bytes=$(wc -c < /tmp/shell.js)"
+          echo "DEMAND bytes=$(wc -c < /tmp/demand.js)"
+          for required in compact-control-center.js admin-menu-layout.js admin-demand-loader.js; do grep -Fq "$required" /tmp/shell.js; done
+          for forbidden in campus-actions.js campus-actions.css device-control-admin.js device-control-admin.css control-center-features.js ai-ops-admin.js; do
+            if grep -Fq "$forbidden" /tmp/shell.js; then echo "FAIL: $forbidden remains in live critical shell"; exit 1; fi
+          done
+          grep -Fq "styles: ['campus-actions.css']" /tmp/demand.js
+          grep -Fq "scripts: ['campus-actions.js']" /tmp/demand.js
+          grep -Fq "styles: ['device-control-admin.css']" /tmp/demand.js
+          grep -Fq "scripts: ['device-control-admin.js']" /tmp/demand.js
+          echo 'PASS: Campus and Devices are live as explicit demand-loaded features'
+
+      - name: Verify compact bundle contains no Campus or Device runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -o /tmp/compact.js https://admin.ekodi.kr/compact-control-center.js
+          curl -fsS -o /tmp/compact.css https://admin.ekodi.kr/compact-control-center.css
+          echo "COMPACT_JS bytes=$(wc -c < /tmp/compact.js)"
+          echo "COMPACT_CSS bytes=$(wc -c < /tmp/compact.css)"
+          for forbidden in WINDOWS_AGENT_URL ekodiDevicePanel CAMPUS_SERVICES 'function installCampus('; do
+            if grep -Fq "$forbidden" /tmp/compact.js; then echo "FAIL: $forbidden leaked into compact JS"; exit 1; fi
+          done
+          for forbidden in '.ekodi-device-panel' '.ekodi-device-card'; do
+            if grep -Fq "$forbidden" /tmp/compact.css; then echo "FAIL: $forbidden leaked into compact CSS"; exit 1; fi
+          done
+          echo 'PASS: compact startup bundle is free of Campus and Device runtime'
+
+      - name: Verify standalone on-demand assets and API health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in campus-actions.js campus-actions.css device-control-admin.js device-control-admin.css; do
+            code=$(curl -sS --connect-timeout 5 --max-time 15 -o "/tmp/${asset//\//_}" -w '%{http_code}' "https://admin.ekodi.kr/$asset")
+            echo "$asset status=$code bytes=$(wc -c < "/tmp/${asset//\//_}")"
+            test "$code" = 200
+          done
+          grep -Fq "section.id = 'campusPanel'" /tmp/campus-actions.js
+          grep -Fq "button.dataset.section = 'campus'" /tmp/campus-actions.js
+          grep -Fq 'WINDOWS_AGENT_URL' /tmp/device-control-admin.js
+          curl -sS --connect-timeout 5 --max-time 15 -o /tmp/api.body \
+            -w 'API status=%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://api.ekodi.kr/health
+          grep -Fq '"ok":true' /tmp/api.body
+          echo 'PASS: standalone demand assets and API are healthy'
