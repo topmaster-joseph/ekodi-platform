@@ -12,3 +12,4 @@ custom_domain = true
 [assets]
 directory = "./books"
 binding = "ASSETS"
+run_worker_first = true
