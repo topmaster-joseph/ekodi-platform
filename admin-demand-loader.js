@@ -90,7 +90,7 @@
       script.dataset.ekodiDemandScript = src;
       script.addEventListener('load', () => resolve(script), { once:true });
       script.addEventListener('error', () => reject(new Error(`${src} 로딩 실패`)), { once:true });
-      document.body.append(script);
+      document.body.appendChild(script);
     }).catch(error => {
       loadedScripts.delete(src);
       throw error;
@@ -242,8 +242,9 @@
         loadStyle('control-center-finance.css'),
         loadStyle('author-billing-admin.css'),
       ]).then(async () => {
-        await loadScript('finance-monitor.js');
+        // Attach the readiness consumer before Finance Monitor can emit the overview event.
         await loadScript('author-billing-admin.js');
+        await loadScript('finance-monitor.js');
       }).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
