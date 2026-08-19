@@ -65,13 +65,19 @@
   }
   function showApp(email, state = '인증 세션 확인 중') {
     if (!app || !token()) return;
+    const becameVisible = app.hidden;
     if (loginScreen) loginScreen.hidden = true;
     app.hidden = false;
     setProfile(email || safeSession.get(EMAIL_KEY));
     applyScope();
     if (apiState) apiState.textContent = state;
+    if (!becameVisible) return;
     mark('ekodi-admin-app-visible');
     window.dispatchEvent(new CustomEvent('ekodi-authenticated', { detail: { optimistic: state.includes('확인 중') } }));
+  }
+  function updateSessionState(email, state) {
+    setProfile(email || safeSession.get(EMAIL_KEY));
+    if (apiState) apiState.textContent = state;
   }
   function showLogin(message = '') {
     if (app) app.hidden = true;
@@ -95,9 +101,8 @@
     const value = token();
     if (!value) return showLogin();
 
-    // The shell contains no privileged data. Reveal it immediately while the server validates
-    // the token, so a slow network never blocks first interaction. Every data API still checks
-    // the bearer token server-side.
+    // Reveal only the static shell immediately. Privileged APIs still validate the bearer
+    // token server-side, while a slow session endpoint never blocks first interaction.
     showApp(safeSession.get(EMAIL_KEY), '인증 세션 확인 중');
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 5000);
@@ -110,12 +115,12 @@
       if (response.status === 401 || response.status === 403) return showLogin('세션 만료 · 다시 로그인');
       if (!response.ok) throw new Error(`session ${response.status}`);
       const result = await response.json();
-      showApp(result.email || safeSession.get(EMAIL_KEY), '인증 세션 정상');
+      updateSessionState(result.email || safeSession.get(EMAIL_KEY), '인증 세션 정상');
       mark('ekodi-admin-session-validated');
       window.dispatchEvent(new CustomEvent('ekodi-session-validated', { detail: result }));
     } catch (error) {
       if (token()) {
-        showApp(safeSession.get(EMAIL_KEY), error?.name === 'AbortError' ? '세션 확인 지연' : '네트워크 확인 필요');
+        updateSessionState(safeSession.get(EMAIL_KEY), error?.name === 'AbortError' ? '세션 확인 지연' : '네트워크 확인 필요');
         document.documentElement.dataset.ekodiSessionDegraded = 'true';
       } else showLogin('통합인증 필요');
     } finally {
@@ -134,20 +139,41 @@
   }
   function installPerfDiagnostics() {
     if (!new URLSearchParams(location.search).has('perf')) return;
-    const state = window.__EKODI_PERF__ = { longTasks: [], resources: [], navigation: null };
+    const state = window.__EKODI_PERF__ = {
+      longTasks: [], resources: [], paints: [], layoutShifts: [], events: [], navigation: null,
+      snapshot() {
+        const resources = this.resources;
+        return {
+          navigation: this.navigation,
+          longTasks: [...this.longTasks],
+          paints: [...this.paints],
+          layoutShifts: [...this.layoutShifts],
+          events: [...this.events],
+          resourceCount: resources.length,
+          transferBytes: resources.reduce((sum, item) => sum + Number(item.transferSize || 0), 0),
+          resourceDurationMs: resources.reduce((sum, item) => sum + Number(item.duration || 0), 0),
+          marks: performance.getEntriesByType('mark').map(entry => ({ name:entry.name, start:entry.startTime })),
+        };
+      },
+    };
     try {
       state.navigation = performance.getEntriesByType('navigation')[0]?.toJSON?.() || null;
+      for (const entry of performance.getEntriesByType('paint')) state.paints.push({ name:entry.name, start:entry.startTime });
       const observer = new PerformanceObserver(list => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'longtask') state.longTasks.push({ start: entry.startTime, duration: entry.duration });
           if (entry.entryType === 'resource') state.resources.push({ name: entry.name, start: entry.startTime, duration: entry.duration, transferSize: entry.transferSize || 0 });
+          if (entry.entryType === 'layout-shift' && !entry.hadRecentInput) state.layoutShifts.push({ start:entry.startTime, value:entry.value });
+          if (entry.entryType === 'event' && entry.duration >= 16) state.events.push({ name:entry.name, start:entry.startTime, duration:entry.duration, interactionId:entry.interactionId || 0 });
         }
       });
       const types = [];
-      if (PerformanceObserver.supportedEntryTypes?.includes('longtask')) types.push('longtask');
-      if (PerformanceObserver.supportedEntryTypes?.includes('resource')) types.push('resource');
-      if (types.length) observer.observe({ entryTypes: types });
-      window.addEventListener('ekodi-admin-ready', () => queueMicrotask(() => console.info('[EKODI perf]', state)), { once: true });
+      for (const type of ['longtask', 'resource', 'layout-shift', 'event']) {
+        if (PerformanceObserver.supportedEntryTypes?.includes(type)) types.push(type);
+      }
+      if (types.length) observer.observe({ entryTypes: types, buffered:true, durationThreshold:16 });
+      window.EKODIAdminPerf = Object.freeze({ snapshot: () => state.snapshot() });
+      window.addEventListener('ekodi-admin-ready', () => queueMicrotask(() => console.info('[EKODI perf]', state.snapshot())), { once: true });
     } catch {}
   }
 
