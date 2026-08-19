@@ -61,5 +61,8 @@ test('postbuild emits a purpose-built minimal compact runtime and standalone Cam
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
   assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
-  assert.doesNotMatch(postbuild, /minimalCompactJs[\s\S]*setTimeout\(/);
+  const generated = postbuild.match(/const minimalCompactJs = `([\s\S]*?)`;\nnew Function\(minimalCompactJs\)/)?.[1] || '';
+  assert.ok(generated, 'minimal compact runtime template must be extractable');
+  assert.doesNotMatch(generated, /setTimeout\(/);
+  assert.doesNotMatch(generated, /installCampus|installPolicies|WINDOWS_AGENT_URL|ekodiDevicePanel/);
 });
