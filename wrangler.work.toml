@@ -19,6 +19,7 @@ AUTH_URL = "https://auth.ekodi.kr/?site=work"
 [assets]
 directory = "./work"
 binding = "ASSETS"
+run_worker_first = true
 
 [observability.logs]
 enabled = true
