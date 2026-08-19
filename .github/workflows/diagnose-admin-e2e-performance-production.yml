@@ -1,0 +1,104 @@
+name: Diagnose Admin E2E Performance Production
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-admin-e2e-performance-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Resolve production and wait for e2e performance release
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== DNS ==='
+          getent ahostsv4 admin.ekodi.kr || true
+          getent ahostsv4 api.ekodi.kr || true
+          ready=''
+          for i in $(seq 1 30); do
+            code=$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/admin.html -w '%{http_code}' https://admin.ekodi.kr/ || true)
+            echo "probe=$i root=$code"
+            if [[ "$code" == '200' ]] && grep -Fq '20260819-e2e-perf-1' /tmp/admin.html; then ready=yes; break; fi
+            sleep 5
+          done
+          test "$ready" = yes
+
+      - name: Measure live HTML and verify first path
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS --connect-timeout 5 --max-time 15 -D /tmp/admin.headers -o /tmp/admin.html \
+            -w 'ADMIN status=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://admin.ekodi.kr/
+          grep -Ei '^(HTTP/|server:|cf-ray:|cache-control:|content-type:|etag:|x-ekodi-route:)' /tmp/admin.headers || true
+          grep -Fq '20260819-e2e-perf-1' /tmp/admin.html
+          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin.html
+          ! grep -Fq '<script src="control-center.js"' /tmp/admin.html
+          ! grep -Fq 'control-center-ops.css' /tmp/admin.html
+          ! grep -Fq 'control-center-finance.css' /tmp/admin.html
+          echo "HTML bytes=$(wc -c < /tmp/admin.html)"
+
+      - name: Verify production runtime budgets and demand contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in admin-central-handoff.js admin-authenticated-shell.js compact-control-center.js admin-menu-layout.js admin-demand-loader.js author-billing-admin.js author-billing-admin.css finance-monitor.js control-center.css device-control-admin.js device-control-admin.css; do
+            code=$(curl -sS --connect-timeout 5 --max-time 15 -o "/tmp/${asset}" -w '%{http_code}' "https://admin.ekodi.kr/$asset")
+            echo "$asset status=$code bytes=$(wc -c < "/tmp/${asset}")"
+            test "$code" = 200
+          done
+          handoff=$(wc -c < /tmp/admin-central-handoff.js)
+          shell=$(wc -c < /tmp/admin-authenticated-shell.js)
+          compact=$(wc -c < /tmp/compact-control-center.js)
+          menu=$(wc -c < /tmp/admin-menu-layout.js)
+          demand=$(wc -c < /tmp/admin-demand-loader.js)
+          first_path=$((handoff + shell + compact + menu + demand))
+          echo "FIRST_PATH_JS=$first_path handoff=$handoff shell=$shell compact=$compact menu=$menu demand=$demand"
+          test "$handoff" -le 9000
+          test "$compact" -le 12000
+          test "$menu" -le 10000
+          test "$demand" -le 14000
+          test "$first_path" -le 52000
+          grep -Fq 'AbortController' /tmp/admin-central-handoff.js
+          ! grep -Fq 'ekodi-finance-overview' /tmp/admin-central-handoff.js
+          ! grep -Fq 'setInterval(' /tmp/admin-central-handoff.js
+          ! grep -Fq 'new MutationObserver' /tmp/admin-authenticated-shell.js
+          ! grep -Fq 'new MutationObserver' /tmp/admin-menu-layout.js
+          ! grep -Fq 'WINDOWS_AGENT_URL' /tmp/compact-control-center.js
+          ! grep -Fq 'CAMPUS_SERVICES' /tmp/compact-control-center.js
+          grep -Fq "scripts: ['device-control-admin.js']" /tmp/admin-demand-loader.js
+          grep -Fq "scripts: ['ai-ops-admin.js']" /tmp/admin-demand-loader.js
+          grep -Fq "await loadScript('author-billing-admin.js');" /tmp/admin-demand-loader.js
+          grep -Fq "await loadScript('finance-monitor.js');" /tmp/admin-demand-loader.js
+          grep -Fq 'ekodi-finance-overview' /tmp/author-billing-admin.js
+          grep -Fq 'tossSecretConfigured' /tmp/author-billing-admin.js
+          grep -Fq '.payment-key-panel' /tmp/author-billing-admin.css
+          grep -Fq "new CustomEvent('ekodi-finance-overview'" /tmp/finance-monitor.js
+          ! grep -Fq 'setInterval(' /tmp/finance-monitor.js
+          grep -Fq 'content-visibility:auto' /tmp/control-center.css
+          grep -Fq 'backdrop-filter:none!important' /tmp/control-center.css
+          grep -Fq 'WINDOWS_AGENT_URL' /tmp/device-control-admin.js
+          grep -Fq '.ekodi-device-panel' /tmp/device-control-admin.css
+
+      - name: Verify API and repeated edge timings
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS --connect-timeout 5 --max-time 15 -o /tmp/api.body \
+            -w 'API status=%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://api.ekodi.kr/health
+          grep -Fq '"ok":true' /tmp/api.body
+          echo '=== ROOT SAMPLES ==='
+          for i in 1 2 3 4 5; do
+            curl -sS --connect-timeout 5 --max-time 15 -o /dev/null \
+              -w "sample=$i status=%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n" \
+              https://admin.ekodi.kr/
+          done
+          echo 'PASS: production admin e2e performance contract is live.'
