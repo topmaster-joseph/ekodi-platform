@@ -4,7 +4,7 @@
     "name": "ekodi-work",
     "config": "wrangler.work.toml",
     "requests": [
-      {"url":"https://work.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI Work","사람과 일을 잇고","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v1"]},
+      {"url":"https://work.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI Work","LOCAL WORKFORCE OS","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v1"]},
       {"url":"https://work.ekodi.kr/config.js","statuses":[200],"redirect":"follow","expect":["\"dataEnabled\":true","\"dataMode\":\"production\""]},
       {"url":"https://work.ekodi.kr/health","statuses":[200],"redirect":"follow","expect":["\"service\":\"ekodi-work\"","\"dataEnabled\":true","\"dataMode\":\"production\""]}
     ]
