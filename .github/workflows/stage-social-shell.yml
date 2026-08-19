@@ -28,7 +28,6 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -46,20 +45,19 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy isolated Social staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.social-staging.toml
-      - name: Verify Social staging, feed and Shell
+      - name: Verify Social staging and Shell independently of external feed providers
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -sS -D /tmp/social-stage.headers -o /tmp/social-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            root_code=$(curl -sS -L -D /tmp/social-stage.headers -o /tmp/social-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -o /tmp/social-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            feed_code=$(curl -sS -o /tmp/social-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/api/feed?org=community" || true)
-            if [[ "$root_code" == '200' && "$health_code" == '200' && "$feed_code" == '200' ]] \
+            echo "Social staging: root=$root_code health=$health_code"
+            if [[ "$root_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'EKODI Social' /tmp/social-stage.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/social-stage.html \
               && grep -Fiq 'x-ekodi-shell: v1' /tmp/social-stage.headers \
-              && grep -Fq '"service":"ekodi-social"' /tmp/social-stage-health.json \
-              && grep -Fq '에코디커뮤니티' /tmp/social-stage-feed.json; then
+              && grep -Fq '"service":"ekodi-social"' /tmp/social-stage-health.json; then
               echo 'Social isolated staging and shared Shell verified.'
               exit 0
             fi
