@@ -64,13 +64,17 @@ test('Flat AI Ops keeps decision safety while current conversation owns normal r
   assert.match(patch,/actionType:'ui\.change_request'/);
 });
 
-test('AI Ops production workflow verifies flat orchestration markers',async()=>{
+test('AI Ops production workflow verifies the canonical true-lazy release instead of deploying it twice',async()=>{
   const workflow=await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow,/admin-readable-command\.js/);
   assert.match(workflow,/admin-readable-command\.css/);
   assert.match(workflow,/secondaryScripts: \['admin-lazy-features\.js', 'system-health-admin\.js'\]/);
   assert.match(workflow,/actionType:'ui\.change_request'/);
-  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
-  assert.match(workflow,/Verify production flat Admin AI Ops/);
+  assert.match(workflow,/workflows: \['Deploy Admin True Lazy Gate'\]/);
+  assert.match(workflow,/Verify production fingerprinted thin shell and flat AI Ops/);
+  assert.match(workflow,/ai-ops-admin\.css/);
+  assert.match(workflow,/max-age=31536000, immutable/);
+  assert.doesNotMatch(workflow,/guarded-worker-release\.mjs/);
+  assert.doesNotMatch(workflow,/CLOUDFLARE_API_TOKEN/);
   assert.doesNotMatch(workflow,/Verify production Admin Governance Cockpit boundary/);
 });
