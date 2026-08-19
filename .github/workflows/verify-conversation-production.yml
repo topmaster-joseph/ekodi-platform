@@ -1,0 +1,47 @@
+name: Verify Conversation Production
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-conversation-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify Workspace Conversation health
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/workspace.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health')
+          [[ "$code" == '200' ]]
+          cat /tmp/workspace.json
+          grep -Fq '"schemaReady":true' /tmp/workspace.json
+          grep -Fq '"mutations":true' /tmp/workspace.json
+          grep -Fq '"conversationFoundation":"v2"' /tmp/workspace.json
+          grep -Fq '"eventOutbox":true' /tmp/workspace.json
+          grep -Fq '"conversationSchemaReady":true' /tmp/workspace.json
+      - name: Verify Control Operator boundary
+        run: |
+          set -euo pipefail
+          health=$(curl -sS -o /tmp/control.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/health')
+          inbox=$(curl -sS -o /tmp/inbox.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/api/control/messenger/inbox')
+          [[ "$health" == '200' ]]
+          [[ "$inbox" == '401' ]]
+          cat /tmp/control.json
+          cat /tmp/inbox.json
+      - name: Verify Messenger UI and async client
+        run: |
+          set -euo pipefail
+          root=$(curl -sS -D /tmp/headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://messenger.ekodi.kr/')
+          app=$(curl -sS -o /tmp/app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://messenger.ekodi.kr/app.js')
+          [[ "$root" == '200' && "$app" == '200' ]]
+          grep -Fq 'EKODI Messenger' /tmp/root.html
+          grep -Fq 'refreshAssistantUntilSettled' /tmp/app.js
+          grep -Fq 'EKODI AI' /tmp/app.js
+          grep -Fq '담당자 연결 대기' /tmp/app.js
+          grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
+          grep -Fiq 'x-ekodi-shell: v1' /tmp/headers
