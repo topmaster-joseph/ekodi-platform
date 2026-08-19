@@ -21,14 +21,19 @@ test('canonical admin edge preserves the direct auth anchor instead of rewriting
   assert.match(worker, /"form-action 'self'"/);
 });
 
-test('apex admin fallback rewrites only the auth destination and keeps admin security headers', async () => {
+test('apex admin fallback rewrites only the auth destination and versioned admin assets use immutable cache safely', async () => {
   const worker = await read('site-worker.js');
   assert.match(worker, /const PUBLIC_ADMIN_ALIASES = new Set\(\['\/admin', '\/admin\/'\]\)/);
   assert.match(worker, /function rewriteAdminApexLogin\(response\)/);
   assert.match(worker, /element\.setAttribute\('href', loginUrl\)/);
   assert.match(worker, /target\.searchParams\.set\('return_to', 'https:\/\/ekodi\.kr\/admin'\)/);
   assert.match(worker, /return withHostSecurity\(rewritten, ADMIN_CSP, 'no-store', 'admin-fallback'\)/);
-  assert.match(worker, /return withHostSecurity\(response, ADMIN_CSP, 'public, max-age=0, must-revalidate', 'admin-fallback-asset'\)/);
+  assert.match(worker, /function adminAssetCacheControl\(url\)/);
+  assert.match(worker, /url\.searchParams\.has\('v'\)/);
+  assert.match(worker, /public, max-age=31536000, immutable/);
+  assert.match(worker, /public, max-age=0, must-revalidate/);
+  assert.match(worker, /return withHostSecurity\(response, ADMIN_CSP, adminAssetCacheControl\(url\), 'admin-fallback-asset'\)/);
+  assert.match(worker, /return withHostSecurity\(response, ADMIN_CSP, adminAssetCacheControl\(url\), 'admin-asset'\)/);
 });
 
 test('legacy admin auth start remains a fixed-origin allow-listed fallback', async () => {
