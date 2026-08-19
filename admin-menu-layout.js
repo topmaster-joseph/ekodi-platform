@@ -20,8 +20,6 @@
   const CANONICAL_HASH = new Map([['aiops', '#ai-ops'], ['devices', '#devices'], ['campus', '#campus']]);
 
   let requestedSection = '';
-  let navMutationQueued = false;
-  let contentMutationQueued = false;
 
   function installCompactNavigationStyle() {
     if (document.querySelector('#ekodi-admin-menu-density')) return;
@@ -66,8 +64,8 @@
         continue;
       }
       const rank = VISIBLE_NAV_RANK.get(sectionOf(item)) ?? unknownRank++;
-      item.style.order = String(rank);
-      item.dataset.menuOrder = String(rank);
+      if (item.style.order !== String(rank)) item.style.order = String(rank);
+      if (item.dataset.menuOrder !== String(rank)) item.dataset.menuOrder = String(rank);
     }
     nav.dataset.stableMenuOrder = 'true';
   }
@@ -75,10 +73,10 @@
   function enforceInternalNavigationPolicy() {
     for (const item of allNavItems()) {
       if (!isInternalNav(item)) continue;
-      item.hidden = true;
+      if (!item.hidden) item.hidden = true;
       item.dataset.aiInternal = sectionOf(item) || item.getAttribute('href') || 'internal';
-      item.setAttribute('aria-hidden', 'true');
-      item.tabIndex = -1;
+      if (item.getAttribute('aria-hidden') !== 'true') item.setAttribute('aria-hidden', 'true');
+      if (item.tabIndex !== -1) item.tabIndex = -1;
       item.classList.remove('active');
     }
     applyStableNavigationOrder();
@@ -92,7 +90,7 @@
     const title = document.querySelector('#pageTitle');
     const item = navItemFor(section);
     const label = item?.querySelector('span')?.textContent?.trim() || item?.textContent?.trim();
-    if (title && label) title.textContent = label;
+    if (title && label && title.textContent !== label) title.textContent = label;
   }
 
   function activatePanel(section) {
@@ -102,7 +100,7 @@
       const visible = panelTargets(panel).includes(section);
       panel.classList.toggle('hidden-panel', !visible);
       if (visible) panel.removeAttribute('hidden');
-      else panel.hidden = true;
+      else if (!panel.hidden) panel.hidden = true;
     }
     for (const item of allNavItems()) item.classList.toggle('active', !isInternalNav(item) && sectionOf(item) === section);
     syncTitle(section);
@@ -116,8 +114,7 @@
     const selector = section === 'aiops'
       ? '[data-demand-feature="aiops"], [data-section="aiops"]'
       : `[data-demand-feature="${section}"], [data-lazy-section="${section}"], [data-section="${section}"]`;
-    const control = nav.querySelector(selector);
-    if (control) control.click();
+    nav.querySelector(selector)?.click();
   }
 
   function routeInternalToAiOps() {
@@ -128,6 +125,11 @@
 
   function explicitHashSection() {
     return HASH_SECTIONS.get(location.hash) || '';
+  }
+
+  function reconcileNavigation() {
+    enforceInternalNavigationPolicy();
+    if (requestedSection) activatePanel(requestedSection);
   }
 
   nav.addEventListener('click', event => {
@@ -153,31 +155,11 @@
     routeInternalToAiOps();
   }, true);
 
-  const navObserver = new MutationObserver(() => {
-    if (navMutationQueued) return;
-    navMutationQueued = true;
-    queueMicrotask(() => {
-      navMutationQueued = false;
-      enforceInternalNavigationPolicy();
-      if (requestedSection) activatePanel(requestedSection);
-    });
-  });
-  navObserver.observe(nav, { childList:true, subtree:true });
-
-  const contentObserver = new MutationObserver(() => {
-    if (contentMutationQueued || !requestedSection) return;
-    contentMutationQueued = true;
-    queueMicrotask(() => {
-      contentMutationQueued = false;
-      activatePanel(requestedSection);
-    });
-  });
-  contentObserver.observe(content, { childList:true, subtree:false });
-
-  window.addEventListener('ekodi-feature-installed', () => {
-    enforceInternalNavigationPolicy();
-    if (requestedSection) activatePanel(requestedSection);
-  });
+  // Dynamic admin modules now announce their navigation changes explicitly. This avoids
+  // keeping subtree MutationObservers alive for the entire session and prevents DOM updates
+  // inside feature panels from repeatedly waking the menu router.
+  window.addEventListener('ekodi-nav-changed', reconcileNavigation);
+  window.addEventListener('ekodi-feature-installed', reconcileNavigation);
 
   window.addEventListener('ekodi-admin-ready', () => {
     enforceInternalNavigationPolicy();
@@ -199,8 +181,6 @@
   const initialHash = explicitHashSection();
   if (initialHash && isInternalSection(initialHash)) routeInternalToAiOps();
   else if (initialHash) requestedSection = initialHash;
-  // No hash: deliberately keep the already-rendered lightweight overview shell.
-  // Do not auto-open Campus, AI Ops, Devices, Finance, or any other workspace.
 
   window.EKODIAdminPanels = Object.freeze({
     activate: section => {
