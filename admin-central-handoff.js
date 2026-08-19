@@ -90,7 +90,8 @@
     const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
     const value = hash.get('ekodi_admin_token');
     if (!value) return false;
-    safeSession.set(TOKEN_KEY, value);
+    try { sessionStorage.setItem('ekodi-auth-token', value); }
+    catch { safeSession.set(TOKEN_KEY, value); }
     history.replaceState({}, document.title, location.pathname + location.search);
     mark('ekodi-admin-token-handoff');
     return true;
