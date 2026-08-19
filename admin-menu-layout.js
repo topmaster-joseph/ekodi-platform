@@ -6,68 +6,35 @@
   const content = document.querySelector('.content');
   if (!sidebar || !nav || !content) return;
 
-  // These capabilities still run and remain addressable by the AI/control plane,
-  // but they are not daily human workspaces. AI Ops becomes their primary surface.
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
-
-  // One canonical human-facing menu order. Dynamic/lazy modules may replace their
-  // button nodes, but the visual position must never depend on which menu was clicked.
   const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus',
-    'aiops',
-    'marketing-ai',
-    'work',
-    'clients',
-    'admins',
-    'community',
-    'books',
-    'finance',
-    'communication',
-    'social',
-    'workspace',
-    'devices',
-    'organization',
-    'affiliates',
+    'campus', 'aiops', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
+    'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
   ]);
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
-
   const HASH_SECTIONS = new Map([
-    ['#ai-ops', 'aiops'],
-    ['#devices', 'devices'],
-    ['#campus', 'campus'],
-    ['#policies', 'policies'],
-    ['#operations', 'overview'],
-    ['#services', 'services'],
-    ['#deployments', 'deployments'],
+    ['#ai-ops', 'aiops'], ['#devices', 'devices'], ['#campus', 'campus'],
+    ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
   ]);
-  const CANONICAL_HASH = new Map([
-    ['aiops', '#ai-ops'],
-    ['devices', '#devices'],
-    ['campus', '#campus'],
-  ]);
+  const CANONICAL_HASH = new Map([['aiops', '#ai-ops'], ['devices', '#devices'], ['campus', '#campus']]);
 
   let requestedSection = '';
-  let queued = false;
-  let preferAiOpsOnReady = ['', '#operations', '#services', '#deployments', '#policies'].includes(location.hash);
+  let navMutationQueued = false;
+  let contentMutationQueued = false;
 
   function installCompactNavigationStyle() {
     if (document.querySelector('#ekodi-admin-menu-density')) return;
     const style = document.createElement('style');
     style.id = 'ekodi-admin-menu-density';
-    style.textContent = `
-      body.compact-control-center .side-caption{margin-bottom:10px!important}
-      body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}
-      body.compact-control-center .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}
-      body.compact-control-center .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}
-      body.compact-control-center .side-bottom{padding-top:8px!important}
-    `;
+    style.textContent = `body.compact-control-center .side-caption{margin-bottom:10px!important}body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.compact-control-center .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.compact-control-center .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.compact-control-center .side-bottom{padding-top:8px!important}`;
     document.head.append(style);
   }
 
   function sectionOf(item) {
     if (item?.dataset?.deviceControlNav === 'true') return 'devices';
-    return String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
+    const raw = String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
+    return raw === 'marketing' ? 'marketing-ai' : raw;
   }
 
   function panelTargets(panel) {
@@ -75,8 +42,7 @@
   }
 
   function hasPanel(section) {
-    if (!section) return false;
-    return Array.from(content.querySelectorAll('[data-panel]')).some(panel => panelTargets(panel).includes(section));
+    return Boolean(section && Array.from(content.querySelectorAll('[data-panel]')).some(panel => panelTargets(panel).includes(section)));
   }
 
   function isInternalSection(section) {
@@ -84,9 +50,8 @@
   }
 
   function isInternalNav(item) {
-    const section = sectionOf(item);
     const href = item?.getAttribute?.('href') || '';
-    return isInternalSection(section) || INTERNAL_ONLY_HREFS.has(href);
+    return isInternalSection(sectionOf(item)) || INTERNAL_ONLY_HREFS.has(href);
   }
 
   function allNavItems() {
@@ -100,143 +65,69 @@
         item.style.order = '9999';
         continue;
       }
-      const section = sectionOf(item);
-      const rank = VISIBLE_NAV_RANK.get(section) ?? unknownRank++;
+      const rank = VISIBLE_NAV_RANK.get(sectionOf(item)) ?? unknownRank++;
       item.style.order = String(rank);
       item.dataset.menuOrder = String(rank);
     }
     nav.dataset.stableMenuOrder = 'true';
   }
 
+  function enforceInternalNavigationPolicy() {
+    for (const item of allNavItems()) {
+      if (!isInternalNav(item)) continue;
+      item.hidden = true;
+      item.dataset.aiInternal = sectionOf(item) || item.getAttribute('href') || 'internal';
+      item.setAttribute('aria-hidden', 'true');
+      item.tabIndex = -1;
+      item.classList.remove('active');
+    }
+    applyStableNavigationOrder();
+  }
+
   function navItemFor(section) {
     return Array.from(allNavItems()).find(item => sectionOf(item) === section && !isInternalNav(item)) || null;
   }
 
-  function activeSection() {
-    const active = Array.from(allNavItems()).find(item => item.classList.contains('active') && !item.hidden && !isInternalNav(item));
-    return sectionOf(active);
-  }
-
-  function explicitHashSection() {
-    return HASH_SECTIONS.get(location.hash) || '';
-  }
-
-  function preferredHumanSection() {
-    const explicit = explicitHashSection();
-    if (explicit && !isInternalSection(explicit) && hasPanel(explicit)) return explicit;
-    if (hasPanel('aiops') && navItemFor('aiops')) return 'aiops';
-    if (hasPanel('campus') && navItemFor('campus')) return 'campus';
-    if (hasPanel('devices') && navItemFor('devices')) return 'devices';
-    const first = Array.from(allNavItems()).find(item => {
-      const section = sectionOf(item);
-      return section && !item.hidden && !isInternalNav(item) && hasPanel(section);
-    });
-    return sectionOf(first);
-  }
-
-  function titleFor(section) {
-    if (section === 'aiops') return 'AI Ops';
-    if (section === 'devices') return 'Devices';
-    if (section === 'campus') return 'Campus';
-    const item = navItemFor(section);
-    return item?.querySelector('span')?.textContent?.trim() || item?.textContent?.trim() || '';
-  }
-
   function syncTitle(section) {
     const title = document.querySelector('#pageTitle');
-    const value = titleFor(section);
-    if (title && value) title.textContent = value;
+    const item = navItemFor(section);
+    const label = item?.querySelector('span')?.textContent?.trim() || item?.textContent?.trim();
+    if (title && label) title.textContent = label;
   }
 
-  function syncCanonicalHash(section) {
-    const hash = CANONICAL_HASH.get(section);
-    if (!hash) return;
-    const currentSection = explicitHashSection();
-    const replacingInternal = currentSection && isInternalSection(currentSection);
-    if ((preferAiOpsOnReady || replacingInternal || location.hash === hash) && location.hash !== hash) {
-      history.replaceState(null, '', hash);
-    }
-  }
-
-  function markInternal(item, reason) {
-    item.hidden = true;
-    item.dataset.aiInternal = reason;
-    item.setAttribute('aria-hidden', 'true');
-    item.tabIndex = -1;
-    item.classList.remove('active');
-  }
-
-  function enforceInternalNavigationPolicy() {
-    for (const item of allNavItems()) {
-      if (isInternalNav(item)) {
-        markInternal(item, sectionOf(item) || item.getAttribute('href') || 'internal');
-      }
-    }
-
-    applyStableNavigationOrder();
-
-    // Old Campus shortcuts must not reopen the retired human-facing Operations/Services panels.
-    for (const control of content.querySelectorAll('[data-campus-section]')) {
-      if (!isInternalSection(control.dataset.campusSection)) continue;
-      control.dataset.campusSection = 'aiops';
-      const text = control.textContent?.trim();
-      if (['Operations', 'Services', 'Deployments', 'Policies'].includes(text)) control.textContent = 'AI Ops';
-      control.setAttribute('aria-label', control.getAttribute('aria-label')?.replace(/관리 메뉴 열기$/, 'AI Ops에서 보기') || 'AI Ops에서 보기');
-    }
-  }
-
-  function normalizeTarget(section) {
-    const candidate = String(section || '').trim();
-    if (isInternalSection(candidate)) return preferredHumanSection();
-    if (candidate && hasPanel(candidate)) return candidate;
-    if (preferAiOpsOnReady) return preferredHumanSection();
-    return '';
-  }
-
-  function applyExclusivePanel(section) {
-    enforceInternalNavigationPolicy();
-    const target = normalizeTarget(section || requestedSection || activeSection());
-    if (!target || !hasPanel(target)) return false;
-
-    requestedSection = target;
+  function activatePanel(section) {
+    if (!section || !hasPanel(section)) return false;
+    requestedSection = section;
     for (const panel of content.querySelectorAll('[data-panel]')) {
-      const visible = panelTargets(panel).includes(target);
+      const visible = panelTargets(panel).includes(section);
       panel.classList.toggle('hidden-panel', !visible);
       if (visible) panel.removeAttribute('hidden');
       else panel.hidden = true;
     }
-
-    for (const item of allNavItems()) {
-      const active = !isInternalNav(item) && sectionOf(item) === target;
-      item.classList.toggle('active', active);
-    }
-
-    syncTitle(target);
-    syncCanonicalHash(target);
-    if (target === 'aiops') preferAiOpsOnReady = false;
+    for (const item of allNavItems()) item.classList.toggle('active', !isInternalNav(item) && sectionOf(item) === section);
+    syncTitle(section);
+    const hash = CANONICAL_HASH.get(section);
+    if (hash && location.hash !== hash) history.replaceState(null, '', hash);
     sidebar.classList.remove('open');
     return true;
   }
 
-  function scheduleExclusivePanel(section = '') {
-    const next = String(section || '').trim();
-    if (next) requestedSection = next;
-    if (queued) return;
-    queued = true;
-
-    queueMicrotask(() => {
-      queued = false;
-      applyExclusivePanel();
-    });
-    window.setTimeout(() => applyExclusivePanel(), 40);
-    window.setTimeout(() => applyExclusivePanel(), 180);
+  function openDemand(section) {
+    const selector = section === 'aiops'
+      ? '[data-demand-feature="aiops"], [data-section="aiops"]'
+      : `[data-demand-feature="${section}"], [data-lazy-section="${section}"], [data-section="${section}"]`;
+    const control = nav.querySelector(selector);
+    if (control) control.click();
   }
 
-  function openAiOpsFromInternalRequest() {
-    preferAiOpsOnReady = true;
+  function routeInternalToAiOps() {
     requestedSection = 'aiops';
     if (location.hash !== '#ai-ops') history.replaceState(null, '', '#ai-ops');
-    scheduleExclusivePanel('aiops');
+    openDemand('aiops');
+  }
+
+  function explicitHashSection() {
+    return HASH_SECTIONS.get(location.hash) || '';
   }
 
   nav.addEventListener('click', event => {
@@ -245,86 +136,79 @@
     if (isInternalNav(item)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      openAiOpsFromInternalRequest();
+      routeInternalToAiOps();
       return;
     }
     const section = sectionOf(item);
     if (!section) return;
-    preferAiOpsOnReady = false;
     requestedSection = section;
-    scheduleExclusivePanel(section);
+    queueMicrotask(() => activatePanel(section));
   }, true);
 
   content.addEventListener('click', event => {
     const control = event.target.closest('[data-campus-section]');
-    if (!control) return;
-    if (!isInternalSection(control.dataset.campusSection)) return;
+    if (!control || !isInternalSection(control.dataset.campusSection)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    openAiOpsFromInternalRequest();
+    routeInternalToAiOps();
   }, true);
 
-  let mutationQueued = false;
-  const mutationObserver = new MutationObserver(() => {
-    if (mutationQueued) return;
-    mutationQueued = true;
+  const navObserver = new MutationObserver(() => {
+    if (navMutationQueued) return;
+    navMutationQueued = true;
     queueMicrotask(() => {
-      mutationQueued = false;
+      navMutationQueued = false;
       enforceInternalNavigationPolicy();
-      if (preferAiOpsOnReady && hasPanel('aiops') && navItemFor('aiops')) requestedSection = 'aiops';
-      const active = activeSection();
-      if (active && !isInternalSection(active)) requestedSection = active;
-      scheduleExclusivePanel(requestedSection || preferredHumanSection());
+      if (requestedSection) activatePanel(requestedSection);
     });
   });
-  mutationObserver.observe(content, { childList:true, subtree:false });
-  mutationObserver.observe(nav, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-section','data-lazy-section','data-device-control-nav'] });
+  navObserver.observe(nav, { childList:true, subtree:true });
+
+  const contentObserver = new MutationObserver(() => {
+    if (contentMutationQueued || !requestedSection) return;
+    contentMutationQueued = true;
+    queueMicrotask(() => {
+      contentMutationQueued = false;
+      activatePanel(requestedSection);
+    });
+  });
+  contentObserver.observe(content, { childList:true, subtree:false });
 
   window.addEventListener('ekodi-feature-installed', () => {
     enforceInternalNavigationPolicy();
-    if (preferAiOpsOnReady && hasPanel('aiops')) requestedSection = 'aiops';
-    scheduleExclusivePanel(requestedSection || preferredHumanSection());
+    if (requestedSection) activatePanel(requestedSection);
   });
+
   window.addEventListener('ekodi-admin-ready', () => {
     enforceInternalNavigationPolicy();
-    if (preferAiOpsOnReady && hasPanel('aiops')) requestedSection = 'aiops';
-    scheduleExclusivePanel(requestedSection || preferredHumanSection());
+    const explicit = explicitHashSection();
+    if (explicit && isInternalSection(explicit)) routeInternalToAiOps();
+    else if (explicit) requestedSection = explicit;
   });
+
   window.addEventListener('hashchange', () => {
     const explicit = explicitHashSection();
-    if (explicit && isInternalSection(explicit)) {
-      openAiOpsFromInternalRequest();
-      return;
-    }
-    if (explicit) {
-      preferAiOpsOnReady = false;
-      requestedSection = explicit;
-    }
-    scheduleExclusivePanel(requestedSection || preferredHumanSection());
+    if (!explicit) return;
+    if (isInternalSection(explicit)) return routeInternalToAiOps();
+    requestedSection = explicit;
+    if (!activatePanel(explicit)) openDemand(explicit);
   });
 
   installCompactNavigationStyle();
   enforceInternalNavigationPolicy();
   const initialHash = explicitHashSection();
-  if (initialHash && isInternalSection(initialHash)) {
-    requestedSection = 'aiops';
-    preferAiOpsOnReady = true;
-  } else if (initialHash) {
-    requestedSection = initialHash;
-    preferAiOpsOnReady = false;
-  } else {
-    requestedSection = 'aiops';
-    preferAiOpsOnReady = true;
-  }
-  scheduleExclusivePanel(requestedSection);
+  if (initialHash && isInternalSection(initialHash)) routeInternalToAiOps();
+  else if (initialHash) requestedSection = initialHash;
+  // No hash: deliberately keep the already-rendered lightweight overview shell.
+  // Do not auto-open Campus, AI Ops, Devices, Finance, or any other workspace.
 
   window.EKODIAdminPanels = Object.freeze({
     activate: section => {
-      if (isInternalSection(section)) return openAiOpsFromInternalRequest();
-      preferAiOpsOnReady = false;
-      scheduleExclusivePanel(section);
+      if (isInternalSection(section)) return routeInternalToAiOps();
+      requestedSection = section;
+      if (!activatePanel(section)) openDemand(section);
     },
-    current: () => requestedSection || activeSection(),
+    current: () => requestedSection,
     internalSections: Object.freeze([...INTERNAL_ONLY_SECTIONS]),
     visibleMenuOrder: VISIBLE_NAV_ORDER,
   });
