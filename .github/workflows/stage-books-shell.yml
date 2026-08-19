@@ -50,10 +50,11 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -sS -D /tmp/books-stage.headers -o /tmp/books-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            publishing_code=$(curl -sS -D /tmp/books-publishing-stage.headers -o /tmp/books-publishing-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/publishing/" || true)
+            root_code=$(curl -sS -L -D /tmp/books-stage.headers -o /tmp/books-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            publishing_code=$(curl -sS -L -D /tmp/books-publishing-stage.headers -o /tmp/books-publishing-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/publishing/" || true)
             health_code=$(curl -sS -o /tmp/books-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$publishing_code" =~ ^[23] ]] && [[ "$health_code" == '200' ]] \
+            echo "Books staging: root=$root_code publishing=$publishing_code health=$health_code"
+            if [[ "$root_code" == '200' && "$publishing_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-stage.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-publishing-stage.html \
               && grep -Fiq 'x-ekodi-shell: v1' /tmp/books-stage.headers \
