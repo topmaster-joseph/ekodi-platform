@@ -1,0 +1,251 @@
+/* EKODI Admin readable command layer
+ * Keeps the thin authenticated shell while making the control plane readable,
+ * light by default, and command-first on desktop and mobile.
+ */
+body.compact-control-center{
+  color-scheme:light;
+  background:#f4f7fb!important;
+  color:#172235!important;
+  font-size:15px;
+  line-height:1.55;
+}
+body.compact-control-center .app,
+body.compact-control-center .app>main,
+body.compact-control-center .content{background:#f4f7fb!important;color:#172235!important}
+body.compact-control-center .sidebar{
+  background:#ffffff!important;
+  color:#172235!important;
+  border-right:1px solid #dce5ef!important;
+  box-shadow:8px 0 24px rgba(34,54,78,.05)!important;
+}
+body.compact-control-center .side-brand,
+body.compact-control-center .side-brand strong,
+body.compact-control-center .profile strong{color:#172235!important}
+body.compact-control-center .side-caption,
+body.compact-control-center .sidebar small,
+body.compact-control-center .profile small{color:#718096!important;font-size:11px!important}
+body.compact-control-center .sidebar nav{gap:5px!important}
+body.compact-control-center .nav{
+  min-height:44px!important;
+  border-radius:11px!important;
+  color:#405269!important;
+  background:transparent!important;
+  font-size:14px!important;
+}
+body.compact-control-center .nav span{font-size:14px!important}
+body.compact-control-center .nav:hover,
+body.compact-control-center .nav:focus-visible,
+body.compact-control-center .nav.active{
+  background:#edf5ff!important;
+  color:#0b5cab!important;
+  outline:none!important;
+}
+body.compact-control-center .topbar{
+  background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid #dce5ef!important;
+  box-shadow:0 5px 18px rgba(34,54,78,.04)!important;
+}
+body.compact-control-center .topbar h1{font-size:22px!important;color:#172235!important}
+body.compact-control-center .topbar .kicker,
+body.compact-control-center .kicker{font-size:11px!important;color:#55708c!important;letter-spacing:.08em}
+body.compact-control-center .profile>span{background:#f4f7fb!important;border-color:#dce5ef!important;color:#172235!important}
+
+body.compact-control-center .hero,
+body.compact-control-center .section,
+body.compact-control-center .architecture,
+body.compact-control-center .metrics article,
+body.compact-control-center .module,
+body.compact-control-center .service-control-card,
+body.compact-control-center .policy-card,
+body.compact-control-center .policy-footer{
+  background:#ffffff!important;
+  color:#172235!important;
+  border-color:#dce5ef!important;
+  box-shadow:0 7px 22px rgba(44,62,84,.045)!important;
+}
+body.compact-control-center .hero h2,
+body.compact-control-center .section h2,
+body.compact-control-center .section h3,
+body.compact-control-center .architecture h2,
+body.compact-control-center .module strong,
+body.compact-control-center .service-control-head strong{color:#172235!important}
+body.compact-control-center .hero h2{font-size:23px!important}
+body.compact-control-center .section-head h2,
+body.compact-control-center .architecture h2{font-size:21px!important}
+body.compact-control-center .hero p:not(.kicker),
+body.compact-control-center .section-head>p,
+body.compact-control-center .operations-copy,
+body.compact-control-center .module p,
+body.compact-control-center .policy-card p{
+  color:#5f7084!important;
+  font-size:14px!important;
+  line-height:1.55!important;
+}
+body.compact-control-center .metrics small{font-size:12px!important;color:#66788d!important}
+body.compact-control-center .metrics strong{font-size:25px!important;color:#172235!important}
+body.compact-control-center .metrics span{font-size:12px!important;color:#718096!important}
+body.compact-control-center .module{min-height:118px!important}
+body.compact-control-center .module strong{font-size:15px!important}
+body.compact-control-center .service-control-head strong{font-size:15px!important}
+body.compact-control-center .service-control-head small,
+body.compact-control-center .health-badge,
+body.compact-control-center .service-stats small{font-size:11px!important}
+body.compact-control-center .service-stats strong{font-size:14px!important}
+body.compact-control-center input,
+body.compact-control-center select,
+body.compact-control-center textarea{font-size:14px!important}
+body.compact-control-center .primary,
+body.compact-control-center .secondary,
+body.compact-control-center .ghost,
+body.compact-control-center button,
+body.compact-control-center a.ghost{
+  min-height:42px;
+  font-size:13px;
+}
+
+/* Governance cockpit: keep the operational density, lose the submarine darkness. */
+body.compact-control-center.governance-cockpit-admin .mission-primary-nav{
+  background:linear-gradient(180deg,#ffffff 82%,rgba(255,255,255,.94) 94%,rgba(255,255,255,0))!important;
+}
+body.compact-control-center.governance-cockpit-admin .mission-primary-icon{color:#47769d!important}
+body.compact-control-center.governance-cockpit-admin .mission-brief,
+body.compact-control-center.governance-cockpit-admin .mission-decisions,
+body.compact-control-center.governance-cockpit-admin .mission-timeline-block,
+body.compact-control-center.governance-cockpit-admin .mission-crew-block,
+body.compact-control-center.governance-cockpit-admin .ai-ops-block,
+body.compact-control-center.governance-cockpit-admin .ai-selected-detail{
+  background:#ffffff!important;
+  border-color:#dce5ef!important;
+  color:#172235!important;
+  box-shadow:0 7px 22px rgba(44,62,84,.04)!important;
+}
+body.compact-control-center.governance-cockpit-admin .governance-brief-copy small,
+body.compact-control-center.governance-cockpit-admin .mission-section-head small{color:#657a91!important;font-size:11px!important}
+body.compact-control-center.governance-cockpit-admin .governance-brief-copy strong{color:#172235!important;font-size:17px!important}
+body.compact-control-center.governance-cockpit-admin .governance-brief-copy span{color:#65788d!important;font-size:12px!important}
+body.compact-control-center.governance-cockpit-admin .governance-brief-metrics article,
+body.compact-control-center.governance-cockpit-admin .mission-time-row,
+body.compact-control-center.governance-cockpit-admin .mission-council-agent,
+body.compact-control-center.governance-cockpit-admin .mission-empty{
+  background:#f7f9fc!important;
+  border-color:#e0e7ef!important;
+  color:#405269!important;
+}
+body.compact-control-center.governance-cockpit-admin .governance-brief-metrics small{font-size:11px!important;color:#65788d!important}
+body.compact-control-center.governance-cockpit-admin .governance-brief-metrics strong{font-size:21px!important;color:#172235!important}
+body.compact-control-center.governance-cockpit-admin .governance-brief-metrics span{font-size:11px!important;color:#718096!important}
+body.compact-control-center.governance-cockpit-admin .mission-section-head h3{font-size:17px!important;color:#172235!important}
+body.compact-control-center.governance-cockpit-admin .mission-time-row time,
+body.compact-control-center.governance-cockpit-admin .mission-time-row>span:last-child{font-size:11px!important;color:#718096!important}
+body.compact-control-center.governance-cockpit-admin .mission-time-row strong{font-size:13px!important;color:#25344a!important}
+body.compact-control-center.governance-cockpit-admin .mission-council-agent strong{font-size:13px!important;color:#25344a!important}
+body.compact-control-center.governance-cockpit-admin .mission-council-agent small{font-size:11px!important;color:#718096!important}
+body.compact-control-center.governance-cockpit-admin .mission-ai-orb{background:#edf5ff!important;color:#0b5cab!important;border-color:#cbdff3!important}
+
+/* The bottom duplicate command bar is intentionally retired. The AI command surface
+ * now sits with its answer stream so question and result stay in one visual context. */
+body.compact-control-center .governance-command-bar{display:none!important}
+
+/* Chief AI conversation: input first, answer directly beneath it. */
+body.compact-control-center .ai-chief-chat{
+  display:flex!important;
+  flex-direction:column!important;
+  background:#ffffff!important;
+  border:1px solid #d8e3ee!important;
+  color:#172235!important;
+  box-shadow:0 10px 30px rgba(44,62,84,.055)!important;
+}
+body.compact-control-center .ai-chat-head{order:1;background:#f8fafc!important;border-color:#e1e8f0!important;padding:14px 16px!important}
+body.compact-control-center .ai-chat-form{order:2;padding:14px 16px 8px!important;grid-template-columns:minmax(0,1fr) auto!important;gap:9px!important;background:#ffffff!important}
+body.compact-control-center .ai-chat-quick{order:3;padding:3px 16px 10px!important;background:#ffffff!important}
+body.compact-control-center .ai-chat-messages{order:4;height:390px!important;background:#f7f9fc!important;padding:15px 16px!important;gap:12px!important}
+body.compact-control-center .ai-chat-foot{order:5;color:#718096!important;font-size:11px!important;padding:9px 16px 13px!important;background:#ffffff!important}
+body.compact-control-center .ai-chat-head h3{font-size:20px!important;color:#172235!important}
+body.compact-control-center .ai-chat-head small{font-size:11px!important;color:#667a91!important}
+body.compact-control-center .ai-chat-scope,
+body.compact-control-center .ai-chat-new{height:40px!important;background:#ffffff!important;color:#33465d!important;border-color:#cfdae6!important;font-size:12px!important}
+body.compact-control-center .ai-chat-input{
+  min-height:66px!important;
+  max-height:150px!important;
+  background:#ffffff!important;
+  color:#172235!important;
+  border:1px solid #b9c9da!important;
+  border-radius:12px!important;
+  padding:12px 13px!important;
+  font-size:15px!important;
+  line-height:1.5!important;
+}
+body.compact-control-center .ai-chat-input::placeholder{color:#8291a2!important}
+body.compact-control-center .ai-chat-input:focus{border-color:#4c8bc3!important;box-shadow:0 0 0 3px rgba(76,139,195,.12)!important}
+body.compact-control-center .ai-chat-send{height:44px!important;min-height:44px!important;background:#165f9d!important;color:#ffffff!important;font-size:13px!important;padding:0 17px!important}
+body.compact-control-center .ai-chat-quick button{min-height:34px!important;background:#f4f7fb!important;color:#405b76!important;border-color:#d5e0ea!important;font-size:11px!important;padding:6px 10px!important}
+body.compact-control-center .ai-chat-message{max-width:91%!important}
+body.compact-control-center .ai-chat-avatar{width:32px!important;height:32px!important;flex-basis:32px!important;background:#e9f3fd!important;color:#0b5cab!important;border-color:#c9dff3!important;font-size:10px!important}
+body.compact-control-center .ai-chat-message.user .ai-chat-avatar{background:#e9edf2!important;color:#405269!important}
+body.compact-control-center .ai-chat-bubble{background:#ffffff!important;border-color:#dce5ef!important;padding:11px 12px!important}
+body.compact-control-center .ai-chat-message.user .ai-chat-bubble{background:#edf5ff!important;border-color:#c9def2!important}
+body.compact-control-center .ai-chat-meta{font-size:11px!important;color:#718096!important}
+body.compact-control-center .ai-chat-meta b{font-size:12px!important;color:#405269!important}
+body.compact-control-center .ai-chat-text{font-size:15px!important;line-height:1.62!important;color:#26384e!important}
+body.compact-control-center .ai-chat-message.user .ai-chat-text{color:#172235!important}
+body.compact-control-center .ai-chat-class{font-size:10px!important}
+body.compact-control-center .ai-chat-actions{gap:7px!important}
+body.compact-control-center .ai-chat-action{min-height:34px!important;background:#f3f7fb!important;color:#315b80!important;border-color:#cbdbe9!important;font-size:11px!important;padding:7px 10px!important}
+body.compact-control-center .ai-chat-action.primary{background:#165f9d!important;color:#fff!important;border-color:#165f9d!important}
+body.compact-control-center .ai-chat-typing{color:#60758c!important;font-size:12px!important}
+body.compact-control-center .ai-chat-council{display:none!important}
+body.compact-control-center .ai-chat-context-card{background:#ffffff!important;border-color:#dce5ef!important;color:#172235!important}
+body.compact-control-center .ai-chat-context-card h3{font-size:16px!important;color:#172235!important}
+body.compact-control-center .ai-chat-context-row{border-color:#e5ebf1!important}
+body.compact-control-center .ai-chat-context-row small{font-size:11px!important;color:#718096!important}
+body.compact-control-center .ai-chat-context-row strong{font-size:12px!important;color:#33465d!important}
+body.compact-control-center .ai-auto-action-status,
+body.compact-control-center .ai-auto-action-result{
+  border:1px solid #c9ddec;
+  border-radius:10px;
+  background:#eef7ff;
+  color:#245579;
+  padding:8px 10px;
+  font-size:12px;
+  line-height:1.45;
+}
+body.compact-control-center .ai-auto-action-status{order:2;margin:0 16px 8px}
+body.compact-control-center .ai-auto-action-result{margin:0 0 9px}
+body.compact-control-center .ai-auto-action-result.is-warning{background:#fff8e8;border-color:#f0d7a1;color:#775315}
+
+@media(max-width:760px){
+  body.compact-control-center{font-size:16px}
+  body.compact-control-center .topbar{height:66px!important;padding:0 14px!important}
+  body.compact-control-center .topbar h1{font-size:21px!important}
+  body.compact-control-center .content{padding:14px 12px 30px!important}
+  body.compact-control-center .hero,
+  body.compact-control-center .section,
+  body.compact-control-center .architecture{padding:15px!important;border-radius:14px!important}
+  body.compact-control-center .hero p:not(.kicker),
+  body.compact-control-center .section-head>p,
+  body.compact-control-center .operations-copy,
+  body.compact-control-center .module p{font-size:15px!important;white-space:normal!important}
+  body.compact-control-center .sidebar{width:min(86vw,300px)!important;left:-100%!important}
+  body.compact-control-center .sidebar.open{left:0!important}
+  body.compact-control-center .nav{min-height:48px!important;padding:11px 13px!important}
+  body.compact-control-center .nav span{font-size:15px!important}
+  body.compact-control-center .primary,
+  body.compact-control-center .secondary,
+  body.compact-control-center .ghost,
+  body.compact-control-center button{min-height:46px;font-size:14px}
+  body.compact-control-center .mission-dashboard{padding-bottom:12px!important}
+  body.compact-control-center .ai-chat-head{padding:13px!important}
+  body.compact-control-center .ai-chat-head-actions{width:100%!important}
+  body.compact-control-center .ai-chat-scope{flex:1!important;min-width:0!important}
+  body.compact-control-center .ai-chat-form{padding:12px 13px 7px!important;grid-template-columns:1fr!important}
+  body.compact-control-center .ai-chat-input{min-height:76px!important;font-size:16px!important}
+  body.compact-control-center .ai-chat-send{width:100%!important;height:46px!important}
+  body.compact-control-center .ai-chat-quick{padding:3px 13px 9px!important}
+  body.compact-control-center .ai-chat-messages{height:min(43vh,370px)!important;padding:13px!important}
+  body.compact-control-center .ai-chat-message{max-width:96%!important}
+  body.compact-control-center .ai-chat-text{font-size:15px!important;line-height:1.65!important}
+  body.compact-control-center .ai-chat-foot{display:block!important;padding:8px 13px 12px!important;font-size:11px!important}
+  body.compact-control-center .ai-chat-foot span{display:block;margin-top:3px}
+  body.compact-control-center .ai-chat-context-card{display:none!important}
+  body.compact-control-center .ai-auto-action-status{margin:0 13px 7px}
+}
