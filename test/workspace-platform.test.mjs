@@ -92,6 +92,7 @@ test('workspace entrypoint changes only Messenger while preserving legacy Invest
   assert.match(entry,/conversationFoundation:'v2'/);
   assert.match(entry,/conversationSchemaReady/);
   assert.match(entry,/drainMessengerOutbox/);
+  assert.match(entry,/scheduleOutboxRecovery/);
   const legacy=await read('workspace-platform-api-worker.js');
   assert.match(legacy,/analysis-and-connection-only/);
   assert.match(legacy,/transactionExecution:false/);
@@ -114,12 +115,14 @@ test('Operator uses normalized admin principal, canonical ledger and channel out
   assert.match(control,/HANDOFF_ALREADY_ACCEPTED/);
 });
 
-test('workspace configs use V2 entrypoint, production cron recovery and read-only staging',async()=>{
-  const [staging,bootstrap,production,manifest]=await Promise.all([
+test('workspace configs use V2 entrypoint without consuming another Cloudflare cron slot',async()=>{
+  const [staging,bootstrap,production,controlConfig,manifest,controlEntry]=await Promise.all([
     read('wrangler.workspace-platform-staging.toml'),
     read('wrangler.workspace-platform-bootstrap.toml'),
     read('wrangler.workspace-platform.toml'),
-    read('deploy/manifests/workspace-platform.worker.json')
+    read('wrangler.api.toml'),
+    read('deploy/manifests/workspace-platform.worker.json'),
+    read('mission-control-entry-worker.js')
   ]);
   for(const config of [staging,bootstrap,production]){
     assert.match(config,/main = "workspace-platform-entry-worker\.js"/);
@@ -128,7 +131,9 @@ test('workspace configs use V2 entrypoint, production cron recovery and read-onl
   assert.match(staging,/ALLOW_MUTATIONS = "false"/);
   assert.match(bootstrap,/ALLOW_MUTATIONS = "false"/);
   assert.match(production,/ALLOW_MUTATIONS = "true"/);
-  assert.match(production,/crons = \["\* \* \* \* \*"\]/);
+  assert.doesNotMatch(production,/\[triggers\]/);
+  assert.match(controlConfig,/crons = \["\*\/10 \* \* \* \*"\]/);
+  assert.match(controlEntry,/drainMessengerOutbox/);
   assert.match(manifest,/conversationFoundation/);
   assert.match(manifest,/conversationSchemaReady/);
 });
@@ -166,6 +171,7 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
   assert.match(workflow,/ekodi-workspace-staging/);
   assert.match(workflow,/ekodi-conversation-control-staging/);
   assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
+  assert.doesNotMatch(workflow,/triggers deploy --config wrangler\.workspace-platform\.toml/);
   assert.match(helper,/d1 migrations apply/);
   assert.match(helper,/UNIQUE constraint failed: d1_migrations\\\.name|d1_migrations\.name/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
