@@ -2,6 +2,7 @@ import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
+import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
@@ -28,10 +29,6 @@ export default {
 
     const path = new URL(request.url).pathname;
 
-    // Admin shell restore is a read-only hot path. Do not send this request through
-    // the legacy auth router, which performs runtime schema checks before every route.
-    // Migrations own schema creation; this path only hashes the bearer token and reads
-    // the existing sessions/admins rows.
     if (path === '/api/session' && request.method === 'GET') {
       try {
         const response = await handleAdminSessionFastPath(request, env);
@@ -42,8 +39,6 @@ export default {
       }
     }
 
-    // Creator AI billing is intentionally isolated from the shared membership router.
-    // D1 is the billing source of truth and every paid Creator AI call re-verifies it.
     if (path.startsWith('/api/author/billing/')) {
       try {
         const response = await handleAuthorBillingControl(request, env);
@@ -54,8 +49,6 @@ export default {
       }
     }
 
-    // MarketingAI Operations Console is a read-only control-plane surface. Keep it
-    // ahead of the shared customer router so admin auth and API security stay explicit.
     if (path.startsWith('/api/marketing/admin/')) {
       try {
         const response = await handleMarketingAdminControl(request, env);
@@ -66,8 +59,6 @@ export default {
       }
     }
 
-    // POS / delivery-app source adapters are store-scoped and import-only. Raw customer
-    // identity is transformed in memory into the Marketing ledger pseudonym and discarded.
     if (path.startsWith('/api/marketing/connectors/')) {
       try {
         const response = await handleMarketingOrderConnectors(request, env);
@@ -78,8 +69,6 @@ export default {
       }
     }
 
-    // Customer/organization Marketing ledger is scoped by the central Marketing
-    // workspace membership and never exposes raw customer identity.
     if (path.startsWith('/api/marketing/ledger/')) {
       try {
         const response = await handleMarketingLedgerControl(request, env);
@@ -90,8 +79,6 @@ export default {
       }
     }
 
-    // Read-only admin System Health. Collection runs out-of-band in GitHub Actions,
-    // so this route only reads tiny daily aggregate rows from D1.
     if (path === '/api/control/system-health') {
       try {
         const response = await handleSystemHealthControl(request, env);
@@ -102,13 +89,9 @@ export default {
       }
     }
 
-    // Canonical EKODI Messenger operator surface. User conversations live only in
-    // messenger_threads/messages/handoffs; this control plane provides admin oversight,
-    // human takeover and channel-adapter requests over that same ledger. The isolated
-    // staging path is re-verified after additive Messenger migrations settle.
     if (path.startsWith('/api/control/messenger')) {
       try {
-        const response = await handleMessengerOperatorControl(request, env);
+        const response = await handleMessengerOperatorControl(request, env, ctx);
         if (response) return applyApiSecurityHeaders(response);
       } catch (error) {
         console.error('Messenger Operator Control error', error);
@@ -145,10 +128,17 @@ export default {
       console.error('Author billing schedule error', error);
       return { processed:0, error:'author_billing_schedule_failed' };
     });
-    if (ctx?.waitUntil) ctx.waitUntil(authorBilling);
+    const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => {
+      console.error('Messenger outbox schedule error', error);
+      return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' };
+    });
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(authorBilling);
+      ctx.waitUntil(messengerOutbox);
+    }
     if (typeof customerEntryWorker.scheduled === 'function') {
       return customerEntryWorker.scheduled(controller, env, ctx);
     }
-    return authorBilling;
+    return Promise.all([authorBilling, messengerOutbox]);
   },
 };
