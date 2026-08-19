@@ -1,0 +1,87 @@
+name: Diagnose Admin Production
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-admin-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve production DNS
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== DNS admin.ekodi.kr ==='
+          getent ahostsv4 admin.ekodi.kr || true
+          echo '=== DNS api.ekodi.kr ==='
+          getent ahostsv4 api.ekodi.kr || true
+          python - <<'PY'
+          import socket
+          for host in ('admin.ekodi.kr','api.ekodi.kr'):
+              try:
+                  values=sorted({x[4][0] for x in socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)})
+                  print(host, values)
+              except Exception as e:
+                  print(host, 'ERROR', repr(e))
+          PY
+
+      - name: Probe live admin HTML and Cloudflare edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS --connect-timeout 5 --max-time 15 \
+            -D /tmp/admin.headers -o /tmp/admin.html \
+            -w 'ADMIN status=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://admin.ekodi.kr/
+          echo '=== RESPONSE HEADERS ==='
+          grep -Ei '^(HTTP/|server:|cf-ray:|cache-control:|content-type:|etag:|last-modified:)' /tmp/admin.headers || true
+          echo '=== LIVE HTML CONTRACT ==='
+          grep -F 'admin-authenticated-shell.js' /tmp/admin.html || true
+          grep -F 'admin-demand-loader.js' /tmp/admin.html || true
+          if grep -Fq '<script src="ai-ops-admin.js"' /tmp/admin.html; then
+            echo 'FAIL: AI Ops is eagerly embedded in live HTML'; exit 1
+          else
+            echo 'PASS: AI Ops is not eagerly embedded in live HTML'
+          fi
+
+      - name: Probe on-demand and latest handoff assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS --connect-timeout 5 --max-time 15 -D /tmp/demand.headers -o /tmp/demand.js https://admin.ekodi.kr/admin-demand-loader.js
+          curl -sS --connect-timeout 5 --max-time 15 -D /tmp/handoff.headers -o /tmp/handoff.js https://admin.ekodi.kr/admin-central-handoff.js
+          echo "DEMAND bytes=$(wc -c < /tmp/demand.js) status=$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END{print code}' /tmp/demand.headers)"
+          echo "HANDOFF bytes=$(wc -c < /tmp/handoff.js) status=$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END{print code}' /tmp/handoff.headers)"
+          grep -Fq 'ai-ops-admin.js' /tmp/demand.js && echo 'PASS: live demand loader contains AI Ops lazy asset'
+          grep -Fq 'system-health-admin.js' /tmp/demand.js && echo 'PASS: live demand loader contains System Health lazy asset'
+          if grep -Eq '^\s*ensurePaymentKeyPanel\(\);\s*$' /tmp/handoff.js; then
+            echo 'FAIL: live handoff still eagerly creates Finance key panel'; exit 1
+          else
+            echo 'PASS: Finance key panel is not eagerly created on first load'
+          fi
+          grep -Fq '1200' /tmp/handoff.js && echo 'PASS: shortened legacy observer marker is live' || true
+
+      - name: Probe API edge and session latency
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== API HEALTH ==='
+          curl -sS --connect-timeout 5 --max-time 15 -D /tmp/api.headers -o /tmp/api.body \
+            -w 'API_HEALTH status=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n' \
+            https://api.ekodi.kr/health
+          grep -Ei '^(HTTP/|server:|cf-ray:|cache-control:|content-type:)' /tmp/api.headers || true
+          head -c 500 /tmp/api.body; echo
+          echo '=== UNAUTHENTICATED /api/session latency samples ==='
+          for i in 1 2 3 4 5; do
+            curl -sS --connect-timeout 5 --max-time 15 -o /tmp/session.body \
+              -w "sample=$i status=%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s remote=%{remote_ip}\n" \
+              https://api.ekodi.kr/api/session || true
+          done
+          echo 'session body:'; head -c 300 /tmp/session.body; echo
