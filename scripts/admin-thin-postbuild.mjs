@@ -18,12 +18,16 @@ function mustRegex(source, pattern, replacement, label) {
   return source.replace(pattern, replacement);
 }
 
-// build.mjs historically concatenates Device Control into the compact shell. Keep the
-// standalone assets, but remove their exact source from the first-login JS/CSS bundle.
+// build.mjs historically concatenates Device Control into the compact shell. Preserve the
+// original sources as standalone demand assets, then remove their exact source from the
+// first-login JS/CSS bundle.
 let compactJs = await text(`${dist}compact-control-center.js`);
 let compactCss = await text(`${dist}compact-control-center.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
+
+await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n`);
+await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
 
 compactJs = mustReplace(compactJs, deviceJs, '', 'device JS bundled in compact shell');
 compactCss = mustReplace(compactCss, deviceCss, '', 'device CSS bundled in compact shell');
@@ -72,10 +76,13 @@ html = html.replaceAll(
 );
 await writeFile(`${dist}control-center.html`, html);
 
-// Fail the build if any heavyweight startup code leaked back into the compact bundle.
+// Fail the build if any heavyweight startup code leaked back into the compact bundle or if
+// either standalone Device asset was not materialized for the demand loader.
 const finalCompactJs = await text(`${dist}compact-control-center.js`);
 const finalCompactCss = await text(`${dist}compact-control-center.css`);
 const finalCampus = await text(`${dist}campus-actions.js`);
+const finalDeviceJs = await text(`${dist}device-control-admin.js`);
+const finalDeviceCss = await text(`${dist}device-control-admin.css`);
 if (finalCompactJs.includes('WINDOWS_AGENT_URL') || finalCompactJs.includes('ekodiDevicePanel')) {
   throw new Error('Device Control leaked into compact-control-center.js');
 }
@@ -88,5 +95,11 @@ if (finalCompactJs.includes('CAMPUS_SERVICES') || finalCompactJs.includes('funct
 if (!finalCampus.includes("section.id = 'campusPanel'") || !finalCampus.includes("button.dataset.section = 'campus'")) {
   throw new Error('On-demand Campus shell was not installed into campus-actions.js');
 }
+if (!finalDeviceJs.includes('WINDOWS_AGENT_URL') || !finalDeviceJs.includes('installPanel()')) {
+  throw new Error('Standalone Device Control JavaScript was not materialized');
+}
+if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes('.ekodi-device-card')) {
+  throw new Error('Standalone Device Control CSS was not materialized');
+}
 
-console.log('Admin thin-shell postbuild: Campus and Device Control are fully demand-loaded.');
+console.log('Admin thin-shell postbuild: Campus and Device Control are fully demand-loaded with standalone Device assets.');
