@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const shell = await readFile(`${root}admin-authenticated-shell.js`, 'utf8');
 const build = await readFile(`${root}scripts/build.mjs`, 'utf8');
 const postbuild = await readFile(`${root}scripts/admin-thin-postbuild.mjs`, 'utf8');
+const performancePostbuild = await readFile(`${root}scripts/admin-performance-postbuild.mjs`, 'utf8');
 
 function scriptTag(name) {
   return `<script src="${name}"`;
@@ -15,19 +16,21 @@ function scriptTag(name) {
 test('pre-auth admin HTML uses only the authenticated shell loader and generated metadata is thinned after build', () => {
   assert.match(build, /admin-authenticated-shell\.js\?v=20260819-true-lazy-1/);
   assert.match(postbuild, /20260819-thin-shell-2/);
+  assert.match(performancePostbuild, /20260819-e2e-perf-1/);
   assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="compact-control-center\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="admin-lazy-features\.js"/);
 });
 
-test('post-auth loader refuses to start any authenticated feature before a validated session reveals app', () => {
+test('post-auth loader starts only when the authenticated app is visible and uses auth events instead of a persistent observer', () => {
   assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
   const guard = shell.indexOf('if (started || !authenticated()) return');
   const criticalLoad = shell.indexOf('await Promise.all(criticalPostAuthScripts.map(loadScript))');
   assert.ok(guard >= 0, 'authenticated shell guard must exist');
   assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
-  assert.match(shell, /observer\.observe\(app, \{ attributes:true, attributeFilter:\['hidden'\] \}\)/);
+  assert.match(shell, /window\.addEventListener\('ekodi-authenticated', onStateChange\)/);
+  assert.doesNotMatch(shell, /new MutationObserver/);
   assert.equal(shell.includes('history.replaceState'), false, 'post-auth loader must never create a navigation hash before authentication');
 });
 
@@ -38,14 +41,13 @@ test('minimal login shell keeps the central auth link interactive while app is h
   assert.equal(scriptTag('compact-control-center.js'), '<script src="compact-control-center.js"');
 });
 
-test('authenticated critical features contain only the three thin shell modules and load in parallel', () => {
+test('authenticated normal route contains only the three thin shell modules and legacy runtime is route isolated', () => {
   for (const asset of [
     'compact-control-center.js',
     'admin-menu-layout.js',
     'admin-demand-loader.js',
-  ]) {
-    assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
-  }
+  ]) assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
+
   for (const noncritical of [
     'control-center-features.js',
     'campus-actions.js',
@@ -55,9 +57,10 @@ test('authenticated critical features contain only the three thin shell modules 
     'release-control-admin.js',
     'work-admin.js',
     'marketing-ai-admin.js',
-  ]) {
-    assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
-  }
+  ]) assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
+
+  assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
+  assert.match(shell, /await loadScript\('control-center\.js'\)/);
   assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
   assert.doesNotMatch(shell, /deferredPostAuthScripts|scheduleDeferredFeatures/);
 });
