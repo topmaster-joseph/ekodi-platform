@@ -1,5 +1,5 @@
 name = "ekodi-energy"
-main = "energy-worker.js"
+main = "energy-shell-worker.js"
 compatibility_date = "2026-08-16"
 workers_dev = true
 preview_urls = false
