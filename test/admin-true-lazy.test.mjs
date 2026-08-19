@@ -17,6 +17,7 @@ test('admin startup does not auto-load heavy operational workspaces', async () =
 
 test('heavy admin modules are explicit on-demand features', async () => {
   const loader = await read('admin-demand-loader.js');
+  assert.doesNotThrow(() => new Function(loader));
   for (const asset of ['ai-ops-admin.js', 'admin-lazy-features.js', 'release-control-admin.js', 'work-admin.js', 'marketing-ai-admin.js']) {
     assert.match(loader, new RegExp(asset.replaceAll('.', '\\.')));
   }
