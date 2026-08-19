@@ -2,6 +2,7 @@
   'use strict';
 
   const TOKEN_KEY = 'ekodi-auth-token';
+  const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
   const app = document.querySelector('#app');
   const nav = document.querySelector('.sidebar nav');
   const loadedScripts = new Map();
@@ -63,14 +64,21 @@
     return Boolean(token() && app && !app.hidden);
   }
 
+  function assetUrl(path) {
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
+  }
+
+  function mark(name) { try { performance.mark(name); } catch {} }
+
   function loadStyle(href) {
     if (loadedStyles.has(href)) return loadedStyles.get(href);
-    const existing = document.querySelector(`link[href="${href}"],link[href="/${href}"]`);
+    const existing = document.querySelector(`link[data-ekodi-demand-style="${href}"]`);
     if (existing) return Promise.resolve(existing);
     const promise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = href;
+      link.href = assetUrl(href);
       link.dataset.ekodiDemandStyle = href;
       link.addEventListener('load', () => resolve(link), { once:true });
       link.addEventListener('error', () => resolve(link), { once:true });
@@ -82,11 +90,11 @@
 
   function loadScript(src) {
     if (loadedScripts.has(src)) return loadedScripts.get(src);
-    const existing = document.querySelector(`script[src="${src}"],script[src="/${src}"]`);
+    const existing = document.querySelector(`script[data-ekodi-demand-script="${src}"]`);
     if (existing) return Promise.resolve(existing);
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = src;
+      script.src = assetUrl(src);
       script.dataset.ekodiDemandScript = src;
       script.addEventListener('load', () => resolve(script), { once:true });
       script.addEventListener('error', () => reject(new Error(`${src} 로딩 실패`)), { once:true });
@@ -142,9 +150,16 @@
     nav.append(button);
   }
 
-  function onIdle(callback, timeout = 1200) {
-    if ('requestIdleCallback' in window) return window.requestIdleCallback(callback, { timeout });
-    return window.setTimeout(() => callback({ didTimeout:true, timeRemaining:() => 0 }), 180);
+  function inputPending() {
+    try { return Boolean(navigator.scheduling?.isInputPending?.()); } catch { return false; }
+  }
+
+  function onBackground(callback) {
+    if (globalThis.scheduler?.postTask) {
+      return globalThis.scheduler.postTask(() => callback({ didTimeout:false, timeRemaining:() => 50 }), { priority:'background' });
+    }
+    if ('requestIdleCallback' in window) return window.requestIdleCallback(callback);
+    return window.setTimeout(() => callback({ didTimeout:false, timeRemaining:() => 20 }), 1200);
   }
 
   function scheduleSecondary(key, feature) {
@@ -154,24 +169,34 @@
     if (!(styles.length || scripts.length)) return;
     secondaryScheduled.add(key);
 
-    const begin = async () => {
-      if (!authenticated()) return;
+    let index = 0;
+    let stylesLoaded = false;
+    const step = () => {
+      if (!authenticated() || index >= scripts.length) return;
       if (document.visibilityState === 'hidden') {
-        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') scheduleStep(0); }, { once:true });
+        document.addEventListener('visibilitychange', step, { once:true });
         return;
       }
-      await Promise.all(styles.map(loadStyle));
-      scheduleStep(0);
+      onBackground(async deadline => {
+        if (!authenticated()) return;
+        if (inputPending() || (deadline?.timeRemaining && deadline.timeRemaining() < 6)) {
+          window.setTimeout(step, 500);
+          return;
+        }
+        try {
+          if (!stylesLoaded) {
+            stylesLoaded = true;
+            await Promise.all(styles.map(loadStyle));
+          }
+          if (scripts[index]) await loadScript(scripts[index]);
+        } catch (error) {
+          console.warn(`[EKODI Admin] ${key} secondary load failed`, error);
+        }
+        index += 1;
+        step();
+      });
     };
-    const scheduleStep = index => {
-      if (index >= scripts.length || !authenticated()) return;
-      onIdle(async () => {
-        try { await loadScript(scripts[index]); }
-        catch (error) { console.warn(`[EKODI Admin] ${key} secondary load failed`, error); }
-        scheduleStep(index + 1);
-      }, 1800);
-    };
-    onIdle(begin, 1500);
+    step();
   }
 
   async function activateFeature(key, placeholder, auto = false) {
@@ -180,6 +205,7 @@
     if (pending.has(key)) return pending.get(key);
 
     const task = (async () => {
+      mark(`ekodi-feature-${key}-start`);
       if (placeholder) {
         placeholder.disabled = true;
         placeholder.setAttribute('aria-busy', 'true');
@@ -194,6 +220,7 @@
         if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
           queueMicrotask(() => real.click());
         }
+        mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
         console.warn(`[EKODI Admin] ${key} demand load failed`, error);
@@ -242,7 +269,6 @@
         loadStyle('control-center-finance.css'),
         loadStyle('author-billing-admin.css'),
       ]).then(async () => {
-        // Attach the readiness consumer before Finance Monitor can emit the overview event.
         await loadScript('author-billing-admin.js');
         await loadScript('finance-monitor.js');
       }).catch(error => {
