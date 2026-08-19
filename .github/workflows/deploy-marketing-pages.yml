@@ -1,14 +1,16 @@
 name: Deploy Marketing AI Pages
-# 2026-08-17 validated release trigger for attractive Marketing AI landing
+# 2026-08-19 shared EKODI Shell production contract
 
 on:
   pull_request:
     paths:
       - '.github/workflows/deploy-marketing-pages.yml'
+      - '.github/workflows/stage-marketing-pages-shell.yml'
   push:
     branches: [main]
     paths:
       - '.github/workflows/deploy-marketing-pages.yml'
+      - '.github/workflows/stage-marketing-pages-shell.yml'
   schedule:
     - cron: '23 * * * *'
   workflow_dispatch:
@@ -62,7 +64,7 @@ jobs:
           set -euo pipefail
           if [ "${{ github.event_name }}" = 'pull_request' ]; then
             echo 'deploy_needed=true' >> "$GITHUB_OUTPUT"
-            echo 'PR validation: build contracts only; no Cloudflare mutation.'
+            echo 'PR validation: build contracts only; no production Cloudflare mutation.'
             exit 0
           fi
 
@@ -133,6 +135,9 @@ jobs:
             grep -Fq '/api/marketing/workspace/resolve?host=' "$file"
             grep -Fq '/api/marketing/store-domains' "$file"
             grep -Fq 'STORE MARKETING AI' "$file"
+            grep -Fq 'data-ekodi-shell="v1"' "$file"
+            grep -Fq 'https://shell.ekodi.kr/shell.js' "$file"
+            grep -Fq 'data-ekodi-service="marketing"' "$file"
           done
           grep -Fq 'data-store-plan-links' dist/marketing-ai/index.html
           grep -Fq "url.searchParams.set('store',store)" dist/marketing-ai/index.html
@@ -220,7 +225,10 @@ jobs:
                  || ! grep -Fq '/api/marketing/domains' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/workspace/resolve?host=' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/store-domains' /tmp/live.html \
-                 || ! grep -Fq 'STORE MARKETING AI' /tmp/live.html; then
+                 || ! grep -Fq 'STORE MARKETING AI' /tmp/live.html \
+                 || ! grep -Fq 'data-ekodi-shell="v1"' /tmp/live.html \
+                 || ! grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/live.html \
+                 || ! grep -Fq 'data-ekodi-service="marketing"' /tmp/live.html; then
                 ok=0
               fi
             done
@@ -235,7 +243,7 @@ jobs:
           for project in marketing-ai marketing-ai-jadam marketing-ai-pizzamaru marketing-ai-yogurtpurple; do
             curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/deployments?env=production&per_page=1" > "/tmp/$project-latest.json"
             PROJECT="$project" TARGET="$sha" python - <<'PY'
-          import json, os, sys
+          import json, os
           project=os.environ['PROJECT']; target=os.environ['TARGET']
           rows=json.load(open('/tmp/'+project+'-latest.json')).get('result') or []
           if not rows: raise SystemExit(project+' has no production deployment')
