@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -35,8 +35,15 @@
         "url": "https://auth.ekodi.kr/auth-router.js",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["admin-auth.js?v=20260816-fedcm-button-1"],
+        "expect": ["admin-auth.js?v=20260816-fedcm-button-1", "manifestService", "authMode==='client'"],
         "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"]
+      },
+      {
+        "url": "https://auth.ekodi.kr/client-auth.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Messenger", "EKODI Investment", "https://shell.ekodi.kr/manifest.json", "authMode!=='client'"],
+        "headerExpect": ["x-ekodi-route: central-auth-asset"]
       },
       {
         "url": "https://auth.ekodi.kr/admin-auth.js",
@@ -44,6 +51,20 @@
         "redirect": "manual",
         "expect": ["use_fedcm_for_button:true", "button_auto_select:false", "expired_challenge", "u.origin==='https://ekodi.kr'"],
         "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"]
+      },
+      {
+        "url": "https://messenger.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Messenger", "PERSON → SPACE → CONVERSATION → ACTION", "https://auth.ekodi.kr/?site=messenger", "https://shell.ekodi.kr/shell.js"],
+        "headerExpect": ["x-ekodi-route: platform-messenger", "x-ekodi-shell: v1"]
+      },
+      {
+        "url": "https://invest.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Investment", "DUE DILIGENCE", "analysis", "https://auth.ekodi.kr/?site=invest", "https://shell.ekodi.kr/shell.js"],
+        "headerExpect": ["x-ekodi-route: platform-invest", "x-ekodi-shell: v1"]
       },
       {
         "url": "https://pay.ekodi.kr/",
