@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-workspace-platform-api",
+    "config": "wrangler.workspace-platform.toml",
+    "requests": [
+      {
+        "url": "https://workspace-api.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["\"service\":\"ekodi-workspace-platform-api\"","\"schemaReady\":true","\"mutations\":true","\"transactionExecution\":false"]
+      }
+    ]
+  }
+}
