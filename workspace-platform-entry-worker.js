@@ -11,10 +11,19 @@ async function conversationSchemaReady(env){
   }catch{return false}
 }
 
+function scheduleOutboxRecovery(env,ctx,limit=8){
+  const task=drainMessengerOutbox(env,{limit}).catch(error=>({processed:0,failed:1,error:String(error?.message||error)}));
+  if(ctx?.waitUntil)ctx.waitUntil(task);
+  return task;
+}
+
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     if(url.pathname.startsWith('/v1/messenger/')){
+      // User traffic also heals pending/failed events. Writes still schedule their own
+      // immediate drain, while reads provide a free recovery path between shared cron runs.
+      scheduleOutboxRecovery(env,ctx,8);
       const response=await handleWorkspaceMessengerV2(request,env,ctx);
       if(response)return response;
     }
@@ -29,8 +38,6 @@ export default {
     return legacyWorkspaceWorker.fetch(request,env,ctx);
   },
   async scheduled(controller,env,ctx){
-    const task=drainMessengerOutbox(env,{limit:20}).catch(error=>({processed:0,failed:1,error:String(error?.message||error)}));
-    if(ctx?.waitUntil)ctx.waitUntil(task);
-    return task;
+    return scheduleOutboxRecovery(env,ctx,20);
   },
 };

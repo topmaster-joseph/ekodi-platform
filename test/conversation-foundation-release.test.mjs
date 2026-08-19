@@ -28,6 +28,7 @@ test('Conversation release is one ordered orchestrator from staging through prod
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.doesNotMatch(workflow,/triggers deploy --config wrangler\.workspace-platform\.toml/);
 });
 
 test('generic Control workflow no longer owns Conversation-specific release triggers',async()=>{
@@ -48,9 +49,24 @@ test('production Conversation release is main-only, recoverable and health-gated
   assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow,/d1 time-travel info ekodi-auth/);
   assert.match(workflow,/conversationSchemaReady/);
-  assert.match(workflow,/triggers deploy --config wrangler\.workspace-platform\.toml/);
   assert.match(workflow,/api\/control\/messenger\/inbox/);
   assert.match(workflow,/refreshAssistantUntilSettled/);
+});
+
+test('Outbox recovery reuses existing Control cron and opportunistic Messenger traffic',async()=>{
+  const [workspaceConfig,controlConfig,entry,controlEntry]=await Promise.all([
+    read('wrangler.workspace-platform.toml'),
+    read('wrangler.api.toml'),
+    read('workspace-platform-entry-worker.js'),
+    read('mission-control-entry-worker.js')
+  ]);
+  assert.doesNotMatch(workspaceConfig,/\[triggers\]/);
+  assert.match(controlConfig,/crons = \["\*\/10 \* \* \* \*"\]/);
+  assert.match(entry,/scheduleOutboxRecovery/);
+  assert.match(entry,/url\.pathname\.startsWith\('\/v1\/messenger\/'\)/);
+  assert.match(controlEntry,/drainMessengerOutbox/);
+  assert.match(controlEntry,/Messenger outbox schedule error/);
+  assert.match(controlEntry,/handleMessengerOperatorControl\(request, env, ctx\)/);
 });
 
 test('Conversation staging uses separate isolated Workspace and Control databases',async()=>{
