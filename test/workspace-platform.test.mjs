@@ -1,16 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { classifyMessengerMessage } from '../workspace-platform-api-worker.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('workspace migration creates isolated Messenger and Investment ledgers',async()=>{
-  const sql=await read('migrations/0028_messenger_investment_workspaces.sql');
-  for(const table of ['messenger_threads','messenger_messages','messenger_handoffs','investment_opportunities','investment_diligence_items'])assert.match(sql,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
-  assert.match(sql,/subject_type IN \('person','tenant'\)/);
-  assert.match(sql,/waiting_human/);
-  assert.match(sql,/diligence/);
-  assert.doesNotMatch(sql,/custody_balance|brokerage_order|securities_order|guaranteed_return/i);
+test('workspace migrations create canonical Messenger and Investment ledgers',async()=>{
+  const [base,extension]=await Promise.all([
+    read('migrations/0028_messenger_investment_workspaces.sql'),
+    read('migrations/0029_messenger_ai_operator_channels.sql')
+  ]);
+  for(const table of ['messenger_threads','messenger_messages','messenger_handoffs','investment_opportunities','investment_diligence_items'])assert.match(base,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  for(const table of ['messenger_events','messenger_channel_links'])assert.match(extension,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  assert.match(base,/subject_type IN \('person','tenant'\)/);
+  assert.match(base,/waiting_human/);
+  assert.match(base,/diligence/);
+  assert.match(extension,/kakao/);
+  assert.match(extension,/whatsapp/);
+  assert.doesNotMatch(base+extension,/custody_balance|brokerage_order|securities_order|guaranteed_return/i);
 });
 
 test('workspace API verifies bearer identity and server-side subject access',async()=>{
@@ -23,7 +30,7 @@ test('workspace API verifies bearer identity and server-side subject access',asy
   assert.doesNotMatch(worker,/SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test('Messenger API persists threads, messages and explicit human handoff state',async()=>{
+test('Messenger API persists threads, messages and human handoff state',async()=>{
   const worker=await read('workspace-platform-api-worker.js');
   for(const route of ['/v1/messenger/threads','/messages','/handoff'])assert.ok(worker.includes(route.replace('/messages','messages').replace('/handoff','handoff'))||worker.includes(route));
   assert.match(worker,/messenger_threads/);
@@ -31,6 +38,40 @@ test('Messenger API persists threads, messages and explicit human handoff state'
   assert.match(worker,/messenger_handoffs/);
   assert.match(worker,/HANDOFF_ALREADY_OPEN/);
   assert.match(worker,/waiting_human/);
+});
+
+test('Messenger is AI-first but suppresses AI after a human operator accepts takeover',async()=>{
+  const worker=await read('workspace-platform-api-worker.js');
+  assert.match(worker,/runAiEnhancedTask/);
+  assert.match(worker,/MESSENGER_AI_URL/);
+  assert.match(worker,/freeAssistReply/);
+  assert.match(worker,/human_operator_active/);
+  assert.match(worker,/human\.review_requested/);
+  assert.match(worker,/assistant\.reply/);
+
+  const normal=classifyMessengerMessage('이번 주 교회 일정을 알려줘');
+  assert.equal(normal.priority,'normal');
+  assert.equal(normal.requiresHuman,false);
+
+  const review=classifyMessengerMessage('관리자가 직접 답변해 주세요');
+  assert.equal(review.requiresHuman,true);
+  assert.ok(review.reasons.includes('explicit_human_request'));
+
+  const urgent=classifyMessengerMessage('결제가 실패했고 환불도 확인해 주세요');
+  assert.equal(urgent.priority,'urgent');
+  assert.equal(urgent.requiresHuman,true);
+});
+
+test('Operator control uses the same Messenger ledger for inbox, takeover and reply',async()=>{
+  const control=await read('messenger-operator-control.js');
+  assert.match(control,/\/api\/control\/messenger/);
+  assert.match(control,/messenger_threads/);
+  assert.match(control,/messenger_messages/);
+  assert.match(control,/messenger_handoffs/);
+  assert.match(control,/messenger_events/);
+  assert.match(control,/messenger_channel_links/);
+  for(const action of ['takeover','reply','release','close','channel-link'])assert.ok(control.includes(action));
+  assert.match(control,/HANDOFF_ALREADY_ACCEPTED/);
 });
 
 test('Investment API stays analysis-only while supporting opportunity and diligence workflow',async()=>{

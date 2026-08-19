@@ -1,6 +1,6 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
-import { handleConversationControl } from './conversation-control.js';
+import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
@@ -86,16 +86,17 @@ export default {
       }
     }
 
-    // EKODI Conversation Core keeps user chat, AI-first assistance and human takeover
-    // on the same shared control plane. It remains provider-independent and can degrade
-    // to free_assist without breaking the underlying messaging path.
-    if (path.startsWith('/api/conversations') || path.startsWith('/api/control/conversations')) {
+    // Canonical EKODI Messenger operator surface. User conversations live only in
+    // messenger_threads/messages/handoffs; this control plane provides admin oversight,
+    // human takeover and channel-adapter requests over that same ledger. The isolated
+    // staging path is re-verified after additive Messenger migrations settle.
+    if (path.startsWith('/api/control/messenger')) {
       try {
-        const response = await handleConversationControl(request, env);
+        const response = await handleMessengerOperatorControl(request, env);
         if (response) return applyApiSecurityHeaders(response);
       } catch (error) {
-        console.error('Conversation Control error', error);
-        return errorResponse('EKODI 대화 처리 중 오류가 발생했습니다.', 'CONVERSATION_CONTROL_ERROR');
+        console.error('Messenger Operator Control error', error);
+        return errorResponse('EKODI Messenger 관리자 처리 중 오류가 발생했습니다.', 'MESSENGER_OPERATOR_CONTROL_ERROR');
       }
     }
 
