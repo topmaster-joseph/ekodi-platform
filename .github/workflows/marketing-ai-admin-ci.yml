@@ -8,6 +8,7 @@ on:
       - 'marketing-ai-admin-live-ops.js'
       - 'marketing-ai-admin-live-ops.css'
       - 'marketing-admin-control.js'
+      - 'admin-demand-loader.js'
       - 'mission-control-entry-worker.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
@@ -23,6 +24,7 @@ on:
       - 'marketing-ai-admin-live-ops.js'
       - 'marketing-ai-admin-live-ops.css'
       - 'marketing-admin-control.js'
+      - 'admin-demand-loader.js'
       - 'mission-control-entry-worker.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
@@ -49,6 +51,7 @@ jobs:
           node --check marketing-ai-admin.js
           node --check marketing-ai-admin-live-ops.js
           node --check marketing-admin-control.js
+          node --check admin-demand-loader.js
           node --check mission-control-entry-worker.js
           node --check site-worker.js
           node --check scripts/build.mjs
@@ -81,6 +84,7 @@ jobs:
           grep -Fq 'handleMarketingAdminControl' mission-control-entry-worker.js
           grep -Fq "'/api/marketing/admin/'" mission-control-entry-worker.js
           grep -Fq "'/marketing-ai-admin.js'" site-worker.js
+          grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
           grep -Fq 'marketing-ai-admin-live-ops.css' scripts/build.mjs
           grep -Fq 'marketing-ai-admin-live-ops.js' scripts/build.mjs
       - name: Build and verify Control Center output
@@ -89,8 +93,11 @@ jobs:
           npm run build
           test -f dist/marketing-ai-admin.js
           test -f dist/marketing-ai-admin.css
-          grep -Fq 'marketing-ai-admin.css' dist/control-center.html
-          grep -Fq 'marketing-ai-admin.js' dist/control-center.html
+          test -f dist/admin-demand-loader.js
+          ! grep -Fq '<script src="marketing-ai-admin.js"' dist/control-center.html
+          ! grep -Fq '<link rel="stylesheet" href="marketing-ai-admin.css"' dist/control-center.html
+          grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "styles: ['marketing-ai-admin.css']" dist/admin-demand-loader.js
           grep -Fq 'Marketing AI 운영 관제센터' dist/marketing-ai-admin.js
           grep -Fq 'DATA CONTRACT NOT CONNECTED' dist/marketing-ai-admin.js
           grep -Fq 'CHANNEL REGISTRY' dist/marketing-ai-admin.js
