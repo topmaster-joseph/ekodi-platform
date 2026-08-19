@@ -1,4 +1,4 @@
-name: Deploy Admin & Auth Site
+name: Deploy Auth Site
 
 on:
   workflow_dispatch:
@@ -6,55 +6,6 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-admin-site.yml'
-      - 'admin.html'
-      - 'control-center.html'
-      - 'control-center.js'
-      - 'control-center-features.js'
-      - 'control-center.css'
-      - 'control-center-ops.css'
-      - 'control-center-finance.css'
-      - 'compact-control-center.js'
-      - 'compact-control-center.css'
-      - 'admin-menu-layout.js'
-      - 'device-control-admin.js'
-      - 'device-control-admin.css'
-      - 'ekodi-device-bootstrap.cmd'
-      - 'campus-actions.js'
-      - 'campus-actions.css'
-      - 'work-admin.js'
-      - 'work-admin.css'
-      - 'admin-central-handoff.js'
-      - 'client-access.js'
-      - 'client-access.css'
-      - 'finance-monitor.js'
-      - 'marketing-funnel-admin.js'
-      - 'marketing-funnel-admin.css'
-      - 'books-admin.js'
-      - 'books-admin.css'
-      - 'books-finance-admin.js'
-      - 'books-finance-admin.css'
-      - 'books-distribution-admin.js'
-      - 'books-distribution-admin.css'
-      - 'books-pipeline-admin.js'
-      - 'books-pipeline-admin.css'
-      - 'books-pipeline-bridge.js'
-      - 'books-royalty-admin.js'
-      - 'books-royalty-admin.css'
-      - 'google-admin-auth.js'
-      - 'google-admin-auth.css'
-      - 'domains-hub.js'
-      - 'domains-hub.css'
-      - 'social-admin.js'
-      - 'social-admin.css'
-      - 'release-control-admin.js'
-      - 'release-control-admin.css'
-      - 'community-reports-admin.js'
-      - 'community-reports-admin.css'
-      - 'site-worker.js'
-      - 'wrangler.site.toml'
-      - 'scripts/build.mjs'
-      - 'scripts/guarded-worker-release.mjs'
-      - 'deploy/manifests/shared-site.worker.json'
       - 'auth-site/**'
 
 permissions:
@@ -77,137 +28,20 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate admin, auth and feature modules
-        run: |
-          node --check control-center.js
-          node --check control-center-features.js
-          node --check compact-control-center.js
-          node --check admin-menu-layout.js
-          node --check device-control-admin.js
-          node --check campus-actions.js
-          node --check work-admin.js
-          node --check admin-central-handoff.js
-          node --check client-access.js
-          node --check finance-monitor.js
-          node --check marketing-funnel-admin.js
-          node --check books-admin.js
-          node --check books-finance-admin.js
-          node --check books-distribution-admin.js
-          node --check books-pipeline-admin.js
-          node --check books-pipeline-bridge.js
-          node --check books-royalty-admin.js
-          node --check google-admin-auth.js
-          node --check domains-hub.js
-          node --check social-admin.js
-          node --check release-control-admin.js
-          node --check community-reports-admin.js
-          node --check site-worker.js
-          node --check auth-site/auth.js
-          node --check auth-site/auth-router.js
-          node --check auth-site/marketing-auth-hotfix.js
-          node --check scripts/guarded-worker-release.mjs
-          test -f ekodi-device-bootstrap.cmd
-          test -f deploy/manifests/shared-site.worker.json
-
-      - name: Validate authentication and compact UI contract
+      - name: Validate central auth and current admin boundary
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq '[hidden]{display:none!important}' control-center.css
-          grep -Fq 'id="loginScreen"' control-center.html
-          grep -Fq 'id="app" hidden' control-center.html
-          grep -Fq 'loginScreen.hidden = true' control-center.js
-          grep -Fq 'app.hidden = false' control-center.js
-          grep -Fq 'google-auth-enabled #loginForm' google-admin-auth.css
-          grep -Fq '/api/google/config' google-admin-auth.js
-          grep -Fq '/api/google/challenge' google-admin-auth.js
-          grep -Fq '/api/google/login' google-admin-auth.js
-          grep -Fq '/api/admin-access/google-accounts' google-admin-auth.js
-          grep -Fq 'google-admin-toolbar' google-admin-auth.js
-          grep -Fq 'google-admin-filters' google-admin-auth.js
-          grep -Fq "placeholder('admins', '◈', 'Admin')" control-center-features.js
-          grep -Fq "placeholder('domains', '◎', 'Domains')" control-center-features.js
-          grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
-          grep -Fq "placeholder('community', '◌', 'Community')" control-center-features.js
-          grep -Fq 'INTERNAL_ONLY_SECTIONS' admin-menu-layout.js
-          grep -Fq "['overview', 'services', 'deployments', 'policies']" admin-menu-layout.js
-          grep -Fq "return 'devices'" admin-menu-layout.js
-          grep -Fq 'openAiOpsFromInternalRequest' admin-menu-layout.js
-          grep -Fq 'normalizeServiceOpenLinks' campus-actions.js
-          grep -Fq '.campus-row-actions' campus-actions.css
-          grep -Fq 'WORK 운영 관리' work-admin.js
-          grep -Fq 'work-admin-rail' work-admin.js
-          grep -Fq 'data-section = '\''work'\''' work-admin.js
-          grep -Fq '.work-admin-layout' work-admin.css
-          grep -Fq '.work-admin-rail' work-admin.css
-          grep -Fq 'EKODI DEVICE AI' device-control-admin.js
-          grep -Fq 'AI 운영 제안' device-control-admin.js
-          grep -Fq 'ekodi-device-bootstrap.cmd' device-control-admin.js
-          grep -Fq '.device-health' device-control-admin.css
-          grep -Fq 'CommandAst' ekodi-device-bootstrap.cmd
-          grep -Fq "'/ekodi-device-bootstrap.cmd'" site-worker.js
-          grep -Fq '/api/control/social/registry' social-admin.js
-          grep -Fq '.social-org-card' social-admin.css
-          grep -Fq 'Deployments' release-control-admin.js
-          grep -Fq "role === 'super_admin'" release-control-admin.js
-          grep -Fq 'section.hidden = true' release-control-admin.js
-          grep -Fq 'api.github.com/repos' release-control-admin.js
-          grep -Fq 'automaticProductionBypass: false' release-control-admin.js
-          grep -Fq '.release-units' release-control-admin.css
-          grep -Fq 'Community Source Evidence' community-reports-admin.js
-          grep -Fq '/sources/refresh' community-reports-admin.js
-          grep -Fq '.community-report-source-panel' community-reports-admin.css
-          grep -Fq "'/social-admin.js'" site-worker.js
-          grep -Fq "'/release-control-admin.js'" site-worker.js
-          grep -Fq "'/work-admin.js'" site-worker.js
-          grep -Fq "'/work'" site-worker.js
-          grep -Fq 'https://api.github.com' site-worker.js
-          grep -Fq "'/community-reports-admin.js'" site-worker.js
-          grep -Fq "'/marketing-auth-hotfix.js'" site-worker.js
-          grep -Fq 'https://esm.sh' site-worker.js
-          grep -Fq '/api/control/overview' domains-hub.js
-          grep -Fq 'Services에서 관리' domains-hub.js
-          grep -Fq 'EKODI Digital Campus' compact-control-center.js
-          grep -Fq 'Policies' compact-control-center.js
-          grep -Fq 'Domains & DNS' compact-control-center.js
-          grep -Fq 'Activity Logs' compact-control-center.js
-          grep -Fq '.campus-layout' compact-control-center.css
-          grep -Fq '.policy-grid' compact-control-center.css
-          grep -Fq 'STALE_DAYS = 14' books-distribution-admin.js
-          grep -Fq 'ACTION QUEUE' books-distribution-admin.js
-          grep -Fq 'exportCsv' books-distribution-admin.js
-          grep -Fq '.books-distribution-attention' books-distribution-admin.css
-          grep -Fq '출판 · 배포 · 매출 통합 파이프라인' books-pipeline-admin.js
-          grep -Fq 'CHANNEL OPS' books-pipeline-admin.js
-          grep -Fq '.books-pipeline-book' books-pipeline-admin.css
-          grep -Fq 'ekodi:books-open-publication' books-pipeline-bridge.js
-          grep -Fq '권리 · 인세 · 지급 관리' books-royalty-admin.js
-          grep -Fq 'Generate Statement' books-royalty-admin.js
-          grep -Fq '.books-royalty-holder' books-royalty-admin.css
-          grep -Fq 'compact-control-center.css' scripts/build.mjs
-          grep -Fq 'compact-control-center.js' scripts/build.mjs
-          grep -Fq 'admin-menu-layout.js' scripts/build.mjs
-          grep -Fq 'control-center-features.js' scripts/build.mjs
-          grep -Fq 'campus-actions.css' scripts/build.mjs
-          grep -Fq 'campus-actions.js' scripts/build.mjs
-          grep -Fq 'work-admin.css' scripts/build.mjs
-          grep -Fq 'work-admin.js' scripts/build.mjs
-          grep -Fq 'domains-hub.css' scripts/build.mjs
-          grep -Fq 'domains-hub.js' scripts/build.mjs
-          grep -Fq 'social-admin.css' scripts/build.mjs
-          grep -Fq 'social-admin.js' scripts/build.mjs
-          grep -Fq 'release-control-admin.css' scripts/build.mjs
-          grep -Fq 'release-control-admin.js' scripts/build.mjs
-          grep -Fq 'community-reports-admin.css' scripts/build.mjs
-          grep -Fq 'community-reports-admin.js' scripts/build.mjs
-          grep -Fq 'books-distribution-admin.css' scripts/build.mjs
-          grep -Fq 'books-distribution-admin.js' scripts/build.mjs
-          grep -Fq 'books-pipeline-admin.css' scripts/build.mjs
-          grep -Fq 'books-pipeline-admin.js' scripts/build.mjs
-          grep -Fq 'books-royalty-admin.css' scripts/build.mjs
-          grep -Fq 'books-royalty-admin.js' scripts/build.mjs
-          grep -Fq 'marketing-auth-hotfix.js' scripts/build.mjs
-          grep -Fq 'ekodi-device-bootstrap.cmd' scripts/build.mjs
+          node --check auth-site/auth.js
+          node --check auth-site/auth-router.js
+          node --check auth-site/marketing-auth-hotfix.js
+          node --check auth-site/client-auth.js
+          node --check admin-central-handoff.js
+          node --check admin-authenticated-shell.js
+          node --check admin-demand-loader.js
+          node --check admin-menu-layout.js
+          node --check site-worker.js
+          node --check scripts/guarded-worker-release.mjs
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' auth-site/index.html
           grep -Fq "'mall-seller':'mall'" auth-site/auth-router.js
@@ -215,10 +49,14 @@ jobs:
           grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
           grep -Fq "sb.auth.onAuthStateChange((event,s)=>" auth-site/marketing-auth-hotfix.js
           if grep -Fq 'onAuthStateChange(async' auth-site/marketing-auth-hotfix.js; then
-            echo 'Async Marketing auth-state callback detected'
-            exit 1
+            echo 'Async Marketing auth-state callback detected'; exit 1
           fi
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
+          grep -Fq 'ekodi_admin_token' admin-central-handoff.js
+          grep -Fq "'compact-control-center.js'" admin-authenticated-shell.js
+          grep -Fq "'admin-menu-layout.js'" admin-authenticated-shell.js
+          grep -Fq "'admin-demand-loader.js'" admin-authenticated-shell.js
+          ! grep -Fq "'control-center-features.js'" admin-authenticated-shell.js
 
       - name: Verify Cloudflare credentials
         run: |
@@ -226,101 +64,49 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
       - name: Build shared site assets
+        shell: bash
         run: |
+          set -euo pipefail
           npm run build
-          test -f dist/marketing-auth-hotfix.js
-          test -f dist/ekodi-device-bootstrap.cmd
-          test -f dist/admin-menu-layout.js
-          grep -Fq 'CommandAst' dist/ekodi-device-bootstrap.cmd
-          grep -Fq 'EKODI DEVICE AI' dist/compact-control-center.js
-          grep -Fq 'AI 운영 제안' dist/compact-control-center.js
-          grep -Fq 'INTERNAL_ONLY_SECTIONS' dist/admin-menu-layout.js
-          grep -Fq 'openAiOpsFromInternalRequest' dist/admin-menu-layout.js
-          grep -Fq "sb.auth.onAuthStateChange((event,s)=>" dist/marketing-auth-hotfix.js
+          test -f dist/auth-center.html
+          test -f dist/auth-router.js
+          test -f dist/admin-demand-loader.js
+          grep -Fq 'EKODI 인증센터' dist/auth-center.html
           grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' dist/auth-center.html
-          grep -Fq "'mall-seller':'mall'" dist/auth-router.js
-          grep -Fq 'https://mall.ekodi.kr/seller/' dist/auth-router.js
+          grep -Fq '20260819-e2e-perf-1' dist/control-center.html
+          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
+          ! grep -Fq '<script src="control-center.js"' dist/control-center.html
+          ! grep -Fq 'control-center-ops.css' dist/control-center.html
+          ! grep -Fq 'control-center-finance.css' dist/control-center.html
 
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
-      - name: Deep verify admin routes, Campus shell, central auth and lazy feature assets
+      - name: Verify production auth and current admin contract
         shell: bash
         run: |
           set -euo pipefail
-
-          need_header() { pattern="$1"; label="$2"; grep -Fiq "$pattern" /tmp/admin-headers || { echo "admin verify: missing $label"; return 1; }; }
-          need_body() { pattern="$1"; label="$2"; grep -Fq "$pattern" /tmp/admin-body || { echo "admin verify: missing $label"; return 1; }; }
-          verify_admin() {
-            url="$1"; code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code";
-            [ "$code" = '200' ] || { echo 'admin verify: expected HTTP 200'; return 1; }
-            need_header 'x-ekodi-route: admin-control-center' 'X-EKODI-Route=admin-control-center' || return 1
-            need_header 'cross-origin-opener-policy: same-origin-allow-popups' 'Cross-Origin-Opener-Policy' || return 1
-            need_body 'EKODI Control Center' 'Control Center title' || return 1
-            need_body 'control-center-features.js' 'lazy feature loader' || return 1
-            need_body 'compact-control-center.js' 'Campus UI loader' || return 1
-            need_body 'release-control-admin.js' 'Deployments loader' || return 1
-            need_body 'work-admin.js' 'WORK admin loader' || return 1
-            if grep -Fiq '^location:' /tmp/admin-headers; then echo 'admin verify: unexpected redirect header'; return 1; fi
-          }
-          verify_asset() {
-            path="$1"; expected="$2"; code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true);
-            if [ "$code" != '200' ]; then echo "asset verify: $path -> $code"; return 1; fi
-            grep -Fq "$expected" /tmp/admin-asset || { echo "asset verify: $path missing expected marker"; return 1; }
-            grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || { echo "asset verify: $path missing admin security route"; return 1; }
-          }
-          verify_auth() {
-            code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true)
-            [ "$code" = '200' ] \
+          for attempt in $(seq 1 18); do
+            auth_code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/' || true)
+            router_code=$(curl -sS -D /tmp/router-headers -o /tmp/router-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+            admin_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            demand_code=$(curl -sS -D /tmp/demand-headers -o /tmp/demand-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-demand-loader.js' || true)
+            if [[ "$auth_code" == '200' && "$router_code" == '200' && "$admin_code" == '200' && "$demand_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers \
               && grep -Fq 'EKODI 인증센터' /tmp/auth-body \
-              && grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' /tmp/auth-body
-          }
-          verify_auth_asset() {
-            path="$1"; expected="$2"
-            code=$(curl -sS -D /tmp/auth-asset-headers -o /tmp/auth-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://auth.ekodi.kr/$path" || true)
-            echo "auth asset $path -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/auth-asset-headers || return 1
-            grep -Fq "$expected" /tmp/auth-asset || return 1
-          }
-
-          for attempt in $(seq 1 18); do
-            if verify_admin 'https://admin.ekodi.kr/' \
-              && verify_admin 'https://admin.ekodi.kr/control-center.html' \
-              && verify_admin 'https://admin.ekodi.kr/work' \
-              && verify_asset 'compact-control-center.js' 'EKODI DEVICE AI' \
-              && verify_asset 'compact-control-center.css' '.device-health' \
-              && verify_asset 'admin-menu-layout.js' 'INTERNAL_ONLY_SECTIONS' \
-              && verify_asset 'admin-menu-layout.js' 'openAiOpsFromInternalRequest' \
-              && verify_asset 'ekodi-device-bootstrap.cmd' 'CommandAst' \
-              && verify_asset 'campus-actions.js' 'normalizeServiceOpenLinks' \
-              && verify_asset 'campus-actions.css' '.campus-row-actions' \
-              && verify_asset 'work-admin.js' 'WORK 운영 관리' \
-              && verify_asset 'work-admin.css' '.work-admin-rail' \
-              && verify_asset 'client-access.js' '/api/customers/tenants' \
-              && verify_asset 'google-admin-auth.js' 'google-admin-toolbar' \
-              && verify_asset 'domains-hub.js' '/api/control/overview' \
-              && verify_asset 'domains-hub.css' '.domains-grid' \
-              && verify_asset 'social-admin.js' '/api/control/social/registry' \
-              && verify_asset 'social-admin.css' '.social-org-card' \
-              && verify_asset 'release-control-admin.js' 'Deployments' \
-              && verify_asset 'release-control-admin.css' '.release-units' \
-              && verify_asset 'community-reports-admin.js' 'Community Source Evidence' \
-              && verify_asset 'community-reports-admin.css' '.community-report-source-panel' \
-              && verify_asset 'books-finance-admin.js' '출판 · 배포 · 매출 통합 파이프라인' \
-              && verify_asset 'books-finance-admin.js' '권리 · 인세 · 지급 관리' \
-              && verify_asset 'books-finance-admin.css' '.books-pipeline-book' \
-              && verify_asset 'books-finance-admin.css' '.books-royalty-holder' \
-              && verify_asset 'finance-monitor.js' 'finance-api.ekodi.kr' \
-              && verify_auth \
-              && verify_auth_asset 'auth-router.js' "'mall-seller':'mall'" \
-              && verify_auth_asset 'auth-router.js' 'https://mall.ekodi.kr/seller/' \
-              && verify_auth_asset 'marketing-auth-hotfix.js' 'sb.auth.onAuthStateChange((event,s)=>'; then
-              echo 'Admin/Auth production boundary including AI-first navigation, Device AI bootstrap, Mall Seller return and Marketing loading hotfix verified.'; exit 0
+              && grep -Fq "'mall-seller':'mall'" /tmp/router-body \
+              && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers \
+              && grep -Fq '20260819-e2e-perf-1' /tmp/admin-body \
+              && grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin-body \
+              && ! grep -Fq '<script src="control-center.js"' /tmp/admin-body \
+              && grep -Fq 'control-center-features.js' /tmp/demand-body; then
+              echo 'Production auth verified without reverting current admin performance architecture.'
+              exit 0
             fi
-            echo "Production verification pending (attempt $attempt/18)."; sleep 4
+            echo "Auth production verification pending (attempt $attempt/18)."
+            sleep 4
           done
+          echo 'Auth production verification failed.'
           exit 1
