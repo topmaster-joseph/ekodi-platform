@@ -13,12 +13,22 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+      - name: Validate GitHub Actions workflows
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
+            .github/workflows/ci.yml \
+            .github/workflows/deploy-control-api.yml \
+            .github/workflows/release-messenger-investment-functional.yml
       - run: npm run check
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience

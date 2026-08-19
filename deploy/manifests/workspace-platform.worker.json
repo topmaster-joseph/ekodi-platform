@@ -8,7 +8,7 @@
         "url": "https://workspace-api.ekodi.kr/health",
         "statuses": [200],
         "redirect": "follow",
-        "expect": ["\"service\":\"ekodi-workspace-platform-api\"","\"schemaReady\":true","\"mutations\":true","\"transactionExecution\":false"]
+        "expect": ["\"service\":\"ekodi-workspace-platform-api\"","\"schemaReady\":true","\"mutations\":true","\"transactionExecution\":false","\"conversationFoundation\":\"v2\"","\"eventOutbox\":true","\"conversationSchemaReady\":true"]
       }
     ]
   }
