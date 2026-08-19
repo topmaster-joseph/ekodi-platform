@@ -2,6 +2,15 @@ import legacyWorkspaceWorker from './workspace-platform-api-worker.js';
 import { handleWorkspaceMessengerV2 } from './workspace-messenger-v2.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 
+async function conversationSchemaReady(env){
+  if(!env?.DB)return false;
+  try{
+    const names=['messenger_outbox','messenger_identity_audit'];
+    const rows=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN (?,?)").bind(...names).all();
+    return new Set((rows.results||[]).map(row=>row.name)).size===names.length;
+  }catch{return false}
+}
+
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
@@ -13,7 +22,8 @@ export default {
       const response=await legacyWorkspaceWorker.fetch(request,env,ctx);
       try{
         const data=await response.clone().json();
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true}),{status:response.status,headers:response.headers});
+        const foundationReady=await conversationSchemaReady(env);
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);
