@@ -11,6 +11,7 @@ on:
       - 'deploy/manifests/workspace-platform.worker.json'
       - 'platform-router-worker.js'
       - 'deploy/manifests/shared-site.worker.json'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'test/workspace-platform.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
 
@@ -41,6 +42,7 @@ jobs:
           node --check workspace-platform-api-worker.js
           node --check platform-router-worker.js
           node --test test/workspace-platform.test.mjs
+          bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'transactionMode' workspace-platform-api-worker.js
           grep -Fq 'analysis-and-connection-only' workspace-platform-api-worker.js
           grep -Fq 'messenger_handoffs' migrations/0028_messenger_investment_workspaces.sql
@@ -60,8 +62,8 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Apply additive D1 migration
-        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.workspace-platform.toml
+      - name: Apply additive D1 migration with concurrent-run recovery
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml "$WRANGLER_VERSION"
 
   staging-api:
     needs: migrate
