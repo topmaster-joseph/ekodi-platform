@@ -1,9 +1,12 @@
 # Admin site rollout: password recovery interface
 name = "shy-thunder-39a4"
-main = "site-worker.js"
+main = "site-shell-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = false
 preview_urls = false
+
+[vars]
+ENVIRONMENT = "production"
 
 [[routes]]
 pattern = "ekodi.kr"
