@@ -1,0 +1,74 @@
+name: Stage Shared Site Shell
+
+on:
+  pull_request:
+    paths:
+      - 'site-worker.js'
+      - 'site-shell-worker.js'
+      - 'ekodi-shell-injector.js'
+      - 'trade.html'
+      - 'hub.html'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
+      - 'scripts/build.mjs'
+      - '.github/workflows/stage-shared-site-shell.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-site-shell-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate wrapper and build
+        run: |
+          set -euo pipefail
+          node --check site-worker.js
+          node --check site-shell-worker.js
+          node --check ekodi-shell-injector.js
+          npm run build
+          test -f dist/trade.html
+          test -f dist/hub.html
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy no-route staging Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
+      - name: Verify Trade and Pay Shell without touching production routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_shell() {
+            host="$1"; needle="$2"
+            code=$(curl -sS -D /tmp/shared-stage.headers -o /tmp/shared-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
+            echo "$host -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq "$needle" /tmp/shared-stage.html
+            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared-stage.html
+            grep -Fiq 'x-ekodi-shell: v1' /tmp/shared-stage.headers
+          }
+          for attempt in $(seq 1 18); do
+            if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' && verify_shell 'pay.ekodi.kr' 'EKODI Pay' && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay'; then
+              echo 'Shared-site Trade and Pay Shell staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
