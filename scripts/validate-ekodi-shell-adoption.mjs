@@ -6,7 +6,7 @@ const docs=await readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.
 const manifest=EKODI_SERVICE_MANIFEST;
 const allowedKinds=new Set(['person','business','organization','church','community','project']);
 const allowedIntegrations=new Set(['worker-injected','shared-proxy','static-script','external-build','pending','planned']);
-const legacyPending=new Set(['marketing','business','work','author','books','social','energy','trade','pay']);
+const legacyPending=new Set(['marketing']);
 
 function fail(message){console.error(`❌ EKODI Shell adoption: ${message}`);process.exitCode=1;}
 
@@ -54,4 +54,4 @@ for(const required of ['Person + Space + Role + Capability','My EKODI responsibi
 }
 
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell adoption policy passed: ${manifest.services.length} services covered; new active services cannot bypass the shared My/Shell contract.`);
+console.log(`✅ EKODI Shell adoption policy passed: ${manifest.services.length} services covered; only ${[...legacyPending].join(', ')||'no'} legacy service remains pending.`);

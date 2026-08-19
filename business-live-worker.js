@@ -1,4 +1,5 @@
 import baseWorker from './business-worker.js';
+import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 function securityHeaders(){return{
   'x-content-type-options':'nosniff',
@@ -69,5 +70,5 @@ export default{async fetch(request,env,ctx){
   if(request.method==='POST'&&url.pathname==='/api/snapshot')return snapshot(request,env);
   if(request.method==='POST'&&url.pathname==='/api/propose-action')return propose(request,env);
   if(request.method==='POST'&&url.pathname==='/api/decide-action')return decide(request,env);
-  return baseWorker.fetch(request,env,ctx);
+  return injectEkodiShell(await baseWorker.fetch(request,env,ctx),'business');
 }};

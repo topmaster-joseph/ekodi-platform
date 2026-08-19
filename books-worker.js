@@ -1,3 +1,5 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -9,6 +11,6 @@ export default {
     if (url.pathname === '/admin' || url.pathname === '/admin/' || url.pathname === '/admin.html') {
       return Response.redirect('https://admin.ekodi.kr/books#books', 307);
     }
-    return env.ASSETS.fetch(request);
+    return injectEkodiShell(await env.ASSETS.fetch(request), 'books');
   },
 };

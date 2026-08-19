@@ -1,5 +1,5 @@
 name = "ekodi-work-staging"
-main = "work-worker.js"
+main = "work-shell-worker.js"
 compatibility_date = "2026-08-14"
 workers_dev = true
 preview_urls = true
@@ -12,6 +12,7 @@ AUTH_URL = "https://auth.ekodi.kr/?site=work"
 [assets]
 directory = "./work"
 binding = "ASSETS"
+run_worker_first = true
 
 [observability.logs]
 enabled = true
