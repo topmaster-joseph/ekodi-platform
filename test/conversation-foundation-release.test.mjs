@@ -60,3 +60,12 @@ test('Conversation staging uses separate isolated Workspace and Control database
   assert.match(workflow,/ALLOW_MUTATIONS = "false"/);
   assert.match(workflow,/Verify Operator authentication boundary/);
 });
+
+test('CI actionlint checks the release workflows without legacy shellcheck noise',async()=>{
+  const workflow=await read('.github/workflows/ci.yml');
+  assert.match(workflow,/actionlint@v1\.7\.12/);
+  assert.match(workflow,/-shellcheck= -pyflakes=/);
+  assert.match(workflow,/\.github\/workflows\/ci\.yml/);
+  assert.match(workflow,/\.github\/workflows\/deploy-control-api\.yml/);
+  assert.match(workflow,/\.github\/workflows\/release-messenger-investment-functional\.yml/);
+});
