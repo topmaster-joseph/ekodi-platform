@@ -1,0 +1,123 @@
+name: Stage Conversation Control
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'messenger-operator-control.js'
+      - 'ekodi-principal.js'
+      - 'messenger-outbox.js'
+      - 'messenger-channel-adapters.js'
+      - 'mission-control-entry-worker.js'
+      - 'migrations/0030_messenger_event_outbox.sql'
+      - 'test/conversation-foundation-release.test.mjs'
+      - '.github/workflows/stage-conversation-control.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-shared-d1-worker-release
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  stage-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Conversation Control modules
+        run: |
+          set -euo pipefail
+          node --check messenger-operator-control.js
+          node --check ekodi-principal.js
+          node --check messenger-outbox.js
+          node --check messenger-channel-adapters.js
+          node --check mission-control-entry-worker.js
+          node --test test/conversation-foundation-release.test.mjs
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Resolve isolated Conversation Control D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-conversation-control-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-conversation-control-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated Control config
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.conversation-control.runtime.toml <<EOF
+          name = "ekodi-conversation-control-staging"
+          main = "mission-control-entry-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          ENVIRONMENT = "staging"
+          ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+          ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
+          GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
+          [[ratelimits]]
+          name = "AUTH_RATE_LIMITER"
+          namespace_id = "3301"
+            [ratelimits.simple]
+            limit = 20
+            period = 60
+          [[ratelimits]]
+          name = "SENSITIVE_RATE_LIMITER"
+          namespace_id = "3302"
+            [ratelimits.simple]
+            limit = 120
+            period = 60
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-conversation-control-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply migrations to isolated Control D1
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.conversation-control.runtime.toml
+      - name: Deploy isolated Conversation Control Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.conversation-control.runtime.toml
+      - name: Verify unauthenticated Operator boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://ekodi-conversation-control-staging.topmaster-joseph.workers.dev'
+          for attempt in $(seq 1 18); do
+            health=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$URL/health" || true)
+            inbox=$(curl -sS -o /tmp/inbox.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$URL/api/control/messenger/inbox" || true)
+            if [[ "$health" == '200' && "$inbox" == '401' ]]; then
+              exit 0
+            fi
+            sleep 4
+          done
+          cat /tmp/health.json || true
+          cat /tmp/inbox.json || true
+          exit 1
+      - name: Cleanup runtime config
+        if: always()
+        run: rm -f wrangler.conversation-control.runtime.toml
