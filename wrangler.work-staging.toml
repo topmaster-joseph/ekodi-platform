@@ -1,5 +1,5 @@
 name = "ekodi-work-staging"
-main = "work-worker.js"
+main = "work-shell-worker.js"
 compatibility_date = "2026-08-14"
 workers_dev = true
 preview_urls = true
