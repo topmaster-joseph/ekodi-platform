@@ -86,11 +86,11 @@ jobs:
           set -euo pipefail
           branch="shell-pr-${{ github.event.pull_request.number }}"
           for spec in \
-            "https://${branch}.marketing-ai.pages.dev/:마케팅AI" \
-            "https://${branch}.marketing-ai-jadam.pages.dev/:자담치킨" \
-            "https://${branch}.marketing-ai-pizzamaru.pages.dev/:피자마루" \
-            "https://${branch}.marketing-ai-yogurtpurple.pages.dev/:요거트퍼플"; do
-            url="${spec%%:*}"; needle="${spec##*:}"
+            "https://${branch}.marketing-ai.pages.dev/|마케팅AI" \
+            "https://${branch}.marketing-ai-jadam.pages.dev/|자담치킨" \
+            "https://${branch}.marketing-ai-pizzamaru.pages.dev/|피자마루" \
+            "https://${branch}.marketing-ai-yogurtpurple.pages.dev/|요거트퍼플"; do
+            url="${spec%%|*}"; needle="${spec#*|}"
             verified=0
             for attempt in $(seq 1 18); do
               code=$(curl -L -sS -o /tmp/marketing-preview.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
