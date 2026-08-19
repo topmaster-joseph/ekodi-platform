@@ -1,5 +1,5 @@
 export const AI_MISSION_RUNTIME = Object.freeze({
-  version: '1.2.0',
+  version: '1.1.0',
   authorityModel: Object.freeze({
     humanRole: 'steward_delegate',
     chiefAiRole: 'orchestrator_not_sovereign',
