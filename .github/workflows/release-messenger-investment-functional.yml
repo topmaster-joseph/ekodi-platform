@@ -354,10 +354,13 @@ jobs:
       - name: Verify production Messenger surface
         run: |
           set -euo pipefail
-          root=$(curl -sS -D /tmp/headers -o /tmp/root.html -w '%{http_code}' 'https://messenger.ekodi.kr/')
-          app=$(curl -sS -o /tmp/app.js -w '%{http_code}' 'https://messenger.ekodi.kr/app.js')
+          stamp="${GITHUB_SHA:-$(date +%s)}"
+          root=$(curl -sS -D /tmp/headers -o /tmp/root.html -w '%{http_code}' "https://messenger.ekodi.kr/?verify=$stamp")
+          app=$(curl -sS -o /tmp/app.js -w '%{http_code}' "https://messenger.ekodi.kr/app.js?verify=$stamp")
           [[ "$root" == '200' && "$app" == '200' ]]
           grep -Fq 'EKODI Messenger' /tmp/root.html
           grep -Fq 'refreshAssistantUntilSettled' /tmp/app.js
+          grep -Fq 'EKODI AI' /tmp/app.js
+          grep -Fq '담당자 연결 대기' /tmp/app.js
           grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
           grep -Fiq 'x-ekodi-shell: v1' /tmp/headers
