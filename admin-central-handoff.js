@@ -44,16 +44,18 @@
     document.body.dataset.scope = scope.toLowerCase();
   }
   function ensureCentralLoginFallback() {
-    if (!loginScreen || document.querySelector('#centralAdminLogin')) return;
-    const link=document.createElement('a');
-    link.id='centralAdminLogin';
-    link.className='primary-login';
-    link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
-    link.textContent='Google 통합인증으로 계속';
-    const form=document.querySelector('#loginForm');
-    if (form) form.hidden=true;
-    loginScreen.append(link);
-    loginLink=link;
+    if (!loginScreen) return;
+    if (!document.querySelector('#centralAdminLogin')) {
+      const link=document.createElement('a');
+      link.id='centralAdminLogin';
+      link.className='primary-login';
+      link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+      link.textContent='Google 통합인증으로 계속';
+      const form=document.querySelector('#loginForm');
+      if (form) form.hidden=true;
+      loginScreen.append(link);
+      loginLink=link;
+    }
   }
   function setProfile(email) {
     const safeEmail = String(email || '').trim();
@@ -80,10 +82,11 @@
     ensureCentralLoginFallback();
   }
   function acceptCentralHandoff() {
-    const params = new URLSearchParams(location.hash.replace(/^#/, ''));
-    const value = params.get('ekodi_admin_token');
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const value = hash.get('ekodi_admin_token');
     if (!value) return false;
-    safeSession.set(TOKEN_KEY, value);
+    try { sessionStorage.setItem('ekodi-auth-token', value); }
+    catch { safeSession.set(TOKEN_KEY, value); }
     history.replaceState({}, document.title, location.pathname + location.search);
     mark('ekodi-admin-token-handoff');
     return true;
