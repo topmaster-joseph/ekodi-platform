@@ -49,8 +49,15 @@
         "url": "https://pay.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI Hub", "EKODI 서비스 허브"],
-        "headerExpect": ["x-ekodi-route: hub"]
+        "expect": ["EKODI Hub", "EKODI 서비스 허브", "https://shell.ekodi.kr/shell.js"],
+        "headerExpect": ["x-ekodi-route: hub", "x-ekodi-shell: v1"]
+      },
+      {
+        "url": "https://pay.biz.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Hub", "EKODI 서비스 허브", "https://shell.ekodi.kr/shell.js"],
+        "headerExpect": ["x-ekodi-route: hub", "x-ekodi-shell: v1"]
       },
       {
         "url": "https://mail.ekodi.kr/",
@@ -77,8 +84,8 @@
         "url": "https://trade.biz.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI Global Trading", "TRADING DIVISION · EKODIBIZ"],
-        "headerExpect": ["x-ekodi-route: trade"]
+        "expect": ["EKODI Global Trading", "TRADING DIVISION · EKODIBIZ", "https://shell.ekodi.kr/shell.js"],
+        "headerExpect": ["x-ekodi-route: trade", "x-ekodi-shell: v1"]
       },
       {
         "url": "https://trade.ekodi.kr/",
