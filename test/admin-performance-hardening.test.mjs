@@ -4,19 +4,33 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('central admin handoff reveals a safe static shell before background session validation', async () => {
+test('central admin handoff reveals a safe static shell once and validates session in background', async () => {
   const handoff = await read('admin-central-handoff.js');
   assert.match(handoff, /ekodi_admin_token/);
+  assert.match(handoff, /const becameVisible = app\.hidden/);
+  assert.match(handoff, /if \(!becameVisible\) return/);
   assert.match(handoff, /showApp\(safeSession\.get\(EMAIL_KEY\), '인증 세션 확인 중'\)/);
+  assert.match(handoff, /updateSessionState\(result\.email/);
   assert.match(handoff, /AbortController/);
-  assert.match(handoff, /5000/);
   assert.match(handoff, /\/api\/session/);
   assert.match(handoff, /ekodi-session-validated/);
+  assert.match(handoff, /admin-perf-diagnostics\.js/);
   assert.match(handoff, /new URLSearchParams\(location\.search\)\.has\('perf'\)/);
-  assert.match(handoff, /PerformanceObserver/);
+  assert.doesNotMatch(handoff, /PerformanceObserver/);
   assert.doesNotMatch(handoff, /MutationObserver/);
   assert.doesNotMatch(handoff, /setInterval\(/);
   assert.doesNotMatch(handoff, /paymentKeyStatusPanel|passwordResetForm|installPasswordResetUI/);
+});
+
+test('detailed diagnostics are standalone and only observe when explicitly loaded', async () => {
+  const diagnostics = await read('admin-perf-diagnostics.js');
+  assert.match(diagnostics, /PerformanceObserver/);
+  assert.match(diagnostics, /longtask/);
+  assert.match(diagnostics, /layout-shift/);
+  assert.match(diagnostics, /durationThreshold:16/);
+  assert.match(diagnostics, /window\.EKODIAdminPerf/);
+  assert.doesNotMatch(diagnostics, /fetch\(/);
+  assert.doesNotMatch(diagnostics, /setInterval\(/);
 });
 
 test('authenticated startup is observer-free and isolates legacy console runtime', async () => {
@@ -27,6 +41,7 @@ test('authenticated startup is observer-free and isolates legacy console runtime
   assert.match(shell, /loadStyle\('control-center-ops\.css'\)/);
   assert.match(shell, /loadStyle\('control-center-finance\.css'\)/);
   assert.match(shell, /await loadScript\('control-center\.js'\)/);
+  assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   const critical = shell.match(/const criticalPostAuthScripts = \[([\s\S]*?)\];/)?.[1] || '';
   for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   for (const asset of ['control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
@@ -41,12 +56,15 @@ test('menu routing is event-driven with no persistent mutation observer', async 
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('demand loader uses transient observation, staggered idle hydration and lazy finance assets', async () => {
+test('demand loader uses transient observation, background priority and input-aware secondary hydration', async () => {
   const loader = await read('admin-demand-loader.js');
   assert.match(loader, /const observer = new MutationObserver/);
   assert.match(loader, /observer\.disconnect\(\)/);
-  assert.match(loader, /requestIdleCallback/);
-  assert.match(loader, /scheduleStep\(index \+ 1\)/);
+  assert.match(loader, /scheduler\?\.postTask/);
+  assert.match(loader, /priority:'background'/);
+  assert.match(loader, /navigator\.scheduling\?\.isInputPending/);
+  assert.match(loader, /requestIdleCallback\(callback\)/);
+  assert.doesNotMatch(loader, /requestIdleCallback\(callback, \{ timeout/);
   assert.match(loader, /control-center-finance\.css/);
   assert.match(loader, /finance-monitor\.js/);
   assert.match(loader, /author-billing-admin\.js/);
@@ -55,20 +73,41 @@ test('demand loader uses transient observation, staggered idle hydration and laz
   assert.doesNotMatch(loader, /observer\.observe\(app/);
 });
 
-test('postbuild removes old first-path assets, perpetual finance polling and mobile blur', async () => {
+test('postbuild removes old first-path assets, versions the final graph and enforces final JS/CSS budgets', async () => {
   const perf = await read('scripts/admin-performance-postbuild.mjs');
   assert.match(perf, /control-center-ops\\\.css/);
   assert.match(perf, /control-center-finance\\\.css/);
   assert.match(perf, /control-center\\\.js/);
-  assert.match(perf, /20260819-e2e-perf-1/);
+  assert.match(perf, /createHash\('sha256'\)/);
+  assert.match(perf, /assetVersion/);
   assert.match(perf, /first-path JavaScript budget exceeded/);
+  assert.match(perf, /first-path CSS budget exceeded/);
+  assert.match(perf, /AI command CSS leaked into startup compact CSS/);
   assert.match(perf, /Finance monitor still contains perpetual polling/);
   assert.match(perf, /content-visibility:auto/);
   assert.match(perf, /backdrop-filter:none!important/);
 });
 
-test('build and check always execute the performance guard', async () => {
+test('AI readable styling stays out of first-path compact CSS', async () => {
+  const readable = await read('scripts/admin-readable-command-postbuild.mjs');
+  assert.match(readable, /ai-ops-admin\.css/);
+  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
+});
+
+test('versioned admin assets receive immutable cache headers while unversioned requests revalidate', async () => {
+  const worker = await read('site-worker.js');
+  assert.match(worker, /function adminAssetCacheControl\(url\)/);
+  assert.match(worker, /url\.searchParams\.has\('v'\)/);
+  assert.match(worker, /max-age=31536000, immutable/);
+  assert.match(worker, /max-age=0, must-revalidate/);
+  assert.match(worker, /admin-perf-diagnostics\.js/);
+});
+
+test('build ordering runs readable layer before the final performance guard', async () => {
   const pkg = JSON.parse(await read('package.json'));
-  assert.match(pkg.scripts.build, /admin-performance-postbuild\.mjs/);
+  const build = pkg.scripts.build;
+  const readableIndex = build.indexOf('admin-readable-command-postbuild.mjs');
+  const perfIndex = build.indexOf('admin-performance-postbuild.mjs');
+  assert.ok(readableIndex >= 0 && perfIndex > readableIndex, 'performance postbuild must run after every startup-affecting postbuild');
   assert.match(pkg.scripts.check, /admin-performance-postbuild\.mjs/);
 });
