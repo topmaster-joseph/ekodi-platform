@@ -8,9 +8,6 @@ preview_urls = false
 pattern = "workspace-api.ekodi.kr"
 custom_domain = true
 
-[triggers]
-crons = ["* * * * *"]
-
 [vars]
 ENVIRONMENT = "production"
 ALLOW_MUTATIONS = "true"
