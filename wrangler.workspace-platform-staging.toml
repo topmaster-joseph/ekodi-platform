@@ -1,5 +1,5 @@
 name = "ekodi-workspace-platform-api-staging"
-main = "workspace-platform-api-worker.js"
+main = "workspace-platform-entry-worker.js"
 compatibility_date = "2026-08-18"
 workers_dev = true
 preview_urls = false
