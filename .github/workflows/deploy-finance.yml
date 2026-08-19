@@ -8,6 +8,7 @@ on:
       - 'finance-entry-worker.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/validate-additive-migrations.mjs'
       - 'deploy/manifests/finance-api.worker.json'
@@ -19,6 +20,7 @@ on:
       - 'finance-entry-worker.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/validate-additive-migrations.mjs'
       - 'deploy/manifests/finance-api.worker.json'
@@ -50,6 +52,7 @@ jobs:
           node --check finance-entry-worker.js
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
+          bash -n scripts/apply-d1-migrations-with-retry.sh
           node scripts/validate-additive-migrations.mjs migrations
           test -f deploy/manifests/finance-api.worker.json
           grep -Fq "finance_organizations" finance-entry-worker.js
@@ -119,7 +122,7 @@ jobs:
           migrations_dir = "migrations"
           EOF
       - name: Apply all migrations to isolated staging D1
-        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.finance.staging.runtime.toml
+        run: bash scripts/apply-d1-migrations-with-retry.sh DB wrangler.finance.staging.runtime.toml "$WRANGLER_VERSION"
       - name: Deploy isolated Finance staging Worker without production payment secrets
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.finance.staging.runtime.toml
       - name: Verify Finance staging health and auth boundary
@@ -173,7 +176,7 @@ jobs:
           test -n "$BOOKMARK"
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
       - name: Apply production D1 migrations only after staging success
-        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.finance.toml
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.finance.toml "$WRANGLER_VERSION"
       - name: Build secret-safe candidate, verify at 0%, then promote
         shell: bash
         run: |

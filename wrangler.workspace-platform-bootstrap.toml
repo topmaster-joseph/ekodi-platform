@@ -1,0 +1,20 @@
+name = "ekodi-workspace-platform-api"
+main = "workspace-platform-api-worker.js"
+compatibility_date = "2026-08-18"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "workspace-api.ekodi.kr"
+custom_domain = true
+
+[vars]
+ENVIRONMENT = "production-bootstrap"
+ALLOW_MUTATIONS = "false"
+ALLOWED_ORIGINS = "https://messenger.ekodi.kr,https://invest.ekodi.kr,https://my.ekodi.kr"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"

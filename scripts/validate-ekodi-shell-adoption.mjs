@@ -14,6 +14,7 @@ const allowedKinds=new Set(['person','business','organization','church','communi
 const allowedIntegrations=new Set(['worker-injected','shared-proxy','static-script','external-build','pending','planned']);
 const legacyPending=new Set();
 const legacyServiceIds=new Set(['my','marketing','community','church','business','biz','work','author','books','lab','social','energy','mall','trade','pay','edu','media','insurance','mail','live','cloud']);
+const compactPlatformRouter=platformRouter.replace(/\s+/g,'');
 
 function fail(message){console.error(`❌ EKODI Shell adoption: ${message}`);process.exitCode=1;}
 
@@ -55,7 +56,7 @@ for(const service of manifest.services||[]){
     }
     if(!planned&&service.shellIntegration==='shared-proxy'){
       if(!siteConfig.includes(`pattern = \"${url.hostname}\"`))fail(`${service.id} shared platform host is missing from wrangler.site.toml`);
-      if(!platformRouter.includes(`'${url.hostname}': '${service.id}'`))fail(`${service.id} shared platform host is missing from platform-router-worker.js`);
+      if(!compactPlatformRouter.includes(`'${url.hostname}':'${service.id}'`))fail(`${service.id} shared platform host is missing from platform-router-worker.js`);
     }
   }
 }
@@ -71,13 +72,7 @@ for(const service of ecosystem.services||[]){
   }catch{fail(`${service.id} has an invalid registry URL`);}
   if(['live','beta'].includes(service.status)&&service.productionVerified===true&&manifestService.state==='planned')fail(`${service.id} is production verified but planned in service manifest`);
 }
-for(const service of manifest.services||[]){
-  if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`);
-}
-
-for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Future-site onboarding','Browser context contract','Security boundaries']){
-  if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
-}
-
+for(const service of manifest.services||[]){if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`)}
+for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Future-site onboarding','Browser context contract','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
 console.log(`✅ EKODI Shell adoption policy passed: ${manifest.services.length} services covered; zero legacy services remain pending; future services require automatic onboarding v${manifest.onboardingPolicyVersion}.`);

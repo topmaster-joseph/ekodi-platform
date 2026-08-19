@@ -1,0 +1,196 @@
+name: Release Messenger & Investment Functional MVP
+
+on:
+  pull_request:
+    paths:
+      - 'migrations/0028_messenger_investment_workspaces.sql'
+      - 'workspace-platform-api-worker.js'
+      - 'wrangler.workspace-platform.toml'
+      - 'wrangler.workspace-platform-staging.toml'
+      - 'wrangler.workspace-platform-bootstrap.toml'
+      - 'deploy/manifests/workspace-platform.worker.json'
+      - 'platform-router-worker.js'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'test/workspace-platform.test.mjs'
+      - '.github/workflows/release-messenger-investment-functional.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-messenger-investment-functional-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.topmaster-joseph.workers.dev
+  SITE_STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate API, schema and functional browser contract
+        run: |
+          set -euo pipefail
+          node --check workspace-platform-api-worker.js
+          node --check platform-router-worker.js
+          node --test test/workspace-platform.test.mjs
+          bash -n scripts/apply-d1-migrations-with-retry.sh
+          grep -Fq 'transactionMode' workspace-platform-api-worker.js
+          grep -Fq 'analysis-and-connection-only' workspace-platform-api-worker.js
+          grep -Fq 'messenger_handoffs' migrations/0028_messenger_investment_workspaces.sql
+          grep -Fq 'investment_diligence_items' migrations/0028_messenger_investment_workspaces.sql
+          ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
+
+  migrate:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Apply additive D1 migration with concurrent-run recovery
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml "$WRANGLER_VERSION"
+
+  staging-api:
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deploy read-only isolated API staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.workspace-platform-staging.toml
+      - name: Verify schema and mutation isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$API_STAGING_URL/health" || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"schemaReady":true' /tmp/health.json && grep -Fq '"mutations":false' /tmp/health.json && grep -Fq '"transactionExecution":false' /tmp/health.json; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+
+  production-api:
+    if: startsWith(github.event.pull_request.head.ref, 'release/messenger-investment-functional-')
+    needs: staging-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Bootstrap new production API read-only when no stable Worker exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.workspace-platform.toml --json >/tmp/api-status.json 2>/tmp/api-status.err; then
+            echo 'Stable workspace API exists; guarded release can proceed.'
+          elif grep -Fq 'This Worker does not exist' /tmp/api-status.err /tmp/api-status.json 2>/dev/null; then
+            echo 'Bootstrapping a read-only production API before enabling writes.'
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.workspace-platform-bootstrap.toml
+            for attempt in $(seq 1 18); do
+              code=$(curl -sS -o /tmp/bootstrap-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health' || true)
+              if [[ "$code" == '200' ]] && grep -Fq '"schemaReady":true' /tmp/bootstrap-health.json && grep -Fq '"mutations":false' /tmp/bootstrap-health.json; then break; fi
+              if [[ "$attempt" == '18' ]]; then exit 1; fi
+              sleep 4
+            done
+          else
+            cat /tmp/api-status.err || true
+            cat /tmp/api-status.json || true
+            exit 1
+          fi
+      - name: Guarded 0-percent API candidate then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
+      - name: Verify production API
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health')
+          [[ "$code" == '200' ]]
+          grep -Fq '"schemaReady":true' /tmp/live-health.json
+          grep -Fq '"mutations":true' /tmp/live-health.json
+          grep -Fq '"transactionExecution":false' /tmp/live-health.json
+
+  staging-ui:
+    needs: production-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Build and deploy shared site staging
+        run: |
+          npm run build
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
+      - name: Verify functional UI assets on both simulated hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify() {
+            host="$1"; marker="$2"
+            root=$(curl -sS -o /tmp/root.html -w '%{http_code}' -H "x-ekodi-staging-host: $host" "$SITE_STAGING_URL/" || true)
+            app=$(curl -sS -o /tmp/app.js -w '%{http_code}' -H "x-ekodi-staging-host: $host" "$SITE_STAGING_URL/app.js" || true)
+            [[ "$root" == '200' && "$app" == '200' ]] && grep -Fq "$marker" /tmp/root.html && grep -Fq 'FUNCTIONAL BETA' /tmp/root.html && grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
+          }
+          for attempt in $(seq 1 18); do
+            if verify 'messenger.ekodi.kr' 'EKODI Messenger' && verify 'invest.ekodi.kr' 'EKODI Investment'; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+
+  production-ui:
+    if: startsWith(github.event.pull_request.head.ref, 'release/messenger-investment-functional-')
+    needs: staging-ui
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Build shared site assets
+        run: npm run build
+      - name: Guarded shared-site candidate then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+      - name: Verify real functional Messenger and Investment surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in 'https://messenger.ekodi.kr/|EKODI Messenger' 'https://invest.ekodi.kr/|EKODI Investment'; do
+            url="${spec%%|*}"; marker="${spec#*|}"
+            root=$(curl -sS -D /tmp/headers -o /tmp/root.html -w '%{http_code}' "$url")
+            app=$(curl -sS -o /tmp/app.js -w '%{http_code}' "${url}app.js")
+            [[ "$root" == '200' && "$app" == '200' ]]
+            grep -Fq "$marker" /tmp/root.html
+            grep -Fq 'FUNCTIONAL BETA' /tmp/root.html
+            grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
+            grep -Fiq 'x-ekodi-shell: v1' /tmp/headers
+          done

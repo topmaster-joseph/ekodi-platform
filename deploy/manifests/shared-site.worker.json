@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -9,10 +9,12 @@
       {"url":"https://admin.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","control-center-features.js","compact-control-center.js","https://auth.ekodi.kr/?site=admin"],"headerExpect":["x-ekodi-route: admin-control-center","cross-origin-opener-policy: same-origin-allow-popups"]},
       {"url":"https://auth.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI 인증센터","/auth-router.js?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1"],"headerExpect":["x-ekodi-route: central-auth"]},
       {"url":"https://auth.ekodi.kr/auth-router.js","statuses":[200],"redirect":"manual","expect":["admin-auth.js?v=20260816-fedcm-button-1","manifestService","authMode==='client'"],"headerExpect":["x-ekodi-route: central-auth-asset","cache-control: no-store"]},
-      {"url":"https://auth.ekodi.kr/client-auth.js","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","EKODI Investment","https://shell.ekodi.kr/manifest.json","authMode!=='client'"],"headerExpect":["x-ekodi-route: central-auth-asset"]},
+      {"url":"https://auth.ekodi.kr/client-auth.js","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","EKODI Investment","https://shell.ekodi.kr/manifest.json"],"headerExpect":["x-ekodi-route: central-auth-asset"]},
       {"url":"https://auth.ekodi.kr/admin-auth.js","statuses":[200],"redirect":"manual","expect":["use_fedcm_for_button:true","button_auto_select:false","expired_challenge","u.origin==='https://ekodi.kr'"],"headerExpect":["x-ekodi-route: central-auth-asset","cache-control: no-store"]},
-      {"url":"https://messenger.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","PERSON → SPACE → CONVERSATION → ACTION","https://auth.ekodi.kr/?site=messenger","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-messenger","x-ekodi-shell: v1"]},
-      {"url":"https://invest.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Investment","DUE DILIGENCE","Due Diligence","https://auth.ekodi.kr/?site=invest","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-invest","x-ekodi-shell: v1"]},
+      {"url":"https://messenger.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","FUNCTIONAL BETA","newThreadDialog","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-messenger","x-ekodi-shell: v1"]},
+      {"url":"https://messenger.ekodi.kr/app.js","statuses":[200],"redirect":"manual","expect":["https://workspace-api.ekodi.kr","/v1/messenger/threads","/handoff"]},
+      {"url":"https://invest.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Investment","FUNCTIONAL BETA","newOpportunityDialog","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-invest","x-ekodi-shell: v1"]},
+      {"url":"https://invest.ekodi.kr/app.js","statuses":[200],"redirect":"manual","expect":["https://workspace-api.ekodi.kr","/v1/invest/opportunities","diligence"]},
       {"url":"https://pay.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v1"]},
       {"url":"https://pay.biz.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v1"]},
       {"url":"https://mail.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브"],"headerExpect":["x-ekodi-route: hub"]},
