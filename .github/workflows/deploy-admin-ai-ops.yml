@@ -1,9 +1,7 @@
 name: Deploy Admin AI Ops
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
+  pull_request:
     paths:
       - '.github/workflows/deploy-admin-ai-ops.yml'
       - 'ai-ops-admin.js'
@@ -12,6 +10,10 @@ on:
       - 'admin-lazy-features.js'
       - 'admin-readable-command.js'
       - 'admin-readable-command.css'
+      - 'admin-central-handoff.js'
+      - 'admin-authenticated-shell.js'
+      - 'admin-perf-diagnostics.js'
+      - 'compact-control-center.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
       - 'release-control-admin.js'
@@ -20,57 +22,69 @@ on:
       - 'package.json'
       - 'scripts/build.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
-      - 'scripts/guarded-worker-release.mjs'
+      - 'scripts/admin-performance-postbuild.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/admin-readable-command.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-deploy-report.test.mjs'
+  workflow_run:
+    workflows: ['Deploy Admin True Lazy Gate']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: ekodi-shared-site-worker-production
+  group: ekodi-admin-production-verification
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  validate:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 24
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      GH_TOKEN: ${{ github.token }}
+    timeout-minutes: 16
+    outputs:
+      asset_version: ${{ steps.build_contract.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Validate flat AI Ops and orchestration contracts
+      - name: Validate flat AI Ops and production verification contracts
         run: |
           set -euo pipefail
           node --check admin-demand-loader.js
           node --check admin-lazy-features.js
           node --check admin-readable-command.js
+          node --check admin-central-handoff.js
+          node --check admin-authenticated-shell.js
+          node --check admin-perf-diagnostics.js
           node --check ai-ops-admin.js
           node --check release-control-admin.js
           node --check system-health-admin.js
-          node --test test/admin-readable-command.test.mjs
-          node --test test/admin-true-lazy.test.mjs
-          node --test test/admin-deploy-report.test.mjs
+          node --test test/admin-readable-command.test.mjs test/admin-true-lazy.test.mjs test/admin-deploy-report.test.mjs
           npm run check
 
-      - name: Build shared admin assets
+      - name: Build fingerprinted Admin contract
+        id: build_contract
+        shell: bash
         run: |
           set -euo pipefail
           npm run build
-          test -f dist/ai-ops-admin.js
-          test -f dist/ai-ops-admin.css
-          test -f dist/admin-demand-loader.js
-          test -f dist/admin-lazy-features.js
-          test -f dist/compact-control-center.css
+          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js compact-control-center.css admin-perf-diagnostics.js; do
+            test -f "dist/$asset"
+          done
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          grep -Fq "control-center.css?v=$version" dist/control-center.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
           grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
           ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
@@ -78,55 +92,79 @@ jobs:
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '재구성' dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
-          grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/compact-control-center.css
-          grep -Fq '#aiOpsPanel .ai-ops-side' dist/compact-control-center.css
+          grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
+          grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/ai-ops-admin.css
+          grep -Fq '#aiOpsPanel .ai-ops-side' dist/ai-ops-admin.css
+          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          grep -Fq 'PerformanceObserver' dist/admin-perf-diagnostics.js
+          ! grep -Fq 'PerformanceObserver' dist/admin-central-handoff.js
+          echo "Admin production verification contract ready: version=$version"
 
-      - name: Verify Cloudflare credentials
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-
-      - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
-        run: |
-          set -euo pipefail
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-
-      - name: Verify production flat Admin AI Ops
+  verify_production:
+    needs: validate
+    if: ${{ always() && (github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_VERSION: ${{ needs.validate.outputs.asset_version }}
+    steps:
+      - name: Verify production fingerprinted thin shell and flat AI Ops
         id: production_verify
+        if: ${{ needs.validate.result == 'success' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
         shell: bash
         run: |
           set -euo pipefail
 
-          verify_admin() {
+          verify_root() {
             code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
             echo "admin root -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
             grep -Fiq 'cache-control: no-store' /tmp/admin-headers || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then return 1; fi
+            LIVE_VERSION=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-body | head -1 | sed 's/.*?v=//')
+            [ -n "$LIVE_VERSION" ] || return 1
+            [ "$LIVE_VERSION" = "$EXPECTED_VERSION" ] || return 1
+            grep -Fq "control-center.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
+            grep -Fq "admin-central-handoff.js?v=$LIVE_VERSION" /tmp/admin-body || return 1
+            ! grep -Fq '<script src="control-center.js"' /tmp/admin-body || return 1
+            ! grep -Fq 'control-center-ops.css' /tmp/admin-body || return 1
+            ! grep -Fq 'control-center-finance.css' /tmp/admin-body || return 1
           }
 
           verify_asset() {
-            path="$1"
+            asset="$1"
             expected="$2"
-            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
-            echo "$path -> $code"
+            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/${asset}?v=$LIVE_VERSION" || true)
+            echo "$asset?v=$LIVE_VERSION -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || return 1
+            grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers || return 1
             grep -Fq "$expected" /tmp/admin-asset || return 1
           }
 
-          for attempt in $(seq 1 18); do
-            if verify_admin \
+          verify_compact_without_readable_css() {
+            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.css?v=$LIVE_VERSION" || true)
+            [ "$code" = '200' ] || return 1
+            grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
+            ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
+          }
+
+          for attempt in $(seq 1 24); do
+            LIVE_VERSION=''
+            if verify_root \
               && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" \
               && verify_asset 'admin-lazy-features.js' "actionType:'ui.change_request'" \
-              && verify_asset 'admin-lazy-features.js' '재구성' \
-              && verify_asset 'compact-control-center.css' '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' \
-              && verify_asset 'compact-control-center.css' '#aiOpsPanel .ai-ops-side'; then
-              echo 'Production Admin verified: flat AI Ops, internal specialist routing, action-first Chief AI and guarded release.'
+              && verify_asset 'admin-lazy-features.js' '전문 기능 선택을 관리자에게 넘기지 않습니다' \
+              && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' \
+              && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-ops-side' \
+              && verify_asset 'admin-perf-diagnostics.js' 'PerformanceObserver' \
+              && verify_compact_without_readable_css; then
+              echo "Production Admin verified: version=$LIVE_VERSION, fingerprinted immutable assets, thin shell and flat AI Ops."
               exit 0
             fi
-            echo "Admin flat AI Ops production verification pending (attempt $attempt/18)."
+            echo "Admin production verification pending (attempt $attempt/24, expected=$EXPECTED_VERSION, live=${LIVE_VERSION:-none})."
             sleep 4
           done
           exit 1
@@ -137,7 +175,9 @@ jobs:
         env:
           VERIFY_OUTCOME: ${{ steps.production_verify.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          UPSTREAM_OUTCOME: ${{ github.event.workflow_run.conclusion || 'manual' }}
+          UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url || 'manual verification' }}
         run: |
           set -euo pipefail
           outcome="${VERIFY_OUTCOME:-skipped}"
@@ -147,9 +187,11 @@ jobs:
 
           - commit: \`$COMMIT_SHA\`
           - production check: \`$outcome\`
+          - upstream true-lazy gate: \`$UPSTREAM_OUTCOME\`
           - canonical: https://admin.ekodi.kr/
-          - contract: flat AI Ops · internal specialist routing · action-first Chief AI
-          - workflow: $RUN_URL
+          - contract: fingerprinted thin shell · immutable assets · flat AI Ops · internal specialist routing
+          - verification workflow: $RUN_URL
+          - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
           EOF
           )
