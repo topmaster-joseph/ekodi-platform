@@ -6,10 +6,13 @@ on:
       - 'platform-router-worker.js'
       - 'wrangler.site.toml'
       - 'wrangler.site-staging.toml'
+      - 'wrangler.shell.toml'
+      - 'wrangler.shell.staging.toml'
       - 'deploy/manifests/shared-site.worker.json'
       - 'auth-site/auth-router.js'
       - 'auth-site/client-auth.js'
       - 'ekodi-service-manifest.js'
+      - 'ekodi-shell-worker.js'
       - 'config/ecosystem-services.json'
       - 'scripts/ecosystem-registry.mjs'
       - 'scripts/validate-ekodi-shell-adoption.mjs'
@@ -25,6 +28,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+  SHELL_STAGING_URL: https://ekodi-shell-staging.topmaster-joseph.workers.dev
 
 jobs:
   validate:
@@ -41,6 +45,7 @@ jobs:
           node --check platform-router-worker.js
           node --check auth-site/auth-router.js
           node --check auth-site/client-auth.js
+          node --check ekodi-shell-worker.js
           node scripts/validate-ekodi-shell-adoption.mjs
           npm run build
           grep -Fq 'data-service-id="messenger"' dist/index.html
@@ -51,7 +56,7 @@ jobs:
   staging:
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -64,7 +69,23 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Build and deploy isolated staging
+      - name: Stage canonical Shell manifest first
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.staging.toml
+      - name: Verify staged Manifest contains both new services and automatic auth metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$SHELL_STAGING_URL/manifest.json" || true)
+            if [[ "$code" == '200' ]] \
+              && grep -Fq '"id":"messenger"' /tmp/manifest.json \
+              && grep -Fq '"id":"invest"' /tmp/manifest.json \
+              && grep -Fq '"authMode":"client"' /tmp/manifest.json \
+              && grep -Fq '"onboardingPolicyVersion":1' /tmp/manifest.json; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+      - name: Build and deploy isolated shared-site staging
         run: |
           npm run build
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
@@ -92,7 +113,7 @@ jobs:
       needs.staging.result == 'success'
     needs: staging
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 26
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -101,6 +122,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Publish canonical Shell manifest before service activation
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.toml
+      - name: Verify production Shell manifest is ready for automatic client auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/live-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            if [[ "$code" == '200' ]] \
+              && grep -Fq '"id":"messenger"' /tmp/live-manifest.json \
+              && grep -Fq '"id":"invest"' /tmp/live-manifest.json \
+              && grep -Fq '"authMode":"client"' /tmp/live-manifest.json; then exit 0; fi
+            sleep 4
+          done
+          exit 1
       - name: Build production assets
         run: npm run build
       - name: Attach new custom-domain triggers to current stable Worker
