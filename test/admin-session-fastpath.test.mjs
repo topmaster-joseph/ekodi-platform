@@ -16,9 +16,16 @@ test('admin session restore bypasses runtime schema work', async () => {
   assert.doesNotMatch(fast, /CREATE TABLE|ALTER TABLE|PRAGMA|ensureSchema/i);
 });
 
-test('initial admin handoff does not prebuild Finance readiness UI', async () => {
-  const handoff = await read('admin-central-handoff.js');
-  assert.match(handoff, /ekodi-finance-overview/);
-  assert.doesNotMatch(handoff, /\n\s*ensurePaymentKeyPanel\(\);\s*\n\s*window\.addEventListener\('ekodi-finance-overview'/);
-  assert.match(handoff, /observer\.disconnect\(\),1200/);
+test('initial admin handoff contains no Finance readiness runtime', async () => {
+  const [handoff, billing, loader] = await Promise.all([
+    read('admin-central-handoff.js'),
+    read('author-billing-admin.js'),
+    read('admin-demand-loader.js'),
+  ]);
+  assert.doesNotMatch(handoff, /ekodi-finance-overview/);
+  assert.doesNotMatch(handoff, /paymentKeyStatusPanel|ensurePaymentKeyPanel|tossSecretConfigured/);
+  assert.doesNotMatch(handoff, /MutationObserver|setInterval\(/);
+  assert.match(billing, /ekodi-finance-overview/);
+  assert.match(billing, /ensurePaymentKeyPanel/);
+  assert.match(loader, /await loadScript\('author-billing-admin\.js'\);\s*\n\s*await loadScript\('finance-monitor\.js'\);/);
 });
