@@ -34,9 +34,11 @@ for (const marker of jsMarkers) {
   if (!js.includes(marker)) throw new Error(`Admin orchestration JS contract missing: ${marker}`);
 }
 
+// Keep the flat readable command styling inside AI Ops. It must not inflate the always-loaded
+// compact shell; the JS patch remains in the authenticated lazy feature bundle.
 await Promise.all([
-  appendFile(`${output}compact-control-center.css`, `\n/* admin-readable-command.css */\n${css}\n`),
+  appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
 ]);
 
-console.log('Applied EKODI flat readable Admin and Chief AI orchestration layer in existing lazy bundles.');
+console.log('Applied EKODI flat readable Admin and Chief AI orchestration layer inside on-demand AI Ops assets.');
