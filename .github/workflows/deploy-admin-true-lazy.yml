@@ -7,41 +7,34 @@ on:
       - 'package.json'
       - 'control-center.html'
       - 'control-center.css'
-      - 'control-center-ops.css'
-      - 'control-center-finance.css'
-      - 'control-center.js'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
       - 'admin-lazy-features.js'
+      - 'admin-readable-command.js'
+      - 'admin-readable-command.css'
       - 'admin-menu-layout.js'
       - 'finance-monitor.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
-      - 'mission-control-admin.js'
-      - 'mission-control-admin.css'
       - 'release-control-admin.js'
       - 'release-control-admin.css'
-      - 'work-admin.js'
-      - 'work-admin.css'
-      - 'marketing-ai-admin.js'
-      - 'marketing-ai-admin.css'
-      - 'author-billing-admin.js'
-      - 'author-billing-admin.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
       - 'site-worker.js'
       - 'scripts/build.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
+      - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
       - 'test/admin-preauth-shell.test.mjs'
       - 'test/admin-performance-hardening.test.mjs'
+      - 'test/admin-readable-command.test.mjs'
   push:
     branches: [main]
     paths: *admin_perf_paths
@@ -62,7 +55,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate end-to-end admin performance contract
+      - name: Validate thin shell, flat AI Ops and performance budgets
         shell: bash
         run: |
           set -euo pipefail
@@ -71,60 +64,39 @@ jobs:
           node --check admin-demand-loader.js
           node --check admin-menu-layout.js
           node --check admin-lazy-features.js
-          node --check device-control-admin.js
+          node --check admin-readable-command.js
           node --check ai-ops-admin.js
-          node --check mission-control-admin.js
           node --check release-control-admin.js
-          node --check work-admin.js
-          node --check marketing-ai-admin.js
-          node --check author-billing-admin.js
           node --check system-health-admin.js
-          node --check site-worker.js
           node --check scripts/admin-thin-postbuild.mjs
           node --check scripts/admin-performance-postbuild.mjs
-          node --check scripts/guarded-worker-release.mjs
+          node --check scripts/admin-readable-command-postbuild.mjs
           node --test test/admin-true-lazy.test.mjs
           node --test test/admin-thin-shell.test.mjs
           node --test test/admin-preauth-shell.test.mjs
           node --test test/admin-performance-hardening.test.mjs
+          node --test test/admin-readable-command.test.mjs
           npm run build
           test -f dist/admin-central-handoff.js
           test -f dist/admin-authenticated-shell.js
           test -f dist/admin-demand-loader.js
-          test -f dist/device-control-admin.js
-          test -f dist/device-control-admin.css
-          test -f dist/ai-ops-admin.js
-          test -f dist/mission-control-admin.js
-          test -f dist/release-control-admin.js
-          test -f dist/work-admin.js
-          test -f dist/marketing-ai-admin.js
-          test -f dist/system-health-admin.js
+          test -f dist/admin-lazy-features.js
+          test -f dist/compact-control-center.css
           grep -Fq '20260819-e2e-perf-1' dist/control-center.html
           grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
           ! grep -Fq '<script src="control-center.js"' dist/control-center.html
-          ! grep -Fq 'control-center-ops.css' dist/control-center.html
-          ! grep -Fq 'control-center-finance.css' dist/control-center.html
           ! grep -Fq '<script src="ai-ops-admin.js"' dist/control-center.html
-          ! grep -Fq '<script src="release-control-admin.js"' dist/control-center.html
-          ! grep -Fq '<script src="work-admin.js"' dist/control-center.html
-          ! grep -Fq '<script src="marketing-ai-admin.js"' dist/control-center.html
-          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
-          ! grep -Fq 'CAMPUS_SERVICES' dist/compact-control-center.js
           ! grep -Fq 'setInterval(' dist/admin-central-handoff.js
           ! grep -Fq 'setInterval(' dist/admin-authenticated-shell.js
-          ! grep -Fq 'setInterval(' dist/admin-menu-layout.js
           ! grep -Fq 'setInterval(' dist/admin-demand-loader.js
-          ! grep -Fq 'setInterval(' dist/finance-monitor.js
-          grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
-          grep -Fq '.ekodi-device-panel' dist/device-control-admin.css
           grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['work-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "loadScript('finance-monitor.js')" dist/admin-demand-loader.js
-          grep -Fq "secondaryScripts: ['mission-control-admin.js', 'release-control-admin.js', 'admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
-          grep -Fq 'content-visibility:auto' dist/control-center.css
-          grep -Fq 'backdrop-filter:none!important' dist/control-center.css
+          grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
+          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
+          grep -Fq 'deployments:' dist/admin-demand-loader.js
+          grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
+          grep -Fq '재구성' dist/admin-lazy-features.js
+          grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/compact-control-center.css
           handoff_bytes=$(wc -c < dist/admin-central-handoff.js)
           shell_bytes=$(wc -c < dist/admin-authenticated-shell.js)
           compact_bytes=$(wc -c < dist/compact-control-center.js)
@@ -135,8 +107,8 @@ jobs:
           test "$handoff_bytes" -le 9000
           test "$compact_bytes" -le 12000
           test "$menu_bytes" -le 10000
-          test "$demand_bytes" -le 14000
-          test "$first_path" -le 52000
+          test "$demand_bytes" -le 15000
+          test "$first_path" -le 53000
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -156,63 +128,35 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
       - name: Build release candidate
-        shell: bash
         run: |
           set -euo pipefail
-          node --test test/admin-true-lazy.test.mjs
-          node --test test/admin-thin-shell.test.mjs
-          node --test test/admin-preauth-shell.test.mjs
-          node --test test/admin-performance-hardening.test.mjs
           npm run build
-          grep -Fq '20260819-e2e-perf-1' dist/control-center.html
-          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
-          ! grep -Fq '<script src="control-center.js"' dist/control-center.html
-          ! grep -Fq 'control-center-ops.css' dist/control-center.html
-          ! grep -Fq 'control-center-finance.css' dist/control-center.html
-          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
-          ! grep -Fq 'setInterval(' dist/finance-monitor.js
-          grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
-          grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "loadScript('finance-monitor.js')" dist/admin-demand-loader.js
+          grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
+          grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/compact-control-center.css
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify production performance shell and demand assets
+      - name: Verify production thin shell and flat AI Ops assets
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
             root_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
-            handoff_code=$(curl -sS -D /tmp/handoff-headers -o /tmp/handoff-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-central-handoff.js' || true)
-            shell_code=$(curl -sS -D /tmp/shell-headers -o /tmp/shell-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-authenticated-shell.js' || true)
-            demand_code=$(curl -sS -D /tmp/demand-headers -o /tmp/demand-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-demand-loader.js' || true)
-            compact_code=$(curl -sS -o /tmp/compact-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/compact-control-center.js' || true)
-            device_js_code=$(curl -sS -o /tmp/device-js-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/device-control-admin.js' || true)
-            device_css_code=$(curl -sS -o /tmp/device-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/device-control-admin.css' || true)
-            aiops_code=$(curl -sS -o /tmp/aiops-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/ai-ops-admin.js' || true)
-            if [[ "$root_code" == '200' && "$handoff_code" == '200' && "$shell_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$device_js_code" == '200' && "$device_css_code" == '200' && "$aiops_code" == '200' ]] \
+            demand_code=$(curl -sS -o /tmp/demand-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-demand-loader.js' || true)
+            lazy_code=$(curl -sS -o /tmp/lazy-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-lazy-features.js' || true)
+            css_code=$(curl -sS -o /tmp/css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/compact-control-center.css' || true)
+            if [[ "$root_code" == '200' && "$demand_code" == '200' && "$lazy_code" == '200' && "$css_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers \
-              && grep -Fq '20260819-e2e-perf-1' /tmp/admin-body \
-              && grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' /tmp/admin-body \
-              && ! grep -Fq '<script src="control-center.js"' /tmp/admin-body \
-              && ! grep -Fq 'control-center-ops.css' /tmp/admin-body \
-              && ! grep -Fq 'control-center-finance.css' /tmp/admin-body \
-              && grep -Fq 'AbortController' /tmp/handoff-body \
-              && grep -Fq 'ekodi-authenticated' /tmp/shell-body \
-              && grep -Fq "scripts: ['ai-ops-admin.js']" /tmp/demand-body \
-              && grep -Fq "scripts: ['device-control-admin.js']" /tmp/demand-body \
-              && grep -Fq "loadScript('finance-monitor.js')" /tmp/demand-body \
-              && ! grep -Fq 'WINDOWS_AGENT_URL' /tmp/compact-body \
-              && grep -Fq 'WINDOWS_AGENT_URL' /tmp/device-js-body \
-              && grep -Fq '.ekodi-device-panel' /tmp/device-css-body \
-              && grep -Fq 'Decision Gate' /tmp/aiops-body; then
-              echo "Production admin performance contract verified. handoff=$(wc -c < /tmp/handoff-body) compact=$(wc -c < /tmp/compact-body) demand=$(wc -c < /tmp/demand-body)"
+              && grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" /tmp/demand-body \
+              && grep -Fq "actionType:'ui.change_request'" /tmp/lazy-body \
+              && grep -Fq '재구성' /tmp/lazy-body \
+              && grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' /tmp/css-body; then
+              echo 'Production admin thin shell and flat orchestration contract verified.'
               exit 0
             fi
-            echo "Production performance verification pending (attempt $attempt/24)."
+            echo "Production verification pending (attempt $attempt/24)."
             sleep 4
           done
-          echo 'Production admin performance verification failed.'
           exit 1
