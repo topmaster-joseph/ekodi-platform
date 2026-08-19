@@ -12,6 +12,18 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// Tax invoices are a Finance sub-workspace, not a new public edge asset. Bundle the
+// dedicated source modules into the already secured Finance assets so the existing
+// admin allowlist, CSP and lazy-loading boundary remain unchanged.
+const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promise.all([
+  readFile(`${output}control-center-finance.css`, 'utf8'),
+  readFile(`${output}finance-monitor.js`, 'utf8'),
+  readFile(`${root}tax-invoice-admin.css`, 'utf8'),
+  readFile(`${root}tax-invoice-admin.js`, 'utf8'),
+]);
+await writeFile(`${output}control-center-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
+await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n`);
+
 // MarketingAI admin keeps one authenticated on-demand asset, while live operations views
 // remain independently maintainable source modules. Bundle them after the base console.
 const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] = await Promise.all([
