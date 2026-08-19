@@ -69,8 +69,13 @@ test('functional platform pages consume central handoff and authenticated worksp
 });
 
 test('release pipeline applies additive schema before read-only staging and guarded production',async()=>{
-  const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
-  assert.match(workflow,/d1 migrations apply ekodi-auth --remote/);
+  const [workflow,helper]=await Promise.all([
+    read('.github/workflows/release-messenger-investment-functional.yml'),
+    read('scripts/apply-d1-migrations-with-retry.sh')
+  ]);
+  assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
+  assert.match(helper,/d1 migrations apply/);
+  assert.match(helper,/UNIQUE constraint failed: d1_migrations\\\.name|d1_migrations\.name/);
   assert.match(workflow,/wrangler\.workspace-platform-staging\.toml/);
   assert.match(workflow,/wrangler\.workspace-platform-bootstrap\.toml/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
