@@ -71,6 +71,21 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(siteToml,/main = "site-shell-worker\.js"/);
 });
 
+test('Shell-enabled asset Workers cannot bypass their wrapper with direct static delivery',async()=>{
+  const configs=await Promise.all([
+    'wrangler.business.toml','wrangler.business-staging.toml','wrangler.work.toml','wrangler.work-staging.toml','wrangler.author.toml','wrangler.books.toml','wrangler.books.staging.toml','wrangler.social.toml','wrangler.social-staging.toml','wrangler.energy.toml','wrangler.energy-staging.toml','wrangler.site.toml','wrangler.site-staging.toml'
+  ].map(read));
+  for(const config of configs)assert.match(config,/run_worker_first\s*=\s*true/);
+});
+
+test('guarded production release contracts require the shared Shell on migrated service roots',async()=>{
+  const manifests=await Promise.all([
+    'deploy/manifests/business.worker.json','deploy/manifests/work.worker.json','deploy/manifests/author.worker.json','deploy/manifests/books.worker.json','deploy/manifests/social.worker.json','deploy/manifests/energy.worker.json','deploy/manifests/shared-site.worker.json'
+  ].map(read));
+  for(const manifest of manifests)assert.match(manifest,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
+  for(const manifest of manifests)assert.match(manifest,/x-ekodi-shell: v1/);
+});
+
 test('all active services except the separately built Marketing UI have concrete Shell integration',()=>{
   const pending=EKODI_SERVICE_MANIFEST.services.filter(service=>service.state!=='planned'&&service.shellIntegration==='pending').map(service=>service.id);
   assert.deepEqual(pending,['marketing']);
