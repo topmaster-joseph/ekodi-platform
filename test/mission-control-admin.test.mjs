@@ -37,12 +37,14 @@ test('Governance Cockpit remains observation-first and routes important choices 
   assert.doesNotMatch(source,/service[_-]?role/i);
 });
 
-test('Governance Cockpit is shipped only through the authenticated admin shell and secured asset route',async()=>{
-  const [build,html,worker]=await Promise.all([read('scripts/build.mjs'),read('control-center.html'),read('site-worker.js')]);
+test('Governance Cockpit is shipped securely and hydrated only after AI Ops is opened',async()=>{
+  const [build,html,worker,demand,shell]=await Promise.all([read('scripts/build.mjs'),read('control-center.html'),read('site-worker.js'),read('admin-demand-loader.js'),read('admin-authenticated-shell.js')]);
   assert.match(build,/'mission-control-admin\.css'/);
   assert.match(build,/'mission-control-admin\.js'/);
-  assert.match(build,/data-ekodi-postauth="[^"]*mission-control-admin\.css mission-control-admin\.js/);
   assert.doesNotMatch(html,/mission-control-admin\.(?:js|css)/);
+  assert.doesNotMatch(shell,/'mission-control-admin\.js'/);
+  assert.match(demand,/secondaryStyles: \['mission-control-admin\.css', 'release-control-admin\.css', 'system-health-admin\.css'\]/);
+  assert.match(demand,/secondaryScripts: \['mission-control-admin\.js', 'release-control-admin\.js', 'admin-lazy-features\.js', 'system-health-admin\.js'\]/);
   assert.match(worker,/'\/mission-control-admin\.css'/);
   assert.match(worker,/'\/mission-control-admin\.js'/);
   assert.match(worker,/ADMIN_ASSETS/);
