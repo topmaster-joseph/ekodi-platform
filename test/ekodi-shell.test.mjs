@@ -59,11 +59,11 @@ test('remaining Worker services use thin shared Shell adapters without moving do
     read('business-live-worker.js'),read('work-shell-worker.js'),read('author-worker.js'),read('books-worker.js'),read('social-shell-worker.js'),read('energy-shell-worker.js'),read('site-shell-worker.js'),read('wrangler.work.toml'),read('wrangler.social.toml'),read('wrangler.energy.toml'),read('wrangler.site.toml')
   ]);
   assert.match(business,/injectEkodiShell\(await baseWorker\.fetch\(request,env,ctx\),'business'\)/);
-  assert.match(work,/workWorker\.fetch/); assert.match(work,/,'work'\)/);
+  assert.match(work,/workWorker\.fetch/); assert.match(work,/,\s*'work'\)/);
   assert.match(author,/injectEkodiShell\(await authorHtml\(response\), 'author'\)/);
   assert.match(books,/injectEkodiShell\(await env\.ASSETS\.fetch\(request\), 'books'\)/);
-  assert.match(social,/socialWorker\.fetch/); assert.match(social,/,'social'\)/);
-  assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,'energy'\)/);
+  assert.match(social,/socialWorker\.fetch/); assert.match(social,/,\s*'social'\)/);
+  assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,\s*'energy'\)/);
   assert.match(site,/trade\.biz\.ekodi\.kr/); assert.match(site,/pay\.ekodi\.kr/); assert.match(site,/shellServiceForHost/);
   assert.match(workToml,/main = "work-shell-worker\.js"/);
   assert.match(socialToml,/main = "social-shell-worker\.js"/);
