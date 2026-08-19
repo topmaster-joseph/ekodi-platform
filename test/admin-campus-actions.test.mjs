@@ -6,6 +6,8 @@ const js = await readFile(new URL('../campus-actions.js', import.meta.url), 'utf
 const css = await readFile(new URL('../campus-actions.css', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const shell = await readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8');
+const demand = await readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
+const postbuild = await readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8');
 
 test('Campus first screen renders the full site catalog with direct operational actions', () => {
   assert.match(js, /All EKODI Sites/);
@@ -81,14 +83,17 @@ test('sidebar normalization is idempotent and cannot feed its own MutationObserv
   assert.match(js, /queueMicrotask\(\(\) =>/);
 });
 
-test('Campus action assets are copied for production but loaded only after authentication', () => {
+test('Campus action assets are shipped but fetched only after the administrator opens Campus', () => {
   assert.match(build, /'campus-actions\.css'/);
   assert.match(build, /'campus-actions\.js'/);
-  assert.match(build, /admin-authenticated-shell\.js/);
-  assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
-  assert.match(shell, /'campus-actions\.css'/);
-  assert.match(shell, /'campus-actions\.js'/);
-  assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
+  assert.doesNotMatch(shell, /'campus-actions\.css'/);
+  assert.doesNotMatch(shell, /'campus-actions\.js'/);
+  assert.match(demand, /campus:\s*\{/);
+  assert.match(demand, /styles: \['campus-actions\.css'\]/);
+  assert.match(demand, /scripts: \['campus-actions\.js'\]/);
+  assert.match(demand, /return Boolean\(token\(\) && app && !app\.hidden\)/);
+  assert.match(postbuild, /On-demand Campus shell/);
+  assert.match(postbuild, /section\.id = 'campusPanel'/);
   assert.match(css, /\.campus-row-actions/);
   assert.match(css, /\.campus-row-action/);
 });

@@ -10,6 +10,14 @@
   const secondaryScheduled = new Set();
 
   const FEATURES = {
+    campus: {
+      label: 'Campus', icon: '⌂',
+      styles: ['campus-actions.css'],
+      scripts: ['campus-actions.js'],
+      real: '[data-section="campus"]',
+      hashes: ['#campus'],
+      insert: 'first',
+    },
     aiops: {
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
@@ -36,6 +44,14 @@
       real: '[data-section="marketing-ai"]',
       hashes: ['#marketing-ai'],
       insert: 'after-work',
+    },
+    devices: {
+      label: 'Devices', icon: '⌁',
+      styles: ['device-control-admin.css'],
+      scripts: ['device-control-admin.js'],
+      real: '[data-device-control-nav]',
+      hashes: ['#devices'],
+      insert: 'after-workspace',
     },
   };
 
@@ -104,8 +120,9 @@
 
   function insertPlaceholder(button, feature) {
     if (!nav) return;
+    if (feature.insert === 'first') return nav.prepend(button);
     if (feature.insert === 'after-campus') {
-      const anchor = nav.querySelector('[data-section="campus"]');
+      const anchor = nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
     if (feature.insert === 'after-services') {
@@ -114,6 +131,10 @@
     }
     if (feature.insert === 'after-work') {
       const anchor = nav.querySelector('[data-demand-feature="work"], [data-section="work"]');
+      if (anchor) return anchor.insertAdjacentElement('afterend', button);
+    }
+    if (feature.insert === 'after-workspace') {
+      const anchor = nav.querySelector('[data-section="workspace"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
     nav.append(button);
@@ -179,6 +200,7 @@
     button.type = 'button';
     button.className = 'nav';
     button.dataset.demandFeature = key;
+    button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key;
     button.append(document.createTextNode(`${feature.icon} `));
     const label = document.createElement('span');
     label.textContent = feature.label;
