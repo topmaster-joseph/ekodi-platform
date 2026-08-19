@@ -8,9 +8,10 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 test('service manifest is the person-space-role registry for future EKODI sites',()=>{
   assert.equal(EKODI_SERVICE_MANIFEST.identityModel,'person-space-role');
   assert.equal(EKODI_SERVICE_MANIFEST.shellVersion,1);
+  assert.equal(EKODI_SERVICE_MANIFEST.onboardingPolicyVersion,1);
   const ids=EKODI_SERVICE_MANIFEST.services.map(s=>s.id);
   assert.equal(new Set(ids).size,ids.length);
-  for(const required of ['my','marketing','community','church','business','work','author','books','lab','social','energy','mall'])assert.ok(ids.includes(required),required);
+  for(const required of ['my','marketing','community','church','business','work','author','books','lab','social','messenger','invest','energy','mall'])assert.ok(ids.includes(required),required);
   for(const service of EKODI_SERVICE_MANIFEST.services){
     assert.match(service.id,/^[a-z][a-z0-9-]*$/);
     assert.equal(new URL(service.url).protocol,'https:');
@@ -18,6 +19,8 @@ test('service manifest is the person-space-role registry for future EKODI sites'
     assert.ok(Array.isArray(service.capabilities)&&service.capabilities.length>0);
   }
   assert.equal(serviceForHost('church.ekodi.kr')?.id,'church');
+  assert.equal(serviceForHost('messenger.ekodi.kr')?.id,'messenger');
+  assert.equal(serviceForHost('invest.ekodi.kr')?.id,'invest');
   assert.equal(serviceForId('community')?.url,'https://community.ekodi.kr/');
 });
 
@@ -55,8 +58,8 @@ test('My, Community and shared service proxy all consume the same shell contract
 });
 
 test('remaining Worker services use thin shared Shell adapters without moving domain logic',async()=>{
-  const [business,work,author,books,social,energy,site,workToml,socialToml,energyToml,siteToml]=await Promise.all([
-    read('business-live-worker.js'),read('work-shell-worker.js'),read('author-worker.js'),read('books-worker.js'),read('social-shell-worker.js'),read('energy-shell-worker.js'),read('site-shell-worker.js'),read('wrangler.work.toml'),read('wrangler.social.toml'),read('wrangler.energy.toml'),read('wrangler.site.toml')
+  const [business,work,author,books,social,energy,site,platform,workToml,socialToml,energyToml,siteToml]=await Promise.all([
+    read('business-live-worker.js'),read('work-shell-worker.js'),read('author-worker.js'),read('books-worker.js'),read('social-shell-worker.js'),read('energy-shell-worker.js'),read('site-shell-worker.js'),read('platform-router-worker.js'),read('wrangler.work.toml'),read('wrangler.social.toml'),read('wrangler.energy.toml'),read('wrangler.site.toml')
   ]);
   assert.match(business,/injectEkodiShell\(await baseWorker\.fetch\(request,env,ctx\),'business'\)/);
   assert.match(work,/workWorker\.fetch/); assert.match(work,/,\s*'work'\)/);
@@ -65,10 +68,11 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(social,/socialWorker\.fetch/); assert.match(social,/,\s*'social'\)/);
   assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,\s*'energy'\)/);
   assert.match(site,/trade\.biz\.ekodi\.kr/); assert.match(site,/pay\.ekodi\.kr/); assert.match(site,/shellServiceForHost/);
+  assert.match(platform,/messenger\.ekodi\.kr/); assert.match(platform,/invest\.ekodi\.kr/); assert.match(platform,/injectEkodiShell/);
   assert.match(workToml,/main = "work-shell-worker\.js"/);
   assert.match(socialToml,/main = "social-shell-worker\.js"/);
   assert.match(energyToml,/main = "energy-shell-worker\.js"/);
-  assert.match(siteToml,/main = "site-shell-worker\.js"/);
+  assert.match(siteToml,/main = "platform-router-worker\.js"/);
 });
 
 test('Shell-enabled asset Workers cannot bypass their wrapper with direct static delivery',async()=>{
@@ -86,10 +90,26 @@ test('guarded production release contracts require the shared Shell on migrated 
   for(const manifest of manifests)assert.match(manifest,/x-ekodi-shell: v1/);
 });
 
-test('all active services have concrete Shell integration',()=>{
+test('all active services have concrete Shell integration and new services use automatic onboarding',()=>{
   const pending=EKODI_SERVICE_MANIFEST.services.filter(service=>service.state!=='planned'&&service.shellIntegration==='pending').map(service=>service.id);
   assert.deepEqual(pending,[]);
   assert.equal(serviceForId('marketing')?.shellIntegration,'static-script');
+  for(const id of ['messenger','invest']){
+    const service=serviceForId(id);
+    assert.equal(service?.onboardingVersion,EKODI_SERVICE_MANIFEST.onboardingPolicyVersion);
+    assert.equal(service?.authMode,'client');
+    assert.equal(service?.sso,true);
+    assert.equal(service?.shellIntegration,'shared-proxy');
+  }
+});
+
+test('production audit inventory is generated from the manifest rather than a hard-coded site list',async()=>{
+  const generator=await read('scripts/build-shell-audit-matrix.mjs');
+  const workflow=await read('.github/workflows/verify-shared-shell-production.yml');
+  assert.match(generator,/EKODI_SERVICE_MANIFEST\.services/);
+  assert.match(generator,/state!==['"]planned['"]/);
+  assert.match(workflow,/build-shell-audit-matrix\.mjs/);
+  assert.match(workflow,/fromJSON\(needs\.inventory\.outputs\.matrix\)/);
 });
 
 test('shell service exposes public manifest and health without account data',async()=>{
