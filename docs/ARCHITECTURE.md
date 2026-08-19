@@ -1,70 +1,123 @@
-# EKODI Platform v3 architecture
+# EKODI Platform v4.3 architecture
 
 ## Scope
 
-Version 3 is an operations MVP, not a multi-tenant business suite. Its production contract is intentionally narrow:
+Version 4.3 is an ecosystem operating architecture with two distinct human-facing planes over a shared stable core:
 
-1. Route visitors to the six EKODI services.
-2. Authenticate one platform administrator.
-3. Show measured service health.
-4. Maintain non-secret domain registration metadata.
-5. Manage DNS only for the five explicitly allow-listed EKODI zones.
-6. Record and export security-relevant operational activity.
+1. `ekodi.kr` is the public front door.
+2. `my.ekodi.kr` is the signed-in experience plane for ordinary users.
+3. `admin.ekodi.kr` is the private control plane for system administrators.
+4. Specialized EKODI services remain isolated deployment and data domains.
+5. AI and automation enhance services but are replaceable and must never be required for core operation.
 
-User provisioning, content workflows, marketing recommendations, billing, and cross-service identity are out of scope until their source systems and authorization models are defined.
+The architecture preserves the product rule that ordinary users should not need to understand system topology while administrators must retain observability, manual control, guarded deployment, and recovery paths.
 
-## Components
+## Layers
 
-### Static control center
+### Foundation
 
-`index.html`, `styles.css`, and `script.js` form a dependency-free browser application. It stores the opaque session token in `sessionStorage`, so closing the tab removes the browser copy. A restrictive Content Security Policy disallows inline scripts.
+Shared provider-independent capabilities include authentication, authorization, Workspace context, durable records, files, membership/billing state, audit, monitoring, backup, and recovery.
 
-### Authentication and operations API
+Shared infrastructure must remain narrow. Platform-specific private data stays with the platform or tenant that owns it and is not read directly by another platform.
 
-`auth-worker.js` is a Cloudflare Worker using D1. It owns administrator setup, login throttling, sessions, the domain registry, audit events, and the Cloudflare API proxy. Every protected endpoint verifies the bearer session. DNS routes additionally resolve the supplied zone ID and reject zones outside the EKODI allow-list.
+### Services
 
-### Monitoring
+EKODI services are independent platforms or specialized services. Ownership, deployment, host, and data boundaries are governed by `platform-boundaries.json`.
 
-`.github/workflows/monitor.yml` probes all six services every ten minutes. It publishes a new snapshot only when an operational state changes or the current snapshot is older than six hours. Response-time jitter therefore does not flood the `main` branch.
+Normal source changes deploy only the owning platform. Shared edge runtimes require cross-domain regression checks.
+
+### Experience plane
+
+`my.ekodi.kr` is the signed-in home for ordinary users. It owns the personal entry experience, Workspace selection, identity/account management, and safe navigation into services.
+
+The canonical identity model is `Person + Space + Role + Capability`. A person can participate in multiple spaces without maintaining a separate identity for each service.
+
+### Control plane
+
+`admin.ekodi.kr` is a private operational command center, not a general-user dashboard. It exists for service health, domains, access, deployment observation, AI operations, audit, recovery, and manual fallback.
+
+Privileged, destructive, legally sensitive, financially sensitive, rights-reducing, or mission-sensitive actions remain subject to human gates and mission governance.
+
+### Intelligence layer
+
+AI providers and specialist agents sit above the stable core. `ai-resilience-runtime.js` implements timeout, circuit-breaker, provider failover, `free_assist`, and final `core` fallback behavior.
+
+`config/ai-provider-independence.json` requires all EKODI surfaces to survive `AI_PROVIDER=NONE`. A provider failure must degrade assistance rather than fail the core request.
+
+## Shared EKODI Shell
+
+User-facing services adopt the shared Shell contract for identity context, Workspace context, navigation, mobile consistency, and service identity.
+
+`ekodi-service-manifest.js` is the canonical service manifest and declares `shellPolicy: required-for-user-facing-services`.
+
+New active services cannot bypass Shell adoption. Existing active legacy services that remain marked `pending` are migration debt and are allowed only by the explicit legacy exception in `scripts/validate-ekodi-shell-adoption.mjs`. They must be migrated through staging and guarded release rather than relabeled without verification.
+
+## Release model
+
+A production-impacting change follows:
+
+`source change → validation → automated tests → staging → guarded promotion → real-host verification → monitoring/audit`
+
+The repository intentionally disables selected direct production deployment commands. Guarded Worker and Pages release scripts run provider-independence gates, and CI explicitly tests `AI_PROVIDER=NONE`.
 
 ## Security model
 
-- Production browser origins must be explicitly listed in `ALLOWED_ORIGINS`.
-- Passwords use salted PBKDF2 hashes with versioned work factors and upgrade after a successful legacy login; session tokens are random and only their SHA-256 hashes are stored.
-- Failed logins are throttled per hashed client IP, and successful logins clear the failure counter.
-- D1 queries use prepared statements.
-- DNS types, names, content lengths, TTL, zone IDs, and record IDs are validated server-side.
-- Cloudflare tokens stay in Worker secrets and should use least-privilege zone scoping.
-- Registry notes are limited to 240 characters and must never contain credentials.
-- Security-sensitive mutations write an audit event.
+- Browser-side provider or privileged secrets are forbidden.
+- Production origins are explicitly allow-listed where required.
+- Administrator surfaces retain restrictive security headers and no-store behavior.
+- Tenant and platform data boundaries are preserved.
+- Privileged agent actions pass mission governance.
+- Security-sensitive changes are auditable.
+- Shared runtimes receive wider regression review than isolated service code.
+
+## Automated acceptance gates
+
+The repository verifies, where applicable:
+
+- syntax and source integrity;
+- business/platform boundaries;
+- deployment guardrails;
+- mission governance;
+- AI provider independence;
+- no-provider survival;
+- user UI DNA;
+- security baseline;
+- EKODI Shell adoption;
+- platform and product tests.
+
+`test/sustainable-operating-model.test.mjs` provides a regression gate for the overall administrator/user split, identity model, provider-independent core, guarded release path, and presence of staging configurations.
 
 ## Data ownership
 
-| Data | System of record | Notes |
-|---|---|---|
-| Service availability | GitHub Actions snapshot | Operational signal, not an SLA record |
-| Admin identity and sessions | Cloudflare D1 | Single administrator in v3 |
-| DNS records | Cloudflare | D1 stores audit metadata only |
-| Registration dates and controls | Cloudflare D1 registry | Registrar remains authoritative |
-| Audit history | Cloudflare D1 | Append-only through the API |
+| Data / concern | System of record / owner |
+|---|---|
+| Person identity and session | shared authentication layer |
+| Active Workspace context | My EKODI / shared identity contract |
+| Platform-private business data | owning platform / tenant |
+| AI provider policy | `config/ai-provider-independence.json` |
+| Service identity and Shell adoption | `ekodi-service-manifest.js` |
+| Platform deployment boundaries | `platform-boundaries.json` |
+| DNS and operational controls | administrator control plane / Cloudflare integration |
+| Audit history | shared operational audit store |
+| Service availability | monitoring workflows and runtime health endpoints |
 
-## Production acceptance checklist
+## Definition of done
 
-- CI syntax checks and tests pass.
-- D1 migrations apply successfully.
-- Worker `/health` returns version 3.
-- Production CORS allows only the deployed dashboard origins.
-- `CF_API_TOKEN` can read zones and mutate DNS only for the five managed zones.
-- Initial administrator setup succeeds exactly once.
-- Wrong-password throttling returns HTTP 429 after eight failures in 15 minutes.
-- Login, session restoration, logout, registry update, DNS create/delete, audit load, and report export work.
-- Static host applies `_headers` and serves UTF-8 assets.
-- GitHub Actions monitoring has `contents: write` only in the monitor workflow.
+For business-critical changes, completion means more than a green commit:
 
-## Next architecture increments
+1. source validation passes;
+2. automated tests pass;
+3. mission and security policy passes where applicable;
+4. staging succeeds;
+5. guarded deployment succeeds;
+6. the real public hostname is verified;
+7. redirect behavior is verified when routing changed;
+8. administrator observability remains intact;
+9. failure remains visible through monitoring or audit;
+10. user agency and tenant boundaries remain intact.
 
-- Replace single-admin credentials with Cloudflare Access or an OIDC identity provider.
-- Move schema creation entirely to migrations after all environments are upgraded.
-- Add durable alert delivery and incident acknowledgement.
-- Add pagination and retention policy for audit history.
-- Introduce role-based authorization only when multi-user workflows are implemented.
+## Current migration status
+
+The sustainable architecture is established in code and policy. My EKODI, the administrator control plane, provider-independent AI runtime, guarded release scripts, Shell policy, and staging configurations exist in the repository.
+
+Some legacy active services still declare `shellIntegration: pending`. These are explicitly tracked migration debt, not evidence that the architecture contract is absent. Their integration should be completed incrementally with isolated staging and production verification.
