@@ -1,0 +1,122 @@
+name: Release Work Shell
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'work-shell-worker.js'
+      - 'work-worker.js'
+      - 'ekodi-shell-injector.js'
+      - 'wrangler.work.toml'
+      - 'wrangler.work-staging.toml'
+      - 'deploy/manifests/work.worker.json'
+      - '.github/workflows/release-work-shell.yml'
+      - 'release/work-shell-production-20260819.marker'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-work-shell-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  STAGING_URL: https://ekodi-work-staging.topmaster-joseph.workers.dev
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'release/work-shell-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Work Shell boundary
+        run: |
+          set -euo pipefail
+          node --check work-worker.js
+          node --check work-shell-worker.js
+          node --check ekodi-shell-injector.js
+          node --check scripts/guarded-worker-release.mjs
+          grep -Fq 'run_worker_first = true' wrangler.work.toml
+          grep -Fq 'run_worker_first = true' wrangler.work-staging.toml
+          grep -Fq 'https://shell.ekodi.kr/shell.js' deploy/manifests/work.worker.json
+          grep -Fq 'x-ekodi-shell: v1' deploy/manifests/work.worker.json
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated Work staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.work-staging.toml
+      - name: Verify Work staging Shell and isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/work-stage.headers -o /tmp/work-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health=$(curl -sS -o /tmp/work-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$root" == '200' && "$health" == '200' ]] \
+              && grep -Fq 'EKODI Work' /tmp/work-stage.html \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/work-stage.html \
+              && grep -Fiq 'x-ekodi-shell: v1' /tmp/work-stage.headers \
+              && grep -Fq '"dataEnabled":false' /tmp/work-stage-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/work-stage-health.json; then
+              echo 'Work isolated staging with shared Shell verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify shared Shell dependency
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/shell.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
+          [[ "$code" == '200' ]]
+          grep -Fq '"identityModel":"person-space-role"' /tmp/shell.json
+      - name: Guarded 0-percent Work release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/work.worker.json
+      - name: Verify Work production Shell and live data mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            root=$(curl -L -sS -D /tmp/work-live.headers -o /tmp/work-live.html -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://work.ekodi.kr/' || true)
+            health=$(curl -sS -o /tmp/work-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://work.ekodi.kr/health' || true)
+            if [[ "$root" == '200' && "$health" == '200' ]] \
+              && grep -Fq 'EKODI Work' /tmp/work-live.html \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/work-live.html \
+              && grep -Fiq 'x-ekodi-shell: v1' /tmp/work-live.headers \
+              && grep -Fq '"dataEnabled":true' /tmp/work-live-health.json \
+              && grep -Fq '"dataMode":"production"' /tmp/work-live-health.json; then
+              echo 'Work production shared Shell verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
