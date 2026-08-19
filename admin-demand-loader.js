@@ -7,14 +7,17 @@
   const loadedScripts = new Map();
   const loadedStyles = new Map();
   const pending = new Map();
+  const secondaryScheduled = new Set();
 
   const FEATURES = {
     aiops: {
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
-      scripts: ['ai-ops-admin.js', 'admin-lazy-features.js'],
+      scripts: ['ai-ops-admin.js'],
+      secondaryStyles: ['mission-control-admin.css', 'release-control-admin.css', 'system-health-admin.css'],
+      secondaryScripts: ['mission-control-admin.js', 'release-control-admin.js', 'admin-lazy-features.js', 'system-health-admin.js'],
       real: '[data-section="aiops"]',
-      hashes: ['#ai-ops', '#aiops'],
+      hashes: ['#ai-ops', '#aiops', '#deployments', '#release'],
       insert: 'after-campus',
     },
     work: {
@@ -33,14 +36,6 @@
       real: '[data-section="marketing-ai"]',
       hashes: ['#marketing-ai'],
       insert: 'after-work',
-    },
-    deployments: {
-      label: 'Deployments', icon: '↑',
-      styles: ['release-control-admin.css'],
-      scripts: ['release-control-admin.js'],
-      real: '[data-section="deployments"]',
-      hashes: ['#deployments', '#release'],
-      insert: 'before-activity',
     },
   };
 
@@ -63,7 +58,7 @@
       link.dataset.ekodiDemandStyle = href;
       link.addEventListener('load', () => resolve(link), { once:true });
       link.addEventListener('error', () => resolve(link), { once:true });
-      document.head.append(link);
+      document.head.appendChild(link);
     });
     loadedStyles.set(href, promise);
     return promise;
@@ -121,11 +116,24 @@
       const anchor = nav.querySelector('[data-demand-feature="work"], [data-section="work"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
-    if (feature.insert === 'before-activity') {
-      const anchor = nav.querySelector('a[href="/legacy#activity"]');
-      if (anchor) return nav.insertBefore(button, anchor);
-    }
     nav.append(button);
+  }
+
+  function scheduleSecondary(key, feature) {
+    if (secondaryScheduled.has(key)) return;
+    if (!(feature.secondaryStyles?.length || feature.secondaryScripts?.length)) return;
+    secondaryScheduled.add(key);
+    const hydrate = async () => {
+      if (!authenticated()) return;
+      try {
+        await Promise.all((feature.secondaryStyles || []).map(loadStyle));
+        for (const src of feature.secondaryScripts || []) await loadScript(src);
+      } catch (error) {
+        console.warn(`[EKODI Admin] ${key} secondary load failed`, error);
+      }
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(() => hydrate(), { timeout:1200 });
+    else window.setTimeout(hydrate, 350);
   }
 
   async function activateFeature(key, placeholder, auto = false) {
@@ -147,6 +155,7 @@
         if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
           queueMicrotask(() => real.click());
         }
+        scheduleSecondary(key, feature);
       } catch (error) {
         console.warn(`[EKODI Admin] ${key} demand load failed`, error);
         if (placeholder?.isConnected) {
@@ -191,17 +200,6 @@
           loadStyle('author-billing-admin.css'),
           loadScript('author-billing-admin.js'),
         ]).catch(error => console.warn('[EKODI Admin] Creator billing lazy load failed', error));
-      }, { once:true });
-    }
-
-    const services = nav?.querySelector('[data-section="services"]');
-    if (services && services.dataset.systemHealthLazy !== 'true') {
-      services.dataset.systemHealthLazy = 'true';
-      services.addEventListener('click', () => {
-        Promise.all([
-          loadStyle('system-health-admin.css'),
-          loadScript('system-health-admin.js'),
-        ]).catch(error => console.warn('[EKODI Admin] System Health lazy load failed', error));
       }, { once:true });
     }
   }
