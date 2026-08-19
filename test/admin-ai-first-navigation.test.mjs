@@ -15,13 +15,15 @@ test('internal operations stay available to the control plane but disappear from
   assert.match(layout, /data\.aiInternal|dataset\.aiInternal/);
 });
 
-test('AI Ops is the human-facing fallback for retired Operations and Services views', () => {
-  assert.match(layout, /preferredHumanSection/);
-  assert.match(layout, /hasPanel\('aiops'\)/);
-  assert.match(layout, /openAiOpsFromInternalRequest/);
+test('retired Operations and Services explicitly route to demand-loaded AI Ops without auto-opening it on normal login', () => {
+  assert.match(layout, /function routeInternalToAiOps/);
+  assert.match(layout, /openDemand\('aiops'\)/);
   assert.match(layout, /#ai-ops/);
   assert.match(layout, /\['#operations', 'overview'\]/);
   assert.match(layout, /\['#services', 'services'\]/);
+  assert.match(layout, /No hash: deliberately keep the already-rendered lightweight overview shell/);
+  assert.match(layout, /Do not auto-open Campus, AI Ops, Devices, Finance/);
+  assert.doesNotMatch(layout, /preferAiOpsOnReady/);
 });
 
 test('Devices participates in the central panel router even though its menu is installed dynamically', () => {
@@ -32,8 +34,9 @@ test('Devices participates in the central panel router even though its menu is i
 
 test('Campus shortcuts cannot reopen hidden operational panels', () => {
   assert.match(layout, /\[data-campus-section\]/);
-  assert.match(layout, /control\.dataset\.campusSection = 'aiops'/);
-  assert.match(layout, /AI Ops/);
+  assert.match(layout, /isInternalSection\(control\.dataset\.campusSection\)/);
+  assert.match(layout, /routeInternalToAiOps\(\)/);
+  assert.match(layout, /openDemand\('aiops'\)/);
 });
 
 test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
