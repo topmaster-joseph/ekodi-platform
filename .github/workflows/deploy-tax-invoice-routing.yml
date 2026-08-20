@@ -81,10 +81,14 @@ jobs:
             echo 'Finance must not embed ecosystem Health data.'
             exit 1
           fi
-          if grep -Fq 'author-billing-admin.js' admin-demand-loader.js; then
+          finance_binding=$(sed -n '/function bindBaseEnhancements/,/function bindBooksEnhancements/p' admin-demand-loader.js)
+          if printf '%s' "$finance_binding" | grep -Fq 'author-billing-admin'; then
             echo 'Creator billing must not be mounted inside Finance.'
             exit 1
           fi
+          books_binding=$(sed -n '/function bindBooksEnhancements/,/function requestedFeature/p' admin-demand-loader.js)
+          printf '%s' "$books_binding" | grep -Fq 'author-billing-admin.js'
+          printf '%s' "$books_binding" | grep -Fq 'author-billing-admin.css'
 
   dispatch-and-verify:
     needs: validate
