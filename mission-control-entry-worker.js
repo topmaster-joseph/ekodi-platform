@@ -9,6 +9,7 @@ import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleBooksNetworkRequest } from './books-network-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -36,6 +37,16 @@ export default {
       } catch (error) {
         console.error('Admin session fast path error', error);
         return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR');
+      }
+    }
+
+    if (path.startsWith('/api/books/public/stores') || path.startsWith('/api/books/me') || path.startsWith('/api/books/admin/network')) {
+      try {
+        const response = await handleBooksNetworkRequest(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Books Network control error', error);
+        return errorResponse('출판·서점 네트워크 처리 중 오류가 발생했습니다.', 'BOOKS_NETWORK_ERROR');
       }
     }
 
