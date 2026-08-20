@@ -42,6 +42,22 @@ requireText(runtimeFile, [
   'AI_PROVIDER_TIMEOUT',
 ]);
 
+const coreGatewayFile = 'core-ai-gateway.js';
+requireText(coreGatewayFile, [
+  'buildCoreAiGateway',
+  'runAiEnhancedTask',
+  'requires a non-AI fallback',
+  'providerIndependent: true',
+  'aiOptional: true',
+]);
+
+const coreApiFile = 'core-api.js';
+requireText(coreApiFile, [
+  '/ai/status',
+  'getCoreAiGatewayStatus',
+  'ai-optional',
+]);
+
 const packageFile = 'package.json';
 const packageJson = JSON.parse(read(packageFile));
 if (!String(packageJson.scripts?.['validate:ai-resilience'] || '').includes('validate-ai-provider-independence.mjs')) {
