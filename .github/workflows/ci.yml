@@ -28,6 +28,7 @@ jobs:
           "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
             .github/workflows/ci.yml \
             .github/workflows/deploy-control-api.yml \
+            .github/workflows/backup-ekodi-core.yml \
             .github/workflows/release-messenger-investment-functional.yml
       - run: npm run check
       - name: Validate AI provider independence
