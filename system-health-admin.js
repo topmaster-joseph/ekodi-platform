@@ -5,6 +5,7 @@
   const SECTION = 'health';
   const API_BASE = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
+  const CORE_SERVICES = ['root', 'admin', 'api', 'biz', 'church', 'lab', 'client-cgma', 'client-jadam', 'client-pizzamaru', 'client-yogurt'];
   if (document.getElementById(MODULE_ID)) return;
 
   const nav = document.querySelector('.sidebar nav');
@@ -27,6 +28,12 @@
     return `${n.toFixed(digits)} ${units[unit]}`;
   }
 
+  function time(value) {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ko-KR');
+  }
+
   function svg(name, attrs = {}) {
     const node = document.createElementNS('http://www.w3.org/2000/svg', name);
     for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
@@ -37,7 +44,7 @@
   button.type = 'button';
   button.className = 'nav system-health-nav';
   button.dataset.section = SECTION;
-  button.title = '트래픽과 시스템 사용량';
+  button.title = 'EKODI Core와 시스템 운영 상태';
   button.append(document.createTextNode('◉ '));
   const navLabel = document.createElement('span');
   navLabel.textContent = 'Health';
@@ -55,9 +62,9 @@
   section.innerHTML = `
     <div class="section-head system-health-head">
       <div>
-        <p class="kicker">SYSTEM HEALTH</p>
-        <h2>System Health</h2>
-        <p class="operations-copy">트래픽과 시스템 사용량을 일 단위 집계로 확인합니다. 평상시에는 데이터를 읽지 않습니다.</p>
+        <p class="kicker">EKODI CORE & SYSTEM HEALTH</p>
+        <h2>EKODI Core & System Health</h2>
+        <p class="operations-copy">Core · DB · Backup · AI 독립성 · 주요 사이트와 트래픽을 한 화면에서 확인합니다. 평상시에는 데이터를 읽지 않습니다.</p>
       </div>
       <div class="system-health-actions" aria-label="System Health 기간 선택">
         <button class="ghost compact is-active" type="button" data-health-days="7">7일</button>
@@ -65,9 +72,42 @@
         <button class="secondary compact" type="button" data-health-refresh>↻ 새로고침</button>
       </div>
     </div>
+
+    <div class="core-health-overall" data-core-overall data-state="pending">
+      <span class="system-health-dot" aria-hidden="true"></span>
+      <div><small>EKODI Core</small><strong data-core-overall-label>확인 전</strong><span data-core-status>Health 메뉴를 열면 Core 운영 상태를 확인합니다.</span></div>
+      <time data-core-checked-at>—</time>
+    </div>
+
+    <div class="core-health-grid" aria-label="EKODI Core 상태">
+      <article data-core-card="core" data-state="pending"><div><small>Core</small><b data-core-badge="core">확인 전</b></div><strong data-core-value="core">—</strong><span data-core-detail="core">api.ekodi.kr</span></article>
+      <article data-core-card="database" data-state="pending"><div><small>DB</small><b data-core-badge="database">확인 전</b></div><strong data-core-value="database">Hybrid</strong><span data-core-detail="database">D1 · Supabase · Storage</span></article>
+      <article data-core-card="backup" data-state="pending"><div><small>Backup</small><b data-core-badge="backup">확인 전</b></div><strong data-core-value="backup">—</strong><span data-core-detail="backup">독립 복원 검증</span></article>
+      <article data-core-card="ai" data-state="pending"><div><small>AI Independence</small><b data-core-badge="ai">확인 전</b></div><strong data-core-value="ai">—</strong><span data-core-detail="ai">AI 공급자 없이도 Core 유지</span></article>
+    </div>
+
+    <div class="core-health-columns">
+      <div class="core-health-card">
+        <div class="core-health-card-head"><div><small>PRODUCTION FLEET</small><strong>주요 사이트</strong></div><span data-core-fleet-summary>—</span></div>
+        <div class="core-health-fleet" data-core-fleet><p class="operations-loading">운영 상태 확인 전입니다.</p></div>
+      </div>
+      <div class="core-health-card">
+        <div class="core-health-card-head"><div><small>RECOVERY</small><strong>백업 · 복구 상태</strong></div></div>
+        <dl class="core-health-facts">
+          <div><dt>아키텍처</dt><dd data-core-architecture>—</dd></div>
+          <div><dt>백업 정책</dt><dd data-core-backup-policy>—</dd></div>
+          <div><dt>최근 복원 검증</dt><dd data-core-recovery-time>—</dd></div>
+          <div><dt>복원 무결성</dt><dd data-core-integrity>—</dd></div>
+          <div><dt>백업 크기</dt><dd data-core-backup-size>—</dd></div>
+          <div><dt>최근 운영 확인</dt><dd data-core-live-check>—</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="system-health-divider"><span>TRAFFIC HEALTH</span></div>
     <div class="system-health-overall" data-health-overall data-state="pending">
       <span class="system-health-dot" aria-hidden="true"></span>
-      <div><small>전체 상태</small><strong data-health-overall-label>확인 전</strong><span data-health-status>Health 메뉴를 열면 최근 집계를 확인합니다.</span></div>
+      <div><small>트래픽 상태</small><strong data-health-overall-label>확인 전</strong><span data-health-status>Health 메뉴를 열면 최근 집계를 확인합니다.</span></div>
     </div>
     <div class="system-health-metrics" aria-label="System Health 요약">
       <article><small>최근 요청</small><strong data-health-requests>—</strong><span>완료된 최근 UTC 일자</span></article>
@@ -172,6 +212,152 @@
     draw(data?.series || []);
   }
 
+  async function fetchJson(path, authenticated = false) {
+    const headers = {};
+    if (authenticated) {
+      const value = token();
+      if (!value) throw new Error('관리자 세션이 없습니다.');
+      headers.authorization = `Bearer ${value}`;
+    }
+    const response = await fetch(`${API_BASE}${path}`, { headers, cache:'no-store' });
+    let data = null;
+    try { data = await response.json(); } catch {}
+    if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+    return data;
+  }
+
+  async function attempt(label, task) {
+    try { return { ok:true, data:await task() }; }
+    catch (error) { return { ok:false, error:new Error(`${label}: ${error?.message || error}`) }; }
+  }
+
+  function setCoreCard(name, state, badge, value, detail) {
+    const card = get(`[data-core-card="${name}"]`);
+    if (card) card.dataset.state = state;
+    const badgeNode = get(`[data-core-badge="${name}"]`);
+    if (badgeNode) badgeNode.textContent = badge;
+    const valueNode = get(`[data-core-value="${name}"]`);
+    if (valueNode) valueNode.textContent = value;
+    const detailNode = get(`[data-core-detail="${name}"]`);
+    if (detailNode) detailNode.textContent = detail;
+  }
+
+  function fleetState(service) {
+    const state = service?.status || service?.latest?.status || '';
+    if (state === 'online') return 'ok';
+    if (state === 'degraded') return 'warn';
+    if (state === 'offline') return 'error';
+    return 'pending';
+  }
+
+  function renderFleet(overview) {
+    const list = get('[data-core-fleet]');
+    list.textContent = '';
+    const monitored = new Map((overview?.sites || []).map(item => [item.id, item]));
+    const services = new Map((overview?.services || []).map(item => [item.id, item]));
+    const rows = CORE_SERVICES.map(id => monitored.get(id) || services.get(id)).filter(Boolean);
+    const counts = { ok:0, warn:0, error:0, pending:0 };
+
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'operations-loading';
+      empty.textContent = '주요 사이트 상태를 확인하지 못했습니다.';
+      list.append(empty);
+      get('[data-core-fleet-summary]').textContent = '확인 필요';
+      return { ...counts, pending:1 };
+    }
+
+    for (const service of rows) {
+      const state = fleetState(service);
+      counts[state] += 1;
+      const row = document.createElement('div');
+      row.className = 'core-health-fleet-row';
+      row.dataset.state = state;
+
+      const identity = document.createElement('div');
+      const name = document.createElement('strong');
+      name.textContent = service.name || service.domain || service.id;
+      const domain = document.createElement('small');
+      domain.textContent = service.domain || '';
+      identity.append(name, domain);
+
+      const meta = document.createElement('div');
+      const badge = document.createElement('b');
+      badge.textContent = state === 'ok' ? '정상' : state === 'warn' ? '주의' : state === 'error' ? '오프라인' : '확인 대기';
+      const latency = document.createElement('span');
+      const responseTime = service.responseTime ?? service.latest?.responseTime;
+      latency.textContent = Number.isFinite(Number(responseTime)) ? `${Number(responseTime)} ms` : '—';
+      meta.append(badge, latency);
+      row.append(identity, meta);
+      list.append(row);
+    }
+    get('[data-core-fleet-summary]').textContent = `${counts.ok}/${rows.length} 정상`;
+    return counts;
+  }
+
+  function renderCore(results) {
+    const { core, ai, recovery, overview } = results;
+    const coreData = core.data || {};
+    const recoveryData = recovery.data?.recovery;
+    const aiData = ai.data || coreData.ai || {};
+
+    if (core.ok && coreData.ok) {
+      setCoreCard('core', 'ok', '정상', `v${coreData.apiVersion || '1.0.0'}`, `${coreData.canonicalHosts?.api || 'api.ekodi.kr'} · ${coreData.architecture || 'hybrid-cloud'}`);
+      get('[data-core-architecture]').textContent = coreData.architecture === 'hybrid-cloud' ? 'Hybrid Cloud · Provider Independent' : coreData.architecture || '—';
+    } else {
+      setCoreCard('core', 'error', '점검 필요', '응답 없음', core.error?.message || 'Core API 확인 실패');
+      get('[data-core-architecture]').textContent = '확인 실패';
+    }
+
+    const databaseOk = recovery.ok && overview.ok;
+    setCoreCard('database', databaseOk ? 'ok' : 'error', databaseOk ? '연결' : '확인 필요', databaseOk ? 'Hybrid 연결' : '확인 필요', databaseOk ? 'Core 원장과 운영 관제 DB 응답 정상' : [recovery.error?.message, overview.error?.message].filter(Boolean).join(' · ') || 'DB 응답 확인 실패');
+
+    if (recovery.ok && recoveryData?.verified) {
+      setCoreCard('backup', 'ok', '검증됨', '복원 가능', `${time(recoveryData.latest?.createdAt)} · ${recoveryData.latest?.restoreIntegrity || 'ok'}`);
+    } else if (recovery.ok) {
+      setCoreCard('backup', 'warn', '확인 필요', recoveryData?.configured ? '검증 대기' : '미설정', '최근 독립 복원 성공 기록을 확인해 주세요.');
+    } else {
+      setCoreCard('backup', 'error', '점검 필요', '조회 실패', recovery.error?.message || '복구 상태 확인 실패');
+    }
+
+    const aiIndependent = Boolean(ai.ok && aiData.providerIndependent && aiData.aiOptional);
+    if (aiIndependent) {
+      setCoreCard('ai', 'ok', '독립', 'AI Optional', `${aiData.gateway || 'EKODI Core Gateway'} · ${aiData.mode || 'provider-independent'}`);
+    } else if (ai.ok) {
+      setCoreCard('ai', 'warn', '확인 필요', '정책 확인', 'AI Optional / 공급자 독립 상태를 확인해 주세요.');
+    } else {
+      setCoreCard('ai', 'error', '점검 필요', '조회 실패', ai.error?.message || 'AI Gateway 상태 확인 실패');
+    }
+
+    const fleet = overview.ok ? renderFleet(overview.data) : renderFleet(null);
+    const hardIssues = [!core.ok, !databaseOk, !aiIndependent, !recovery.ok || !recoveryData?.verified, !overview.ok || fleet.error > 0].filter(Boolean).length;
+    const softIssues = fleet.warn + fleet.pending;
+    const coreOverall = get('[data-core-overall]');
+    const coreLabel = get('[data-core-overall-label]');
+    const coreStatus = get('[data-core-status]');
+    if (!hardIssues && !softIssues) {
+      coreOverall.dataset.state = 'ok';
+      coreLabel.textContent = '정상';
+      coreStatus.textContent = 'Core, DB, Backup, AI 독립성, 주요 사이트를 모두 확인했습니다.';
+    } else if (!hardIssues) {
+      coreOverall.dataset.state = 'warn';
+      coreLabel.textContent = '정상 · 일부 확인 대기';
+      coreStatus.textContent = `핵심 기능은 정상이며 사이트 ${softIssues}건이 주의 또는 확인 대기입니다.`;
+    } else {
+      coreOverall.dataset.state = 'error';
+      coreLabel.textContent = '점검 필요';
+      coreStatus.textContent = `${hardIssues}개 핵심 항목을 확인해 주세요. 확인되지 않은 항목은 정상으로 간주하지 않습니다.`;
+    }
+
+    const latest = recoveryData?.latest;
+    get('[data-core-backup-policy]').textContent = recoveryData?.policy || coreData.recovery?.strategy || '—';
+    get('[data-core-recovery-time]').textContent = time(latest?.createdAt);
+    get('[data-core-integrity]').textContent = latest?.restoreIntegrity || (recoveryData?.verified ? 'ok' : '—');
+    get('[data-core-backup-size]').textContent = bytes(latest?.exportBytes);
+    get('[data-core-live-check]').textContent = overview.ok ? time(overview.data?.generatedAt) : '확인 실패';
+    get('[data-core-checked-at]').textContent = `확인 ${new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })}`;
+  }
+
   async function load(force = false) {
     if (loading || (loaded && !force) || !token()) return;
     loading = true;
@@ -179,24 +365,31 @@
     overall.dataset.state = 'pending';
     overallLabel.textContent = '확인 중';
     status.textContent = 'Cloudflare 일별 집계를 읽는 중입니다.';
-    try {
-      const response = await fetch(`${API_BASE}/api/control/system-health?days=${days}`, {
-        headers:{ authorization:`Bearer ${token()}` },
-        cache:'no-store',
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    const coreOverall = get('[data-core-overall]');
+    coreOverall.dataset.state = 'pending';
+    get('[data-core-overall-label]').textContent = '확인 중';
+    get('[data-core-status]').textContent = 'Core 운영 계약과 복구 상태를 확인하는 중입니다.';
+
+    const [health, core, ai, recovery, overview] = await Promise.all([
+      attempt('System Health', () => fetchJson(`/api/control/system-health?days=${days}`, true)),
+      attempt('Core', () => fetchJson('/api/core/v1/status')),
+      attempt('AI Gateway', () => fetchJson('/api/core/v1/ai/status')),
+      attempt('Backup', () => fetchJson('/api/core/v1/recovery/status', true)),
+      attempt('Fleet', () => fetchJson('/api/control/overview', true)),
+    ]);
+
+    renderCore({ core, ai, recovery, overview });
+    if (health.ok) {
       loaded = true;
-      render(data);
-    } catch (error) {
+      render(health.data);
+    } else {
       overall.dataset.state = 'error';
       overallLabel.textContent = '점검 필요';
-      status.textContent = `System Health를 불러오지 못했습니다: ${error.message || error}`;
+      status.textContent = `System Health를 불러오지 못했습니다: ${health.error?.message || '연결 실패'}`;
       chart.innerHTML = '<p class="operations-error">서비스 운영에는 영향이 없습니다. Analytics 연결 상태만 확인해 주세요.</p>';
-    } finally {
-      loading = false;
-      refresh.disabled = false;
     }
+    loading = false;
+    refresh.disabled = false;
   }
 
   function activate() {
