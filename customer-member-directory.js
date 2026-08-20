@@ -1,6 +1,15 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { canonicalCoreRole } from './ekodi-principal.js';
 
 const ROLE_LABELS = Object.freeze({
+  owner: '점주/책임자',
+  admin: '관리자',
+  manager: '운영책임자',
+  marketer: '마케팅담당자',
+  accountant: '회계담당자',
+  staff: '실무담당자',
+  member: '회원',
+  viewer: '조회·검수자',
   store_owner: '점주/책임자',
   marketing_manager: '마케팅담당자',
   hq_manager: '본사담당자',
@@ -53,6 +62,7 @@ function accessStatus(row) {
 
 function publicMember(row) {
   const status = accessStatus(row);
+  const coreRole = canonicalCoreRole(row.role);
   return {
     userId: row.user_id == null ? null : Number(row.user_id),
     email: row.email,
@@ -60,6 +70,8 @@ function publicMember(row) {
     userStatus: status === 'disabled' ? 'disabled' : (row.user_status || 'active'),
     role: row.role,
     roleLabel: ROLE_LABELS[row.role] || row.role,
+    coreRole,
+    coreRoleLabel: ROLE_LABELS[coreRole] || coreRole,
     status,
     joinedAt: row.grant_created_at,
     lastLoginAt: row.last_verified_at || row.last_login_at || '',
@@ -81,9 +93,9 @@ function filterMembers(members, url) {
   return members.filter(member => {
     if (tenant && member.tenant.slug !== tenant) return false;
     if (status && member.status !== status) return false;
-    if (role && member.role !== role) return false;
+    if (role && member.role !== role && member.coreRole !== role) return false;
     if (q) {
-      const haystack = normalize(`${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel}`);
+      const haystack = normalize(`${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel} ${member.coreRoleLabel}`);
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -123,6 +135,14 @@ function tenantDirectory(rows, members) {
 function roleDirectory(members) {
   const counts = new Map();
   for (const member of members) counts.set(member.role, (counts.get(member.role) || 0) + 1);
+  return [...counts.entries()]
+    .map(([role, count]) => ({ role, coreRole: canonicalCoreRole(role), label: ROLE_LABELS[role] || role, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko'));
+}
+
+function coreRoleDirectory(members) {
+  const counts = new Map();
+  for (const member of members) counts.set(member.coreRole, (counts.get(member.coreRole) || 0) + 1);
   return [...counts.entries()]
     .map(([role, count]) => ({ role, label: ROLE_LABELS[role] || role, count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko'));
@@ -167,10 +187,12 @@ export async function handleCustomerMemberDirectory(request, env) {
   const members = filterMembers(allMembers, url);
 
   return json({
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     summary: directorySummary(allMembers, tenants),
     tenants,
     roles: roleDirectory(allMembers),
+    coreRoles: coreRoleDirectory(allMembers),
     members,
   }, 200, request, env);
 }
