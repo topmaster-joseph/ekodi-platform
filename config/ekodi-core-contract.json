@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "name": "EKODI Core",
+  "status": "adopted",
+  "purpose": "Keep EKODI-owned identity, organization, authorization, audit and service contracts independent from replaceable infrastructure providers.",
+  "canonicalHosts": {
+    "api": "api.ekodi.kr",
+    "admin": "admin.ekodi.kr",
+    "auth": "auth.ekodi.kr"
+  },
+  "controlPlane": {
+    "platformId": "control-api",
+    "database": "ekodi-auth D1",
+    "canonicalEntities": {
+      "organization": "customer_tenants",
+      "person": "customer_users",
+      "membership": "customer_memberships",
+      "audit": "customer_audit_logs"
+    }
+  },
+  "dataStrategy": {
+    "mode": "hybrid",
+    "authoritativeRule": "Each domain owns its data. Cross-platform access uses an explicit shared API contract.",
+    "stores": [
+      { "kind": "cloudflare-d1", "role": "shared control-plane and selected service namespaces" },
+      { "kind": "supabase-postgres", "role": "platform-owned relational workloads and auth where declared" },
+      { "kind": "object-storage", "role": "documents, media, exports and independent backup artifacts" }
+    ],
+    "rules": [
+      "Do not consolidate healthy platform data into one database only for architectural symmetry.",
+      "Prefer portable schemas and exportable formats.",
+      "A shared database migration is a shared-core change.",
+      "Tenant-private data must not be read or written across boundaries without explicit authorization."
+    ]
+  },
+  "aiStrategy": {
+    "mode": "optional-enhancement",
+    "gateway": "EKODI Core service contract",
+    "rules": [
+      "Core business functions must remain usable when every external AI provider is unavailable.",
+      "Browser clients must not depend on direct provider credentials.",
+      "AI providers are replaceable adapters, not system-of-record dependencies.",
+      "Privileged AI actions remain governed, observable and reversible where feasible."
+    ]
+  },
+  "providerIndependence": {
+    "required": true,
+    "principle": "Cloud providers are infrastructure. EKODI Core is the product boundary.",
+    "replaceableCategories": [
+      "ai-provider",
+      "object-storage",
+      "managed-database",
+      "edge-runtime",
+      "identity-provider"
+    ]
+  },
+  "corePrinciples": [
+    "tenant-isolation",
+    "provider-independence",
+    "ai-optional",
+    "data-portability",
+    "graceful-degradation",
+    "observable-operations",
+    "human-agency"
+  ],
+  "completionGates": [
+    "core-contract-validation-passes",
+    "automated-tests-pass",
+    "shared-auth-and-organization-contracts-are-live",
+    "admin-can-observe-core-state",
+    "tenant-isolation-is-verified",
+    "ai-provider-outage-does-not-break-core-workflows",
+    "backup-and-restore-path-is-verified",
+    "production-hostname-regressions-pass"
+  ]
+}
