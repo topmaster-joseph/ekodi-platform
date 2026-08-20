@@ -51,8 +51,20 @@ test('Finance no longer embeds ecosystem Health or Creator billing', async () =>
   assert.doesNotMatch(finance, /monitor-status\.json/);
   assert.doesNotMatch(finance, /ensureEcosystemPanel/);
   assert.doesNotMatch(finance, /ecosystemRequest/);
-  assert.doesNotMatch(loader, /author-billing-admin\.js/);
-  assert.doesNotMatch(loader, /author-billing-admin\.css/);
+  const financeBinding = loader.match(/function bindBaseEnhancements\(\)[\s\S]*?\n  }/m)?.[0] || '';
+  assert.doesNotMatch(financeBinding, /author-billing-admin/);
+});
+
+test('Creator billing is preserved but mounted only from the Books path', async () => {
+  const loader = await source('admin-demand-loader.js');
+  const billing = await source('author-billing-admin.js');
+  const booksBinding = loader.match(/function bindBooksEnhancements\(\)[\s\S]*?\n  }/m)?.[0] || '';
+  assert.match(booksBinding, /author-billing-admin\.css/);
+  assert.match(booksBinding, /author-billing-admin\.js/);
+  assert.match(booksBinding, /data-section=\\"books\\"|data-section="books"/);
+  assert.match(billing, /data-books-tab = 'creator-billing'|dataset\.booksTab = 'creator-billing'/);
+  assert.match(billing, /Creator Billing/);
+  assert.doesNotMatch(billing, /#financeTitle/);
 });
 
 test('base admin sections do not leak full detail panels into Overview', async () => {
@@ -106,6 +118,7 @@ test('new Finance and supplier modules pass syntax checks', () => {
   for (const file of [
     'tax-invoice-multi-supplier-worker.js',
     'tax-invoice-multi-supplier-admin.js',
+    'author-billing-admin.js',
     'finance-entry-worker.js',
     'finance-monitor.js',
     'admin-demand-loader.js',
