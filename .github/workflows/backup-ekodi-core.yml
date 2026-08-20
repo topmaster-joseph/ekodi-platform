@@ -2,6 +2,11 @@ name: Backup EKODI Core
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/backup-ekodi-core.yml'
+      - 'migrations/0031_core_backup_state.sql'
+      - 'core-api.js'
   push:
     branches: [main]
     paths:
@@ -15,11 +20,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-core-backup
+  group: ekodi-core-backup-${{ github.event_name }}
   cancel-in-progress: false
 
 env:
   WRANGLER_VERSION: '4.119.0'
+  BACKUP_DATABASE: ${{ github.event_name == 'pull_request' && 'ekodi-auth-staging' || 'ekodi-auth' }}
 
 jobs:
   backup-and-restore-test:
@@ -39,12 +45,13 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$BACKUP_DATABASE"
 
       - name: Export EKODI Core D1
         run: |
           set -euo pipefail
           mkdir -p backup
-          npx --yes wrangler@${WRANGLER_VERSION} d1 export ekodi-auth \
+          npx --yes wrangler@${WRANGLER_VERSION} d1 export "$BACKUP_DATABASE" \
             --remote \
             --skip-confirmation \
             --output=backup/ekodi-auth.sql \
@@ -64,11 +71,11 @@ jobs:
           test "$REQUIRED" = '6'
           CHECKSUM=$(sha256sum backup/ekodi-auth.sql | awk '{print $1}')
           BYTES=$(stat -c%s backup/ekodi-auth.sql)
-          ARTIFACT="ekodi-core-d1-$(date -u +%Y%m%dT%H%M%SZ)"
+          ARTIFACT="ekodi-core-${BACKUP_DATABASE}-$(date -u +%Y%m%dT%H%M%SZ)"
           printf 'integrity=%s\nrequired_tables=%s\nchecksum=%s\nbytes=%s\nartifact=%s\n' \
             "$INTEGRITY" "$REQUIRED" "$CHECKSUM" "$BYTES" "$ARTIFACT" >> "$GITHUB_OUTPUT"
           cat > backup/restore-report.txt <<EOF
-          source=ekodi-auth
+          source=$BACKUP_DATABASE
           restore_engine=sqlite3
           integrity=$INTEGRITY
           required_tables=$REQUIRED
@@ -87,8 +94,8 @@ jobs:
         run: |
           set -euo pipefail
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          SQL="INSERT INTO core_backup_runs(source,status,artifact_name,checksum_sha256,export_bytes,restore_integrity,required_tables,created_at) VALUES('ekodi-auth','verified','$ARTIFACT','$CHECKSUM',$BYTES,'$INTEGRITY',$REQUIRED,'$NOW');"
-          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth \
+          SQL="INSERT INTO core_backup_runs(source,status,artifact_name,checksum_sha256,export_bytes,restore_integrity,required_tables,created_at) VALUES('$BACKUP_DATABASE','verified','$ARTIFACT','$CHECKSUM',$BYTES,'$INTEGRITY',$REQUIRED,'$NOW');"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute "$BACKUP_DATABASE" \
             --remote --yes --config wrangler.api.toml --command "$SQL"
 
       - name: Upload independent backup artifact
@@ -104,7 +111,7 @@ jobs:
       - name: Backup summary
         run: |
           echo '### EKODI Core backup verified' >> "$GITHUB_STEP_SUMMARY"
-          echo '- D1 export: success' >> "$GITHUB_STEP_SUMMARY"
+          echo "- D1 source: $BACKUP_DATABASE" >> "$GITHUB_STEP_SUMMARY"
           echo '- Restore engine: SQLite outside D1' >> "$GITHUB_STEP_SUMMARY"
           echo '- Integrity: ${{ steps.verify.outputs.integrity }}' >> "$GITHUB_STEP_SUMMARY"
           echo '- Required Core tables: ${{ steps.verify.outputs.required_tables }}/6' >> "$GITHUB_STEP_SUMMARY"
