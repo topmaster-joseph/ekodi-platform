@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { classifyOperatorCommand } from './messenger-operator-runtime.js';
 import { channelConfigurationStatus, buildChannelEnvelope } from './messenger-channel-adapters.js';
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
@@ -52,4 +53,12 @@ test('operator page is no-store and only exposed on explicit path',async()=>{
   assert.equal(response.headers.get('cache-control'),'no-store');
   assert.match(response.headers.get('content-security-policy'),/accounts\.google\.com/);
   assert.equal(handleMessengerOperatorPage(new Request('https://api.ekodi.kr/other')),null);
+});
+
+test('operator Google auth bridge is restricted to exact same origin before reusing admin allowlist',async()=>{
+  const source=await readFile(new URL('./mission-control-entry-worker.js',import.meta.url),'utf8');
+  assert.match(source,/handleSameOriginOperatorGoogleAuth/);
+  assert.match(source,/request\.headers\.get\('origin'\).*url\.origin/);
+  assert.match(source,/\['\/api\/google\/challenge','\/api\/google\/login'\]/);
+  assert.match(source,/headers\.set\('origin', 'https:\/\/admin\.ekodi\.kr'\)/);
 });
