@@ -17,18 +17,22 @@ test('Admin production verifier runs after the canonical true-lazy release and p
   assert.match(workflow, /gh issue comment 333/);
   assert.match(workflow, /PRODUCTION VERIFIED/);
   assert.match(workflow, /PRODUCTION NOT VERIFIED/);
-  assert.match(workflow, /fingerprinted thin shell · immutable assets · flat AI Ops · internal specialist routing/);
+  assert.match(workflow, /fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing/);
   assert.doesNotMatch(workflow, /guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
 });
 
-test('Admin production verification follows the content fingerprint and lazy AI Ops CSS contract', async () => {
+test('Admin production verification follows the content fingerprint and lazy AI Ops plus standalone Health contract', async () => {
   const workflow = await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow, /admin-authenticated-shell\\\.js\\\?v=\[a-f0-9\]\{16\}/);
   assert.match(workflow, /EXPECTED_VERSION/);
   assert.match(workflow, /LIVE_VERSION/);
   assert.match(workflow, /max-age=31536000, immutable/);
   assert.match(workflow, /verify_asset 'ai-ops-admin\.css'/);
+  assert.match(workflow, /verify_asset 'system-health-admin\.js'/);
+  assert.match(workflow, /verify_asset 'system-health-admin\.css'/);
+  assert.match(workflow, /navLabel\.textContent = 'Health'/);
+  assert.match(workflow, /pageTitle\.textContent = 'System Health'/);
   assert.match(workflow, /#aiOpsPanel \.ai-chief-chat\{order:1!important;position:static!important/);
   assert.match(workflow, /verify_compact_without_readable_css/);
   assert.match(workflow, /! grep -Fq 'admin-readable-command\.css' \/tmp\/compact-css/);

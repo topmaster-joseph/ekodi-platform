@@ -24,7 +24,7 @@ test('Governance technical asset keeps decision and council information without 
   assert.doesNotMatch(source,/service[_-]?role/i);
 });
 
-test('Primary AI Ops does not auto-hydrate Governance or Deployments',async()=>{
+test('Primary AI Ops does not auto-hydrate Governance, Health or Deployments',async()=>{
   const [build,html,worker,demand,shell]=await Promise.all([
     read('scripts/build.mjs'),read('control-center.html'),read('site-worker.js'),read('admin-demand-loader.js'),read('admin-authenticated-shell.js')
   ]);
@@ -32,10 +32,13 @@ test('Primary AI Ops does not auto-hydrate Governance or Deployments',async()=>{
   assert.match(build,/'mission-control-admin\.js'/);
   assert.doesNotMatch(html,/mission-control-admin\.(?:js|css)/);
   assert.doesNotMatch(shell,/'mission-control-admin\.js'/);
-  const aiops=demand.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*deployments:/)?.[1] || '';
-  assert.match(aiops,/secondaryStyles: \['system-health-admin\.css'\]/);
-  assert.match(aiops,/secondaryScripts: \['admin-lazy-features\.js', 'system-health-admin\.js'\]/);
-  assert.doesNotMatch(aiops,/mission-control-admin|release-control-admin/);
+  const aiops=demand.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  assert.match(aiops,/secondaryScripts: \['admin-lazy-features\.js'\]/);
+  assert.doesNotMatch(aiops,/system-health-admin|mission-control-admin|release-control-admin/);
+  assert.match(demand,/health:\s*\{/);
+  assert.match(demand,/styles: \['system-health-admin\.css'\]/);
+  assert.match(demand,/scripts: \['system-health-admin\.js'\]/);
+  assert.match(demand,/hashes: \['#health'\]/);
   assert.match(demand,/deployments:\s*\{/);
   assert.match(demand,/scripts: \['release-control-admin\.js'\]/);
   assert.match(worker,/'\/mission-control-admin\.css'/);
@@ -68,7 +71,9 @@ test('AI Ops production workflow verifies the canonical true-lazy release instea
   const workflow=await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow,/admin-readable-command\.js/);
   assert.match(workflow,/admin-readable-command\.css/);
-  assert.match(workflow,/secondaryScripts: \['admin-lazy-features\.js', 'system-health-admin\.js'\]/);
+  assert.match(workflow,/secondaryScripts: \['admin-lazy-features\.js'\]/);
+  assert.match(workflow,/health:/);
+  assert.match(workflow,/system-health-admin\.js/);
   assert.match(workflow,/actionType:'ui\.change_request'/);
   assert.match(workflow,/workflows: \['Deploy Admin True Lazy Gate'\]/);
   assert.match(workflow,/Verify production fingerprinted thin shell and flat AI Ops/);

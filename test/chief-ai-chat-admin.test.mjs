@@ -33,8 +33,12 @@ test('Chief AI chat loads only after AI Ops opens without hydrating unrelated co
   assert.match(build, /'admin-lazy-features\.js'/);
   assert.match(build, /minimal pre-auth Control Center/);
   assert.doesNotMatch(shell, /'admin-lazy-features\.js'/);
-  assert.match(demand, /secondaryScripts: \['admin-lazy-features\.js', 'system-health-admin\.js'\]/);
-  assert.doesNotMatch(demand.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*deployments:/)?.[1] || '', /mission-control-admin|release-control-admin/);
+  assert.match(demand, /secondaryScripts: \['admin-lazy-features\.js'\]/);
+  const aiOpsBlock = demand.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  assert.ok(aiOpsBlock, 'AI Ops feature block must be extractable');
+  assert.doesNotMatch(aiOpsBlock, /system-health-admin|mission-control-admin|release-control-admin/);
+  assert.match(demand, /health:\s*\{/);
+  assert.match(demand, /scripts: \['system-health-admin\.js'\]/);
   assert.match(demand, /deployments:\s*\{/);
   assert.match(demand, /scripts: \['release-control-admin\.js'\]/);
   assert.match(patch, /ROLE_HANDOFF_RE/);
