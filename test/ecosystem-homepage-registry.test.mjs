@@ -7,24 +7,25 @@ const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8
 const releaseManifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 const registry = JSON.parse(await readFile(new URL('../config/ecosystem-services.json', import.meta.url), 'utf8'));
 
-const clickableStatuses = new Set(['live', 'beta']);
-const roadmapStatuses = new Set(['preparing', 'planned']);
+const hiddenStatuses = new Set(['beta', 'preparing', 'planned']);
 
-test('homepage registry exposes only production-verified bilingual usable services', async () => {
+test('homepage registry exposes only production-verified live bilingual services', async () => {
   const services = await loadHomepageServices();
   assert.ok(services.length > 0);
   assert.ok(services.every(service => service.homepage === true));
   assert.ok(services.every(service => service.url.startsWith('https://')));
   assert.ok(services.every(service => !/staging|preview/i.test(new URL(service.url).hostname)));
   assert.ok(services.every(service => service.nameEn && service.descriptionKo && service.descriptionEn));
-  assert.ok(services.every(service => STATUS_DEFINITIONS[service.status]));
-  assert.ok(services.every(service => clickableStatuses.has(service.status)));
+  assert.ok(services.every(service => service.status === 'live'));
   assert.ok(services.every(service => service.productionVerified === true));
 
   const ids = services.map(service => service.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const required of ['church', 'community', 'social', 'biz', 'business', 'mall', 'marketing', 'books', 'author', 'lab', 'work', 'energy']) {
-    assert.ok(ids.includes(required), `missing verified homepage service: ${required}`);
+  for (const required of ['church', 'community', 'social', 'biz', 'mall', 'marketing', 'books', 'author', 'lab', 'work']) {
+    assert.ok(ids.includes(required), `missing verified live homepage service: ${required}`);
+  }
+  for (const hidden of ['business', 'invest', 'energy', 'messenger']) {
+    assert.ok(!ids.includes(hidden), `beta service must stay off the public root: ${hidden}`);
   }
   assert.ok(!ids.includes('mission'), 'legacy mission service must not be published separately');
 
@@ -38,7 +39,7 @@ test('homepage registry exposes only production-verified bilingual usable servic
   assert.equal(community?.category, 'community-ministry');
 });
 
-test('homepage cards render Korean and English together with live or beta badges', async () => {
+test('homepage semi-list renders Korean and English together with live badges', async () => {
   const services = await loadHomepageServices();
   const html = renderServiceCards(services);
   for (const service of services) {
@@ -46,9 +47,9 @@ test('homepage cards render Korean and English together with live or beta badges
     assert.ok(html.includes(service.name));
     assert.ok(html.includes(service.nameEn));
     assert.ok(html.includes(service.label));
-    assert.match(html, new RegExp(`data-service-status="${service.status}"`));
-    assert.ok(html.includes(STATUS_DEFINITIONS[service.status].label));
-    assert.ok(html.includes(STATUS_DEFINITIONS[service.status].labelEn));
+    assert.match(html, /data-service-status="live"/);
+    assert.ok(html.includes(STATUS_DEFINITIONS.live.label));
+    assert.ok(html.includes(STATUS_DEFINITIONS.live.labelEn));
   }
 
   for (const category of CATEGORY_DEFINITIONS) {
@@ -60,15 +61,13 @@ test('homepage cards render Korean and English together with live or beta badges
   }
 });
 
-test('preparing and planned services remain in the registry but stay hidden from the public root', async () => {
+test('beta and roadmap services remain in the registry but stay hidden from the public root', async () => {
   const services = await loadHomepageServices();
   const html = renderServiceCards(services);
-  const roadmap = registry.services.filter(service => roadmapStatuses.has(service.status));
-  assert.ok(roadmap.length > 0);
-  assert.ok(roadmap.every(service => service.homepage === false));
-  assert.ok(roadmap.every(service => service.productionVerified !== true));
-  for (const service of roadmap) {
-    assert.doesNotMatch(html, new RegExp(`data-service-id="${service.id}"`), `roadmap service must stay hidden: ${service.id}`);
+  const hidden = registry.services.filter(service => hiddenStatuses.has(service.status));
+  assert.ok(hidden.length > 0);
+  for (const service of hidden) {
+    assert.doesNotMatch(html, new RegExp(`data-service-id="${service.id}"`), `non-live service must stay hidden: ${service.id}`);
   }
 });
 
