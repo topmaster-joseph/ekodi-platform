@@ -2,6 +2,12 @@ name: Backup EKODI Core
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/backup-ekodi-core.yml'
+      - 'migrations/0031_core_backup_state.sql'
+      - 'core-api.js'
   schedule:
     - cron: '30 18 * * *'
 
