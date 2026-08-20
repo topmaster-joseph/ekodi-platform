@@ -1,5 +1,6 @@
 const SHELL_ORIGIN='https://shell.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
+const MOBILE_FIXED_HEADER_STYLE=`<style data-ekodi-mobile-fixed-header>@media(max-width:768px){:where(.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header],body>header){position:sticky!important;top:0!important;z-index:2147482000!important}}</style>`;
 
 function extendDirective(csp,name,value){
   const parts=String(csp||'').split(';').map(v=>v.trim()).filter(Boolean);
@@ -21,7 +22,7 @@ class HeadInjector{
   constructor(serviceId){this.serviceId=serviceId;}
   element(element){
     const service=String(this.serviceId||'').replace(/[^a-z0-9-]/g,'');
-    element.prepend(`<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}"></script>`,{html:true});
+    element.prepend(`${MOBILE_FIXED_HEADER_STYLE}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}"></script>`,{html:true});
   }
 }
 
