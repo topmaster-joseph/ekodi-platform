@@ -1,5 +1,5 @@
 import financeWorker from './finance-worker.js';
-import taxInvoiceWorker from './tax-invoice-worker.js';
+import taxInvoiceWorker from './tax-invoice-free-first-worker.js';
 
 const FINANCE_TABLES = Object.freeze({
   organizations: 'finance_organizations',
