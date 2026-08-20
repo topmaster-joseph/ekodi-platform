@@ -7,7 +7,8 @@ const readJson = async path => JSON.parse(await readFile(new URL(path, root), 'u
 
 test('EKODI Core owns canonical control-plane identity and organization contracts', async () => {
   const core = await readJson('config/ekodi-core-contract.json');
-  assert.equal(core.status, 'adopted');
+  assert.equal(core.status, 'completed');
+  assert.equal(core.adoptionStatus, 'adopted');
   assert.equal(core.canonicalHosts.api, 'api.ekodi.kr');
   assert.equal(core.controlPlane.platformId, 'control-api');
   assert.equal(core.controlPlane.database, 'ekodi-auth D1');
@@ -29,10 +30,19 @@ test('EKODI Core remains hybrid, provider-independent and AI-optional', async ()
   }
 });
 
-test('EKODI Core completion requires production and restore verification', async () => {
+test('EKODI Core completion requires production, isolation, resilience, recovery, performance and rollback verification', async () => {
   const core = await readJson('config/ekodi-core-contract.json');
   const gates = new Set(core.completionGates);
-  assert.ok(gates.has('backup-and-restore-path-is-verified'));
-  assert.ok(gates.has('production-hostname-regressions-pass'));
-  assert.ok(gates.has('tenant-isolation-is-verified'));
+  for (const gate of [
+    'backup-and-restore-path-is-verified',
+    'production-hostname-regressions-pass',
+    'tenant-isolation-is-verified',
+    'ai-provider-outage-does-not-break-core-workflows',
+    'production-core-api-contract-is-live',
+    'protected-core-routes-fail-closed-without-auth',
+    'bounded-production-load-test-passes',
+    'automatic-worker-rollback-contract-is-enforced',
+    'd1-recovery-point-is-captured-before-control-release',
+    'security-baseline-is-enforced',
+  ]) assert.ok(gates.has(gate), `missing completion gate: ${gate}`);
 });
