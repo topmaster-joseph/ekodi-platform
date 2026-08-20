@@ -1,3 +1,6 @@
+.finance-view-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 16px;padding:5px;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(15,23,42,.28)}
+.finance-view-tab{min-height:38px;padding:8px 14px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;opacity:.72}.finance-view-tab:hover{opacity:1;background:rgba(148,163,184,.08)}.finance-view-tab.active{opacity:1;background:rgba(59,130,246,.16);box-shadow:inset 0 0 0 1px rgba(96,165,250,.26)}
+.finance-view-pane[hidden]{display:none!important}.finance-view-pane{display:grid;gap:14px}.finance-pane-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.finance-accounting-status{grid-template-columns:minmax(220px,420px)}.finance-payment-status{grid-template-columns:repeat(3,minmax(0,1fr))}
 .tax-multi-supplier{display:grid;gap:16px}
 .tax-supplier-toolbar{display:grid;grid-template-columns:minmax(220px,320px) 1fr auto;gap:12px;align-items:end;padding:14px;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(15,23,42,.34)}
 .tax-supplier-toolbar label{display:grid;gap:6px}.tax-supplier-toolbar label span{font-size:12px;opacity:.72}.tax-supplier-toolbar select{width:100%;min-height:40px}
@@ -8,4 +11,4 @@
 .tax-default-badge{display:inline-flex;width:max-content;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.28)}
 .tax-supplier-meta{margin:9px 0 0;font-size:12px;opacity:.72;line-height:1.55}.tax-check-field{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px}.tax-check-field input{width:auto}
 .tax-invoice-table td:nth-child(2){font-weight:650}.tax-invoice-table td:nth-child(3){white-space:nowrap}
-@media(max-width:900px){.tax-supplier-toolbar{grid-template-columns:1fr}.tax-supplier-toolbar>button{width:100%}.tax-supplier-card-head{display:grid}.tax-supplier-card-head .tax-row-actions{justify-content:flex-start}.tax-invoice-table{min-width:1040px}}
+@media(max-width:900px){.finance-view-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.finance-payment-status{grid-template-columns:1fr}.finance-pane-head{align-items:stretch;flex-direction:column}.tax-supplier-toolbar{grid-template-columns:1fr}.tax-supplier-toolbar>button{width:100%}.tax-supplier-card-head{display:grid}.tax-supplier-card-head .tax-row-actions{justify-content:flex-start}.tax-invoice-table{min-width:1040px}}
