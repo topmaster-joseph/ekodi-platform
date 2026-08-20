@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import {
   CORE_ROLES,
   canonicalCoreRole,
@@ -129,12 +130,13 @@ async function organizationForSlug(env, resolved, slug) {
   return organizationFromRow(row, grant.role);
 }
 
-function coreStatus() {
+function coreStatus(env = {}) {
+  const ai = getCoreAiGatewayStatus(env);
   return {
     ok: true,
     service: 'ekodi-core',
     apiVersion: CORE_API_VERSION,
-    schemaVersion: 1,
+    schemaVersion: 2,
     architecture: 'hybrid-cloud',
     canonicalHosts: {
       api: 'api.ekodi.kr',
@@ -150,6 +152,13 @@ function coreStatus() {
       'observable-operations',
     ],
     stores: ['cloudflare-d1', 'supabase-postgres', 'object-storage'],
+    ai: {
+      gateway: ai.gateway,
+      providerIndependent: ai.providerIndependent,
+      aiOptional: ai.aiOptional,
+      mode: ai.mode,
+      providerDisabled: ai.providerDisabled,
+    },
   };
 }
 
@@ -163,7 +172,11 @@ export async function handleCoreApi(request, env) {
   if (request.method !== 'GET') return json(request, env, { error: '지원하지 않는 요청 방식입니다.', code: 'CORE_METHOD_NOT_ALLOWED' }, 405);
 
   if (url.pathname === `${CORE_API_PREFIX}/status`) {
-    return json(request, env, coreStatus());
+    return json(request, env, coreStatus(env));
+  }
+
+  if (url.pathname === `${CORE_API_PREFIX}/ai/status`) {
+    return json(request, env, getCoreAiGatewayStatus(env));
   }
 
   if (url.pathname === `${CORE_API_PREFIX}/roles`) {
