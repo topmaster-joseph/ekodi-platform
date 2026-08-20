@@ -61,9 +61,11 @@ test('Messenger V2 persists first, then queues assistant work without awaiting p
   assert.doesNotMatch(worker,/runAiEnhancedTask/);
 });
 
-test('outbox owns AI provider calls, rechecks human takeover and uses bounded retry',async()=>{
+test('outbox owns AI provider calls through Core Gateway, rechecks human takeover and uses bounded retry',async()=>{
   const outbox=await read('messenger-outbox.js');
-  assert.match(outbox,/runAiEnhancedTask/);
+  assert.match(outbox,/buildCoreAiGateway/);
+  assert.match(outbox,/gateway\.run/);
+  assert.match(outbox,/gateway:'ekodi-core-ai'/);
   assert.match(outbox,/MESSENGER_AI_URL/);
   assert.match(outbox,/acceptedHandoff/);
   assert.match(outbox,/before_generation/);
