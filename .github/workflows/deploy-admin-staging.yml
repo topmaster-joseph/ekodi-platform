@@ -46,6 +46,7 @@ on:
       - 'test/admin-readable-command.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
+      - 'test/admin-health-menu.test.mjs'
       - 'test/admin-preauth-shell.test.mjs'
       - 'test/admin-performance-hardening.test.mjs'
       - 'test/mission-control-admin.test.mjs'
@@ -74,7 +75,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate fingerprinted flat AI Ops and full-path performance
+      - name: Validate fingerprinted flat AI Ops, standalone Health and full-path performance
         run: |
           set -euo pipefail
           node --check admin-staging-worker.js
@@ -86,13 +87,14 @@ jobs:
           node --check admin-readable-command.js
           node --check admin-menu-layout.js
           node --check device-control-admin.js
+          node --check system-health-admin.js
           node --check scripts/admin-thin-postbuild.mjs
           node --check scripts/admin-readable-command-postbuild.mjs
           node --check scripts/admin-performance-postbuild.mjs
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
+          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js device-control-admin.js device-control-admin.css ai-ops-admin.css release-control-admin.js system-health-admin.js; do
+          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js device-control-admin.js device-control-admin.css ai-ops-admin.css release-control-admin.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
 
@@ -113,7 +115,11 @@ jobs:
           grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
           grep -Fq '.ekodi-device-panel' dist/device-control-admin.css
           grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
+          grep -Fq 'health:' dist/admin-demand-loader.js
+          grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
+          grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "hashes: ['#health']" dist/admin-demand-loader.js
           ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
@@ -124,6 +130,9 @@ jobs:
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          grep -Fq "navLabel.textContent = 'Health'" dist/system-health-admin.js
+          grep -Fq "pageTitle.textContent = 'System Health'" dist/system-health-admin.js
+          ! grep -Fq 'setInterval(' dist/system-health-admin.js
 
           compact_bytes=$(wc -c < dist/compact-control-center.js)
           first_js=$(( $(wc -c < dist/admin-central-handoff.js) + $(wc -c < dist/admin-authenticated-shell.js) + compact_bytes + $(wc -c < dist/admin-menu-layout.js) + $(wc -c < dist/admin-demand-loader.js) ))
@@ -141,7 +150,7 @@ jobs:
       - name: Deploy isolated admin staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
 
-      - name: Verify staging fingerprinted thin shell and latest flat AI Ops
+      - name: Verify staging fingerprinted thin shell, standalone Health and latest flat AI Ops
         shell: bash
         run: |
           set -euo pipefail
@@ -163,8 +172,10 @@ jobs:
             device_code=$(curl -sS -o /tmp/admin-stage-device.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/device-control-admin.js$q" || true)
             ai_css_code=$(curl -sS -o /tmp/admin-stage-ai.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ai-ops-admin.css$q" || true)
             lazy_code=$(curl -sS -o /tmp/admin-stage-lazy.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-lazy-features.js$q" || true)
+            health_js_code=$(curl -sS -D /tmp/admin-stage-health-js-headers -o /tmp/admin-stage-health.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/system-health-admin.js$q" || true)
+            health_css_code=$(curl -sS -D /tmp/admin-stage-health-css-headers -o /tmp/admin-stage-health.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/system-health-admin.css$q" || true)
 
-            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$device_code" == '200' && "$ai_css_code" == '200' && "$lazy_code" == '200' ]] \
+            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$device_code" == '200' && "$ai_css_code" == '200' && "$lazy_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
               && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
               && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
@@ -176,7 +187,9 @@ jobs:
               && grep -Fq 'AbortController' /tmp/admin-stage-handoff.js \
               && ! grep -Fq 'PerformanceObserver' /tmp/admin-stage-handoff.js \
               && grep -Fq 'PerformanceObserver' /tmp/admin-stage-perf.js \
-              && grep -Fq "secondaryScripts: ['admin-lazy-features.js', 'system-health-admin.js']" /tmp/admin-stage-demand.js \
+              && grep -Fq "secondaryScripts: ['admin-lazy-features.js']" /tmp/admin-stage-demand.js \
+              && grep -Fq 'health:' /tmp/admin-stage-demand.js \
+              && grep -Fq "scripts: ['system-health-admin.js']" /tmp/admin-stage-demand.js \
               && ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" /tmp/admin-stage-demand.js \
               && grep -Fq 'deployments:' /tmp/admin-stage-demand.js \
               && grep -Fq 'isInputPending' /tmp/admin-stage-demand.js \
@@ -187,8 +200,11 @@ jobs:
               && grep -Fq 'WINDOWS_AGENT_URL' /tmp/admin-stage-device.js \
               && grep -Fq 'admin-readable-command.css' /tmp/admin-stage-ai.css \
               && grep -Fq "actionType:'ui.change_request'" /tmp/admin-stage-lazy.js \
-              && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/admin-stage-lazy.js; then
-              echo "Admin PR staging verified: version=$version, fingerprinted thin shell, demand-only features, latest flat AI Ops, zero production traffic."
+              && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/admin-stage-lazy.js \
+              && grep -Fq "navLabel.textContent = 'Health'" /tmp/admin-stage-health.js \
+              && grep -Fq "pageTitle.textContent = 'System Health'" /tmp/admin-stage-health.js \
+              && grep -Fq '.system-health-overall' /tmp/admin-stage-health.css; then
+              echo "Admin PR staging verified: version=$version, standalone Health, fingerprinted thin shell, demand-only features, latest flat AI Ops, zero production traffic."
               exit 0
             fi
             echo "Admin PR staging verification pending (attempt $attempt/18, version=$version)."

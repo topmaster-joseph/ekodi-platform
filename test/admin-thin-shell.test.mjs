@@ -16,19 +16,43 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.doesNotMatch(shell, /'campus-actions\.css'/);
   assert.doesNotMatch(shell, /'control-center-features\.js'/);
   assert.doesNotMatch(shell, /'device-control-admin\.js'/);
+  assert.doesNotMatch(shell, /'system-health-admin\.js'/);
 });
 
-test('Campus and Device Control are explicit versioned demand-loaded features', async () => {
+test('Campus, Health and Device Control are explicit versioned demand-loaded features', async () => {
   const loader = await read('admin-demand-loader.js');
   assert.match(loader, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.match(loader, /campus:\s*\{/);
   assert.match(loader, /styles: \['campus-actions\.css'\]/);
   assert.match(loader, /scripts: \['campus-actions\.js'\]/);
+  assert.match(loader, /health:\s*\{/);
+  assert.match(loader, /label: 'Health'/);
+  assert.match(loader, /styles: \['system-health-admin\.css'\]/);
+  assert.match(loader, /scripts: \['system-health-admin\.js'\]/);
+  assert.match(loader, /hashes: \['#health'\]/);
+  assert.match(loader, /insert: 'after-aiops'/);
   assert.match(loader, /devices:\s*\{/);
   assert.match(loader, /styles: \['device-control-admin\.css'\]/);
   assert.match(loader, /scripts: \['device-control-admin\.js'\]/);
   assert.match(loader, /hashes: \['#devices'\]/);
   assert.match(loader, /assetUrl\(src\)/);
+  const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  assert.ok(aiOps, 'AI Ops feature block must be extractable');
+  assert.doesNotMatch(aiOps, /system-health-admin/);
+});
+
+test('standalone Health creates its own menu and fetches only on activation', async () => {
+  const health = await read('system-health-admin.js');
+  assert.match(health, /const SECTION = 'health'/);
+  assert.match(health, /button\.dataset\.section = SECTION/);
+  assert.match(health, /navLabel\.textContent = 'Health'/);
+  assert.match(health, /section\.dataset\.panel = SECTION/);
+  assert.match(health, /pageTitle\.textContent = 'System Health'/);
+  assert.match(health, /if \(location\.hash !== '#health'\)/);
+  assert.match(health, /button\.addEventListener\('click', activate\)/);
+  assert.match(health, /load\(false\)/);
+  assert.doesNotMatch(health, /IntersectionObserver/);
+  assert.doesNotMatch(health, /setInterval\(/);
 });
 
 test('secondary hydration never has a forced requestIdleCallback deadline', async () => {
@@ -46,6 +70,8 @@ test('admin menu does not auto-open heavy workspaces on a normal login', async (
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialHash = explicitHashSection\(\)/);
   assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
+  assert.match(menu, /'campus', 'aiops', 'health'/);
+  assert.match(menu, /\['#health', 'health'\]/);
   assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
   assert.doesNotMatch(menu, /setInterval\(/);
 });
