@@ -1,4 +1,5 @@
 import apiWorker from './api-worker.js';
+import { handleCoreApi } from './core-api.js';
 import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
@@ -46,6 +47,26 @@ function disabledPasswordResponse(kind = 'admin') {
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (path.startsWith('/api/core/v1')) {
+      try {
+        const response = await handleCoreApi(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('EKODI Core API error', error);
+        return new Response(JSON.stringify({
+          error: 'EKODI Core API 처리 중 오류가 발생했습니다.',
+          code: 'CORE_API_ERROR',
+        }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+          },
+        });
+      }
+    }
 
     if (path.startsWith('/api/membership/')) {
       try {
