@@ -1,4 +1,4 @@
-import { runAiEnhancedTask } from './ai-resilience-runtime.js';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
 import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-channel-adapters.js';
 import { freeAssistReply } from './messenger-triage.js';
 
@@ -50,21 +50,19 @@ async function processAssistant(env,row,payload){
   if(!message)return {ok:true,result:{suppressed:true,reason:'message_missing'}};
   const triage=payload.triage&&typeof payload.triage==='object'?payload.triage:{};
   const context={threadId:row.thread_id,subject:{type:thread.subject_type,key:thread.subject_key},targetService:thread.target_service||'',message,triage};
-  const result=await runAiEnhancedTask({env,providers:aiProviders(env,context),taskName:'messenger_reply',timeoutMs:4000,fallback:async()=>({reply:freeAssistReply(triage)})});
+  const gateway=buildCoreAiGateway(env,aiProviders(env,context));
+  const result=await gateway.run({taskName:'messenger_reply',context,timeoutMs:4000,fallback:async()=>({reply:freeAssistReply(triage)})});
 
-  // Human takeover may happen while a provider is generating. Re-check immediately
-  // before persisting the assistant message so a late model response cannot speak over
-  // an accepted human operator.
   const after=await acceptedHandoff(env,row.thread_id);
   if(after){await recordSuppressedAssistant(env,row.thread_id,after.id,'before_write');return {ok:true,result:{suppressed:true,reason:'human_operator_active',handoffId:after.id}}}
 
   const reply=clean(result.value?.reply||freeAssistReply(triage));const now=nowIso();const authorKind=result.mode==='ai'?'ai':'agent';
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO messenger_messages(thread_id,author_user_id,author_kind,body,metadata_json,created_at) VALUES(?,?,?,?,?,?)`).bind(row.thread_id,'ekodi-assistant',authorKind,reply,safeJson({mode:result.mode,degraded:Boolean(result.degraded),provider:result.provider||null,priority:triage.priority||'normal',triage}),now),
-    env.DB.prepare(`INSERT INTO messenger_events(thread_id,event_type,actor_kind,actor_id,detail_json,created_at) VALUES(?,?,?,?,?,?)`).bind(row.thread_id,'assistant.reply',authorKind,'ekodi-assistant',safeJson({mode:result.mode,degraded:Boolean(result.degraded),priority:triage.priority||'normal',requiresHuman:Boolean(triage.requiresHuman)}),now),
+    env.DB.prepare(`INSERT INTO messenger_messages(thread_id,author_user_id,author_kind,body,metadata_json,created_at) VALUES(?,?,?,?,?,?)`).bind(row.thread_id,'ekodi-assistant',authorKind,reply,safeJson({mode:result.mode,degraded:Boolean(result.degraded),provider:result.provider||null,gateway:'ekodi-core-ai',priority:triage.priority||'normal',triage}),now),
+    env.DB.prepare(`INSERT INTO messenger_events(thread_id,event_type,actor_kind,actor_id,detail_json,created_at) VALUES(?,?,?,?,?,?)`).bind(row.thread_id,'assistant.reply',authorKind,'ekodi-assistant',safeJson({mode:result.mode,degraded:Boolean(result.degraded),provider:result.provider||null,gateway:'ekodi-core-ai',priority:triage.priority||'normal',requiresHuman:Boolean(triage.requiresHuman)}),now),
     env.DB.prepare(`UPDATE messenger_threads SET updated_at=? WHERE id=?`).bind(now,row.thread_id),
   ]);
-  return {ok:true,result:{mode:result.mode,degraded:Boolean(result.degraded),provider:result.provider||null}};
+  return {ok:true,result:{mode:result.mode,degraded:Boolean(result.degraded),provider:result.provider||null,gateway:'ekodi-core-ai'}};
 }
 
 async function processChannel(env,row,payload){
