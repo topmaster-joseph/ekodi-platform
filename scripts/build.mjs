@@ -14,15 +14,17 @@ await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)
 
 // Tax invoices are a Finance sub-workspace, not a new public edge asset. Bundle the
 // dedicated source modules into the already secured Finance assets so the existing
-// admin allowlist, CSP and lazy-loading boundary remain unchanged.
-const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promise.all([
+// admin allowlist, CSP and lazy-loading boundary remain unchanged. Free-first policy
+// runs last so the free HomeTax path remains the default even when paid adapters exist.
+const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs, taxInvoiceFreeFirstJs] = await Promise.all([
   readFile(`${output}control-center-finance.css`, 'utf8'),
   readFile(`${output}finance-monitor.js`, 'utf8'),
   readFile(`${root}tax-invoice-admin.css`, 'utf8'),
   readFile(`${root}tax-invoice-admin.js`, 'utf8'),
+  readFile(`${root}tax-invoice-free-first-admin.js`, 'utf8'),
 ]);
 await writeFile(`${output}control-center-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
-await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n`);
+await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n${taxInvoiceFreeFirstJs}\n`);
 
 // MarketingAI admin keeps one authenticated on-demand asset, while live operations views
 // remain independently maintainable source modules. Bundle them after the base console.
