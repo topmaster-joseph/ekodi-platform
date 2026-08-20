@@ -1,7 +1,10 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "EKODI Core",
-  "status": "adopted",
+  "status": "completed",
+  "adoptionStatus": "adopted",
+  "completedOn": "2026-08-20",
+  "completionEvidence": "config/ekodi-core-completion.json",
   "purpose": "Keep EKODI-owned identity, organization, authorization, audit and service contracts independent from replaceable infrastructure providers.",
   "canonicalHosts": {
     "api": "api.ekodi.kr",
@@ -71,6 +74,12 @@
     "tenant-isolation-is-verified",
     "ai-provider-outage-does-not-break-core-workflows",
     "backup-and-restore-path-is-verified",
-    "production-hostname-regressions-pass"
+    "production-hostname-regressions-pass",
+    "production-core-api-contract-is-live",
+    "protected-core-routes-fail-closed-without-auth",
+    "bounded-production-load-test-passes",
+    "automatic-worker-rollback-contract-is-enforced",
+    "d1-recovery-point-is-captured-before-control-release",
+    "security-baseline-is-enforced"
   ]
 }
