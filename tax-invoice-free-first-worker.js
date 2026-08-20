@@ -193,6 +193,17 @@ export default {
     }
     const url = new URL(request.url);
 
+    if (request.method === 'GET' && url.pathname === '/api/finance/tax-health') {
+      return json({
+        ok: true,
+        service: 'ekodi-finance-tax-invoice',
+        operationPolicy: 'FREE_FIRST',
+        defaultChannel: 'HOMETAX_MANUAL',
+        paidAutomationEnabled: automationEnabled(env),
+        version: 2
+      }, 200, null, origin);
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/finance/tax-invoices/readiness') {
       return decorateReadiness(request, env, ctx, origin);
     }
