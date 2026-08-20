@@ -69,7 +69,7 @@ jobs:
         run: node scripts/source-integrity-audit.mjs
       - name: Publish audit report artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: source-integrity-${{ github.run_id }}
           path: .source-integrity-report.json
