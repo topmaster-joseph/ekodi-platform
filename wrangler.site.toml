@@ -1,6 +1,6 @@
 # Admin site rollout: password recovery interface
 name = "shy-thunder-39a4"
-main = "platform-router-worker.js"
+main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = false
 preview_urls = false
