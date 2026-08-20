@@ -16,20 +16,6 @@ function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {status:500,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}}));
 }
 
-async function handleSameOriginOperatorGoogleAuth(request, env, ctx) {
-  if (request.method !== 'POST') return null;
-  const url = new URL(request.url);
-  if (!['/api/google/challenge','/api/google/login'].includes(url.pathname)) return null;
-  if (String(request.headers.get('origin') || '') !== url.origin) return null;
-  const headers = new Headers(request.headers);
-  // Reuse the already-audited Google admin allowlist implementation. The bridge is
-  // reachable only from this exact Control API origin, so no external origin gains access.
-  headers.set('origin', 'https://admin.ekodi.kr');
-  const body = await request.clone().arrayBuffer();
-  const forwarded = new Request(url.toString(), { method:'POST', headers, body });
-  return customerEntryWorker.fetch(forwarded, env, ctx);
-}
-
 export default {
   async fetch(request, env, ctx) {
     const guard = await enforceEdgeSecurity(request, env);
@@ -94,3 +80,17 @@ export default {
     return Promise.all([authorBilling, messengerOutbox]);
   },
 };
+
+async function handleSameOriginOperatorGoogleAuth(request, env, ctx) {
+  if (request.method !== 'POST') return null;
+  const url = new URL(request.url);
+  if (!['/api/google/challenge','/api/google/login'].includes(url.pathname)) return null;
+  if (String(request.headers.get('origin') || '') !== url.origin) return null;
+  const headers = new Headers(request.headers);
+  // Reuse the already-audited Google admin allowlist implementation. The bridge is
+  // reachable only from this exact Control API origin, so no external origin gains access.
+  headers.set('origin', 'https://admin.ekodi.kr');
+  const body = await request.clone().arrayBuffer();
+  const forwarded = new Request(url.toString(), { method:'POST', headers, body });
+  return customerEntryWorker.fetch(forwarded, env, ctx);
+}
