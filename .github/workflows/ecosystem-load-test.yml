@@ -19,11 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      LOAD_CONCURRENCY: '1,5,10,20'
-      LOAD_REQUESTS_PER_STAGE: '40'
+      LOAD_CONCURRENCY: '1,10,20,50'
+      LOAD_REQUESTS_PER_STAGE: '60'
       LOAD_TIMEOUT_MS: '5000'
-      LOAD_P95_BUDGET_MS: '1500'
-      LOAD_INCIDENT_P95_MS: '2500'
+      LOAD_P95_BUDGET_MS: '500'
+      LOAD_INCIDENT_P95_MS: '1500'
       LOAD_ERROR_RATE_BUDGET: '0.01'
     steps:
       - uses: actions/checkout@v7
