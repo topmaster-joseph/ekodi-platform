@@ -1,0 +1,11 @@
+.tax-multi-supplier{display:grid;gap:16px}
+.tax-supplier-toolbar{display:grid;grid-template-columns:minmax(220px,320px) 1fr auto;gap:12px;align-items:end;padding:14px;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(15,23,42,.34)}
+.tax-supplier-toolbar label{display:grid;gap:6px}.tax-supplier-toolbar label span{font-size:12px;opacity:.72}.tax-supplier-toolbar select{width:100%;min-height:40px}
+.tax-supplier-toolbar>div{display:grid;gap:3px}.tax-supplier-toolbar>div small{opacity:.7}
+.tax-supplier-manager-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.tax-supplier-list{display:grid;gap:10px}
+.tax-supplier-card{padding:14px;border:1px solid rgba(148,163,184,.2);border-radius:14px;background:rgba(15,23,42,.28)}
+.tax-supplier-card-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.tax-supplier-card-head>div:first-child{display:grid;gap:4px}.tax-supplier-card-head small{opacity:.72}
+.tax-default-badge{display:inline-flex;width:max-content;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.28)}
+.tax-supplier-meta{margin:9px 0 0;font-size:12px;opacity:.72;line-height:1.55}.tax-check-field{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px}.tax-check-field input{width:auto}
+.tax-invoice-table td:nth-child(2){font-weight:650}.tax-invoice-table td:nth-child(3){white-space:nowrap}
+@media(max-width:900px){.tax-supplier-toolbar{grid-template-columns:1fr}.tax-supplier-toolbar>button{width:100%}.tax-supplier-card-head{display:grid}.tax-supplier-card-head .tax-row-actions{justify-content:flex-start}.tax-invoice-table{min-width:1040px}}
