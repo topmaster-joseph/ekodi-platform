@@ -1,5 +1,6 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
+import { handleCoreApi } from './core-api.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
@@ -28,6 +29,16 @@ export default {
     if (guard) return guard;
 
     const path = new URL(request.url).pathname;
+
+    if (path.startsWith('/api/core/v1')) {
+      try {
+        const response = await handleCoreApi(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('EKODI Core API error', error);
+        return errorResponse('EKODI Core API 처리 중 오류가 발생했습니다.', 'CORE_API_ERROR');
+      }
+    }
 
     if (path === '/api/session' && request.method === 'GET') {
       try {
