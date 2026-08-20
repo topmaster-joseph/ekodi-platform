@@ -6,16 +6,34 @@ on:
     paths:
       - 'tax-invoice-worker.js'
       - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-multi-supplier-worker.js'
       - 'tax-invoice-admin.js'
       - 'tax-invoice-admin.css'
+      - 'tax-invoice-multi-supplier-admin.js'
+      - 'tax-invoice-multi-supplier-admin.css'
+      - 'finance-entry-worker.js'
+      - 'finance-monitor.js'
+      - 'control-center.html'
+      - 'admin-demand-loader.js'
+      - 'scripts/build.mjs'
+      - 'migrations/0032_finance_multi_tax_suppliers.sql'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
   push:
     branches: [main]
     paths:
       - 'tax-invoice-worker.js'
       - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-multi-supplier-worker.js'
       - 'tax-invoice-admin.js'
       - 'tax-invoice-admin.css'
+      - 'tax-invoice-multi-supplier-admin.js'
+      - 'tax-invoice-multi-supplier-admin.css'
+      - 'finance-entry-worker.js'
+      - 'finance-monitor.js'
+      - 'control-center.html'
+      - 'admin-demand-loader.js'
+      - 'scripts/build.mjs'
+      - 'migrations/0032_finance_multi_tax_suppliers.sql'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
 
 permissions:
@@ -29,31 +47,50 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate FREE-FIRST tax invoice boundary
+      - name: Validate FREE-FIRST multi-supplier tax invoice boundary
         shell: bash
         run: |
           set -euo pipefail
           node --check tax-invoice-worker.js
           node --check tax-invoice-free-first-worker.js
-          node --check tax-invoice-admin.js
+          node --check tax-invoice-multi-supplier-worker.js
+          node --check tax-invoice-multi-supplier-admin.js
+          node --check finance-monitor.js
+          node --check admin-demand-loader.js
           grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
           grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
           grep -Fq "defaultChannel: 'HOMETAX_MANUAL'" tax-invoice-free-first-worker.js
           grep -Fq "'/api/finance/tax-health'" tax-invoice-free-first-worker.js
-          grep -Fq '홈택스 · 무료 기본' tax-invoice-admin.js
-          grep -Fq '발행완료 기록' tax-invoice-admin.js
+          grep -Fq 'tax_supplier_profiles' tax-invoice-multi-supplier-worker.js
+          grep -Fq 'supplierProfileId' tax-invoice-multi-supplier-worker.js
+          grep -Fq '공급자 관리' tax-invoice-multi-supplier-admin.js
+          grep -Fq '공급자별 발행내역' tax-invoice-multi-supplier-admin.js
+          grep -Fq '발행완료 기록' tax-invoice-multi-supplier-admin.js
+          grep -Fq 'finance_tax_supplier_profiles' migrations/0032_finance_multi_tax_suppliers.sql
+          if grep -Fq 'DROP TABLE' migrations/0032_finance_multi_tax_suppliers.sql; then
+            echo 'Multi-supplier migration must remain additive.'
+            exit 1
+          fi
+          if grep -Fq 'monitor-status.json' finance-monitor.js; then
+            echo 'Finance must not embed ecosystem Health data.'
+            exit 1
+          fi
+          if grep -Fq 'author-billing-admin.js' admin-demand-loader.js; then
+            echo 'Creator billing must not be mounted inside Finance.'
+            exit 1
+          fi
 
   dispatch-and-verify:
     needs: validate
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -64,7 +101,7 @@ jobs:
           set -euo pipefail
           gh workflow run deploy-finance.yml --ref main
           gh workflow run deploy-admin-site.yml --ref main
-          echo 'Guarded Finance and Admin deployment workflows dispatched for FREE-FIRST tax invoice changes.'
+          echo 'Guarded Finance and Admin deployment workflows dispatched for multi-supplier FREE-FIRST tax invoice changes.'
 
       - name: Verify production FREE-FIRST Finance and Admin assets
         id: verify
@@ -77,7 +114,7 @@ jobs:
           finance_ok='false'
           admin_ok='false'
 
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 72); do
             finance_json=$(curl -fsS --connect-timeout 5 --max-time 12 "$finance_url" || true)
             if printf '%s' "$finance_json" | grep -Fq '"operationPolicy":"FREE_FIRST"' \
               && printf '%s' "$finance_json" | grep -Fq '"defaultChannel":"HOMETAX_MANUAL"'; then
@@ -86,7 +123,8 @@ jobs:
 
             admin_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$admin_asset_url" || true)
             if printf '%s' "$admin_body" | grep -Fq 'FREE-FIRST' \
-              && printf '%s' "$admin_body" | grep -Fq '홈택스 · 무료 기본' \
+              && printf '%s' "$admin_body" | grep -Fq '공급자 관리' \
+              && printf '%s' "$admin_body" | grep -Fq '공급자별 발행내역' \
               && printf '%s' "$admin_body" | grep -Fq '발행완료 기록'; then
               admin_ok='true'
             fi
@@ -98,11 +136,11 @@ jobs:
           done
 
           [ "$finance_ok" = 'true' ] || { echo 'FREE-FIRST Finance production verification failed.'; exit 1; }
-          [ "$admin_ok" = 'true' ] || { echo 'FREE-FIRST Admin production asset verification failed.'; exit 1; }
+          [ "$admin_ok" = 'true' ] || { echo 'Multi-supplier Admin production asset verification failed.'; exit 1; }
 
           paid_enabled=$(printf '%s' "$finance_json" | jq -r '.paidAutomationEnabled // false')
           echo "paid_enabled=$paid_enabled" >> "$GITHUB_OUTPUT"
-          echo 'FREE-FIRST Finance and Admin production verification passed.'
+          echo 'FREE-FIRST multi-supplier Finance and Admin production verification passed.'
 
       - name: Persist production verification marker
         shell: bash
@@ -118,18 +156,18 @@ jobs:
             --arg financeUrl 'https://finance-api.ekodi.kr/api/finance/tax-health' \
             --arg adminAssetUrl 'https://admin.ekodi.kr/finance-monitor.js' \
             --argjson paidAutomationEnabled "${PAID_ENABLED:-false}" \
-            '{verifiedAt:$verifiedAt,commit:$commit,operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,adminAssetUrl:$adminAssetUrl,status:"verified"}' \
+            '{verifiedAt:$verifiedAt,commit:$commit,operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",multiSupplier:true,paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,adminAssetUrl:$adminAssetUrl,status:"verified"}' \
             > /tmp/tax-invoice-status.json
           content=$(base64 -w0 /tmp/tax-invoice-status.json)
           current_sha=$(gh api "repos/$GH_REPO/contents/$path" --jq '.sha' 2>/dev/null || true)
           if [ -n "$current_sha" ]; then
             gh api --method PUT "repos/$GH_REPO/contents/$path" \
-              -f message='chore: record FREE-FIRST tax invoice deployment [skip ci]' \
+              -f message='chore: record multi-supplier FREE-FIRST tax invoice deployment [skip ci]' \
               -f content="$content" \
               -f sha="$current_sha" >/dev/null
           else
             gh api --method PUT "repos/$GH_REPO/contents/$path" \
-              -f message='chore: record FREE-FIRST tax invoice deployment [skip ci]' \
+              -f message='chore: record multi-supplier FREE-FIRST tax invoice deployment [skip ci]' \
               -f content="$content" >/dev/null
           fi
           cat /tmp/tax-invoice-status.json
