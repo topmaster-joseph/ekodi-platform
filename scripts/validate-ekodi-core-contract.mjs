@@ -13,8 +13,10 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-if (core.schemaVersion !== 1) fail('schemaVersion must be 1');
-if (core.status !== 'adopted') fail('status must be adopted');
+if (core.schemaVersion !== 2) fail('schemaVersion must be 2 after final completion');
+if (core.status !== 'completed') fail('status must be completed after seven-stage rollout');
+if (core.adoptionStatus !== 'adopted') fail('adoptionStatus must preserve the adopted architecture state');
+if (core.completionEvidence !== 'config/ekodi-core-completion.json') fail('completion evidence contract must be declared');
 if (core.canonicalHosts?.api !== 'api.ekodi.kr') fail('canonical API host must be api.ekodi.kr');
 if (core.controlPlane?.platformId !== 'control-api') fail('control plane must be control-api');
 
@@ -43,6 +45,19 @@ const requiredPrinciples = [
 ];
 for (const principle of requiredPrinciples) {
   if (!core.corePrinciples?.includes(principle)) fail(`required Core principle is missing: ${principle}`);
+}
+
+const requiredCompletionGates = [
+  'tenant-isolation-is-verified',
+  'ai-provider-outage-does-not-break-core-workflows',
+  'backup-and-restore-path-is-verified',
+  'production-core-api-contract-is-live',
+  'bounded-production-load-test-passes',
+  'automatic-worker-rollback-contract-is-enforced',
+  'security-baseline-is-enforced'
+];
+for (const gate of requiredCompletionGates) {
+  if (!core.completionGates?.includes(gate)) fail(`required completion gate is missing: ${gate}`);
 }
 
 const rules = boundaries.rules || [];
