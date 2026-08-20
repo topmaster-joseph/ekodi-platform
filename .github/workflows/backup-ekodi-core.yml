@@ -1,0 +1,105 @@
+name: Backup EKODI Core
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 18 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-core-backup
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  backup-and-restore-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Verify backup credentials
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Export EKODI Core D1
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          npx --yes wrangler@${WRANGLER_VERSION} d1 export ekodi-auth \
+            --remote \
+            --skip-confirmation \
+            --output=backup/ekodi-auth.sql \
+            --config wrangler.api.toml
+          test -s backup/ekodi-auth.sql
+
+      - name: Restore export outside D1 and verify
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f backup/restored.sqlite
+          sqlite3 backup/restored.sqlite < backup/ekodi-auth.sql
+          INTEGRITY=$(sqlite3 backup/restored.sqlite 'PRAGMA integrity_check;')
+          test "$INTEGRITY" = 'ok'
+          REQUIRED=$(sqlite3 backup/restored.sqlite "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('customer_tenants','customer_users','customer_memberships','customer_access_grants','customer_sessions','customer_audit_logs');")
+          test "$REQUIRED" = '6'
+          CHECKSUM=$(sha256sum backup/ekodi-auth.sql | awk '{print $1}')
+          BYTES=$(stat -c%s backup/ekodi-auth.sql)
+          ARTIFACT="ekodi-core-d1-$(date -u +%Y%m%dT%H%M%SZ)"
+          printf 'integrity=%s\nrequired_tables=%s\nchecksum=%s\nbytes=%s\nartifact=%s\n' \
+            "$INTEGRITY" "$REQUIRED" "$CHECKSUM" "$BYTES" "$ARTIFACT" >> "$GITHUB_OUTPUT"
+          cat > backup/restore-report.txt <<EOF
+          source=ekodi-auth
+          restore_engine=sqlite3
+          integrity=$INTEGRITY
+          required_tables=$REQUIRED
+          sha256=$CHECKSUM
+          bytes=$BYTES
+          verified_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+
+      - name: Record successful recovery drill
+        env:
+          CHECKSUM: ${{ steps.verify.outputs.checksum }}
+          BYTES: ${{ steps.verify.outputs.bytes }}
+          ARTIFACT: ${{ steps.verify.outputs.artifact }}
+          REQUIRED: ${{ steps.verify.outputs.required_tables }}
+          INTEGRITY: ${{ steps.verify.outputs.integrity }}
+        run: |
+          set -euo pipefail
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SQL="INSERT INTO core_backup_runs(source,status,artifact_name,checksum_sha256,export_bytes,restore_integrity,required_tables,created_at) VALUES('ekodi-auth','verified','$ARTIFACT','$CHECKSUM',$BYTES,'$INTEGRITY',$REQUIRED,'$NOW');"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth \
+            --remote --yes --config wrangler.api.toml --command "$SQL"
+
+      - name: Upload independent backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verify.outputs.artifact }}
+          path: |
+            backup/ekodi-auth.sql
+            backup/restore-report.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Backup summary
+        run: |
+          echo '### EKODI Core backup verified' >> "$GITHUB_STEP_SUMMARY"
+          echo '- D1 export: success' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Restore engine: SQLite outside D1' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Integrity: ${{ steps.verify.outputs.integrity }}' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Required Core tables: ${{ steps.verify.outputs.required_tables }}/6' >> "$GITHUB_STEP_SUMMARY"
+          echo '- SHA-256: ${{ steps.verify.outputs.checksum }}' >> "$GITHUB_STEP_SUMMARY"
