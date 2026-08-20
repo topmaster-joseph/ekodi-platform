@@ -1,6 +1,6 @@
-PRAGMA foreign_keys = OFF;
+PRAGMA foreign_keys = ON;
 
-CREATE TABLE finance_tax_profiles_v2 (
+CREATE TABLE IF NOT EXISTS finance_tax_supplier_profiles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   organization_id TEXT NOT NULL,
   profile_name TEXT NOT NULL DEFAULT '',
@@ -19,12 +19,18 @@ CREATE TABLE finance_tax_profiles_v2 (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   updated_by INTEGER,
+  UNIQUE(organization_id, corp_num, tax_reg_id),
   FOREIGN KEY(organization_id) REFERENCES finance_organizations(id),
-  FOREIGN KEY(updated_by) REFERENCES admins(id),
-  UNIQUE(organization_id, corp_num, tax_reg_id)
+  FOREIGN KEY(updated_by) REFERENCES admins(id)
 );
 
-INSERT INTO finance_tax_profiles_v2
+CREATE INDEX IF NOT EXISTS idx_finance_tax_supplier_profiles_org
+  ON finance_tax_supplier_profiles(organization_id, active, is_default DESC, id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_finance_tax_supplier_profiles_default
+  ON finance_tax_supplier_profiles(organization_id)
+  WHERE is_default = 1 AND active = 1;
+
+INSERT OR IGNORE INTO finance_tax_supplier_profiles
   (organization_id,profile_name,corp_num,tax_reg_id,corp_name,ceo_name,addr,biz_type,biz_class,contact_name,tel,email,is_default,active,created_at,updated_at,updated_by)
 SELECT
   organization_id,
@@ -32,14 +38,3 @@ SELECT
   corp_num,tax_reg_id,corp_name,ceo_name,addr,biz_type,biz_class,contact_name,tel,email,
   1,1,updated_at,updated_at,updated_by
 FROM finance_tax_profiles;
-
-DROP TABLE finance_tax_profiles;
-ALTER TABLE finance_tax_profiles_v2 RENAME TO finance_tax_profiles;
-
-CREATE INDEX IF NOT EXISTS idx_finance_tax_profiles_org_active
-  ON finance_tax_profiles(organization_id, active, is_default DESC, id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_finance_tax_profiles_one_default
-  ON finance_tax_profiles(organization_id)
-  WHERE is_default = 1 AND active = 1;
-
-PRAGMA foreign_keys = ON;
