@@ -17,10 +17,7 @@ function financeDate(value) {
 }
 
 async function financeRequest(path) {
-  const response = await fetch(`${FINANCE_API}${path}`, {
-    cache:'no-store',
-    headers:{ authorization:`Bearer ${financeToken()}` }
-  });
+  const response = await fetch(`${FINANCE_API}${path}`, { cache:'no-store', headers:{ authorization:`Bearer ${financeToken()}` } });
   let data = {};
   try { data = await response.json(); } catch {}
   if (!response.ok) throw new Error(data.error || `Finance API 요청 실패 (${response.status})`);
@@ -157,6 +154,8 @@ async function loadFinance(force = false) {
 
 function activateFinanceView(view) {
   financeView = ['tax','payments','accounting','structure'].includes(view) ? view : 'tax';
+  const pageTitle = document.querySelector('#pageTitle');
+  if (pageTitle) pageTitle.textContent = '재무 · 세금';
   financeViewButtons.forEach(button => button.classList.toggle('active', button.dataset.financeView === financeView));
   financeViewPanes.forEach(pane => { pane.hidden = pane.dataset.financePane !== financeView; });
   if (financeView !== 'tax') loadFinance(false);
@@ -164,10 +163,7 @@ function activateFinanceView(view) {
 
 financeViewButtons.forEach(button => button.addEventListener('click', () => activateFinanceView(button.dataset.financeView)));
 financeRefresh?.addEventListener('click', () => loadFinance(true));
-financeSectionButton?.addEventListener('click', () => {
-  const title = document.querySelector('#pageTitle'); if (title) title.textContent = '재무 · 세금';
-  activateFinanceView('tax');
-});
+financeSectionButton?.addEventListener('click', () => activateFinanceView('tax'));
 
 if ((location.hash === '#finance' || financeSectionButton?.classList.contains('active')) && financeToken()) setTimeout(() => activateFinanceView('tax'), 0);
 
