@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "policy": "EKODI root shows only currently usable public platforms. Homepage visibility is reserved for production-verified Live or Beta services; Preparing and Planned services remain in the registry but must stay hidden from the public root until they become eligible.",
+  "policy": "EKODI root shows only production-verified Live public platforms. Beta, Preparing and Planned services remain in the registry but stay hidden from the public root until they are promoted to Live and explicitly enabled for the homepage.",
   "services": [
     {"id":"church","name":"에코디교회","nameEn":"EKODI Church","descriptionKo":"예배와 말씀, 공동체의 자리","descriptionEn":"Worship, Scripture, and community","url":"https://church.ekodi.kr","label":"church.ekodi.kr","icon":"church","category":"community-ministry","order":10,"homepage":true,"productionVerified":true,"status":"live"},
     {"id":"community","name":"에코디커뮤니티","nameEn":"EKODI Community","descriptionKo":"사람과 모임, 참여를 연결","descriptionEn":"People, groups, and participation","url":"https://community.ekodi.kr","label":"community.ekodi.kr","icon":"community","category":"community-ministry","order":20,"homepage":true,"productionVerified":true,"status":"live"},
