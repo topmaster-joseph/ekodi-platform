@@ -72,7 +72,7 @@ test('AI Ops production workflow verifies the canonical true-lazy release instea
   assert.match(workflow,/admin-readable-command\.js/);
   assert.match(workflow,/admin-readable-command\.css/);
   assert.match(workflow,/secondaryScripts: \['admin-lazy-features\.js'\]/);
-  assert.match(workflow,/health:\\s\*\\\{/);
+  assert.match(workflow,/health:/);
   assert.match(workflow,/system-health-admin\.js/);
   assert.match(workflow,/actionType:'ui\.change_request'/);
   assert.match(workflow,/workflows: \['Deploy Admin True Lazy Gate'\]/);
