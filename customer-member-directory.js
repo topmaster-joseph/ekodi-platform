@@ -133,20 +133,19 @@ function tenantDirectory(rows, members) {
 }
 
 function roleDirectory(members) {
-  const rawCounts = new Map();
-  const coreCounts = new Map();
-  for (const member of members) {
-    rawCounts.set(member.role, (rawCounts.get(member.role) || 0) + 1);
-    coreCounts.set(member.coreRole, (coreCounts.get(member.coreRole) || 0) + 1);
-  }
-  return {
-    source: [...rawCounts.entries()]
-      .map(([role, count]) => ({ role, coreRole: canonicalCoreRole(role), label: ROLE_LABELS[role] || role, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko')),
-    core: [...coreCounts.entries()]
-      .map(([role, count]) => ({ role, label: ROLE_LABELS[role] || role, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko')),
-  };
+  const counts = new Map();
+  for (const member of members) counts.set(member.role, (counts.get(member.role) || 0) + 1);
+  return [...counts.entries()]
+    .map(([role, count]) => ({ role, coreRole: canonicalCoreRole(role), label: ROLE_LABELS[role] || role, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko'));
+}
+
+function coreRoleDirectory(members) {
+  const counts = new Map();
+  for (const member of members) counts.set(member.coreRole, (counts.get(member.coreRole) || 0) + 1);
+  return [...counts.entries()]
+    .map(([role, count]) => ({ role, label: ROLE_LABELS[role] || role, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko'));
 }
 
 export async function handleCustomerMemberDirectory(request, env) {
@@ -193,6 +192,7 @@ export async function handleCustomerMemberDirectory(request, env) {
     summary: directorySummary(allMembers, tenants),
     tenants,
     roles: roleDirectory(allMembers),
+    coreRoles: coreRoleDirectory(allMembers),
     members,
   }, 200, request, env);
 }
