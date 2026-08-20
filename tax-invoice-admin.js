@@ -4,6 +4,7 @@
   const FINANCE_API = 'https://finance-api.ekodi.kr';
   const ORGANIZATION_ID = 'EKODIBIZ';
   const DEFAULT_UNIT = 'BIZ';
+  const HOMETAX_URL = 'https://www.hometax.go.kr';
   let readiness = null;
   let customers = [];
   let invoices = [];
@@ -75,9 +76,9 @@
     workspace.innerHTML = `
       <div class="tax-invoice-head">
         <div>
-          <p class="kicker">ELECTRONIC TAX INVOICE</p>
+          <p class="kicker">ELECTRONIC TAX INVOICE · FREE-FIRST</p>
           <h3 id="taxInvoiceTitle">전자세금계산서</h3>
-          <p class="operations-copy">초안 작성 → 관리자 승인 → 발행 → 국세청 전송상태 확인의 순서로 처리합니다.</p>
+          <p class="operations-copy">무료 기본 운영: 에코디에서 작성·관리하고 홈택스에서 무료 최종발행합니다. 이용량이 커지면 준비된 API 자동화 엔진을 선택적으로 켭니다.</p>
         </div>
         <div class="tax-invoice-actions">
           <button type="button" class="secondary" id="taxProfileButton">공급자 정보</button>
@@ -85,11 +86,12 @@
         </div>
       </div>
       <div class="tax-invoice-status" aria-label="전자세금계산서 상태">
-        <article><small>발행 환경</small><strong id="taxEnvironment">확인 중</strong><span id="taxProvider">POPBILL</span></article>
+        <article><small>기본 발행경로</small><strong id="taxEnvironment">HomeTax 무료</strong><span id="taxProvider">홈택스 · 무료 기본</span></article>
         <article><small>공급자 정보</small><strong id="taxProfileState">확인 중</strong><span>사업자번호 · 대표자</span></article>
         <article><small>이번 달 발행</small><strong id="taxMonthAmount">₩0</strong><span id="taxMonthCount">0건</span></article>
         <article><small>확인 필요</small><strong id="taxAttentionCount">0</strong><span>실패 · 전송 확인</span></article>
       </div>
+      <div class="tax-invoice-notice good" id="taxFreeFirstPolicy"><strong>FREE-FIRST</strong> 기본 운영비 0원을 우선합니다. 유료 API는 자동으로 켜지지 않으며 별도 운영 승인 후에만 활성화됩니다.</div>
       <div class="tax-invoice-notice" id="taxInvoiceNotice">전자세금계산서 준비 상태를 확인하고 있습니다.</div>
       <div class="tax-invoice-table-head">
         <h4>최근 세금계산서</h4>
@@ -122,10 +124,18 @@
     const attention = document.querySelector('#taxAttentionCount');
     if (!environment) return;
 
+    const automated = Boolean(data.automationEnabled);
     const sandbox = data.environment !== 'production';
-    environment.textContent = sandbox ? 'Sandbox' : (data.liveEnabled ? '운영 발행 가능' : '운영 발행 잠김');
-    environment.className = sandbox || !data.liveEnabled ? 'finance-warn' : 'finance-ready';
-    provider.textContent = `${data.provider || 'POPBILL'} · ${data.credentialsConfigured ? 'API 연결' : '키 미연결'}`;
+    if (automated) {
+      environment.textContent = sandbox ? 'API Sandbox' : (data.liveEnabled ? 'API 운영 발행' : 'API 운영 잠김');
+      environment.className = sandbox || !data.liveEnabled ? 'finance-warn' : 'finance-ready';
+      provider.textContent = `${data.paidAutomationProvider || 'POPBILL'} · 선택적 자동화`;
+    } else {
+      environment.textContent = 'HomeTax 무료';
+      environment.className = 'finance-ready';
+      provider.textContent = '홈택스 · 무료 기본';
+    }
+
     profile.textContent = data.profileComplete ? '완료' : '정보 필요';
     profile.className = data.profileComplete ? 'finance-ready' : 'finance-warn';
     monthAmount.textContent = won(data.monthAmount);
@@ -136,14 +146,16 @@
 
     if (!data.profileComplete) {
       setNotice('공급자 사업자번호·상호·대표자 정보를 먼저 등록해 주세요. 초안 작성은 가능하지만 승인은 잠깁니다.');
-    } else if (!data.credentialsConfigured) {
-      setNotice('공급자 정보와 내부 대장은 준비되었습니다. 팝빌 API 키가 연결되기 전까지 실제 외부 발행은 안전하게 잠깁니다.');
+    } else if (!automated) {
+      setNotice('현재 기본 경로는 홈택스 무료 발행입니다. 거래처·품목·금액·발행이력은 에코디가 관리하고 최종 발행만 홈택스에서 처리합니다.', true);
+    } else if (!data.automationReady) {
+      setNotice('API 자동화 스위치는 켜져 있지만 공급자 키가 없어 실제 자동발행은 잠겨 있습니다. 홈택스 무료 발행으로 계속 운영할 수 있습니다.');
     } else if (data.environment === 'production' && !data.liveEnabled) {
-      setNotice('운영 API는 연결되어 있지만 실제 발행 잠금이 켜져 있습니다. 검증 후에만 운영 발행을 열 수 있습니다.');
+      setNotice('유료 API 운영 연결은 준비됐지만 실제 발행 잠금이 켜져 있습니다. 최종 검증 후에만 열 수 있습니다.');
     } else if (sandbox) {
-      setNotice('Sandbox 발행 환경입니다. 국세청 실제 전송 없이 전체 흐름을 검증할 수 있습니다.', true);
+      setNotice('유료 API Sandbox 환경입니다. 국세청 실제 전송 없이 자동화 흐름을 검증할 수 있습니다.', true);
     } else {
-      setNotice('운영 발행 준비가 완료되었습니다. 모든 발행은 관리자 승인 후에만 진행됩니다.', true);
+      setNotice('선택적 API 자동발행이 활성화되어 있습니다. 모든 발행은 관리자 승인 후에만 진행됩니다.', true);
     }
   }
 
@@ -197,11 +209,19 @@
     if (invoice.status === 'DRAFT') {
       actions.push(actionButton('승인', 'secondary compact', () => approve(invoice)));
     } else if (invoice.status === 'APPROVED') {
-      const productionLocked = readiness?.environment === 'production' && !readiness?.liveEnabled;
-      const noCredentials = readiness && !readiness.credentialsConfigured;
-      const label = readiness?.environment === 'production' ? '발행' : '샌드박스 발행';
-      actions.push(actionButton(label, 'primary compact', () => issue(invoice), productionLocked || noCredentials));
-    } else if (['ISSUING', 'ISSUED', 'FAILED'].includes(invoice.status)) {
+      if (!readiness?.automationEnabled) {
+        actions.push(
+          actionButton('정보 복사', 'ghost compact', () => copyForHometax(invoice)),
+          actionButton('홈택스 열기', 'secondary compact', openHometax),
+          actionButton('발행완료 기록', 'primary compact', () => recordManualIssue(invoice))
+        );
+      } else {
+        const productionLocked = readiness?.environment === 'production' && !readiness?.liveEnabled;
+        const noCredentials = readiness && !readiness.automationReady;
+        const label = readiness?.environment === 'production' ? 'API 발행' : 'Sandbox 발행';
+        actions.push(actionButton(label, 'primary compact', () => issue(invoice), productionLocked || noCredentials));
+      }
+    } else if (['ISSUING', 'ISSUED', 'FAILED'].includes(invoice.status) && invoice.provider !== 'HOMETAX_MANUAL') {
       actions.push(actionButton('상태 확인', 'secondary compact', () => sync(invoice)));
     }
     return actions;
@@ -461,7 +481,7 @@
   }
 
   async function approve(invoice) {
-    const ok = confirm(`${invoice.invoicee?.corpName || '거래처'} · ${won(invoice.totalAmount)} 세금계산서를 승인하시겠습니까?\n\n승인은 실제 발행 직전의 사람 검토 단계이며, 아직 외부 발행은 하지 않습니다.`);
+    const ok = confirm(`${invoice.invoicee?.corpName || '거래처'} · ${won(invoice.totalAmount)} 세금계산서를 승인하시겠습니까?\n\n승인은 실제 발행 직전의 사람 검토 단계이며 아직 홈택스 또는 유료 API 발행은 하지 않습니다.`);
     if (!ok) return;
     try {
       await request(`/api/finance/tax-invoices/${invoice.id}/approve`, { method: 'POST' });
@@ -469,9 +489,76 @@
     } catch (error) { alert(error.message); }
   }
 
+  function hometaxText(detail) {
+    return [
+      '[에코디 세금계산서 홈택스 입력자료]',
+      `작성일: ${detail.writeDate || ''}`,
+      `문서번호: ${detail.documentNo || ''}`,
+      `영수/청구: ${detail.purposeType || ''}`,
+      `과세구분: ${detail.taxType || ''}`,
+      '',
+      '[공급자]',
+      `사업자번호: ${detail.invoicer?.corpNum || ''}`,
+      `상호: ${detail.invoicer?.corpName || ''}`,
+      `대표자: ${detail.invoicer?.ceoName || ''}`,
+      `주소: ${detail.invoicer?.addr || ''}`,
+      `업태: ${detail.invoicer?.bizType || ''}`,
+      `종목: ${detail.invoicer?.bizClass || ''}`,
+      '',
+      '[공급받는자]',
+      `사업자번호: ${detail.invoicee?.corpNum || ''}`,
+      `상호: ${detail.invoicee?.corpName || ''}`,
+      `대표자: ${detail.invoicee?.ceoName || ''}`,
+      `주소: ${detail.invoicee?.addr || ''}`,
+      `업태: ${detail.invoicee?.bizType || ''}`,
+      `종목: ${detail.invoicee?.bizClass || ''}`,
+      `이메일: ${detail.invoicee?.email || ''}`,
+      '',
+      '[금액]',
+      `공급가액: ${detail.supplyAmount || 0}`,
+      `세액: ${detail.taxAmount || 0}`,
+      `합계: ${detail.totalAmount || 0}`,
+      '',
+      '[품목]',
+      ...(detail.items || []).map((item, index) => `${index + 1}. ${item.itemName || ''} / 수량 ${item.qty || '1'} / 공급가액 ${item.supplyCost || 0} / 세액 ${item.tax || 0}`)
+    ].join('\n');
+  }
+
+  async function copyForHometax(invoice) {
+    try {
+      const { invoice: detail } = await request(`/api/finance/tax-invoices/${invoice.id}`);
+      const copyText = hometaxText(detail);
+      try {
+        await navigator.clipboard.writeText(copyText);
+        alert('홈택스 입력용 정보가 클립보드에 복사되었습니다.');
+      } catch {
+        prompt('아래 내용을 복사해 홈택스 입력에 사용하세요.', copyText);
+      }
+    } catch (error) { alert(error.message); }
+  }
+
+  function openHometax() {
+    window.open(readiness?.hometaxUrl || HOMETAX_URL, '_blank', 'noopener,noreferrer');
+  }
+
+  async function recordManualIssue(invoice) {
+    const confirmNum = prompt(
+      `${invoice.invoicee?.corpName || '거래처'} · ${won(invoice.totalAmount)}\n홈택스에서 발행을 완료했다면 국세청 승인번호를 입력하세요.\n아직 승인번호를 확인하지 못했다면 비워둔 채 확인을 눌러도 됩니다.`
+    );
+    if (confirmNum === null) return;
+    const ok = confirm('홈택스에서 실제 발행을 완료한 것이 맞습니까? 에코디 내부 발행대장에 완료 기록을 남깁니다.');
+    if (!ok) return;
+    try {
+      await request(`/api/finance/tax-invoices/${invoice.id}/manual-issued`, {
+        method: 'POST', body: JSON.stringify({ ntsConfirmNum: confirmNum.trim() })
+      });
+      await loadAll(true);
+    } catch (error) { alert(error.message); }
+  }
+
   async function issue(invoice) {
     const sandbox = readiness?.environment !== 'production';
-    const environmentText = sandbox ? 'Sandbox 테스트 발행' : '운영 전자세금계산서 실제 발행';
+    const environmentText = sandbox ? '유료 API Sandbox 테스트 발행' : '유료 API 운영 전자세금계산서 실제 발행';
     const ok = confirm(`${environmentText}\n${invoice.invoicee?.corpName || '거래처'} · ${won(invoice.totalAmount)}\n\n계속하시겠습니까?`);
     if (!ok) return;
     try {
@@ -490,7 +577,10 @@
   async function openDetailDialog(id) {
     try {
       const { invoice } = await request(`/api/finance/tax-invoices/${id}`);
-      const shell = dialogShell(`세금계산서 ${invoice.documentNo}`, '발행 흐름과 국세청 전송 상태를 함께 확인합니다.');
+      const shell = dialogShell(
+        `세금계산서 ${invoice.documentNo}`,
+        invoice.provider === 'HOMETAX_MANUAL' ? '홈택스 직접발행과 에코디 내부 기록을 함께 확인합니다.' : '발행 흐름과 국세청 전송 상태를 함께 확인합니다.'
+      );
       const summary = make('div', 'tax-detail-grid');
       const entries = [
         ['작성일', formatDate(invoice.writeDate)], ['상태', statusLabel(invoice.status)],
