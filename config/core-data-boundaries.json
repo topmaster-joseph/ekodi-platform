@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "protectedTables": [
+    "customer_tenants",
+    "customer_users",
+    "customer_memberships",
+    "customer_access_grants",
+    "customer_sessions",
+    "customer_audit_logs"
+  ],
+  "coreOwners": [
+    "core-api.js",
+    "ekodi-principal.js",
+    "customer-auth.js",
+    "customer-federated-auth.js",
+    "customer-google-prereg.js",
+    "customer-member-directory.js",
+    "membership-billing.js"
+  ],
+  "platformRoots": [
+    "books",
+    "business",
+    "community",
+    "energy",
+    "marketing",
+    "my",
+    "shell",
+    "sites",
+    "social",
+    "work"
+  ],
+  "rule": "Platform-owned source under platformRoots must not directly reference EKODI Core protected tables. Cross-platform access uses core-client.js / api.ekodi.kr contracts."
+}
