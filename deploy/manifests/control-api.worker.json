@@ -5,6 +5,8 @@
     "config": "wrangler.api.toml",
     "requests": [
       {"url":"https://api.ekodi.kr/health","statuses":[200],"expect":["\"ok\":true"]},
+      {"url":"https://api.ekodi.kr/operator","statuses":[200],"expect":["EKODI Operator","관리자 대화 조종석","중요 대화","상세 관리자"],"headerExpect":["cache-control: no-store","x-frame-options: DENY"]},
+      {"url":"https://api.ekodi.kr/operator.js","statuses":[200],"expect":["/api/control/messenger/inbox","/api/control/messenger/threads/","/api/google/challenge","/api/google/login"],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
       {"url":"https://api.ekodi.kr/api/status","statuses":[200],"expect":["\"initialized\""]},
       {"url":"https://api.ekodi.kr/api/google/config","statuses":[200],"expect":["\"enabled\":true","483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"]},
       {"url":"https://api.ekodi.kr/api/books/public/config","statuses":[200],"expect":["\"digital-start\""]},
