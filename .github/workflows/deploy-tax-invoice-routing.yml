@@ -19,7 +19,7 @@ on:
       - '.github/workflows/deploy-tax-invoice-routing.yml'
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 concurrency:
@@ -49,11 +49,11 @@ jobs:
           grep -Fq '홈택스 · 무료 기본' tax-invoice-admin.js
           grep -Fq '발행완료 기록' tax-invoice-admin.js
 
-  dispatch:
+  dispatch-and-verify:
     needs: validate
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -65,3 +65,71 @@ jobs:
           gh workflow run deploy-finance.yml --ref main
           gh workflow run deploy-admin-site.yml --ref main
           echo 'Guarded Finance and Admin deployment workflows dispatched for FREE-FIRST tax invoice changes.'
+
+      - name: Verify production FREE-FIRST Finance and Admin assets
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          finance_url='https://finance-api.ekodi.kr/api/finance/tax-health'
+          admin_asset_url='https://admin.ekodi.kr/finance-monitor.js'
+          finance_json=''
+          finance_ok='false'
+          admin_ok='false'
+
+          for attempt in $(seq 1 60); do
+            finance_json=$(curl -fsS --connect-timeout 5 --max-time 12 "$finance_url" || true)
+            if printf '%s' "$finance_json" | grep -Fq '"operationPolicy":"FREE_FIRST"' \
+              && printf '%s' "$finance_json" | grep -Fq '"defaultChannel":"HOMETAX_MANUAL"'; then
+              finance_ok='true'
+            fi
+
+            admin_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$admin_asset_url" || true)
+            if printf '%s' "$admin_body" | grep -Fq 'FREE-FIRST' \
+              && printf '%s' "$admin_body" | grep -Fq '홈택스 · 무료 기본' \
+              && printf '%s' "$admin_body" | grep -Fq '발행완료 기록'; then
+              admin_ok='true'
+            fi
+
+            if [ "$finance_ok" = 'true' ] && [ "$admin_ok" = 'true' ]; then
+              break
+            fi
+            sleep 5
+          done
+
+          [ "$finance_ok" = 'true' ] || { echo 'FREE-FIRST Finance production verification failed.'; exit 1; }
+          [ "$admin_ok" = 'true' ] || { echo 'FREE-FIRST Admin production asset verification failed.'; exit 1; }
+
+          paid_enabled=$(printf '%s' "$finance_json" | jq -r '.paidAutomationEnabled // false')
+          echo "paid_enabled=$paid_enabled" >> "$GITHUB_OUTPUT"
+          echo 'FREE-FIRST Finance and Admin production verification passed.'
+
+      - name: Persist production verification marker
+        shell: bash
+        env:
+          PAID_ENABLED: ${{ steps.verify.outputs.paid_enabled }}
+        run: |
+          set -euo pipefail
+          path='deploy-status/tax-invoice.json'
+          verified_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          jq -n \
+            --arg verifiedAt "$verified_at" \
+            --arg commit "$GITHUB_SHA" \
+            --arg financeUrl 'https://finance-api.ekodi.kr/api/finance/tax-health' \
+            --arg adminAssetUrl 'https://admin.ekodi.kr/finance-monitor.js' \
+            --argjson paidAutomationEnabled "${PAID_ENABLED:-false}" \
+            '{verifiedAt:$verifiedAt,commit:$commit,operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,adminAssetUrl:$adminAssetUrl,status:"verified"}' \
+            > /tmp/tax-invoice-status.json
+          content=$(base64 -w0 /tmp/tax-invoice-status.json)
+          current_sha=$(gh api "repos/$GH_REPO/contents/$path" --jq '.sha' 2>/dev/null || true)
+          if [ -n "$current_sha" ]; then
+            gh api --method PUT "repos/$GH_REPO/contents/$path" \
+              -f message='chore: record FREE-FIRST tax invoice deployment [skip ci]' \
+              -f content="$content" \
+              -f sha="$current_sha" >/dev/null
+          else
+            gh api --method PUT "repos/$GH_REPO/contents/$path" \
+              -f message='chore: record FREE-FIRST tax invoice deployment [skip ci]' \
+              -f content="$content" >/dev/null
+          fi
+          cat /tmp/tax-invoice-status.json
