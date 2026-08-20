@@ -1,0 +1,67 @@
+name: Route Tax Invoice Deployments
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tax-invoice-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-admin.js'
+      - 'tax-invoice-admin.css'
+      - '.github/workflows/deploy-tax-invoice-routing.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tax-invoice-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-admin.js'
+      - 'tax-invoice-admin.css'
+      - '.github/workflows/deploy-tax-invoice-routing.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ekodi-tax-invoice-routing-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate FREE-FIRST tax invoice boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tax-invoice-worker.js
+          node --check tax-invoice-free-first-worker.js
+          node --check tax-invoice-admin.js
+          grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
+          grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
+          grep -Fq "defaultChannel: 'HOMETAX_MANUAL'" tax-invoice-free-first-worker.js
+          grep -Fq "'/api/finance/tax-health'" tax-invoice-free-first-worker.js
+          grep -Fq '홈택스 · 무료 기본' tax-invoice-admin.js
+          grep -Fq '발행완료 기록' tax-invoice-admin.js
+
+  dispatch:
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Dispatch guarded Finance and Admin releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-finance.yml --ref main
+          gh workflow run deploy-admin-site.yml --ref main
+          echo 'Guarded Finance and Admin deployment workflows dispatched for FREE-FIRST tax invoice changes.'
