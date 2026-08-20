@@ -10,6 +10,7 @@ on:
       - 'core-ai-gateway.js'
       - 'core-client.js'
       - 'ekodi-principal.js'
+      - 'scripts/validate-ekodi-core-contract.mjs'
       - 'scripts/validate-ekodi-core-completion.mjs'
       - 'scripts/verify-ekodi-core-production.mjs'
       - 'scripts/guarded-worker-release.mjs'
@@ -17,6 +18,7 @@ on:
       - '.github/workflows/verify-ekodi-core-completion.yml'
       - '.github/workflows/backup-ekodi-core.yml'
       - '.github/workflows/deploy-control-api.yml'
+      - 'test/ekodi-core-validator.test.mjs'
       - 'test/core-*.test.mjs'
       - 'package.json'
   push:
@@ -28,6 +30,7 @@ on:
       - 'core-ai-gateway.js'
       - 'core-client.js'
       - 'ekodi-principal.js'
+      - 'scripts/validate-ekodi-core-contract.mjs'
       - 'scripts/validate-ekodi-core-completion.mjs'
       - 'scripts/verify-ekodi-core-production.mjs'
       - 'scripts/guarded-worker-release.mjs'
@@ -35,6 +38,7 @@ on:
       - '.github/workflows/verify-ekodi-core-completion.yml'
       - '.github/workflows/backup-ekodi-core.yml'
       - '.github/workflows/deploy-control-api.yml'
+      - 'test/ekodi-core-validator.test.mjs'
       - 'test/core-*.test.mjs'
       - 'package.json'
 
@@ -56,6 +60,8 @@ jobs:
           node-version: '24'
       - name: Validate final Core completion contract
         run: npm run validate:core-completion
+      - name: Verify legacy Core contract validator stays aligned
+        run: node scripts/validate-ekodi-core-contract.mjs
       - name: Verify security baseline
         run: npm run validate:security
       - name: Verify AI provider independence
@@ -67,6 +73,7 @@ jobs:
       - name: Run focused Core completion contracts
         run: |
           node --test \
+            test/ekodi-core-validator.test.mjs \
             test/ekodi-core-contract.test.mjs \
             test/core-final-completion.test.mjs \
             test/core-api-contract.test.mjs \
