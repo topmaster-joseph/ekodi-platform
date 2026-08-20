@@ -12,16 +12,16 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
-// Tax invoices are a Finance sub-workspace, not a new public edge asset. Bundle the
-// dedicated source modules into the already secured Finance assets so the existing
-// admin allowlist, CSP and lazy-loading boundary remain unchanged.
-const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promise.all([
+// Tax invoices stay inside the authenticated Finance lazy asset. Use the multi-supplier
+// workspace while keeping the older single-supplier source available for rollback history.
+const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxMultiCss, taxInvoiceJs] = await Promise.all([
   readFile(`${output}control-center-finance.css`, 'utf8'),
   readFile(`${output}finance-monitor.js`, 'utf8'),
   readFile(`${root}tax-invoice-admin.css`, 'utf8'),
-  readFile(`${root}tax-invoice-admin.js`, 'utf8'),
+  readFile(`${root}tax-invoice-multi-supplier-admin.css`, 'utf8'),
+  readFile(`${root}tax-invoice-multi-supplier-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}control-center-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
+await writeFile(`${output}control-center-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n${taxMultiCss}\n`);
 await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n`);
 
 // MarketingAI admin keeps one authenticated on-demand asset, while live operations views
@@ -35,8 +35,7 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] =
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
 await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
 
-// Device Control stays in the compact authenticated shell for now. Creator billing is
-// deliberately separate so it can load only when Finance is opened.
+// Device Control stays in the compact authenticated shell.
 const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'),
   readFile(`${output}compact-control-center.js`, 'utf8'),
@@ -97,12 +96,8 @@ for (const asset of htmlAssets) {
       .replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
     if (html.includes('EKODI선교회') || html.includes('에코디선교회')) throw new Error('Legacy EKODI mission brand remains on homepage');
 
-    if (!html.includes('homepage-ambient.css')) {
-      html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');
-    }
-    if (!html.includes('homepage-ambient.js')) {
-      html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');
-    }
+    if (!html.includes('homepage-ambient.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');
+    if (!html.includes('homepage-ambient.js')) html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');
   }
 
   if (!html.includes('data-ekodi-responsive')) {
@@ -111,8 +106,6 @@ for (const asset of htmlAssets) {
   }
   if (asset === 'control-center.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
-    // Pre-auth stays tiny. After authentication only the shell and demand loader start;
-    // operational workspaces are fetched when their menu item is opened.
     html = html.replace(/\s*<link rel="stylesheet" href="(?:compact-control-center|campus-actions)\.css">\s*/g, '\n');
     html = html.replace(/\s*<script src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
     if (!html.includes('admin-authenticated-shell.js')) {
@@ -122,8 +115,7 @@ for (const asset of htmlAssets) {
   await writeFile(path, html);
 }
 
-// GitHub-backed System Timeline stays with Deployments. System Health is a separate
-// Services enhancement so opening Deployments is not required to see traffic trends.
+// GitHub-backed System Timeline stays with Deployments. System Health is a separate menu.
 const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
   readFile(`${output}release-control-admin.css`, 'utf8'),
   readFile(`${output}release-control-admin.js`, 'utf8'),
@@ -133,4 +125,4 @@ const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
 await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
 await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/Deployments/Work/MarketingAI/Creator billing/System Health, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/Deployments/Work/MarketingAI/System Health, authenticated Campus/Device Control, multi-supplier FREE-FIRST tax invoices, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
