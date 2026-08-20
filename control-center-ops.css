@@ -9,7 +9,7 @@
     left:0!important;
     right:0!important;
     width:100%!important;
-    z-index:40!important;
+    z-index:1000!important;
     padding-top:env(safe-area-inset-top,0px)!important;
     box-sizing:content-box;
   }
