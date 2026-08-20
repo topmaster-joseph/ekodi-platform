@@ -11,13 +11,19 @@ function resolvedHost(request,env){
   return simulated||url.hostname.toLowerCase();
 }
 
+async function withReleaseMarker(response){
+  const text=await response.text();
+  return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
+}
+
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
     if(host===MESSENGER_HOST&&request.method==='GET'){
       if(url.pathname==='/'||url.pathname===''){
-        return injectEkodiShell(messengerUserPage(),'messenger');
+        const response=await withReleaseMarker(messengerUserPage());
+        return injectEkodiShell(response,'messenger');
       }
       if(url.pathname==='/messenger-ui.js')return messengerUiScript();
     }
