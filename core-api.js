@@ -130,13 +130,43 @@ async function organizationForSlug(env, resolved, slug) {
   return organizationFromRow(row, grant.role);
 }
 
+async function latestRecoveryStatus(env) {
+  const row = await env.DB.prepare(`SELECT source, status, artifact_name, checksum_sha256,
+      export_bytes, restore_integrity, required_tables, created_at
+    FROM core_backup_runs
+    ORDER BY id DESC LIMIT 1`).first();
+  if (!row) {
+    return {
+      configured: true,
+      verified: false,
+      latest: null,
+      policy: 'daily-export-plus-independent-restore-test',
+    };
+  }
+  return {
+    configured: true,
+    verified: row.status === 'verified' && row.restore_integrity === 'ok' && Number(row.required_tables) >= 6,
+    latest: {
+      source: row.source,
+      status: row.status,
+      artifactName: row.artifact_name,
+      checksumSha256: row.checksum_sha256,
+      exportBytes: Number(row.export_bytes || 0),
+      restoreIntegrity: row.restore_integrity,
+      requiredTables: Number(row.required_tables || 0),
+      createdAt: row.created_at,
+    },
+    policy: 'daily-export-plus-independent-restore-test',
+  };
+}
+
 function coreStatus(env = {}) {
   const ai = getCoreAiGatewayStatus(env);
   return {
     ok: true,
     service: 'ekodi-core',
     apiVersion: CORE_API_VERSION,
-    schemaVersion: 2,
+    schemaVersion: 3,
     architecture: 'hybrid-cloud',
     canonicalHosts: {
       api: 'api.ekodi.kr',
@@ -158,6 +188,11 @@ function coreStatus(env = {}) {
       aiOptional: ai.aiOptional,
       mode: ai.mode,
       providerDisabled: ai.providerDisabled,
+    },
+    recovery: {
+      strategy: 'd1-time-travel-plus-independent-sql-export',
+      restoreTest: 'sqlite-integrity-and-required-table-check',
+      schedule: 'daily',
     },
   };
 }
@@ -189,6 +224,14 @@ export async function handleCoreApi(request, env) {
   if (!env.DB) return json(request, env, { error: 'Core 데이터베이스 연결이 설정되지 않았습니다.', code: 'CORE_DATABASE_UNAVAILABLE' }, 503);
   const resolved = await resolveCorePrincipal(request, env);
   if (!resolved) return json(request, env, { error: 'EKODI 통합인증이 필요합니다.', code: 'CORE_AUTH_REQUIRED' }, 401);
+
+  if (url.pathname === `${CORE_API_PREFIX}/recovery/status`) {
+    if (!resolved.admin) return json(request, env, { error: '관리자 권한이 필요합니다.', code: 'CORE_ADMIN_REQUIRED' }, 403);
+    return json(request, env, {
+      schemaVersion: 1,
+      recovery: await latestRecoveryStatus(env),
+    });
+  }
 
   if (url.pathname === `${CORE_API_PREFIX}/me`) {
     const organizations = await organizationsForPrincipal(env, resolved);
