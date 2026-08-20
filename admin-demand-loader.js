@@ -97,8 +97,17 @@
     finance.addEventListener('click',()=>{if(finance.dataset.financeAssetsRequested==='true')return;finance.dataset.financeAssetsRequested='true';Promise.all([loadStyle('control-center-finance.css')]).then(async()=>{await loadScript('finance-monitor.js');}).catch(error=>{finance.dataset.financeAssetsRequested='false';console.warn('[EKODI Admin] Finance lazy load failed',error);});},true);
   }
 
+  function bindBooksEnhancements(){
+    if(!nav||nav.dataset.creatorBillingBound==='true')return;nav.dataset.creatorBillingBound='true';
+    nav.addEventListener('click',event=>{
+      const books=event.target.closest('[data-section="books"], [data-lazy-section="books"]');
+      if(!books||!authenticated())return;
+      Promise.all([loadStyle('author-billing-admin.css'),loadScript('author-billing-admin.js')]).catch(error=>console.warn('[EKODI Admin] Creator Billing lazy load failed',error));
+    },true);
+  }
+
   function requestedFeature(){const hash=location.hash.toLowerCase(),path=location.pathname.toLowerCase();return Object.entries(FEATURES).find(([,feature])=>feature.hashes?.includes(hash)||feature.paths?.includes(path))?.[0]||'';}
-  function install(){if(!authenticated()||!nav)return;Object.entries(FEATURES).forEach(([key,feature])=>placeholder(key,feature));bindBaseEnhancements();window.dispatchEvent(new CustomEvent('ekodi-nav-changed',{detail:{feature:'placeholders'}}));const requested=requestedFeature();if(requested){const button=nav.querySelector(`[data-demand-feature="${requested}"]`);activateFeature(requested,button,true);}}
+  function install(){if(!authenticated()||!nav)return;Object.entries(FEATURES).forEach(([key,feature])=>placeholder(key,feature));bindBaseEnhancements();bindBooksEnhancements();window.dispatchEvent(new CustomEvent('ekodi-nav-changed',{detail:{feature:'placeholders'}}));const requested=requestedFeature();if(requested){const button=nav.querySelector(`[data-demand-feature="${requested}"]`);activateFeature(requested,button,true);}}
 
   onAuthState();
   function onAuthState(){if(authenticated())install();}
