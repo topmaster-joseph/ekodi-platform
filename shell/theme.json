@@ -1,0 +1,54 @@
+{
+  "version": 2,
+  "defaultMode": "workspace",
+  "workspace": {
+    "scheme": "dark",
+    "background": "#071522",
+    "surface": "#0B1D2E",
+    "surfaceRaised": "#10263A",
+    "border": "#24425E",
+    "text": "#F4F7FB",
+    "muted": "#9FB1C3",
+    "focus": "#8EC8FF",
+    "radius": "16px"
+  },
+  "rules": {
+    "stableSurfaces": ["workspace", "admin", "form", "document", "data"],
+    "dynamicSurfaces": ["transition", "bridge", "loading", "handoff"],
+    "dynamicMayChange": ["accent", "ambientBackground", "illustrationKey", "microcopyKey", "motionKey"],
+    "dynamicMustNotChange": ["navigationPosition", "buttonGeometry", "fontScale", "formLayout", "focusTreatment", "contrastFloor", "safeArea", "authMeaning"]
+  },
+  "services": {
+    "my": {"accent": "#7CC7FF", "identity": "personal-constellation"},
+    "marketing": {"accent": "#B58CFF", "identity": "campaign-studio"},
+    "community": {"accent": "#75C99D", "identity": "neighborhood-commons"},
+    "church": {"accent": "#D8B66A", "identity": "sanctuary"},
+    "business": {"accent": "#59C9B6", "identity": "operator-cockpit"},
+    "biz": {"accent": "#C8A96B", "identity": "business-briefing"},
+    "work": {"accent": "#7FA8FF", "identity": "precision-workbench"},
+    "author": {"accent": "#B7FF67", "identity": "writing-lab"},
+    "books": {"accent": "#C99084", "identity": "academic-press"},
+    "lab": {"accent": "#E39463", "identity": "field-research-journal"},
+    "social": {"accent": "#70B7FF", "identity": "signal-stream"},
+    "messenger": {"accent": "#5AD9D0", "identity": "conversation-switchboard"},
+    "energy": {"accent": "#F0C35B", "identity": "solar-grid"},
+    "mall": {"accent": "#FF9278", "identity": "curated-market"},
+    "trade": {"accent": "#58D7F2", "identity": "global-terminal"},
+    "invest": {"accent": "#B4D65C", "identity": "investment-dossier"},
+    "pay": {"accent": "#65D6A6", "identity": "trust-ledger"},
+    "insurance": {"accent": "#7DA7FF", "identity": "protective-clarity"},
+    "edu": {"accent": "#F1C84B", "identity": "learning-studio"},
+    "media": {"accent": "#FF6F78", "identity": "broadcast-stage"},
+    "mail": {"accent": "#72A9E8", "identity": "correspondence-desk"},
+    "live": {"accent": "#FF746B", "identity": "live-stage"},
+    "cloud": {"accent": "#8CB8DE", "identity": "cloud-library"}
+  },
+  "transition": {
+    "rotation": "daily-deterministic",
+    "variants": [
+      {"id": "deep-current", "ambientBackground": "radial-gradient(circle at 18% 20%, rgba(77,151,214,.24), transparent 34%), linear-gradient(145deg,#06111C,#0B2033)"},
+      {"id": "quiet-grid", "ambientBackground": "radial-gradient(circle at 82% 18%, rgba(88,215,242,.18), transparent 30%), linear-gradient(160deg,#071522,#0D1C2A)"},
+      {"id": "night-orbit", "ambientBackground": "radial-gradient(circle at 50% -10%, rgba(181,140,255,.18), transparent 38%), linear-gradient(180deg,#07101A,#0B1B2B)"}
+    ]
+  }
+}
