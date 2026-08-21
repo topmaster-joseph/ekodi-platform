@@ -9,7 +9,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI Creator AI", "Creator AI가 세상과 연결될 형태로 만듭니다", "CREATOR APPROVED", "https://shell.ekodi.kr/shell.js"],
-        "headerExpect": ["x-ekodi-service: author-ai", "x-ekodi-product: creator-ai", "x-content-type-options: nosniff", "x-ekodi-shell: v1"]
+        "headerExpect": ["x-ekodi-service: author-ai", "x-ekodi-product: creator-ai", "x-content-type-options: nosniff", "x-ekodi-shell: v2"]
       },
       {
         "url": "https://author.ekodi.kr/health",
