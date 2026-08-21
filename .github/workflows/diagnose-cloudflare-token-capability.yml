@@ -37,17 +37,31 @@ jobs:
             return { response, body };
           }
 
-          const userVerify = await req('user_verify', '/user/tokens/verify');
-          const accountVerify = await req('account_verify', `/accounts/${account}/tokens/verify`);
-          const tokenId = accountVerify.body?.result?.id || userVerify.body?.result?.id || '';
+          const verify = await req('account_verify', `/accounts/${account}/tokens/verify`);
+          const tokenId = verify.body?.result?.id || '';
           console.log(`token_active=${Boolean(tokenId)} token_id_tail=${tokenId ? tokenId.slice(-6) : 'none'}`);
+          if (!tokenId) process.exit(2);
 
-          if (tokenId) {
-            await req('user_token_details', `/user/tokens/${tokenId}`);
-            await req('account_token_details', `/accounts/${account}/tokens/${tokenId}`);
+          const details = await req('account_token_details', `/accounts/${account}/tokens/${tokenId}`);
+          const groups = await req('account_permission_groups', `/accounts/${account}/tokens/permission_groups`);
+          const tokenData = details.body?.result || {};
+          const policies = Array.isArray(tokenData.policies) ? tokenData.policies : [];
+          console.log(`token_name=${String(tokenData.name || '').slice(0,80)} policy_count=${policies.length}`);
+          for (const [index, policy] of policies.entries()) {
+            const names = (policy.permission_groups || []).map(group => group.name || group.id).join(' | ');
+            const resources = Object.keys(policy.resources || {}).join(' | ');
+            console.log(`policy_${index + 1}_permissions=${names}`);
+            console.log(`policy_${index + 1}_resources=${resources}`);
           }
-          await req('user_token_list', '/user/tokens?per_page=5');
-          await req('account_token_list', `/accounts/${account}/tokens?per_page=5`);
-          await req('user_permission_groups', '/user/tokens/permission_groups');
-          await req('account_permission_groups', `/accounts/${account}/tokens/permission_groups`);
+
+          const permissionGroups = Array.isArray(groups.body?.result) ? groups.body.result : [];
+          const interesting = permissionGroups.filter(group => /analytics read|api tokens (write|edit|read)/i.test(String(group.name || '')));
+          for (const group of interesting) {
+            console.log(`permission_group name=${group.name} id=${group.id} scope=${group.scopes?.join(',') || group.scope || group.meta?.scope || 'unknown'}`);
+          }
+
+          const hasTokenWrite = policies.some(policy => (policy.permission_groups || []).some(group => /account api tokens (write|edit)/i.test(String(group.name || ''))));
+          const hasAnalyticsRead = policies.some(policy => (policy.permission_groups || []).some(group => /analytics read/i.test(String(group.name || ''))));
+          console.log(`has_account_token_write=${hasTokenWrite}`);
+          console.log(`has_analytics_read=${hasAnalyticsRead}`);
           NODE
