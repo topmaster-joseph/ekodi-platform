@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
-const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shellSource,injectorSource]=await Promise.all([
+const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shellSource,injectorSource,workspaceStyle]=await Promise.all([
   readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.url),'utf8'),
   readFile(new URL('../auth-site/auth-router.js',import.meta.url),'utf8'),
@@ -11,10 +11,12 @@ const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shel
   readFile(new URL('../shell/theme.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../shell/shell.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
+  readFile(new URL('../shell/workspace.css',import.meta.url),'utf8'),
 ]);
 const manifest=EKODI_SERVICE_MANIFEST;
 const allowedKinds=new Set(['person','business','organization','church','community','project']);
 const allowedIntegrations=new Set(['worker-injected','shared-proxy','static-script','external-build','pending','planned']);
+const allowedSurfaces=new Set(['public','workspace','admin','form','document','data','transition','bridge','loading','handoff']);
 const legacyPending=new Set();
 const legacyServiceIds=new Set(['my','marketing','community','church','business','biz','work','author','books','lab','social','energy','mall','trade','pay','edu','media','insurance','mail','live','cloud']);
 const compactPlatformRouter=platformRouter.replace(/\s+/g,'');
@@ -29,9 +31,11 @@ if(theme.version!==manifest.shellVersion)fail(`theme version ${theme.version} mu
 for(const required of ['workspace','admin','form','document','data'])if(!theme.rules?.stableSurfaces?.includes(required))fail(`stable surface missing: ${required}`);
 for(const required of ['transition','bridge','loading','handoff'])if(!theme.rules?.dynamicSurfaces?.includes(required))fail(`dynamic surface missing: ${required}`);
 for(const required of ['navigationPosition','buttonGeometry','fontScale','formLayout','focusTreatment','contrastFloor','safeArea','authMeaning'])if(!theme.rules?.dynamicMustNotChange?.includes(required))fail(`dynamic protected property missing: ${required}`);
-if(!shellSource.includes("setSurface")||!shellSource.includes("ekodi:shell-theme"))fail('Shell browser API must publish the v2 surface/theme contract');
-if(!injectorSource.includes('data-ekodi-surface="workspace"'))fail('Worker injection must default to stable workspace surface');
+if(!shellSource.includes('setSurface')||!shellSource.includes('ekodi:shell-theme'))fail('Shell browser API must publish the v2 surface/theme contract');
+for(const required of ['SHELL_WORKSPACE_STYLE','INTERNAL_SURFACES','defaultSurface(serviceId)','data-ekodi-workspace-style'])if(!injectorSource.includes(required))fail(`Worker injection lost internal UI contract: ${required}`);
 if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker injection must advertise Shell v2');
+if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker injection must advertise the resolved surface');
+if(!workspaceStyle.includes('data-ekodi-shell-surface="workspace"'))fail('shared workspace stylesheet must be scoped to internal surfaces');
 
 const byId=new Map();
 const byHost=new Map();
@@ -45,6 +49,7 @@ for(const service of manifest.services||[]){
   if(url.protocol!=='https:')fail(`${service.id} must use https`);
   if(byHost.has(url.hostname))fail(`duplicate canonical host: ${url.hostname}`);
   byHost.set(url.hostname,service.id);
+  if(!allowedSurfaces.has(service.defaultSurface))fail(`${service.id} must declare a recognized defaultSurface`);
   if(!Array.isArray(service.workspaceKinds)||!service.workspaceKinds.length)fail(`${service.id} needs workspaceKinds`);
   for(const kind of service.workspaceKinds||[])if(!allowedKinds.has(kind))fail(`${service.id} has unsupported workspace kind ${kind}`);
   if(!Array.isArray(service.capabilities)||!service.capabilities.length)fail(`${service.id} needs capabilities`);
@@ -86,4 +91,4 @@ for(const service of ecosystem.services||[]){
 for(const service of manifest.services||[]){if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`)}
 for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; stable workspace UI and bounded dynamic surfaces verified.`);
+console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; public and internal roots are explicit and dynamic surfaces remain bounded.`);
