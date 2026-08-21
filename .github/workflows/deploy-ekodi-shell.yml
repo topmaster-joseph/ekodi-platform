@@ -8,6 +8,8 @@ on:
       - 'ekodi-shell-worker.js'
       - 'ekodi-shell-injector.js'
       - 'shell/**'
+      - 'config/internal-ui-rollout.json'
+      - 'scripts/validate-internal-ui-rollout.mjs'
       - 'wrangler.shell.toml'
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
@@ -20,6 +22,8 @@ on:
       - 'ekodi-shell-worker.js'
       - 'ekodi-shell-injector.js'
       - 'shell/**'
+      - 'config/internal-ui-rollout.json'
+      - 'scripts/validate-internal-ui-rollout.mjs'
       - 'wrangler.shell.toml'
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
@@ -52,6 +56,7 @@ jobs:
           node --check shell/shell.js
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
+          node scripts/validate-internal-ui-rollout.mjs
 
   staging:
     if: github.event_name == 'pull_request'
@@ -77,17 +82,17 @@ jobs:
             health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             manifest=$(curl -sS -o /tmp/shell-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/manifest.json" || true)
             script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/shell.js" || true)
-            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' ]] \
+            style=$(curl -sS -o /tmp/workspace.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/workspace.css" || true)
+            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' && "$style" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json \
               && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-manifest.json \
-              && grep -Fq '"id":"church"' /tmp/shell-manifest.json \
-              && grep -Fq '"id":"community"' /tmp/shell-manifest.json \
-              && grep -Fq '"id":"marketing"' /tmp/shell-manifest.json \
-              && grep -Fq '"shellIntegration":"static-script"' /tmp/shell-manifest.json \
-              && grep -Fq '"id":"insurance"' /tmp/shell-manifest.json \
+              && grep -Fq '"defaultSurface":"workspace"' /tmp/shell-manifest.json \
+              && grep -Fq '"defaultSurface":"public"' /tmp/shell-manifest.json \
               && ! grep -Fq '"shellIntegration":"pending"' /tmp/shell-manifest.json \
-              && grep -Fq 'window.EKODIShell' /tmp/shell.js; then
-              echo 'EKODI Shell staging verified with zero active pending integrations.'
+              && grep -Fq 'window.EKODIShell' /tmp/shell.js \
+              && grep -Fq 'data-ekodi-shell-surface="workspace"' /tmp/workspace.css \
+              && grep -Fq 'data-ekodi-document-surface' /tmp/workspace.css; then
+              echo 'EKODI Shell staging verified with shared internal UI and explicit public/workspace surfaces.'
               exit 0
             fi
             sleep 4
@@ -116,16 +121,17 @@ jobs:
             health=$(curl -sS -o /tmp/shell-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
             manifest=$(curl -sS -o /tmp/shell-live-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
             script=$(curl -sS -o /tmp/shell-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/shell.js' || true)
-            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' ]] \
+            style=$(curl -sS -o /tmp/shell-live-workspace.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/workspace.css' || true)
+            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' && "$style" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-live-health.json \
               && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-live-manifest.json \
-              && grep -Fq '"id":"my"' /tmp/shell-live-manifest.json \
-              && grep -Fq '"id":"marketing"' /tmp/shell-live-manifest.json \
-              && grep -Fq '"shellIntegration":"static-script"' /tmp/shell-live-manifest.json \
-              && grep -Fq '"id":"insurance"' /tmp/shell-live-manifest.json \
+              && grep -Fq '"defaultSurface":"workspace"' /tmp/shell-live-manifest.json \
+              && grep -Fq '"defaultSurface":"public"' /tmp/shell-live-manifest.json \
               && ! grep -Fq '"shellIntegration":"pending"' /tmp/shell-live-manifest.json \
-              && grep -Fq '공간 전환 · My EKODI' /tmp/shell-live.js; then
-              echo 'EKODI Shell production verified with zero active pending integrations.'
+              && grep -Fq '공간 전환 · My EKODI' /tmp/shell-live.js \
+              && grep -Fq 'data-ekodi-shell-surface="workspace"' /tmp/shell-live-workspace.css \
+              && grep -Fq 'data-ekodi-document-surface' /tmp/shell-live-workspace.css; then
+              echo 'EKODI Shell production verified with shared internal UI and explicit public/workspace surfaces.'
               exit 0
             fi
             sleep 5

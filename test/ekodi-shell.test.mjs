@@ -17,11 +17,14 @@ test('service manifest is the person-space-role registry for future EKODI sites'
     assert.equal(new URL(service.url).protocol,'https:');
     assert.ok(Array.isArray(service.workspaceKinds)&&service.workspaceKinds.length>0);
     assert.ok(Array.isArray(service.capabilities)&&service.capabilities.length>0);
+    assert.ok(['public','workspace','admin','form','document','data','transition','bridge','loading','handoff'].includes(service.defaultSurface));
   }
   assert.equal(serviceForHost('church.ekodi.kr')?.id,'church');
   assert.equal(serviceForHost('messenger.ekodi.kr')?.id,'messenger');
   assert.equal(serviceForHost('invest.ekodi.kr')?.id,'invest');
   assert.equal(serviceForId('community')?.url,'https://community.ekodi.kr/');
+  assert.equal(serviceForId('social')?.defaultSurface,'workspace');
+  assert.equal(serviceForId('church')?.defaultSurface,'public');
 });
 
 test('browser shell preserves workspace context and exposes bounded visual surfaces',async()=>{
@@ -46,15 +49,21 @@ test('browser shell preserves workspace context and exposes bounded visual surfa
   assert.ok(theme.rules.dynamicMustNotChange.includes('navigationPosition'));
 });
 
-test('shell injector is isolated in Shadow DOM and extends CSP instead of weakening it globally',async()=>{
-  const [client,injector]=await Promise.all([read('shell/shell.js'),read('ekodi-shell-injector.js')]);
+test('shell injector is isolated in Shadow DOM and applies shared style only to internal surfaces',async()=>{
+  const [client,injector,workspaceCss]=await Promise.all([read('shell/shell.js'),read('ekodi-shell-injector.js'),read('shell/workspace.css')]);
   assert.match(client,/attachShadow\(\{mode:'open'\}\)/);
   assert.match(injector,/HTMLRewriter/);
   assert.match(injector,/script-src/);
+  assert.match(injector,/style-src/);
   assert.match(injector,/connect-src/);
   assert.match(injector,/https:\/\/shell\.ekodi\.kr/);
-  assert.match(injector,/data-ekodi-surface=\"workspace\"/);
+  assert.match(injector,/SHELL_WORKSPACE_STYLE/);
+  assert.match(injector,/INTERNAL_SURFACES\.has\(surface\)/);
+  assert.match(injector,/data-ekodi-workspace-style/);
+  assert.match(injector,/x-ekodi-surface/);
   assert.match(injector,/x-ekodi-shell','v2/);
+  assert.match(workspaceCss,/data-ekodi-shell-surface="workspace"/);
+  assert.match(workspaceCss,/data-ekodi-document-surface/);
 });
 
 test('My, Community and shared service proxy all consume the same shell contract',async()=>{
