@@ -22,7 +22,7 @@ class HeadInjector{
   constructor(serviceId){this.serviceId=serviceId;}
   element(element){
     const service=String(this.serviceId||'').replace(/[^a-z0-9-]/g,'');
-    element.prepend(`${MOBILE_FIXED_HEADER_STYLE}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}"></script>`,{html:true});
+    element.prepend(`${MOBILE_FIXED_HEADER_STYLE}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="workspace"></script>`,{html:true});
   }
 }
 
@@ -32,7 +32,7 @@ export function injectEkodiShell(response,serviceId){
   if(!contentType.includes('text/html'))return response;
   const headers=new Headers(response.headers);
   headers.set('content-security-policy',shellCsp(headers.get('content-security-policy')));
-  headers.set('x-ekodi-shell','v1');
+  headers.set('x-ekodi-shell','v2');
   const transformed=new HTMLRewriter().on('head',new HeadInjector(serviceId)).transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
   return transformed;
 }
