@@ -90,6 +90,7 @@
       <div class="core-health-card">
         <div class="core-health-card-head"><div><small>PRODUCTION FLEET</small><strong>주요 사이트</strong></div><span data-core-fleet-summary>—</span></div>
         <div class="core-health-fleet" data-core-fleet><p class="operations-loading">운영 상태 확인 전입니다.</p></div>
+        <div class="core-health-latency-chart" data-core-latency-chart aria-label="주요 사이트 응답속도 그래프"><p class="operations-loading">응답속도 그래프 준비 전입니다.</p></div>
       </div>
       <div class="core-health-card">
         <div class="core-health-card-head"><div><small>RECOVERY</small><strong>백업 · 복구 상태</strong></div></div>
@@ -146,9 +147,15 @@
   function draw(series) {
     chart.textContent = '';
     if (!series?.length) {
-      const empty = document.createElement('p');
-      empty.className = 'operations-loading';
-      empty.textContent = '아직 일별 집계 데이터가 없습니다.';
+      const empty = document.createElement('div');
+      empty.className = 'system-health-chart-empty';
+      const grid = document.createElement('div');
+      grid.className = 'system-health-chart-empty-grid';
+      grid.setAttribute('aria-hidden', 'true');
+      const copy = document.createElement('p');
+      copy.className = 'operations-loading';
+      copy.textContent = '트래픽 집계 연결 대기 · 위의 주요 사이트 응답속도 그래픽은 현재 측정값으로 표시됩니다.';
+      empty.append(grid, copy);
       chart.append(empty);
       return;
     }
@@ -252,7 +259,9 @@
 
   function renderFleet(overview) {
     const list = get('[data-core-fleet]');
+    const latencyChart = get('[data-core-latency-chart]');
     list.textContent = '';
+    latencyChart.textContent = '';
     const monitored = new Map((overview?.sites || []).map(item => [item.id, item]));
     const services = new Map((overview?.services || []).map(item => [item.id, item]));
     const rows = CORE_SERVICES.map(id => monitored.get(id) || services.get(id)).filter(Boolean);
@@ -263,6 +272,10 @@
       empty.className = 'operations-loading';
       empty.textContent = '주요 사이트 상태를 확인하지 못했습니다.';
       list.append(empty);
+      const chartEmpty = document.createElement('p');
+      chartEmpty.className = 'operations-loading';
+      chartEmpty.textContent = '응답속도 데이터가 없습니다.';
+      latencyChart.append(chartEmpty);
       get('[data-core-fleet-summary]').textContent = '확인 필요';
       return { ...counts, pending:1 };
     }
@@ -290,6 +303,35 @@
       meta.append(badge, latency);
       row.append(identity, meta);
       list.append(row);
+    }
+    const latencyRows = rows.map(service => {
+      const responseTime = Number(service.responseTime ?? service.latest?.responseTime);
+      return { service, responseTime };
+    }).filter(item => Number.isFinite(item.responseTime) && item.responseTime >= 0);
+    if (latencyRows.length) {
+      const maxLatency = Math.max(...latencyRows.map(item => item.responseTime), 1);
+      latencyRows.forEach(({ service, responseTime }) => {
+        const visual = document.createElement('div');
+        visual.className = 'core-health-latency-row';
+        visual.dataset.state = fleetState(service);
+        const label = document.createElement('span');
+        label.textContent = service.name || service.domain || service.id;
+        const track = document.createElement('i');
+        track.className = 'core-health-latency-track';
+        const fill = document.createElement('span');
+        fill.className = 'core-health-latency-fill';
+        fill.style.width = `${Math.max(4, Math.min(100, (responseTime / maxLatency) * 100))}%`;
+        track.append(fill);
+        const value = document.createElement('b');
+        value.textContent = `${Math.round(responseTime)} ms`;
+        visual.append(label, track, value);
+        latencyChart.append(visual);
+      });
+    } else {
+      const chartEmpty = document.createElement('p');
+      chartEmpty.className = 'operations-loading';
+      chartEmpty.textContent = '응답속도 데이터가 없습니다.';
+      latencyChart.append(chartEmpty);
     }
     get('[data-core-fleet-summary]').textContent = `${counts.ok}/${rows.length} 정상`;
     return counts;

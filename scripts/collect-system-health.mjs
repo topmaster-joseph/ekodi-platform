@@ -159,9 +159,12 @@ ON CONFLICT(source) DO UPDATE SET
     await writeFile(outputPath, `${statements.join('\n')}\n`, 'utf8');
     console.log(`Prepared ${rows.length} Cloudflare daily aggregate rows (${outputPath}).`);
   } catch (error) {
-    const message = String(error?.message || error).slice(0, 400);
+    const rawMessage = String(error?.message || error).slice(0, 400);
+    const message = rawMessage.includes('zone.analytics.read')
+      ? 'Cloudflare Analytics Read 권한이 없어 트래픽 집계를 수집하지 못했습니다.'
+      : rawMessage;
     await writeFailure(message);
-    throw error;
+    throw new Error(message);
   }
 }
 
