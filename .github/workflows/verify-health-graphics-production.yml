@@ -1,0 +1,42 @@
+name: Verify Health Graphics Production
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-health-graphics-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify canonical Health assets from production
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://admin.ekodi.kr'
+          ok=0
+          for attempt in $(seq 1 24); do
+            probe="?prod-health-graphics=${GITHUB_RUN_ID}-${attempt}"
+            root_code=$(curl -sS -D /tmp/root.h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/$probe" || true)
+            js_code=$(curl -sS -D /tmp/health-js.h -o /tmp/health.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/system-health-admin.js$probe" || true)
+            css_code=$(curl -sS -D /tmp/health-css.h -o /tmp/health.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/system-health-admin.css$probe" || true)
+            if [[ "$root_code" == '200' && "$js_code" == '200' && "$css_code" == '200' ]] \
+              && grep -Fq 'data-core-latency-chart' /tmp/health.js \
+              && grep -Fq 'core-health-latency-row' /tmp/health.js \
+              && grep -Fq '트래픽 집계 연결 대기' /tmp/health.js \
+              && grep -Fq '.core-health-latency-fill' /tmp/health.css \
+              && grep -Fq '.system-health-chart-empty-grid' /tmp/health.css; then
+              echo "Production Health graphics verified on attempt $attempt."
+              grep -Fi 'cache-control:' /tmp/health-js.h | tail -1 || true
+              ok=1
+              break
+            fi
+            echo "Production assets not promoted yet (attempt $attempt/24, root=$root_code js=$js_code css=$css_code)."
+            sleep 5
+          done
+          test "$ok" -eq 1
