@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('service manifest is the person-space-role registry for future EKODI sites',()=>{
   assert.equal(EKODI_SERVICE_MANIFEST.identityModel,'person-space-role');
-  assert.equal(EKODI_SERVICE_MANIFEST.shellVersion,1);
+  assert.equal(EKODI_SERVICE_MANIFEST.shellVersion,2);
   assert.equal(EKODI_SERVICE_MANIFEST.onboardingPolicyVersion,1);
   const ids=EKODI_SERVICE_MANIFEST.services.map(s=>s.id);
   assert.equal(new Set(ids).size,ids.length);
@@ -24,8 +24,9 @@ test('service manifest is the person-space-role registry for future EKODI sites'
   assert.equal(serviceForId('community')?.url,'https://community.ekodi.kr/');
 });
 
-test('browser shell preserves workspace context and returns space switching to My EKODI',async()=>{
-  const client=await read('shell/shell.js');
+test('browser shell preserves workspace context and exposes bounded visual surfaces',async()=>{
+  const [client,themeRaw]=await Promise.all([read('shell/shell.js'),read('shell/theme.json')]);
+  const theme=JSON.parse(themeRaw);
   assert.match(client,/ekodi_workspace/);
   assert.match(client,/ekodi_shell_context:/);
   assert.match(client,/사람 → 공간 → 기능/);
@@ -35,7 +36,14 @@ test('browser shell preserves workspace context and returns space switching to M
   assert.match(client,/workspace/);
   assert.match(client,/window\.EKODIShell/);
   assert.match(client,/setContext:mergeContext/);
+  assert.match(client,/setSurface/);
+  assert.match(client,/getTheme:resolvedTheme/);
+  assert.match(client,/ekodi:shell-theme/);
   assert.match(client,/ekodi:context-change/);
+  assert.equal(theme.version,2);
+  assert.ok(theme.rules.stableSurfaces.includes('workspace'));
+  assert.ok(theme.rules.dynamicSurfaces.includes('transition'));
+  assert.ok(theme.rules.dynamicMustNotChange.includes('navigationPosition'));
 });
 
 test('shell injector is isolated in Shadow DOM and extends CSP instead of weakening it globally',async()=>{
@@ -45,7 +53,8 @@ test('shell injector is isolated in Shadow DOM and extends CSP instead of weaken
   assert.match(injector,/script-src/);
   assert.match(injector,/connect-src/);
   assert.match(injector,/https:\/\/shell\.ekodi\.kr/);
-  assert.match(injector,/x-ekodi-shell/);
+  assert.match(injector,/data-ekodi-surface=\"workspace\"/);
+  assert.match(injector,/x-ekodi-shell','v2/);
 });
 
 test('My, Community and shared service proxy all consume the same shell contract',async()=>{
@@ -83,12 +92,12 @@ test('Shell-enabled asset Workers cannot bypass their wrapper with direct static
   for(const config of configs)assert.match(config,/run_worker_first\s*=\s*true/);
 });
 
-test('guarded production release contracts require the shared Shell on migrated service roots',async()=>{
+test('guarded production release contracts require Shell v2 on migrated service roots',async()=>{
   const manifests=await Promise.all([
     'deploy/manifests/business.worker.json','deploy/manifests/work.worker.json','deploy/manifests/author.worker.json','deploy/manifests/books.worker.json','deploy/manifests/social.worker.json','deploy/manifests/energy.worker.json','deploy/manifests/shared-site.worker.json'
   ].map(read));
   for(const manifest of manifests)assert.match(manifest,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
-  for(const manifest of manifests)assert.match(manifest,/x-ekodi-shell: v1/);
+  for(const manifest of manifests)assert.match(manifest,/x-ekodi-shell: v2/);
 });
 
 test('all active services have concrete Shell integration and new services use automatic onboarding',()=>{
