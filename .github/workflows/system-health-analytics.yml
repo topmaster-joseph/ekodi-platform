@@ -65,6 +65,7 @@ jobs:
         run: |
           set -uo pipefail
           sql_file="$RUNNER_TEMP/ekodi-system-health.sql"
+          set +e
           node scripts/collect-system-health.mjs "$sql_file"
           collector_status=$?
           set -e
