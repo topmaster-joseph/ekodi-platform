@@ -1,4 +1,4 @@
-name: Diagnose Cloudflare Token Capability
+name: Apply Cloudflare Analytics Read
 
 on:
   pull_request:
@@ -9,15 +9,21 @@ permissions:
   contents: read
 
 jobs:
-  diagnose:
+  apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EKODI_SITE_WORKER_SERVICE: shy-thunder-39a4
+      EKODI_CANONICAL_HOST: admin.ekodi.kr
     steps:
       - uses: actions/checkout@v7
-      - name: Inspect token capability without changing Cloudflare
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Add least-privilege Zone Analytics Read to existing account token
         shell: bash
         run: |
           set -euo pipefail
@@ -26,42 +32,125 @@ jobs:
           node <<'NODE'
           const token = process.env.CLOUDFLARE_API_TOKEN;
           const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const service = process.env.EKODI_SITE_WORKER_SERVICE;
+          const host = process.env.EKODI_CANONICAL_HOST;
           const base = 'https://api.cloudflare.com/client/v4';
-          const headers = { authorization: `Bearer ${token}`, accept: 'application/json' };
+          const authHeaders = { authorization: `Bearer ${token}`, accept: 'application/json' };
 
-          async function req(label, path) {
-            const response = await fetch(base + path, { headers });
+          async function api(path, init = {}) {
+            const response = await fetch(base + path, {
+              ...init,
+              headers: {
+                ...authHeaders,
+                ...(init.body ? { 'content-type': 'application/json' } : {}),
+                ...(init.headers || {})
+              }
+            });
             const body = await response.json().catch(() => ({}));
-            const msg = body?.errors?.[0]?.message || '';
-            console.log(`${label}: http=${response.status} success=${body?.success === true}${msg ? ` error=${msg.slice(0,120)}` : ''}`);
-            return { response, body };
+            if (!response.ok || body?.success === false) {
+              const message = body?.errors?.[0]?.message || `HTTP ${response.status}`;
+              throw new Error(`${path}: ${message}`);
+            }
+            return body;
           }
 
-          const verify = await req('account_verify', `/accounts/${account}/tokens/verify`);
-          const tokenId = verify.body?.result?.id || '';
-          console.log(`token_active=${Boolean(tokenId)} token_id_tail=${tokenId ? tokenId.slice(-6) : 'none'}`);
-          if (!tokenId) process.exit(2);
+          const verify = await api(`/accounts/${account}/tokens/verify`);
+          const tokenId = verify?.result?.id;
+          if (!tokenId) throw new Error('현재 Account API Token ID를 확인하지 못했습니다.');
 
-          const details = await req('account_token_details', `/accounts/${account}/tokens/${tokenId}`);
-          const groups = await req('account_permission_groups', `/accounts/${account}/tokens/permission_groups`);
-          const tokenData = details.body?.result || {};
+          const [details, groupPayload, domains] = await Promise.all([
+            api(`/accounts/${account}/tokens/${tokenId}`),
+            api(`/accounts/${account}/tokens/permission_groups`),
+            api(`/accounts/${account}/workers/domains?service=${encodeURIComponent(service)}`)
+          ]);
+
+          const tokenData = details?.result || {};
+          const groups = Array.isArray(groupPayload?.result) ? groupPayload.result : [];
+          const analytics = groups.find(group => group?.name === 'Analytics Read' && Array.isArray(group?.scopes) && group.scopes.includes('com.cloudflare.api.account.zone'));
+          if (!analytics?.id) throw new Error('Zone Analytics Read permission group을 찾지 못했습니다.');
+
+          const domain = (domains?.result || []).find(item => item?.hostname === host && item?.service === service);
+          const zoneId = domain?.zone_id;
+          if (!zoneId) throw new Error(`${host}의 Cloudflare Zone ID를 찾지 못했습니다.`);
+
+          const zoneKey = `com.cloudflare.api.account.zone.${zoneId}`;
+          const accountKey = `com.cloudflare.api.account.${account}`;
           const policies = Array.isArray(tokenData.policies) ? tokenData.policies : [];
-          console.log(`token_name=${String(tokenData.name || '').slice(0,80)} policy_count=${policies.length}`);
-          for (const [index, policy] of policies.entries()) {
-            const names = (policy.permission_groups || []).map(group => group.name || group.id).join(' | ');
-            const resources = Object.keys(policy.resources || {}).join(' | ');
-            console.log(`policy_${index + 1}_permissions=${names}`);
-            console.log(`policy_${index + 1}_resources=${resources}`);
+          const hasGroup = policy => (policy?.permission_groups || []).some(group => group?.id === analytics.id);
+          const coversZone = policy => {
+            const resources = policy?.resources || {};
+            if (resources[zoneKey] === '*') return true;
+            if (resources['com.cloudflare.api.account.zone.*'] === '*') return true;
+            const nested = resources[accountKey];
+            return Boolean(nested && typeof nested === 'object' && nested['com.cloudflare.api.account.zone.*'] === '*');
+          };
+          const alreadyEffective = policies.some(policy => hasGroup(policy) && coversZone(policy));
+
+          if (alreadyEffective) {
+            console.log(`Zone Analytics Read is already effective for ${host}; no token policy change needed.`);
+            process.exit(0);
           }
 
-          const permissionGroups = Array.isArray(groups.body?.result) ? groups.body.result : [];
-          const interesting = permissionGroups.filter(group => /analytics read|api tokens (write|edit|read)/i.test(String(group.name || '')));
-          for (const group of interesting) {
-            console.log(`permission_group name=${group.name} id=${group.id} scope=${group.scopes?.join(',') || group.scope || group.meta?.scope || 'unknown'}`);
+          const cleanPolicies = policies.map(policy => ({
+            effect: policy.effect || 'allow',
+            resources: policy.resources || {},
+            permission_groups: (policy.permission_groups || []).map(group => ({ id: group.id })).filter(group => group.id)
+          }));
+          cleanPolicies.push({
+            effect: 'allow',
+            resources: { [zoneKey]: '*' },
+            permission_groups: [{ id: analytics.id }]
+          });
+
+          const payload = {
+            name: tokenData.name || 'EKODI GitHub Deploy',
+            policies: cleanPolicies
+          };
+          for (const key of ['condition', 'expires_on', 'not_before', 'status']) {
+            if (tokenData[key] !== undefined && tokenData[key] !== null) payload[key] = tokenData[key];
           }
 
-          const hasTokenWrite = policies.some(policy => (policy.permission_groups || []).some(group => /account api tokens (write|edit)/i.test(String(group.name || ''))));
-          const hasAnalyticsRead = policies.some(policy => (policy.permission_groups || []).some(group => /analytics read/i.test(String(group.name || ''))));
-          console.log(`has_account_token_write=${hasTokenWrite}`);
-          console.log(`has_analytics_read=${hasAnalyticsRead}`);
+          await api(`/accounts/${account}/tokens/${tokenId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+
+          const after = await api(`/accounts/${account}/tokens/${tokenId}`);
+          const applied = (after?.result?.policies || []).some(policy =>
+            (policy?.permission_groups || []).some(group => group?.id === analytics.id) &&
+            (policy?.resources || {})[zoneKey] === '*'
+          );
+          if (!applied) throw new Error('Cloudflare가 Zone Analytics Read 정책을 저장하지 않았습니다.');
+          console.log(`Added Zone Analytics Read for ${host} only. Existing token secret and other policies were preserved.`);
           NODE
+
+      - name: Backfill 30-day Cloudflare Health aggregates
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql_file="$RUNNER_TEMP/ekodi-system-health.sql"
+          success=0
+          for attempt in $(seq 1 8); do
+            if node scripts/collect-system-health.mjs "$sql_file"; then
+              success=1
+              echo "Cloudflare Analytics collector succeeded on attempt $attempt."
+              break
+            fi
+            echo "Analytics permission propagation pending ($attempt/8)."
+            sleep 5
+          done
+          test "$success" -eq 1
+          test -s "$sql_file"
+          npx --yes wrangler@4.119.0 d1 execute ekodi-auth \
+            --remote \
+            --config wrangler.api.toml \
+            --file "$sql_file"
+
+      - name: Verify production Health aggregate rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 d1 execute ekodi-auth \
+            --remote \
+            --config wrangler.api.toml \
+            --command "SELECT COUNT(*) AS row_count, MIN(day) AS first_day, MAX(day) AS last_day, COALESCE(SUM(requests),0) AS requests FROM system_usage_daily WHERE source='cloudflare'; SELECT source,status,last_attempt_at,last_success_at,message FROM system_usage_state WHERE source='cloudflare' LIMIT 1;"
