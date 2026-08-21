@@ -1,8 +1,8 @@
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
   version: 2,
-  updatedAt: '2026-08-19',
+  updatedAt: '2026-08-21',
   identityModel: 'person-space-role',
-  shellVersion: 1,
+  shellVersion: 2,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
   services: [

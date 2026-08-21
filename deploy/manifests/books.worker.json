@@ -9,14 +9,14 @@
         "statuses": [200, 301, 302, 307, 308],
         "redirect": "follow",
         "expect": ["href=\"https://ekodi.kr/\"", "https://shell.ekodi.kr/shell.js"],
-        "headerExpect": ["x-ekodi-shell: v1"]
+        "headerExpect": ["x-ekodi-shell: v2"]
       },
       {
         "url": "https://books.ekodi.kr/publishing/",
         "statuses": [200, 301, 302, 307, 308],
         "redirect": "follow",
         "expect": ["id=\"consultationForm\"", "https://shell.ekodi.kr/shell.js"],
-        "headerExpect": ["x-ekodi-shell: v1"]
+        "headerExpect": ["x-ekodi-shell: v2"]
       },
       {
         "url": "https://books.ekodi.kr/admin",
