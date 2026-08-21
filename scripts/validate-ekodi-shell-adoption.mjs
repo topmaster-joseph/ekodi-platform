@@ -1,13 +1,16 @@
 import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
-const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter]=await Promise.all([
+const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shellSource,injectorSource]=await Promise.all([
   readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.url),'utf8'),
   readFile(new URL('../auth-site/auth-router.js',import.meta.url),'utf8'),
   readFile(new URL('../auth-site/client-auth.js',import.meta.url),'utf8'),
   readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),
   readFile(new URL('../platform-router-worker.js',import.meta.url),'utf8').catch(()=>''),
+  readFile(new URL('../shell/theme.json',import.meta.url),'utf8').then(JSON.parse),
+  readFile(new URL('../shell/shell.js',import.meta.url),'utf8'),
+  readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
 ]);
 const manifest=EKODI_SERVICE_MANIFEST;
 const allowedKinds=new Set(['person','business','organization','church','community','project']);
@@ -20,8 +23,15 @@ function fail(message){console.error(`❌ EKODI Shell adoption: ${message}`);pro
 
 if(manifest.identityModel!=='person-space-role')fail('identityModel must remain person-space-role');
 if(manifest.shellPolicy!=='required-for-user-facing-services')fail('shellPolicy must require Shell for user-facing services');
-if(!Number.isInteger(manifest.shellVersion)||manifest.shellVersion<1)fail('shellVersion must be a positive integer');
+if(!Number.isInteger(manifest.shellVersion)||manifest.shellVersion<2)fail('shellVersion must be at least 2');
 if(!Number.isInteger(manifest.onboardingPolicyVersion)||manifest.onboardingPolicyVersion<1)fail('onboardingPolicyVersion must be a positive integer');
+if(theme.version!==manifest.shellVersion)fail(`theme version ${theme.version} must match shellVersion ${manifest.shellVersion}`);
+for(const required of ['workspace','admin','form','document','data'])if(!theme.rules?.stableSurfaces?.includes(required))fail(`stable surface missing: ${required}`);
+for(const required of ['transition','bridge','loading','handoff'])if(!theme.rules?.dynamicSurfaces?.includes(required))fail(`dynamic surface missing: ${required}`);
+for(const required of ['navigationPosition','buttonGeometry','fontScale','formLayout','focusTreatment','contrastFloor','safeArea','authMeaning'])if(!theme.rules?.dynamicMustNotChange?.includes(required))fail(`dynamic protected property missing: ${required}`);
+if(!shellSource.includes("setSurface")||!shellSource.includes("ekodi:shell-theme"))fail('Shell browser API must publish the v2 surface/theme contract');
+if(!injectorSource.includes('data-ekodi-surface="workspace"'))fail('Worker injection must default to stable workspace surface');
+if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker injection must advertise Shell v2');
 
 const byId=new Map();
 const byHost=new Map();
@@ -41,6 +51,7 @@ for(const service of manifest.services||[]){
   if(typeof service.sso!=='boolean')fail(`${service.id} must declare sso`);
   if(typeof service.targetable!=='boolean')fail(`${service.id} must declare targetable`);
   if(!allowedIntegrations.has(service.shellIntegration))fail(`${service.id} must declare a recognized shellIntegration`);
+  if(!theme.services?.[service.id]?.accent)fail(`${service.id} needs a Shell v2 identity accent`);
   const planned=service.state==='planned';
   if(planned&&service.shellIntegration!=='planned')fail(`${service.id} is planned and must use shellIntegration=planned`);
   if(!planned&&service.shellIntegration==='planned')fail(`${service.id} is active but still marked shellIntegration=planned`);
@@ -73,6 +84,6 @@ for(const service of ecosystem.services||[]){
   if(['live','beta'].includes(service.status)&&service.productionVerified===true&&manifestService.state==='planned')fail(`${service.id} is production verified but planned in service manifest`);
 }
 for(const service of manifest.services||[]){if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`)}
-for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Future-site onboarding','Browser context contract','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
+for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell adoption policy passed: ${manifest.services.length} services covered; zero legacy services remain pending; future services require automatic onboarding v${manifest.onboardingPolicyVersion}.`);
+console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; stable workspace UI and bounded dynamic surfaces verified.`);
