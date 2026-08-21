@@ -1,0 +1,53 @@
+name: Diagnose Cloudflare Token Capability
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-cloudflare-token-capability.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inspect token capability without changing Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          node <<'NODE'
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const base = 'https://api.cloudflare.com/client/v4';
+          const headers = { authorization: `Bearer ${token}`, accept: 'application/json' };
+
+          async function req(label, path) {
+            const response = await fetch(base + path, { headers });
+            const body = await response.json().catch(() => ({}));
+            const msg = body?.errors?.[0]?.message || '';
+            console.log(`${label}: http=${response.status} success=${body?.success === true}${msg ? ` error=${msg.slice(0,120)}` : ''}`);
+            return { response, body };
+          }
+
+          const userVerify = await req('user_verify', '/user/tokens/verify');
+          const accountVerify = await req('account_verify', `/accounts/${account}/tokens/verify`);
+          const tokenId = accountVerify.body?.result?.id || userVerify.body?.result?.id || '';
+          console.log(`token_active=${Boolean(tokenId)} token_id_tail=${tokenId ? tokenId.slice(-6) : 'none'}`);
+
+          if (tokenId) {
+            await req('user_token_details', `/user/tokens/${tokenId}`);
+            await req('account_token_details', `/accounts/${account}/tokens/${tokenId}`);
+          }
+          await req('user_token_list', '/user/tokens?per_page=5');
+          await req('account_token_list', `/accounts/${account}/tokens?per_page=5`);
+          await req('user_permission_groups', '/user/tokens/permission_groups');
+          await req('account_permission_groups', `/accounts/${account}/tokens/permission_groups`);
+          NODE
