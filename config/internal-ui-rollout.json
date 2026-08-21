@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "status": "in-progress",
+  "policy": "EKODI internal work surfaces inherit Shell v2 dark tokens and interaction rules. Public brand surfaces remain service-specific. Dynamic visual variation is limited to transition, bridge, loading, and handoff surfaces.",
+  "internalSurfaces": ["workspace", "admin", "form", "document", "data"],
+  "dynamicSurfaces": ["transition", "bridge", "loading", "handoff"],
+  "protected": ["navigation-position", "form-layout", "font-scale", "contrast", "auth-meaning", "tenant-boundary", "mobile-safe-area"],
+  "rootWorkspaceServices": ["my", "business", "author", "social", "messenger", "energy", "invest"],
+  "publicRootServices": ["marketing", "community", "church", "biz", "work", "books", "lab", "mall", "trade", "pay"],
+  "completionGates": {
+    "shared-workspace-style-present": false,
+    "service-default-surfaces-explicit": false,
+    "shell-loads-shared-style-only-on-internal-surfaces": false,
+    "public-roots-not-forced-dark": false,
+    "legacy-shell-v1-contracts-removed": false,
+    "mobile-fixed-header-contract-preserved": false,
+    "ci-passes": false,
+    "production-shell-verified": false
+  }
+}
