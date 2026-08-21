@@ -1,0 +1,89 @@
+name: Apply Health Graphics Fix
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/apply-health-graphics-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Apply targeted Health graphics patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          js = Path('system-health-admin.js')
+          s = js.read_text()
+          old = '''        <div class="core-health-fleet" data-core-fleet><p class="operations-loading">운영 상태 확인 전입니다.</p></div>'''
+          new = '''        <div class="core-health-fleet" data-core-fleet><p class="operations-loading">운영 상태 확인 전입니다.</p></div>\n        <div class="core-health-latency-chart" data-core-latency-chart aria-label="주요 사이트 응답속도 그래프"><p class="operations-loading">응답속도 그래프 준비 전입니다.</p></div>'''
+          assert old in s
+          s = s.replace(old, new, 1)
+
+          old = '''  function renderFleet(overview) {\n    const list = get('[data-core-fleet]');\n    list.textContent = '';'''
+          new = '''  function renderFleet(overview) {\n    const list = get('[data-core-fleet]');\n    const latencyChart = get('[data-core-latency-chart]');\n    list.textContent = '';\n    latencyChart.textContent = '';'''
+          assert old in s
+          s = s.replace(old, new, 1)
+
+          old = '''      list.append(empty);\n      get('[data-core-fleet-summary]').textContent = '확인 필요';\n      return { ...counts, pending:1 };'''
+          new = '''      list.append(empty);\n      const chartEmpty = document.createElement('p');\n      chartEmpty.className = 'operations-loading';\n      chartEmpty.textContent = '응답속도 데이터가 없습니다.';\n      latencyChart.append(chartEmpty);\n      get('[data-core-fleet-summary]').textContent = '확인 필요';\n      return { ...counts, pending:1 };'''
+          assert old in s
+          s = s.replace(old, new, 1)
+
+          old = '''    get('[data-core-fleet-summary]').textContent = `${counts.ok}/${rows.length} 정상`;\n    return counts;'''
+          new = '''    const latencyRows = rows.map(service => {\n      const responseTime = Number(service.responseTime ?? service.latest?.responseTime);\n      return { service, responseTime };\n    }).filter(item => Number.isFinite(item.responseTime) && item.responseTime >= 0);\n    if (latencyRows.length) {\n      const maxLatency = Math.max(...latencyRows.map(item => item.responseTime), 1);\n      latencyRows.forEach(({ service, responseTime }) => {\n        const visual = document.createElement('div');\n        visual.className = 'core-health-latency-row';\n        visual.dataset.state = fleetState(service);\n        const label = document.createElement('span');\n        label.textContent = service.name || service.domain || service.id;\n        const track = document.createElement('i');\n        track.className = 'core-health-latency-track';\n        const fill = document.createElement('span');\n        fill.className = 'core-health-latency-fill';\n        fill.style.width = `${Math.max(4, Math.min(100, (responseTime / maxLatency) * 100))}%`;\n        track.append(fill);\n        const value = document.createElement('b');\n        value.textContent = `${Math.round(responseTime)} ms`;\n        visual.append(label, track, value);\n        latencyChart.append(visual);\n      });\n    } else {\n      const chartEmpty = document.createElement('p');\n      chartEmpty.className = 'operations-loading';\n      chartEmpty.textContent = '응답속도 데이터가 없습니다.';\n      latencyChart.append(chartEmpty);\n    }\n    get('[data-core-fleet-summary]').textContent = `${counts.ok}/${rows.length} 정상`;\n    return counts;'''
+          assert old in s
+          s = s.replace(old, new, 1)
+
+          old = '''    if (!series?.length) {\n      const empty = document.createElement('p');\n      empty.className = 'operations-loading';\n      empty.textContent = '아직 일별 집계 데이터가 없습니다.';\n      chart.append(empty);\n      return;\n    }'''
+          new = '''    if (!series?.length) {\n      const empty = document.createElement('div');\n      empty.className = 'system-health-chart-empty';\n      const grid = document.createElement('div');\n      grid.className = 'system-health-chart-empty-grid';\n      grid.setAttribute('aria-hidden', 'true');\n      const copy = document.createElement('p');\n      copy.className = 'operations-loading';\n      copy.textContent = '트래픽 집계 연결 대기 · 위의 주요 사이트 응답속도 그래픽은 현재 측정값으로 표시됩니다.';\n      empty.append(grid, copy);\n      chart.append(empty);\n      return;\n    }'''
+          assert old in s
+          s = s.replace(old, new, 1)
+          js.write_text(s)
+
+          css = Path('system-health-admin.css')
+          c = css.read_text().rstrip() + '''\n.core-health-latency-chart{display:grid;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(148,163,184,.12)}.core-health-latency-row{display:grid;grid-template-columns:minmax(72px,130px) minmax(80px,1fr) 58px;gap:8px;align-items:center;font-size:.7rem}.core-health-latency-row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted,#94a3b8)}.core-health-latency-row>b{text-align:right;font-size:.68rem;font-weight:700}.core-health-latency-track{display:block;height:7px;overflow:hidden;border-radius:999px;background:rgba(148,163,184,.13)}.core-health-latency-fill{display:block;height:100%;min-width:4px;border-radius:inherit;background:#22c55e}.core-health-latency-row[data-state="warn"] .core-health-latency-fill{background:#f59e0b}.core-health-latency-row[data-state="error"] .core-health-latency-fill{background:#ef4444}.core-health-latency-row[data-state="pending"] .core-health-latency-fill{background:#94a3b8}.system-health-chart-empty{display:grid;min-height:220px;align-content:center;gap:14px}.system-health-chart-empty-grid{height:128px;border:1px dashed rgba(148,163,184,.2);border-radius:12px;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(148,163,184,.12) 32px),repeating-linear-gradient(to right,transparent 0,transparent calc(14.285% - 1px),rgba(148,163,184,.08) 14.285%)}.system-health-chart-empty p{text-align:center;margin:0}@media(max-width:540px){.core-health-latency-row{grid-template-columns:72px minmax(60px,1fr) 48px;gap:6px}.core-health-latency-row>b{font-size:.64rem}}\n'''
+          css.write_text(c)
+
+          collector = Path('scripts/collect-system-health.mjs')
+          q = collector.read_text()
+          old = '''  } catch (error) {\n    const message = String(error?.message || error).slice(0, 400);\n    await writeFailure(message);\n    throw error;\n  }'''
+          new = '''  } catch (error) {\n    const rawMessage = String(error?.message || error).slice(0, 400);\n    const message = rawMessage.includes('zone.analytics.read')\n      ? 'Cloudflare Analytics Read 권한이 없어 트래픽 집계를 수집하지 못했습니다.'\n      : rawMessage;\n    await writeFailure(message);\n    throw new Error(message);\n  }'''
+          assert old in q
+          collector.write_text(q.replace(old, new, 1))
+
+          workflow = Path('.github/workflows/system-health-analytics.yml')
+          w = workflow.read_text()
+          old = '''          set -uo pipefail\n          sql_file="$RUNNER_TEMP/ekodi-system-health.sql"\n          node scripts/collect-system-health.mjs "$sql_file"\n          collector_status=$?\n          set -e'''
+          new = '''          set -uo pipefail\n          sql_file="$RUNNER_TEMP/ekodi-system-health.sql"\n          set +e\n          node scripts/collect-system-health.mjs "$sql_file"\n          collector_status=$?\n          set -e'''
+          assert old in w
+          workflow.write_text(w.replace(old, new, 1))
+          PY
+
+          node --check system-health-admin.js
+          node --check scripts/collect-system-health.mjs
+          node --test test/system-health-lightweight.test.mjs test/admin-health-menu.test.mjs
+
+      - name: Commit patch to fix branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add system-health-admin.js system-health-admin.css scripts/collect-system-health.mjs .github/workflows/system-health-analytics.yml
+          git commit -m 'fix: keep Health graphics useful without traffic aggregates'
+          git push origin HEAD:${{ github.head_ref }}
