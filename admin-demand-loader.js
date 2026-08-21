@@ -290,13 +290,26 @@
       finance.dataset.financeAssetsRequested = 'true';
       Promise.all([
         loadStyle('control-center-finance.css'),
-        loadStyle('author-billing-admin.css'),
       ]).then(async () => {
-        await loadScript('author-billing-admin.js');
         await loadScript('finance-monitor.js');
       }).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
+      });
+    }, true);
+  }
+
+  function bindBooksEnhancements() {
+    if (!nav || nav.dataset.creatorBillingBound === 'true') return;
+    nav.dataset.creatorBillingBound = 'true';
+    nav.addEventListener('click', event => {
+      const books = event.target.closest('[data-section="books"], [data-lazy-section="books"]');
+      if (!books || !authenticated()) return;
+      Promise.all([
+        loadStyle('author-billing-admin.css'),
+        loadScript('author-billing-admin.js'),
+      ]).catch(error => {
+        console.warn('[EKODI Admin] Creator Billing lazy load failed', error);
       });
     }, true);
   }
@@ -311,6 +324,7 @@
     if (!authenticated() || !nav) return;
     Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
     bindBaseEnhancements();
+    bindBooksEnhancements();
     window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
     if (requested) {
