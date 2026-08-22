@@ -100,6 +100,7 @@ export function createOpenAiProvider(env = {}, options = {}) {
         },
         body: JSON.stringify({
           model,
+          store: false,
           instructions: ADMIN_AI_INSTRUCTIONS,
           input: buildAdminInput(context),
           max_output_tokens: 1_200,
