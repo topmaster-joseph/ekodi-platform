@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const apiWorker = await readFile(new URL('../api-worker.js', import.meta.url), 'utf8');
 const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
+const workspacePolicy = JSON.parse(await readFile(new URL('../config/service-workspace-policy.json', import.meta.url), 'utf8'));
 
 const criticalClients = [
   ['client-cgma', 'cgma.ekodi.kr', '청계면상인회'],
@@ -12,14 +13,13 @@ const criticalClients = [
   ['client-yogurt', 'yogurt.ekodi.kr', '요거트퍼플 목포대점'],
 ];
 
-test('revenue-critical external clients stay active and monitored', () => {
-  for (const [id, domain, name] of criticalClients) {
+test('revenue-critical external clients remain customer workspaces, not provider services', () => {
+  assert.equal(workspacePolicy.customerWorkspaceRule.managedBy, 'customer_tenant_directory');
+  assert.equal(workspacePolicy.customerWorkspaceRule.preserveCustomerOwnership, true);
+  for (const [id, , name] of criticalClients) {
     const row = apiWorker.split('\n').find(line => line.includes(`id: '${id}'`));
-    assert.ok(row, `${id} must exist in SERVICE_CATALOG`);
-    assert.match(row, new RegExp(`domain: '${domain.replaceAll('.', '\\.')}'`));
-    assert.ok(row.includes("group: 'client'"), `${name} must remain an external client`);
-    assert.ok(row.includes("defaultState: 'active'"), `${name} must remain active`);
-    assert.ok(row.includes('defaultMonitor: true'), `${name} must remain monitored`);
+    assert.equal(row, undefined, `${name} must not exist in provider SERVICE_CATALOG`);
+    assert.ok(workspacePolicy.customerWorkspaceRule.examples.includes(name), `${name} must remain represented by the customer Workspace policy`);
   }
 });
 
@@ -34,7 +34,7 @@ test('EKODI-owned brands are never classified as external clients', () => {
   assert.ok(!apiWorker.includes('에코디선교회'), 'retired formal mission organization label must not reappear in Control API source');
 });
 
-test('short canonical client domains are preserved', () => {
+test('short canonical client domains are preserved as customer-facing workspace addresses', () => {
   for (const [, domain] of criticalClients) {
     assert.ok(!domain.includes('.marketing.ekodi.kr'), `${domain} must stay short`);
     assert.equal(domain.split('.').length, 3, `${domain} must be a first-level EKODI subdomain`);
