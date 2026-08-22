@@ -7,7 +7,7 @@ const area=document.body.dataset.area||'home';
 const STORAGE_KEY='ekodi_education_planner_v1';
 const $=(selector,root=document)=>root.querySelector(selector);
 const $$=(selector,root=document)=>[...root.querySelectorAll(selector)];
-const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]);
+const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'})[ch]);
 let session=null;
 let state=load();
 
@@ -69,8 +69,7 @@ function bindForms(){
   $('#shortlistForm')?.addEventListener('submit',event=>{event.preventDefault();const f=new FormData(event.currentTarget);const institution=safeText(f.get('institution'),120);if(!institution)return;state.shortlist.push({id:makeId(),institution,program:safeText(f.get('program'),140),level:safeText(f.get('level'),60),source:isHttps(f.get('source'))?String(f.get('source')):''});save();event.currentTarget.reset()});
   $('#studyForm')?.addEventListener('submit',event=>{event.preventDefault();const f=new FormData(event.currentTarget);const title=safeText(f.get('title'),140);if(!title)return;state.study.push({id:makeId(),kind:safeText(f.get('kind'),60),title,note:safeText(f.get('note'),220),source:isHttps(f.get('source'))?String(f.get('source')):''});save();event.currentTarget.reset()});
 }
-function bindJourneyLinks(){$$('[data-auth-link]').forEach(link=>link.href=authUrl(link.href||location.href));$('#authButton')?.addEventListener('click',authAction)}
 function renderAll(){renderToday();renderSummary();renderAdmission();renderStudy()}
 
-bindForms();bindJourneyLinks();renderAll();renderIdentity();
+bindForms();$('#authButton')?.addEventListener('click',authAction);renderAll();renderIdentity();
 if(enabled){try{await handoff()}catch(error){console.error('education auth handoff',error)}await refreshSession();sb?.auth.onAuthStateChange((_event,next)=>{session=next;renderIdentity()})}
