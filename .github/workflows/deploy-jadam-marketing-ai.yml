@@ -54,9 +54,13 @@ jobs:
           grep -Fq '&plan=plus' dist/marketing-ai/index.html
           grep -Fq '&plan=pro' dist/marketing-ai/index.html
           grep -Fq '&plan=auto' dist/marketing-ai/index.html
+          while IFS= read -r file; do
+            grep -Fq 'data-ekodi-fixed-header' "$file" || { echo "Fixed mobile header marker missing: $file"; exit 1; }
+            grep -Fq 'https://shell.ekodi.kr/shell.js' "$file" || { echo "Shared EKODI Shell missing: $file"; exit 1; }
+          done < <(find dist/marketing-ai -name index.html -type f -print)
           for file in dist/marketing-ai/jadam/index.html dist/marketing-ai/pizzamaru/index.html dist/marketing-ai/yogurtpurple/index.html; do
             grep -Fq 'id="googleCustomerAuth"' "$file"
-            grep -Fq 'Google로 로그인' "$file"
+            grep -Eq 'Google로 (로그인|무료 시작)' "$file"
             grep -Fq '/api/customer/federated-login' "$file"
             grep -Fq '/api/membership/me?site=marketing&tenant=' "$file"
             if grep -Fq '점주 Google 로그인' "$file" || grep -Fq '/api/customer/login' "$file" || grep -Fq '/api/customer/accept-invite' "$file"; then
@@ -77,16 +81,24 @@ jobs:
           set -euo pipefail
           verify_url() {
             url="$1"; needle="$2"
-            code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            code=$(curl -L -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${url}?release=${GITHUB_SHA}" || true)
             echo "$url -> $code"
             [ "$code" = '200' ] && grep -Fq "$needle" /tmp/site.html
           }
-          verify_customer() {
+          verify_fixed_header() {
             url="$1"; label="$2"
-            code=$(curl -L -sS -o /tmp/customer.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            code=$(curl -L -sS -o /tmp/customer.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${url}?release=${GITHUB_SHA}" || true)
+            echo "$url -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fq "$label" /tmp/customer.html
-            grep -Fq 'Google로 로그인' /tmp/customer.html
+            grep -Fq 'data-ekodi-fixed-header' /tmp/customer.html
+            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/customer.html
+          }
+          verify_customer() {
+            url="$1"; label="$2"
+            verify_fixed_header "$url" "$label" || return 1
+            grep -Fq 'id="googleCustomerAuth"' /tmp/customer.html
+            grep -Eq 'Google로 (로그인|무료 시작)' /tmp/customer.html
             grep -Fq '/api/customer/federated-login' /tmp/customer.html
             grep -Fq '/api/membership/me?site=marketing&tenant=' /tmp/customer.html
             ! grep -Fq '점주 Google 로그인' /tmp/customer.html
@@ -95,10 +107,10 @@ jobs:
             if verify_url 'https://marketing.ekodi.kr/' '마케팅AI' \
               && verify_url 'https://marketing.ekodi.kr/' '&plan=plus' \
               && verify_url 'https://marketing.ekodi.kr/qa/' '마케팅AI 검수센터' \
-              && verify_customer 'https://jadam.ekodi.kr/' '자담치킨 목포대점' \
-              && verify_customer 'https://pizzamaru.ekodi.kr/' '피자마루 목포대점' \
-              && verify_customer 'https://yogurt.ekodi.kr/' '요거트퍼플 목포대점'; then
-              echo 'Guarded Marketing AI universal login and membership release verified.'
+              && verify_customer 'https://jadam.ai.ekodi.kr/' '자담치킨 목포대점' \
+              && verify_customer 'https://pizzamaru.ai.ekodi.kr/' '피자마루 목포대점' \
+              && verify_customer 'https://yogurt.ai.ekodi.kr/' '요거트퍼플 목포대점'; then
+              echo 'Guarded Marketing AI tenant release verified on canonical ai.ekodi.kr domains with shared fixed mobile headers.'
               exit 0
             fi
             sleep 5
