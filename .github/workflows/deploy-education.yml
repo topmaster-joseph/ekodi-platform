@@ -1,0 +1,194 @@
+name: Deploy EKODI Education
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'education/**'
+      - 'education-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'my/life-journey.js'
+      - 'test/education-platform.test.mjs'
+      - 'test/my-life-journey.test.mjs'
+      - 'wrangler.education.toml'
+      - 'wrangler.education.staging.toml'
+      - 'deploy/manifests/education.worker.json'
+      - '.github/workflows/deploy-education.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'education/**'
+      - 'education-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'my/life-journey.js'
+      - 'test/education-platform.test.mjs'
+      - 'test/my-life-journey.test.mjs'
+      - 'wrangler.education.toml'
+      - 'wrangler.education.staging.toml'
+      - 'deploy/manifests/education.worker.json'
+      - '.github/workflows/deploy-education.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-education-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Education contracts
+        run: |
+          set -euo pipefail
+          node --check education-worker.js
+          node --check education/app.js
+          node --check ekodi-service-manifest.js
+          node --test test/education-platform.test.mjs test/my-life-journey.test.mjs
+          node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/education.worker.json','utf8'))"
+          grep -Fq 'EKODI Education' education/index.html
+          grep -Fq 'ADMISSION · SOURCE FIRST' education/admission/index.html
+          grep -Fq 'STUDY · CONTINUITY' education/study/index.html
+          grep -Fq "id:'edu'" ekodi-service-manifest.js
+          grep -Fq "authMode:'client'" ekodi-service-manifest.js
+          grep -Fq '"education"' platform-boundaries.json
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-education-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Deploy isolated Education staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.staging.toml
+      - name: Verify staging surfaces and isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/edu-stage-headers -o /tmp/edu-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            admission=$(curl -L -sS -o /tmp/edu-stage-admission.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admission" || true)
+            study=$(curl -L -sS -o /tmp/edu-stage-study.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/study" || true)
+            health=$(curl -sS -o /tmp/edu-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            config=$(curl -sS -o /tmp/edu-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
+            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' ]] \
+              && grep -Fq 'EKODI Education' /tmp/edu-stage.html \
+              && grep -Fq 'ADMISSION · SOURCE FIRST' /tmp/edu-stage-admission.html \
+              && grep -Fq 'STUDY · CONTINUITY' /tmp/edu-stage-study.html \
+              && grep -Fq '"service":"ekodi-education"' /tmp/edu-stage-health.json \
+              && grep -Fq '"submissionExecution":false' /tmp/edu-stage-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/edu-stage-health.json \
+              && grep -Fq '"dataEnabled":false' /tmp/edu-stage-config.js \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-stage-headers; then
+              echo 'EKODI Education isolated staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Wait for Shell and central auth Education contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            shell_code=$(curl -sS -o /tmp/edu-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            auth_code=$(curl -sS -o /tmp/edu-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] \
+              && grep -Fq '"id":"edu"' /tmp/edu-manifest.json \
+              && grep -Fq '"authMode":"client"' /tmp/edu-manifest.json \
+              && grep -Fq 'manifestRealm' /tmp/edu-client-auth.js; then
+              echo 'Education Shell/Auth contract is live.'
+              break
+            fi
+            if [[ "$attempt" == '24' ]]; then echo 'Education Shell/Auth contract is not live; deployment blocked.'; exit 1; fi
+            sleep 5
+          done
+      - name: Bootstrap or guarded release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.education.toml --json > /tmp/edu-deployments.log 2>&1; then
+            echo 'Stable Education Worker exists; using guarded release.'
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/education.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/edu-deployments.log; then
+            echo 'No Education production Worker exists; bootstrapping verified source.'
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.toml
+          else
+            cat /tmp/edu-deployments.log
+            exit 1
+          fi
+      - name: Verify real Education production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/edu-headers -o /tmp/edu.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/' || true)
+            admission=$(curl -L -sS -o /tmp/edu-admission.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/admission' || true)
+            study=$(curl -L -sS -o /tmp/edu-study.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study' || true)
+            health=$(curl -sS -o /tmp/edu-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/health' || true)
+            config=$(curl -sS -o /tmp/edu-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/config.js' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/edu-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/admin' || true)
+            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' && "$admin" == '307' ]] \
+              && grep -Fq 'EKODI Education' /tmp/edu.html \
+              && grep -Fq 'ADMISSION · SOURCE FIRST' /tmp/edu-admission.html \
+              && grep -Fq 'STUDY · CONTINUITY' /tmp/edu-study.html \
+              && grep -Fq '"service":"ekodi-education"' /tmp/edu-health.json \
+              && grep -Fq '"dataMode":"production"' /tmp/edu-health.json \
+              && grep -Fq '"submissionExecution":false' /tmp/edu-health.json \
+              && grep -Fq '"dataEnabled":true' /tmp/edu-config.js \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-headers \
+              && grep -Eiq '^location: https://admin\.ekodi\.kr/education' /tmp/edu-admin-headers; then
+              echo 'EKODI Education production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Publish Education production status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in success) state=success;; cancelled) state=error;; *) state=failure;; esac
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(jq -n --arg state "$state" --arg context 'ekodi/education-production' --arg description "EKODI Education production deployment: $JOB_STATUS" --arg target_url "$target_url" '{state:$state,context:$context,description:$description,target_url:$target_url}')
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload"
