@@ -84,6 +84,9 @@ if (!finalLazyFeatures.includes('ekodiAssistDock') || !finalLazyFeatures.include
 if (!finalAiOpsCss.includes('.ekodi-assist-launcher') || !finalAiOpsCss.includes('.ekodi-assist-panel') || !finalAiOpsCss.includes('@media(max-width:720px)')) {
   throw new Error('Full EKODI Assist responsive styles were not attached to the secured lazy stylesheet');
 }
+if (!finalAiOpsCss.includes('height:min(500px,60vh)') || !finalAiOpsCss.includes('height:min(58vh,540px)') || !finalAiOpsCss.includes('max-height:calc(100vh - 132px)')) {
+  throw new Error('EKODI Assist compact panel height contract was not preserved in the secured lazy stylesheet');
+}
 if (!finalCampus.includes("section.id = 'campusPanel'") || !finalCampus.includes("button.dataset.section = 'campus'")) {
   throw new Error('On-demand Campus shell was not installed into campus-actions.js');
 }
@@ -94,4 +97,4 @@ if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes(
   throw new Error('Standalone Device Control CSS was not materialized');
 }
 
-console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Assist launcher-only first path; full Assist lazy; Campus, Policies and Device constructors removed from first interaction.`);
+console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Assist launcher-only first path; compact full Assist lazy; Campus, Policies and Device constructors removed from first interaction.`);
