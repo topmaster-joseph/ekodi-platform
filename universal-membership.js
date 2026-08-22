@@ -7,6 +7,7 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 const LEGACY_MEMBERSHIP_SITES = new Set([
   'portal', 'marketing', 'biz', 'trade', 'mall', 'books', 'church', 'lab', 'community', 'edu', 'media',
 ]);
+const USER_SERVICE_ORIGINS = new Set(USER_SERVICES.map((service) => `https://${service.domain}`));
 const FREE_PLAN = Object.freeze({
   id: 'free',
   label: 'FREE',
@@ -15,6 +16,10 @@ const FREE_PLAN = Object.freeze({
   billing: 'free',
 });
 
+function isUniversalAllowedOrigin(origin, env) {
+  return !origin || isAllowedOrigin(origin, env) || USER_SERVICE_ORIGINS.has(origin);
+}
+
 function cors(origin, env) {
   const headers = {
     'access-control-allow-headers': 'content-type, authorization',
@@ -22,7 +27,7 @@ function cors(origin, env) {
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
-  if (origin && isAllowedOrigin(origin, env)) headers['access-control-allow-origin'] = origin;
+  if (origin && isUniversalAllowedOrigin(origin, env)) headers['access-control-allow-origin'] = origin;
   return headers;
 }
 
@@ -189,7 +194,7 @@ async function genericSelect(request, env) {
 export async function handleUniversalMembership(request, env) {
   if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
   const origin = request.headers.get('origin');
-  if (origin && !isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
+  if (origin && !isUniversalAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
 
   const url = new URL(request.url);
