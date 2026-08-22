@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "provider": {
+    "legalOperator": "EKODIBIZ",
+    "role": "service_provider"
+  },
+  "entityBoundary": {
+    "service": "EKODI가 제공·운영하는 공통 기능 또는 상품",
+    "workspace": "EKODI 서비스를 이용하는 개인·사업체·교회·기관·단체의 독립 운영공간",
+    "entitlement": "사용자 또는 Workspace가 특정 Service를 이용할 수 있는 권리"
+  },
+  "userServiceKinds": [
+    {
+      "id": "shared_user_service",
+      "label": "사용자 공용서비스"
+    },
+    {
+      "id": "dedicated_user_service",
+      "label": "사용자 전용서비스"
+    }
+  ],
+  "visibilityPolicies": [
+    {
+      "id": "guest_visible",
+      "label": "비회원 노출 ON",
+      "guestVisible": true,
+      "existingMemberAccess": true
+    },
+    {
+      "id": "guest_hidden",
+      "label": "비회원 노출 OFF",
+      "guestVisible": false,
+      "existingMemberAccess": true
+    },
+    {
+      "id": "member_forced_off",
+      "label": "회원 이용 강제 OFF",
+      "guestVisible": false,
+      "existingMemberAccess": false
+    }
+  ],
+  "customerWorkspaceRule": {
+    "mustNotAppearInProviderServiceRegistry": true,
+    "managedBy": "customer_tenant_directory",
+    "preserveCustomerOwnership": true,
+    "examples": [
+      "청계면상인회",
+      "자담치킨 목포대점",
+      "피자마루 목포대점",
+      "요거트퍼플 목포대점"
+    ]
+  }
+}
