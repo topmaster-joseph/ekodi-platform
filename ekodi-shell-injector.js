@@ -4,7 +4,7 @@ const SHELL_ORIGIN='https://shell.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
-const MOBILE_FIXED_HEADER_STYLE=`<style data-ekodi-mobile-fixed-header>@media(max-width:768px){:where(.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header],body>header){position:sticky!important;top:0!important;z-index:2147482000!important}}</style>`;
+const MOBILE_FIXED_HEADER_STYLE=`<style data-ekodi-mobile-fixed-header>@media(max-width:768px){:where(.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header],body>header){position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important;z-index:2147482000!important}:where(body:has(.site-header),body:has(.app-header),body:has(.main-header),body:has([data-ekodi-fixed-header]))::before{content:"";display:block;height:calc(82px + env(safe-area-inset-top,0px));pointer-events:none}}</style>`;
 
 function extendDirective(csp,name,value){
   const parts=String(csp||'').split(';').map(v=>v.trim()).filter(Boolean);
