@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source=fs.readFileSync(new URL('../shell/user-context.js',import.meta.url),'utf8');
+const worker=fs.readFileSync(new URL('../ekodi-shell-worker.js',import.meta.url),'utf8');
+test('user context is limited to user surfaces',()=>{assert.match(source,/public/);assert.match(source,/workspace/);assert.match(source,/ekodiShellSurface/);});
+test('workspace switcher returns through My EKODI',()=>{assert.match(source,/my\.ekodi\.kr/);assert.match(source,/hash='workspaces'/);assert.match(source,/return_to/);assert.match(source,/공간 전환/);});
+test('context enriches the existing Shell header instead of adding overlapping fixed chrome',()=>{assert.match(source,/data-ekodi-shell-root/);assert.match(source,/shadowRoot/);assert.match(source,/data-space/);assert.match(source,/data-person/);assert.match(source,/data-role/);assert.doesNotMatch(source,/position:fixed/);assert.doesNotMatch(source,/attachShadow/);});
+test('context consumes the canonical Shell person-space-role event',()=>{assert.match(source,/ekodi:shell-context/);assert.match(source,/personName/);assert.match(source,/workspaceName/);assert.match(source,/workspaceKey/);assert.match(source,/ekodiUserName/);assert.match(source,/ekodiWorkspaceName/);assert.match(source,/ekodiUserRole/);});
+test('shell bundles user context',()=>{assert.match(worker,/user-context\.js/);assert.match(worker,/userContext/);});
