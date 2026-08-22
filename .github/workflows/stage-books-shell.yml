@@ -52,14 +52,17 @@ jobs:
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -L -D /tmp/books-stage.headers -o /tmp/books-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             publishing_code=$(curl -sS -L -D /tmp/books-publishing-stage.headers -o /tmp/books-publishing-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/publishing/" || true)
+            upaper_code=$(curl -sS -L -D /tmp/books-upaper-stage.headers -o /tmp/books-upaper-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/publishing/upaper/" || true)
             health_code=$(curl -sS -o /tmp/books-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            echo "Books staging: root=$root_code publishing=$publishing_code health=$health_code"
-            if [[ "$root_code" == '200' && "$publishing_code" == '200' && "$health_code" == '200' ]] \
+            echo "Books staging: root=$root_code publishing=$publishing_code upaper=$upaper_code health=$health_code"
+            if [[ "$root_code" == '200' && "$publishing_code" == '200' && "$upaper_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-stage.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-publishing-stage.html \
+              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-upaper-stage.html \
+              && grep -Fq 'UPAPER QUICK PUBLISH' /tmp/books-upaper-stage.html \
               && grep -Fiq 'x-ekodi-shell: v1' /tmp/books-stage.headers \
               && grep -Fq '"service":"ekodi-books"' /tmp/books-stage-health.json; then
-              echo 'Books isolated staging and shared Shell verified.'
+              echo 'Books isolated staging, adaptive UPaper helper, and shared Shell verified.'
               exit 0
             fi
             sleep 4
