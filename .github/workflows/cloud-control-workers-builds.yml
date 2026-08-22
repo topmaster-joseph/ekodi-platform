@@ -26,6 +26,10 @@ on:
         description: 'Audit reason for this Cloud Control invocation'
         required: true
         type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/cloud-control/requests/workers-builds.json'
 
 permissions:
   contents: read
@@ -55,7 +59,33 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/cloud-control-workers-builds.mjs
-          node --test test/cloud-control-workers-builds-contract.test.mjs
+          node --check scripts/resolve-cloud-control-request.mjs
+          node --test test/cloud-control-workers-builds-contract.test.mjs test/cloud-control-gitops-request-contract.test.mjs
+
+      - name: Resolve authorized request
+        env:
+          DISPATCH_MODE: ${{ inputs.mode }}
+          DISPATCH_TARGET: ${{ inputs.target }}
+          DISPATCH_CONFIRMATION: ${{ inputs.confirmation }}
+          DISPATCH_REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
+            request='.github/cloud-control/requests/workers-builds.json'
+            test -f "$request"
+            node scripts/resolve-cloud-control-request.mjs "$request" >> "$GITHUB_ENV"
+          else
+            [[ -n "$DISPATCH_MODE" ]]
+            [[ "$DISPATCH_TARGET" == 'ekodi-platform' ]]
+            [[ -n "$DISPATCH_REASON" ]]
+            [[ "$DISPATCH_REASON" != *$'\n'* ]]
+            printf 'CONTROL_MODE=%s\n' "$DISPATCH_MODE" >> "$GITHUB_ENV"
+            printf 'CONTROL_TARGET=%s\n' "$DISPATCH_TARGET" >> "$GITHUB_ENV"
+            printf 'CONTROL_CONFIRMATION=%s\n' "$DISPATCH_CONFIRMATION" >> "$GITHUB_ENV"
+            printf 'CONTROL_REASON=%s\n' "$DISPATCH_REASON" >> "$GITHUB_ENV"
+            printf 'CONTROL_REQUEST_ID=manual-%s\n' "$GITHUB_RUN_ID" >> "$GITHUB_ENV"
+            printf 'CONTROL_EXPIRES_AT=workflow-dispatch\n' >> "$GITHUB_ENV"
+          fi
 
       - name: Verify scoped credentials exist
         run: |
@@ -64,18 +94,23 @@ jobs:
           test -n "$CLOUDFLARE_BUILDS_ADMIN_TOKEN"
 
       - name: Enforce break-glass confirmation
-        if: inputs.mode == 'apply'
-        env:
-          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          test "$CONFIRMATION" = 'DISCONNECT_EKODI_PLATFORM_BUILDS'
+          test "$CONTROL_TARGET" = 'ekodi-platform'
+          case "$CONTROL_MODE" in
+            plan)
+              test -z "$CONTROL_CONFIRMATION"
+              ;;
+            apply)
+              test "$CONTROL_CONFIRMATION" = 'DISCONNECT_EKODI_PLATFORM_BUILDS'
+              ;;
+            *)
+              echo "Unsupported control mode: $CONTROL_MODE" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Execute allowlisted Cloud Control operation
-        env:
-          CONTROL_MODE: ${{ inputs.mode }}
-          CONTROL_TARGET: ${{ inputs.target }}
-          CONTROL_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
           node scripts/cloud-control-workers-builds.mjs \
@@ -85,17 +120,15 @@ jobs:
 
       - name: Publish audit summary
         if: always()
-        env:
-          CONTROL_MODE: ${{ inputs.mode }}
-          CONTROL_TARGET: ${{ inputs.target }}
-          CONTROL_REASON: ${{ inputs.reason }}
         run: |
           {
             echo '## EKODI Cloud Control'
             echo "- Actor: ${GITHUB_ACTOR}"
-            echo "- Mode: ${CONTROL_MODE}"
-            echo "- Target: ${CONTROL_TARGET}"
-            echo "- Reason: ${CONTROL_REASON}"
+            echo "- Mode: ${CONTROL_MODE:-unresolved}"
+            echo "- Target: ${CONTROL_TARGET:-unresolved}"
+            echo "- Request: ${CONTROL_REQUEST_ID:-unresolved}"
+            echo "- Expires: ${CONTROL_EXPIRES_AT:-unresolved}"
+            echo "- Reason: ${CONTROL_REASON:-unresolved}"
             echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             if [[ -f cloud-control-audit.json ]]; then
               echo '- Result:'
@@ -111,9 +144,6 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          CONTROL_MODE: ${{ inputs.mode }}
-          CONTROL_TARGET: ${{ inputs.target }}
-          CONTROL_REASON: ${{ inputs.reason }}
           JOB_STATUS: ${{ job.status }}
         run: |
           set -euo pipefail
@@ -125,9 +155,10 @@ jobs:
           Cloud Control run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
 
           - actor: ${GITHUB_ACTOR}
-          - mode: ${CONTROL_MODE}
-          - target: ${CONTROL_TARGET}
-          - reason: ${CONTROL_REASON}
+          - mode: ${CONTROL_MODE:-unresolved}
+          - target: ${CONTROL_TARGET:-unresolved}
+          - request: ${CONTROL_REQUEST_ID:-unresolved}
+          - reason: ${CONTROL_REASON:-unresolved}
           - job status: ${JOB_STATUS}
 
           \`\`\`json
