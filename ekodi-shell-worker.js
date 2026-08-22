@@ -5,18 +5,21 @@ function json(data,status=200,cache='public, max-age=60, stale-while-revalidate=
 function withHeaders(response){const headers=new Headers(response.headers);headers.set('access-control-allow-origin','*');headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','no-referrer');headers.set('cross-origin-resource-policy','cross-origin');if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
 async function bundledShell(request,env){
   const shellUrl=new URL(request.url);shellUrl.pathname='/shell.js';
+  const navUrl=new URL(request.url);navUrl.pathname='/user-global-nav.js';
   const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
-  const [shellResponse,headerResponse]=await Promise.all([
+  const [shellResponse,navResponse,headerResponse]=await Promise.all([
     env.ASSETS.fetch(new Request(shellUrl,request)),
+    env.ASSETS.fetch(new Request(navUrl,request)),
     env.ASSETS.fetch(new Request(headerUrl,request)),
   ]);
   if(!shellResponse.ok)return withHeaders(shellResponse);
   const shell=await shellResponse.text();
+  const globalNav=navResponse.ok?await navResponse.text():'';
   const fixedHeader=headerResponse.ok?await headerResponse.text():'';
   const headers=new Headers(shellResponse.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
-  return withHeaders(new Response(`${shell}\n${fixedHeader}\n`,{status:200,headers}));
+  return withHeaders(new Response(`${shell}\n${globalNav}\n${fixedHeader}\n`,{status:200,headers}));
 }
 
 export default {
