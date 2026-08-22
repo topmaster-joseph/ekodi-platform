@@ -10,8 +10,9 @@ test('EKODI keeps separate user experience and administrator control planes', as
   const myHome = await read('my/index.html');
   assert.match(constitution, /`admin\.ekodi\.kr`: private control plane and operational command center/);
   assert.match(myHome, /모든 일반사용자를 위한 EKODI 개인 홈/);
+  assert.match(myHome, /data-ekodi-ui="USER"/);
   assert.match(myHome, /내 공간/);
-  assert.match(myHome, /EKODI 통합 로그인/);
+  assert.match(myHome, /통합 로그인/);
 });
 
 test('EKODI identity remains person-space-role and shared Shell is mandatory for user-facing services', async () => {
