@@ -10,8 +10,10 @@ on:
       - 'system-health-admin.css'
       - 'system-health-control.js'
       - 'scripts/collect-system-health.mjs'
+      - 'scripts/apply-health-simple-diagrams.py'
       - 'migrations/0028_system_usage_daily.sql'
       - 'test/system-health-lightweight.test.mjs'
+      - 'test/admin-health-menu.test.mjs'
       - '.github/workflows/system-health-analytics.yml'
   push:
     branches: [main]
@@ -24,13 +26,38 @@ on:
       - '.github/workflows/system-health-analytics.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ekodi-system-health-analytics-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  diagram_patch:
+    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Apply lightweight Health diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/apply-health-simple-diagrams.py
+          node --check system-health-admin.js
+          node --test test/admin-health-menu.test.mjs test/system-health-lightweight.test.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add system-health-admin.js system-health-admin.css test/admin-health-menu.test.mjs
+          git commit -m 'feat: add lightweight Health system diagrams'
+          git push origin HEAD:${{ github.head_ref }}
+
   validate:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -45,7 +72,7 @@ jobs:
           node --check system-health-control.js
           node --check system-health-admin.js
           node --check scripts/collect-system-health.mjs
-          node --test test/system-health-lightweight.test.mjs
+          node --test test/system-health-lightweight.test.mjs test/admin-health-menu.test.mjs
 
   collect:
     if: github.event_name != 'pull_request'
