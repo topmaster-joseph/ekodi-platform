@@ -13,20 +13,34 @@ function mustReplace(source, search, replacement, label) {
   return source.replace(search, replacement);
 }
 
-// Device Control is published only as a standalone demand asset. The compact stylesheet
-// keeps its shell styles but loses every Device rule before the browser sees it.
+// Device Control is published only as a standalone demand asset. EKODI Assist keeps only
+// a tiny launcher in the first path; its full panel rides on already secured AI Ops assets.
 let compactCss = await text(`${dist}compact-control-center.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
+const assistJs = (await text(`${root}admin-assist-dock.js`)).trim();
+const assistCss = (await text(`${root}admin-assist-dock.css`)).trim();
+const assistBootstrapJs = (await text(`${root}admin-assist-bootstrap.js`)).trim();
+const assistBootstrapCss = (await text(`${root}admin-assist-bootstrap.css`)).trim();
+new Function(assistJs);
+new Function(assistBootstrapJs);
 await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n`);
 await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
 compactCss = mustReplace(compactCss, deviceCss, '', 'device CSS bundled in compact shell');
+compactCss = `${compactCss}\n${assistBootstrapCss}\n`;
 await writeFile(`${dist}compact-control-center.css`, compactCss);
+
+let lazyFeatures = await text(`${dist}admin-lazy-features.js`);
+lazyFeatures = `${lazyFeatures}\n${assistJs}\n`;
+await writeFile(`${dist}admin-lazy-features.js`, lazyFeatures);
+let aiOpsCss = await text(`${dist}ai-ops-admin.css`);
+aiOpsCss = `${aiOpsCss}\n${assistCss}\n`;
+await writeFile(`${dist}ai-ops-admin.css`, aiOpsCss);
 
 // Rebuild the startup JavaScript from the actual first-login responsibility instead of
 // carrying historical Campus/Policies/Device constructors and zero-delay routing timers.
-// Dynamic workspaces announce themselves and this runtime only normalizes their labels.
-const minimalCompactJs = `(() => {\n  'use strict';\n  const NAV_MAP = Object.freeze({\n    overview:'Operations', services:'Services', clients:'Clients', admins:'Admin Accounts',\n    books:'Books', finance:'Finance', affiliates:'Affiliates', communication:'Mail & Live',\n    workspace:'Cloud & Files', organization:'Organization', domains:'Domains', social:'Social',\n    community:'Community', campus:'Campus'\n  });\n  function setText(selector, value) {\n    const node = document.querySelector(selector);\n    if (node && node.textContent !== value) node.textContent = value;\n  }\n  function normalizeNavigation() {\n    const nav = document.querySelector('.sidebar nav');\n    if (!nav) return;\n    for (const item of nav.querySelectorAll('[data-section]')) {\n      const label = NAV_MAP[item.dataset.section];\n      const span = item.querySelector('span');\n      if (label && span && span.textContent !== label) span.textContent = label;\n    }\n    const domains = nav.querySelector('a[href="/legacy#domains"] span');\n    const activity = nav.querySelector('a[href="/legacy#activity"] span');\n    if (domains && domains.textContent !== 'Domains & DNS') domains.textContent = 'Domains & DNS';\n    if (activity && activity.textContent !== 'Activity Logs') activity.textContent = 'Activity Logs';\n  }\n  function normalizeVisibleShell() {\n    document.body.classList.add('compact-control-center');\n    normalizeNavigation();\n    setText('#logoutButton', 'Logout');\n    setText('#pageTitle', 'Operations');\n    const hero = document.querySelector('.hero[data-panel~="overview"]');\n    if (hero) {\n      const kicker = hero.querySelector('.kicker');\n      const heading = hero.querySelector('h2');\n      const copy = hero.querySelector('p:not(.kicker)');\n      if (kicker) kicker.textContent = 'OPERATIONS OVERVIEW';\n      if (heading) heading.textContent = 'EKODI Platform Operations';\n      if (copy) copy.textContent = 'Live service health, clients and core operations in one view.';\n      const actions = hero.querySelectorAll('.hero-actions a');\n      if (actions[0]) actions[0].textContent = 'EKODI Home ↗';\n      if (actions[1]) actions[1].textContent = 'Admin Tools ↗';\n    }\n  }\n  window.addEventListener('ekodi-feature-installed', normalizeNavigation);\n  window.addEventListener('ekodi-nav-changed', normalizeNavigation);\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeVisibleShell, { once:true });\n  else normalizeVisibleShell();\n})();\n`;
+// The tiny Assist launcher upgrades itself through the existing demand loader.
+const minimalCompactJs = `(() => {\n  'use strict';\n  const NAV_MAP = Object.freeze({\n    overview:'Operations', services:'Services', clients:'Clients', admins:'Admin Accounts',\n    books:'Books', finance:'Finance', affiliates:'Affiliates', communication:'Mail & Live',\n    workspace:'Cloud & Files', organization:'Organization', domains:'Domains', social:'Social',\n    community:'Community', campus:'Campus'\n  });\n  function setText(selector, value) {\n    const node = document.querySelector(selector);\n    if (node && node.textContent !== value) node.textContent = value;\n  }\n  function normalizeNavigation() {\n    const nav = document.querySelector('.sidebar nav');\n    if (!nav) return;\n    for (const item of nav.querySelectorAll('[data-section]')) {\n      const label = NAV_MAP[item.dataset.section];\n      const span = item.querySelector('span');\n      if (label && span && span.textContent !== label) span.textContent = label;\n    }\n    const domains = nav.querySelector('a[href="/legacy#domains"] span');\n    const activity = nav.querySelector('a[href="/legacy#activity"] span');\n    if (domains && domains.textContent !== 'Domains & DNS') domains.textContent = 'Domains & DNS';\n    if (activity && activity.textContent !== 'Activity Logs') activity.textContent = 'Activity Logs';\n  }\n  function normalizeVisibleShell() {\n    document.body.classList.add('compact-control-center');\n    normalizeNavigation();\n    setText('#logoutButton', 'Logout');\n    setText('#pageTitle', 'Operations');\n    const hero = document.querySelector('.hero[data-panel~="overview"]');\n    if (hero) {\n      const kicker = hero.querySelector('.kicker');\n      const heading = hero.querySelector('h2');\n      const copy = hero.querySelector('p:not(.kicker)');\n      if (kicker) kicker.textContent = 'OPERATIONS OVERVIEW';\n      if (heading) heading.textContent = 'EKODI Platform Operations';\n      if (copy) copy.textContent = 'Live service health, clients and core operations in one view.';\n      const actions = hero.querySelectorAll('.hero-actions a');\n      if (actions[0]) actions[0].textContent = 'EKODI Home ↗';\n      if (actions[1]) actions[1].textContent = 'Admin Tools ↗';\n    }\n  }\n  window.addEventListener('ekodi-feature-installed', normalizeNavigation);\n  window.addEventListener('ekodi-nav-changed', normalizeNavigation);\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeVisibleShell, { once:true });\n  else normalizeVisibleShell();\n})();\n${assistBootstrapJs}\n`;
 new Function(minimalCompactJs);
 await writeFile(`${dist}compact-control-center.js`, minimalCompactJs);
 
@@ -47,6 +61,8 @@ await writeFile(`${dist}control-center.html`, html);
 
 const finalCompactJs = await text(`${dist}compact-control-center.js`);
 const finalCompactCss = await text(`${dist}compact-control-center.css`);
+const finalLazyFeatures = await text(`${dist}admin-lazy-features.js`);
+const finalAiOpsCss = await text(`${dist}ai-ops-admin.css`);
 const finalCampus = await text(`${dist}campus-actions.js`);
 const finalDeviceJs = await text(`${dist}device-control-admin.js`);
 const finalDeviceCss = await text(`${dist}device-control-admin.css`);
@@ -55,6 +71,18 @@ for (const forbidden of ['WINDOWS_AGENT_URL', 'ekodiDevicePanel', 'CAMPUS_SERVIC
 }
 if (finalCompactCss.includes('.ekodi-device-panel') || finalCompactCss.includes('.ekodi-device-card')) {
   throw new Error('Device Control CSS leaked into compact-control-center.css');
+}
+if (!finalCompactJs.includes('ekodiAssistBootstrap') || finalCompactJs.includes('/api/control/messenger/inbox')) {
+  throw new Error('EKODI Assist bootstrap is not thin or full runtime leaked into first-path JS');
+}
+if (!finalCompactCss.includes('.ekodi-assist-bootstrap') || finalCompactCss.includes('.ekodi-assist-panel')) {
+  throw new Error('EKODI Assist first-path CSS is not launcher-only');
+}
+if (!finalLazyFeatures.includes('ekodiAssistDock') || !finalLazyFeatures.includes('/api/control/messenger/inbox') || !finalLazyFeatures.includes('/api/control/ai/actions')) {
+  throw new Error('Full EKODI Assist runtime was not attached to the secured lazy asset');
+}
+if (!finalAiOpsCss.includes('.ekodi-assist-launcher') || !finalAiOpsCss.includes('.ekodi-assist-panel') || !finalAiOpsCss.includes('@media(max-width:720px)')) {
+  throw new Error('Full EKODI Assist responsive styles were not attached to the secured lazy stylesheet');
 }
 if (!finalCampus.includes("section.id = 'campusPanel'") || !finalCampus.includes("button.dataset.section = 'campus'")) {
   throw new Error('On-demand Campus shell was not installed into campus-actions.js');
@@ -66,4 +94,4 @@ if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes(
   throw new Error('Standalone Device Control CSS was not materialized');
 }
 
-console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Campus, Policies and Device constructors removed from first interaction.`);
+console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Assist launcher-only first path; full Assist lazy; Campus, Policies and Device constructors removed from first interaction.`);
