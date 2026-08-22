@@ -282,7 +282,7 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Verify production Control, AI auth boundary and universal membership
+      - name: Verify production Control and universal membership boundaries
         shell: bash
         run: |
           set -euo pipefail
