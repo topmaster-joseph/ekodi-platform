@@ -4,6 +4,7 @@ compatibility_date = "2026-08-22"
 workers_dev = true
 preview_urls = false
 
+# The release workflow reconciles this custom-domain trigger before guarded promotion.
 [[routes]]
 pattern = "edu.ekodi.kr"
 zone_name = "ekodi.kr"
