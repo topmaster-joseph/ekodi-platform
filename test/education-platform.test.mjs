@@ -35,7 +35,7 @@ test('Education first release protects high-impact actions and sensitive documen
 test('Education is an isolated Worker with Shell and admin handoff',async()=>{
   const [worker,boundaries,production,staging]=await Promise.all([read('education-worker.js'),read('platform-boundaries.json'),read('wrangler.education.toml'),read('wrangler.education.staging.toml')]);
   assert.match(worker,/injectEkodiShell/);
-  assert.match(worker,/admin\.ekodi\.kr\/education/);
+  assert.match(worker,/Response\.redirect\('https:\/\/admin\.ekodi\.kr\/',307\)/);
   assert.match(boundaries,/"education"/);
   assert.match(boundaries,/education_\*/);
   assert.match(production,/pattern = "edu\.ekodi\.kr"/);
