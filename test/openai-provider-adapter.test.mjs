@@ -16,7 +16,7 @@ test('OpenAI provider stays unavailable without a server-side key', () => {
   });
 });
 
-test('OpenAI provider uses Responses API and redacts credentials from admin context', async () => {
+test('OpenAI provider uses Responses API without storage and redacts credentials from admin context', async () => {
   let observed = null;
   const provider = createOpenAiProvider({
     OPENAI_API_KEY: 'sk-proj-server-only-example-1234567890',
@@ -48,6 +48,7 @@ test('OpenAI provider uses Responses API and redacts credentials from admin cont
   assert.equal(observed.init.method, 'POST');
   assert.equal(observed.init.headers.authorization, 'Bearer sk-proj-server-only-example-1234567890');
   assert.equal(observed.body.model, 'gpt-5.6-terra');
+  assert.equal(observed.body.store, false);
   assert.match(observed.body.instructions, /EKODI Admin AI/);
   assert.match(observed.body.input, /System Health/);
   assert.match(observed.body.input, /\[REDACTED\]/);
