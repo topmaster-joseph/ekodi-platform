@@ -9,7 +9,11 @@ on:
       - 'ekodi-shell-injector.js'
       - 'shell/**'
       - 'config/internal-ui-rollout.json'
+      - 'config/seasonal-design-governance.json'
+      - 'docs/ekodi-shell-contract.md'
+      - 'scripts/validate-ekodi-shell-adoption.mjs'
       - 'scripts/validate-internal-ui-rollout.mjs'
+      - 'scripts/validate-seasonal-design-governance.mjs'
       - 'wrangler.shell.toml'
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
@@ -23,7 +27,11 @@ on:
       - 'ekodi-shell-injector.js'
       - 'shell/**'
       - 'config/internal-ui-rollout.json'
+      - 'config/seasonal-design-governance.json'
+      - 'docs/ekodi-shell-contract.md'
+      - 'scripts/validate-ekodi-shell-adoption.mjs'
       - 'scripts/validate-internal-ui-rollout.mjs'
+      - 'scripts/validate-seasonal-design-governance.mjs'
       - 'wrangler.shell.toml'
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
@@ -56,6 +64,7 @@ jobs:
           node --check shell/shell.js
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
+          node scripts/validate-seasonal-design-governance.mjs
           node scripts/validate-internal-ui-rollout.mjs
 
   staging:
@@ -82,17 +91,22 @@ jobs:
             health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             manifest=$(curl -sS -o /tmp/shell-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/manifest.json" || true)
             script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/shell.js" || true)
+            theme=$(curl -sS -o /tmp/theme.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/theme.json" || true)
             style=$(curl -sS -o /tmp/workspace.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/workspace.css" || true)
-            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' && "$style" == '200' ]] \
+            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' && "$theme" == '200' && "$style" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json \
               && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-manifest.json \
               && grep -Fq '"defaultSurface":"workspace"' /tmp/shell-manifest.json \
               && grep -Fq '"defaultSurface":"public"' /tmp/shell-manifest.json \
               && ! grep -Fq '"shellIntegration":"pending"' /tmp/shell-manifest.json \
               && grep -Fq 'window.EKODIShell' /tmp/shell.js \
+              && grep -Fq 'EKODI 서비스 전환' /tmp/shell.js \
+              && grep -Fq 'ekodi:public-experience' /tmp/shell.js \
+              && grep -Fq '"rotation":"weekly-deterministic"' /tmp/theme.json \
+              && grep -Fq '"timezone":"Asia/Seoul"' /tmp/theme.json \
               && grep -Fq 'data-ekodi-shell-surface="workspace"' /tmp/workspace.css \
               && grep -Fq 'data-ekodi-document-surface' /tmp/workspace.css; then
-              echo 'EKODI Shell staging verified with shared internal UI and explicit public/workspace surfaces.'
+              echo 'EKODI Shell staging verified with public service switching, weekly service identity rotation, and stable internal UI.'
               exit 0
             fi
             sleep 4
@@ -121,17 +135,22 @@ jobs:
             health=$(curl -sS -o /tmp/shell-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
             manifest=$(curl -sS -o /tmp/shell-live-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
             script=$(curl -sS -o /tmp/shell-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/shell.js' || true)
+            theme=$(curl -sS -o /tmp/shell-live-theme.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/theme.json' || true)
             style=$(curl -sS -o /tmp/shell-live-workspace.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/workspace.css' || true)
-            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' && "$style" == '200' ]] \
+            if [[ "$health" == '200' && "$manifest" == '200' && "$script" == '200' && "$theme" == '200' && "$style" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-live-health.json \
               && grep -Fq '"shellPolicy":"required-for-user-facing-services"' /tmp/shell-live-manifest.json \
               && grep -Fq '"defaultSurface":"workspace"' /tmp/shell-live-manifest.json \
               && grep -Fq '"defaultSurface":"public"' /tmp/shell-live-manifest.json \
               && ! grep -Fq '"shellIntegration":"pending"' /tmp/shell-live-manifest.json \
               && grep -Fq '공간 전환 · My EKODI' /tmp/shell-live.js \
+              && grep -Fq 'EKODI 서비스 전환' /tmp/shell-live.js \
+              && grep -Fq 'ekodi:public-experience' /tmp/shell-live.js \
+              && grep -Fq '"rotation":"weekly-deterministic"' /tmp/shell-live-theme.json \
+              && grep -Fq '"timezone":"Asia/Seoul"' /tmp/shell-live-theme.json \
               && grep -Fq 'data-ekodi-shell-surface="workspace"' /tmp/shell-live-workspace.css \
               && grep -Fq 'data-ekodi-document-surface' /tmp/shell-live-workspace.css; then
-              echo 'EKODI Shell production verified with shared internal UI and explicit public/workspace surfaces.'
+              echo 'EKODI Shell production verified with public service switching, weekly service identity rotation, and stable internal UI.'
               exit 0
             fi
             sleep 5
