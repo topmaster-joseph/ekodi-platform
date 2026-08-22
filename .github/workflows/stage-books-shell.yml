@@ -60,7 +60,7 @@ jobs:
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-publishing-stage.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-upaper-stage.html \
               && grep -Fq 'UPAPER QUICK PUBLISH' /tmp/books-upaper-stage.html \
-              && grep -Fiq 'x-ekodi-shell: v1' /tmp/books-stage.headers \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/books-stage.headers \
               && grep -Fq '"service":"ekodi-books"' /tmp/books-stage-health.json; then
               echo 'Books isolated staging, adaptive UPaper helper, and shared Shell verified.'
               exit 0
