@@ -14,7 +14,8 @@ test('Health capacity panel reports only bounded verified concurrency with evide
   assert.match(source, /다음 단계 50\+는 아직 미검증/);
   assert.match(source, /actions\/runs\/32541529236/);
   assert.match(source, /scripts\/ecosystem-load-test\.mjs/);
-  assert.doesNotMatch(source, /최대\s*20명/);
+  assert.match(source, /최대 20명이라는 뜻이 아닙니다/);
+  assert.doesNotMatch(source, /최대\s*20명(?:까지|을|을\s*수용|\s*지원|\s*가능)/);
   assert.doesNotMatch(source, /setInterval\(/);
   assert.doesNotMatch(source, /fetch\(/);
 });
