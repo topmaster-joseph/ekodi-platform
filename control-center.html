@@ -36,6 +36,7 @@
       <nav>
         <button class="nav active" data-section="overview">⌂ <span>통합 운영</span></button>
         <button class="nav" data-section="services">◉ <span>서비스 · 통계</span></button>
+        <button class="nav" data-section="architecture">◇ <span>Architecture</span></button>
         <button class="nav" data-section="finance">₩ <span>결제 · 회계</span></button>
         <button class="nav" data-section="communication">✦ <span>메일 · 라이브</span></button>
         <button class="nav" data-section="workspace">▣ <span>클라우드 · 자료</span></button>
@@ -124,7 +125,49 @@
           <a class="module" href="/legacy"><span class="icon">⌘</span><div><small>ADVANCED</small><strong>고급 관리 콘솔</strong><p>DNS·등록기관·감사로그 등 고급 운영</p></div><b>→</b></a>
         </div></section>
 
-        <section class="architecture" data-panel="overview"><p class="kicker">CONTROL ARCHITECTURE</p><h2>분리는 안전하게, 관제는 하나로</h2><div class="flow"><span>ekodi.kr<br><small>생태계 정문</small></span><b>→</b><span>*.ekodi.kr<br><small>독립 서비스</small></span><b>→</b><span>api · finance-api<br><small>상태 · 결제 · 회계</small></span><b>→</b><span>admin.ekodi.kr<br><small>통합 모니터링</small></span></div></section>
+        <section class="architecture hidden-panel" data-panel="architecture" aria-labelledby="architectureTitle">
+          <p class="kicker">SYSTEM ARCHITECTURE</p>
+          <h2 id="architectureTitle">EKODI System Architecture</h2>
+          <p>에코디 생태계가 무엇으로 구성되고 어떻게 연결되는지 설명하는 공식 시스템 지도입니다. 실시간 정상·주의·장애 판정은 이 화면이 아니라 Health가 담당합니다.</p>
+          <div class="hero-actions"><a class="secondary" href="#health">Health에서 현재 상태 확인 →</a><a class="secondary" href="/legacy#activity">Logs · 감사기록 →</a></div>
+
+          <div class="flow" aria-label="에코디 핵심 연결 구조">
+            <span>ekodi.kr<br><small>생태계 정문 · 서비스 발견</small></span><b>→</b>
+            <span>EKODI Core<br><small>인증 · 권한 · AI · 보안 · 공통정책</small></span><b>→</b>
+            <span>*.ekodi.kr<br><small>고객사이트 · 독립 서비스</small></span><b>→</b>
+            <span>api · finance-api<br><small>공통 API · 결제 · 회계</small></span>
+          </div>
+
+          <div class="cards">
+            <article class="module"><span class="icon">C</span><div><small>CORE</small><strong>EKODI Core</strong><p>통합인증, 권한, AI 연결, 보안정책과 공통 운영규칙을 제공하는 기반 계층입니다.</p></div></article>
+            <article class="module"><span class="icon">T</span><div><small>TENANTS</small><strong>고객 사이트 · 독립 서비스</strong><p>교회, 비즈, 연구소, 마케팅과 고객별 사이트는 Core를 공유하되 서비스 경계와 데이터 책임을 분리합니다.</p></div></article>
+            <article class="module"><span class="icon">API</span><div><small>INTERFACES</small><strong>공통 API 계층</strong><p>api.ekodi.kr와 finance-api.ekodi.kr가 상태, 운영 데이터, 결제·회계 등 공통 인터페이스를 담당합니다.</p></div></article>
+            <article class="module"><span class="icon">↗</span><div><small>EXTERNAL</small><strong>외부 연동</strong><p>Google 인증·Workspace, AI 공급자, 결제와 메일 등은 교체 가능한 외부 연동으로 Core 경계 밖에 둡니다.</p></div></article>
+          </div>
+
+          <div class="section-head">
+            <div><p class="kicker">RESPONSIBILITY MAP</p><h2>구조 · 상태 · 조치 · 기록을 분리</h2></div>
+            <p>Architecture는 구조, Health는 현재 상태, Operations는 조치, Logs는 사건과 변경 이력을 담당합니다.</p>
+          </div>
+          <div class="cards">
+            <article class="module featured"><span class="icon">◇</span><div><small>ARCHITECTURE</small><strong>어떻게 연결되어 있는가</strong><p>서비스 역할, 경계, 의존성, 인터페이스와 영향 범위를 설명합니다.</p></div></article>
+            <a class="module" href="#health"><span class="icon">♥</span><div><small>HEALTH</small><strong>지금 정상인가</strong><p>가동률, 응답시간, 오류, 외부 연동과 백업 등 현재 상태를 확인합니다.</p></div><b>→</b></a>
+            <article class="module"><span class="icon">⚙</span><div><small>OPERATIONS</small><strong>무엇을 조치할 것인가</strong><p>배포, 복구, 공급자 전환, 서비스 제어 등 실제 운영 행동의 책임 영역입니다.</p></div></article>
+            <a class="module" href="/legacy#activity"><span class="icon">≡</span><div><small>LOGS</small><strong>무슨 일이 있었는가</strong><p>로그인, 관리자 조작, API 오류, 배포와 보안 이벤트를 추적합니다.</p></div><b>→</b></a>
+          </div>
+
+          <div class="section-head">
+            <div><p class="kicker">SAFE EXTERNAL VIEW</p><h2>외부 개발자 · 유지보수 공유 기준</h2></div>
+            <p>이 페이지 자체는 설명 가능한 구조 정보만 담습니다. 비밀값은 어떤 보기에서도 노출하지 않습니다.</p>
+          </div>
+          <div class="cards">
+            <article class="module"><span class="icon">A</span><div><small>ADMIN</small><strong>관리자 관점</strong><p>생태계 전체 경계, 책임, 서비스 관계와 운영 진입점을 파악합니다.</p></div></article>
+            <article class="module"><span class="icon">D</span><div><small>DEVELOPER</small><strong>개발 · 유지보수 관점</strong><p>담당 서비스, 연결 API, 의존성, 배포 경계와 Health·Logs 진입점을 기준으로 작업합니다.</p></div></article>
+            <article class="module featured"><span class="icon">S</span><div><small>SAFE SHARE</small><strong>외부 공유 관점</strong><p>역할·경계·인터페이스만 공유하며 API Key, Secret, 환경변수, DB 접속정보, 내부 IP, PII, 토큰, 결제 인증정보는 제외합니다.</p></div></article>
+          </div>
+
+          <p class="finance-note">외부 업체에 보여줄 때의 원칙: 담당 범위와 연결 관계는 충분히 설명하되, 실제 인증정보와 개인정보는 이 화면에 존재하지 않도록 유지합니다.</p>
+        </section>
       </div>
     </main>
   </div>
