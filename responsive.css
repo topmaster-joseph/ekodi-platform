@@ -18,8 +18,15 @@
   :where(input,select,textarea,button){max-width:100%}
   :where(h1,h2,h3,h4,h5,h6,p,li,dt,dd,blockquote){max-width:100%}
   :where(.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]){
-    position:sticky!important;
+    position:fixed!important;
     top:0!important;
-    z-index:1000!important;
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    z-index:2147482000!important;
+    padding-top:max(env(safe-area-inset-top,0px),0px);
+  }
+  :where(body:has(>.site-header),body:has(>.app-header),body:has(>.main-header),body:has(>[data-ekodi-fixed-header])){
+    padding-top:calc(72px + env(safe-area-inset-top,0px))!important;
   }
 }
