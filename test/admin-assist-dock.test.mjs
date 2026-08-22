@@ -13,6 +13,10 @@ test('EKODI Assist source parses and stays one fixed dock with two modes',async(
   assert.match(js,/data-assist-tab=\"inbox\"/);
   assert.match(js,/data-assist-tab=\"ai\"/);
   assert.match(css,/\.ekodi-assist\{position:fixed/);
+  assert.match(css,/height:min\(500px,60vh\)/);
+  assert.match(css,/height:min\(58vh,540px\)/);
+  assert.match(css,/max-height:calc\(100vh - 132px\)/);
+  assert.doesNotMatch(css,/height:min\(680px,calc\(100vh - 92px\)\)/);
   assert.match(css,/@media\(max-width:720px\)/);
   assert.match(css,/position:fixed;left:0;right:0;bottom:0/);
   assert.doesNotMatch(js,/setInterval\s*\(/);
