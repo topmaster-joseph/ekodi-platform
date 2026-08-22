@@ -18,42 +18,104 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_GLOBAL_API_KEY: ${{ secrets.CLOUDFLARE_GLOBAL_API_KEY }}
+      CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+      CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+      CF_EMAIL: ${{ secrets.CF_EMAIL }}
     steps:
-      - name: Verify credentials are available
+      - name: Verify core credentials are available
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
       - name: Remove only the legacy ekodi-platform Workers Builds triggers
         shell: bash
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
-          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
 
-          curl --fail-with-body -sS "${api}/workers/scripts" "${auth[@]}" > /tmp/workers.json
+          request() {
+            local method="$1" url="$2" output="$3"
+            shift 3
+            curl -sS -o "$output" -w '%{http_code}' -X "$method" "$url" "$@"
+          }
+
+          auth_mode=''
+          workers_code=$(request GET "${api}/workers/scripts" /tmp/workers.json \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' || true)
+          if [[ "$workers_code" == '200' ]]; then
+            auth_mode='bearer'
+          fi
+
+          if [[ -z "$auth_mode" ]]; then
+            key=''
+            for candidate in "$CLOUDFLARE_GLOBAL_API_KEY" "$CLOUDFLARE_API_KEY" "$CF_GLOBAL_API_KEY" "$CF_API_KEY"; do
+              if [[ -n "$candidate" ]]; then key="$candidate"; break; fi
+            done
+            email=''
+            for candidate in "$CLOUDFLARE_EMAIL" "$CF_EMAIL"; do
+              if [[ -n "$candidate" ]]; then email="$candidate"; break; fi
+            done
+            if [[ -n "$key" && -n "$email" ]]; then
+              workers_code=$(request GET "${api}/workers/scripts" /tmp/workers.json \
+                -H "X-Auth-Email: ${email}" \
+                -H "X-Auth-Key: ${key}" \
+                -H 'Content-Type: application/json' || true)
+              if [[ "$workers_code" == '200' ]]; then auth_mode='global-key'; fi
+            fi
+          fi
+
+          if [[ -z "$auth_mode" ]]; then
+            echo "No existing repository credential can manage Cloudflare Workers Builds (Workers Scripts read returned HTTP ${workers_code})."
+            echo 'No Cloudflare resource was changed.'
+            exit 42
+          fi
+
+          cf_request() {
+            local method="$1" url="$2" output="$3"
+            if [[ "$auth_mode" == 'bearer' ]]; then
+              request "$method" "$url" "$output" \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H 'Content-Type: application/json'
+            else
+              request "$method" "$url" "$output" \
+                -H "X-Auth-Email: ${email}" \
+                -H "X-Auth-Key: ${key}" \
+                -H 'Content-Type: application/json'
+            fi
+          }
+
           worker_tag=$(jq -r '.result[]? | select(.id == "ekodi-platform") | .tag // empty' /tmp/workers.json | head -n1)
-
           if [[ -z "$worker_tag" ]]; then
-            echo 'No Worker named ekodi-platform exists; no legacy Workers Builds trigger can remain for that Worker.'
+            echo 'No Worker named ekodi-platform exists; no legacy Workers Builds trigger remains for that Worker.'
             exit 0
           fi
 
-          curl --fail-with-body -sS "${api}/builds/workers/${worker_tag}/triggers" "${auth[@]}" > /tmp/triggers.json
-          mapfile -t trigger_ids < <(jq -r '.result[]? | .trigger_uuid // empty' /tmp/triggers.json)
+          trigger_code=$(cf_request GET "${api}/builds/workers/${worker_tag}/triggers" /tmp/triggers.json || true)
+          if [[ "$trigger_code" != '200' ]]; then
+            echo "Existing credential can read Workers but cannot manage Workers Builds triggers (HTTP ${trigger_code})."
+            echo 'No Cloudflare resource was changed.'
+            exit 43
+          fi
 
+          mapfile -t trigger_ids < <(jq -r '.result[]? | .trigger_uuid // empty' /tmp/triggers.json)
           if (( ${#trigger_ids[@]} == 0 )); then
             echo 'Worker ekodi-platform has no Workers Builds triggers.'
             exit 0
           fi
 
-          echo "Found ${#trigger_ids[@]} legacy Workers Builds trigger(s) for ekodi-platform. Removing trigger(s) only; Worker and repository connection are preserved."
+          echo "Found ${#trigger_ids[@]} legacy Workers Builds trigger(s) for ekodi-platform. Removing trigger(s) only."
           for trigger_uuid in "${trigger_ids[@]}"; do
-            response=$(curl --fail-with-body -sS -X DELETE "${api}/builds/triggers/${trigger_uuid}" "${auth[@]}")
-            printf '%s' "$response" | jq -e '.success == true' >/dev/null
+            delete_code=$(cf_request DELETE "${api}/builds/triggers/${trigger_uuid}" /tmp/delete.json || true)
+            [[ "$delete_code" == '200' ]]
+            jq -e '.success == true' /tmp/delete.json >/dev/null
           done
 
-          curl --fail-with-body -sS "${api}/builds/workers/${worker_tag}/triggers" "${auth[@]}" > /tmp/after.json
+          verify_code=$(cf_request GET "${api}/builds/workers/${worker_tag}/triggers" /tmp/after.json || true)
+          [[ "$verify_code" == '200' ]]
           remaining=$(jq '[.result[]?] | length' /tmp/after.json)
           test "$remaining" = '0'
           echo 'Legacy ekodi-platform Workers Builds triggers removed and verified absent.'
