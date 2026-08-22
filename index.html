@@ -25,6 +25,7 @@
   --shadow:0 18px 50px rgba(90,105,93,.09);
   --live:#4f9270;
   --beta:#8c78b8;
+  --ekodi-home-header-height:82px;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -213,7 +214,8 @@ main{padding:46px 0 72px}
   .service-grid,.lower-grid{grid-template-columns:1fr}.connect-points{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:640px){
-  .shell{width:min(100% - 24px,520px)}.site-header{position:sticky;top:0;z-index:50;padding:13px 0}.navbar{align-items:flex-start;gap:12px}
+  body{padding-top:var(--ekodi-home-header-height)}
+  .shell{width:min(100% - 24px,520px)}.site-header{position:fixed;top:0;left:0;right:0;width:100%;z-index:2147482000;padding:calc(13px + env(safe-area-inset-top,0px)) 0 13px}.navbar{align-items:flex-start;gap:12px}
   .brand strong{font-size:21px}.brand small{font-size:9px}.nav{max-width:330px;gap:8px 13px;flex-wrap:wrap}.nav a{font-size:12px}
   .login{padding:8px 11px}.login svg{width:14px;height:14px}main{padding:26px 0 48px}.hero{min-height:0;padding:18px 0 30px}
   .eyebrow{font-size:10px;letter-spacing:.2em}.hero h1{font-size:clamp(42px,13vw,58px)}.hero h1 span{font-size:clamp(19px,6vw,27px)}
@@ -298,5 +300,23 @@ main{padding:46px 0 72px}
 
   <p class="footer-note">서로를 붙잡는 플랫폼이 아니라, 서로가 더 잘 서도록 연결하는 EKODI 생태계<span>An ecosystem that connects so people and platforms can stand more freely.</span></p>
 </main>
+<script>
+(()=>{
+  const header=document.querySelector('.site-header');
+  if(!header)return;
+  const mobile=window.matchMedia('(max-width:640px)');
+  const sync=()=>{
+    if(!mobile.matches){document.documentElement.style.removeProperty('--ekodi-home-header-height');return;}
+    const height=Math.ceil(header.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--ekodi-home-header-height',`${height}px`);
+  };
+  const observer='ResizeObserver' in window?new ResizeObserver(sync):null;
+  if(observer)observer.observe(header);
+  mobile.addEventListener?.('change',sync);
+  window.addEventListener('orientationchange',sync,{passive:true});
+  window.addEventListener('resize',sync,{passive:true});
+  sync();
+})();
+</script>
 </body>
 </html>
