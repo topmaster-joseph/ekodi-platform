@@ -15,7 +15,7 @@ export default{
     const url=new URL(request.url);
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/education',307);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/',307);
     let response;
     if(url.pathname==='/admission'||url.pathname==='/admission/')response=await assetFor(request,env,'/admission/index.html');
     else if(url.pathname==='/study'||url.pathname==='/study/')response=await assetFor(request,env,'/study/index.html');
