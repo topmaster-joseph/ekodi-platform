@@ -3,16 +3,22 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('My EKODI is a unified private-first hub, not a second source of truth',async()=>{
-  const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
+test('My EKODI is a unified private-first USER UI hub, not a second source of truth',async()=>{
+  const [html,app,userAi,userUi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/user-ai.js'),read('my/user-ui.css')]);
+  assert.match(html,/data-ekodi-ui="USER"/);
+  assert.match(html,/EKODI USER AI/);
   assert.match(html,/MY PLATFORMS/);
-  assert.match(html,/MY WORKSPACES/);
-  assert.match(html,/PRIVATE FIRST/);
-  assert.match(html,/NO DATA MONOLITH/);
+  assert.match(html,/MY SPACES/);
+  assert.match(html,/내 선택이 우선/);
+  assert.match(html,/공간별 데이터/);
   assert.match(app,/current_site_access/);
   assert.match(app,/current_site_workspaces/);
   assert.match(app,/creator_portfolio_items/);
   assert.doesNotMatch(app,/\.update\(\{visibility:/);
+  assert.match(userAi,/boundary:'suggest-and-handoff'/);
+  assert.match(userAi,/dependsOnExternalAI:false/);
+  assert.match(userAi,/specialistDirectControl:false/);
+  assert.match(userUi,/\.workspace-control\{display:none!important\}/);
 });
 
 test('My EKODI reuses central identity and consumes one-time auth handoff',async()=>{
@@ -116,7 +122,7 @@ test('Creator portfolio stays person-scoped and private by default',async()=>{
 test('Personal users can enter personal-brand Marketing without a tenant or store workspace',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
   assert.match(html,/PERSONAL BRAND MARKETING/);
-  assert.match(html,/소속이 없어도, 내가 브랜드입니다/);
+  assert.match(html,/나도 하나의 브랜드/);
   assert.match(html,/mode%3Dpersonal-brand/);
   assert.match(worker,/personalBrandMarketing:true/);
   assert.match(worker,/pathname==='\/personal-brand'/);
