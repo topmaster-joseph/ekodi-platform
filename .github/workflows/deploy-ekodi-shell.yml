@@ -62,6 +62,7 @@ jobs:
           node --check ekodi-shell-worker.js
           node --check ekodi-shell-injector.js
           node --check shell/shell.js
+          node --check shell/mobile-fixed-header.js
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
@@ -102,11 +103,15 @@ jobs:
               && grep -Fq 'window.EKODIShell' /tmp/shell.js \
               && grep -Fq 'EKODI 서비스 전환' /tmp/shell.js \
               && grep -Fq 'ekodi:public-experience' /tmp/shell.js \
+              && grep -Fq 'ekodi-mobile-fixed-header-style' /tmp/shell.js \
+              && grep -Fq 'data-ekodi-mobile-header-spacer' /tmp/shell.js \
+              && grep -Fq 'ResizeObserver' /tmp/shell.js \
+              && grep -Fq 'position:fixed!important' /tmp/shell.js \
               && grep -Fq '"rotation":"weekly-deterministic"' /tmp/theme.json \
               && grep -Fq '"timezone":"Asia/Seoul"' /tmp/theme.json \
               && grep -Fq 'data-ekodi-shell-surface="workspace"' /tmp/workspace.css \
               && grep -Fq 'data-ekodi-document-surface' /tmp/workspace.css; then
-              echo 'EKODI Shell staging verified with public service switching, weekly service identity rotation, and stable internal UI.'
+              echo 'EKODI Shell staging verified with service switching, shared mobile fixed headers, weekly service identity rotation, and stable internal UI.'
               exit 0
             fi
             sleep 4
@@ -146,11 +151,15 @@ jobs:
               && grep -Fq '공간 전환 · My EKODI' /tmp/shell-live.js \
               && grep -Fq 'EKODI 서비스 전환' /tmp/shell-live.js \
               && grep -Fq 'ekodi:public-experience' /tmp/shell-live.js \
+              && grep -Fq 'ekodi-mobile-fixed-header-style' /tmp/shell-live.js \
+              && grep -Fq 'data-ekodi-mobile-header-spacer' /tmp/shell-live.js \
+              && grep -Fq 'ResizeObserver' /tmp/shell-live.js \
+              && grep -Fq 'position:fixed!important' /tmp/shell-live.js \
               && grep -Fq '"rotation":"weekly-deterministic"' /tmp/shell-live-theme.json \
               && grep -Fq '"timezone":"Asia/Seoul"' /tmp/shell-live-theme.json \
               && grep -Fq 'data-ekodi-shell-surface="workspace"' /tmp/shell-live-workspace.css \
               && grep -Fq 'data-ekodi-document-surface' /tmp/shell-live-workspace.css; then
-              echo 'EKODI Shell production verified with public service switching, weekly service identity rotation, and stable internal UI.'
+              echo 'EKODI Shell production verified with service switching, shared mobile fixed headers, weekly service identity rotation, and stable internal UI.'
               exit 0
             fi
             sleep 5
