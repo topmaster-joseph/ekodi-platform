@@ -23,6 +23,12 @@ on:
       - 'security-edge.js'
       - 'ai-agent-control.js'
       - 'ai-governance-runtime.js'
+      - 'ai-resilience-runtime.js'
+      - 'core-ai-gateway.js'
+      - 'core-api.js'
+      - 'openai-provider-adapter.js'
+      - 'test/core-ai-gateway.test.mjs'
+      - 'test/openai-provider-adapter.test.mjs'
       - 'config/ai-mission-governance.json'
       - 'customer-google-prereg.js'
       - 'customer-federated-auth.js'
@@ -66,6 +72,12 @@ on:
       - 'security-edge.js'
       - 'ai-agent-control.js'
       - 'ai-governance-runtime.js'
+      - 'ai-resilience-runtime.js'
+      - 'core-ai-gateway.js'
+      - 'core-api.js'
+      - 'openai-provider-adapter.js'
+      - 'test/core-ai-gateway.test.mjs'
+      - 'test/openai-provider-adapter.test.mjs'
       - 'config/ai-mission-governance.json'
       - 'customer-google-prereg.js'
       - 'customer-federated-auth.js'
@@ -112,10 +124,10 @@ jobs:
           node-version: '24'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
-      - name: Validate control plane and governance
+      - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -128,9 +140,11 @@ jobs:
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
+          grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
+          ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
     needs: validate
@@ -184,6 +198,8 @@ jobs:
           ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
           ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
           GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          AI_PROVIDER = "NONE"
+          OPENAI_MODEL = "gpt-5.6-terra"
           ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
           [observability.logs]
           enabled = true
@@ -210,7 +226,7 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify security and universal membership boundaries
+      - name: Verify security, AI auth boundary and universal membership
         shell: bash
         run: |
           set -euo pipefail
@@ -219,12 +235,14 @@ jobs:
             headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
             devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
             ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
+            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/provider-status' || true)
             membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/portfolio' || true)
             catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/catalog?site=invest' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
               && [ "$devices" = '401' ] \
               && [ "$ai" = '401' ] \
+              && [ "$provider" = '401' ] \
               && [ "$membership" = '401' ] \
               && [ "$catalog" = '200' ] \
               && grep -Fq '"inheritedDefault":true' /tmp/catalog.json; then
@@ -264,18 +282,20 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Verify production Control and universal membership boundaries
+      - name: Verify production Control, AI auth boundary and universal membership
         shell: bash
         run: |
           set -euo pipefail
           health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
           devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
           ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
+          provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/provider-status')
           membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/portfolio')
           catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
           printf '%s' "$health" | grep -q '"ok":true'
           [ "$devices" = '401' ]
           [ "$ai" = '401' ]
+          [ "$provider" = '401' ]
           [ "$membership" = '401' ]
           [ "$catalog" = '200' ]
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
