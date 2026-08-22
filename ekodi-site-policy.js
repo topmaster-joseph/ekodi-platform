@@ -57,19 +57,20 @@ export const EKODI_OWNED_CUSTOMER_SITES = Object.freeze(
 );
 
 const OWNED_BY_ID = new Map(EKODI_OWNED_CUSTOMER_SITES.map(site => [site.id, site]));
+const OWNED_BY_SLUG = new Map(EKODI_OWNED_CUSTOMER_SITES.map(site => [site.slug, site]));
 const OWNED_BY_DOMAIN = new Map(EKODI_OWNED_CUSTOMER_SITES.map(site => [site.domain, site]));
-
 const PLATFORM_CORE_IDS = new Set(['my']);
 
 export function ownedCustomerSiteFor(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return null;
-  return OWNED_BY_ID.get(normalized) || OWNED_BY_DOMAIN.get(normalized) || null;
+  return OWNED_BY_ID.get(normalized) || OWNED_BY_SLUG.get(normalized) || OWNED_BY_DOMAIN.get(normalized) || null;
 }
 
 export function operatingModelForService(serviceId = '') {
+  const site = ownedCustomerSiteFor(serviceId);
+  if (site) return SITE_OPERATING_MODELS.CUSTOMER_SITE;
   const id = String(serviceId || '').trim().toLowerCase();
-  if (OWNED_BY_ID.has(id)) return SITE_OPERATING_MODELS.CUSTOMER_SITE;
   if (PLATFORM_CORE_IDS.has(id)) return SITE_OPERATING_MODELS.PLATFORM_CORE;
   return SITE_OPERATING_MODELS.SHARED_SERVICE;
 }
