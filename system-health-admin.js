@@ -86,6 +86,29 @@
       <article data-core-card="ai" data-state="pending"><div><small>AI Independence</small><b data-core-badge="ai">확인 전</b></div><strong data-core-value="ai">—</strong><span data-core-detail="ai">AI 공급자 없이도 Core 유지</span></article>
     </div>
 
+    <div class="system-health-divider"><span>SYSTEM MAP</span></div>
+    <div class="health-diagram-grid" aria-label="시스템 흐름 및 병목 다이어그램">
+      <article class="health-diagram-card health-path-card">
+        <div class="health-diagram-head"><div><small>REQUEST PATH</small><strong>서비스 연결 흐름</strong></div><span>현재 상태</span></div>
+        <div class="health-flow" data-health-flow>
+          <div class="health-flow-node" data-flow-node="user" data-state="ok"><small>USER</small><strong>사용자</strong><span>브라우저 · 모바일</span></div>
+          <i class="health-flow-arrow" aria-hidden="true">›</i>
+          <div class="health-flow-node" data-flow-node="edge" data-state="pending"><small>EDGE</small><strong>Cloudflare</strong><span data-flow-detail="edge">Analytics 확인 전</span></div>
+          <i class="health-flow-arrow" aria-hidden="true">›</i>
+          <div class="health-flow-node" data-flow-node="core" data-state="pending"><small>CORE</small><strong>API · Auth</strong><span data-flow-detail="core">Core 확인 전</span></div>
+          <i class="health-flow-arrow" aria-hidden="true">›</i>
+          <div class="health-flow-node" data-flow-node="data" data-state="pending"><small>DATA</small><strong>D1 · Storage</strong><span data-flow-detail="data">DB 확인 전</span></div>
+          <i class="health-flow-arrow" aria-hidden="true">›</i>
+          <div class="health-flow-node" data-flow-node="services" data-state="pending"><small>SERVICES</small><strong>EKODI Sites</strong><span data-flow-detail="services">사이트 확인 전</span></div>
+        </div>
+        <div class="health-state-matrix" data-health-state-matrix aria-label="사이트 상태 매트릭스"><p class="operations-loading">사이트 상태 매트릭스 준비 전입니다.</p></div>
+      </article>
+      <article class="health-diagram-card">
+        <div class="health-diagram-head"><div><small>BOTTLENECK</small><strong>느린 구간</strong></div><span>응답속도 기준</span></div>
+        <div class="health-bottlenecks" data-health-bottlenecks><p class="operations-loading">응답속도 분석 전입니다.</p></div>
+      </article>
+    </div>
+
     <div class="core-health-columns">
       <div class="core-health-card">
         <div class="core-health-card-head"><div><small>PRODUCTION FLEET</small><strong>주요 사이트</strong></div><span data-core-fleet-summary>—</span></div>
@@ -115,6 +138,23 @@
       <article><small>최근 전송량</small><strong data-health-bandwidth>—</strong><span>Cloudflare 측정값</span></article>
       <article><small>캐시 요청 비율</small><strong data-health-cache>—</strong><span>최근 선택 기간</span></article>
       <article><small>최근 고유 방문</small><strong data-health-unique>—</strong><span>Cloudflare 추정 고유 IP</span></article>
+    </div>
+    <div class="health-traffic-diagrams">
+      <article class="health-diagram-card">
+        <div class="health-diagram-head"><div><small>REQUEST FLOW</small><strong>캐시 · 원본 요청</strong></div><span data-request-flow-total>—</span></div>
+        <div class="health-request-flow" data-request-flow>
+          <div class="health-request-track"><span data-request-cache style="width:0%"></span><i data-request-origin style="width:100%"></i></div>
+          <div class="health-request-legend"><span><b class="health-legend-cache"></b>캐시 <strong data-request-cache-label>—</strong></span><span><b class="health-legend-origin"></b>원본 <strong data-request-origin-label>—</strong></span><span>위협 <strong data-request-threats>—</strong></span></div>
+        </div>
+      </article>
+      <article class="health-diagram-card">
+        <div class="health-diagram-head"><div><small>CHECKPOINTS</small><strong>최근 운영 확인</strong></div><span>읽기 전용</span></div>
+        <div class="health-checkpoints">
+          <div data-checkpoint-state="analytics" data-state="pending"><i></i><span><small>Analytics</small><strong data-checkpoint="analytics">확인 전</strong></span></div>
+          <div data-checkpoint-state="fleet" data-state="pending"><i></i><span><small>Fleet</small><strong data-checkpoint="fleet">확인 전</strong></span></div>
+          <div data-checkpoint-state="recovery" data-state="pending"><i></i><span><small>Recovery</small><strong data-checkpoint="recovery">확인 전</strong></span></div>
+        </div>
+      </article>
     </div>
     <div class="system-health-chart-card">
       <div class="system-health-chart-toolbar">
@@ -198,6 +238,23 @@
     chart.append(root);
   }
 
+  function renderTrafficFlow(data) {
+    const series = data?.series || [];
+    const total = series.reduce((sum, row) => sum + Math.max(0, Number(row.requests) || 0), 0);
+    const cached = series.reduce((sum, row) => sum + Math.max(0, Number(row.cachedRequests) || 0), 0);
+    const threats = series.reduce((sum, row) => sum + Math.max(0, Number(row.threats) || 0), 0);
+    const safeCached = Math.min(total, cached);
+    const origin = Math.max(0, total - safeCached);
+    const cachePercent = total ? Math.round((safeCached / total) * 1000) / 10 : 0;
+    const originPercent = total ? Math.round((origin / total) * 1000) / 10 : 0;
+    get('[data-request-flow-total]').textContent = total ? `${compact(total)} 요청` : '집계 대기';
+    get('[data-request-cache]').style.width = `${cachePercent}%`;
+    get('[data-request-origin]').style.width = `${originPercent}%`;
+    get('[data-request-cache-label]').textContent = total ? `${cachePercent}%` : '—';
+    get('[data-request-origin-label]').textContent = total ? `${originPercent}%` : '—';
+    get('[data-request-threats]').textContent = total ? compact(threats) : '—';
+  }
+
   function render(data) {
     latestData = data;
     const latest = data?.summary?.latest;
@@ -209,6 +266,10 @@
     const state = data?.state || {};
     const ok = state.status === 'ok';
     const error = state.status === 'error';
+    const edgeState = ok ? 'ok' : error ? 'error' : 'pending';
+    setFlowNode('edge', edgeState, ok ? `캐시 ${data?.summary?.cacheRequestPercent ?? 0}% · 집계 정상` : error ? 'Analytics 연결 확인 필요' : 'Analytics 집계 대기');
+    setCheckpoint('analytics', edgeState, ok ? time(state.lastSuccessAt) : error ? '수집 실패' : '집계 대기');
+    renderTrafficFlow(data);
     overall.dataset.state = ok ? 'ok' : error ? 'error' : 'pending';
     overallLabel.textContent = ok ? '정상' : error ? '점검 필요' : '집계 대기';
     status.textContent = ok
@@ -238,6 +299,20 @@
     catch (error) { return { ok:false, error:new Error(`${label}: ${error?.message || error}`) }; }
   }
 
+  function setFlowNode(name, state, detail) {
+    const node = get(`[data-flow-node="${name}"]`);
+    if (node) node.dataset.state = state;
+    const detailNode = get(`[data-flow-detail="${name}"]`);
+    if (detailNode) detailNode.textContent = detail;
+  }
+
+  function setCheckpoint(name, state, value) {
+    const row = get(`[data-checkpoint-state="${name}"]`);
+    if (row) row.dataset.state = state;
+    const valueNode = get(`[data-checkpoint="${name}"]`);
+    if (valueNode) valueNode.textContent = value;
+  }
+
   function setCoreCard(name, state, badge, value, detail) {
     const card = get(`[data-core-card="${name}"]`);
     if (card) card.dataset.state = state;
@@ -260,8 +335,12 @@
   function renderFleet(overview) {
     const list = get('[data-core-fleet]');
     const latencyChart = get('[data-core-latency-chart]');
+    const bottlenecks = get('[data-health-bottlenecks]');
+    const matrix = get('[data-health-state-matrix]');
     list.textContent = '';
     latencyChart.textContent = '';
+    bottlenecks.textContent = '';
+    matrix.textContent = '';
     const monitored = new Map((overview?.sites || []).map(item => [item.id, item]));
     const services = new Map((overview?.services || []).map(item => [item.id, item]));
     const rows = CORE_SERVICES.map(id => monitored.get(id) || services.get(id)).filter(Boolean);
@@ -276,6 +355,15 @@
       chartEmpty.className = 'operations-loading';
       chartEmpty.textContent = '응답속도 데이터가 없습니다.';
       latencyChart.append(chartEmpty);
+      const bottleneckEmpty = document.createElement('p');
+      bottleneckEmpty.className = 'operations-loading';
+      bottleneckEmpty.textContent = '응답속도 분석 데이터가 없습니다.';
+      bottlenecks.append(bottleneckEmpty);
+      const matrixEmpty = document.createElement('p');
+      matrixEmpty.className = 'operations-loading';
+      matrixEmpty.textContent = '사이트 상태 데이터가 없습니다.';
+      matrix.append(matrixEmpty);
+      setFlowNode('services', 'pending', '사이트 상태 확인 대기');
       get('[data-core-fleet-summary]').textContent = '확인 필요';
       return { ...counts, pending:1 };
     }
@@ -303,6 +391,15 @@
       meta.append(badge, latency);
       row.append(identity, meta);
       list.append(row);
+
+      const cell = document.createElement('span');
+      cell.className = 'health-state-cell';
+      cell.dataset.state = state;
+      cell.title = `${service.name || service.domain || service.id} · ${latency.textContent}`;
+      const cellLabel = document.createElement('b');
+      cellLabel.textContent = String(service.name || service.id).replace(/^client-/, '').slice(0, 10);
+      cell.append(cellLabel);
+      matrix.append(cell);
     }
     const latencyRows = rows.map(service => {
       const responseTime = Number(service.responseTime ?? service.latest?.responseTime);
@@ -327,12 +424,35 @@
         visual.append(label, track, value);
         latencyChart.append(visual);
       });
+
+      latencyRows.slice().sort((a, b) => b.responseTime - a.responseTime).slice(0, 4).forEach(({ service, responseTime }) => {
+        const state = fleetState(service);
+        const row = document.createElement('div');
+        row.className = 'health-bottleneck-row';
+        row.dataset.state = state;
+        const label = document.createElement('span');
+        label.textContent = service.name || service.domain || service.id;
+        const track = document.createElement('i');
+        const fill = document.createElement('span');
+        fill.style.width = `${Math.max(5, Math.min(100, (responseTime / maxLatency) * 100))}%`;
+        track.append(fill);
+        const value = document.createElement('b');
+        value.textContent = `${Math.round(responseTime)} ms`;
+        row.append(label, track, value);
+        bottlenecks.append(row);
+      });
     } else {
       const chartEmpty = document.createElement('p');
       chartEmpty.className = 'operations-loading';
       chartEmpty.textContent = '응답속도 데이터가 없습니다.';
       latencyChart.append(chartEmpty);
+      const bottleneckEmpty = document.createElement('p');
+      bottleneckEmpty.className = 'operations-loading';
+      bottleneckEmpty.textContent = '응답속도 데이터가 없습니다.';
+      bottlenecks.append(bottleneckEmpty);
     }
+    const serviceState = counts.error ? 'error' : counts.warn ? 'warn' : counts.pending ? 'pending' : 'ok';
+    setFlowNode('services', serviceState, `${counts.ok}/${rows.length} 정상 · 주의 ${counts.warn + counts.pending}`);
     get('[data-core-fleet-summary]').textContent = `${counts.ok}/${rows.length} 정상`;
     return counts;
   }
@@ -344,14 +464,17 @@
     const aiData = ai.data || coreData.ai || {};
 
     if (core.ok && coreData.ok) {
+      setFlowNode('core', 'ok', `${coreData.canonicalHosts?.api || 'api.ekodi.kr'} 정상`);
       setCoreCard('core', 'ok', '정상', `v${coreData.apiVersion || '1.0.0'}`, `${coreData.canonicalHosts?.api || 'api.ekodi.kr'} · ${coreData.architecture || 'hybrid-cloud'}`);
       get('[data-core-architecture]').textContent = coreData.architecture === 'hybrid-cloud' ? 'Hybrid Cloud · Provider Independent' : coreData.architecture || '—';
     } else {
+      setFlowNode('core', 'error', 'Core API 확인 필요');
       setCoreCard('core', 'error', '점검 필요', '응답 없음', core.error?.message || 'Core API 확인 실패');
       get('[data-core-architecture]').textContent = '확인 실패';
     }
 
     const databaseOk = recovery.ok && overview.ok;
+    setFlowNode('data', databaseOk ? 'ok' : 'error', databaseOk ? '운영 DB 연결 정상' : 'DB 연결 확인 필요');
     setCoreCard('database', databaseOk ? 'ok' : 'error', databaseOk ? '연결' : '확인 필요', databaseOk ? 'Hybrid 연결' : '확인 필요', databaseOk ? 'Core 원장과 운영 관제 DB 응답 정상' : [recovery.error?.message, overview.error?.message].filter(Boolean).join(' · ') || 'DB 응답 확인 실패');
 
     if (recovery.ok && recoveryData?.verified) {
@@ -392,6 +515,8 @@
     }
 
     const latest = recoveryData?.latest;
+    setCheckpoint('recovery', recovery.ok && recoveryData?.verified ? 'ok' : recovery.ok ? 'warn' : 'error', recoveryData?.verified ? time(latest?.createdAt) : recovery.ok ? '복원 검증 대기' : '조회 실패');
+    setCheckpoint('fleet', overview.ok ? (fleet.error ? 'error' : fleet.warn || fleet.pending ? 'warn' : 'ok') : 'error', overview.ok ? time(overview.data?.generatedAt) : '조회 실패');
     get('[data-core-backup-policy]').textContent = recoveryData?.policy || coreData.recovery?.strategy || '—';
     get('[data-core-recovery-time]').textContent = time(latest?.createdAt);
     get('[data-core-integrity]').textContent = latest?.restoreIntegrity || (recoveryData?.verified ? 'ok' : '—');

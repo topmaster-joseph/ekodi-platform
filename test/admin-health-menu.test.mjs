@@ -53,3 +53,21 @@ test('Health is the read-only EKODI Core operations dashboard', async () => {
   assert.match(css, /\.core-health-fleet-row/);
   assert.doesNotMatch(health, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
 });
+
+test('Health diagrams stay lightweight and are driven by existing read-only data', async () => {
+  const [health, css] = await Promise.all([
+    read('system-health-admin.js'),
+    read('system-health-admin.css'),
+  ]);
+  assert.match(health, /data-health-flow/);
+  assert.match(health, /data-health-state-matrix/);
+  assert.match(health, /data-health-bottlenecks/);
+  assert.match(health, /data-request-flow/);
+  assert.match(health, /data-checkpoint="analytics"/);
+  assert.match(health, /function renderTrafficFlow\(data\)/);
+  assert.match(css, /\.health-flow-node/);
+  assert.match(css, /\.health-bottleneck-row/);
+  assert.match(css, /\.health-request-track/);
+  assert.doesNotMatch(health, /setInterval\(/);
+  assert.doesNotMatch(health, /chart\.js|recharts|d3\./i);
+});
