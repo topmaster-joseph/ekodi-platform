@@ -1,0 +1,138 @@
+name: EKODI Cloud Control - Workers Builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan = read-only, apply = disconnect allowlisted Builds trigger'
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+      target:
+        description: 'Allowlisted Cloudflare Worker'
+        required: true
+        type: choice
+        default: ekodi-platform
+        options:
+          - ekodi-platform
+      confirmation:
+        description: 'For apply only: DISCONNECT_EKODI_PLATFORM_BUILDS'
+        required: false
+        type: string
+      reason:
+        description: 'Audit reason for this Cloud Control invocation'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-cloud-control-workers-builds
+  cancel-in-progress: false
+
+jobs:
+  control:
+    if: github.actor == 'topmaster-joseph'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: ekodi-cloud-control
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_BUILDS_ADMIN_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_ADMIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate Cloud Control contract
+        run: |
+          set -euo pipefail
+          node --check scripts/cloud-control-workers-builds.mjs
+          node --test test/cloud-control-workers-builds-contract.test.mjs
+
+      - name: Verify scoped credentials exist
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_BUILDS_ADMIN_TOKEN"
+
+      - name: Enforce break-glass confirmation
+        if: inputs.mode == 'apply'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = 'DISCONNECT_EKODI_PLATFORM_BUILDS'
+
+      - name: Execute allowlisted Cloud Control operation
+        env:
+          CONTROL_MODE: ${{ inputs.mode }}
+          CONTROL_TARGET: ${{ inputs.target }}
+          CONTROL_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          node scripts/cloud-control-workers-builds.mjs \
+            --target "$CONTROL_TARGET" \
+            --mode "$CONTROL_MODE" \
+            --confirm "$CONTROL_CONFIRMATION"
+
+      - name: Publish audit summary
+        if: always()
+        env:
+          CONTROL_MODE: ${{ inputs.mode }}
+          CONTROL_TARGET: ${{ inputs.target }}
+          CONTROL_REASON: ${{ inputs.reason }}
+        run: |
+          {
+            echo '## EKODI Cloud Control'
+            echo "- Actor: ${GITHUB_ACTOR}"
+            echo "- Mode: ${CONTROL_MODE}"
+            echo "- Target: ${CONTROL_TARGET}"
+            echo "- Reason: ${CONTROL_REASON}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            if [[ -f cloud-control-audit.json ]]; then
+              echo '- Result:'
+              echo '```json'
+              cat cloud-control-audit.json
+              echo '```'
+            else
+              echo '- Result: operation did not reach audited completion; inspect the run log.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record operation on issue 406
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONTROL_MODE: ${{ inputs.mode }}
+          CONTROL_TARGET: ${{ inputs.target }}
+          CONTROL_REASON: ${{ inputs.reason }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          audit='No audit file was produced.'
+          if [[ -f cloud-control-audit.json ]]; then
+            audit=$(cat cloud-control-audit.json)
+          fi
+          body=$(cat <<EOF
+          Cloud Control run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          - actor: ${GITHUB_ACTOR}
+          - mode: ${CONTROL_MODE}
+          - target: ${CONTROL_TARGET}
+          - reason: ${CONTROL_REASON}
+          - job status: ${JOB_STATUS}
+
+          \`\`\`json
+          ${audit}
+          \`\`\`
+          EOF
+          )
+          gh issue comment 406 --repo "$GITHUB_REPOSITORY" --body "$body"
