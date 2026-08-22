@@ -173,7 +173,7 @@ jobs:
               && grep -Fq '"submissionExecution":false' /tmp/edu-health.json \
               && grep -Fq '"dataEnabled":true' /tmp/edu-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-headers \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/education' /tmp/edu-admin-headers; then
+              && grep -Eiq '^location: https://admin\.ekodi\.kr/$' /tmp/edu-admin-headers; then
               echo 'EKODI Education production verified.'
               exit 0
             fi
