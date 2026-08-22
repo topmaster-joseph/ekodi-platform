@@ -29,9 +29,19 @@ if(!Number.isInteger(manifest.shellVersion)||manifest.shellVersion<2)fail('shell
 if(!Number.isInteger(manifest.onboardingPolicyVersion)||manifest.onboardingPolicyVersion<1)fail('onboardingPolicyVersion must be a positive integer');
 if(theme.version!==manifest.shellVersion)fail(`theme version ${theme.version} must match shellVersion ${manifest.shellVersion}`);
 for(const required of ['workspace','admin','form','document','data'])if(!theme.rules?.stableSurfaces?.includes(required))fail(`stable surface missing: ${required}`);
+if(!theme.rules?.publicSurfaces?.includes('public'))fail('public surface must be explicit in the shared Shell');
 for(const required of ['transition','bridge','loading','handoff'])if(!theme.rules?.dynamicSurfaces?.includes(required))fail(`dynamic surface missing: ${required}`);
 for(const required of ['navigationPosition','buttonGeometry','fontScale','formLayout','focusTreatment','contrastFloor','safeArea','authMeaning'])if(!theme.rules?.dynamicMustNotChange?.includes(required))fail(`dynamic protected property missing: ${required}`);
-if(!shellSource.includes('setSurface')||!shellSource.includes('ekodi:shell-theme'))fail('Shell browser API must publish the v2 surface/theme contract');
+for(const required of ['siteLayout','contentOrder','navigationPosition','buttonGeometry','fontScale','focusTreatment','contrastFloor','safeArea','authMeaning','serviceIdentity'])if(!theme.rules?.publicDynamicMustNotChange?.includes(required))fail(`public rotation protected property missing: ${required}`);
+
+if(theme.publicExperience?.enabled!==true)fail('public experience rotation must be enabled');
+if(theme.publicExperience?.timezone!=='Asia/Seoul')fail('public experience rotation timezone must remain Asia/Seoul');
+if(theme.publicExperience?.rotation!=='weekly-deterministic'||theme.publicExperience?.cycleDays!==7)fail('public experience rotation must remain weekly-deterministic');
+if(!Array.isArray(theme.publicExperience?.variants)||theme.publicExperience.variants.length<3)fail('public experience needs at least three pre-approved variants');
+for(const motif of ['orbit','flow','grid','paper','signal','stage'])if(!Array.isArray(theme.publicExperience?.motifs?.[motif])||!theme.publicExperience.motifs[motif].length)fail(`public experience motif missing: ${motif}`);
+
+for(const required of ['setSurface','ekodi:shell-theme','ekodi:public-experience','EKODI 서비스 전환','public-rail','Asia/Seoul'])if(!shellSource.includes(required))fail(`Shell browser source lost public experience marker: ${required}`);
+for(const forbidden of ['fetchPublicThemeFromAI','OPENAI_API_KEY','ANTHROPIC_API_KEY'])if(shellSource.includes(forbidden))fail(`Shell public rotation must remain provider-independent: ${forbidden}`);
 for(const required of ['SHELL_WORKSPACE_STYLE','INTERNAL_SURFACES','defaultSurface(serviceId)','data-ekodi-workspace-style'])if(!injectorSource.includes(required))fail(`Worker injection lost internal UI contract: ${required}`);
 if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker injection must advertise Shell v2');
 if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker injection must advertise the resolved surface');
@@ -56,7 +66,10 @@ for(const service of manifest.services||[]){
   if(typeof service.sso!=='boolean')fail(`${service.id} must declare sso`);
   if(typeof service.targetable!=='boolean')fail(`${service.id} must declare targetable`);
   if(!allowedIntegrations.has(service.shellIntegration))fail(`${service.id} must declare a recognized shellIntegration`);
-  if(!theme.services?.[service.id]?.accent)fail(`${service.id} needs a Shell v2 identity accent`);
+  const serviceTheme=theme.services?.[service.id];
+  if(!serviceTheme?.accent)fail(`${service.id} needs a Shell v2 identity accent`);
+  if(!serviceTheme?.public?.motif||!theme.publicExperience?.motifs?.[serviceTheme.public.motif])fail(`${service.id} needs a recognized public visual motif`);
+  if(!serviceTheme?.public?.companion)fail(`${service.id} needs a public companion color`);
   const planned=service.state==='planned';
   if(planned&&service.shellIntegration!=='planned')fail(`${service.id} is planned and must use shellIntegration=planned`);
   if(!planned&&service.shellIntegration==='planned')fail(`${service.id} is active but still marked shellIntegration=planned`);
@@ -71,7 +84,7 @@ for(const service of manifest.services||[]){
       if(!clientAuth.includes("service.authMode!=='client'"))fail('Client Auth lost manifest-backed client realm validation');
     }
     if(!planned&&service.shellIntegration==='shared-proxy'){
-      if(!siteConfig.includes(`pattern = \"${url.hostname}\"`))fail(`${service.id} shared platform host is missing from wrangler.site.toml`);
+      if(!siteConfig.includes(`pattern = "${url.hostname}"`))fail(`${service.id} shared platform host is missing from wrangler.site.toml`);
       if(!compactPlatformRouter.includes(`'${url.hostname}':'${service.id}'`))fail(`${service.id} shared platform host is missing from platform-router-worker.js`);
     }
   }
@@ -88,7 +101,7 @@ for(const service of ecosystem.services||[]){
   }catch{fail(`${service.id} has an invalid registry URL`);}
   if(['live','beta'].includes(service.status)&&service.productionVerified===true&&manifestService.state==='planned')fail(`${service.id} is production verified but planned in service manifest`);
 }
-for(const service of manifest.services||[]){if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`)}
-for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
+for(const service of manifest.services||[])if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`);
+for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Public service selector','Public experience rotation','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; public and internal roots are explicit and dynamic surfaces remain bounded.`);
+console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; every service has a top selector identity, public rotation is bounded, and internal surfaces remain stable.`);
