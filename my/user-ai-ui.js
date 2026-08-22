@@ -2,7 +2,7 @@ import { buildUserSuggestions, EKODI_USER_AI } from './user-ai.js';
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'})[c]);
 
 const ACTIONS={
   attention:'#home',
@@ -56,6 +56,13 @@ function updateGreeting(){
   else lead.innerHTML='오늘도 편안하게,<br>필요한 것부터.';
 }
 
+function normalizeUserLabels(){
+  const topAuth=$('#authButton'),accountAuth=$('#accountAuthButton');
+  for(const button of [topAuth,accountAuth]){
+    if(button?.textContent?.trim()==='My에서 나가기')button.textContent='로그아웃';
+  }
+}
+
 let queued=false;
 function scheduleRender(){
   if(queued)return;
@@ -63,12 +70,13 @@ function scheduleRender(){
   queueMicrotask(()=>{
     queued=false;
     updateGreeting();
+    normalizeUserLabels();
     renderSuggestions();
   });
 }
 
 const observer=new MutationObserver(scheduleRender);
-['#identityName','#workspaceList','#platformList','#creatorList'].forEach(selector=>{
+['#identityName','#workspaceList','#platformList','#creatorList','#authButton','#accountAuthButton'].forEach(selector=>{
   const node=$(selector);
   if(node)observer.observe(node,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
 });
