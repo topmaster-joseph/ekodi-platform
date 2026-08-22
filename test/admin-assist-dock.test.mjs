@@ -47,23 +47,35 @@ test('Assist is current-screen aware and high-impact actions map to permanent hu
   assert.match(js,/preflightVerified/);
 });
 
-test('Assist is bundled only after authenticated compact shell starts',async()=>{
-  const [postbuild,shell]=await Promise.all([read('scripts/admin-thin-postbuild.mjs'),read('admin-authenticated-shell.js')]);
+test('Assist first path is launcher-only and upgrades through existing secured lazy assets',async()=>{
+  const [postbuild,shell,bootstrap,bootstrapCss]=await Promise.all([
+    read('scripts/admin-thin-postbuild.mjs'),read('admin-authenticated-shell.js'),read('admin-assist-bootstrap.js'),read('admin-assist-bootstrap.css')
+  ]);
+  assert.match(postbuild,/admin-assist-bootstrap\.js/);
+  assert.match(postbuild,/admin-assist-bootstrap\.css/);
   assert.match(postbuild,/admin-assist-dock\.js/);
   assert.match(postbuild,/admin-assist-dock\.css/);
-  assert.match(postbuild,/compactRuntime/);
-  assert.match(postbuild,/ekodiAssistDock/);
+  assert.match(postbuild,/admin-lazy-features\.js/);
+  assert.match(postbuild,/ai-ops-admin\.css/);
+  assert.match(postbuild,/Assist launcher-only first path/);
+  assert.match(bootstrap,/requestIdleCallback/);
+  assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
+  assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrapCss,/\.ekodi-assist-bootstrap/);
+  assert.doesNotMatch(bootstrap,/\/api\/control\/messenger\/inbox/);
   assert.match(shell,/compact-control-center\.js/);
   assert.doesNotMatch(shell,/admin-assist-dock\.js/);
   assert.doesNotMatch(shell,/admin-assist-dock\.css/);
 });
 
-test('guarded shared-site release verifies the live Assist bundle',async()=>{
+test('guarded shared-site release verifies bootstrap and full Assist lazy assets separately',async()=>{
   const manifest=await read('deploy/manifests/shared-site.worker.json');
-  assert.match(manifest,/admin\.ekodi\.kr\/compact-control-center\.js\?assist=v1/);
+  assert.match(manifest,/admin\.ekodi\.kr\/compact-control-center\.js\?assist=v2/);
+  assert.match(manifest,/ekodiAssistBootstrap/);
+  assert.match(manifest,/admin\.ekodi\.kr\/admin-lazy-features\.js\?assist=v2/);
   assert.match(manifest,/ekodiAssistDock/);
   assert.match(manifest,/api\\\/control\\\/messenger\\\/inbox/);
   assert.match(manifest,/api\\\/control\\\/ai\\\/actions/);
-  assert.match(manifest,/admin\.ekodi\.kr\/compact-control-center\.css\?assist=v1/);
+  assert.match(manifest,/admin\.ekodi\.kr\/ai-ops-admin\.css\?assist=v2/);
   assert.match(manifest,/ekodi-assist-launcher/);
 });
