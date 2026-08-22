@@ -1,0 +1,3 @@
+EKODI Cloud Control verification probe.
+Purpose: confirm the legacy Cloudflare ekodi-platform Workers Builds integration no longer reacts to new pull requests after audited trigger deletion.
+This file is verification-only and is not intended for main.
