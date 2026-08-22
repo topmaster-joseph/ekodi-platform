@@ -51,6 +51,9 @@ jobs:
           node --check shell/shell.js
           node --check shell/mobile-fixed-header.js
           node --check scripts/verify-ekodi-shell-live.mjs
+          test -f shell/workspace.css
+          grep -Fq 'data-ekodi-shell-surface="workspace"' shell/workspace.css
+          grep -Fq 'data-ekodi-document-surface' shell/workspace.css
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
