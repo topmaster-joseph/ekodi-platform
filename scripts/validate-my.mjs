@@ -42,7 +42,7 @@ must('userAi','dependsOnExternalAI:false');
 must('userAi','specialistDirectControl:false');
 must('userAiUi','buildUserSuggestions');
 must('userAiUi','collectContext');
-must('userUiCss','.workspace-control{display:none!important}');
+mustNot('userUiCss','.workspace-control{display:none!important}');
 must('userUiCss','position:fixed');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");

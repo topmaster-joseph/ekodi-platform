@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-education",
+    "config": "wrangler.education.toml",
+    "requests": [
+      {"url":"https://edu.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI Education","Admission","Study"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://edu.ekodi.kr/admission","statuses":[200],"redirect":"follow","expect":["ADMISSION · SOURCE FIRST","지원 후보","공식 모집요강"]},
+      {"url":"https://edu.ekodi.kr/study","statuses":[200],"redirect":"follow","expect":["STUDY · CONTINUITY","학습·유학 준비 항목","EKODI Work"]},
+      {"url":"https://edu.ekodi.kr/health","statuses":[200],"expect":["ekodi-education","\"officialSourceRequired\":true","\"submissionExecution\":false","\"ekodiShell\":true"]}
+    ]
+  }
+}

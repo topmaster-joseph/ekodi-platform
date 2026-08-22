@@ -18,18 +18,25 @@ test('Life journey is person-centered and not foreigner-only',()=>{
   assert.equal(EKODI_LIFE_JOURNEY.safeguards.noAutomaticSensitiveInference,true);
 });
 
-test('Admission and Study are distinct education journeys while active stages reuse existing platforms',()=>{
+test('Admission and Study are active areas inside one Education platform',()=>{
   const ids=EKODI_LIFE_JOURNEY.stages.map(stage=>stage.id);
   assert.deepEqual(ids,['admission','study','career','startup','settlement']);
   const admission=EKODI_LIFE_JOURNEY.stages.find(stage=>stage.id==='admission');
   const study=EKODI_LIFE_JOURNEY.stages.find(stage=>stage.id==='study');
-  assert.equal(admission.ownerService,'edu');
-  assert.equal(study.ownerService,'edu');
-  assert.equal(admission.state,'planned');
-  assert.equal(study.state,'planned');
-  assert.notEqual(admission.futureRoute,study.futureRoute);
-  assert.match(admission.futureRoute,/\/admission$/);
-  assert.match(study.futureRoute,/\/study$/);
+  const education=service('edu');
+  assert.ok(education);
+  assert.notEqual(education.state,'planned');
+  for(const stage of [admission,study]){
+    assert.equal(stage.ownerService,'edu');
+    assert.equal(stage.state,'active');
+    assert.equal(new URL(stage.route).origin,new URL(education.url).origin);
+  }
+  assert.match(admission.route,/\/admission$/);
+  assert.match(study.route,/\/study$/);
+  assert.equal(EKODI_LIFE_JOURNEY.handoffs.find(row=>row.from==='admission'&&row.to==='study')?.samePlatform,true);
+});
+
+test('Other active stages reuse existing specialist platforms',()=>{
   for(const [stageId,owner] of [['career','work'],['startup','business'],['settlement','community']]){
     const stage=EKODI_LIFE_JOURNEY.stages.find(row=>row.id===stageId);
     assert.equal(stage.state,'active');
@@ -39,7 +46,6 @@ test('Admission and Study are distinct education journeys while active stages re
     assert.notEqual(platform.state,'planned',`${owner} must be an active existing platform`);
     assert.equal(new URL(stage.route).origin,new URL(platform.url).origin);
   }
-  assert.equal(service('edu')?.state,'planned');
 });
 
 test('Every cross-stage handoff is advisory and requires user consent',()=>{
@@ -60,6 +66,7 @@ test('My EKODI journey surface stays inside My and does not query specialist pri
   assert.match(page,/외국인만을 위한 경로가 아니라/);
   assert.match(app,/current_site_access/);
   assert.match(app,/auth\.ekodi\.kr/);
+  assert.doesNotMatch(app,/from\(['"]education_/);
   assert.doesNotMatch(app,/from\(['"]work_/);
   assert.doesNotMatch(app,/from\(['"]community_/);
   assert.doesNotMatch(app,/from\(['"]business_/);

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="EKODI Education Study 학습·유학 준비 공간">
+  <meta name="ekodi-ui-type" content="USER">
+  <title>Study | EKODI Education</title>
+  <link rel="stylesheet" href="/styles.css?v=20260822-edu-1">
+</head>
+<body data-area="study" data-ekodi-ui="USER">
+<header class="topbar">
+  <a class="brand" href="/"><span class="mark">E</span><span><strong>EKODI Education</strong><small>Study</small></span></a>
+  <nav aria-label="주요 메뉴"><a href="/">Education</a><a href="/admission">Admission</a><a href="/study">Study</a><a href="https://my.ekodi.kr/journey/">My Journey</a></nav>
+  <button id="authButton" class="ghost" type="button">Google로 시작</button>
+</header>
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">STUDY · CONTINUITY</p>
+      <h1>합격 다음 날부터,<br><span>배움의 생활이 시작됩니다.</span></h1>
+      <p class="lead">Study는 국내 학습과 국내외 유학을 함께 다룹니다. 등록·수강·학사일정·장학·학습계획·생활 준비를 하나의 흐름으로 정리하고, 외국인 사용자에게 필요한 체류 정보는 공식 출입국 안내와 분리해 확인합니다.</p>
+      <div class="route-tabs"><a href="/admission">Admission</a><a href="/study" aria-current="page">Study</a></div>
+    </div>
+    <aside class="identity-card"><small>EKODI USER AI</small><strong id="identityName">로그인 전</strong><p>학습을 대신하지 않고, 놓치기 쉬운 일정과 준비를 먼저 정리합니다. 학사·장학·체류 같은 중요한 사실은 학교와 공식기관 안내를 기준으로 확인합니다.</p><code>enroll → learn → grow → next</code></aside>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><p class="eyebrow">STUDY RECORD</p><h2>학습·유학 준비 항목</h2></div><p>수강·등록·장학·학사·생활처럼 다음에 확인할 항목을 공식 안내와 함께 기록합니다. 개인정보나 증빙파일은 첫 릴리스에서 저장하지 않습니다.</p></div>
+    <div class="panel">
+      <form id="studyForm" class="form-grid">
+        <label>구분<select name="kind"><option value="학사">학사</option><option value="수강">수강</option><option value="장학">장학</option><option value="학습">학습</option><option value="생활">생활</option><option value="유학">유학</option></select></label>
+        <label>항목<input name="title" required maxlength="140" placeholder="예: 2학기 수강신청 일정"></label>
+        <label class="full">메모<textarea name="note" maxlength="220" placeholder="필요한 준비나 확인사항"></textarea></label>
+        <label class="full">공식 안내 URL<input name="source" type="url" inputmode="url" placeholder="https://..."></label>
+        <div class="full form-actions"><button class="primary" type="submit">준비 항목 추가</button></div>
+      </form>
+    </div>
+    <div id="studyRecords" class="records" style="margin-top:14px"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><p class="eyebrow">NEXT ACTION</p><h2>Study 할 일 추가</h2></div><p>Education 홈에 기한이 가까운 항목 최대 3개만 우선 노출됩니다.</p></div>
+    <div class="panel">
+      <form id="taskForm" class="form-grid">
+        <label class="full">할 일<input name="title" required maxlength="120" placeholder="예: 장학금 신청기간 확인"></label>
+        <label>기한<input name="due" type="date"></label>
+        <label>공식 근거 URL<input name="source" type="url" inputmode="url" placeholder="https://..."></label>
+        <div class="full form-actions"><button class="primary" type="submit">할 일 추가</button></div>
+      </form>
+    </div>
+    <div id="todayList" class="task-list" style="margin-top:14px"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><p class="eyebrow">NEXT JOURNEY</p><h2>교육 다음도 끊기지 않게</h2></div><p>졸업이나 진로준비가 가까워지면 My Journey가 Work 또는 Business 같은 전문 플랫폼을 제안할 수 있지만 자동 전환하지 않습니다.</p></div>
+    <div class="journey-grid">
+      <a class="journey-card" href="https://work.ekodi.kr/"><small>CAREER</small><h3>EKODI Work</h3><p>취업·진로 준비가 필요할 때 기존 Work 플랫폼으로 이동합니다.</p><strong>Work 열기 →</strong></a>
+      <a class="journey-card" href="https://business.ekodi.kr/"><small>STARTUP</small><h3>EKODI Business</h3><p>창업을 선택하면 기존 Business 생태계로 이어갑니다.</p><strong>Business 열기 →</strong></a>
+    </div>
+  </section>
+</main>
+<footer><strong>EKODI Education · Study</strong><a href="/admission">Admission ←</a><a href="https://my.ekodi.kr/journey/">My Journey ↗</a></footer>
+<script src="/config.js"></script>
+<script type="module" src="/app.js?v=20260822-edu-1"></script>
+</body>
+</html>
