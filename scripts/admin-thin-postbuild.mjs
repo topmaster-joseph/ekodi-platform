@@ -18,17 +18,22 @@ function mustReplace(source, search, replacement, label) {
 let compactCss = await text(`${dist}compact-control-center.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
+const assistJs = (await text(`${root}admin-assist-dock.js`)).trim();
+const assistCss = (await text(`${root}admin-assist-dock.css`)).trim();
+new Function(assistJs);
 await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n`);
 await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
 compactCss = mustReplace(compactCss, deviceCss, '', 'device CSS bundled in compact shell');
+compactCss = `${compactCss}\n${assistCss}\n`;
 await writeFile(`${dist}compact-control-center.css`, compactCss);
 
 // Rebuild the startup JavaScript from the actual first-login responsibility instead of
 // carrying historical Campus/Policies/Device constructors and zero-delay routing timers.
 // Dynamic workspaces announce themselves and this runtime only normalizes their labels.
 const minimalCompactJs = `(() => {\n  'use strict';\n  const NAV_MAP = Object.freeze({\n    overview:'Operations', services:'Services', clients:'Clients', admins:'Admin Accounts',\n    books:'Books', finance:'Finance', affiliates:'Affiliates', communication:'Mail & Live',\n    workspace:'Cloud & Files', organization:'Organization', domains:'Domains', social:'Social',\n    community:'Community', campus:'Campus'\n  });\n  function setText(selector, value) {\n    const node = document.querySelector(selector);\n    if (node && node.textContent !== value) node.textContent = value;\n  }\n  function normalizeNavigation() {\n    const nav = document.querySelector('.sidebar nav');\n    if (!nav) return;\n    for (const item of nav.querySelectorAll('[data-section]')) {\n      const label = NAV_MAP[item.dataset.section];\n      const span = item.querySelector('span');\n      if (label && span && span.textContent !== label) span.textContent = label;\n    }\n    const domains = nav.querySelector('a[href="/legacy#domains"] span');\n    const activity = nav.querySelector('a[href="/legacy#activity"] span');\n    if (domains && domains.textContent !== 'Domains & DNS') domains.textContent = 'Domains & DNS';\n    if (activity && activity.textContent !== 'Activity Logs') activity.textContent = 'Activity Logs';\n  }\n  function normalizeVisibleShell() {\n    document.body.classList.add('compact-control-center');\n    normalizeNavigation();\n    setText('#logoutButton', 'Logout');\n    setText('#pageTitle', 'Operations');\n    const hero = document.querySelector('.hero[data-panel~="overview"]');\n    if (hero) {\n      const kicker = hero.querySelector('.kicker');\n      const heading = hero.querySelector('h2');\n      const copy = hero.querySelector('p:not(.kicker)');\n      if (kicker) kicker.textContent = 'OPERATIONS OVERVIEW';\n      if (heading) heading.textContent = 'EKODI Platform Operations';\n      if (copy) copy.textContent = 'Live service health, clients and core operations in one view.';\n      const actions = hero.querySelectorAll('.hero-actions a');\n      if (actions[0]) actions[0].textContent = 'EKODI Home ↗';\n      if (actions[1]) actions[1].textContent = 'Admin Tools ↗';\n    }\n  }\n  window.addEventListener('ekodi-feature-installed', normalizeNavigation);\n  window.addEventListener('ekodi-nav-changed', normalizeNavigation);\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeVisibleShell, { once:true });\n  else normalizeVisibleShell();\n})();\n`;
-new Function(minimalCompactJs);
-await writeFile(`${dist}compact-control-center.js`, minimalCompactJs);
+const compactRuntime = `${minimalCompactJs}\n${assistJs}\n`;
+new Function(compactRuntime);
+await writeFile(`${dist}compact-control-center.js`, compactRuntime);
 
 // Inject a minimal Campus shell into the standalone Campus asset. The full Campus renderer
 // upgrades it only after the Campus placeholder is explicitly opened.
@@ -56,6 +61,12 @@ for (const forbidden of ['WINDOWS_AGENT_URL', 'ekodiDevicePanel', 'CAMPUS_SERVIC
 if (finalCompactCss.includes('.ekodi-device-panel') || finalCompactCss.includes('.ekodi-device-card')) {
   throw new Error('Device Control CSS leaked into compact-control-center.css');
 }
+if (!finalCompactJs.includes('ekodiAssistDock') || !finalCompactJs.includes('/api/control/messenger/inbox') || !finalCompactJs.includes('/api/control/ai/actions')) {
+  throw new Error('EKODI Assist runtime was not bundled into compact-control-center.js');
+}
+if (!finalCompactCss.includes('.ekodi-assist-launcher') || !finalCompactCss.includes('@media(max-width:720px)')) {
+  throw new Error('EKODI Assist responsive styles were not bundled into compact-control-center.css');
+}
 if (!finalCampus.includes("section.id = 'campusPanel'") || !finalCampus.includes("button.dataset.section = 'campus'")) {
   throw new Error('On-demand Campus shell was not installed into campus-actions.js');
 }
@@ -66,4 +77,4 @@ if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes(
   throw new Error('Standalone Device Control CSS was not materialized');
 }
 
-console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Campus, Policies and Device constructors removed from first interaction.`);
+console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; EKODI Assist bundled; Campus, Policies and Device constructors removed from first interaction.`);
