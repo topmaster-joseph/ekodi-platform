@@ -54,6 +54,7 @@ test('Health is the read-only EKODI Core operations dashboard', async () => {
   assert.doesNotMatch(health, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
 });
 
+// Keep diagram contracts tied to existing read-only Health data and the lazy runtime.
 test('Health diagrams stay lightweight and are driven by existing read-only data', async () => {
   const [health, css] = await Promise.all([
     read('system-health-admin.js'),
