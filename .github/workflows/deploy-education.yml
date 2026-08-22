@@ -36,7 +36,7 @@ permissions:
 
 concurrency:
   group: ekodi-education-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   WRANGLER_VERSION: '4.119.0'
