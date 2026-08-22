@@ -2,9 +2,9 @@
   "schema": "ekodi.cloud-control.request.v1",
   "operation": "workers-builds-trigger-disconnect",
   "target": "ekodi-platform",
-  "mode": "plan",
-  "confirmation": "",
-  "reason": "Verify the legacy ekodi-platform Workers Builds trigger with the newly registered least-privilege token before any mutation.",
-  "requestId": "workers-builds-plan-20260823-01",
+  "mode": "apply",
+  "confirmation": "DISCONNECT_EKODI_PLATFORM_BUILDS",
+  "reason": "Disconnect the two verified legacy ekodi-platform Workers Builds triggers after successful read-only PLAN validation.",
+  "requestId": "workers-builds-apply-20260823-01",
   "expiresAt": "2026-08-23T02:30:00Z"
 }
