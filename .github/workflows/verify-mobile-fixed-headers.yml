@@ -1,0 +1,46 @@
+name: Verify EKODI Mobile Fixed Headers
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-mobile-fixed-headers.yml'
+      - 'scripts/verify-mobile-fixed-headers-live.mjs'
+      - 'ekodi-service-manifest.js'
+      - 'ekodi-shell-injector.js'
+      - 'shell/**'
+      - 'responsive.css'
+      - 'index.html'
+      - 'control-center.css'
+      - '.github/workflows/deploy-site-core.yml'
+      - '.github/workflows/deploy-ekodi-shell.yml'
+      - '.github/workflows/deploy-admin-true-lazy.yml'
+      - '.github/workflows/deploy-jadam-marketing-ai.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-mobile-fixed-header-live-audit
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate audit script
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-mobile-fixed-headers-live.mjs
+          node scripts/validate-ekodi-shell-adoption.mjs
+      - name: Audit production mobile fixed headers
+        env:
+          EKODI_MOBILE_HEADER_ATTEMPTS: '30'
+          EKODI_MOBILE_HEADER_DELAY_MS: '5000'
+        run: node scripts/verify-mobile-fixed-headers-live.mjs
