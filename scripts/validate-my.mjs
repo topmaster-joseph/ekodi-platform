@@ -48,6 +48,7 @@ must('userAi','specialistDirectControl:false');
 must('userAiUi','buildUserSuggestions');
 must('userAiUi','collectContext');
 must('userUiCss','position:fixed');
+mustNot('userUiCss','.workspace-control{display:none!important}');
 mustNot('html','class="workspace-control"');
 must('membershipJs','/api/membership/portfolio');
 must('membershipJs','USER_SERVICES');
