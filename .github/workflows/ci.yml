@@ -30,7 +30,8 @@ jobs:
             .github/workflows/deploy-control-api.yml \
             .github/workflows/backup-ekodi-core.yml \
             .github/workflows/verify-ekodi-core-completion.yml \
-            .github/workflows/release-messenger-investment-functional.yml
+            .github/workflows/release-messenger-investment-functional.yml \
+            .github/workflows/cloud-control-workers-builds.yml
       - run: npm run check
       - run: npm run build
       - name: Validate AI provider independence
