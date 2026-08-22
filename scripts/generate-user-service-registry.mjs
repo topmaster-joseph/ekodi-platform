@@ -10,15 +10,25 @@ const browserPath = path.join(root, 'my', 'user-services.js');
 const RESERVED_INTERNAL = new Set([
   'admin', 'api', 'auth', 'control', 'core', 'finance', 'security', 'shell', 'workspace-api',
 ]);
+const AVAILABLE_STATUSES = new Set(['live', 'beta']);
 
 const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
 const services = Array.isArray(raw.services) ? raw.services : [];
-const normalized = services.map((service) => ({
-  id: String(service?.id || '').trim().toLowerCase(),
-  name: String(service?.name || '').trim(),
-  domain: String(service?.domain || '').trim().toLowerCase(),
-  group: String(service?.group || '').trim().toLowerCase(),
-}));
+const normalized = services.map((service) => {
+  const id = String(service?.id || '').trim().toLowerCase();
+  const sourceUrl = String(service?.url || (service?.domain ? `https://${service.domain}` : '')).trim();
+  let parsed = null;
+  try { parsed = new URL(sourceUrl); } catch {}
+  const status = String(service?.status || 'planned').trim().toLowerCase();
+  return {
+    id,
+    name: String(service?.name || service?.nameEn || '').trim(),
+    domain: String(parsed?.hostname || service?.domain || '').trim().toLowerCase(),
+    group: String(service?.category || service?.group || '').trim().toLowerCase(),
+    status,
+    available: Boolean(service?.productionVerified === true && AVAILABLE_STATUSES.has(status)),
+  };
+});
 
 for (const service of normalized) {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(service.id)) throw new Error(`Invalid user service id: ${service.id}`);
