@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('My EKODI is a unified private-first USER UI hub, not a second source of truth',async()=>{
-  const [html,app,userAi,userUi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/user-ai.js'),read('my/user-ui.css')]);
+  const [html,app,userAi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/user-ai.js')]);
   assert.match(html,/data-ekodi-ui="USER"/);
   assert.match(html,/EKODI USER AI/);
   assert.match(html,/MY PLATFORMS/);
@@ -18,7 +18,14 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(userAi,/boundary:'suggest-and-handoff'/);
   assert.match(userAi,/dependsOnExternalAI:false/);
   assert.match(userAi,/specialistDirectControl:false/);
-  assert.match(userUi,/\.workspace-control\{display:none!important\}/);
+});
+
+test('My EKODI has one visible workspace selector path and no dead hidden controls',async()=>{
+  const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
+  assert.match(html,/id="workspaceList"/);
+  assert.doesNotMatch(html,/workspaceSwitcher|workspaceControl|refreshButton/);
+  assert.doesNotMatch(app,/workspaceSwitcher|workspaceControl|refreshButton|function refresh\(/);
+  assert.doesNotMatch(app,/function recommendationUi\(/);
 });
 
 test('My EKODI reuses central identity and consumes one-time auth handoff',async()=>{
@@ -36,7 +43,6 @@ test('My workspace selection enters a linked workspace instead of only changing 
   assert.match(app,/requires_handoff/);
   assert.match(app,/function enterWorkspace\(key\)/);
   assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
-  assert.match(app,/workspaceSwitcher.*enterWorkspace/s);
   assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
   assert.match(app,/return_to/);
   assert.match(app,/new URL\(url\)\.origin===target\.origin/);
