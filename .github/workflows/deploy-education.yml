@@ -139,6 +139,11 @@ jobs:
             if [[ "$attempt" == '24' ]]; then echo 'Education Shell/Auth contract is not live; deployment blocked.'; exit 1; fi
             sleep 5
           done
+      - name: Reconcile Education production hostname trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.education.toml
       - name: Bootstrap or guarded release
         shell: bash
         run: |
