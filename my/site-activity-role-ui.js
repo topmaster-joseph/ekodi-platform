@@ -6,7 +6,6 @@ const OWNED_SITE_URLS=Object.freeze({
   biz:'https://biz.ekodi.kr/',
   lab:'https://lab.ekodi.kr/',
   trade:'https://trade.ekodi.kr/',
-  cafe:'https://cafe.ekodi.kr/',
 });
 const ROLE_FALLBACK=Object.freeze({
   church:'목사',
@@ -28,7 +27,7 @@ function roleLabel(context){return context?.activity_role_label||ROLE_FALLBACK[c
 function rememberWorkspace(key){try{if(key)localStorage.setItem('ekodi_my_active_workspace',key)}catch{}}
 function routeFor(context){
   const returnTo=OWNED_SITE_URLS[context.site];
-  if(!returnTo)return '#workspaces';
+  if(!returnTo)return '';
   const target=new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site',context.site);
   target.searchParams.set('return_to',returnTo);
@@ -52,10 +51,11 @@ function markExistingCard(card,context){
 }
 
 function appendMissingCard(host,context){
-  if(!host||host.querySelector(`[data-owned-context="${CSS.escape(context.workspace_key)}"]`))return;
+  const route=routeFor(context);
+  if(!route||!host||host.querySelector(`[data-owned-context="${CSS.escape(context.workspace_key)}"]`))return;
   const link=document.createElement('a');
   link.className='workspace-card workspace-button owned-site-workspace';
-  link.href=routeFor(context);
+  link.href=route;
   link.dataset.workspaceKey=context.workspace_key;
   link.dataset.ownedContext=context.workspace_key;
   link.dataset.activityRole=context.activity_role||'';
