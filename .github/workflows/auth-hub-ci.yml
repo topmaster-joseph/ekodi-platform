@@ -113,7 +113,10 @@ jobs:
             grep -Fq "${site}:{" auth-site/auth.js || { echo "Missing central auth service: $site"; exit 1; }
           done
           grep -Fq 'yogurt.ekodi.kr' auth-site/auth.js
-          grep -Fq 'yogurt.ekodi.kr' api-worker.js
+          if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then
+            echo 'Customer workspace domain must not be registered as an EKODI provider service'
+            exit 1
+          fi
           if grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js; then
             echo 'Legacy yogurtpurple domain detected'
             exit 1
