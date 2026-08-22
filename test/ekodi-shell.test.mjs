@@ -34,6 +34,10 @@ test('browser shell preserves workspace context and exposes bounded visual surfa
   assert.match(client,/ekodi_shell_context:/);
   assert.match(client,/사람 → 공간 → 기능/);
   assert.match(client,/공간 전환 · My EKODI/);
+  assert.match(client,/EKODI 서비스 전환/);
+  assert.match(client,/ekodi:public-experience/);
+  assert.match(client,/public-rail/);
+  assert.match(client,/Asia\/Seoul/);
   assert.match(client,/return_to/);
   assert.match(client,/auth\.ekodi\.kr/);
   assert.match(client,/workspace/);
@@ -45,8 +49,20 @@ test('browser shell preserves workspace context and exposes bounded visual surfa
   assert.match(client,/ekodi:context-change/);
   assert.equal(theme.version,2);
   assert.ok(theme.rules.stableSurfaces.includes('workspace'));
+  assert.ok(theme.rules.publicSurfaces.includes('public'));
   assert.ok(theme.rules.dynamicSurfaces.includes('transition'));
   assert.ok(theme.rules.dynamicMustNotChange.includes('navigationPosition'));
+  assert.ok(theme.rules.publicDynamicMustNotChange.includes('siteLayout'));
+  assert.equal(theme.publicExperience.enabled,true);
+  assert.equal(theme.publicExperience.timezone,'Asia/Seoul');
+  assert.equal(theme.publicExperience.rotation,'weekly-deterministic');
+  assert.equal(theme.publicExperience.cycleDays,7);
+  assert.ok(theme.publicExperience.variants.length>=3);
+  for(const service of EKODI_SERVICE_MANIFEST.services){
+    assert.ok(theme.services[service.id]?.accent,`${service.id} accent`);
+    assert.ok(theme.services[service.id]?.public?.motif,`${service.id} public motif`);
+    assert.ok(theme.services[service.id]?.public?.companion,`${service.id} public companion`);
+  }
 });
 
 test('shell injector is isolated in Shadow DOM and applies shared style only to internal surfaces',async()=>{
@@ -129,6 +145,8 @@ test('production audit inventory is generated from the manifest rather than a ha
   assert.match(generator,/state!==['"]planned['"]/);
   assert.match(workflow,/build-shell-audit-matrix\.mjs/);
   assert.match(workflow,/fromJSON\(needs\.inventory\.outputs\.matrix\)/);
+  assert.match(workflow,/shell\/\*\*/);
+  assert.match(workflow,/weekly-deterministic/);
 });
 
 test('shell service exposes public manifest and health without account data',async()=>{
