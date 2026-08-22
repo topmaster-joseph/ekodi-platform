@@ -1,0 +1,109 @@
+name: EKODI Cafe · Validate and Deploy
+
+on:
+  pull_request:
+    paths:
+      - 'sites/ekodi-cafe/**'
+      - 'platform-boundaries.json'
+      - 'config/user-ui-dna.json'
+      - 'config/ecosystem-services.json'
+      - 'ekodi-service-manifest.js'
+      - '.github/workflows/deploy-ekodi-cafe.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sites/ekodi-cafe/**'
+      - '.github/workflows/deploy-ekodi-cafe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-cafe-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  PROJECT: ekodi-cafe
+  PUBLIC_URL: https://cafe.ekodi.kr
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate static contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f sites/ekodi-cafe/index.html
+          test -f sites/ekodi-cafe/app.js
+          test -f sites/ekodi-cafe/_headers
+          test -f sites/ekodi-cafe/deployment.json
+          grep -Fq 'EKODI CAFE' sites/ekodi-cafe/index.html
+          grep -Fq 'data-ekodi-service="cafe"' sites/ekodi-cafe/index.html
+          grep -Fq 'https://shell.ekodi.kr/shell.js' sites/ekodi-cafe/index.html
+          grep -Fq 'localStorage' sites/ekodi-cafe/app.js
+          grep -Fq 'Content-Security-Policy' sites/ekodi-cafe/_headers
+          python3 -m json.tool sites/ekodi-cafe/deployment.json >/dev/null
+          echo 'EKODI Cafe static, privacy and Shell contracts verified.'
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Ensure isolated Pages project
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} pages project list | grep -Fq "$PROJECT"; then
+            echo 'Pages project already exists.'
+          else
+            npx --yes wrangler@${WRANGLER_VERSION} pages project create "$PROJECT" --production-branch main
+          fi
+      - name: Deploy exact Cafe artifact
+        run: npx --yes wrangler@${WRANGLER_VERSION} pages deploy sites/ekodi-cafe --project-name="$PROJECT" --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
+      - name: Ensure cafe.ekodi.kr custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/cafe-domain.json -w '%{http_code}' -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/domains" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data '{"name":"cafe.ekodi.kr"}' || true)
+          if [[ "$code" =~ ^20 ]] || grep -Eqi 'already|exists|duplicate' /tmp/cafe-domain.json; then
+            cat /tmp/cafe-domain.json
+          else
+            cat /tmp/cafe-domain.json
+            exit 1
+          fi
+      - name: Verify real production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -L -sS -o /tmp/cafe.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PUBLIC_URL/" || true)
+            app=$(curl -L -sS -o /tmp/cafe-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PUBLIC_URL/app.js" || true)
+            if [[ "$code" == '200' && "$app" == '200' ]] && grep -Fq '아직 문을 열지 않은 카페입니다' /tmp/cafe.html && grep -Fq 'ekodi_cafe_ideas_v1' /tmp/cafe-app.js; then
+              echo 'EKODI Cafe production hostname verified.'
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
