@@ -6,8 +6,12 @@ on:
       - '.github/workflows/verify-shared-shell-production.yml'
       - 'ekodi-service-manifest.js'
       - 'config/ecosystem-services.json'
+      - 'config/seasonal-design-governance.json'
+      - 'docs/ekodi-shell-contract.md'
+      - 'shell/**'
       - 'scripts/build-shell-audit-matrix.mjs'
       - 'scripts/validate-ekodi-shell-adoption.mjs'
+      - 'scripts/validate-seasonal-design-governance.mjs'
       - 'test/ekodi-shell.test.mjs'
 
 permissions:
@@ -44,9 +48,16 @@ jobs:
           for attempt in $(seq 1 24); do
             health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
             script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/shell.js' || true)
-            if [[ "$health" == '200' && "$script" == '200' ]] \
+            theme=$(curl -sS -o /tmp/theme.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/theme.json' || true)
+            if [[ "$health" == '200' && "$script" == '200' && "$theme" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json \
-              && grep -Fq 'window.EKODIShell' /tmp/shell.js; then exit 0; fi
+              && grep -Fq 'window.EKODIShell' /tmp/shell.js \
+              && grep -Fq 'EKODI 서비스 전환' /tmp/shell.js \
+              && grep -Fq 'ekodi:public-experience' /tmp/shell.js \
+              && grep -Fq '"rotation":"weekly-deterministic"' /tmp/theme.json \
+              && grep -Fq '"timezone":"Asia/Seoul"' /tmp/theme.json; then
+              exit 0
+            fi
             sleep 5
           done
           exit 1
@@ -83,4 +94,4 @@ jobs:
     needs: [inventory, shell, services]
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'All active services from the canonical EKODI manifest were verified with the shared My/Shell contract.'
+      - run: echo 'All active services from the canonical EKODI manifest were verified with the shared top service selector, weekly public identity rotation, and My/Shell contract.'
