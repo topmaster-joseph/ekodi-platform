@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
 # This workflow is intentionally manual-only.
 # Production admin deployment is owned by deploy-admin-true-lazy.yml.
 # Shared root/auth deployment is owned by deploy-site-core.yml.
