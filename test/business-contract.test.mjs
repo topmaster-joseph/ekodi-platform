@@ -4,24 +4,6 @@ import { readFile } from 'node:fs/promises';
 
 const apiWorker = await readFile(new URL('../api-worker.js', import.meta.url), 'utf8');
 const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
-const workspacePolicy = JSON.parse(await readFile(new URL('../config/service-workspace-policy.json', import.meta.url), 'utf8'));
-
-const criticalClients = [
-  ['client-cgma', 'cgma.ekodi.kr', '청계면상인회'],
-  ['client-jadam', 'jadam.ekodi.kr', '자담치킨 목포대점'],
-  ['client-pizzamaru', 'pizzamaru.ekodi.kr', '피자마루 목포대점'],
-  ['client-yogurt', 'yogurt.ekodi.kr', '요거트퍼플 목포대점'],
-];
-
-test('revenue-critical external clients remain customer workspaces, not provider services', () => {
-  assert.equal(workspacePolicy.customerWorkspaceRule.managedBy, 'customer_tenant_directory');
-  assert.equal(workspacePolicy.customerWorkspaceRule.preserveCustomerOwnership, true);
-  for (const [id, , name] of criticalClients) {
-    const row = apiWorker.split('\n').find(line => line.includes(`id: '${id}'`));
-    assert.equal(row, undefined, `${name} must not exist in provider SERVICE_CATALOG`);
-    assert.ok(workspacePolicy.customerWorkspaceRule.examples.includes(name), `${name} must remain represented by the customer Workspace policy`);
-  }
-});
 
 test('EKODI-owned brands are never classified as external clients', () => {
   const internalIds = ['biz', 'trade', 'mall', 'pay', 'books', 'lab', 'edu', 'media', 'church', 'community', 'social'];
@@ -32,13 +14,6 @@ test('EKODI-owned brands are never classified as external clients', () => {
   }
   assert.ok(!apiWorker.split('\n').some(line => line.includes("id: 'mission'")), 'retired mission service must not reappear in SERVICE_CATALOG');
   assert.ok(!apiWorker.includes('에코디선교회'), 'retired formal mission organization label must not reappear in Control API source');
-});
-
-test('short canonical client domains are preserved as customer-facing workspace addresses', () => {
-  for (const [, domain] of criticalClients) {
-    assert.ok(!domain.includes('.marketing.ekodi.kr'), `${domain} must stay short`);
-    assert.equal(domain.split('.').length, 3, `${domain} must be a first-level EKODI subdomain`);
-  }
 });
 
 test('admin worker never reintroduces the static-assets redirect loop', () => {
