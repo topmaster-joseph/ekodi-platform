@@ -28,15 +28,25 @@ function planLabel(subscription) {
   return plan || 'FREE';
 }
 
+function serviceMarkup(row) {
+  const plan = esc(planLabel(row.subscription));
+  const name = esc(row.name);
+  if (row.available === false) {
+    const state = row.status === 'planned' ? '예정' : '준비중';
+    return `<span class="membership-service membership-service-disabled" aria-disabled="true"><span>${name}</span><b>${plan} · ${state}</b></span>`;
+  }
+  return `<a class="membership-service" href="https://${esc(row.domain)}"><span>${name}</span><b>${plan}</b></a>`;
+}
+
 function renderGuest() {
   const host = ensureHost();
   if (!host) return;
   host.innerHTML = `
     <div class="membership-summary-head">
-      <div><small>EKODI UNIVERSAL MEMBERSHIP</small><strong>Google 인증 하나로 전체 FREE 이용</strong></div>
+      <div><small>EKODI UNIVERSAL MEMBERSHIP</small><strong>Google 인증 하나로 전체 FREE 기본 자격</strong></div>
       <span class="membership-badge">Guest</span>
     </div>
-    <p>로그인하면 모든 EKODI 사용자 서비스의 기본 FREE 이용권과 서비스별 구독 상태를 한곳에서 확인합니다.</p>`;
+    <p>로그인하면 운영 중인 EKODI 사용자 서비스를 FREE 수준부터 이용하고 서비스별 구독 상태를 한곳에서 확인합니다.</p>`;
 }
 
 function renderPortfolio(data) {
@@ -46,17 +56,18 @@ function renderPortfolio(data) {
     ...service,
     subscription: { planId: 'free', status: 'eligible', inherited: true },
   }));
-  const paid = rows.filter((row) => Number(row?.subscription?.monthlyFee || 0) > 0 || !['free', 'eligible'].includes(String(row?.subscription?.status || '').toLowerCase()) && String(row?.subscription?.planId || 'free').toLowerCase() !== 'free').length;
+  const availableCount = rows.filter((row) => row.available !== false).length;
+  const paid = rows.filter((row) => Number(row?.subscription?.monthlyFee || 0) > 0 || (!['free', 'eligible'].includes(String(row?.subscription?.status || '').toLowerCase()) && String(row?.subscription?.planId || 'free').toLowerCase() !== 'free')).length;
   host.innerHTML = `
     <div class="membership-summary-head">
-      <div><small>EKODI UNIVERSAL MEMBERSHIP</small><strong>통합계정 · ${rows.length}개 서비스 FREE 기본 이용</strong></div>
+      <div><small>EKODI UNIVERSAL MEMBERSHIP</small><strong>통합계정 · 운영 ${availableCount}개 서비스 FREE 기본 이용</strong></div>
       <span class="membership-badge">${paid ? `${paid} Paid` : 'FREE'}</span>
     </div>
-    <p>계정은 하나, 기본 이용권은 전체 서비스에 적용됩니다. 유료 기능은 필요한 서비스만 개별적으로 업그레이드합니다.</p>
+    <p>계정은 하나, 운영 중인 서비스의 기본 이용권은 FREE입니다. 유료 기능은 필요한 서비스만 개별적으로 업그레이드합니다.</p>
     <details class="membership-details">
       <summary>전체 서비스 이용권 보기</summary>
       <div class="membership-grid">
-        ${rows.map((row) => `<a class="membership-service" href="https://${esc(row.domain)}"><span>${esc(row.name)}</span><b>${esc(planLabel(row.subscription))}</b></a>`).join('')}
+        ${rows.map(serviceMarkup).join('')}
       </div>
     </details>`;
 }
