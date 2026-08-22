@@ -17,8 +17,8 @@ export default{
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/',307);
     let response;
-    if(url.pathname==='/admission'||url.pathname==='/admission/')response=await assetFor(request,env,'/admission/index.html');
-    else if(url.pathname==='/study'||url.pathname==='/study/')response=await assetFor(request,env,'/study/index.html');
+    if(url.pathname==='/admission'||url.pathname==='/admission/')response=await assetFor(request,env,'/admission/');
+    else if(url.pathname==='/study'||url.pathname==='/study/')response=await assetFor(request,env,'/study/');
     else response=await env.ASSETS.fetch(request);
     return injectEkodiShell(withHeaders(response),'edu');
   }
