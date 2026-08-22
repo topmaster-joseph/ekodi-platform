@@ -2,7 +2,6 @@
 :root{--user-bg:#f7f8f4;--user-paper:#fff;--user-ink:#1f2d25;--user-muted:#68766e;--user-green:#244b35;--user-green-soft:#eaf1eb;--user-warm:#f3f0e7;--user-line:#dde5de;--user-radius:20px}
 body[data-ekodi-ui="USER"]{background:var(--user-bg);color:var(--user-ink)}
 body[data-ekodi-ui="USER"] .topbar{min-height:64px;padding-top:max(10px,env(safe-area-inset-top));background:rgba(250,251,248,.96);box-shadow:0 1px 0 rgba(37,58,45,.04)}
-body[data-ekodi-ui="USER"] .topbar .workspace-control{display:none!important}
 body[data-ekodi-ui="USER"] .topbar .ghost{border-radius:999px;padding:8px 12px;font-size:12px;white-space:nowrap}
 body[data-ekodi-ui="USER"] .brand strong{font-size:14px;letter-spacing:-.01em}
 body[data-ekodi-ui="USER"] .brand small{font-size:10px}
