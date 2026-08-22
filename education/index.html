@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="입시와 학습·유학을 하나의 교육 여정으로 이어주는 EKODI Education">
+  <meta name="ekodi-ui-type" content="USER">
+  <title>EKODI Education | 에코디교육</title>
+  <link rel="stylesheet" href="/styles.css?v=20260822-edu-1">
+</head>
+<body data-area="home" data-ekodi-ui="USER">
+<header class="topbar">
+  <a class="brand" href="/"><span class="mark">E</span><span><strong>EKODI Education</strong><small>에코디교육</small></span></a>
+  <nav aria-label="주요 메뉴"><a href="/admission">Admission</a><a href="/study">Study</a><a href="#today">오늘</a><a href="https://my.ekodi.kr/journey/">My Journey</a></nav>
+  <button id="authButton" class="ghost" type="button">Google로 시작</button>
+</header>
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">USER UI · EDUCATION PLATFORM</p>
+      <h1>입시에서 끝나지 않고,<br><span>배움의 다음까지 이어집니다.</span></h1>
+      <p class="lead">EKODI Education은 Admission과 Study를 한 플랫폼 안에서 연결합니다. 학교·과정 탐색과 지원 준비, 합격 이후의 학습·학사·장학·생활 준비를 같은 교육 맥락에서 이어가되, 공식 근거 확인과 사용자의 최종 판단을 항상 우선합니다.</p>
+      <div class="hero-actions"><a class="primary" href="/admission">입시 준비 시작</a><a class="secondary" href="/study">학습·유학 보기</a><a class="secondary" href="https://my.ekodi.kr/journey/">My Journey로 돌아가기</a></div>
+    </div>
+    <aside class="identity-card">
+      <small>EKODI USER AI</small>
+      <strong id="identityName">로그인 전</strong>
+      <p>Education은 진로를 대신 결정하지 않습니다. 필요한 공식 자료와 다음 행동을 정리하고, 제출·결제·계약 같은 중요한 행동은 사용자가 최종 확인합니다.</p>
+      <code>Education → Admission + Study</code>
+    </aside>
+  </section>
+
+  <section class="summary" aria-label="Education 요약">
+    <article><span id="taskCount">0</span><small>진행 중 할 일</small></article>
+    <article><span id="shortlistCount">0</span><small>지원 후보</small></article>
+    <article><span id="studyCount">0</span><small>학습 준비 항목</small></article>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><p class="eyebrow">TWO AREAS · ONE EDUCATION CONTEXT</p><h2>두 업무영역, 하나의 교육 플랫폼</h2></div><p>Admission과 Study는 사용자 여정상 구분되지만 학교·과정·학력·언어·일정·장학·상담 같은 공통 맥락이 많아 처음부터 플랫폼을 둘로 쪼개지 않습니다.</p></div>
+    <div class="journey-grid">
+      <a class="journey-card" href="/admission"><small>ADMISSION</small><h3>입시</h3><p>학교·과정 탐색, 지원 적합도 검토, 공식 모집요강 확인, 서류·면접·지원 일정 관리.</p><strong>입시 업무영역 열기 →</strong></a>
+      <a class="journey-card" href="/study"><small>STUDY</small><h3>학습·유학</h3><p>합격 이후 등록·수강·학사·장학·학습 계획과 국내외 유학 생활 준비를 연결.</p><strong>학습·유학 업무영역 열기 →</strong></a>
+    </div>
+  </section>
+
+  <section id="today" class="section">
+    <div class="section-head"><div><p class="eyebrow">TODAY · MAX 3</p><h2>지금 할 일</h2></div><p>해야 할 일을 길게 쌓지 않고, 기한이 가까운 미완료 항목 최대 3개만 우선 보여줍니다.</p></div>
+    <div id="todayList" class="task-list"><div class="empty"><strong>지금 등록된 할 일이 없습니다.</strong></div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><p class="eyebrow">OFFICIAL SOURCE FIRST</p><h2>AI보다 공식 근거가 먼저</h2></div><p>전형일정, 자격, 비자, 장학, 등록 같은 고위험 정보는 AI 기억이 아니라 공식 기관·대학의 최신 안내를 기준으로 확인합니다.</p></div>
+    <div class="source-grid">
+      <article class="source-card"><small>UNIVERSITY</small><h3>학교·대학원 공식 모집요강</h3><p>지원하려는 기관의 공식 입학 페이지와 해당 연도 모집요강을 최우선 근거로 사용합니다.</p></article>
+      <article class="source-card"><small>STUDY IN KOREA</small><h3>국가 유학정보</h3><p>한국 유학 관련 공공 정보를 확인할 때 활용합니다.</p><a href="https://www.studyinkorea.go.kr/" target="_blank" rel="noreferrer">공식 사이트 ↗</a></article>
+      <article class="source-card"><small>HIKOREA</small><h3>체류·출입국 정보</h3><p>외국인 사용자의 체류·출입국 정보는 필요한 경우 공식 출입국 안내로 별도 확인합니다.</p><a href="https://www.hikorea.go.kr/" target="_blank" rel="noreferrer">공식 사이트 ↗</a></article>
+    </div>
+    <p class="privacy-note">현재 첫 릴리스는 민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다. 개인 계획 메모와 할 일은 이 브라우저에만 저장됩니다.</p>
+  </section>
+</main>
+<footer><strong>EKODI Education</strong><span>Admission + Study · User agency first</span><a href="https://my.ekodi.kr/journey/">My Journey ↗</a><a href="/admin">Admin ↗</a></footer>
+<script src="/config.js"></script>
+<script type="module" src="/app.js?v=20260822-edu-1"></script>
+</body>
+</html>
