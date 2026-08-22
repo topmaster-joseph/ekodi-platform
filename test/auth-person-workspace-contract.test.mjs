@@ -149,7 +149,8 @@ test('targeted workspace routing is available across shared and person-scoped EK
 test('My EKODI is the signed-in workspace home and routes connected platforms through central auth',()=>{
   assert.match(myHtml,/MY EKODI · USER UI/);
   assert.match(myHtml,/data-ekodi-ui="USER"/);
-  assert.match(myHtml,/id="workspaceSwitcher"/);
+  assert.match(myHtml,/id="workspaceList"/);
+  assert.doesNotMatch(myHtml,/id="workspaceSwitcher"/);
   assert.match(myHtml,/id="recommendationList"/);
   assert.match(myApp,/ekodi_my_active_workspace/);
   assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
