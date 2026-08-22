@@ -14,22 +14,23 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 
 ### Admission
 
-- Product area: EKODI Education
-- Route reserved: `edu.ekodi.kr/admission`
-- State: planned
-- Responsibility: school/program discovery, eligibility, application documents, interview and admission decision workflow
+- Platform: EKODI Education
+- Route: `edu.ekodi.kr/admission`
+- State: active
+- Responsibility: school/program discovery, eligibility preparation, official-source verification, application checklist, interview preparation and admission decision workflow
+- First-release boundary: no automatic application submission, payment or sensitive document vault
 
 ### Study
 
-- Product area: EKODI Education
-- Route reserved: `edu.ekodi.kr/study`
-- State: planned
-- Responsibility: learning and study-abroad preparation, academic life, mobility and scholarship support
-- Admission and Study remain distinct user journeys even though they share the Education platform boundary.
+- Platform: EKODI Education
+- Route: `edu.ekodi.kr/study`
+- State: active
+- Responsibility: learning and study-abroad preparation, academic life, mobility, scholarship and study planning
+- Admission and Study remain distinct user journeys while sharing one Education platform boundary, deployment unit and future `education_*` data namespace.
 
 ### Career
 
-- Existing product: EKODI Work
+- Existing platform: EKODI Work
 - Canonical host: `work.ekodi.kr`
 - State: active
 - Responsibility: talent profile, job discovery, recruiting, applications and employer workflow
@@ -37,7 +38,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 
 ### Startup
 
-- Existing product: EKODI Business OS
+- Existing platform: EKODI Business OS
 - Canonical host: `business.ekodi.kr`
 - Supporting ecosystem: EKODI Biz, Marketing AI, Trade and Mall
 - State: active
@@ -45,7 +46,7 @@ This diagram is a navigation aid, not a mandatory funnel. A person may start at 
 
 ### Settlement
 
-- Existing product: EKODI Community
+- Existing platform: EKODI Community
 - Canonical host: `community.ekodi.kr`
 - Supporting ecosystem: Work, Church and Energy where the user chooses them
 - State: active
@@ -59,10 +60,11 @@ A handoff means an explicit, user-visible transition suggestion. It does not mea
 1. My EKODI may suggest a next stage when it is relevant.
 2. The user chooses whether to continue.
 3. Central authentication may preserve login and navigation context.
-4. The destination service re-authorizes Person + Space + Role server-side.
-5. Private cross-service data requires an explicit API contract, minimum necessary scope and user authorization.
-6. Applications, submissions, contracts, payments and other high-impact actions keep a human confirmation gate.
-7. The person may stop, reverse direction, export data or choose a different path.
+4. Admission → Study stays inside Education and preserves only non-sensitive planning context in the first release.
+5. Cross-platform destinations re-authorize Person + Space + Role server-side.
+6. Private cross-service data requires an explicit API contract, minimum necessary scope and user authorization.
+7. Applications, submissions, contracts, payments and other high-impact actions keep a human confirmation gate.
+8. The person may stop, reverse direction, export data or choose a different path.
 
 ## AI boundary
 
@@ -76,4 +78,8 @@ Machine-readable journey contract: `my/life-journey.js`
 
 User surface: `my.ekodi.kr/journey/`
 
-The surface reads only central access status for active owner services. It does not directly query Work, Business or Community private tables. Admission and Study remain visibly planned until their Education implementation passes its own platform, security and production gates.
+Education platform: `edu.ekodi.kr/`
+
+Education areas: `edu.ekodi.kr/admission` and `edu.ekodi.kr/study`
+
+The My Journey surface reads only central access status for active owner services. It does not directly query Education, Work, Business or Community private tables. Education first release stores non-sensitive planning metadata in the browser only; any future persistent Education store must use an isolated `education_*` namespace and explicit Core contracts.
