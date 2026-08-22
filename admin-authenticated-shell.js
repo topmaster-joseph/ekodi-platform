@@ -6,11 +6,12 @@
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const loginLink = document.querySelector('#centralAdminLogin');
-  const postAuthStyles = ['compact-control-center.css'];
+  const postAuthStyles = ['compact-control-center.css', 'admin-assist-dock.css'];
   const criticalPostAuthScripts = [
     'compact-control-center.js',
     'admin-menu-layout.js',
     'admin-demand-loader.js',
+    'admin-assist-dock.js',
   ];
   let started = false;
 
