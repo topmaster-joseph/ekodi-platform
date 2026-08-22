@@ -24,7 +24,10 @@ function allowed(){
  return USER_SURFACES.has(surface);
 }
 function switchUrl(){
- const u=new URL(MY);u.pathname='/workspaces';u.searchParams.set('return_to',location.href);return u.href;
+ const u=new URL(MY);
+ u.searchParams.set('return_to',location.href);
+ u.hash='workspaces';
+ return u.href;
 }
 function render(){
  if(!allowed()){root?.remove();root=null;return;}
