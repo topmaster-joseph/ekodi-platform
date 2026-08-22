@@ -44,6 +44,12 @@ test('Education is an isolated Worker with Shell and admin handoff',async()=>{
   assert.match(staging,/DATA_MODE = "isolated-staging"/);
 });
 
+test('Admin Campus observes Education as live, not planned',async()=>{
+  const campus=await read('campus-actions.js');
+  assert.match(campus,/name: 'EKODI Education', domain: 'edu\.ekodi\.kr'/);
+  assert.doesNotMatch(campus,/domain: 'edu\.ekodi\.kr'[^\n]*lifecycle: 'planned'/);
+});
+
 test('Education browser code stores planning metadata only and parses',async()=>{
   const app=await read('education/app.js');
   assert.match(app,/ekodi_education_planner_v1/);
