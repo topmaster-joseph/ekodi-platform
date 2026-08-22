@@ -12,7 +12,7 @@
 <body data-ekodi-ui="USER">
   <header class="topbar">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">서비스</a><a href="#account">내 정보</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="/journey/">나의 여정</a><a href="#workspaces">내 공간</a><a href="#platforms">서비스</a><a href="#account">내 정보</a></nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
     <button id="refreshButton" class="hide" type="button" tabindex="-1" aria-hidden="true">새로고침</button>
     <div id="workspaceControl" class="workspace-control hide" aria-hidden="true">
@@ -44,6 +44,15 @@
       </div>
       <div id="recommendationList" class="recommendation-grid" aria-live="polite"><div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong><p>내 공간과 연결된 서비스를 살펴보고 필요한 다음 행동을 준비합니다.</p></div></div>
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
+    </section>
+
+    <section id="journey-preview" class="section soft-section">
+      <div class="section-head"><div><p class="eyebrow">MY JOURNEY</p><h2>서비스보다 먼저, 나의 다음 단계</h2></div><p>입시·학습과 유학·취업과 진로·창업과 사업·생활과 정착을 하나의 강제된 코스로 만들지 않습니다. 지금 필요한 단계만 선택하고 기존 EKODI 전문 플랫폼으로 이어갑니다.</p></div>
+      <div class="recommendation-grid">
+        <article class="recommendation-card"><small>01 · PERSON FIRST</small><h3>한 사람의 맥락</h3><p>서비스를 바꿀 때마다 처음부터 다시 시작하지 않도록 My EKODI가 로그인과 선택 맥락을 이어갑니다.</p></article>
+        <article class="recommendation-card"><small>02 · SPECIALISTS</small><h3>전문 플랫폼은 그대로</h3><p>취업은 Work, 창업·사업은 Business 생태계, 생활과 관계는 Community처럼 기존 전문성을 유지합니다.</p></article>
+        <article class="recommendation-card"><small>03 · YOUR CHOICE</small><h3>필요할 때만 연결</h3><p>AI와 시스템은 다음 단계를 제안할 수 있지만 진로를 대신 결정하거나 민감한 정보를 자동으로 넘기지 않습니다.</p><a class="primary" href="/journey/">나의 여정 열기 →</a></article>
+      </div>
     </section>
 
     <section id="workspaces" class="section workspace-section">
@@ -90,7 +99,7 @@
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="/journey/">My Journey ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js?v=20260821-user-ui-1"></script>
   <script type="module" src="/user-ai-ui.js?v=20260822-user-ai-1"></script>
