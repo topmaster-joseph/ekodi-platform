@@ -153,11 +153,11 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
   assert.match(myHtml,/workspace-selector-sync\.js/);
   assert.doesNotMatch(myHtml,/id="workspaceSwitcher"/);
   assert.match(myHtml,/id="recommendationList"/);
+  assert.match(myHtml,/user-ai-ui\.js/);
   assert.match(myApp,/ekodi_my_active_workspace/);
   assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
   assert.match(myApp,/searchParams\.set\('workspace'/);
   assert.match(myApp,/setActiveWorkspace/);
-  assert.match(myApp,/recommendationUi/);
 });
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
