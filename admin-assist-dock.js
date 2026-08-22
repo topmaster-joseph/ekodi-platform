@@ -12,9 +12,12 @@
     {re:/(도메인\s*(이전|삭제)|서비스\s*(종료|폐쇄)|ownership\s*transfer|shutdown)/i,area:'domain_service_shutdown_or_ownership_transfer'},
   ];
   const HEALTH_RE=/(상태|점검|장애|이상|느려|오류|health|status|incident)/i;
+  const ACTION_RE=/(수정|바꿔|변경|고쳐|조치|적용|구축|연동|배포|재구성|정리|없애|옮겨|추가|만들어|fix|change|deploy|build|connect|apply|update)/i;
   let inbox=[];
   let actions=[];
   let activeThread=null;
+  let aiHistory=[];
+  let lastAiReply=null;
   let state=loadState();
   let root=null;
 
@@ -23,6 +26,7 @@
   function loadState(){try{return {...{open:false,tab:'inbox'},...JSON.parse(sessionStorage.getItem(STATE_KEY)||'{}')}}catch{return{open:false,tab:'inbox'}}}
   function saveState(){try{sessionStorage.setItem(STATE_KEY,JSON.stringify({open:state.open,tab:state.tab}))}catch{}}
   function esc(text){return String(text??'')}
+  function rememberAi(role,text){const value=String(text||'').trim();if(!value)return;aiHistory.push({role,text:value.slice(0,2000)});if(aiHistory.length>8)aiHistory=aiHistory.slice(-8)}
   function context(){
     const active=document.querySelector('.sidebar .nav.active[data-section]');
     const section=active?.dataset.section||location.hash.replace(/^#/,'')||'overview';
@@ -80,7 +84,9 @@
   function renderAi(){
     const view=root?.querySelector('#ekodiAssistAi');if(!view)return;view.replaceChildren();const c=context();const intro=el('div','ekodi-assist-ai-intro');intro.append(el('strong','',`${c.title}에서 무엇을 할까요?`),el('p','','현재 관리자 화면의 맥락을 함께 보내며, 삭제·권한·금전·계약 같은 고위험 요청은 자동 실행하지 않습니다.'));view.append(intro);
     const quick=el('div','ekodi-assist-quick');[['현재 화면 상태 점검','health'],['승인 대기 보기','approvals'],['전체 AI OPS 열기','full']].forEach(([label,kind])=>{const button=el('button','',label);button.type='button';button.addEventListener('click',()=>{if(kind==='health')submitAi('현재 화면과 관련 서비스 상태를 점검해줘');else if(kind==='approvals')renderAiActions(view,true);else location.hash='#ai-ops'});quick.append(button)});view.append(quick);
-    const form=el('form');const input=el('textarea','ekodi-assist-command');input.rows=3;input.maxLength=1800;input.placeholder='원하는 결과를 그대로 말씀해 주세요. 예: 이 화면 상태를 점검해줘';const submit=el('button','ekodi-assist-primary','요청 보내기');submit.type='submit';submit.style.height='34px';submit.style.marginTop='7px';form.append(input,submit);form.addEventListener('submit',event=>{event.preventDefault();const text=input.value.trim();if(text){input.value='';submitAi(text)}});view.append(form);renderAiActions(view,false)
+    const form=el('form');const input=el('textarea','ekodi-assist-command');input.rows=3;input.maxLength=1800;input.placeholder='질문하거나 운영 요청을 말씀해 주세요. 예: 이 화면에서 지금 중요한 것은 뭐야?';const submit=el('button','ekodi-assist-primary','요청 보내기');submit.type='submit';submit.style.height='34px';submit.style.marginTop='7px';form.append(input,submit);form.addEventListener('submit',event=>{event.preventDefault();const text=input.value.trim();if(text){input.value='';submitAi(text)}});view.append(form);
+    if(lastAiReply){const reply=el('div','ekodi-assist-ai-intro');const label=lastAiReply.mode==='ai'?'EKODI Admin AI':'EKODI Assist 기본 모드';const body=el('p','',lastAiReply.text);body.style.whiteSpace='pre-wrap';reply.append(el('strong','',label),body);if(lastAiReply.notice){const notice=el('p','',lastAiReply.notice);notice.style.opacity='.8';reply.append(notice)}view.append(reply)}
+    renderAiActions(view,false)
   }
   function renderAiActions(view,onlyApprovals){
     let container=view.querySelector('.ekodi-assist-ai-result');if(container)container.remove();container=el('div','ekodi-assist-ai-result');const rows=(onlyApprovals?actions.filter(item=>item.status==='awaiting_human'):actions).slice(0,5);if(!rows.length){container.append(el('div','ekodi-assist-empty',onlyApprovals?'현재 사람 승인을 기다리는 작업이 없습니다.':'최근 AI 운영 요청이 없습니다.'))}else{for(const item of rows){const row=el('div','ekodi-assist-actionrow');row.append(el('b','',`${statusLabel(item.status)} · ${item.agent_name||item.agent_id||'AI'}`),el('span','',item.rationale||item.action_type||''));container.append(row)}}view.append(container)
@@ -90,11 +96,18 @@
     const view=root?.querySelector('#ekodiAssistAi');if(!view)return;const status=el('div','ekodi-assist-status','요청을 분류하고 안전 경계를 확인 중입니다.');view.prepend(status);const c=context();const risky=highRiskArea(text);
     try{
       let result;
-      if(risky){result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'admin.assist_request',area:risky,target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c,request:text},reversible:false,delegated:true,preflightVerified:false,reducesUserRights:risky==='policy_change_that_materially_reduces_user_rights'})});status.textContent=`${statusLabel(result.status)} · 이 요청은 관리자 판단 경계에 두었습니다.`}
-      else if(HEALTH_RE.test(text)){result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});status.textContent=result.status==='verified'?'상태 점검 완료 · 운영 기록에 남겼습니다.':`${statusLabel(result.status)} · 상태 점검 결과를 확인해 주세요.`}
+      let queued=null;
+      if(risky){result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'admin.assist_request',area:risky,target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c,request:text},reversible:false,delegated:true,preflightVerified:false,reducesUserRights:risky==='policy_change_that_materially_reduces_user_rights'})});lastAiReply=null;status.textContent=`${statusLabel(result.status)} · 이 요청은 관리자 판단 경계에 두었습니다.`}
+      else if(HEALTH_RE.test(text)){result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});lastAiReply=null;status.textContent=result.status==='verified'?'상태 점검 완료 · 운영 기록에 남겼습니다.':`${statusLabel(result.status)} · 상태 점검 결과를 확인해 주세요.`}
       else{
-        let preflight=false;try{const check=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:`Assist 사전점검: ${text}`,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});preflight=Boolean(check.ok)}catch{}
-        result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c,request:text},reversible:true,delegated:true,preflightVerified:preflight})});status.textContent=`${statusLabel(result.status)} · 요청을 감사 가능한 운영 큐에 기록했습니다.`
+        if(ACTION_RE.test(text)){
+          let preflight=false;try{const check=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:`Assist 사전점검: ${text}`,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});preflight=Boolean(check.ok)}catch{}
+          queued=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c,request:text},reversible:true,delegated:true,preflightVerified:preflight})})
+        }
+        const history=aiHistory.slice(-8);rememberAi('user',text);
+        result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:text,context:c,history})});
+        const reply=String(result.reply||'응답을 받지 못했습니다.');rememberAi('assistant',reply);lastAiReply={text:reply,mode:result.mode||'free_assist',provider:result.provider||null,notice:result.notice||''};
+        status.textContent=queued?`${statusLabel(queued.status)} · 운영 큐에 기록하고 Admin AI가 응답했습니다.`:(result.mode==='ai'?'EKODI Admin AI가 응답했습니다.':'기본 보조 모드로 응답했습니다.')
       }
       await refreshSummary();renderAi();const latest=root?.querySelector('#ekodiAssistAi');if(latest){const note=el('div','ekodi-assist-status',status.textContent);latest.prepend(note)}
     }catch(error){status.textContent=error.message;status.classList.add('error')}

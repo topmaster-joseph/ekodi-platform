@@ -1,10 +1,14 @@
 import authWorker from './auth-worker.js';
 import apiWorker from './api-worker.js';
+import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js';
+import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
 const MAX_PAYLOAD_BYTES = 16_384;
+const MAX_ASSIST_MESSAGE_CHARS = 4_000;
+const MAX_ASSIST_HISTORY_ITEMS = 8;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
 
 function json(data, status = 200, request = null, env = {}) {
@@ -86,6 +90,24 @@ function normalizeAction(body = {}) {
   };
 }
 
+function normalizeAssistPage(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    section: String(source.section || '').trim().slice(0, 120),
+    title: String(source.title || '').trim().slice(0, 180),
+    pathname: String(source.pathname || '').trim().slice(0, 240),
+    hash: String(source.hash || '').trim().slice(0, 180),
+  };
+}
+
+function normalizeAssistHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(-MAX_ASSIST_HISTORY_ITEMS).map(item => ({
+    role: item?.role === 'assistant' ? 'assistant' : item?.role === 'user' ? 'user' : '',
+    text: String(item?.text ?? item?.content ?? '').trim().slice(0, 2_000),
+  })).filter(item => item.role && item.text);
+}
+
 function payloadJson(action) {
   try {
     const value = JSON.stringify(action.payload || {});
@@ -165,6 +187,24 @@ async function finalizeAction(env, id, execution) {
   return { status, verifiedAt: now };
 }
 
+async function finalizeAssistAction(env, id, result, value) {
+  const now = new Date().toISOString();
+  const status = result.ok ? 'verified' : 'failed';
+  const audit = {
+    mode: result.mode,
+    degraded: Boolean(result.degraded),
+    provider: result.provider || null,
+    model: value?.model || null,
+    responseId: value?.responseId || null,
+    notice: result.notice || '',
+  };
+  await env.DB.prepare(`UPDATE ai_agent_actions
+    SET status = ?, result_json = ?, verified_at = ?
+    WHERE id = ?`)
+    .bind(status, JSON.stringify(audit), now, id).run();
+  return { status, verifiedAt: now };
+}
+
 async function listActions(env, url) {
   const requested = Number.parseInt(url.searchParams.get('limit') || '30', 10);
   const limit = Math.min(Math.max(Number.isFinite(requested) ? requested : 30, 1), MAX_LIST);
@@ -190,6 +230,77 @@ async function listActions(env, url) {
 
 function safeParse(value) {
   try { return JSON.parse(value || '{}'); } catch { return {}; }
+}
+
+async function handleAdminAssist(request, env, session) {
+  const body = await readJson(request);
+  if (!body) return json({ error: '유효한 JSON 요청이 필요합니다.', code: 'INVALID_JSON' }, 400, request, env);
+  const message = String(body.message || '').trim().slice(0, MAX_ASSIST_MESSAGE_CHARS);
+  if (!message) return json({ error: 'AI Assist 요청 내용이 필요합니다.', code: 'ASSIST_MESSAGE_REQUIRED' }, 400, request, env);
+  const page = normalizeAssistPage(body.context || body.page || {});
+  const history = normalizeAssistHistory(body.history);
+
+  const auditAction = normalizeAction({
+    agentId: 'chief',
+    actionType: 'admin.assist_chat',
+    area: 'read_only_audits',
+    target: page.section || 'admin',
+    rationale: message,
+    payload: {
+      source: 'admin-assist-dock',
+      context: page,
+      historyItems: history.length,
+    },
+    reversible: true,
+    delegated: true,
+    preflightVerified: true,
+  });
+  const decision = evaluateMissionAction(auditAction);
+  const stored = await insertAction(env, session, auditAction, decision);
+  const provider = createOpenAiProvider(env);
+  const gateway = buildCoreAiGateway(env, [provider]);
+  const configuredTimeout = Number(env.AI_ADMIN_TIMEOUT_MS || 15_000);
+  const timeoutMs = Math.min(Math.max(Number.isFinite(configuredTimeout) ? configuredTimeout : 15_000, 2_500), 30_000);
+  const result = await gateway.run({
+    taskName: 'admin-assist',
+    timeoutMs,
+    context: {
+      message,
+      page,
+      history,
+      requestedBy: String(session.email || 'unknown'),
+    },
+    fallback: () => ({
+      text: '외부 AI 연결이 준비되지 않았거나 일시적으로 응답하지 않습니다. 요청은 감사 가능한 운영 기록에 남겼으며, EKODI의 핵심 관리 기능은 AI 없이도 계속 사용할 수 있습니다.',
+      model: null,
+      responseId: null,
+    }),
+  });
+  const value = result.value && typeof result.value === 'object' ? result.value : { text: String(result.value || '') };
+  const finalized = await finalizeAssistAction(env, stored.id, result, value);
+  if (!result.ok) {
+    return json({
+      ok: false,
+      actionId: stored.id,
+      status: finalized.status,
+      mode: result.mode,
+      degraded: true,
+      provider: null,
+      reply: 'AI 보조 기능 없이 핵심 기능을 계속 이용할 수 있습니다.',
+      notice: result.notice || '',
+    }, 503, request, env);
+  }
+  return json({
+    ok: true,
+    actionId: stored.id,
+    status: finalized.status,
+    mode: result.mode,
+    degraded: Boolean(result.degraded),
+    provider: result.provider || null,
+    model: value.model || null,
+    reply: String(value.text || '').trim(),
+    notice: result.notice || '',
+  }, 200, request, env);
 }
 
 async function decideAction(request, env, session, id) {
@@ -246,6 +357,19 @@ export async function handleAgentMissionControl(request, env) {
       humanGateAreas: AI_MISSION_RUNTIME.humanGateAreas,
       forbiddenAreas: AI_MISSION_RUNTIME.forbiddenAreas,
     }, 200, request, env);
+  }
+
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/provider-status`) {
+    const provider = createOpenAiProvider(env);
+    return json({
+      ok: true,
+      gateway: getCoreAiGatewayStatus(env, [provider]),
+      openai: getOpenAiProviderStatus(env),
+    }, 200, request, env);
+  }
+
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/assist`) {
+    return handleAdminAssist(request, env, auth.session);
   }
 
   if (request.method === 'POST' && url.pathname === `${PREFIX}/evaluate`) {

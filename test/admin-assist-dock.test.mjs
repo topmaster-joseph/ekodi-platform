@@ -23,18 +23,21 @@ test('EKODI Assist source parses and stays one fixed dock with two modes',async(
   assert.doesNotMatch(js,/pointermove|dragstart|draggable/);
 });
 
-test('Assist combines canonical Operator and AI Mission Control without a second backend',async()=>{
+test('Assist combines canonical Operator, Mission Control and server-side Admin AI without browser secrets',async()=>{
   const js=await read('admin-assist-dock.js');
   assert.match(js,/\/api\/control\/messenger\/inbox/);
   assert.match(js,/\/api\/control\/messenger\/threads\//);
   assert.match(js,/\/api\/control\/ai\/actions/);
+  assert.match(js,/\/api\/control\/ai\/assist/);
   assert.match(js,/awaiting_human/);
   assert.match(js,/item\.status==='waiting_human'/);
   assert.match(js,/actions\.filter\(item=>item\.status==='awaiting_human'\)/);
-  assert.doesNotMatch(js,/SUPABASE_SERVICE_ROLE_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY/);
+  assert.match(js,/aiHistory/);
+  assert.match(js,/lastAiReply/);
+  assert.doesNotMatch(js,/SUPABASE_SERVICE_ROLE_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY|sk-proj-/);
 });
 
-test('Assist is current-screen aware and high-impact actions map to permanent human gates',async()=>{
+test('Assist is current-screen aware, action-first and high-impact actions map to permanent human gates',async()=>{
   const js=await read('admin-assist-dock.js');
   assert.match(js,/\.sidebar \.nav\.active\[data-section\]/);
   assert.match(js,/#pageTitle/);
@@ -48,7 +51,9 @@ test('Assist is current-screen aware and high-impact actions map to permanent hu
   ]) assert.match(js,new RegExp(area));
   assert.match(js,/service\.health_check/);
   assert.match(js,/ui\.change_request/);
+  assert.match(js,/ACTION_RE/);
   assert.match(js,/preflightVerified/);
+  assert.match(js,/운영 큐에 기록하고 Admin AI가 응답했습니다/);
 });
 
 test('Assist first path is launcher-only and upgrades through existing secured lazy assets',async()=>{
@@ -80,6 +85,7 @@ test('guarded shared-site release verifies bootstrap and full Assist lazy assets
   assert.match(manifest,/ekodiAssistDock/);
   assert.match(manifest,/\/api\/control\/messenger\/inbox/);
   assert.match(manifest,/\/api\/control\/ai\/actions/);
+  assert.match(manifest,/\/api\/control\/ai\/assist/);
   assert.match(manifest,/admin\.ekodi\.kr\/ai-ops-admin\.css\?assist=v2/);
   assert.match(manifest,/ekodi-assist-launcher/);
 });
