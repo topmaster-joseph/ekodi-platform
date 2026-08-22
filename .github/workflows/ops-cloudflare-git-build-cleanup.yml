@@ -1,0 +1,58 @@
+name: One-time Cloudflare legacy Git build cleanup
+
+on:
+  push:
+    branches:
+      - ops/cloudflare-git-build-cleanup-20260822
+    paths:
+      - '.github/workflows/ops-cloudflare-git-build-cleanup.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  disconnect-legacy-worker-build-trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Verify credentials are available
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Remove only the legacy ekodi-platform Workers Builds triggers
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
+          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
+
+          curl --fail-with-body -sS "${api}/workers/scripts" "${auth[@]}" > /tmp/workers.json
+          worker_tag=$(jq -r '.result[]? | select(.id == "ekodi-platform") | .tag // empty' /tmp/workers.json | head -n1)
+
+          if [[ -z "$worker_tag" ]]; then
+            echo 'No Worker named ekodi-platform exists; no legacy Workers Builds trigger can remain for that Worker.'
+            exit 0
+          fi
+
+          curl --fail-with-body -sS "${api}/builds/workers/${worker_tag}/triggers" "${auth[@]}" > /tmp/triggers.json
+          mapfile -t trigger_ids < <(jq -r '.result[]? | .trigger_uuid // empty' /tmp/triggers.json)
+
+          if (( ${#trigger_ids[@]} == 0 )); then
+            echo 'Worker ekodi-platform has no Workers Builds triggers.'
+            exit 0
+          fi
+
+          echo "Found ${#trigger_ids[@]} legacy Workers Builds trigger(s) for ekodi-platform. Removing trigger(s) only; Worker and repository connection are preserved."
+          for trigger_uuid in "${trigger_ids[@]}"; do
+            response=$(curl --fail-with-body -sS -X DELETE "${api}/builds/triggers/${trigger_uuid}" "${auth[@]}")
+            printf '%s' "$response" | jq -e '.success == true' >/dev/null
+          done
+
+          curl --fail-with-body -sS "${api}/builds/workers/${worker_tag}/triggers" "${auth[@]}" > /tmp/after.json
+          remaining=$(jq '[.result[]?] | length' /tmp/after.json)
+          test "$remaining" = '0'
+          echo 'Legacy ekodi-platform Workers Builds triggers removed and verified absent.'
