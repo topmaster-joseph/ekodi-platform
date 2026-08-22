@@ -1,7 +1,7 @@
 const url=new URL(location.href);
 const params=url.searchParams;
 const legacySiteAliases=Object.freeze({'mall-seller':'mall'});
-const targetableWorkspaceSites=new Set(['cgma','marketing','biz','trade','mall','pay','books','church','lab','cafe','mission','community','edu','media','social','energy','messenger','invest']);
+const targetableWorkspaceSites=new Set(['cgma','marketing','biz','trade','mall','pay','books','church','lab','mission','community','edu','media','social','energy','messenger','invest']);
 
 let changed=false;
 const requestedSite=params.get('site');
