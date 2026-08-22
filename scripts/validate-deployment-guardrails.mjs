@@ -22,14 +22,26 @@ function forbidText(file, needles) {
 
 const workerGuarded = {
   '.github/workflows/deploy-site-core.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json'],
-  '.github/workflows/deploy-admin-site.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json'],
   '.github/workflows/deploy-books.yml': ['guarded-worker-release.mjs', 'books.worker.json'],
   '.github/workflows/deploy-community.yml': ['guarded-worker-release.mjs', 'community.worker.json'],
   '.github/workflows/deploy-social.yml': ['guarded-worker-release.mjs', 'social.worker.json'],
 };
 for (const [file, needles] of Object.entries(workerGuarded)) requireText(file, needles);
+
+// Legacy admin compatibility is intentionally manual-only. It must never become an
+// automatic production deploy again, but because it performs no production write it
+// must not be forced to contain the guarded release controller or Worker manifest.
+const legacyAdmin = requireText('.github/workflows/deploy-admin-site.yml', [
+  'workflow_dispatch:',
+  'Legacy Admin & Auth Compatibility Check',
+  'ekodi-shared-site-worker-production',
+]);
+for (const trigger of [/\n\s*push\s*:/, /\n\s*pull_request\s*:/, /\n\s*schedule\s*:/]) {
+  if (trigger.test(legacyAdmin)) fail('.github/workflows/deploy-admin-site.yml', 'legacy admin compatibility workflow must remain manual-only');
+}
+forbidText('.github/workflows/deploy-admin-site.yml', ['npm run deploy:site', 'guarded-worker-release.mjs', 'npx wrangler', 'wrangler@']);
+
 forbidText('.github/workflows/deploy-site-core.yml', ['npm run deploy:site', 'wrangler.site.toml\n      - name: Deploy']);
-forbidText('.github/workflows/deploy-admin-site.yml', ['npm run deploy:site']);
 forbidText('.github/workflows/deploy-books.yml', ['npm run deploy:books', 'deploy --config wrangler.books.toml']);
 forbidText('.github/workflows/deploy-community.yml', ['npm run deploy:community', 'deploy --config wrangler.community.toml']);
 forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.social.toml']);
@@ -82,4 +94,4 @@ if (failed) {
   console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: protected production paths and credential roles cannot bypass guarded release gates.');
+console.log('✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying.');
