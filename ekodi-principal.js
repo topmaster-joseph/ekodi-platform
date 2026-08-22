@@ -1,8 +1,9 @@
+import { activityRoleFor, ownedCustomerSiteFor } from './ekodi-site-policy.js';
+
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const SUBJECT_TYPES=new Set(['person','tenant']);
 const LEGACY_WRITE_ROLES=new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
-const LEGACY_ADMIN_ROLES=new Set(['super_admin','admin','owner','manager']);
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const encoder=new TextEncoder();
 
@@ -47,19 +48,24 @@ export function principalCapabilities(role='',kind='user'){
   const normalized=clean(role,80).toLowerCase();
   const coreRole=canonicalCoreRole(normalized,kind);
   const set=new Set(['conversation:read']);
-  if(kind==='admin'||LEGACY_ADMIN_ROLES.has(normalized)||coreRole==='admin'){
+
+  // Platform authority is activated only by an authenticated admin principal.
+  // A tenant-local role named "admin" must never inherit platform authority.
+  if(kind==='admin'){
     ['conversation:write','conversation:operate','conversation:handoff','conversation:channel-link'].forEach(v=>set.add(v));
-  }else if(LEGACY_WRITE_ROLES.has(normalized)||['owner','manager','marketer','accountant','staff'].includes(coreRole)){
+  }else if(LEGACY_WRITE_ROLES.has(normalized)||['owner','admin','manager','marketer','accountant','staff'].includes(coreRole)){
     ['conversation:write','conversation:handoff'].forEach(v=>set.add(v));
   }
   return [...set];
 }
 
-export function buildPrincipal({id,email='',kind='user',provider='unknown',role='member',subjectType='person',subjectKey=''}){
+export function buildPrincipal({id,email='',kind='user',provider='unknown',role='member',subjectType='person',subjectKey='',activityRole='',activityRoleLabel=''}){
   const principalId=clean(id,240);
   if(!principalId)return null;
   const normalizedKind=kind==='admin'?'admin':'user';
   const normalizedRole=clean(role,80)||'member';
+  const normalizedSubjectType=SUBJECT_TYPES.has(subjectType)?subjectType:'person';
+  const authorityScope=normalizedKind==='admin'?'platform':normalizedSubjectType==='tenant'?'tenant':'person';
   return Object.freeze({
     id:principalId,
     email:clean(email,320).toLowerCase(),
@@ -67,7 +73,10 @@ export function buildPrincipal({id,email='',kind='user',provider='unknown',role=
     provider:clean(provider,80)||'unknown',
     role:normalizedRole,
     coreRole:canonicalCoreRole(normalizedRole,normalizedKind),
-    subject:Object.freeze({type:SUBJECT_TYPES.has(subjectType)?subjectType:'person',key:clean(subjectKey,240)||principalId}),
+    activityRole:clean(activityRole,80)||null,
+    activityRoleLabel:clean(activityRoleLabel,120)||null,
+    authorityScope,
+    subject:Object.freeze({type:normalizedSubjectType,key:clean(subjectKey,240)||principalId}),
     capabilities:Object.freeze(principalCapabilities(normalizedRole,normalizedKind)),
   });
 }
@@ -104,6 +113,7 @@ export async function principalFromCustomerSession(request,env){
     WHERE s.token_hash=? AND s.expires_at>?`)
     .bind(tokenHash,new Date().toISOString()).first();
   if(!row||row.user_status!=='active'||row.tenant_status!=='active'||row.membership_status!=='active')return null;
+  const activity=activityRoleFor(row.slug,row.role);
   return buildPrincipal({
     id:`customer:${row.user_id}`,
     email:row.email,
@@ -112,6 +122,8 @@ export async function principalFromCustomerSession(request,env){
     role:row.role,
     subjectType:'tenant',
     subjectKey:row.slug,
+    activityRole:activity.role,
+    activityRoleLabel:activity.label,
   });
 }
 
@@ -132,7 +144,12 @@ export async function resolveWorkspacePrincipal(request,env,{write=false}={}){
   if(!tenant||tenant.status!=='active')return {error:'SUBJECT_FORBIDDEN',status:403};
   const grant=await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id,base.email).first();
   if(!grant||Number(grant.enabled)!==1)return {error:'SUBJECT_FORBIDDEN',status:403};
-  const principal=buildPrincipal({id:base.id,email:base.email,kind:'user',provider:base.provider,role:String(grant.role||'member'),subjectType:'tenant',subjectKey:String(tenant.slug)});
+  const site=ownedCustomerSiteFor(tenant.slug);
+  const activity=activityRoleFor(site?.id||tenant.slug,String(grant.role||'member'));
+  const principal=buildPrincipal({
+    id:base.id,email:base.email,kind:'user',provider:base.provider,role:String(grant.role||'member'),
+    subjectType:'tenant',subjectKey:String(tenant.slug),activityRole:activity.role,activityRoleLabel:activity.label,
+  });
   if(write&&!principal.capabilities.includes('conversation:write'))return {error:'SUBJECT_READ_ONLY',status:403};
   if(write&&String(env.ALLOW_MUTATIONS)!=='true')return {error:'MUTATIONS_DISABLED',status:503};
   return {principal,subject:principal.subject,identity:{id:base.subject.key,email:base.email}};

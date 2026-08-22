@@ -35,19 +35,20 @@ The machine-readable source of truth is `config/ai-mission-governance.json`. The
 - Existing first-level customer domains may remain official public-site domains or compatibility aliases. Do not treat them as the canonical Marketing AI naming standard unless explicitly configured for another product.
 - Service-specific details belong in URL paths or product configuration unless a product has an explicit namespace contract such as `ai.ekodi.kr`.
 
-## 2. Customer classification is a business invariant
+## 2. Customer classification and authority scope are business invariants
 
-Only EKODI-owned brands are internal.
+Ownership by EKODI is not the platform boundary. The boundary is operational responsibility.
 
-Internal examples:
-- EKODI Biz
-- EKODI Church
-- EKODI Lab
-- EKODI Books
-- EKODI Trading
-- other brands owned by EKODI
+Platform-internal surfaces are limited to EKODI Core and reusable shared/professional capabilities such as central identity, authorization, billing, AI governance, security, logs, shared APIs, and control-plane infrastructure.
 
-Every non-EKODI organization is an external client even when closely partnered with EKODI.
+An operating organization or business is a customer site/tenant even when EKODI owns it. It must use the same tenant contract, isolation rules, memberships, audit model, and role boundaries as an external customer.
+
+EKODI-owned customer-site examples include:
+- `church.ekodi.kr` — 에코디교회
+- `biz.ekodi.kr` — 에코디비즈
+- `lab.ekodi.kr` — 에코디연구소
+- `trade.ekodi.kr` — EKODI Global Trading
+- `cafe.ekodi.kr` — 에코디 카페 when operated as an organization/business
 
 Revenue-critical external clients currently include:
 - `cgma.ekodi.kr` — 청계면상인회 public site; `cgma.ai.ekodi.kr` is its dedicated Marketing AI workspace.
@@ -55,7 +56,11 @@ Revenue-critical external clients currently include:
 - `pizzamaru.ai.ekodi.kr` — 피자마루 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
 - `yogurt.ai.ekodi.kr` — 요거트퍼플 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
 
-Do not silently reclassify these tenants.
+One person may hold both platform-global and tenant-local roles. These authorities must never be implicitly combined. A Super Admin acts with platform authority only inside an explicit admin/control-plane context; when entering a customer site, including an EKODI-owned customer site, the person acts only through that site's membership and local activity role. A tenant-local role named `admin` must never inherit platform-admin capabilities merely because the role string matches.
+
+`My EKODI` should present the person's available sites/workspaces and local roles, while `admin.ekodi.kr` remains the explicit ecosystem-wide administrator context.
+
+Do not silently reclassify customer tenants or weaken this authority boundary.
 
 ## 3. Production invariants
 
@@ -122,7 +127,9 @@ Agent actions must be scoped by tenant, role, delegated purpose, and mission pol
 
 ## 6. Multi-tenant direction
 
-External customers are independent tenants, not cosmetic page variants.
+All customer sites are independent tenants, not cosmetic page variants. This includes both external customers and EKODI-owned operating organizations.
+
+The canonical activity model is `Person + Site/Tenant + Membership Role + Authority Scope`. A person may belong to many tenants and hold different local roles in each. The currently active site context determines the available tenant capabilities; platform-global administrator authority is a separate context and is never inherited by a tenant session.
 
 Each tenant should be able to own independent configuration for:
 - identity and branding
@@ -133,11 +140,12 @@ Each tenant should be able to own independent configuration for:
 - analytics
 - billing/subscription
 - users and roles
+- local activity-role labels such as pastor, representative, director, manager, or staff
 - audit history
 - delegated AI permissions and revocation state
 - data access/export and exit controls where applicable
 
-Shared infrastructure is encouraged, shared customer data is not.
+Shared infrastructure is encouraged, shared customer data or implicit cross-tenant authority is not.
 
 ## 7. Monetization direction
 

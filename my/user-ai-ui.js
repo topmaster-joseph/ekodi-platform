@@ -1,4 +1,5 @@
 import { buildUserSuggestions, EKODI_USER_AI } from './user-ai.js';
+import { initSiteActivityRoleUi } from './site-activity-role-ui.js';
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
@@ -55,4 +56,5 @@ const observer=new MutationObserver(scheduleRender);
 });
 
 document.documentElement.dataset.ekodiUserAi=EKODI_USER_AI.boundary;
+initSiteActivityRoleUi();
 scheduleRender();
