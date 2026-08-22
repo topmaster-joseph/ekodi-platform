@@ -32,6 +32,7 @@ jobs:
             .github/workflows/verify-ekodi-core-completion.yml \
             .github/workflows/release-messenger-investment-functional.yml
       - run: npm run check
+      - run: npm run build
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience
       - name: Verify no-provider survival
