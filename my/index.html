@@ -7,12 +7,14 @@
   <meta name="ekodi-ui-type" content="USER">
   <title>My EKODI | 나의 에코디</title>
   <link rel="stylesheet" href="/styles.css?v=20260821-user-ui-1">
+  <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
 </head>
 <body data-ekodi-ui="USER">
   <header class="topbar">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
     <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">서비스</a><a href="#account">내 정보</a></nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
+    <button id="refreshButton" class="hide" type="button" tabindex="-1" aria-hidden="true">새로고침</button>
     <div id="workspaceControl" class="workspace-control hide" aria-hidden="true">
       <label for="workspaceSwitcher">현재 공간</label>
       <select id="workspaceSwitcher" tabindex="-1" aria-label="현재 Workspace 전환"></select>
@@ -27,7 +29,7 @@
         <p class="lead">My EKODI는 내 정보와 공간을 보여주는 곳을 넘어, 지금 필요한 일을 먼저 살피고 다음 행동을 제안하는 개인 AI 비서입니다.</p>
       </div>
       <aside class="identity-card" aria-label="나의 EKODI 상태">
-        <div class="identity-top"><small>MY EKODI</small><span id="accountPlan" class="status-pill">Guest</span></div>
+        <div class="identity-top"><small>EKODI USER AI</small><span id="accountPlan" class="status-pill">Guest</span></div>
         <strong id="identityName">로그인 전</strong>
         <span id="identityEmail">Google 인증 후 연결됩니다.</span>
         <code id="workspaceKey">workspace:…</code>
@@ -38,9 +40,9 @@
     <section id="recommendations" class="section assistant-section">
       <div class="assistant-heading">
         <div class="assistant-orb" aria-hidden="true">✦</div>
-        <div><p class="eyebrow">MY AI ASSISTANT</p><h2>개인비서의 제안</h2><p>현재 연결 상태와 이용 범위를 바탕으로, 지금 하면 좋은 일만 골라 제안합니다. 중요한 실행은 항상 내가 확인하고 결정합니다.</p></div>
+        <div><p class="eyebrow">EKODI USER AI · 개인 AI 비서</p><h2>오늘의 제안</h2><p>현재 연결 상태와 이용 범위를 바탕으로 지금 하면 좋은 일만 골라 제안합니다. 전문 AI를 직접 지휘하지 않으며, 필요한 서비스로 안전하게 이어줍니다.</p></div>
       </div>
-      <div id="recommendationList" class="recommendation-grid"><div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong><p>내 공간과 연결된 서비스를 살펴보고 필요한 다음 행동을 준비합니다.</p></div></div>
+      <div id="recommendationList" class="recommendation-grid" aria-live="polite"><div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong><p>내 공간과 연결된 서비스를 살펴보고 필요한 다음 행동을 준비합니다.</p></div></div>
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
     </section>
 
@@ -88,8 +90,9 @@
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>내 공간 · 내 서비스 · 개인 AI 비서 · 내 선택</span><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js?v=20260821-user-ui-1"></script>
+  <script type="module" src="/user-ai-ui.js?v=20260822-user-ai-1"></script>
 </body>
 </html>
