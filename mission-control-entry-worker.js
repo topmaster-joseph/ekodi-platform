@@ -11,6 +11,7 @@ import { handleMarketingOrderConnectors } from './marketing-order-connectors.js'
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
+import { handleUniversalMembership } from './universal-membership.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -37,6 +38,11 @@ export default {
     if (path === '/api/session' && request.method === 'GET') {
       try { const response = await handleAdminSessionFastPath(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Admin session fast path error', error); return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR'); }
+    }
+
+    if (path.startsWith('/api/membership/')) {
+      try { const response = await handleUniversalMembership(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Universal membership error', error); return errorResponse('통합 회원등급·구독 처리 중 오류가 발생했습니다.', 'UNIVERSAL_MEMBERSHIP_ERROR'); }
     }
 
     if (path.startsWith('/api/books/public/stores') || path.startsWith('/api/books/me') || path.startsWith('/api/books/admin/network')) {

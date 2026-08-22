@@ -10,6 +10,15 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'mission-control-entry-worker.js'
+      - 'universal-membership.js'
+      - 'membership-billing.js'
+      - 'generated/user-services.js'
+      - 'config/ecosystem-services.json'
+      - 'config/universal-membership.json'
+      - 'scripts/generate-user-service-registry.mjs'
+      - 'scripts/validate-universal-membership.mjs'
+      - 'test/universal-membership-contract.test.mjs'
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
@@ -34,6 +43,7 @@ on:
       - 'scripts/validate-security-baseline.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
+      - '.github/workflows/deploy-control-api.yml'
   push:
     branches: [main]
     paths:
@@ -43,6 +53,15 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'mission-control-entry-worker.js'
+      - 'universal-membership.js'
+      - 'membership-billing.js'
+      - 'generated/user-services.js'
+      - 'config/ecosystem-services.json'
+      - 'config/universal-membership.json'
+      - 'scripts/generate-user-service-registry.mjs'
+      - 'scripts/validate-universal-membership.mjs'
+      - 'test/universal-membership-contract.test.mjs'
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
@@ -67,6 +86,7 @@ on:
       - 'scripts/validate-security-baseline.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
+      - '.github/workflows/deploy-control-api.yml'
 
 permissions:
   contents: read
@@ -89,20 +109,25 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Generate universal user-service registry
+        run: npm run generate:user-services
       - name: Validate control plane and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
             node --check "$file"
           done
+          node --check scripts/generate-user-service-registry.mjs
+          node --check scripts/validate-universal-membership.mjs
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs
+          node scripts/validate-universal-membership.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/device-control-contract.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
 
@@ -118,6 +143,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Generate universal user-service registry
+        run: npm run generate:user-services
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -182,7 +209,7 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify security boundaries
+      - name: Verify security and universal membership boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -191,10 +218,15 @@ jobs:
             headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
             devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
             ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
+            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/portfolio' || true)
+            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/catalog?site=invest' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
               && [ "$devices" = '401' ] \
-              && [ "$ai" = '401' ]; then
+              && [ "$ai" = '401' ] \
+              && [ "$membership" = '401' ] \
+              && [ "$catalog" = '200' ] \
+              && grep -Fq '"inheritedDefault":true' /tmp/catalog.json; then
               exit 0
             fi
             sleep 5
@@ -217,6 +249,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Generate universal user-service registry
+        run: npm run generate:user-services
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         run: |
@@ -229,16 +263,21 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
-      - name: Verify production Control boundaries
+      - name: Verify production Control and universal membership boundaries
         shell: bash
         run: |
           set -euo pipefail
           health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
           devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
           ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
+          membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/portfolio')
+          catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
           printf '%s' "$health" | grep -q '"ok":true'
           [ "$devices" = '401' ]
           [ "$ai" = '401' ]
+          [ "$membership" = '401' ]
+          [ "$catalog" = '200' ]
+          grep -Fq '"inheritedDefault":true' /tmp/catalog.json
       - name: Record recovery point
         env:
           BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}

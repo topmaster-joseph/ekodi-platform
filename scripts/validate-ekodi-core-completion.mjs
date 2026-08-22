@@ -65,7 +65,7 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'Capture production D1 recovery bookmark',
   'd1 time-travel info ekodi-auth',
   'Guarded 0-percent Control candidate then promote',
-  'Verify production Control boundaries',
+  'Verify production Control and universal membership boundaries',
 ]);
 requireText('.github/workflows/backup-ekodi-core.yml', [
   'ekodi-auth-staging',
