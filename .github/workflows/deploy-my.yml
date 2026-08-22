@@ -14,6 +14,7 @@ on:
       - 'scripts/guarded-worker-release.mjs'
       - 'test/my-ekodi-contract.test.mjs'
       - 'test/my-manifest-services.test.mjs'
+      - 'test/my-life-journey.test.mjs'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -32,6 +33,7 @@ on:
       - 'scripts/guarded-worker-release.mjs'
       - 'test/my-ekodi-contract.test.mjs'
       - 'test/my-manifest-services.test.mjs'
+      - 'test/my-life-journey.test.mjs'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -61,12 +63,13 @@ jobs:
           set -euo pipefail
           node --check my-worker.js
           node --check my/app.js
+          node --check my/journey/app.js
           node --check ekodi-service-manifest.js
           node --check auth-site/client-auth.js
           node --check auth-site/auth-router.js
           node --check scripts/validate-my.mjs
           node scripts/validate-my.mjs
-          node --test test/my-ekodi-contract.test.mjs test/my-manifest-services.test.mjs
+          node --test test/my-ekodi-contract.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
@@ -86,28 +89,34 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
       - name: Deploy isolated My EKODI staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.my.staging.toml
-      - name: Verify staging, manifest-driven services and personal-data isolation
+      - name: Verify staging, Life Journey, manifest-driven services and personal-data isolation
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/my-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            journey_code=$(curl -L -sS -o /tmp/my-stage-journey.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/journey/" || true)
+            journey_app_code=$(curl -sS -o /tmp/my-stage-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/journey/app.js" || true)
             config_code=$(curl -sS -o /tmp/my-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             app_code=$(curl -sS -o /tmp/my-stage-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/app.js" || true)
             manifest_code=$(curl -sS -o /tmp/my-stage-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/service-manifest.json" || true)
             health_code=$(curl -sS -o /tmp/my-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            if [[ "$root_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$journey_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my-stage.html \
-              && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=1' /tmp/my-stage-app.js \
+              && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-stage-journey.html \
+              && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-stage-journey.html \
+              && grep -Fq 'current_site_access' /tmp/my-stage-journey-app.js \
+              && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-stage-journey-app.js \
+              && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-stage-app.js \
               && grep -Fq '["trade","EKODI Global Trading","https://trade.ekodi.kr/"]' /tmp/my-stage-app.js \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/my-stage-services.json \
               && grep -Fq '"id":"community"' /tmp/my-stage-services.json \
               && grep -Fq '"dataEnabled":false' /tmp/my-stage-config.js \
               && grep -Fq '"manifestDrivenServices":true' /tmp/my-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/my-stage-health.json; then
-              echo 'My EKODI staging verified with manifest-driven services and production personal data disabled.'
+              echo 'My EKODI staging verified with Life Journey, manifest-driven services and production personal data disabled.'
               exit 0
             fi
             sleep 4
@@ -190,28 +199,34 @@ jobs:
             cat /tmp/my-deployments.log
             exit 1
           fi
-      - name: Verify real My EKODI production hostname
+      - name: Verify real My EKODI production hostname and Life Journey
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
+            journey_code=$(curl -L -sS -o /tmp/my-journey.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/' || true)
+            journey_app_code=$(curl -sS -o /tmp/my-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/app.js' || true)
             config_code=$(curl -sS -o /tmp/my-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/config.js' || true)
             app_code=$(curl -sS -o /tmp/my-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/app.js' || true)
             manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/service-manifest.json' || true)
             health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
-            if [[ "$root_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$journey_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my.html \
-              && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=1' /tmp/my-app.js \
+              && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-journey.html \
+              && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-journey.html \
+              && grep -Fq 'current_site_access' /tmp/my-journey-app.js \
+              && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-journey-app.js \
+              && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-app.js \
               && grep -Fq '["trade","EKODI Global Trading","https://trade.ekodi.kr/"]' /tmp/my-app.js \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/my-services.json \
               && grep -Fq '"dataEnabled":true' /tmp/my-config.js \
               && grep -Fq '"dataMode":"production"' /tmp/my-health.json \
               && grep -Fq '"manifestDrivenServices":true' /tmp/my-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/my-health.json; then
-              echo 'My EKODI production verified with manifest-driven service registry.'
+              echo 'My EKODI production verified with Life Journey and manifest-driven service registry.'
               exit 0
             fi
             sleep 5
