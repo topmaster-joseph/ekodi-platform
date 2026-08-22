@@ -14,7 +14,7 @@ function readContext(){
   workspace:detail.workspace||d.ekodiWorkspaceName||'',
   workspaceId:detail.workspaceId||d.ekodiWorkspaceId||'',
   role:detail.role||d.ekodiUserRole||'',
-  signedIn:Boolean(detail.signedIn||d.ekodiSignedIn==='true')
+  signedIn:Boolean(detail.signedIn||d.ekodiSignedIn==='true'||detail.name||detail.workspace)
  };
 }
 function allowed(){
@@ -44,7 +44,18 @@ function render(){
  </style><div class="bar" role="region" aria-label="현재 EKODI 사용자 공간"><div class="who">${c.name?`<span class="name">${esc(c.name)}</span><span class="sep">·</span>`:''}<span class="space">${esc(c.workspace||'개인 공간')}</span>${c.role?`<span class="role">${esc(c.role)}</span>`:''}</div><a href="${esc(switchUrl())}">공간 전환</a></div>`;
 }
 function reconcile(e){if(e?.detail?.surface)surface=String(e.detail.surface).toLowerCase();render();}
+function mergeContext(next={}){
+ window.__EKODI_USER_CONTEXT__={...(window.__EKODI_USER_CONTEXT__||{}),...next};
+ render();
+}
 window.addEventListener('ekodi:shell-theme',reconcile);
-window.addEventListener('ekodi:user-context',e=>{if(e.detail)window.__EKODI_USER_CONTEXT__={...(window.__EKODI_USER_CONTEXT__||{}),...e.detail};render();});
+window.addEventListener('ekodi:shell-context',e=>mergeContext({
+ name:e.detail?.personName||'',
+ workspace:e.detail?.workspaceName||'',
+ workspaceId:e.detail?.workspaceKey||'',
+ role:e.detail?.role||'',
+ signedIn:Boolean(e.detail?.personName||e.detail?.workspaceKey)
+}));
+window.addEventListener('ekodi:user-context',e=>{if(e.detail)mergeContext(e.detail);});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(render),{once:true});else requestAnimationFrame(render);
 })();
