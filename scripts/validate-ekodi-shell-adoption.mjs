@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
-const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shellSource,injectorSource,workspaceStyle]=await Promise.all([
+const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shellSource,injectorSource,workspaceStyle,responsiveStyle,rootIndex,adminStyle]=await Promise.all([
   readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.url),'utf8'),
   readFile(new URL('../auth-site/auth-router.js',import.meta.url),'utf8'),
@@ -12,6 +12,9 @@ const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shel
   readFile(new URL('../shell/shell.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
   readFile(new URL('../shell/workspace.css',import.meta.url),'utf8'),
+  readFile(new URL('../responsive.css',import.meta.url),'utf8'),
+  readFile(new URL('../index.html',import.meta.url),'utf8'),
+  readFile(new URL('../control-center.css',import.meta.url),'utf8'),
 ]);
 const manifest=EKODI_SERVICE_MANIFEST;
 const allowedKinds=new Set(['person','business','organization','church','community','project']);
@@ -46,6 +49,19 @@ for(const required of ['SHELL_WORKSPACE_STYLE','INTERNAL_SURFACES','defaultSurfa
 if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker injection must advertise Shell v2');
 if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker injection must advertise the resolved surface');
 if(!workspaceStyle.includes('data-ekodi-shell-surface="workspace"'))fail('shared workspace stylesheet must be scoped to internal surfaces');
+
+// Mobile persistent-header contract. This is intentionally checked in CI because a later responsive
+// stylesheet can otherwise silently downgrade fixed headers back to sticky positioning.
+for(const required of ['position:fixed!important','left:0!important','right:0!important','safe-area-inset-top']){
+  if(!injectorSource.includes(required))fail(`shared Shell mobile header contract missing: ${required}`);
+  if(!responsiveStyle.includes(required))fail(`responsive mobile header contract missing: ${required}`);
+}
+if(injectorSource.includes('position:sticky!important'))fail('shared Shell injector must not downgrade mobile headers to sticky');
+if(responsiveStyle.includes('position:sticky!important'))fail('responsive.css must not downgrade mobile headers to sticky');
+if(!rootIndex.includes('.site-header{position:fixed;top:0;left:0;right:0;width:100%'))fail('ekodi.kr mobile site header must be fixed');
+if(!rootIndex.includes('--ekodi-home-header-height')||!rootIndex.includes("new ResizeObserver(sync)"))fail('ekodi.kr must measure the fixed mobile header and offset content');
+if(!adminStyle.includes('.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}'))fail('admin mobile content must be offset below the fixed topbar');
+if(!adminStyle.includes('.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important'))fail('admin mobile topbar must remain fixed across control-center pages');
 
 const byId=new Map();
 const byHost=new Map();
@@ -104,4 +120,4 @@ for(const service of ecosystem.services||[]){
 for(const service of manifest.services||[])if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`);
 for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Public service selector','Public experience rotation','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; every service has a top selector identity, public rotation is bounded, and internal surfaces remain stable.`);
+console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; every service has a top selector identity, mobile headers are fixed, public rotation is bounded, and internal surfaces remain stable.`);
