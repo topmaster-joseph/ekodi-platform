@@ -10,6 +10,7 @@ const HOME='https://ekodi.kr/';
 const SERVICES='https://ekodi.kr/#services';
 const HISTORY='https://ekodi.kr/history';
 const MY='https://my.ekodi.kr/';
+const USER_AI='https://my.ekodi.kr/#recommendations';
 const AUTH='https://auth.ekodi.kr/';
 let root=null;
 let panel=null;
@@ -89,6 +90,8 @@ function install(){
     a:hover,a:focus-visible{border-color:rgba(145,202,171,.36);background:rgba(18,43,35,.94);outline:2px solid transparent}
     a strong{font-size:12px;line-height:1.15}
     a span{overflow:hidden;color:#718d7e;font-size:9px;white-space:nowrap;text-overflow:ellipsis}
+    a[data-ekodi-global-link="assistant"]{grid-column:1/-1;background:linear-gradient(135deg,rgba(38,77,64,.94),rgba(16,39,32,.96));border-color:rgba(146,207,175,.28)}
+    a[data-ekodi-global-link="assistant"] strong::before{content:'✦ ';color:#9dd4b6}
     a[data-ekodi-global-link="account"]{grid-column:1/-1;background:linear-gradient(135deg,rgba(35,75,59,.82),rgba(17,40,33,.92))}
     @media(max-width:768px){
       :host{right:max(8px,env(safe-area-inset-right))!important;top:calc(max(8px,env(safe-area-inset-top)) + 58px)!important}
@@ -96,7 +99,7 @@ function install(){
       .current{display:none}
       nav{width:min(292px,calc(100vw - 16px));max-height:calc(100dvh - 116px);overflow:auto}
       .links{grid-template-columns:1fr}
-      a[data-ekodi-global-link="account"]{grid-column:auto}
+      a[data-ekodi-global-link="assistant"],a[data-ekodi-global-link="account"]{grid-column:auto}
     }
     @media(prefers-reduced-motion:reduce){.chev{transition:none}}
   `;
@@ -121,6 +124,7 @@ function install(){
     navItem('서비스','Services',SERVICES,'services'),
     navItem('역사','History',HISTORY,'history'),
     navItem('마이 에코디','My EKODI',MY,'my'),
+    navItem('개인 AI 비서','EKODI User AI',USER_AI,'assistant'),
     navItem('로그인 · 계정','Sign in · Account',authUrl(),'account')
   );
   panel.append(head,links);
