@@ -21,6 +21,7 @@ const authHtml=read('auth-site/index.html');
 const marketingOnboarding=read('auth-site/marketing-onboarding.js');
 const myHtml=read('my/index.html');
 const myApp=read('my/app.js');
+const myUserAiUi=read('my/user-ai-ui.js');
 
 test('person and login identity schema stays separate from organization membership',()=>{
   assert.match(migration,/create table if not exists public\.people/i);
@@ -156,11 +157,12 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
   assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
   assert.match(myApp,/searchParams\.set\('workspace'/);
   assert.match(myApp,/setActiveWorkspace/);
-  assert.match(myApp,/recommendationUi/);
+  assert.match(myUserAiUi,/buildUserSuggestions/);
+  assert.match(myUserAiUi,/recommendationList/);
 });
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
-  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js']){
+  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
     const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
