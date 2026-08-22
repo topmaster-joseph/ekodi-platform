@@ -35,6 +35,17 @@
     return hash >>> 0;
   }
 
+  function installHistoryEntry() {
+    const nav = document.querySelector('.site-header .nav');
+    if (!nav || nav.querySelector('[data-ekodi-history-link]')) return;
+    const login = nav.querySelector('.login');
+    const link = document.createElement('a');
+    link.href = '/history';
+    link.dataset.ekodiHistoryLink = 'v1';
+    link.innerHTML = '역사 <span>History</span>';
+    nav.insertBefore(link, login || null);
+  }
+
   function setHeroStory(story, dateLabel) {
     const eyebrow = document.querySelector('.hero .eyebrow');
     if (eyebrow) eyebrow.textContent = `${story.keyword} · ${dateLabel}`;
@@ -96,6 +107,8 @@
     panel.append(top, date, label, focusTitle, focusCopy, link);
     host.append(panel);
   }
+
+  installHistoryEntry();
 
   const root = document.documentElement;
   const dateKey = seoulDateKey();
