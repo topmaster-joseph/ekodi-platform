@@ -7,6 +7,7 @@ test('security control plane is disabled by default', async () => {
   assert.equal(response.status, 503);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.match(response.headers.get('x-robots-tag') || '', /noindex/);
+  assert.match(response.headers.get('x-robots-tag') || '', /nosnippet/);
   const body = await response.json();
   assert.equal(body.code, 'SECURITY_CONTROL_PLANE_DISABLED');
 });
@@ -25,9 +26,18 @@ test('enabled pre-activation exposes only minimal health', async () => {
 });
 
 test('mutating methods are rejected', async () => {
-  const response = await worker.fetch(new Request('https://security.ekodi.kr/', { method: 'POST' }), {
-    SECURITY_CONTROL_PLANE_ENABLED: 'true'
-  });
+  const response = await worker.fetch(new Request('https://security.ekodi.kr/', { method: 'POST' }), { SECURITY_CONTROL_PLANE_ENABLED: 'true' });
   assert.equal(response.status, 405);
   assert.equal(response.headers.get('allow'), 'GET, HEAD');
+});
+
+test('robots excludes every crawler and sitemap is absent', async () => {
+  const robots = await worker.fetch(new Request('https://security.ekodi.kr/robots.txt'), {});
+  assert.equal(robots.status, 200);
+  assert.equal(await robots.text(), 'User-agent: *\nDisallow: /\n');
+  assert.match(robots.headers.get('x-robots-tag') || '', /noindex/);
+
+  const sitemap = await worker.fetch(new Request('https://security.ekodi.kr/sitemap.xml'), {});
+  assert.equal(sitemap.status, 404);
+  assert.match(sitemap.headers.get('x-robots-tag') || '', /noindex/);
 });
