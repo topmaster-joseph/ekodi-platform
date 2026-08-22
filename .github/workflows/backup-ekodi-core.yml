@@ -99,7 +99,7 @@ jobs:
             --remote --yes --config wrangler.api.toml --command "$SQL"
 
       - name: Upload independent backup artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.verify.outputs.artifact }}
           path: |
