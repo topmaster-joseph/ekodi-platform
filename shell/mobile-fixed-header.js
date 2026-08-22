@@ -14,8 +14,13 @@ const HEADER_SELECTORS=[
   '.main-header',
   '.mobile-header',
   '.page-header',
+  '.global-header',
+  '.nav-header',
+  '.header-wrap',
+  '.header',
   'header[role="banner"]',
-  'body > header'
+  'body > header',
+  'body header:first-of-type'
 ];
 let activeHeader=null;
 let spacer=null;
