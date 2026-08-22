@@ -21,10 +21,14 @@ function currentReturn(){
   url.hash='';
   return url.href;
 }
+function serviceIdFromHost(){
+  const host=String(location.hostname||'').toLowerCase();
+  if(!host.endsWith('.ekodi.kr'))return'';
+  return host.slice(0,-9).split('.')[0]||'';
+}
 function authUrl(){
   const url=new URL(AUTH);
-  const host=String(location.hostname||'').toLowerCase();
-  const service=host.endsWith('.ekodi.kr')?host.slice(0,-9).split('.').pop():'';
+  const service=serviceIdFromHost();
   if(service&&service!=='www'&&service!=='shell')url.searchParams.set('site',service);
   url.searchParams.set('return_to',currentReturn());
   return url.href;
@@ -32,7 +36,7 @@ function authUrl(){
 function serviceLabel(){
   const host=String(location.hostname||'').toLowerCase();
   if(host==='ekodi.kr'||host==='www.ekodi.kr')return'EKODI';
-  const label=host.endsWith('.ekodi.kr')?host.slice(0,-9).split('.').pop():host.split('.')[0];
+  const label=serviceIdFromHost()||host.split('.')[0];
   return (label||'EKODI').replace(/-/g,' ').toUpperCase();
 }
 function shouldShow(){
