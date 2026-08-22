@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "policyId": "one-account-free-everywhere-pay-where-needed",
+  "identity": {
+    "primaryLogin": "google",
+    "singleEcosystemAccount": true,
+    "repeatSignupPerService": false
+  },
+  "defaultEntitlement": {
+    "scope": "all_registry_user_services",
+    "tier": "free",
+    "materialization": "lazy_on_first_service_use",
+    "portfolioProjection": "synthesized_until_materialized"
+  },
+  "paidPlans": {
+    "scope": "service_specific",
+    "sharedPaidTierAcrossAllServices": false,
+    "upgradeIndependently": true,
+    "downgradeIndependently": true,
+    "billingLedger": "service_subscriptions"
+  },
+  "myEkodi": {
+    "showAllRegistryServices": true,
+    "showEffectiveTier": true,
+    "handoffToOwningService": true,
+    "doNotOwnSpecialistPrivateData": true
+  },
+  "automaticInheritance": {
+    "sourceRegistry": "config/ecosystem-services.json",
+    "generator": "scripts/generate-user-service-registry.mjs",
+    "generatedServerModule": "generated/user-services.js",
+    "generatedMyModule": "my/user-services.js",
+    "enabledForFutureRegistryServices": true
+  },
+  "excludedInfrastructure": [
+    "admin",
+    "api",
+    "auth",
+    "control",
+    "core",
+    "finance",
+    "security",
+    "shell",
+    "workspace-api"
+  ]
+}
