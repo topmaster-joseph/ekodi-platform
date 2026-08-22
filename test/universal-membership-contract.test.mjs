@@ -7,6 +7,7 @@ const policy = JSON.parse(fs.readFileSync(new URL('../config/universal-membershi
 const registry = JSON.parse(fs.readFileSync(new URL('../config/ecosystem-services.json', import.meta.url), 'utf8'));
 const runtime = fs.readFileSync(new URL('../universal-membership.js', import.meta.url), 'utf8');
 const entry = fs.readFileSync(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8');
+const myWorker = fs.readFileSync(new URL('../my-worker.js', import.meta.url), 'utf8');
 
 const registryIds = registry.services.map((service) => service.id);
 
@@ -27,4 +28,10 @@ test('paid plans stay service-specific and universal runtime is wired', () => {
   assert.match(runtime, /one-account-free-everywhere-pay-where-needed/);
   assert.match(runtime, /\/api\/membership\/portfolio/);
   assert.match(entry, /handleUniversalMembership/);
+});
+
+test('My EKODI may read the shared membership API without weakening other browser boundaries', () => {
+  assert.match(myWorker, /https:\/\/api\.ekodi\.kr/);
+  assert.match(myWorker, /universalMembership:true/);
+  assert.match(myWorker, /frame-ancestors 'none'/);
 });
