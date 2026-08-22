@@ -24,5 +24,5 @@ test('Shell Worker bundles global navigation into the one shared shell payload',
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/user-global-nav\.js/);
   assert.match(worker,/globalNav/);
-  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{fixedHeader\}/);
+  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{fixedHeader\}/);
 });
