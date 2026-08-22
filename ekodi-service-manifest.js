@@ -1,5 +1,5 @@
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 3,
+  version: 4,
   updatedAt: '2026-08-22',
   identityModel: 'person-space-role',
   shellVersion: 2,
@@ -19,6 +19,7 @@ export const EKODI_SERVICE_MANIFEST = Object.freeze({
     {id:'social',name:'EKODI Social',shortName:'Social',url:'https://social.ekodi.kr/',group:'community',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['social','channels'],sso:true,targetable:true,openSso:true,order:110,shellIntegration:'worker-injected'},
     {id:'messenger',name:'EKODI Messenger',shortName:'Messenger',url:'https://messenger.ekodi.kr/',group:'communication',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['messaging','ai-assist','handoff','notifications','commands'],sso:true,targetable:true,openSso:true,order:115,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1},
     {id:'energy',name:'EKODI Energy AI',shortName:'Energy',url:'https://energy.ekodi.kr/',group:'life',defaultSurface:'workspace',workspaceKinds:['person','business','organization'],capabilities:['energy','solar','electricity'],sso:true,targetable:true,openSso:true,order:120,shellIntegration:'worker-injected'},
+    {id:'cafe',name:'에코디 카페',shortName:'Cafe',url:'https://cafe.ekodi.kr/',group:'community',defaultSurface:'public',workspaceKinds:['person','community','church','organization','project'],capabilities:['place','community','culture','local','imagination'],sso:true,targetable:true,order:125,state:'preparing',shellIntegration:'static-script'},
     {id:'mall',name:'에코디몰',shortName:'Mall',url:'https://mall.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['commerce','products','orders'],sso:true,targetable:true,order:130,shellIntegration:'shared-proxy'},
     {id:'trade',name:'EKODI Global Trading',shortName:'Trade',url:'https://trade.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['business','organization'],capabilities:['trade','buyers','suppliers'],sso:true,targetable:true,order:140,shellIntegration:'worker-injected'},
     {id:'invest',name:'EKODI Investment',shortName:'Investment',url:'https://invest.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','project'],capabilities:['investment','research','due-diligence','ir','opportunities'],sso:true,targetable:true,order:145,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1,transactionMode:'analysis-and-connection-only'},
