@@ -61,7 +61,7 @@ test('Every cross-stage handoff is advisory and requires user consent',()=>{
 });
 
 test('My EKODI journey surface stays inside My and does not query specialist private tables',async()=>{
-  const [page,app]=await Promise.all([read('my/journey/index.html'),read('my/journey/app.js')]);
+  const [page,app,journeyContract]=await Promise.all([read('my/journey/index.html'),read('my/journey/app.js'),read('my/life-journey.js')]);
   assert.match(page,/MY JOURNEY · PERSON FIRST/);
   assert.match(page,/외국인만을 위한 경로가 아니라/);
   assert.match(app,/current_site_access/);
@@ -70,5 +70,6 @@ test('My EKODI journey surface stays inside My and does not query specialist pri
   assert.doesNotMatch(app,/from\(['"]work_/);
   assert.doesNotMatch(app,/from\(['"]community_/);
   assert.doesNotMatch(app,/from\(['"]business_/);
+  assert.doesNotMatch(journeyContract,/EKODI_LIFE_STAGE_BY_ID|lifeStageForId/);
   execFileSync(process.execPath,['--check',new URL('../my/journey/app.js',import.meta.url).pathname],{stdio:'pipe'});
 });
