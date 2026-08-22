@@ -6,6 +6,9 @@ const files={
   userAi:'my/user-ai.js',
   userAiUi:'my/user-ai-ui.js',
   userUiCss:'my/user-ui.css',
+  membershipJs:'my/membership-summary.js',
+  membershipCss:'my/membership-summary.css',
+  userServices:'my/user-services.js',
   worker:'my-worker.js',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
@@ -31,6 +34,8 @@ must('html','공간별 데이터');
 must('html','/config.js');
 must('html','/user-ui.css');
 must('html','/user-ai-ui.js');
+must('html','/membership-summary.js');
+must('html','/membership-summary.css');
 must('app','creator_portfolio_items');
 must('app','current_site_access');
 must('app','current_site_workspaces');
@@ -42,8 +47,12 @@ must('userAi','dependsOnExternalAI:false');
 must('userAi','specialistDirectControl:false');
 must('userAiUi','buildUserSuggestions');
 must('userAiUi','collectContext');
-must('userUiCss','.workspace-control{display:none!important}');
 must('userUiCss','position:fixed');
+mustNot('html','class="workspace-control"');
+must('membershipJs','/api/membership/portfolio');
+must('membershipJs','USER_SERVICES');
+must('membershipCss','.membership-summary');
+must('userServices','USER_SERVICES');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
@@ -67,4 +76,4 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: USER UI, EKODI User AI suggest-and-handoff boundary, single visible Workspace chooser, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
+console.log('My EKODI validation passed: USER UI, EKODI User AI suggest-and-handoff boundary, universal membership summary, single visible Workspace chooser, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
