@@ -1,5 +1,7 @@
 import authWorker from './auth-worker.js';
 
+// Provider service registry only. Customer organizations and their sites are managed as
+// customer tenants/workspaces through the customer directory, never as EKODI services.
 const SERVICE_CATALOG = [
   { id: 'root', name: 'EKODI Root', domain: 'ekodi.kr', url: 'https://ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
   { id: 'admin', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', url: 'https://admin.ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
@@ -14,11 +16,7 @@ const SERVICE_CATALOG = [
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'community', name: '에코디커뮤니티', domain: 'community.ekodi.kr', url: 'https://community.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
-  { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true },
-  { id: 'client-cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://cgma.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
-  { id: 'client-jadam', name: '자담치킨 목포대점 Marketing AI', domain: 'jadam.ekodi.kr', url: 'https://jadam.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
-  { id: 'client-pizzamaru', name: '피자마루 목포대점 Marketing AI', domain: 'pizzamaru.ekodi.kr', url: 'https://pizzamaru.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true },
-  { id: 'client-yogurt', name: '요거트퍼플 목포대점 Marketing AI', domain: 'yogurt.ekodi.kr', url: 'https://yogurt.ekodi.kr', group: 'client', defaultState: 'active', defaultMonitor: true }
+  { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
 const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
