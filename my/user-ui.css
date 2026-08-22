@@ -1,0 +1,41 @@
+/* My EKODI USER UI comfort layer. Keeps the user experience calm, mobile-first and distinct from ADMIN UI. */
+:root{--user-bg:#f7f8f4;--user-paper:#fff;--user-ink:#1f2d25;--user-muted:#68766e;--user-green:#244b35;--user-green-soft:#eaf1eb;--user-warm:#f3f0e7;--user-line:#dde5de;--user-radius:20px}
+body[data-ekodi-ui="USER"]{background:var(--user-bg);color:var(--user-ink)}
+body[data-ekodi-ui="USER"] .topbar{min-height:64px;padding-top:max(10px,env(safe-area-inset-top));background:rgba(250,251,248,.96);box-shadow:0 1px 0 rgba(37,58,45,.04)}
+body[data-ekodi-ui="USER"] .topbar .workspace-control{display:none!important}
+body[data-ekodi-ui="USER"] .topbar .ghost{border-radius:999px;padding:8px 12px;font-size:12px;white-space:nowrap}
+body[data-ekodi-ui="USER"] .brand strong{font-size:14px;letter-spacing:-.01em}
+body[data-ekodi-ui="USER"] .brand small{font-size:10px}
+.welcome-shell{max-width:1120px;margin:0 auto;padding:52px 28px 28px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:24px;align-items:stretch}
+.welcome-copy{padding:12px 4px}
+.welcome-copy h1{margin:10px 0 14px;font-size:clamp(32px,5vw,54px);line-height:1.08;letter-spacing:-.045em;font-weight:760}
+.welcome-copy .lead{max-width:680px;margin:0;font-size:16px;line-height:1.75;color:var(--user-muted)}
+body[data-ekodi-ui="USER"] .identity-card{background:linear-gradient(145deg,#244b35,#315f45);border-radius:24px;box-shadow:0 14px 36px rgba(37,75,53,.14);padding:24px}
+body[data-ekodi-ui="USER"] .identity-card code{font-size:11px;background:rgba(12,34,22,.34)}
+.assistant-section{padding-top:18px;padding-bottom:42px}
+.assistant-heading{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:start;margin-bottom:18px}
+.assistant-heading h2{font-size:30px;letter-spacing:-.03em;margin:2px 0 6px}
+.assistant-heading p:last-child{margin:0;max-width:760px;color:var(--user-muted)}
+.assistant-orb{width:48px;height:48px;border-radius:18px;display:grid;place-items:center;background:var(--user-green);color:#fff;font-size:21px;box-shadow:0 8px 24px rgba(36,75,53,.16)}
+body[data-ekodi-ui="USER"] .assistant-section .recommendation-card{min-height:168px;border-radius:var(--user-radius);box-shadow:0 8px 26px rgba(36,55,43,.045);border-color:var(--user-line)}
+body[data-ekodi-ui="USER"] .assistant-section .recommendation-card small{font-size:10px;letter-spacing:.08em;font-weight:800;color:#6c7c72}
+body[data-ekodi-ui="USER"] .assistant-section .recommendation-card h3{font-size:18px;line-height:1.35;margin:8px 0}
+body[data-ekodi-ui="USER"] .assistant-section .recommendation-card p{font-size:14px;line-height:1.65}
+.assistant-principles{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.assistant-principles span{font-size:11px;padding:6px 10px;border-radius:999px;background:var(--user-green-soft);color:#496353}
+.workspace-section{padding-top:26px}
+body[data-ekodi-ui="USER"] .workspace-card{border-radius:var(--user-radius);box-shadow:0 5px 18px rgba(36,55,43,.035);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+body[data-ekodi-ui="USER"] .workspace-card:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(36,55,43,.07)}
+body[data-ekodi-ui="USER"] .workspace-button.selected{border-color:#5c8069;box-shadow:0 0 0 3px rgba(74,118,89,.1),0 8px 24px rgba(36,55,43,.05)}
+body[data-ekodi-ui="USER"] .summary{max-width:1120px;margin-bottom:36px}
+body[data-ekodi-ui="USER"] .summary article{border-radius:16px;padding:16px 18px}
+body[data-ekodi-ui="USER"] .summary span{font-size:25px}
+body[data-ekodi-ui="USER"] .summary small{font-size:11px}
+body[data-ekodi-ui="USER"] .section{max-width:1120px}
+body[data-ekodi-ui="USER"] .section-head h2{font-size:30px;letter-spacing:-.03em}
+body[data-ekodi-ui="USER"] .platform-card,body[data-ekodi-ui="USER"] .account-grid article,body[data-ekodi-ui="USER"] .portfolio-card{border-radius:var(--user-radius)}
+body[data-ekodi-ui="USER"] footer{background:#f9faf7}
+@media(max-width:980px){.welcome-shell{grid-template-columns:1fr;padding-top:36px}.welcome-copy{padding-bottom:0}}
+@media(max-width:760px){html{scroll-padding-top:74px}body[data-ekodi-ui="USER"] .topbar{position:fixed;left:0;right:0;top:0;width:100%;min-height:62px;z-index:60;padding-left:14px;padding-right:14px;gap:8px}body[data-ekodi-ui="USER"] main{padding-top:calc(62px + env(safe-area-inset-top))}.welcome-shell{padding:28px 16px 18px;gap:16px}.welcome-copy h1{font-size:34px;margin-top:8px}.welcome-copy .lead{font-size:14px;line-height:1.65}.assistant-section{padding-top:20px}.assistant-heading{grid-template-columns:40px minmax(0,1fr);gap:11px}.assistant-orb{width:40px;height:40px;border-radius:14px;font-size:18px}.assistant-heading h2{font-size:24px}.assistant-heading p:last-child{font-size:13px;line-height:1.6}.assistant-principles{overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}.assistant-principles span{white-space:nowrap}.identity-card{order:2}.topbar .brand{min-width:0}.topbar .brand strong{font-size:13px}.topbar .ghost{font-size:11px;padding:7px 10px}.section-head h2{font-size:26px!important}}
+@media(max-width:540px){body[data-ekodi-ui="USER"] .topbar{flex-wrap:nowrap}.welcome-shell{padding-top:22px}.welcome-copy h1{font-size:31px}.identity-card{padding:20px!important;border-radius:20px!important}.assistant-section,.workspace-section,body[data-ekodi-ui="USER"] .section,body[data-ekodi-ui="USER"] .summary{padding-left:16px;padding-right:16px}.assistant-section .recommendation-card{padding:18px;min-height:0}.assistant-principles{margin-top:10px}.workspace-grid{gap:10px}.workspace-card{padding:17px}.summary{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:8px}.summary article{display:block!important}.summary span{font-size:22px!important}.summary small{font-size:10px}.topbar nav{display:none}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
