@@ -3,6 +3,9 @@ import { readFile } from 'node:fs/promises';
 const files={
   html:'my/index.html',
   app:'my/app.js',
+  userAi:'my/user-ai.js',
+  userAiUi:'my/user-ai-ui.js',
+  userUiCss:'my/user-ui.css',
   worker:'my-worker.js',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
@@ -18,16 +21,29 @@ function must(key,marker){if(!content[key].includes(marker))throw new Error(`My 
 function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} contains forbidden ${marker}`)}
 
 must('html','My EKODI');
+must('html','data-ekodi-ui="USER"');
+must('html','EKODI USER AI');
+must('html','MY SPACES');
 must('html','MY PLATFORMS');
-must('html','MY WORKSPACES');
 must('html','CREATOR PORTFOLIO');
-must('html','PRIVATE FIRST');
-must('html','NO DATA MONOLITH');
+must('html','내 선택이 우선');
+must('html','공간별 데이터');
 must('html','/config.js');
+must('html','/user-ui.css');
+must('html','/user-ai-ui.js');
 must('app','creator_portfolio_items');
 must('app','current_site_access');
 must('app','current_site_workspaces');
 must('app','ekodi_token');
+must('userAi',"name:'EKODI User AI'");
+must('userAi',"role:'개인 AI 비서'");
+must('userAi',"boundary:'suggest-and-handoff'");
+must('userAi','dependsOnExternalAI:false');
+must('userAi','specialistDirectControl:false');
+must('userAiUi','buildUserSuggestions');
+must('userAiUi','collectContext');
+must('userUiCss','.workspace-control{display:none!important}');
+must('userUiCss','position:fixed');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
@@ -44,8 +60,11 @@ must('creatorMigration',"visibility text not null default 'private'");
 must('creatorPrivate','private.current_person_id');
 must('creatorOptimized','(select private.current_person_id())');
 
+const visibleWorkspaceChooserCount=(content.html.match(/id="workspaceList"/g)||[]).length;
+if(visibleWorkspaceChooserCount!==1)throw new Error(`My EKODI validation failed: expected one visible Workspace chooser, found ${visibleWorkspaceChooserCount}`);
+
 const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: isolated staging, central Google auth, unified platform/workspace access, private Creator portfolio and guarded production rollout are present.');
+console.log('My EKODI validation passed: USER UI, EKODI User AI suggest-and-handoff boundary, single visible Workspace chooser, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
