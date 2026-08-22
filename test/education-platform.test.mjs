@@ -58,3 +58,10 @@ test('Education browser code stores planning metadata only and parses',async()=>
   execFileSync(process.execPath,['--check',new URL('../education/app.js',import.meta.url).pathname],{stdio:'pipe'});
   execFileSync(process.execPath,['--check',new URL('../education-worker.js',import.meta.url).pathname],{stdio:'pipe'});
 });
+
+test('Post-promotion Education code does not retain unused rollout hooks',async()=>{
+  const [app,worker,production]=await Promise.all([read('education/app.js'),read('education-worker.js'),read('wrangler.education.toml')]);
+  assert.doesNotMatch(app,/data-auth-link|bindJourneyLinks/);
+  assert.doesNotMatch(worker,/journeyUrl/);
+  assert.doesNotMatch(production,/release workflow reconciles this custom-domain trigger/i);
+});

@@ -28,6 +28,3 @@ export const EKODI_LIFE_JOURNEY=Object.freeze({
     humanDecision:'required-for-submission-and-high-impact-actions'
   }
 });
-
-export const EKODI_LIFE_STAGE_BY_ID=new Map(EKODI_LIFE_JOURNEY.stages.map(stage=>[stage.id,stage]));
-export function lifeStageForId(id){return EKODI_LIFE_STAGE_BY_ID.get(String(id||'').toLowerCase())||null;}
