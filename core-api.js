@@ -1,5 +1,6 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
+import { createOpenAiProvider } from './openai-provider-adapter.js';
 import {
   CORE_ROLES,
   canonicalCoreRole,
@@ -160,8 +161,12 @@ async function latestRecoveryStatus(env) {
   };
 }
 
+function aiGatewayStatus(env = {}) {
+  return getCoreAiGatewayStatus(env, [createOpenAiProvider(env)]);
+}
+
 function coreStatus(env = {}) {
-  const ai = getCoreAiGatewayStatus(env);
+  const ai = aiGatewayStatus(env);
   return {
     ok: true,
     service: 'ekodi-core',
@@ -188,6 +193,7 @@ function coreStatus(env = {}) {
       aiOptional: ai.aiOptional,
       mode: ai.mode,
       providerDisabled: ai.providerDisabled,
+      providerCount: ai.providerCount,
     },
     recovery: {
       strategy: 'd1-time-travel-plus-independent-sql-export',
@@ -211,7 +217,7 @@ export async function handleCoreApi(request, env) {
   }
 
   if (url.pathname === `${CORE_API_PREFIX}/ai/status`) {
-    return json(request, env, getCoreAiGatewayStatus(env));
+    return json(request, env, aiGatewayStatus(env));
   }
 
   if (url.pathname === `${CORE_API_PREFIX}/roles`) {
