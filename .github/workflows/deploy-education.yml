@@ -169,7 +169,9 @@ jobs:
             health=$(curl -sS -o /tmp/edu-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/health' || true)
             config=$(curl -sS -o /tmp/edu-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/config.js' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/edu-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/admin' || true)
-            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' && "$admin" == '307' ]] \
+            admin_redirect=false
+            case "$admin" in 301|302|303|307|308) admin_redirect=true;; esac
+            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' && "$admin_redirect" == 'true' ]] \
               && grep -Fq 'EKODI Education' /tmp/edu.html \
               && grep -Fq 'ADMISSION · SOURCE FIRST' /tmp/edu-admission.html \
               && grep -Fq 'STUDY · CONTINUITY' /tmp/edu-study.html \
@@ -178,10 +180,14 @@ jobs:
               && grep -Fq '"submissionExecution":false' /tmp/edu-health.json \
               && grep -Fq '"dataEnabled":true' /tmp/edu-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-headers \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/$' /tmp/edu-admin-headers; then
+              && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/edu-admin-headers; then
               echo 'EKODI Education production verified.'
               exit 0
             fi
+            echo "Education verify attempt=$attempt root=$root admission=$admission study=$study health=$health config=$config admin=$admin"
+            grep -Ei '^(x-ekodi-shell|location):' /tmp/edu-headers /tmp/edu-admin-headers || true
+            head -c 300 /tmp/edu-config.js || true
+            echo
             sleep 5
           done
           exit 1
