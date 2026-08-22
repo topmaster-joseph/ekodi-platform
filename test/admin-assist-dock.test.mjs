@@ -74,8 +74,8 @@ test('guarded shared-site release verifies bootstrap and full Assist lazy assets
   assert.match(manifest,/ekodiAssistBootstrap/);
   assert.match(manifest,/admin\.ekodi\.kr\/admin-lazy-features\.js\?assist=v2/);
   assert.match(manifest,/ekodiAssistDock/);
-  assert.match(manifest,/api\\\/control\\\/messenger\\\/inbox/);
-  assert.match(manifest,/api\\\/control\\\/ai\\\/actions/);
+  assert.match(manifest,/\/api\/control\/messenger\/inbox/);
+  assert.match(manifest,/\/api\/control\/ai\/actions/);
   assert.match(manifest,/admin\.ekodi\.kr\/ai-ops-admin\.css\?assist=v2/);
   assert.match(manifest,/ekodi-assist-launcher/);
 });
