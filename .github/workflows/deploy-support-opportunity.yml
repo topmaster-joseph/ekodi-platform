@@ -88,9 +88,11 @@ jobs:
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/sources/status" || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq 'OFFICIAL FEED' /tmp/support.html && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then exit 0; fi
+            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$STAGING_URL/api/opportunities?limit=5" || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq 'OFFICIAL FEED' /tmp/support.html && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json && grep -Fq '"ok":true' /tmp/support-notices.json && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json && grep -Fq '"official":true' /tmp/support-notices.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then exit 0; fi
             sleep 4
           done
+          cat /tmp/support-notices.json || true
           exit 1
 
   production:
@@ -139,10 +141,12 @@ jobs:
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/' || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/health' || true)
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/api/sources/status' || true)
+            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 'https://support.ekodi.kr/api/opportunities?limit=5' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/admin' || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq 'OFFICIAL FEED' /tmp/support.html && grep -Fq '"dataMode":"production"' /tmp/support-health.json && grep -Fq '"submissionExecution":false' /tmp/support-health.json && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq 'OFFICIAL FEED' /tmp/support.html && grep -Fq '"dataMode":"production"' /tmp/support-health.json && grep -Fq '"submissionExecution":false' /tmp/support-health.json && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json && grep -Fq '"ok":true' /tmp/support-notices.json && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json && grep -Fq '"official":true' /tmp/support-notices.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then exit 0; fi
             sleep 5
           done
+          cat /tmp/support-notices.json || true
           exit 1
       - name: Publish production verification status
         if: always()
