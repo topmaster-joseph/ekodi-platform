@@ -26,7 +26,8 @@ export function resolveAiAccessRoute(options = {}) {
     return { route:'core-only', reason:'no-server-ai-route', intent, surface };
   }
 
-  // Foreground user experience: keep Free cost-safe, but avoid unnecessary handoffs for paid members.
+  // Foreground user experience: provider details stay behind the gateway.
+  // A connected personal API remains preferred; otherwise bounded EKODI sponsorship avoids an unnecessary handoff.
   if (mode === 'ekodi-first' && sponsored) return { route:'ekodi-sponsored', reason:'explicit-ekodi-first', intent, surface };
   if (personalApi) return { route:'personal-api', reason:'personal-api-available', intent, surface };
   if (mode === 'personal-first' && personalWeb) return { route:'personal-web', reason:'explicit-personal-first', intent, surface };
@@ -51,16 +52,17 @@ export function routeSequence(options = {}) {
 }
 
 export const AI_ACCESS_POLICY = Object.freeze({
-  version:'2026-08-23.1',
+  version:'2026-08-23.2',
   modes:[...MODES],
   intents:[...INTENTS],
   surfaces:[...SURFACES],
   principles:Object.freeze({
     coreFirst:true,
-    freeNeverAutoConsumesEkodiPaidApi:true,
+    boundedEkodiSponsorshipForFree:true,
     personalApiPreferredWhenSafe:true,
+    providerDetailsHiddenByDefault:true,
     consumerWebNeverUsedForProactiveExecution:true,
-    paidInteractiveMayUseSponsoredApiToAvoidHandoff:true,
+    interactiveMayUseSponsoredApiToAvoidHandoff:true,
     adminAndSystemExecutionRequireServerCallableApi:true,
     providerIndependent:true,
   }),
