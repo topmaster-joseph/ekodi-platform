@@ -58,7 +58,7 @@ test('legacy Mall seller login is normalized back to Seller Studio',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1&workspace=20260817-sso-1&entry=20260817-workspace-entry-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260823-mobile-admin-handoff-1&workspace=20260817-sso-1&entry=20260817-workspace-entry-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
