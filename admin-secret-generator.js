@@ -66,7 +66,7 @@
         <div class="admin-secret-output" data-secret-state="empty">
           <small>생성값</small>
           <textarea data-secret-output rows="3" readonly autocomplete="off" spellcheck="false" aria-label="생성된 비밀키" placeholder="생성하기 전에는 아무 값도 없습니다."></textarea>
-          <span data-secret-status>키는 생성 후 30초가 지나면 화면과 메모리에서 자동으로 지워집니다.</span>
+          <span data-secret-status>키는 생성 후 30초가 지나면 화면에서 지우고 JavaScript 참조를 제거합니다.</span>
         </div>
       </article>
       <aside class="admin-secret-guide">
@@ -88,10 +88,10 @@
 
   function scheduleClear(delay) {
     window.clearTimeout(clearTimer);
-    clearTimer = window.setTimeout(() => clearSecret('안전을 위해 생성값을 화면과 메모리에서 지웠습니다.'), delay);
+    clearTimer = window.setTimeout(() => clearSecret('안전을 위해 생성값 표시를 지우고 JavaScript 참조를 제거했습니다.'), delay);
   }
 
-  function clearSecret(message = '생성값을 지웠습니다.') {
+  function clearSecret(message = '생성값 표시를 지우고 JavaScript 참조를 제거했습니다.') {
     window.clearTimeout(clearTimer);
     clearTimer = 0;
     activeSecret = '';
@@ -109,7 +109,7 @@
     copy.disabled = false;
     clear.disabled = false;
     section.querySelector('.admin-secret-output').dataset.secretState = 'ready';
-    status.textContent = '이 값은 서버에 전송되지 않습니다. 30초 후 자동으로 지워집니다.';
+    status.textContent = '이 값은 서버에 전송되지 않습니다. 30초 후 화면에서 자동으로 지웁니다.';
     scheduleClear(DISPLAY_TTL_MS);
   });
 
@@ -134,8 +134,8 @@
     window.EKODIAdminPanels?.activate?.(SECTION);
     if (location.hash !== '#security') history.replaceState(null, '', '#security');
   });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && activeSecret) clearSecret('탭을 벗어나 생성값을 지웠습니다.'); });
-  window.addEventListener('pagehide', () => clearSecret('페이지를 떠나 생성값을 지웠습니다.'));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && activeSecret) clearSecret('탭을 벗어나 생성값 표시와 참조를 제거했습니다.'); });
+  window.addEventListener('pagehide', () => clearSecret('페이지를 떠나 생성값 표시와 참조를 제거했습니다.'));
 
   window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail:{ feature:SECTION } }));
   window.EKODIAdminSecretGenerator = Object.freeze({ defaultBytes:DEFAULT_BYTES, allowedBytes:Object.freeze([...ALLOWED_BYTES]) });
