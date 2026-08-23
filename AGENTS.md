@@ -125,6 +125,41 @@ Examples:
 
 Agent actions must be scoped by tenant, role, delegated purpose, and mission policy. High-impact actions must never be hidden behind vague automation. A specialist AI may escalate or object when its domain boundary is crossed, and Chief AI must surface rather than suppress that dissent.
 
+## 5A. AI access, funding, and execution are ecosystem operating invariants
+
+EKODI must hide unnecessary AI-provider complexity from users and administrators while keeping funding, privacy, execution authority, and provider boundaries explicit inside EKODI Core.
+
+The default experience is not “choose OpenAI, Gemini, API, or web.” A person should normally sign in, use EKODI, and receive prepared help without needing to understand the underlying AI route. Provider and billing choices belong behind EKODI Core and the AI Gateway unless the person deliberately opens advanced AI settings.
+
+The governing access principles are:
+
+- **Core first**: rules, verified system data, deterministic workflows, and non-AI services must handle a task whenever they can. Do not call a model merely because an AI provider is available.
+- **Provider independence**: OpenAI, Gemini, or any other provider is a replaceable reasoning/execution resource behind EKODI Core, not the identity or source of truth of the ecosystem.
+- **Identity is separate from AI entitlement**: Google sign-in establishes EKODI identity. It does not automatically transfer a user's ChatGPT, Gemini, or other consumer AI subscription, quota, or billing rights to EKODI.
+- **Personal AI access and API execution are different channels**: consumer ChatGPT/Gemini web access may be offered for a person's own interactive use, but it must never be treated as a server API, borrowed session, or unattended automation credential.
+- **Free/Flex cost invariant**: by default, Free and Flex members must not silently consume EKODI-paid model API usage. Their normal order is `Core → connected personal server-callable API → personal AI web handoff → Core-only`.
+- **Paid seamless-use invariant**: when a paid membership includes EKODI AI support, the automatic interactive order is `Core → connected personal API → membership-sponsored EKODI API → personal AI web handoff → Core-only`. This minimizes disruptive page switching while keeping the EKODI-funded allowance bounded by membership policy.
+- **Explicit personal-first preference**: when a person explicitly chooses personal-first mode, EKODI should prefer personal API and personal AI access before consuming a sponsored EKODI allowance, subject to privacy and execution rules.
+- **Proactive/unattended execution invariant**: when EKODI acts before a person asks, prepares background recommendations, or performs scheduled/conditional AI work, it may use only server-callable, auditable API paths. Consumer ChatGPT/Gemini web sessions must never be used for unattended execution.
+- **Admin/system execution invariant**: EKODI Admin AI and system automation must use EKODI Core, governed server integrations, and auditable APIs. They must not borrow an administrator's consumer AI browser session or subscription as an automation engine.
+- **Sensitive-data invariant**: secrets, credentials, tokens, payment data, government identifiers, protected personal data, or equivalent sensitive information must not be automatically sent to personal/free AI routes or consumer web handoffs. Route only through an explicitly permitted protected path, or remain Core-only.
+- **Credential invariant**: user-owned provider credentials must never be stored in browser localStorage, client bundles, analytics, or logs. They require a server-side encrypted credential vault, revocation, masking, tenant/user isolation, and auditability.
+- **Funding traceability**: AI usage must distinguish at least `personal`, `ekodi-sponsored`, and `none/core-only` funding so EKODI never mixes user-owned usage with ecosystem-paid usage.
+- **Membership packaging**: commercial plans should sell an `EKODI AI support allowance` or capability, not a hard dependency on a named provider or fixed provider-specific call count. The Gateway may change models/providers while preserving the member benefit and cost ceiling.
+- **Graceful degradation**: lack of a personal AI connection, sponsored allowance, provider availability, or API credential must never stop EKODI Core. The system must fall back safely to personal handoff or Core-only behavior.
+- **Low-friction UI**: normal UI should show concise states such as “내 AI 연결됨”, “EKODI 지원 AI”, “무료 이용”, or “AI 없이 계속”. API keys, model names, token accounting, and provider routing belong in advanced settings or admin observability, not in the ordinary user path.
+- **Proactive service, not proactive noise**: User AI and Admin AI should observe state, prepare useful outputs, and surface only high-value next actions. Users and administrators should not be forced to ask first, but AI must also avoid unnecessary interruption and preserve final human control for high-impact decisions.
+
+The shared routing policy should follow the intent-specific pattern:
+
+- Interactive Free/Flex: `Core → personal API → personal AI access → Core-only`
+- Interactive paid automatic mode: `Core → personal API → EKODI-sponsored API → personal AI access → Core-only`
+- Interactive explicit personal-first: `Core → personal API → personal AI access → EKODI-sponsored API when allowed → Core-only`
+- Proactive/unattended: `Core → personal server API when explicitly connected and permitted → EKODI-sponsored API when entitled → Core-only`
+- Admin/system: `Core → governed server API/integration → Core-only`
+
+Any implementation that bypasses these invariants, silently shifts AI cost to EKODI or the user, reuses a consumer browser session for automation, exposes provider credentials, or makes Core availability depend on one AI provider is a governance regression and must not ship.
+
 ## 6. Multi-tenant direction
 
 All customer sites are independent tenants, not cosmetic page variants. This includes both external customers and EKODI-owned operating organizations.
