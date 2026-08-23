@@ -1,0 +1,137 @@
+name: Deploy EKODI Support Opportunity
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'support/**'
+      - 'support-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/support-opportunity.test.mjs'
+      - 'wrangler.support.toml'
+      - 'wrangler.support.staging.toml'
+      - 'deploy/manifests/support.worker.json'
+      - '.github/workflows/deploy-support-opportunity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'support/**'
+      - 'support-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/support-opportunity.test.mjs'
+      - 'wrangler.support.toml'
+      - 'wrangler.support.staging.toml'
+      - 'deploy/manifests/support.worker.json'
+      - '.github/workflows/deploy-support-opportunity.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-support-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Support contracts
+        run: |
+          set -euo pipefail
+          node --check support-worker.js
+          node --check support/core.js
+          node --check support/app.js
+          node --check ekodi-service-manifest.js
+          node --test test/support-opportunity.test.mjs
+          node scripts/validate-platform-boundaries.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
+          grep -Fq 'EKODI SUPPORT · OPPORTUNITY FIRST' support/index.html
+          grep -Fq "id:'support'" ekodi-service-manifest.js
+          grep -Fq '"support"' platform-boundaries.json
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-support-opportunity-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.support.staging.toml
+      - name: Verify staging
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$root" == '200' && "$health" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Wait for Shell contract
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"id":"support"' /tmp/manifest.json; then break; fi
+            if [[ "$attempt" == '24' ]]; then exit 1; fi
+            sleep 5
+          done
+      - name: Reconcile production hostname trigger
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
+      - name: Bootstrap or guarded release
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.support.toml --json > /tmp/deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/support.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.support.toml
+          else
+            cat /tmp/deployments.log
+            exit 1
+          fi
+      - name: Verify real production hostname
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/' || true)
+            health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/health' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/admin' || true)
+            if [[ "$root" == '200' && "$health" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq '"dataMode":"production"' /tmp/support-health.json && grep -Fq '"submissionExecution":false' /tmp/support-health.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then exit 0; fi
+            sleep 5
+          done
+          exit 1
