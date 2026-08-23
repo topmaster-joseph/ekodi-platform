@@ -20,6 +20,7 @@ const SERVICES = [
   {id:'invest',name:'EKODI Investment',shortName:'Investment',url:'https://invest.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','project'],capabilities:['investment','research','due-diligence','ir','opportunities'],sso:true,targetable:true,order:145,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1,transactionMode:'analysis-and-connection-only'},
   {id:'pay',name:'EKODI Pay',shortName:'Pay',url:'https://pay.ekodi.kr/',group:'finance',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['payments','billing'],sso:true,targetable:true,order:150,shellIntegration:'worker-injected'},
   {id:'edu',name:'EKODI Education',shortName:'Education',url:'https://edu.ekodi.kr/',group:'knowledge',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['education','courses','learning','admission','study','official-sources','planning'],sso:true,targetable:true,openSso:true,order:160,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
+  {id:'support',name:'EKODI Support Opportunity AI',shortName:'Support',url:'https://support.ekodi.kr/',group:'business',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['government-support','opportunities','grants','official-sources','forms','project-lifecycle'],sso:true,targetable:true,openSso:true,order:165,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'media',name:'에코디미디어',shortName:'Media',url:'https://media.ekodi.kr/',group:'creator',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['media','video','live'],sso:true,targetable:true,order:170,state:'planned',shellIntegration:'planned'},
   {id:'insurance',name:'에코디보험',shortName:'Insurance',url:'https://ins.ekodi.kr/',group:'life',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['insurance','coverage','claims'],sso:true,targetable:true,order:180,state:'planned',shellIntegration:'planned'},
   {id:'mail',name:'EKODI Mail',shortName:'Mail',url:'https://mail.ekodi.kr/',group:'communication',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['mail','communication'],sso:true,targetable:true,order:190,state:'planned',shellIntegration:'planned'},
@@ -27,28 +28,11 @@ const SERVICES = [
   {id:'cloud',name:'EKODI Cloud',shortName:'Cloud',url:'https://cloud.ekodi.kr/',group:'communication',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['files','collaboration','cloud'],sso:true,targetable:true,order:210,state:'planned',shellIntegration:'planned'}
 ].map(service=>{
   const ownedSite=ownedCustomerSiteFor(service.id);
-  return Object.freeze({
-    ...service,
-    operatingModel:operatingModelForService(service.id),
-    tenantSlug:ownedSite?.slug||null,
-    defaultActivityRole:ownedSite?.defaultActivityRole||null,
-    defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null,
-  });
+  return Object.freeze({...service,operatingModel:operatingModelForService(service.id),tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
-export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 6,
-  updatedAt: '2026-08-23',
-  identityModel: 'person-space-role',
-  authorityModel: 'platform-admin-is-separate-from-tenant-activity',
-  shellVersion: 2,
-  shellPolicy: 'required-for-user-facing-services',
-  onboardingPolicyVersion: 1,
-  services: Object.freeze(SERVICES),
-});
-
+export const EKODI_SERVICE_MANIFEST = Object.freeze({version:7,updatedAt:'2026-08-23',identityModel:'person-space-role',authorityModel:'platform-admin-is-separate-from-tenant-activity',shellVersion:2,shellPolicy:'required-for-user-facing-services',onboardingPolicyVersion:1,services:Object.freeze(SERVICES)});
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
 export const EKODI_SERVICE_BY_HOST = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[new URL(service.url).hostname,service]));
-
 export function serviceForHost(hostname){return EKODI_SERVICE_BY_HOST.get(String(hostname||'').toLowerCase())||null;}
 export function serviceForId(id){return EKODI_SERVICE_BY_ID.get(String(id||'').toLowerCase())||null;}
