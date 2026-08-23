@@ -3,6 +3,7 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { AI_ACCESS_POLICY } from './ai-access-orchestration.js';
+import { PERSONAL_AI_PROVIDER_REGISTRY } from './personal-ai-provider-registry.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
@@ -26,6 +27,7 @@ function errorResponse(message, code) {
 function userAiResponse(response) {
   if (!response) return response;
   response.headers.set('x-ekodi-ai-access-policy', AI_ACCESS_POLICY.version);
+  response.headers.set('x-ekodi-personal-ai-registry', PERSONAL_AI_PROVIDER_REGISTRY.version);
   return applyApiSecurityHeaders(response);
 }
 
