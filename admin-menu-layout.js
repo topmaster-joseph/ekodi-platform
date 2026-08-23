@@ -9,15 +9,15 @@
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
   const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus', 'aiops', 'health', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
+    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
     'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
   ]);
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
   const HASH_SECTIONS = new Map([
-    ['#ai-ops', 'aiops'], ['#health', 'health'], ['#devices', 'devices'], ['#campus', 'campus'],
+    ['#ai-ops', 'aiops'], ['#health', 'health'], ['#security', 'security'], ['#devices', 'devices'], ['#campus', 'campus'],
     ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
   ]);
-  const CANONICAL_HASH = new Map([['aiops', '#ai-ops'], ['health', '#health'], ['devices', '#devices'], ['campus', '#campus']]);
+  const CANONICAL_HASH = new Map([['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus']]);
 
   let requestedSection = '';
 
