@@ -1,0 +1,4 @@
+source_repository=topmaster-joseph/jadam-maru
+source_commit=20bd1f0b64581057d1981ff35d9442438e4f7c39
+scope=marketing-ai tenant style asset recovery
+reference=https://cgma.ai.ekodi.kr/market-ai
