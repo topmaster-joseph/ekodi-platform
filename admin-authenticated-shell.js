@@ -27,6 +27,25 @@
     return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
   }
 
+  function applyOfficialAdminSurface() {
+    const root = document.documentElement;
+    root.dataset.ekodiShellSurface = 'admin';
+    root.dataset.ekodiAdminUi = 'official';
+    const tokens = {
+      '--ekodi-ui-bg': '#071522',
+      '--ekodi-ui-surface': '#0B1D2E',
+      '--ekodi-ui-surface-raised': '#10263A',
+      '--ekodi-ui-border': '#24425E',
+      '--ekodi-ui-text': '#F4F7FB',
+      '--ekodi-ui-muted': '#9FB1C3',
+      '--ekodi-ui-accent': '#8EC8FF',
+      '--ekodi-ui-radius': '16px',
+    };
+    for (const [name, value] of Object.entries(tokens)) {
+      if (!root.style.getPropertyValue(name)) root.style.setProperty(name, value);
+    }
+  }
+
   function keepLoginInteractive() {
     if (!loginScreen || authenticated()) return;
     loginScreen.style.position = 'relative';
@@ -104,6 +123,7 @@
   async function startAuthenticatedShell() {
     if (started || !authenticated()) return;
     started = true;
+    applyOfficialAdminSurface();
     document.documentElement.dataset.ekodiAdminReady = 'loading';
 
     if (location.pathname.startsWith('/legacy')) {
