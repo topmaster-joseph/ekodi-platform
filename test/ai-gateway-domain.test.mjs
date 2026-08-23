@@ -15,18 +15,30 @@ test('root AI Gateway is an admin-only provider status surface', async () => {
   assert.match(html, /EKODI AI Gateway/);
   assert.match(html, /Google 관리자 인증/);
   assert.match(html, /실제 연결 테스트/);
+  assert.match(html, /sessionIdentity/);
   assert.match(html, /\*\.ai\.ekodi\.kr/);
   assert.doesNotMatch(html, /OPENAI_API_KEY|sk-proj-/);
 });
 
-test('AI Gateway client uses protected same-origin provider status and explicit assist test', async () => {
+test('AI Gateway client preserves Google admin handoff until session validation', async () => {
   const response = aiGatewayScript();
   const script = await response.text();
   assert.equal(response.headers.get('x-ekodi-route'), 'ai-gateway-asset');
+  assert.match(script, /const HANDOFF_KEY='ekodi_admin_token'/);
+  assert.match(script, /let memoryToken=''/);
+  assert.match(script, /TOKEN_PATTERN=\/\^\[a-f0-9\]\{64\}\$\/i/);
+  assert.match(script, /function acceptHandoff\(\)/);
+  assert.match(script, /function clearHandoff\(\)/);
+  assert.match(script, /Google 관리자 인증 완료 · 세션 확인 중/);
+  assert.match(script, /const session=await request\('\/api\/session'\)/);
+  assert.match(script, /signedIn\(true\);clearHandoff\(\)/);
   assert.match(script, /\/api\/control\/ai\/provider-status/);
   assert.match(script, /\/api\/control\/ai\/assist/);
-  assert.match(script, /ekodi_admin_token/);
   assert.match(script, /OpenAI 실제 호출/);
+
+  const acceptBody = script.match(/function acceptHandoff\(\)\{([\s\S]*?)\}\nfunction clearHandoff/)?.[1] || '';
+  assert.doesNotMatch(acceptBody, /history\.replaceState/);
+  assert.match(acceptBody, /setToken\(value\)/);
 });
 
 test('Worker, auth and release contracts include the AI Gateway hostname', () => {
@@ -38,6 +50,7 @@ test('Worker, auth and release contracts include the AI Gateway hostname', () =>
   assert.match(router, /host===AI_GATEWAY_HOST/);
   assert.match(wrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
   assert.match(auth, /u\.origin==='https:\/\/ai\.ekodi\.kr'/);
+  assert.match(auth, /ekodi_admin_token:result\.token/);
 
   const urls = new Set(manifest.worker.requests.map(item => item.url));
   assert.equal(urls.has('https://ai.ekodi.kr/'), true);
