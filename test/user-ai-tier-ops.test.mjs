@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import {
   USER_AI_PLAN_DEFAULTS,
@@ -9,7 +10,7 @@ import {
 } from '../user-ai-admin-control.js';
 import { fundingPolicyForPlan } from '../user-ai-control.js';
 
-test('User AI tier defaults preserve bounded FREE/FLEX sponsorship', () => {
+test('User AI tier defaults preserve bounded FREE/FLEX sponsorship', async () => {
   assert.equal(USER_AI_PLAN_DEFAULTS.free, 20);
   assert.equal(USER_AI_PLAN_DEFAULTS.flex, 20);
   assert.equal(USER_AI_PLAN_DEFAULTS.basic, 25);
@@ -18,15 +19,22 @@ test('User AI tier defaults preserve bounded FREE/FLEX sponsorship', () => {
   assert.equal(USER_AI_PLAN_DEFAULTS.auto, 1500);
   assert.equal(configuredMonthlyRequests({}, 'free'), 20);
   assert.equal(configuredMonthlyRequests({}, 'flex'), 20);
+  const runtime = await applyUserAiPlanOverrides({});
+  assert.equal(runtime.USER_AI_FREE_MONTHLY_REQUESTS, '20');
+  assert.equal(runtime.USER_AI_FLEX_MONTHLY_REQUESTS, '20');
+  assert.equal(fundingPolicyForPlan('free', runtime).sponsoredRequests, 20);
+  assert.equal(fundingPolicyForPlan('flex', runtime).sponsoredRequests, 20);
 });
 
-test('environment values remain the deployment baseline when no admin override exists', () => {
+test('environment values remain the deployment baseline when no admin override exists', async () => {
   const env = { USER_AI_FREE_MONTHLY_REQUESTS:'24', USER_AI_PRO_MONTHLY_REQUESTS:'900' };
   assert.equal(configuredMonthlyRequests(env, 'free'), 24);
   assert.equal(configuredMonthlyRequests(env, 'pro'), 900);
-  const userPolicy = fundingPolicyForPlan('free', env);
-  assert.equal(userPolicy.sponsoredRequests, 24);
-  assert.equal(userPolicy.sponsoredEligible, true);
+  const runtime = await applyUserAiPlanOverrides(env);
+  assert.equal(runtime.USER_AI_FREE_MONTHLY_REQUESTS, '24');
+  assert.equal(runtime.USER_AI_PRO_MONTHLY_REQUESTS, '900');
+  assert.equal(fundingPolicyForPlan('free', runtime).sponsoredRequests, 24);
+  assert.equal(fundingPolicyForPlan('free', runtime).sponsoredEligible, true);
 });
 
 test('admin limit validation accepts zero as a safe pause and rejects invalid ranges', () => {
@@ -60,4 +68,14 @@ test('D1 admin overrides are projected into the existing User AI gateway environ
   assert.equal(runtime.USER_AI_PLUS_MONTHLY_REQUESTS, '0');
   assert.equal(fundingPolicyForPlan('free', runtime).sponsoredRequests, 7);
   assert.equal(fundingPolicyForPlan('plus', runtime).sponsoredEligible, false);
+});
+
+test('User AI operations panel stays inside the existing lazy AI Ops asset', async () => {
+  const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  const shell = await readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
+  assert.match(build, /readFile\(`\$\{root\}user-ai-tier-panel\.js`/);
+  assert.match(build, /writeFile\(`\$\{output\}ai-ops-admin\.js`/);
+  assert.doesNotMatch(shell, /user-ai-tier-panel\.js/);
+  assert.doesNotMatch(worker, /user-ai-tier-panel\.js/);
 });
