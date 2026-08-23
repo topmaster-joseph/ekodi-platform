@@ -6,6 +6,7 @@ on:
       - 'ai-gateway-page.js'
       - 'platform-router-entry-worker.js'
       - 'test/ai-gateway-domain.test.mjs'
+      - 'test/ai-gateway-auth-flow.test.mjs'
       - '.github/workflows/deploy-ai-gateway.yml'
   push:
     branches: [main]
@@ -45,7 +46,7 @@ jobs:
           node --check platform-router-entry-worker.js
           node --check auth-site/admin-auth.js
           node --check scripts/guarded-worker-release.mjs
-          node --test test/ai-gateway-domain.test.mjs
+          node --test test/ai-gateway-domain.test.mjs test/ai-gateway-auth-flow.test.mjs
           grep -Fq "pattern = \"ai.ekodi.kr\"" wrangler.site.toml
           grep -Fq "ekodi_admin_token:result.token" auth-site/admin-auth.js
           grep -Fq "Google 관리자 인증 완료 · 세션 확인 중" ai-gateway-page.js
