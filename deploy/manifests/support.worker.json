@@ -4,8 +4,9 @@
     "name": "ekodi-support-opportunity",
     "config": "wrangler.support.toml",
     "requests": [
-      {"url":"https://support.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI SUPPORT · OPPORTUNITY FIRST","GRANT WORKSPACE","FORM ENGINE"],"headerExpect":["x-ekodi-shell: v2"]},
-      {"url":"https://support.ekodi.kr/health","statuses":[200],"expect":["ekodi-support-opportunity","\"officialSourceRequired\":true","\"submissionExecution\":false","\"humanGateRequired\":true","\"ekodiShell\":true"]}
+      {"url":"https://support.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI SUPPORT · OPPORTUNITY FIRST","OFFICIAL FEED","PROACTIVE BRIEF","GRANT WORKSPACE","FORM ENGINE"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://support.ekodi.kr/health","statuses":[200],"expect":["ekodi-support-opportunity","\"officialSourceRequired\":true","\"submissionExecution\":false","\"humanGateRequired\":true","\"ekodiShell\":true"]},
+      {"url":"https://support.ekodi.kr/api/sources/status","statuses":[200],"expect":["\"id\":\"bizinfo\"","\"official\":true"]}
     ]
   }
 }

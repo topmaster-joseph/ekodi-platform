@@ -51,6 +51,7 @@ jobs:
           set -euo pipefail
           node --check support-worker.js
           node --check support/core.js
+          node --check support/sources.js
           node --check support/app.js
           node --check ekodi-service-manifest.js
           node --test test/support-opportunity.test.mjs
@@ -58,6 +59,8 @@ jobs:
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
           grep -Fq 'EKODI SUPPORT · OPPORTUNITY FIRST' support/index.html
+          grep -Fq 'OFFICIAL FEED' support/index.html
+          grep -Fq 'PROACTIVE BRIEF' support/index.html
           grep -Fq "id:'support'" ekodi-service-manifest.js
           grep -Fq '"support"' platform-boundaries.json
 
@@ -84,7 +87,8 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            if [[ "$root" == '200' && "$health" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then exit 0; fi
+            sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/sources/status" || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq 'OFFICIAL FEED' /tmp/support.html && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then exit 0; fi
             sleep 4
           done
           exit 1
@@ -97,6 +101,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BIZINFO_API_KEY: ${{ secrets.BIZINFO_API_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -122,6 +127,9 @@ jobs:
             cat /tmp/deployments.log
             exit 1
           fi
+      - name: Sync optional Bizinfo credential
+        if: env.BIZINFO_API_KEY != ''
+        run: printf '%s' "$BIZINFO_API_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put BIZINFO_API_KEY --config wrangler.support.toml
       - name: Reconcile production hostname trigger
         run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
       - name: Verify real production hostname
@@ -130,8 +138,9 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/' || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/health' || true)
+            sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/api/sources/status' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/admin' || true)
-            if [[ "$root" == '200' && "$health" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq '"dataMode":"production"' /tmp/support-health.json && grep -Fq '"submissionExecution":false' /tmp/support-health.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' ]] && grep -Fq 'GRANT WORKSPACE' /tmp/support.html && grep -Fq 'OFFICIAL FEED' /tmp/support.html && grep -Fq '"dataMode":"production"' /tmp/support-health.json && grep -Fq '"submissionExecution":false' /tmp/support-health.json && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then exit 0; fi
             sleep 5
           done
           exit 1
