@@ -36,3 +36,5 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /releaseJs.*systemHealthJs/);
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
+
+// Release trigger checkpoint: shared-site manifest v8 is validated by the guarded production gate.
