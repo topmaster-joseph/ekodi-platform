@@ -2,6 +2,7 @@ import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleUserAiControl } from './user-ai-control.js';
+import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
 import { AI_ACCESS_POLICY } from './ai-access-orchestration.js';
 import { PERSONAL_AI_PROVIDER_REGISTRY } from './personal-ai-provider-registry.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
@@ -52,7 +53,11 @@ export default {
     }
 
     if (path.startsWith('/api/user-ai/')) {
-      try { const response = await handleUserAiControl(request, env); if (response) return userAiResponse(response); }
+      try {
+        const runtimeEnv = await applyUserAiPlanOverrides(env);
+        const response = await handleUserAiControl(request, runtimeEnv);
+        if (response) return userAiResponse(response);
+      }
       catch (error) { console.error('User AI control error', error); return errorResponse('개인 AI 연결 처리 중 오류가 발생했습니다.', 'USER_AI_CONTROL_ERROR'); }
     }
 
@@ -94,6 +99,11 @@ export default {
     if (path === '/api/control/system-health') {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/user-ai')) {
+      try { const response = await handleUserAiAdminControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('User AI admin control error', error); return errorResponse('User AI 운영 처리 중 오류가 발생했습니다.', 'USER_AI_ADMIN_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/messenger')) {
