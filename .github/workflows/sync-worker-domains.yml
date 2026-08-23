@@ -10,9 +10,10 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
-  group: ekodi-shared-site-worker-production
+  group: ekodi-worker-domain-sync
   cancel-in-progress: false
 
 jobs:
@@ -34,11 +35,13 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
       - name: Apply Worker domains and routes
+        id: routes
         run: |
           set -euo pipefail
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
 
       - name: Verify AI Gateway hostname is provisioned
+        id: hostname
         shell: bash
         run: |
           set -euo pipefail
@@ -52,3 +55,32 @@ jobs:
           done
           echo 'ai.ekodi.kr DNS/TLS provisioning was not observable.'
           exit 1
+
+      - name: Publish AI Gateway domain checkpoint
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROUTES_OUTCOME: ${{ steps.routes.outcome }}
+          HOSTNAME_OUTCOME: ${{ steps.hostname.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ROUTES_OUTCOME" = 'success' ] && [ "$HOSTNAME_OUTCOME" = 'success' ]; then
+            icon='✅'; summary='DOMAIN SYNC VERIFIED'
+          else
+            icon='❌'; summary='DOMAIN SYNC NOT VERIFIED'
+          fi
+          body=$(cat <<EOF
+          $icon **$summary**
+
+          - commit: \`$COMMIT_SHA\`
+          - Worker routes/domains: \`$ROUTES_OUTCOME\`
+          - ai.ekodi.kr DNS/TLS observable: \`$HOSTNAME_OUTCOME\`
+          - canonical: https://ai.ekodi.kr/
+          - workflow: $RUN_URL
+          - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          EOF
+          )
+          gh issue comment 443 --repo "$GITHUB_REPOSITORY" --body "$body"
