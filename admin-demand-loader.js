@@ -36,13 +36,21 @@
       hashes: ['#health'],
       insert: 'after-aiops',
     },
+    security: {
+      label: 'Security', icon: '◆',
+      styles: ['admin-secret-generator.css'],
+      scripts: ['admin-secret-generator.js'],
+      real: '[data-section="security"]',
+      hashes: ['#security'],
+      insert: 'after-health',
+    },
     deployments: {
       label: 'Deployments', icon: '↑',
       styles: ['release-control-admin.css'],
       scripts: ['release-control-admin.js'],
       real: '[data-section="deployments"]',
       hashes: ['#deployments', '#release'],
-      insert: 'after-health',
+      insert: 'after-security',
     },
     work: {
       label: 'WORK', icon: 'W',
@@ -156,6 +164,10 @@
     }
     if (feature.insert === 'after-health') {
       const anchor = nav.querySelector('[data-demand-feature="health"], [data-section="health"]');
+      if (anchor) return anchor.insertAdjacentElement('afterend', button);
+    }
+    if (feature.insert === 'after-security') {
+      const anchor = nav.querySelector('[data-demand-feature="security"], [data-section="security"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
     if (feature.insert === 'after-services') {

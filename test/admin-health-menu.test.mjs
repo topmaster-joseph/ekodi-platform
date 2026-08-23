@@ -4,15 +4,16 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Health is a visible standalone route between AI Ops and later operational features', async () => {
+test('Health remains a visible standalone route before Security and later operational features', async () => {
   const menu = await read('admin-menu-layout.js');
   const loader = await read('admin-demand-loader.js');
-  assert.match(menu, /'campus', 'aiops', 'health'/);
+  assert.match(menu, /'campus', 'aiops', 'health', 'security'/);
   assert.match(menu, /\['#health', 'health'\]/);
   assert.match(menu, /\['health', '#health'\]/);
   assert.match(loader, /health:\s*\{/);
-  assert.match(loader, /insert: 'after-aiops'/);
-  assert.match(loader, /deployments:\s*\{[\s\S]*?insert: 'after-health'/);
+  assert.match(loader, /health:\s*\{[\s\S]*?insert: 'after-aiops'/);
+  assert.match(loader, /security:\s*\{[\s\S]*?insert: 'after-health'/);
+  assert.match(loader, /deployments:\s*\{[\s\S]*?insert: 'after-security'/);
 });
 
 test('Health assets do not ride along with AI Ops secondary hydration', async () => {
