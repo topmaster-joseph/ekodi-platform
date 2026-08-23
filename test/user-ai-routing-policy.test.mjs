@@ -5,6 +5,7 @@ import {
   classifyUserAiData,
   chooseUserAiRoute,
 } from '../user-ai-control.js';
+import { AI_ACCESS_POLICY, resolveAiAccessRoute, routeSequence } from '../ai-access-orchestration.js';
 import { createGeminiPersonalProvider } from '../gemini-provider-adapter.js';
 import { createSponsoredUserOpenAiProvider } from '../user-openai-provider-adapter.js';
 
@@ -13,6 +14,7 @@ test('FREE and FLEX never receive EKODI-sponsored AI by default', () => {
     const policy = fundingPolicyForPlan(plan);
     assert.equal(policy.sponsoredRequests, 0);
     assert.equal(policy.sponsoredEligible, false);
+    assert.equal(policy.freeEkodiApiCost, 0);
   }
 });
 
@@ -28,12 +30,76 @@ test('environment can lower or raise a plan allowance without code changes', () 
   assert.equal(fundingPolicyForPlan('plus', { USER_AI_PLUS_MONTHLY_REQUESTS:'0' }).sponsoredEligible, false);
 });
 
-test('personal AI wins in automatic mode when it is safe and connected', () => {
+test('personal API wins in automatic mode when safe and connected', () => {
   assert.equal(chooseUserAiRoute({ mode:'auto', hasPersonal:true, personalAllowed:true, sponsoredAvailable:true, sponsoredRemaining:100 }), 'personal-api');
 });
 
-test('FREE-like state without a personal API falls back to personal web, never sponsored', () => {
+test('FREE interactive request without personal API uses personal web, never EKODI paid API', () => {
   assert.equal(chooseUserAiRoute({ mode:'auto', hasPersonal:false, personalAllowed:true, sponsoredAvailable:false, sponsoredRemaining:0 }), 'personal-web');
+});
+
+test('paid interactive automatic mode uses sponsored API before forcing a web handoff', () => {
+  const decision = resolveAiAccessRoute({
+    mode:'auto', intent:'interactive', surface:'user', aiRequired:true,
+    hasPersonalApi:false, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:true, sponsoredRemaining:100,
+  });
+  assert.equal(decision.route, 'ekodi-sponsored');
+  assert.equal(decision.reason, 'membership-supported-seamless');
+});
+
+test('personal-first explicit mode preserves user-owned web access before sponsored API', () => {
+  const decision = resolveAiAccessRoute({
+    mode:'personal-first', intent:'interactive', surface:'user', aiRequired:true,
+    hasPersonalApi:false, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:true, sponsoredRemaining:100,
+  });
+  assert.equal(decision.route, 'personal-web');
+});
+
+test('proactive execution never depends on ChatGPT or Gemini consumer web sessions', () => {
+  const decision = resolveAiAccessRoute({
+    mode:'auto', intent:'proactive', surface:'user', aiRequired:true,
+    hasPersonalApi:false, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:false, sponsoredRemaining:0,
+  });
+  assert.equal(decision.route, 'core-only');
+  assert.equal(routeSequence({ mode:'auto', intent:'proactive', surface:'user' }).includes('personal-web'), false);
+});
+
+test('proactive execution uses a personal server API before an EKODI sponsored API', () => {
+  const personal = resolveAiAccessRoute({
+    mode:'auto', intent:'proactive', surface:'user', aiRequired:true,
+    hasPersonalApi:true, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:true, sponsoredRemaining:100,
+  });
+  assert.equal(personal.route, 'personal-api');
+  const sponsored = resolveAiAccessRoute({
+    mode:'auto', intent:'proactive', surface:'user', aiRequired:true,
+    hasPersonalApi:false, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:true, sponsoredRemaining:100,
+  });
+  assert.equal(sponsored.route, 'ekodi-sponsored');
+});
+
+test('admin/system execution is server API only and cannot silently borrow consumer web sessions', () => {
+  const decision = resolveAiAccessRoute({
+    mode:'auto', intent:'interactive', surface:'admin', aiRequired:true,
+    hasPersonalApi:false, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:true, sponsoredRemaining:100,
+  });
+  assert.equal(decision.route, 'ekodi-sponsored');
+  assert.equal(AI_ACCESS_POLICY.principles.adminAndSystemExecutionRequireServerCallableApi, true);
+});
+
+test('Core-first classification can avoid any AI call', () => {
+  const decision = resolveAiAccessRoute({
+    mode:'auto', intent:'proactive', surface:'system', aiRequired:false,
+    hasPersonalApi:true, personalApiAllowed:true, personalWebAvailable:true,
+    sponsoredAvailable:true, sponsoredRemaining:100,
+  });
+  assert.equal(decision.route, 'core-only');
+  assert.equal(decision.reason, 'core-can-handle');
 });
 
 test('sensitive data classification blocks automatic personal free API routing', () => {
