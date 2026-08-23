@@ -1,0 +1,29 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { SUPPORT_STAGES, analyzeGuidanceChange, scoreOpportunity, fillOfficialForm, buildNextActions, requiresHumanGate } from './support/core.js';
+
+const SECURITY_HEADERS={
+  'x-content-type-options':'nosniff',
+  'referrer-policy':'strict-origin-when-cross-origin',
+  'permissions-policy':'camera=(), microphone=(), geolocation=()',
+  'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+};
+function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}})}
+function withHeaders(response){const headers=new Headers(response.headers);for(const [key,value] of Object.entries(SECURITY_HEADERS))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
+async function body(request){try{return await request.json()}catch{return null}}
+function runtimeConfig(env){return{dataMode:env.DATA_MODE||'isolated-staging',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=support',officialSourceRequired:true,submissionExecution:false,humanGateRequired:true,persistence:'browser-local-first'}}
+
+export default{
+  async fetch(request,env){
+    const url=new URL(request.url);
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-support-opportunity',surface:'support-platform',stages:SUPPORT_STAGES,officialSourceRequired:true,submissionExecution:false,humanGateRequired:true,dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
+    if(url.pathname==='/config.js')return new Response(`window.EKODI_SUPPORT_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
+    if(url.pathname==='/api/change-analysis'&&request.method==='POST'){const payload=await body(request);if(!payload)return json({error:'invalid_json'},400);return json(analyzeGuidanceChange(payload.previous,payload.current));}
+    if(url.pathname==='/api/opportunity-score'&&request.method==='POST'){const payload=await body(request);if(!payload)return json({error:'invalid_json'},400);return json({score:scoreOpportunity(payload.profile,payload.notice)});}
+    if(url.pathname==='/api/form-fill'&&request.method==='POST'){const payload=await body(request);if(!payload||!Array.isArray(payload.schema))return json({error:'invalid_form_schema'},400);return json({fields:fillOfficialForm(payload.schema,payload.profile,payload.project)});}
+    if(url.pathname==='/api/next-actions'&&request.method==='POST'){const payload=await body(request);return json({actions:buildNextActions(payload||{})});}
+    if(url.pathname==='/api/action-gate'&&request.method==='POST'){const payload=await body(request);const action=payload?.action||'';return json({action,humanGateRequired:requiresHumanGate(action),allowedAutonomously:!requiresHumanGate(action)});}
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/',307);
+    const response=await env.ASSETS.fetch(request);
+    return injectEkodiShell(withHeaders(response),'support');
+  }
+};
