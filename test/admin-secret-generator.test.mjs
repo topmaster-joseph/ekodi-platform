@@ -17,13 +17,13 @@ test('local fallback generator still uses Web Crypto with strong presets', () =>
 });
 
 
-test('Cloudflare automatic mode sends only admin intent and never receives generated value', () => {
+test('Cloudflare automatic mode sends only admin intent and never exposes generated value', () => {
   assert.match(generator, /\/api\/control\/secrets\/status/);
   assert.match(generator, /\/api\/control\/secrets\/generate/);
   assert.match(generator, /x-ekodi-confirm-impact/);
   assert.match(generator, /cloudflare-secret-create/);
-  assert.match(generator, /valueReturned/);
   assert.match(generator, /비밀값 자체는 브라우저로 반환되지 않았습니다/);
+  assert.match(generator, /서버에서 암호학적 난수를 만들고 Cloudflare Worker Secret으로 바로 등록/);
   assert.doesNotMatch(generator, /CLOUDFLARE_SECRET_MANAGER_TOKEN/);
   assert.doesNotMatch(generator, /api\.cloudflare\.com/);
   assert.doesNotMatch(generator, /localStorage/);
