@@ -16,6 +16,7 @@ test('root AI Gateway is an admin-only provider status surface', async () => {
   assert.match(html, /Google 관리자 인증/);
   assert.match(html, /실제 연결 테스트/);
   assert.match(html, /sessionIdentity/);
+  assert.match(html, /loginMessage/);
   assert.match(html, /\*\.ai\.ekodi\.kr/);
   assert.doesNotMatch(html, /OPENAI_API_KEY|sk-proj-/);
 });
@@ -32,6 +33,8 @@ test('AI Gateway client preserves Google admin handoff until session validation'
   assert.match(script, /Google 관리자 인증 완료 · 세션 확인 중/);
   assert.match(script, /const session=await request\('\/api\/session'\)/);
   assert.match(script, /signedIn\(true\);clearHandoff\(\)/);
+  assert.match(script, /Google 인증은 완료됐지만 EKODI 세션 확인에 실패했습니다/);
+  assert.match(script, /세션 확인 지연/);
   assert.match(script, /\/api\/control\/ai\/provider-status/);
   assert.match(script, /\/api\/control\/ai\/assist/);
   assert.match(script, /OpenAI 실제 호출/);
