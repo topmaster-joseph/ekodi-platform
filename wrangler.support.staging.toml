@@ -1,0 +1,18 @@
+name = "ekodi-support-opportunity-staging"
+main = "support-worker.js"
+compatibility_date = "2026-08-23"
+workers_dev = true
+preview_urls = false
+
+[vars]
+DATA_MODE = "isolated-staging"
+AUTH_URL = "https://auth.ekodi.kr/?site=support"
+
+[assets]
+directory = "./support"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
