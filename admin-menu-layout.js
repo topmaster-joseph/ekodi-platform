@@ -193,3 +193,7 @@
     visibleMenuOrder: VISIBLE_NAV_ORDER,
   });
 })();
+
+import('./admin-menu-runtime.js').catch(error => {
+  console.error('EKODI shared admin menu runtime failed to load.', error);
+});
