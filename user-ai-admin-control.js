@@ -85,7 +85,12 @@ async function readOverrides(db) {
 }
 
 export async function applyUserAiPlanOverrides(env = {}) {
-  if (!env?.DB) return env;
+  const runtimeEnv = Object.create(env || null);
+  for (const planId of PLAN_IDS) {
+    runtimeEnv[envName(planId)] = String(configuredMonthlyRequests(env, planId));
+  }
+  if (!env?.DB) return runtimeEnv;
+
   let rows = [];
   try {
     const result = await env.DB.prepare('SELECT plan_id, monthly_requests FROM user_ai_plan_limits').all();
@@ -94,10 +99,9 @@ export async function applyUserAiPlanOverrides(env = {}) {
     if (!looksLikeMissingTable(error) && !String(error?.message || error || '').toLowerCase().includes('user_ai_plan_limits')) {
       console.error('User AI plan override read failed', error);
     }
-    return env;
+    return runtimeEnv;
   }
-  if (!rows.length) return env;
-  const runtimeEnv = Object.create(env);
+
   for (const row of rows) {
     const planId = String(row?.plan_id || '').trim().toLowerCase();
     const monthlyRequests = Number(row?.monthly_requests);
