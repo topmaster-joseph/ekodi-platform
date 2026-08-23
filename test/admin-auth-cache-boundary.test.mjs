@@ -9,17 +9,23 @@ const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-s
 test('critical admin auth assets cannot remain stale in the browser cache', () => {
   assert.match(worker, /AUTH_CRITICAL_ASSETS = new Set\(\['\/auth-router\.js','\/admin-auth\.js'\]\)/);
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
-  assert.match(authIndex, /auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260816-admin-fedcm-button-1/);
+  assert.match(authIndex, /auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260823-mobile-admin-handoff-1/);
 });
 
-test('guarded production release verifies current FedCM admin assets', () => {
+test('guarded production release verifies mobile-safe admin auth assets', () => {
   const requests = manifest.worker.requests;
+  const root = requests.find(item => item.url === 'https://auth.ekodi.kr/');
   const router = requests.find(item => item.url === 'https://auth.ekodi.kr/auth-router.js');
   const admin = requests.find(item => item.url === 'https://auth.ekodi.kr/admin-auth.js');
+  assert.ok(root);
   assert.ok(router);
   assert.ok(admin);
-  assert.ok(router.expect.includes('admin-auth.js?v=20260816-fedcm-button-1'));
-  assert.ok(admin.expect.includes('use_fedcm_for_button:true'));
+  assert.ok(root.expect.some(item => item.includes('cb=20260823-mobile-admin-handoff-1')));
+  assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
+  assert.ok(admin.expect.includes('use_fedcm_for_button:supportsFedCmButton()'));
+  assert.ok(admin.expect.includes('isEmbeddedWebView'));
+  assert.ok(admin.expect.includes('Chrome에서 관리자 로그인 열기'));
+  assert.ok(admin.expect.includes('location.replace(targetHref)'));
   assert.ok(admin.expect.includes('button_auto_select:false'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
 });
