@@ -12,6 +12,7 @@ custom_domain = true
 [vars]
 DATA_MODE = "production"
 AUTH_URL = "https://auth.ekodi.kr/?site=support"
+BIZINFO_API_URL = "https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do"
 
 [assets]
 directory = "./support"
