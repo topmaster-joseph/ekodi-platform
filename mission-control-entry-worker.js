@@ -1,6 +1,7 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
+import { handleUserAiControl } from './user-ai-control.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
@@ -38,6 +39,11 @@ export default {
     if (path === '/api/session' && request.method === 'GET') {
       try { const response = await handleAdminSessionFastPath(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Admin session fast path error', error); return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR'); }
+    }
+
+    if (path.startsWith('/api/user-ai/')) {
+      try { const response = await handleUserAiControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('User AI control error', error); return errorResponse('개인 AI 연결 처리 중 오류가 발생했습니다.', 'USER_AI_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/membership/')) {
