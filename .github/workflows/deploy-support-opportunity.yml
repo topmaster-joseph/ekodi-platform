@@ -111,8 +111,6 @@ jobs:
             if [[ "$attempt" == '24' ]]; then exit 1; fi
             sleep 5
           done
-      - name: Reconcile production hostname trigger
-        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
       - name: Bootstrap or guarded release
         run: |
           set -euo pipefail
@@ -124,6 +122,8 @@ jobs:
             cat /tmp/deployments.log
             exit 1
           fi
+      - name: Reconcile production hostname trigger
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
       - name: Verify real production hostname
         run: |
           set -euo pipefail
