@@ -41,6 +41,10 @@ pattern = "invest.ekodi.kr"
 custom_domain = true
 
 [[routes]]
+pattern = "ai.ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "admin.ekodi.kr"
 custom_domain = true
 
