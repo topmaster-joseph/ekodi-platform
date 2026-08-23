@@ -1,6 +1,7 @@
 import legacyPlatformRouter from './platform-router-worker.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
+import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
 
@@ -20,6 +21,14 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+
+    if(host===AI_GATEWAY_HOST){
+      if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return aiGatewayPage();
+      if(request.method==='GET'&&url.pathname==='/ai-gateway.js')return aiGatewayScript();
+      const proxied=await proxyAiGatewayApi(request);
+      if(proxied)return proxied;
+    }
+
     if(host===MESSENGER_HOST&&request.method==='GET'){
       if(url.pathname==='/'||url.pathname===''){
         const response=await withReleaseMarker(messengerUserPage());
