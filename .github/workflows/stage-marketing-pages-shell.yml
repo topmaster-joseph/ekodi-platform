@@ -1,4 +1,4 @@
-# 2026-08-24 style release: Yogurt Purple CGMA-aligned layout + CSP-safe assets
+# 2026-08-24 official USER UI release: public service face -> authenticated Core workspace
 name: Stage Marketing AI Pages Shell
 
 on:
@@ -57,7 +57,16 @@ jobs:
             grep -Fq 'data-ekodi-shell="v1"' "$file"
             grep -Fq 'https://shell.ekodi.kr/shell.js' "$file"
             grep -Fq 'data-ekodi-service="marketing"' "$file"
+            grep -Fq 'data-ekodi-surface="public"' "$file"
             grep -Fq 'data-ekodi-workspace-handoff' "$file"
+            grep -Fq 'data-ekodi-user-ui="official"' "$file"
+            grep -Fq 'data-ekodi-user-ui-runtime="official"' "$file"
+          done
+          for dir in dist/marketing-ai dist/marketing-ai/jadam dist/marketing-ai/pizzamaru dist/marketing-ai/yogurtpurple; do
+            test -s "$dir/official-user-ui.css"
+            test -s "$dir/official-user-ui.js"
+            grep -Fq 'ekodi-authenticated-user' "$dir/official-user-ui.css"
+            grep -Fq "setSurface?.('workspace')" "$dir/official-user-ui.js"
           done
           for tenant in jadam pizzamaru yogurtpurple; do
             dir="dist/marketing-ai/$tenant"
@@ -118,7 +127,13 @@ jobs:
                 && grep -Fq 'data-ekodi-shell="v1"' /tmp/marketing-preview.html \
                 && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/marketing-preview.html \
                 && grep -Fq 'data-ekodi-service="marketing"' /tmp/marketing-preview.html \
+                && grep -Fq 'data-ekodi-surface="public"' /tmp/marketing-preview.html \
+                && grep -Fq 'data-ekodi-user-ui="official"' /tmp/marketing-preview.html \
                 && grep -Fq 'data-ekodi-workspace-handoff' /tmp/marketing-preview.html; then
+                curl -L -fsS --connect-timeout 5 --max-time 15 "${url%/}/official-user-ui.css" -o /tmp/official-user-ui.css || { sleep 4; continue; }
+                curl -L -fsS --connect-timeout 5 --max-time 15 "${url%/}/official-user-ui.js" -o /tmp/official-user-ui.js || { sleep 4; continue; }
+                grep -Fq 'ekodi-authenticated-user' /tmp/official-user-ui.css || { sleep 4; continue; }
+                grep -Fq "setSurface?.('workspace')" /tmp/official-user-ui.js || { sleep 4; continue; }
                 if [[ "$kind" == 'tenant' ]]; then
                   grep -Fq 'data-ekodi-style-asset="tenant"' /tmp/marketing-preview.html || { sleep 4; continue; }
                   grep -Fq 'data-ekodi-shell-style-fallback="tenant"' /tmp/marketing-preview.html || { sleep 4; continue; }
@@ -136,4 +151,4 @@ jobs:
             done
             [[ "$verified" == '1' ]]
           done
-          echo 'All four Marketing AI Pages previews verified with CSP-safe tenant and Shell styling assets.'
+          echo 'All four Marketing AI previews verified: public USER face, authenticated Core workspace contract, CSP-safe tenant styling.'
