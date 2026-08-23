@@ -155,9 +155,6 @@
     routeInternalToAiOps();
   }, true);
 
-  // Dynamic admin modules now announce their navigation changes explicitly. This avoids
-  // keeping subtree MutationObservers alive for the entire session and prevents DOM updates
-  // inside feature panels from repeatedly waking the menu router.
   window.addEventListener('ekodi-nav-changed', reconcileNavigation);
   window.addEventListener('ekodi-feature-installed', reconcileNavigation);
 
@@ -193,3 +190,7 @@
     visibleMenuOrder: VISIBLE_NAV_ORDER,
   });
 })();
+
+import('./admin-menu-runtime.js').catch(error => {
+  console.error('EKODI shared admin menu runtime failed to load.', error);
+});
