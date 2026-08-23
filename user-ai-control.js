@@ -1,7 +1,16 @@
 import { isAllowedOrigin } from './auth-worker.js';
-import { createGeminiPersonalProvider } from './gemini-provider-adapter.js';
 import { createSponsoredUserOpenAiProvider } from './user-openai-provider-adapter.js';
 import { AI_ACCESS_POLICY, resolveAiAccessRoute, routeSequence } from './ai-access-orchestration.js';
+import {
+  PERSONAL_AI_PROVIDER_REGISTRY,
+  createPersonalProvider,
+  firstConnectionGuide,
+  getPersonalAiProvider,
+  personalAiProviders,
+  personalApiProviderIds,
+  personalWebProviderIds,
+  validatePersonalApiKey,
+} from './personal-ai-provider-registry.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -9,11 +18,10 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const MODES = new Set(['auto', 'personal-first', 'ekodi-first', 'off']);
 const INTENTS = new Set(['interactive', 'proactive']);
-const PROVIDERS = Object.freeze([
-  { id:'chatgpt-web', label:'ChatGPT', kind:'personal-web', url:'https://chatgpt.com/', ekodiCost:false },
-  { id:'gemini-web', label:'Gemini', kind:'personal-web', url:'https://gemini.google.com/', ekodiCost:false },
-  { id:'gemini-api', label:'Gemini 내 API', kind:'personal-api', url:'https://aistudio.google.com/apikey', ekodiCost:false },
-]);
+const PROVIDERS = Object.freeze(personalAiProviders());
+const PROVIDER_IDS = new Set(PROVIDERS.map(item => item.id));
+const API_PROVIDER_IDS = new Set(personalApiProviderIds());
+const WEB_PROVIDER_IDS = new Set(personalWebProviderIds());
 const DEFAULT_SPONSORED_REQUESTS = Object.freeze({ free:0, flex:0, basic:25, plus:100, pro:500, auto:1500 });
 const SENSITIVE_RE = /(비밀번호|패스워드|password|secret|api[_ -]?key|access[_ -]?token|refresh[_ -]?token|주민등록|주민번호|여권번호|카드번호|계좌번호|보안코드|cvv|개인정보|진료|질병|건강정보)/i;
 
@@ -162,15 +170,27 @@ async function decryptSecret(env, cipher, iv) {
 
 async function preferenceFor(env, identity) {
   const row = await env.DB.prepare('SELECT mode,preferred_provider FROM user_ai_preferences WHERE user_id=?').bind(identity.id).first();
+  const preferred = String(row?.preferred_provider || 'gemini-api');
   return {
     mode:MODES.has(row?.mode) ? row.mode : 'auto',
-    preferredProvider:String(row?.preferred_provider || 'gemini-api'),
+    preferredProvider:PROVIDER_IDS.has(preferred) ? preferred : 'gemini-api',
   };
 }
-async function credentialFor(env, identity, provider = 'gemini-api') {
-  return env.DB.prepare(`SELECT provider,secret_cipher,secret_iv,updated_at FROM user_ai_credentials
-    WHERE user_id=? AND provider=? AND revoked_at IS NULL`).bind(identity.id, provider).first();
+
+async function credentialsFor(env, identity) {
+  const rows = await env.DB.prepare(`SELECT provider,secret_cipher,secret_iv,updated_at FROM user_ai_credentials
+    WHERE user_id=? AND revoked_at IS NULL ORDER BY updated_at DESC`).bind(identity.id).all();
+  return (rows.results || []).filter(row => API_PROVIDER_IDS.has(String(row.provider || '')));
 }
+
+function selectedCredential(pref, credentials) {
+  if (!Array.isArray(credentials) || !credentials.length) return null;
+  const preferred = credentials.find(row => row.provider === pref.preferredProvider);
+  if (preferred) return preferred;
+  const order = personalApiProviderIds();
+  return [...credentials].sort((a, b) => order.indexOf(a.provider) - order.indexOf(b.provider))[0] || null;
+}
+
 async function planFor(env, identity, site) {
   const row = await env.DB.prepare(`SELECT plan_id,status FROM service_subscriptions
     WHERE subject_type='person' AND subject_key=? AND site=? LIMIT 1`).bind(identity.id, site).first();
@@ -191,11 +211,12 @@ async function recordUsage(env, identity, { site, planId, funding, provider, mod
     VALUES(?,?,?,?,?,?,?)`).bind(identity.id, site, planId, funding, provider, model, new Date().toISOString()).run();
 }
 
-function publicProviders(connectedGemini = false, vaultReady = false) {
+function publicProviders(credentials = [], vaultReady = false) {
+  const connected = new Set(credentials.map(row => row.provider));
   return PROVIDERS.map(provider => ({
     ...provider,
-    connected:provider.id === 'gemini-api' ? connectedGemini : null,
-    connectionReady:provider.id === 'gemini-api' ? vaultReady : true,
+    connected:provider.kind === 'personal-api' ? connected.has(provider.id) : null,
+    connectionReady:provider.kind === 'personal-api' ? vaultReady : true,
   }));
 }
 
@@ -203,21 +224,25 @@ async function status(request, env, identity) {
   const url = new URL(request.url);
   const site = normalizeSite(url.searchParams.get('site'));
   const pref = await preferenceFor(env, identity);
-  const credential = await credentialFor(env, identity);
+  const credentials = await credentialsFor(env, identity);
   const plan = await planFor(env, identity, site);
   const policy = fundingPolicyForPlan(plan.planId, env);
   const used = await sponsoredUsage(env, identity, site);
   const remaining = Math.max(0, policy.sponsoredRequests - used);
   const vaultReady = Boolean(String(env.USER_AI_CREDENTIAL_ENCRYPTION_KEY || '').trim());
+  const connectedProviderIds = credentials.map(row => row.provider);
   return json({
-    schemaVersion:2,
+    schemaVersion:3,
     policy:'automatic-personal-first-provider-independent',
     accessPolicyVersion:AI_ACCESS_POLICY.version,
+    providerRegistryVersion:PERSONAL_AI_PROVIDER_REGISTRY.version,
     account:{ email:identity.email },
     site,
     preference:pref,
     plan:{ ...plan, sponsoredRequests:policy.sponsoredRequests, sponsoredUsed:used, sponsoredRemaining:remaining },
-    providers:publicProviders(Boolean(credential), vaultReady),
+    providers:publicProviders(credentials, vaultReady),
+    connectedProviderIds,
+    connectionGuide:firstConnectionGuide(connectedProviderIds),
     routing:{
       automatic:true,
       interactive:routeSequence({ mode:pref.mode, intent:'interactive', surface:'user' }),
@@ -241,7 +266,7 @@ async function savePreference(request, env, identity) {
   let body = null;
   try { body = await request.json(); } catch {}
   const mode = MODES.has(body?.mode) ? body.mode : '';
-  const provider = ['chatgpt-web','gemini-web','gemini-api'].includes(body?.preferredProvider) ? body.preferredProvider : '';
+  const provider = PROVIDER_IDS.has(body?.preferredProvider) ? body.preferredProvider : '';
   if (!mode || !provider) return json({ error:'AI 사용 방식 또는 공급자를 확인해 주세요.', code:'USER_AI_PREFERENCE_INVALID' }, 400, request, env);
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO user_ai_preferences(user_id,mode,preferred_provider,created_at,updated_at)
@@ -250,41 +275,58 @@ async function savePreference(request, env, identity) {
   return json({ ok:true, preference:{ mode, preferredProvider:provider } }, 200, request, env);
 }
 
-async function saveGeminiCredential(request, env, identity) {
+async function saveCredential(request, env, identity, providerId) {
+  if (!API_PROVIDER_IDS.has(providerId)) return json({ error:'지원하지 않는 개인 AI 공급자입니다.', code:'USER_AI_PROVIDER_UNSUPPORTED' }, 404, request, env);
   if (!String(env.USER_AI_CREDENTIAL_ENCRYPTION_KEY || '').trim()) {
     return json({ error:'개인 AI 보안 저장소가 아직 활성화되지 않았습니다.', code:'USER_AI_VAULT_NOT_CONFIGURED' }, 503, request, env);
   }
   let body = null;
   try { body = await request.json(); } catch {}
   const apiKey = String(body?.apiKey || '').trim();
-  if (apiKey.length < 20 || apiKey.length > 256 || /\s/.test(apiKey)) {
-    return json({ error:'Gemini API 키 형식을 확인해 주세요.', code:'USER_AI_CREDENTIAL_INVALID' }, 400, request, env);
-  }
+  const validation = validatePersonalApiKey(providerId, apiKey);
+  if (!validation.ok) return json({ error:'API 키 형식을 확인해 주세요.', code:`USER_AI_${validation.code}` }, 400, request, env);
   const encrypted = await encryptSecret(env, apiKey);
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO user_ai_credentials(user_id,provider,secret_cipher,secret_iv,created_at,updated_at,revoked_at)
     VALUES(?,?,?,?,?,?,NULL) ON CONFLICT(user_id,provider) DO UPDATE SET secret_cipher=excluded.secret_cipher,secret_iv=excluded.secret_iv,updated_at=excluded.updated_at,revoked_at=NULL`)
-    .bind(identity.id, 'gemini-api', encrypted.cipher, encrypted.iv, now, now).run();
-  return json({ ok:true, provider:'gemini-api', connected:true }, 200, request, env);
+    .bind(identity.id, providerId, encrypted.cipher, encrypted.iv, now, now).run();
+  const definition = getPersonalAiProvider(providerId);
+  return json({ ok:true, provider:providerId, label:definition?.label || providerId, connected:true }, 200, request, env);
 }
-async function revokeGeminiCredential(request, env, identity) {
+
+async function revokeCredential(request, env, identity, providerId) {
+  if (!API_PROVIDER_IDS.has(providerId)) return json({ error:'지원하지 않는 개인 AI 공급자입니다.', code:'USER_AI_PROVIDER_UNSUPPORTED' }, 404, request, env);
   const now = new Date().toISOString();
-  await env.DB.prepare(`UPDATE user_ai_credentials SET revoked_at=?,updated_at=? WHERE user_id=? AND provider='gemini-api'`)
-    .bind(now, now, identity.id).run();
-  return json({ ok:true, provider:'gemini-api', connected:false }, 200, request, env);
+  await env.DB.prepare(`UPDATE user_ai_credentials SET revoked_at=?,updated_at=? WHERE user_id=? AND provider=?`)
+    .bind(now, now, identity.id, providerId).run();
+  return json({ ok:true, provider:providerId, connected:false }, 200, request, env);
+}
+
+function webProviderFor(preferred) {
+  if (WEB_PROVIDER_IDS.has(preferred)) return preferred;
+  if (preferred === 'openai-api') return 'chatgpt-web';
+  if (preferred === 'claude-api') return 'claude-web';
+  return 'gemini-web';
 }
 
 function handoffPayload(preferred = 'gemini-web', notice = '') {
-  const order = [preferred, 'gemini-web', 'chatgpt-web'];
+  const order = [webProviderFor(preferred), 'gemini-web', 'chatgpt-web', 'claude-web'];
   const seen = new Set();
   const handoffs = [];
   for (const id of order) {
     if (seen.has(id)) continue;
     seen.add(id);
-    const provider = PROVIDERS.find(item => item.id === id && item.kind === 'personal-web');
-    if (provider) handoffs.push({ id:provider.id, label:provider.label, url:provider.url });
+    const provider = getPersonalAiProvider(id);
+    if (provider?.kind === 'personal-web') handoffs.push({ id:provider.id, label:provider.label, url:provider.url });
   }
   return { mode:'personal-web', funding:'personal', provider:null, text:'내 개인 AI에서 계속할 수 있습니다.', notice, handoffs, ekodiCost:false };
+}
+
+function personalProviderOptions(providerId, apiKey, env) {
+  if (providerId === 'gemini-api') return { apiKey, model:String(env.USER_AI_GEMINI_MODEL || '').trim() || undefined };
+  if (providerId === 'openai-api') return { apiKey, model:String(env.USER_AI_OPENAI_MODEL || '').trim() || undefined };
+  if (providerId === 'claude-api') return { apiKey, model:String(env.USER_AI_CLAUDE_MODEL || '').trim() || undefined };
+  return { apiKey };
 }
 
 async function assist(request, env, identity) {
@@ -297,7 +339,8 @@ async function assist(request, env, identity) {
   const aiRequired = body?.aiRequired !== false;
   const dataClass = classifyUserAiData(message, body?.dataClass || 'general');
   const pref = await preferenceFor(env, identity);
-  const credential = await credentialFor(env, identity);
+  const credentials = await credentialsFor(env, identity);
+  const credential = selectedCredential(pref, credentials);
   const plan = await planFor(env, identity, site);
   const policy = fundingPolicyForPlan(plan.planId, env);
   const used = await sponsoredUsage(env, identity, site);
@@ -333,18 +376,23 @@ async function assist(request, env, identity) {
   const tryPersonal = async () => {
     if (!credential || !personalAllowed) return null;
     const apiKey = await decryptSecret(env, credential.secret_cipher, credential.secret_iv);
-    const provider = createGeminiPersonalProvider({ apiKey });
-    if (!provider.available) return null;
+    const provider = createPersonalProvider(credential.provider, personalProviderOptions(credential.provider, apiKey, env));
+    if (!provider?.available) return null;
     const result = await provider.invoke({ message });
-    await recordUsage(env, identity, { site, planId:plan.planId, funding:'personal', provider:provider.id, model:result.model });
-    return { mode:'ai', funding:'personal', provider:provider.id, text:result.text, model:result.model, dataClass, intent, ekodiCost:false };
+    await recordUsage(env, identity, { site, planId:plan.planId, funding:'personal', provider:credential.provider, model:result.model });
+    const definition = getPersonalAiProvider(credential.provider);
+    return {
+      mode:'ai', funding:'personal', provider:credential.provider, providerLabel:definition?.shortLabel || definition?.label || credential.provider,
+      text:result.text, model:result.model, dataClass, intent, ekodiCost:false,
+    };
   };
+
   const trySponsored = async () => {
     if (!sponsoredAvailable || remaining <= 0) return null;
     const result = await sponsoredProvider.invoke({ message, site });
     await recordUsage(env, identity, { site, planId:plan.planId, funding:'ekodi', provider:sponsoredProvider.id, model:result.model });
     return {
-      mode:'ai', funding:'ekodi', provider:sponsoredProvider.id, text:result.text, model:result.model, dataClass, intent, ekodiCost:true,
+      mode:'ai', funding:'ekodi', provider:sponsoredProvider.id, providerLabel:'OpenAI · EKODI 지원', text:result.text, model:result.model, dataClass, intent, ekodiCost:true,
       quota:{ monthly:policy.sponsoredRequests, used:used + 1, remaining:Math.max(0, remaining - 1) },
     };
   };
@@ -377,7 +425,7 @@ async function assist(request, env, identity) {
       }
     }
   } catch (error) {
-    console.error('User AI provider invocation failed', { route:decision.route, intent, error:String(error?.message || error) });
+    console.error('User AI provider invocation failed', { route:decision.route, intent, provider:credential?.provider || null, error:String(error?.message || error) });
   }
 
   if (intent === 'interactive' && personalAllowed) {
@@ -406,8 +454,13 @@ export async function handleUserAiControl(request, env = {}) {
 
   if (request.method === 'GET' && url.pathname === '/api/user-ai/status') return status(request, env, identity);
   if (request.method === 'PUT' && url.pathname === '/api/user-ai/preferences') return savePreference(request, env, identity);
-  if (request.method === 'POST' && url.pathname === '/api/user-ai/credentials/gemini') return saveGeminiCredential(request, env, identity);
-  if (request.method === 'DELETE' && url.pathname === '/api/user-ai/credentials/gemini') return revokeGeminiCredential(request, env, identity);
+
+  const connectionMatch = url.pathname.match(/^\/api\/user-ai\/connections\/(gemini-api|openai-api|claude-api)$/);
+  if (connectionMatch && request.method === 'POST') return saveCredential(request, env, identity, connectionMatch[1]);
+  if (connectionMatch && request.method === 'DELETE') return revokeCredential(request, env, identity, connectionMatch[1]);
+
+  if (request.method === 'POST' && url.pathname === '/api/user-ai/credentials/gemini') return saveCredential(request, env, identity, 'gemini-api');
+  if (request.method === 'DELETE' && url.pathname === '/api/user-ai/credentials/gemini') return revokeCredential(request, env, identity, 'gemini-api');
   if (request.method === 'POST' && url.pathname === '/api/user-ai/assist') return assist(request, env, identity);
   return json({ error:'User AI endpoint not found', code:'USER_AI_NOT_FOUND' }, 404, request, env);
 }
@@ -418,4 +471,5 @@ export const USER_AI_POLICY = Object.freeze({
   providers:PROVIDERS,
   defaultSponsoredRequests:DEFAULT_SPONSORED_REQUESTS,
   accessPolicyVersion:AI_ACCESS_POLICY.version,
+  providerRegistryVersion:PERSONAL_AI_PROVIDER_REGISTRY.version,
 });
