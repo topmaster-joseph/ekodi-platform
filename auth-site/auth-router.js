@@ -39,7 +39,7 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 
-if(site==='admin')await import('./admin-auth.js?v=20260816-fedcm-button-1');
+if(site==='admin')await import('./admin-auth.js?v=20260823-mobile-handoff-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260817-business-live-1');
 else if(site==='my'||site==='work'||site==='community'||site==='cgma-client'||site==='jadam-client'||site==='pizzamaru-client'||site==='yogurt-client')await import('./client-auth.js?v=20260817-sso-1');

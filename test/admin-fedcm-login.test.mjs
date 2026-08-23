@@ -16,9 +16,12 @@ test('admin Google auth modules remain syntactically valid', () => {
   }
 });
 
-test('admin Google button uses the current FedCM button flow', () => {
-  assert.match(adminAuth, /use_fedcm_for_button:\s*true/);
-  assert.match(adminAuth, /button_auto_select:\s*false/);
+test('admin Google button enables FedCM only on supported browser versions', () => {
+  assert.match(adminAuth, /function supportsFedCmButton\(\)/);
+  assert.match(adminAuth, /isEmbeddedWebView\|\|isIos/);
+  assert.match(adminAuth, /return isAndroid\?major>=128:major>=125/);
+  assert.match(adminAuth, /use_fedcm_for_button:supportsFedCmButton\(\)/);
+  assert.match(adminAuth, /button_auto_select:false/);
   assert.doesNotMatch(adminAuth, /use_fedcm_for_prompt/);
   assert.match(adminAuth, /disableAutoSelect/);
 });
@@ -26,6 +29,6 @@ test('admin Google button uses the current FedCM button flow', () => {
 test('admin auth recovers from expired challenges and shows allowlist failures clearly', () => {
   assert.match(adminAuth, /GOOGLE_ACCOUNT_NOT_ALLOWED/);
   assert.match(adminAuth, /expired_challenge/);
-  assert.match(adminAuth, /setTimeout\(prepare,\s*350\)/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260816-fedcm-button-1/);
+  assert.match(adminAuth, /setTimeout\(prepare,350\)/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260823-mobile-handoff-1/);
 });
