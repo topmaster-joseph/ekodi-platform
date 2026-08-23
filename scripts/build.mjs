@@ -12,6 +12,15 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+// User AI membership operations belong to AI Ops and should never increase the normal
+// authenticated startup path. Keep the source modular, but bundle it into the existing
+// demand-loaded AI Ops JavaScript asset at build time.
+const [aiOpsBaseJs, userAiTierPanelJs] = await Promise.all([
+  readFile(`${output}ai-ops-admin.js`, 'utf8'),
+  readFile(`${root}user-ai-tier-panel.js`, 'utf8'),
+]);
+await writeFile(`${output}ai-ops-admin.js`, `${aiOpsBaseJs}\n${userAiTierPanelJs}\n`);
+
 // Tax invoices are a Finance sub-workspace, not a new public edge asset. Bundle the
 // dedicated source modules into the already secured Finance assets so the existing
 // admin allowlist, CSP and lazy-loading boundary remain unchanged.
