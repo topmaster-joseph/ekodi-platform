@@ -1,0 +1,92 @@
+name: Verify EKODI AI Gateway Production
+
+on:
+  workflow_run:
+    workflows: ['Deploy Admin True Lazy Gate']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-ai-gateway-production-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+      UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url }}
+    steps:
+      - name: Require guarded upstream success
+        if: github.event_name == 'workflow_run'
+        run: |
+          test "$UPSTREAM_CONCLUSION" = 'success' || (echo "Guarded upstream was $UPSTREAM_CONCLUSION" && exit 1)
+
+      - name: Verify AI Gateway production contract
+        id: gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          passed='false'
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -sS -D /tmp/ai-root-headers -o /tmp/ai-root -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/' || true)
+            asset_code=$(curl -sS -D /tmp/ai-asset-headers -o /tmp/ai-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/ai-gateway.js' || true)
+            unauth_code=$(curl -sS -D /tmp/ai-api-headers -o /tmp/ai-api -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/api/control/ai/provider-status' || true)
+
+            if [ "$root_code" = '200' ] \
+              && [ "$asset_code" = '200' ] \
+              && { [ "$unauth_code" = '401' ] || [ "$unauth_code" = '403' ]; } \
+              && grep -Fq 'EKODI AI Gateway' /tmp/ai-root \
+              && grep -Fq '실제 연결 테스트' /tmp/ai-root \
+              && grep -Fq '/api/control/ai/provider-status' /tmp/ai-asset \
+              && grep -Fq '/api/control/ai/assist' /tmp/ai-asset \
+              && grep -Fiq 'x-ekodi-route: ai-gateway' /tmp/ai-root-headers \
+              && grep -Fiq 'cache-control: no-store' /tmp/ai-root-headers \
+              && grep -Fiq 'x-content-type-options: nosniff' /tmp/ai-root-headers \
+              && grep -Fiq 'x-ekodi-route: ai-gateway-asset' /tmp/ai-asset-headers \
+              && grep -Fiq 'x-ekodi-route: ai-gateway-api-proxy' /tmp/ai-api-headers; then
+              passed='true'
+              break
+            fi
+            echo "AI Gateway verification pending (attempt $attempt/18 root=$root_code asset=$asset_code unauth=$unauth_code)"
+            sleep 4
+          done
+          test "$passed" = 'true' || (echo 'AI Gateway production verification failed.' && exit 1)
+          echo '✅ ai.ekodi.kr production contract verified.'
+
+      - name: Publish AI Gateway production checkpoint
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_OUTCOME: ${{ steps.gateway.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CURRENT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="${UPSTREAM_SHA:-$CURRENT_SHA}"
+          if [ "$VERIFY_OUTCOME" = 'success' ]; then
+            icon='✅'; summary='PRODUCTION VERIFIED'
+          else
+            icon='❌'; summary='PRODUCTION NOT VERIFIED'
+          fi
+          body=$(cat <<EOF
+          $icon **$summary**
+
+          - commit: \`$commit\`
+          - guarded upstream: \`${UPSTREAM_CONCLUSION:-manual}\`
+          - AI Gateway production check: \`$VERIFY_OUTCOME\`
+          - canonical: https://ai.ekodi.kr/
+          - security: unauthenticated provider status rejected
+          - verification workflow: $RUN_URL
+          - upstream workflow: ${UPSTREAM_RUN_URL:-manual}
+          - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          EOF
+          )
+          gh issue comment 443 --repo "$GITHUB_REPOSITORY" --body "$body"
