@@ -11,6 +11,7 @@
     'compact-control-center.js',
     'admin-menu-layout.js',
     'admin-demand-loader.js',
+    'user-ai-tier-panel.js',
   ];
   let started = false;
 
