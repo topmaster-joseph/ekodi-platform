@@ -1,0 +1,92 @@
+name: Deploy AI Gateway
+
+on:
+  pull_request:
+    paths: &ai_gateway_paths
+      - 'ai-gateway-page.js'
+      - 'platform-router-entry-worker.js'
+      - 'test/ai-gateway-domain.test.mjs'
+      - '.github/workflows/deploy-ai-gateway.yml'
+  push:
+    branches: [main]
+    paths: *ai_gateway_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The AI Gateway shares the same Cloudflare Worker as root/admin/auth. Serialize
+# mutation with every other shared-site production release, but do not cancel it.
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate AI Gateway auth handoff and routing contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ai-gateway-page.js
+          node --check platform-router-entry-worker.js
+          node --check auth-site/admin-auth.js
+          node --check scripts/guarded-worker-release.mjs
+          node --test test/ai-gateway-domain.test.mjs
+          grep -Fq "pattern = \"ai.ekodi.kr\"" wrangler.site.toml
+          grep -Fq "ekodi_admin_token:result.token" auth-site/admin-auth.js
+          grep -Fq "Google 관리자 인증 완료 · 세션 확인 중" ai-gateway-page.js
+          grep -Fq "let memoryToken=''" ai-gateway-page.js
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Build shared Worker assets
+        run: |
+          set -euo pipefail
+          npm run build
+          test -f dist/control-center.html
+
+      - name: Guarded candidate, production promotion and rollback on failure
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify AI Gateway live auth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -sS -D /tmp/ai-root-h -o /tmp/ai-root -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/' || true)
+            js_code=$(curl -sS -D /tmp/ai-js-h -o /tmp/ai-js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/ai-gateway.js' || true)
+            session_code=$(curl -sS -o /tmp/ai-session -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/api/session' || true)
+            provider_code=$(curl -sS -o /tmp/ai-provider -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/api/control/ai/provider-status' || true)
+            if [ "$root_code" = '200' ] && [ "$js_code" = '200' ] && [ "$session_code" = '401' ] && [ "$provider_code" = '401' ] \
+              && grep -Fq 'EKODI AI Gateway' /tmp/ai-root \
+              && grep -Fq 'Google 관리자 인증' /tmp/ai-root \
+              && grep -Fq 'Google 관리자 인증 완료 · 세션 확인 중' /tmp/ai-js \
+              && grep -Fq "let memoryToken=''" /tmp/ai-js \
+              && grep -Fq "const HANDOFF_KEY='ekodi_admin_token'" /tmp/ai-js \
+              && grep -Fiq 'x-ekodi-route: ai-gateway' /tmp/ai-root-h \
+              && grep -Fiq 'cache-control: no-store' /tmp/ai-root-h; then
+              echo 'AI Gateway production auth handoff and unauthenticated boundary verified.'
+              exit 0
+            fi
+            echo "attempt $attempt: root=$root_code js=$js_code session=$session_code provider=$provider_code"
+            sleep 5
+          done
+          echo 'AI Gateway production verification failed.'
+          exit 1
