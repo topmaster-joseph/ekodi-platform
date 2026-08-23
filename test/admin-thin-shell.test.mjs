@@ -19,6 +19,19 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.doesNotMatch(shell, /'system-health-admin\.js'/);
 });
 
+test('authenticated ADMIN UI declares the official stable Core surface and tokens', async () => {
+  const shell = await read('admin-authenticated-shell.js');
+  assert.match(shell, /function applyOfficialAdminSurface\(\)/);
+  assert.match(shell, /root\.dataset\.ekodiShellSurface = 'admin'/);
+  assert.match(shell, /root\.dataset\.ekodiAdminUi = 'official'/);
+  assert.match(shell, /'--ekodi-ui-bg': '#071522'/);
+  assert.match(shell, /'--ekodi-ui-surface': '#0B1D2E'/);
+  assert.match(shell, /'--ekodi-ui-border': '#24425E'/);
+  assert.match(shell, /'--ekodi-ui-text': '#F4F7FB'/);
+  assert.match(shell, /'--ekodi-ui-accent': '#8EC8FF'/);
+  assert.match(shell, /applyOfficialAdminSurface\(\);/);
+});
+
 test('Campus, Health and Device Control are explicit versioned demand-loaded features', async () => {
   const loader = await read('admin-demand-loader.js');
   assert.match(loader, /__EKODI_ADMIN_ASSET_VERSION__/);
