@@ -81,6 +81,14 @@ export const USER_SERVICES = Object.freeze([
     "available": true
   },
   {
+    "id": "support",
+    "name": "에코디 지원사업 AI",
+    "domain": "support.ekodi.kr",
+    "group": "business-growth",
+    "status": "beta",
+    "available": true
+  },
+  {
     "id": "pay",
     "name": "에코디 페이",
     "domain": "pay.ekodi.kr",
