@@ -53,11 +53,39 @@ function renderGuest(host) {
   host.innerHTML = '<div class="empty"><strong>Google 로그인 후 내 AI를 선택할 수 있습니다.</strong><p>무료회원도 EKODI가 유료 API를 대신 호출하지 않도록 개인 AI 우선 원칙이 적용됩니다.</p></div>';
 }
 
+function fundingLabel(result) {
+  if (result.funding === 'personal') return '내 AI · EKODI 비용 0원';
+  if (result.funding === 'ekodi') return 'EKODI 회원 지원 AI';
+  return result.mode === 'core-only' ? 'AI 없이 Core 모드' : '개인 AI에서 계속';
+}
+
+function renderAssistResult(host, result, prompt) {
+  const resultHost = host.querySelector('#personalAiResult');
+  if (!resultHost) return;
+  const quota = result.quota ? `<span>지원 잔여 ${Number(result.quota.remaining || 0)} / ${Number(result.quota.monthly || 0)}회</span>` : '';
+  const handoffs = Array.isArray(result.handoffs) ? result.handoffs : [];
+  resultHost.hidden = false;
+  resultHost.innerHTML = `
+    <div class="personal-ai-result-head"><strong>${esc(fundingLabel(result))}</strong><span>${esc(result.provider || result.model || '')}</span>${quota}</div>
+    <p class="personal-ai-result-text">${esc(result.text || '')}</p>
+    ${result.notice ? `<p class="personal-ai-result-notice">${esc(result.notice)}</p>` : ''}
+    ${handoffs.length ? `<div class="personal-ai-handoffs">${handoffs.map(item => `<button type="button" class="secondary" data-personal-handoff-url="${esc(item.url)}">질문 복사 + ${esc(item.label)} 열기</button>`).join('')}</div>` : ''}`;
+  resultHost.querySelectorAll('[data-personal-handoff-url]').forEach(button => button.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(prompt); } catch {}
+    window.open(button.dataset.personalHandoffUrl, '_blank', 'noopener,noreferrer');
+  }));
+}
+
 function renderStatus(host, status) {
   const pref = status.preference || { mode:'auto', preferredProvider:'gemini-api' };
   const plan = status.plan || {};
   const isFree = String(plan.planId || 'free') === 'free';
   host.innerHTML = `
+    <article class="personal-ai-console">
+      <div class="personal-ai-console-copy"><small>EKODI User AI</small><h3>무엇을 도와드릴까요?</h3><p>연결된 내 AI를 먼저 사용합니다. 내 AI가 없고 FREE라면 EKODI 유료 API 대신 개인 AI 화면으로 이어드립니다.</p></div>
+      <form id="personalAiAskForm" class="personal-ai-ask"><textarea name="message" rows="3" maxlength="4000" placeholder="예: 오늘 내가 먼저 확인할 일을 정리해줘" required></textarea><button class="primary" type="submit">AI에게 묻기</button></form>
+      <div id="personalAiResult" class="personal-ai-result" hidden></div>
+    </article>
     <article class="personal-ai-policy">
       <div><small>현재 AI 비용 정책</small><h3>${isFree ? 'FREE · EKODI API 비용 0원' : `${esc(String(plan.planId || '').toUpperCase())} · EKODI 지원량 적용`}</h3><p>${isFree ? '내 AI를 우선 사용하며 EKODI 유료 API로 자동 전환하지 않습니다.' : `이번 달 EKODI 지원 ${Number(plan.sponsoredUsed || 0)} / ${Number(plan.sponsoredRequests || 0)}회 사용`}</p></div>
       <form id="personalAiPreferenceForm" class="personal-ai-preference">
@@ -68,6 +96,32 @@ function renderStatus(host, status) {
     </article>
     <div class="personal-ai-grid">${(status.providers || []).map(providerCard).join('')}</div>
     <div class="personal-ai-privacy"><strong>개인정보 보호</strong><span>비밀번호·API 키·주민번호·카드·계좌 등 민감정보는 개인 무료 API로 자동 전송하지 않습니다. AI가 없어도 EKODI Core는 계속 작동합니다.</span></div>`;
+
+  const askForm = host.querySelector('#personalAiAskForm');
+  if (askForm) askForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const message = askForm.elements.message.value.trim();
+    const button = askForm.querySelector('button[type="submit"]');
+    const resultHost = host.querySelector('#personalAiResult');
+    if (!message || !button) return;
+    button.disabled = true;
+    button.textContent = '연결 경로 확인 중…';
+    if (resultHost) { resultHost.hidden = false; resultHost.innerHTML = '<p class="personal-ai-result-text">내 AI와 회원 지원량을 확인하고 있습니다.</p>'; }
+    try {
+      const result = await api('/assist', { method:'POST', body:JSON.stringify({ message, site:'my', dataClass:'general' }) });
+      renderAssistResult(host, result, message);
+      if (result.funding === 'ekodi' && result.quota) {
+        const policyCopy = host.querySelector('.personal-ai-policy p');
+        if (policyCopy) policyCopy.textContent = `이번 달 EKODI 지원 ${Number(result.quota.used || 0)} / ${Number(result.quota.monthly || 0)}회 사용`;
+      }
+    } catch (error) {
+      if (resultHost) resultHost.innerHTML = `<p class="personal-ai-result-notice">${esc(error.message)}</p>`;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'AI에게 묻기';
+    }
+  });
+
   const form = host.querySelector('#personalAiPreferenceForm');
   if (form) {
     form.elements.mode.value = pref.mode || 'auto';
