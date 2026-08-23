@@ -31,7 +31,16 @@ const SERVICES = [
   return Object.freeze({...service,operatingModel:operatingModelForService(service.id),tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
-export const EKODI_SERVICE_MANIFEST = Object.freeze({version:7,updatedAt:'2026-08-23',identityModel:'person-space-role',authorityModel:'platform-admin-is-separate-from-tenant-activity',shellVersion:2,shellPolicy:'required-for-user-facing-services',onboardingPolicyVersion:1,services:Object.freeze(SERVICES)});
+export const EKODI_SERVICE_MANIFEST = Object.freeze({
+  version: 7,
+  updatedAt: '2026-08-23',
+  identityModel: 'person-space-role',
+  authorityModel: 'platform-admin-is-separate-from-tenant-activity',
+  shellVersion: 2,
+  shellPolicy: 'required-for-user-facing-services',
+  onboardingPolicyVersion: 1,
+  services: Object.freeze(SERVICES)
+});
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
 export const EKODI_SERVICE_BY_HOST = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[new URL(service.url).hostname,service]));
 export function serviceForHost(hostname){return EKODI_SERVICE_BY_HOST.get(String(hostname||'').toLowerCase())||null;}
