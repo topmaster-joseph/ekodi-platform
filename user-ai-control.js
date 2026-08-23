@@ -1,12 +1,14 @@
 import { isAllowedOrigin } from './auth-worker.js';
 import { createGeminiPersonalProvider } from './gemini-provider-adapter.js';
 import { createSponsoredUserOpenAiProvider } from './user-openai-provider-adapter.js';
+import { AI_ACCESS_POLICY, resolveAiAccessRoute, routeSequence } from './ai-access-orchestration.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const MODES = new Set(['auto', 'personal-first', 'ekodi-first', 'off']);
+const INTENTS = new Set(['interactive', 'proactive']);
 const PROVIDERS = Object.freeze([
   { id:'chatgpt-web', label:'ChatGPT', kind:'personal-web', url:'https://chatgpt.com/', ekodiCost:false },
   { id:'gemini-web', label:'Gemini', kind:'personal-web', url:'https://gemini.google.com/', ekodiCost:false },
@@ -38,7 +40,7 @@ async function userIdentity(request) {
   const token = bearerToken(request);
   if (!token || token.length > 8192) return null;
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization:`Bearer ${token}` },
+    headers:{ apikey:SUPABASE_PUBLISHABLE_KEY, authorization:`Bearer ${token}` },
   });
   if (!response.ok) return null;
   const user = await response.json();
@@ -84,6 +86,7 @@ function normalizeSite(value) {
   const site = String(value || 'my').trim().toLowerCase();
   return /^[a-z0-9-]{1,50}$/.test(site) ? site : 'my';
 }
+function normalizeIntent(value) { return INTENTS.has(value) ? value : 'interactive'; }
 
 function envQuota(env, planId) {
   const name = `USER_AI_${String(planId || '').toUpperCase()}_MONTHLY_REQUESTS`;
@@ -101,30 +104,29 @@ export function fundingPolicyForPlan(planId = 'free', env = {}) {
     personalAiFirst:true,
     sponsoredRequests,
     sponsoredEligible:sponsoredRequests > 0,
-    freeEkodiApiCost:id === 'free' ? 0 : null,
+    freeEkodiApiCost:id === 'free' || id === 'flex' ? 0 : null,
   });
 }
 
 export function classifyUserAiData(message = '', declared = 'general') {
-  const level = ['public','general','private','sensitive'].includes(String(declared || '').toLowerCase())
-    ? String(declared).toLowerCase() : 'general';
+  const requested = String(declared || '').toLowerCase();
+  const level = ['public','general','private','sensitive'].includes(requested) ? requested : 'general';
   if (level === 'sensitive' || SENSITIVE_RE.test(String(message || ''))) return 'sensitive';
   return level;
 }
 
 export function chooseUserAiRoute(options = {}) {
-  const mode = MODES.has(options.mode) ? options.mode : 'auto';
-  if (mode === 'off') return 'core-only';
-  const personal = Boolean(options.hasPersonal && options.personalAllowed);
-  const sponsored = Boolean(options.sponsoredAvailable && Number(options.sponsoredRemaining || 0) > 0);
-  if (mode === 'ekodi-first') {
-    if (sponsored) return 'ekodi-sponsored';
-    if (personal) return 'personal-api';
-    return 'personal-web';
-  }
-  if (personal) return 'personal-api';
-  if (sponsored) return 'ekodi-sponsored';
-  return 'personal-web';
+  return resolveAiAccessRoute({
+    mode:options.mode,
+    intent:options.intent || 'interactive',
+    surface:'user',
+    aiRequired:options.aiRequired,
+    hasPersonalApi:options.hasPersonal,
+    personalApiAllowed:options.personalAllowed,
+    personalWebAvailable:options.personalWebAvailable !== false,
+    sponsoredAvailable:options.sponsoredAvailable,
+    sponsoredRemaining:options.sponsoredRemaining,
+  }).route;
 }
 
 function bytesToB64(value) {
@@ -161,34 +163,29 @@ async function decryptSecret(env, cipher, iv) {
 async function preferenceFor(env, identity) {
   const row = await env.DB.prepare('SELECT mode,preferred_provider FROM user_ai_preferences WHERE user_id=?').bind(identity.id).first();
   return {
-    mode: MODES.has(row?.mode) ? row.mode : 'auto',
-    preferredProvider: String(row?.preferred_provider || 'gemini-api'),
+    mode:MODES.has(row?.mode) ? row.mode : 'auto',
+    preferredProvider:String(row?.preferred_provider || 'gemini-api'),
   };
 }
-
 async function credentialFor(env, identity, provider = 'gemini-api') {
   return env.DB.prepare(`SELECT provider,secret_cipher,secret_iv,updated_at FROM user_ai_credentials
     WHERE user_id=? AND provider=? AND revoked_at IS NULL`).bind(identity.id, provider).first();
 }
-
 async function planFor(env, identity, site) {
   const row = await env.DB.prepare(`SELECT plan_id,status FROM service_subscriptions
     WHERE subject_type='person' AND subject_key=? AND site=? LIMIT 1`).bind(identity.id, site).first();
   if (!row) return { planId:'free', status:'eligible' };
   return { planId:String(row.plan_id || 'free').toLowerCase(), status:String(row.status || 'free').toLowerCase() };
 }
-
 function monthStart() {
   const date = new Date();
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).toISOString();
 }
-
 async function sponsoredUsage(env, identity, site) {
   const row = await env.DB.prepare(`SELECT COUNT(*) AS count FROM user_ai_usage
     WHERE user_id=? AND site=? AND funding='ekodi' AND created_at>=?`).bind(identity.id, site, monthStart()).first();
   return Number(row?.count || 0);
 }
-
 async function recordUsage(env, identity, { site, planId, funding, provider, model='' }) {
   await env.DB.prepare(`INSERT INTO user_ai_usage(user_id,site,plan_id,funding,provider,model,created_at)
     VALUES(?,?,?,?,?,?,?)`).bind(identity.id, site, planId, funding, provider, model, new Date().toISOString()).run();
@@ -213,18 +210,28 @@ async function status(request, env, identity) {
   const remaining = Math.max(0, policy.sponsoredRequests - used);
   const vaultReady = Boolean(String(env.USER_AI_CREDENTIAL_ENCRYPTION_KEY || '').trim());
   return json({
-    schemaVersion:1,
-    policy:'personal-ai-first-ekodi-sponsored-by-membership',
+    schemaVersion:2,
+    policy:'automatic-personal-first-provider-independent',
+    accessPolicyVersion:AI_ACCESS_POLICY.version,
     account:{ email:identity.email },
     site,
     preference:pref,
     plan:{ ...plan, sponsoredRequests:policy.sponsoredRequests, sponsoredUsed:used, sponsoredRemaining:remaining },
     providers:publicProviders(Boolean(credential), vaultReady),
+    routing:{
+      automatic:true,
+      interactive:routeSequence({ mode:pref.mode, intent:'interactive', surface:'user' }),
+      proactive:routeSequence({ mode:pref.mode, intent:'proactive', surface:'user' }),
+      userShouldNotNeedProviderKnowledge:true,
+    },
     rules:{
+      coreFirst:true,
       freeUsesEkodiPaidApi:false,
       personalWebQuotaIsProviderOwned:true,
       personalApiCostOwnedByUser:true,
       sensitiveDataToPersonalFreeApi:false,
+      personalWebForProactive:false,
+      paidInteractiveMayUseSponsoredApiForContinuity:true,
       coreWorksWithoutAi:true,
     },
   }, 200, request, env);
@@ -260,10 +267,10 @@ async function saveGeminiCredential(request, env, identity) {
     .bind(identity.id, 'gemini-api', encrypted.cipher, encrypted.iv, now, now).run();
   return json({ ok:true, provider:'gemini-api', connected:true }, 200, request, env);
 }
-
 async function revokeGeminiCredential(request, env, identity) {
+  const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE user_ai_credentials SET revoked_at=?,updated_at=? WHERE user_id=? AND provider='gemini-api'`)
-    .bind(new Date().toISOString(), new Date().toISOString(), identity.id).run();
+    .bind(now, now, identity.id).run();
   return json({ ok:true, provider:'gemini-api', connected:false }, 200, request, env);
 }
 
@@ -277,7 +284,7 @@ function handoffPayload(preferred = 'gemini-web', notice = '') {
     const provider = PROVIDERS.find(item => item.id === id && item.kind === 'personal-web');
     if (provider) handoffs.push({ id:provider.id, label:provider.label, url:provider.url });
   }
-  return { mode:'personal-web', funding:'personal', provider:null, text:'개인 무료 AI에서 계속할 수 있습니다.', notice, handoffs };
+  return { mode:'personal-web', funding:'personal', provider:null, text:'내 개인 AI에서 계속할 수 있습니다.', notice, handoffs, ekodiCost:false };
 }
 
 async function assist(request, env, identity) {
@@ -286,6 +293,8 @@ async function assist(request, env, identity) {
   const message = String(body?.message || '').trim().slice(0, 4000);
   if (!message) return json({ error:'질문을 입력해 주세요.', code:'USER_AI_EMPTY_MESSAGE' }, 400, request, env);
   const site = normalizeSite(body?.site);
+  const intent = normalizeIntent(body?.intent);
+  const aiRequired = body?.aiRequired !== false;
   const dataClass = classifyUserAiData(message, body?.dataClass || 'general');
   const pref = await preferenceFor(env, identity);
   const credential = await credentialFor(env, identity);
@@ -295,16 +304,30 @@ async function assist(request, env, identity) {
   const remaining = Math.max(0, policy.sponsoredRequests - used);
   const sponsoredProvider = createSponsoredUserOpenAiProvider(env);
   const personalAllowed = dataClass === 'public' || dataClass === 'general';
-  const route = chooseUserAiRoute({
+  const sponsoredAvailable = sponsoredProvider.available && policy.sponsoredEligible && !['canceled','past_due'].includes(plan.status);
+  const decision = resolveAiAccessRoute({
     mode:pref.mode,
-    hasPersonal:Boolean(credential),
-    personalAllowed,
-    sponsoredAvailable:sponsoredProvider.available && policy.sponsoredEligible && !['canceled','past_due'].includes(plan.status),
+    intent,
+    surface:'user',
+    aiRequired,
+    hasPersonalApi:Boolean(credential),
+    personalApiAllowed:personalAllowed,
+    personalWebAvailable:personalAllowed,
+    sponsoredAvailable,
     sponsoredRemaining:remaining,
   });
 
-  if (route === 'core-only') {
-    return json({ mode:'core-only', funding:'none', provider:null, text:'AI 호출 없이 EKODI Core 기본 기능을 계속 이용합니다.', dataClass }, 200, request, env);
+  const coreResult = notice => json({
+    mode:'core-only', funding:'none', provider:null,
+    text:'AI 호출 없이 EKODI Core 기본 기능을 계속 이용합니다.',
+    notice, dataClass, intent, routeReason:decision.reason, ekodiCost:false,
+  }, 200, request, env);
+
+  if (decision.route === 'core-only') {
+    const notice = dataClass === 'sensitive'
+      ? '민감정보로 판단되어 개인 무료 AI로 전송하지 않았습니다.'
+      : !aiRequired ? '이 작업은 AI 없이 처리하도록 분류되었습니다.' : '';
+    return coreResult(notice);
   }
 
   const tryPersonal = async () => {
@@ -314,41 +337,56 @@ async function assist(request, env, identity) {
     if (!provider.available) return null;
     const result = await provider.invoke({ message });
     await recordUsage(env, identity, { site, planId:plan.planId, funding:'personal', provider:provider.id, model:result.model });
-    return { mode:'ai', funding:'personal', provider:provider.id, text:result.text, model:result.model, dataClass, ekodiCost:false };
+    return { mode:'ai', funding:'personal', provider:provider.id, text:result.text, model:result.model, dataClass, intent, ekodiCost:false };
   };
-
   const trySponsored = async () => {
-    if (!sponsoredProvider.available || remaining <= 0 || !policy.sponsoredEligible) return null;
+    if (!sponsoredAvailable || remaining <= 0) return null;
     const result = await sponsoredProvider.invoke({ message, site });
     await recordUsage(env, identity, { site, planId:plan.planId, funding:'ekodi', provider:sponsoredProvider.id, model:result.model });
     return {
-      mode:'ai', funding:'ekodi', provider:sponsoredProvider.id, text:result.text, model:result.model, dataClass, ekodiCost:true,
+      mode:'ai', funding:'ekodi', provider:sponsoredProvider.id, text:result.text, model:result.model, dataClass, intent, ekodiCost:true,
       quota:{ monthly:policy.sponsoredRequests, used:used + 1, remaining:Math.max(0, remaining - 1) },
     };
   };
 
   try {
-    if (route === 'personal-api') {
+    if (decision.route === 'personal-web') {
+      return json({ ...handoffPayload(pref.preferredProvider, '개인 AI 계정의 사용량을 이용합니다.'), dataClass, intent, routeReason:decision.reason }, 200, request, env);
+    }
+    if (decision.route === 'personal-api') {
       const personal = await tryPersonal();
-      if (personal) return json(personal, 200, request, env);
+      if (personal) return json({ ...personal, routeReason:decision.reason }, 200, request, env);
+      const fallbackDecision = resolveAiAccessRoute({
+        mode:pref.mode === 'personal-first' ? 'personal-first' : 'auto', intent, surface:'user', aiRequired:true,
+        hasPersonalApi:false, personalApiAllowed:false, personalWebAvailable:personalAllowed,
+        sponsoredAvailable, sponsoredRemaining:remaining,
+      });
+      if (fallbackDecision.route === 'personal-web') return json({ ...handoffPayload(pref.preferredProvider, '연결된 개인 API가 응답하지 않아 내 AI 화면으로 이어드립니다.'), dataClass, intent, routeReason:fallbackDecision.reason }, 200, request, env);
+      if (fallbackDecision.route === 'ekodi-sponsored') {
+        const sponsored = await trySponsored();
+        if (sponsored) return json({ ...sponsored, routeReason:fallbackDecision.reason }, 200, request, env);
+      }
+    }
+    if (decision.route === 'ekodi-sponsored') {
       const sponsored = await trySponsored();
-      if (sponsored) return json(sponsored, 200, request, env);
-    } else if (route === 'ekodi-sponsored') {
-      const sponsored = await trySponsored();
-      if (sponsored) return json(sponsored, 200, request, env);
+      if (sponsored) return json({ ...sponsored, routeReason:decision.reason }, 200, request, env);
       const personal = await tryPersonal();
-      if (personal) return json(personal, 200, request, env);
+      if (personal) return json({ ...personal, routeReason:'sponsored-unavailable-personal-api' }, 200, request, env);
+      if (intent === 'interactive' && personalAllowed) {
+        return json({ ...handoffPayload(pref.preferredProvider, '회원 지원 AI가 응답하지 않아 내 개인 AI로 이어드립니다.'), dataClass, intent, routeReason:'sponsored-unavailable-personal-web' }, 200, request, env);
+      }
     }
   } catch (error) {
-    console.error('User AI provider invocation failed', { route, provider: route, error:String(error?.message || error) });
+    console.error('User AI provider invocation failed', { route:decision.route, intent, error:String(error?.message || error) });
   }
 
-  const notice = dataClass === 'sensitive'
-    ? '민감정보로 판단되어 개인 무료 API로 자동 전송하지 않았습니다.'
-    : plan.planId === 'free'
-      ? 'FREE 회원의 요청은 EKODI 유료 API로 자동 전환하지 않습니다.'
-      : '연결된 개인 AI 또는 회원등급 지원 AI를 사용할 수 없어 개인 AI 화면으로 전환합니다.';
-  return json({ ...handoffPayload(pref.preferredProvider, notice), dataClass, ekodiCost:false }, 200, request, env);
+  if (intent === 'interactive' && personalAllowed) {
+    const notice = policy.sponsoredEligible
+      ? '현재 연결 가능한 API가 없어 내 개인 AI로 이어드립니다.'
+      : 'FREE/FLEX 회원은 EKODI 유료 API로 자동 전환하지 않습니다.';
+    return json({ ...handoffPayload(pref.preferredProvider, notice), dataClass, intent, routeReason:'final-personal-web-fallback' }, 200, request, env);
+  }
+  return coreResult('선제 실행에 사용할 수 있는 서버 API가 없어 Core 모드로 유지합니다.');
 }
 
 export async function handleUserAiControl(request, env = {}) {
@@ -376,6 +414,8 @@ export async function handleUserAiControl(request, env = {}) {
 
 export const USER_AI_POLICY = Object.freeze({
   modes:[...MODES],
+  intents:[...INTENTS],
   providers:PROVIDERS,
   defaultSponsoredRequests:DEFAULT_SPONSORED_REQUESTS,
+  accessPolicyVersion:AI_ACCESS_POLICY.version,
 });

@@ -2,6 +2,7 @@ import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleUserAiControl } from './user-ai-control.js';
+import { AI_ACCESS_POLICY } from './ai-access-orchestration.js';
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
@@ -20,6 +21,12 @@ function errorResponse(message, code) {
     status:500,
     headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
   }));
+}
+
+function userAiResponse(response) {
+  if (!response) return response;
+  response.headers.set('x-ekodi-ai-access-policy', AI_ACCESS_POLICY.version);
+  return applyApiSecurityHeaders(response);
 }
 
 export default {
@@ -42,7 +49,7 @@ export default {
     }
 
     if (path.startsWith('/api/user-ai/')) {
-      try { const response = await handleUserAiControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      try { const response = await handleUserAiControl(request, env); if (response) return userAiResponse(response); }
       catch (error) { console.error('User AI control error', error); return errorResponse('개인 AI 연결 처리 중 오류가 발생했습니다.', 'USER_AI_CONTROL_ERROR'); }
     }
 
