@@ -1,4 +1,4 @@
-# 2026-08-24 style delivery contract: self-hosted tenant CSS + Shell fallback
+# 2026-08-24 style release: Yogurt Purple CGMA-aligned layout + CSP-safe assets
 name: Stage Marketing AI Pages Shell
 
 on:
@@ -71,6 +71,7 @@ jobs:
             grep -Fq "style-src" "$dir/index.html"
             grep -Fq "script-src" "$dir/index.html"
           done
+          grep -Fq 'CGMA /market-ai와 같은 compact dashboard rhythm' dist/marketing-ai/yogurtpurple/site.css
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
