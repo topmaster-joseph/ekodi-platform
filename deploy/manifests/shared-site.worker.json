@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -10,7 +10,7 @@
       {"url":"https://admin.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","admin-authenticated-shell.js?v=","compact-control-center.js admin-menu-layout.js admin-demand-loader.js","https://auth.ekodi.kr/?site=admin"],"headerExpect":["x-ekodi-route: admin-control-center","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
       {"url":"https://admin.ekodi.kr/compact-control-center.js?assist=v2","statuses":[200],"redirect":"manual","expect":["ekodiAssistBootstrap","admin-lazy-features.js","requestIdleCallback"],"headerExpect":["x-ekodi-route: admin-asset","x-content-type-options: nosniff"]},
       {"url":"https://admin.ekodi.kr/compact-control-center.css?assist=v2","statuses":[200],"redirect":"manual","expect":[".ekodi-assist-bootstrap","@media(max-width:720px)"],"headerExpect":["x-ekodi-route: admin-asset","x-content-type-options: nosniff"]},
-      {"url":"https://admin.ekodi.kr/admin-lazy-features.js?assist=v2","statuses":[200],"redirect":"manual","expect":["ekodiAssistDock","/api/control/messenger/inbox","/api/control/ai/actions","/api/control/ai/assist","ekodi-assist-state-v1"],"headerExpect":["x-ekodi-route: admin-asset","x-content-type-options: nosniff"]},
+      {"url":"https://admin.ekodi.kr/admin-lazy-features.js?assist=v2","statuses":[200],"redirect":"manual","expect":["ekodiAssistBootstrap","/api/control/messenger/inbox","/api/control/ai/actions","/api/control/ai/assist","ekodi-assist-state-v1"],"headerExpect":["x-ekodi-route: admin-asset","x-content-type-options: nosniff"]},
       {"url":"https://admin.ekodi.kr/ai-ops-admin.css?assist=v2","statuses":[200],"redirect":"manual","expect":[".ekodi-assist-launcher",".ekodi-assist-panel","@media(max-width:720px)"],"headerExpect":["x-ekodi-route: admin-asset","x-content-type-options: nosniff"]},
       {"url":"https://ai.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI AI Gateway","AI PROVIDER CONNECTION","실제 연결 테스트","Provider 독립"],"headerExpect":["x-ekodi-route: ai-gateway","cache-control: no-store","x-content-type-options: nosniff"]},
       {"url":"https://ai.ekodi.kr/ai-gateway.js","statuses":[200],"redirect":"manual","expect":["/api/control/ai/provider-status","/api/control/ai/assist","ekodi_admin_token","OpenAI 실제 호출"],"headerExpect":["x-ekodi-route: ai-gateway-asset","cache-control: no-store","x-content-type-options: nosniff"]},
