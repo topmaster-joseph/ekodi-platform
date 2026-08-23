@@ -4,10 +4,10 @@ import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('../my/user-ai-provider-ui.js', import.meta.url), 'utf8');
 
-test('My EKODI shows first-connection guidance only when backend supplies it', () => {
+test('My EKODI renders first-connection guidance only when backend supplies it', () => {
   assert.match(source, /status\.connectionGuide/);
   assert.match(source, /처음 한 번만/);
-  assert.match(source, /연결이 끝나면 이 안내/);
+  assert.match(source, /connectionGuide\(status\)/);
 });
 
 test('connected users get compact state and connection management stays collapsed', () => {
