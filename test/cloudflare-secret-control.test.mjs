@@ -36,6 +36,16 @@ test('target scripts are allowlisted and existing secrets cannot be overwritten 
 });
 
 
+test('secret-manager controller credentials cannot overwrite themselves', () => {
+  assert.match(control, /RESERVED_NAMES/);
+  assert.match(control, /'CLOUDFLARE_SECRET_MANAGER_TOKEN'/);
+  assert.match(control, /'CLOUDFLARE_API_TOKEN'/);
+  assert.match(control, /'CLOUDFLARE_ACCOUNT_ID'/);
+  assert.match(control, /SECRET_NAME_RESERVED/);
+  assert.match(control, /controllerCredentialsProtected:true/);
+});
+
+
 test('only configured top administrators may use secret manager', () => {
   assert.match(control, /SECRET_MANAGER_ADMIN_EMAILS/);
   assert.match(control, /ADMIN_GOOGLE_BOOTSTRAP_EMAILS/);
