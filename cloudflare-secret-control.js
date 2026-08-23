@@ -4,6 +4,11 @@ const BASE_PATH = '/api/control/secrets';
 const DEFAULT_BYTES = 48;
 const ALLOWED_BYTES = new Set([32, 48, 64]);
 const BINDING_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,127}$/;
+const RESERVED_NAMES = new Set([
+  'CLOUDFLARE_SECRET_MANAGER_TOKEN',
+  'CLOUDFLARE_API_TOKEN',
+  'CLOUDFLARE_ACCOUNT_ID',
+]);
 
 function json(data, status = 200, sourceHeaders = new Headers()) {
   const headers = new Headers({
@@ -125,6 +130,7 @@ export async function handleCloudflareSecretControl(request, env) {
       defaultBytes:DEFAULT_BYTES,
       valueReturned:false,
       existingSecretRequiresExplicitReplace:true,
+      controllerCredentialsProtected:true,
     }, 200, auth.response.headers);
   }
 
@@ -151,6 +157,9 @@ export async function handleCloudflareSecretControl(request, env) {
   }
   if (!BINDING_NAME.test(name)) {
     return json({ error:'Variable name 형식이 올바르지 않습니다.', code:'INVALID_SECRET_NAME' }, 400, auth.response.headers);
+  }
+  if (RESERVED_NAMES.has(name)) {
+    return json({ error:'Secret Manager 자체 제어 자격증명은 이 화면에서 생성·교체할 수 없습니다.', code:'SECRET_NAME_RESERVED' }, 403, auth.response.headers);
   }
   if (type !== 'secret_text') {
     return json({ error:'현재 자동 생성은 Cloudflare Secret 타입만 지원합니다.', code:'UNSUPPORTED_SECRET_TYPE' }, 400, auth.response.headers);
