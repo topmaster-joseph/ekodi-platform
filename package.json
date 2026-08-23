@@ -24,6 +24,7 @@
     "validate:membership": "node scripts/validate-universal-membership.mjs",
     "verify:core-production": "node scripts/verify-ekodi-core-production.mjs",
     "test:ai-none": "node --test test/ai-provider-none.test.mjs",
+    "test:security": "node --test test/admin-secret-generator.test.mjs test/cloudflare-secret-control.test.mjs",
     "deploy:api": "node -e \"console.error('Direct Control API production deploy is disabled. Use the guarded Deploy Control API workflow.');process.exit(1)\"",
     "deploy:finance": "node -e \"console.error('Direct Finance production deploy is disabled. Use the guarded Deploy EKODI Finance API workflow.');process.exit(1)\"",
     "deploy:site": "npm run build && node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json",

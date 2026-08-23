@@ -13,6 +13,7 @@ import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
@@ -83,6 +84,11 @@ export default {
     if (path.startsWith('/api/marketing/ledger/')) {
       try { const response = await handleMarketingLedgerControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Marketing ledger control error', error); return errorResponse('Marketing CRM 원장 처리 중 오류가 발생했습니다.', 'MARKETING_LEDGER_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/secrets')) {
+      try { const response = await handleCloudflareSecretControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Cloudflare secret control error', error); return errorResponse('Cloudflare Secret 처리 중 오류가 발생했습니다.', 'CLOUDFLARE_SECRET_CONTROL_ERROR'); }
     }
 
     if (path === '/api/control/system-health') {
