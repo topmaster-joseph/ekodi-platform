@@ -64,6 +64,8 @@ jobs:
           grep -Fq "x-ekodi-link-compat" ekodi-shell-worker.js
           grep -Fq 'window.EKODIMessage' ekodi-message-ui.js
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
+          grep -Fq 'run_worker_first = true' wrangler.shell.toml
+          grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
