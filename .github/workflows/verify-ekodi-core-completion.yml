@@ -3,13 +3,18 @@ name: Verify EKODI Core Completion
 on:
   workflow_dispatch:
   pull_request:
-    paths:
+    paths: &core_paths
       - 'config/ekodi-core-contract.json'
       - 'config/ekodi-core-completion.json'
       - 'core-api.js'
       - 'core-ai-gateway.js'
       - 'core-client.js'
+      - 'core-permission.js'
+      - 'core-workflow.js'
+      - 'core-evidence.js'
       - 'ekodi-principal.js'
+      - 'ekodi-service-manifest.js'
+      - 'scripts/validate-central-modules.mjs'
       - 'scripts/validate-ekodi-core-contract.mjs'
       - 'scripts/validate-ekodi-core-completion.mjs'
       - 'scripts/verify-ekodi-core-production.mjs'
@@ -23,24 +28,7 @@ on:
       - 'package.json'
   push:
     branches: [main]
-    paths:
-      - 'config/ekodi-core-contract.json'
-      - 'config/ekodi-core-completion.json'
-      - 'core-api.js'
-      - 'core-ai-gateway.js'
-      - 'core-client.js'
-      - 'ekodi-principal.js'
-      - 'scripts/validate-ekodi-core-contract.mjs'
-      - 'scripts/validate-ekodi-core-completion.mjs'
-      - 'scripts/verify-ekodi-core-production.mjs'
-      - 'scripts/guarded-worker-release.mjs'
-      - 'scripts/ecosystem-load-test.mjs'
-      - '.github/workflows/verify-ekodi-core-completion.yml'
-      - '.github/workflows/backup-ekodi-core.yml'
-      - '.github/workflows/deploy-control-api.yml'
-      - 'test/ekodi-core-validator.test.mjs'
-      - 'test/core-*.test.mjs'
-      - 'package.json'
+    paths: *core_paths
 
 permissions:
   contents: read
@@ -60,6 +48,8 @@ jobs:
           node-version: '24'
       - name: Validate final Core completion contract
         run: npm run validate:core-completion
+      - name: Verify central permission, workflow, evidence and AI contracts
+        run: node scripts/validate-central-modules.mjs
       - name: Verify legacy Core contract validator stays aligned
         run: node scripts/validate-ekodi-core-contract.mjs
       - name: Verify security baseline
@@ -114,6 +104,7 @@ jobs:
         run: |
           echo '### EKODI Core v1.0 completion verification' >> "$GITHUB_STEP_SUMMARY"
           echo '- Seven-stage completion contract: passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Central permission/workflow/evidence contracts: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Production Core API: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Protected routes fail closed without auth: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Security headers: passed' >> "$GITHUB_STEP_SUMMARY"
