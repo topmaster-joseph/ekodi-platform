@@ -6,6 +6,15 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  workflow_run:
+    workflows:
+      - Deploy Admin True Lazy Gate
+      - Deploy My EKODI
+      - Deploy Marketing AI Pages
+      - Deploy AI Gateway
+      - Deploy EKODI Publishing
+      - EKODI Cafe · Validate and Deploy
+    types: [completed]
 
 permissions:
   contents: write
@@ -26,6 +35,7 @@ jobs:
       - name: Verify monitor registry and logic
         run: |
           node --check scripts/monitor-lib.mjs
+          node --check scripts/monitor.mjs
           node --test test/monitor.test.mjs
       - name: Check EKODI services, shared infrastructure and Marketing AI tenants
         run: npm run monitor
