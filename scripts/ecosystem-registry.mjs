@@ -44,6 +44,7 @@ const STATUS_DEFINITIONS = {
 const CATEGORY_IDS = new Set(CATEGORY_DEFINITIONS.map(category => category.id));
 const STATUS_IDS = new Set(Object.keys(STATUS_DEFINITIONS));
 const CLICKABLE_STATUSES = new Set(['live', 'beta']);
+const SUPPORTED_REGISTRY_VERSIONS = new Set([2, 3]);
 
 function escapeHtml(value) {
   return String(value)
@@ -55,7 +56,7 @@ function escapeHtml(value) {
 }
 
 function validateRegistry(registry) {
-  if (!registry || registry.version !== 2 || !Array.isArray(registry.services)) {
+  if (!registry || !SUPPORTED_REGISTRY_VERSIONS.has(registry.version) || !Array.isArray(registry.services)) {
     throw new Error('Invalid EKODI ecosystem service registry');
   }
 
