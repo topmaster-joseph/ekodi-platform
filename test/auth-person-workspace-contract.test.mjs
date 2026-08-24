@@ -54,11 +54,11 @@ test('Mall gives every verified Google member an active free personal seller han
   assert.match(mallHandoffMigration,/true,[\s\S]*'synthetic'/i);
 });
 
-test('legacy Mall seller login is normalized back to Seller Studio',()=>{
+test('legacy Mall seller login is normalized back to Seller Studio through the current router',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260815-mall-seller-return-1&cb=20260823-mobile-admin-handoff-1&workspace=20260817-sso-1&entry=20260817-workspace-entry-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260824-return-origin-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -104,16 +104,16 @@ test('auth center is workspace-first and hides linked login identities outside a
   assert.match(authHtml,/id="workspacePanel"/);
   assert.match(authHtml,/id="identityPanel"/);
   assert.match(authHtml,/data-identity-manage/);
-  assert.match(authHtml,/계정을 고르는 대신|Workspace|내 공간/);
+  assert.match(authHtml,/Workspace|내 공간/);
   assert.match(authJs,/renderWorkspacePanel/);
   assert.match(authJs,/prepareLinkGoogle/);
   assert.match(authJs,/workspace_key/);
 });
 
-test('Marketing workspace labels are separated and stale assets are force-refreshed',()=>{
+test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/entry=20260817-workspace-entry-1/);
-  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260817-workspace-entry-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260824-return-origin-1/);
+  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
   assert.match(marketingOnboarding,/workspace-name/);
