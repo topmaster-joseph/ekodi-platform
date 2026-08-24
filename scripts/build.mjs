@@ -21,6 +21,23 @@ const [aiOpsBaseJs, userAiTierPanelJs] = await Promise.all([
 ]);
 await writeFile(`${output}ai-ops-admin.js`, `${aiOpsBaseJs}\n${userAiTierPanelJs}\n`);
 
+// The Admin AI provider control plane must reach production without adding another
+// first-load asset. Bundle the same guarded module into both demand-loaded entry points:
+// AI Ops for Chief/specialist routing and Security for Cloudflare account/zone/Worker context.
+// The module self-deduplicates through window.EKODIAdminAIControlPlane when both are opened.
+const adminAiControlPlaneJs = await readFile(`${root}admin-ai-control-plane.js`, 'utf8');
+const [aiOpsWithTierJs, secretGeneratorBaseJs] = await Promise.all([
+  readFile(`${output}ai-ops-admin.js`, 'utf8'),
+  readFile(`${output}admin-secret-generator.js`, 'utf8'),
+]);
+if (!adminAiControlPlaneJs.includes('EKODIAdminAIControlPlane')) {
+  throw new Error('Admin AI control plane marker missing');
+}
+await Promise.all([
+  writeFile(`${output}ai-ops-admin.js`, `${aiOpsWithTierJs}\n${adminAiControlPlaneJs}\n`),
+  writeFile(`${output}admin-secret-generator.js`, `${secretGeneratorBaseJs}\n${adminAiControlPlaneJs}\n`),
+]);
+
 // Tax invoices are a Finance sub-workspace, not a new public edge asset. Bundle the
 // dedicated source modules into the already secured Finance assets so the existing
 // admin allowlist, CSP and lazy-loading boundary remain unchanged.
