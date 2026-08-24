@@ -90,10 +90,10 @@ jobs:
             if [[ "$root_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'EKODI Community' /tmp/community-stage.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community-stage.html \
-              && grep -Fiq 'x-ekodi-shell: v1' /tmp/community-stage.headers \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/community-stage.headers \
               && grep -Fq '"ekodiShell":true' /tmp/community-stage-health.json \
               && grep -Fq '"contextModel":"person-space-role"' /tmp/community-stage-health.json; then
-              echo 'Community staging verified with shared EKODI Shell.'
+              echo 'Community staging verified with shared EKODI Shell v2.'
               exit 0
             fi
             sleep 4
@@ -142,11 +142,11 @@ jobs:
             if [[ "$root_code" == '200' && "$social_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'EKODI Community' /tmp/community.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community.html \
-              && grep -Fiq 'x-ekodi-shell: v1' /tmp/community.headers \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/community.headers \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/community-health.json; then
-              echo 'EKODI Community production verified with shared Shell.'
+              echo 'EKODI Community production verified with shared Shell v2.'
               break
             fi
             if [[ "$attempt" == '18' ]]; then exit 1; fi
