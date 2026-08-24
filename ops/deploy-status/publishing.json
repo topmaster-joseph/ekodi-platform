@@ -1,0 +1,21 @@
+{
+  "service": "publishing",
+  "checkedAt": "2026-08-24T07:07:16.435945+00:00",
+  "githubRunId": "32700074966",
+  "githubSha": "72c9ae970e2bbabef2ef2afaff092c58904a9730",
+  "root": {
+    "http": "200",
+    "remoteIp": "172.67.168.222",
+    "error": ""
+  },
+  "studio": {
+    "http": "200",
+    "remoteIp": "104.21.27.35",
+    "error": ""
+  },
+  "admin": {
+    "http": "307",
+    "remoteIp": "104.21.27.35",
+    "error": ""
+  }
+}
