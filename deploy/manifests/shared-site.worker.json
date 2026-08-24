@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -21,7 +21,9 @@
       {"url":"https://messenger.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","궁금한 것을 편하게 말씀해 주세요.","대화 검색","무엇을 도와드릴까요?","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-messenger","x-ekodi-shell: v2"]},
       {"url":"https://messenger.ekodi.kr/messenger-ui.js","statuses":[200],"redirect":"manual","expect":["thread-open","conversationSearch","makeTitle"]},
       {"url":"https://messenger.ekodi.kr/app.js","statuses":[200],"redirect":"manual","expect":["https://workspace-api.ekodi.kr","/v1/messenger/threads","/handoff"]},
-      {"url":"https://invest.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Investment","FUNCTIONAL BETA","newOpportunityDialog","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-invest","x-ekodi-shell: v2"]},
+      {"url":"https://invest.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI · INVEST","EVIDENCE FIRST","investLensTitle","investConnections","newOpportunityDialog","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-invest","x-ekodi-shell: v2"]},
+      {"url":"https://invest.ekodi.kr/invest-ui.js","statuses":[200],"redirect":"manual","expect":["/v1/invest/context","investEvidenceBadge","renderConnections"]},
+      {"url":"https://invest.ekodi.kr/invest-subject-ui.js","statuses":[200],"redirect":"manual","expect":["/v1/invest/subjects","investSubjectSelect","matchesHint"]},
       {"url":"https://invest.ekodi.kr/app.js","statuses":[200],"redirect":"manual","expect":["https://workspace-api.ekodi.kr","/v1/invest/opportunities","diligence"]},
       {"url":"https://pay.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
       {"url":"https://pay.biz.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
