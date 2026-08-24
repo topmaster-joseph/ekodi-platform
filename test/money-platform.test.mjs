@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { classifyAccount, buildCleanupPlan, buildFinancialCleanupBrief, requiresHumanGate } from '../money/core.js';
+import { buildConsentPreview, buildIntegrationReadiness, providerFor, securityEvent } from '../money/integrations.js';
 
 test('inactive unlinked account is cleanup candidate',()=>{
   const r=classifyAccount({id:'a',institution:'A',alias:'old',balance:50000,inactiveDays:400,autoDebits:[]});
@@ -32,4 +33,34 @@ test('brief remains decision support rather than execution',()=>{
   assert.equal(brief.plan.executionMode,'human-confirmed-handoff');
   assert.equal(brief.plan.autonomousFinancialExecution,false);
   assert.match(brief.disclaimer,/명시적 승인/);
+});
+
+test('official accountinfo handoff remains available without live API access',()=>{
+  const provider=providerFor('accountinfo');
+  assert.equal(provider.state,'available');
+  assert.equal(provider.mode,'official-handoff');
+  assert.equal(provider.liveAccess,false);
+});
+
+test('open banking remains disabled until contract and oauth state infrastructure are ready',()=>{
+  const readiness=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://money.ekodi.kr/callback'});
+  assert.equal(readiness.openBankingConfigured,false);
+  const configured=buildIntegrationReadiness({KFTC_OPENBANKING_ENABLED:'true',KFTC_OPENBANKING_CLIENT_ID:'client',KFTC_OPENBANKING_REDIRECT_URI:'https://money.ekodi.kr/callback',OAUTH_STATE_STORE_READY:'true'});
+  assert.equal(configured.openBankingConfigured,true);
+  assert.equal(configured.financialExecution,false);
+});
+
+test('consent preview accepts read scopes only and separates execution',()=>{
+  const preview=buildConsentPreview('kftc-openbanking',['accounts:read','transactions:read','payment:write','accounts:read']);
+  assert.equal(preview.ok,true);
+  assert.deepEqual(preview.scopes,['accounts:read','transactions:read']);
+  assert.equal(preview.humanGateRequired,true);
+  assert.match(preview.execution,/분리/);
+});
+
+test('security event contains metadata only',()=>{
+  const event=securityEvent('connection-begin-requested',{providerId:'kftc-openbanking',scopes:['accounts:read'],accountNumber:'123'});
+  assert.equal(event.providerId,'kftc-openbanking');
+  assert.equal(event.scopeCount,1);
+  assert.equal('accountNumber' in event,false);
 });

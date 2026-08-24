@@ -55,6 +55,7 @@ jobs:
           set -euo pipefail
           node --check money-worker.js
           node --check money/core.js
+          node --check money/integrations.js
           node --check money/app.js
           node --check ekodi-service-manifest.js
           node --test test/money-platform.test.mjs
@@ -63,6 +64,7 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/money.worker.json','utf8'))"
           node -e "const r=require('./config/ecosystem-services.json');if(!r.services.some(s=>s.id==='money'))process.exit(1)"
           grep -Fq 'EKODI MONEY · FINANCIAL CLEANUP' money/index.html
+          grep -Fq 'V2 · 금융연동 준비층' money/index.html
           grep -Fq '금융행위는 반드시 사람이 결정합니다.' money/index.html
           grep -Fq "id:'money'" ekodi-service-manifest.js
           grep -Fq '"money"' platform-boundaries.json
@@ -90,11 +92,15 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/integrations" || true)
             gate=$(curl -sS -o /tmp/money-gate.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"action":"close-account"}' "$STAGING_URL/api/action-gate" || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$gate" == '200' ]] && grep -Fq '금융행위는 반드시 사람이 결정합니다.' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
+            blocked=$(curl -sS -o /tmp/money-connect.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"providerId":"kftc-openbanking","scopes":["accounts:read"]}' "$STAGING_URL/api/connect/begin" || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$gate" == '200' && "$blocked" == '503' ]] && grep -Fq 'V2 · 금융연동 준비층' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"financialExecution":false' /tmp/money-integrations.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Fq '"provider_not_live"' /tmp/money-connect.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
             sleep 4
           done
           cat /tmp/money-health.json || true
+          cat /tmp/money-integrations.json || true
+          cat /tmp/money-connect.json || true
           exit 1
 
   production:
@@ -138,12 +144,16 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/' || true)
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/health' || true)
+            integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/api/integrations' || true)
             exec_code=$(curl -sS -o /tmp/money-exec.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://money.ekodi.kr/api/execution' || true)
+            openbanking=$(curl -sS -o /tmp/money-openbanking.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"providerId":"kftc-openbanking","scopes":["accounts:read"]}' 'https://money.ekodi.kr/api/connect/begin' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/money-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/admin' || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$exec_code" == '409' ]] && grep -Fq 'EKODI MONEY · FINANCIAL CLEANUP' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/money-admin-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$exec_code" == '409' && "$openbanking" == '503' ]] && grep -Fq 'V2 · 금융연동 준비층' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Fq '"provider_not_live"' /tmp/money-openbanking.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/\?focus=money' /tmp/money-admin-headers; then exit 0; fi
             sleep 5
           done
           cat /tmp/money-health.json || true
+          cat /tmp/money-integrations.json || true
+          cat /tmp/money-openbanking.json || true
           exit 1
       - name: Publish production verification status
         if: always()

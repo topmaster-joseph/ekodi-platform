@@ -22,14 +22,27 @@
           </div>
         </div>
         <div class="trust-panel" aria-label="안전 원칙">
-          <span class="status-pill">V1 · 판단과 안전한 연결</span>
-          <strong>AI는 돈을 직접 움직이지 않습니다.</strong>
-          <p>발견 → 관계분석 → 순서추천 → 사용자 확인 → 공인 금융망 실행</p>
+          <span class="status-pill">V2 · 금융연동 준비층</span>
+          <strong>연결은 준비하되, 권한은 앞서가지 않습니다.</strong>
+          <p>공식 연결 → 동의 → 최소조회 → 정리추천 → 사용자 확인 → 공인 금융망 실행</p>
         </div>
       </div>
     </section>
 
     <section class="summary-grid" id="summary" aria-live="polite"></section>
+
+    <section class="card integrations-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">REGULATED CONNECTION LAYER</span>
+          <h2>금융 연결 준비 상태</h2>
+        </div>
+        <span id="integration-status" class="status-line">연동상태 확인 중</span>
+      </div>
+      <p class="section-copy">실제 금융 API는 계약·보안검토·사용자 동의가 모두 충족된 기관만 활성화합니다. 준비되지 않은 연결은 버튼이 있어도 실행되지 않습니다.</p>
+      <div id="integrations" class="integration-grid" aria-live="polite"></div>
+      <div id="consent-detail" aria-live="polite"></div>
+    </section>
 
     <section class="two-col">
       <article class="card">
@@ -62,6 +75,7 @@
       </div>
       <div class="actions compact">
         <a class="primary link-button" href="https://www.payinfo.or.kr/main/main.do" target="_blank" rel="noopener noreferrer">계좌·자동이체 확인하기</a>
+        <a class="secondary" href="https://my.ekodi.kr/">My EKODI</a>
         <a class="secondary" href="https://auth.ekodi.kr/?site=money">EKODI 로그인</a>
       </div>
     </section>
@@ -69,7 +83,7 @@
     <section class="card policy-card">
       <span class="eyebrow">HUMAN GATE</span>
       <h2>금융행위는 반드시 사람이 결정합니다.</h2>
-      <p>EKODI Money는 계좌번호·비밀번호·주민등록번호를 이 화면에 입력받지 않습니다. V1은 정리 판단과 안전한 실행 연결에 집중하고, 이후 공인 API 계약이 완료된 범위만 서버측 승인 흐름으로 확장합니다.</p>
+      <p>EKODI Money는 계좌번호·비밀번호·주민등록번호를 이 화면에 입력받지 않습니다. V2는 공인 API 연동을 위한 동의·철회·기관 어댑터·보안 이벤트 구조를 준비하며, 실제 금융 실행권한은 계속 분리합니다.</p>
     </section>
   </main>
   <script src="/config.js"></script>
