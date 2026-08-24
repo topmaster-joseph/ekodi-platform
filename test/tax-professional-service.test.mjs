@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('multi-supplier migration is additive and preserves legacy tax profile data', async () => {
-  const sql = await read('migrations/0036_finance_multi_tax_suppliers.sql');
+  const sql = await read('migrations/0037_finance_multi_tax_suppliers.sql');
   assert.match(sql, /CREATE TABLE IF NOT EXISTS finance_tax_supplier_profiles/);
   assert.match(sql, /INSERT OR IGNORE INTO finance_tax_supplier_profiles/);
   assert.match(sql, /FROM finance_tax_profiles/);
@@ -81,8 +81,9 @@ test('Creator Billing belongs to Books and is not loaded by Finance', async () =
   assert.match(booksBinding, /author-billing-admin\.js/);
 });
 
-test('shared deployment manifest verifies Tax and auth handoff', async () => {
+test('shared deployment manifest is valid JSON and verifies Tax/auth handoff', async () => {
   const manifest = await read('deploy/manifests/shared-site.worker.json');
+  assert.doesNotThrow(() => JSON.parse(manifest));
   assert.match(manifest, /https:\/\/tax\.ekodi\.kr\//);
   assert.match(manifest, /EKODI Tax/);
   assert.match(manifest, /u\.origin==='https:\/\/tax\.ekodi\.kr'/);
