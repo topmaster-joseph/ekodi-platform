@@ -1,4 +1,4 @@
-name: Deploy My EKODI
+﻿name: Deploy My EKODI
 
 on:
   workflow_dispatch:
@@ -20,6 +20,7 @@ on:
       - 'test/my-ekodi-contract.test.mjs'
       - 'test/my-manifest-services.test.mjs'
       - 'test/my-life-journey.test.mjs'
+      - 'test/my-life-communication.test.mjs'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -44,6 +45,7 @@ on:
       - 'test/my-ekodi-contract.test.mjs'
       - 'test/my-manifest-services.test.mjs'
       - 'test/my-life-journey.test.mjs'
+      - 'test/my-life-communication.test.mjs'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -86,7 +88,7 @@ jobs:
           node --check scripts/validate-universal-membership.mjs
           node scripts/validate-my.mjs
           node scripts/validate-universal-membership.mjs
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
@@ -131,8 +133,8 @@ jobs:
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'membership-summary.js' /tmp/my-stage.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my-stage.html \
-              && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-stage-journey.html \
-              && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-stage-journey.html \
+              && grep -Fq 'MY JOURNEY 쨌 PERSON FIRST' /tmp/my-stage-journey.html \
+              && grep -Fq '?멸뎅?몃쭔???꾪븳 寃쎈줈媛 ?꾨땲?? /tmp/my-stage-journey.html \
               && grep -Fq 'current_site_access' /tmp/my-stage-journey-app.js \
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-stage-journey-app.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-stage-app.js \
@@ -249,8 +251,8 @@ jobs:
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'membership-summary.js' /tmp/my.html \
               && grep -Fq 'PERSONAL BRAND MARKETING' /tmp/my.html \
-              && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-journey.html \
-              && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-journey.html \
+              && grep -Fq 'MY JOURNEY 쨌 PERSON FIRST' /tmp/my-journey.html \
+              && grep -Fq '?멸뎅?몃쭔???꾪븳 寃쎈줈媛 ?꾨땲?? /tmp/my-journey.html \
               && grep -Fq 'current_site_access' /tmp/my-journey-app.js \
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-journey-app.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-app.js \
