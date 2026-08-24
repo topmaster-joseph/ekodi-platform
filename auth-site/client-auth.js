@@ -9,10 +9,10 @@ const realms={
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://messenger.ekodi.kr/',open:true,kind:'messenger'},
   invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
-  'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/'},
-  'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ekodi.kr/'},
-  'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ekodi.kr/'},
-  'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ekodi.kr/'},
+  'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/',origins:['https://cgma.ekodi.kr']},
+  'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ai.ekodi.kr/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr']},
+  'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ai.ekodi.kr/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr']},
+  'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ai.ekodi.kr/',origins:['https://yogurt.ai.ekodi.kr','https://yogurt.ekodi.kr']},
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site');
@@ -24,7 +24,8 @@ async function manifestRealm(id){
     const manifest=await response.json();
     const service=manifest?.services?.find(item=>item.id===id);
     if(!service||service.sso!==true||service.authMode!=='client')return null;
-    return {name:service.name||service.shortName||id,returnTo:service.url,open:true,kind:id};
+    const origin=new URL(service.url).origin;
+    return {name:service.name||service.shortName||id,returnTo:service.url,origins:[origin],open:true,kind:id};
   }catch{return null}
 }
 const config=realms[site]||await manifestRealm(site)||realms['cgma-client'];
@@ -33,7 +34,8 @@ function safeReturn(raw){
   if(!raw)return fallback.href;
   try{
     const target=new URL(raw);
-    if(target.protocol!=='https:'||target.origin!==fallback.origin)return fallback.href;
+    const allowedOrigins=new Set(config.origins||[fallback.origin]);
+    if(target.protocol!=='https:'||target.username||target.password||!allowedOrigins.has(target.origin))return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
