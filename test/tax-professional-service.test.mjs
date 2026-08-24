@@ -50,7 +50,7 @@ test('Finance links to Tax and remains event-driven without perpetual polling', 
   assert.doesNotMatch(finance, /setInterval\s*\(/);
 
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
-  assert.match(postbuild, /data-panel=\\"services\\"/);
-  assert.match(postbuild, /data-panel=\\"finance\\"/);
+  assert.match(postbuild, /data-panel="services"/);
+  assert.match(postbuild, /data-panel="finance"/);
   assert.doesNotMatch(postbuild, /finance polling tail marker missing/);
 });
