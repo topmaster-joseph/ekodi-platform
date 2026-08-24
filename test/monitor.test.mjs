@@ -29,7 +29,7 @@ test('checkSite uses an injected fetch implementation', async () => {
   assert.equal(result.responseTime, 140);
 });
 
-test('monitor covers official services, shared infrastructure, Marketing AI tenants and legacy aliases', () => {
+test('monitor covers official services, shared infrastructure, Marketing AI tenants, public sites and legacy aliases', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
   assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
@@ -41,8 +41,12 @@ test('monitor covers official services, shared infrastructure, Marketing AI tena
   assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
+  assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.ekodi.kr');
+  assert.equal(byId.get('prelaunch-mail')?.[2], 'mail.ekodi.kr');
+  assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
+  assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');
   assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-jadam-')));
-  assert.ok(SITE_DEFINITIONS.length >= 35);
+  assert.ok(SITE_DEFINITIONS.length >= 46);
 });
 
 test('shouldPublish ignores timing jitter but publishes state changes and refreshes stale data', () => {
