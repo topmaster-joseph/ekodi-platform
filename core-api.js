@@ -1,6 +1,9 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { createOpenAiProvider } from './openai-provider-adapter.js';
+import { CORE_PERMISSION_POLICY, evaluateCorePermission } from './core-permission.js';
+import { CORE_WORKFLOW_POLICY } from './core-workflow.js';
+import { CORE_EVIDENCE_POLICY } from './core-evidence.js';
 import {
   CORE_ROLES,
   canonicalCoreRole,
@@ -165,13 +168,36 @@ function aiGatewayStatus(env = {}) {
   return getCoreAiGatewayStatus(env, [createOpenAiProvider(env)]);
 }
 
+function centralContracts() {
+  return {
+    schemaVersion: 1,
+    permission: {
+      version: CORE_PERMISSION_POLICY.version,
+      model: CORE_PERMISSION_POLICY.model,
+      defaultDecision: CORE_PERMISSION_POLICY.defaultDecision,
+      platformAdminTenantPolicy: CORE_PERMISSION_POLICY.platformAdminTenantPolicy,
+    },
+    workflow: {
+      version: CORE_WORKFLOW_POLICY.version,
+      model: CORE_WORKFLOW_POLICY.model,
+      immutableHistory: CORE_WORKFLOW_POLICY.immutableHistory,
+    },
+    evidence: {
+      version: CORE_EVIDENCE_POLICY.version,
+      model: CORE_EVIDENCE_POLICY.model,
+      defaultVisibility: CORE_EVIDENCE_POLICY.defaultVisibility,
+      authorityLevels: CORE_EVIDENCE_POLICY.authorityLevels,
+    },
+  };
+}
+
 function coreStatus(env = {}) {
   const ai = aiGatewayStatus(env);
   return {
     ok: true,
     service: 'ekodi-core',
     apiVersion: CORE_API_VERSION,
-    schemaVersion: 3,
+    schemaVersion: 4,
     architecture: 'hybrid-cloud',
     canonicalHosts: {
       api: 'api.ekodi.kr',
@@ -185,6 +211,9 @@ function coreStatus(env = {}) {
       'data-portability',
       'graceful-degradation',
       'observable-operations',
+      'central-permission-fail-closed',
+      'service-owned-workflows',
+      'portable-evidence-provenance',
     ],
     stores: ['cloudflare-d1', 'supabase-postgres', 'object-storage'],
     ai: {
@@ -195,6 +224,7 @@ function coreStatus(env = {}) {
       providerDisabled: ai.providerDisabled,
       providerCount: ai.providerCount,
     },
+    centralContracts: centralContracts(),
     recovery: {
       strategy: 'd1-time-travel-plus-independent-sql-export',
       restoreTest: 'sqlite-integrity-and-required-table-check',
@@ -216,6 +246,10 @@ export async function handleCoreApi(request, env) {
     return json(request, env, coreStatus(env));
   }
 
+  if (url.pathname === `${CORE_API_PREFIX}/contracts`) {
+    return json(request, env, centralContracts());
+  }
+
   if (url.pathname === `${CORE_API_PREFIX}/ai/status`) {
     return json(request, env, aiGatewayStatus(env));
   }
@@ -230,6 +264,28 @@ export async function handleCoreApi(request, env) {
   if (!env.DB) return json(request, env, { error: 'Core 데이터베이스 연결이 설정되지 않았습니다.', code: 'CORE_DATABASE_UNAVAILABLE' }, 503);
   const resolved = await resolveCorePrincipal(request, env);
   if (!resolved) return json(request, env, { error: 'EKODI 통합인증이 필요합니다.', code: 'CORE_AUTH_REQUIRED' }, 401);
+
+  if (url.pathname === `${CORE_API_PREFIX}/permission`) {
+    const serviceId = String(url.searchParams.get('service') || '').trim().toLowerCase();
+    const action = String(url.searchParams.get('action') || 'read').trim().toLowerCase();
+    const capability = String(url.searchParams.get('capability') || '').trim().toLowerCase();
+    const targetScope = url.searchParams.get('scope') === 'tenant' ? 'tenant' : 'service';
+    const reversible = url.searchParams.get('reversible') !== 'false';
+    const decision = evaluateCorePermission({
+      principal: resolved.principal,
+      serviceId,
+      action,
+      serviceCapability: capability,
+      targetScope,
+      delegatedTenant: false,
+      reversible,
+    });
+    return json(request, env, {
+      schemaVersion: 1,
+      principal: publicPrincipal(resolved.principal),
+      decision,
+    });
+  }
 
   if (url.pathname === `${CORE_API_PREFIX}/recovery/status`) {
     if (!resolved.admin) return json(request, env, { error: '관리자 권한이 필요합니다.', code: 'CORE_ADMIN_REQUIRED' }, 403);
