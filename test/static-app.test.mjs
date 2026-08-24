@@ -81,7 +81,7 @@ test('nested EKODI BIZ service domains follow the organization hierarchy', () =>
   assert.match(siteWorker, /HUB_HOSTS = new Set\(\[/);
   for (const d of ['pay.ekodi.kr','pay.biz.ekodi.kr']) hasDomain(siteWorker, d);
   assert.match(siteWorker, /TRADE_CANONICAL_HOST = 'trade\.ekodi\.kr'/);
-  assert.match(siteWorker, /TRADE_COMPAT_HOSTS = new Set\(\['trade\.biz\.ekodi\.kr'\]\)/);
+  assert.match(siteWorker, /TRADE_LEGACY_HOSTS = new Set\(\['trade\.biz\.ekodi\.kr'\]\)/);
   hasRoute(siteToml, 'trade.biz.ekodi.kr');
   hasRoute(siteToml, 'trade.ekodi.kr');
 });
