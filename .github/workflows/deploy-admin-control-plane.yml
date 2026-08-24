@@ -45,7 +45,7 @@ jobs:
           grep -Fq 'EKODIAdminAIControlPlane' dist/admin-secret-generator.js
           grep -Fq 'EKODIAdminAIGovernor' dist/admin-secret-generator.js
           grep -Fq '다시 조회' dist/admin-secret-generator.js
-          grep -Fq 'Worker가 0개로 조회되었습니다.' dist/admin-secret-generator.js
+          grep -Fq 'Worker 목록이 비어 있습니다. Cloudflare Account ID와 Workers 읽기 권한을 확인하세요.' dist/admin-secret-generator.js
           grep -Fq 'API Token의 Account/Zone/Workers 읽기 권한' dist/admin-secret-generator.js
 
   deploy:
@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           npm run build
           grep -Fq '다시 조회' dist/admin-secret-generator.js
-          grep -Fq 'Worker가 0개로 조회되었습니다.' dist/admin-secret-generator.js
+          grep -Fq 'Worker 목록이 비어 있습니다. Cloudflare Account ID와 Workers 읽기 권한을 확인하세요.' dist/admin-secret-generator.js
       - name: Guarded shared-site deployment
         shell: bash
         run: |
@@ -87,7 +87,7 @@ jobs:
             if [ "$code" = '200' ] \
               && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/h \
               && grep -Fq '다시 조회' /tmp/b \
-              && grep -Fq 'Worker가 0개로 조회되었습니다.' /tmp/b \
+              && grep -Fq 'Worker 목록이 비어 있습니다. Cloudflare Account ID와 Workers 읽기 권한을 확인하세요.' /tmp/b \
               && grep -Fq 'API Token의 Account/Zone/Workers 읽기 권한' /tmp/b; then
               echo 'Production Worker diagnostics verified.'
               exit 0
