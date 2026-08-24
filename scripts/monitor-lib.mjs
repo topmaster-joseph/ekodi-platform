@@ -1,22 +1,68 @@
-export const SITE_DEFINITIONS = Object.freeze([
+import { readFileSync } from 'node:fs';
+import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
+
+const marketingTenants = JSON.parse(
+  readFileSync(new URL('../config/marketing-tenants.json', import.meta.url), 'utf8')
+);
+
+const INFRA_SITES = [
   ['root', 'EKODI Root', 'ekodi.kr'],
   ['admin', 'EKODI Admin', 'admin.ekodi.kr'],
+  ['auth', 'EKODI Auth', 'auth.ekodi.kr'],
+  ['ai-gateway', 'EKODI AI Gateway', 'ai.ekodi.kr'],
   ['api', 'EKODI API', 'api.ekodi.kr', 'https://api.ekodi.kr/health'],
   ['finance', 'EKODI Finance API', 'finance-api.ekodi.kr', 'https://finance-api.ekodi.kr/health'],
-  ['pay', 'EKODI Pay', 'pay.ekodi.kr'],
-  ['mail', 'EKODI Mail', 'mail.ekodi.kr'],
-  ['live', 'EKODI Live', 'live.ekodi.kr'],
-  ['cloud', 'EKODI Cloud', 'cloud.ekodi.kr'],
-  ['mall', '에코디몰', 'mall.ekodi.kr'],
-  ['biz', '에코디비즈', 'biz.ekodi.kr'],
-  ['trade', 'EKODI Trading', 'trade.ekodi.kr'],
-  ['marketing', '마케팅AI', 'marketing.ekodi.kr'],
-  ['cgma', '청계상권', 'cgma.ekodi.kr'],
-  ['publishing', '에코디출판', 'books.ekodi.kr'],
-  ['church', '에코디교회', 'church.ekodi.kr'],
-  ['lab', '에코디연구소', 'lab.ekodi.kr'],
-  ['mission', '에코디선교회', 'youtube.com/@ekodicommunity', 'https://youtube.com/@ekodicommunity']
+  ['marketing-publish-api', 'Marketing Publishing API', 'marketing-publish-api.ekodi.kr', 'https://marketing-publish-api.ekodi.kr/health'],
+  ['shell-js', 'EKODI Shell JS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/shell.js'],
+  ['shell-workspace', 'EKODI Workspace CSS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/workspace.css']
+];
+
+const SERVICE_SITES = EKODI_SERVICE_MANIFEST.services
+  .filter(service => service.state !== 'planned')
+  .map(service => [
+    service.id,
+    service.name,
+    new URL(service.url).hostname,
+    service.url
+  ]);
+
+const MARKETING_TENANT_SITES = marketingTenants.tenants.map(row => [
+  `marketing-tenant-${row.tenant}`,
+  `${row.name} Marketing AI`,
+  row.domain,
+  `https://${row.domain}${row.landingPath || '/'}`
 ]);
+
+const MARKETING_ALIAS_SITES = marketingTenants.tenants.flatMap(row =>
+  (row.legacyDomains || []).map((domain, index) => [
+    `marketing-alias-${row.tenant}-${index + 1}`,
+    `${row.name} legacy alias`,
+    domain,
+    `https://${domain}/`
+  ])
+);
+
+const EXTRA_SITES = [
+  ['mission', '에코디선교회', 'youtube.com/@ekodicommunity', 'https://youtube.com/@ekodicommunity']
+];
+
+function uniqueSites(sites) {
+  const seen = new Set();
+  return sites.filter(site => {
+    const key = `${site[0]}|${site[3] || `https://${site[2]}`}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
+  ...INFRA_SITES,
+  ...SERVICE_SITES,
+  ...MARKETING_TENANT_SITES,
+  ...MARKETING_ALIAS_SITES,
+  ...EXTRA_SITES
+]));
 
 export function classifyStatus(httpStatus, responseTime) {
   if (!Number.isInteger(httpStatus) || httpStatus < 200 || httpStatus >= 400) return 'offline';
@@ -35,7 +81,7 @@ export async function checkSite(
     const response = await fetchImpl(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(12000),
-      headers: { 'user-agent': 'EKODI-Monitor/2.0' }
+      headers: { 'user-agent': 'EKODI-Monitor/3.0' }
     });
     await response.body?.cancel();
     const responseTime = Math.round(clock() - started);
