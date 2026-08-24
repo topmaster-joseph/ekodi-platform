@@ -15,7 +15,7 @@ on:
       - 'auth-site/admin-auth.js'
       - 'platform-router-entry-worker.js'
       - 'wrangler.site.toml'
-      - 'migrations/0036_finance_multi_tax_suppliers.sql'
+      - 'migrations/0037_finance_multi_tax_suppliers.sql'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/tax-professional-service.test.mjs'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
@@ -54,12 +54,13 @@ jobs:
           node --check admin-demand-loader.js
           node --check auth-site/admin-auth.js
           node --check platform-router-entry-worker.js
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/shared-site.worker.json','utf8'))"
           node --test test/tax-professional-service.test.mjs
 
           grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
           grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
           grep -Fq "defaultChannel: 'HOMETAX_MANUAL'" tax-invoice-free-first-worker.js
-          grep -Fq 'finance_tax_supplier_profiles' migrations/0036_finance_multi_tax_suppliers.sql
+          grep -Fq 'finance_tax_supplier_profiles' migrations/0037_finance_multi_tax_suppliers.sql
           grep -Fq 'supplierProfileId' tax-portal-worker.js
           grep -Fq 'multiSupplier:true' tax-service-worker.js
           grep -Fq "const TAX_HOST='tax.ekodi.kr'" platform-router-entry-worker.js
