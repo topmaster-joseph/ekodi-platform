@@ -20,11 +20,52 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
+const CONTROL_WRITE_METHODS = new Set(['POST','PUT','PATCH','DELETE']);
+
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
     status:500,
     headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
   }));
+}
+
+function roleBoundaryResponse(message, code, status = 403) {
+  return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
+    status,
+    headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+  }));
+}
+
+async function controlSession(request, env) {
+  const url = new URL(request.url);
+  url.pathname = '/api/session';
+  url.search = '';
+  const probe = new Request(url.toString(), { method:'GET', headers:request.headers });
+  const response = await handleAdminSessionFastPath(probe, env);
+  if (!response?.ok) return { error:response || roleBoundaryResponse('관리자 인증이 필요합니다.','ADMIN_AUTH_REQUIRED',401) };
+  return { session:await response.json() };
+}
+
+async function enforceControlRoleBoundary(request, env) {
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith('/api/control/')) return null;
+  if (request.method === 'OPTIONS') return null;
+
+  const sensitive = path.startsWith('/api/control/secrets');
+  const mutating = CONTROL_WRITE_METHODS.has(request.method);
+  if (!sensitive && !mutating) return null;
+
+  const auth = await controlSession(request, env);
+  if (auth.error) return applyApiSecurityHeaders(auth.error);
+  const role = String(auth.session?.role || '');
+
+  if (sensitive && role !== 'super_admin') {
+    return roleBoundaryResponse('Cloudflare Secret 관리는 EKODI 최고관리자만 사용할 수 있습니다.','SUPER_ADMIN_REQUIRED');
+  }
+  if (mutating && role === 'viewer') {
+    return roleBoundaryResponse('조회관리자는 EKODI Core 운영정보를 조회할 수 있지만 변경할 수 없습니다.','VIEWER_READ_ONLY');
+  }
+  return null;
 }
 
 function userAiResponse(response) {
@@ -47,6 +88,9 @@ export default {
 
     const operatorGoogle = await handleSameOriginOperatorGoogleAuth(request, env, ctx);
     if (operatorGoogle) return applyApiSecurityHeaders(operatorGoogle);
+
+    const roleBoundary = await enforceControlRoleBoundary(request, env);
+    if (roleBoundary) return roleBoundary;
 
     if (path === '/api/session' && request.method === 'GET') {
       try { const response = await handleAdminSessionFastPath(request, env); if (response) return applyApiSecurityHeaders(response); }
