@@ -1,6 +1,7 @@
 const cfg=window.EKODI_BUSINESS_CONFIG||{};
 const $=(id)=>document.getElementById(id);
 const SESSION_KEY='ekodi-business-session';
+const AUTH_FALLBACK='https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F';
 const state={workspaces:[],current:null,metrics:null,liveSnapshot:null,session:null};
 
 function applyConfig(){
@@ -13,7 +14,7 @@ function applyConfig(){
 function syncAuthLink(){
   const link=$('authLink');if(!link)return;
   if(state.session?.accessToken){link.href='#logout';link.textContent=state.session?.user?.email?'Sign out':'Sign out'}
-  else{link.href=cfg.authUrl||'https://auth.ekodi.kr/?site=business';link.textContent='Sign in'}
+  else{link.href=cfg.authUrl||AUTH_FALLBACK;link.textContent='Sign in'}
 }
 function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken&&value?.refreshToken?value:null}catch{return null}}
 function saveSession(value){state.session=value;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));syncAuthLink()}
