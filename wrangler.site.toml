@@ -97,6 +97,14 @@ pattern = "cloud.ekodi.kr"
 custom_domain = true
 
 [[routes]]
+pattern = "ins.ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "media.ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "auth.ekodi.kr"
 custom_domain = true
 

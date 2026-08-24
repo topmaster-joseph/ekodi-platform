@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -25,13 +25,22 @@
       {"url":"https://invest.ekodi.kr/invest-ui.js","statuses":[200],"redirect":"manual","expect":["/v1/invest/context","investEvidenceBadge","renderConnections"]},
       {"url":"https://invest.ekodi.kr/invest-subject-ui.js","statuses":[200],"redirect":"manual","expect":["/v1/invest/subjects","investSubjectSelect","matchesHint"]},
       {"url":"https://invest.ekodi.kr/app.js","statuses":[200],"redirect":"manual","expect":["https://workspace-api.ekodi.kr","/v1/invest/opportunities","diligence"]},
-      {"url":"https://pay.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
-      {"url":"https://pay.biz.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
-      {"url":"https://mail.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브"],"headerExpect":["x-ekodi-route: hub"]},
-      {"url":"https://live.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브"],"headerExpect":["x-ekodi-route: hub"]},
-      {"url":"https://cloud.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브"],"headerExpect":["x-ekodi-route: hub"]},
-      {"url":"https://trade.biz.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Global Trading","TRADING DIVISION · EKODIBIZ","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: trade","x-ekodi-shell: v2"]},
-      {"url":"https://trade.ekodi.kr/","statuses":[308],"redirect":"manual","headerExpect":["location: https://trade.biz.ekodi.kr/"]}
+      {"url":"https://pay.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Pay","Universal FREE","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://pay.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-pay\"","\"membership\":\"universal-free-lazy\"","\"aiDependency\":\"optional\""]},
+      {"url":"https://pay.biz.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Pay","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://mail.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Mail","ekodibiz.kr","메일 열기","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://mail.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-mail\"","\"providerFailureMode\":\"core\""]},
+      {"url":"https://live.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Live","Core 기능은 유지","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://live.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-live\"","\"adminSeparated\":true"]},
+      {"url":"https://cloud.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Cloud","비공개 파일을 직접 복제","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://cloud.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-cloud\"","\"privateCrossServiceDataAccess\":false"]},
+      {"url":"https://ins.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Insurance","보험상품 최종 추천","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://ins.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-insurance\"","\"membership\":\"universal-free-lazy\""]},
+      {"url":"https://media.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Media","외부 AI나 미디어 공급자가 없어도","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: hub","x-ekodi-shell: v2"]},
+      {"url":"https://media.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-media\"","\"aiDependency\":\"optional\""]},
+      {"url":"https://trade.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Global Trading","TRADING DIVISION · EKODIBIZ","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: trade","x-ekodi-shell: v2"]},
+      {"url":"https://trade.ekodi.kr/health","statuses":[200],"redirect":"manual","expect":["\"service\":\"ekodi-trade\"","\"membership\":\"universal-free-lazy\""]},
+      {"url":"https://trade.biz.ekodi.kr/","statuses":[308],"redirect":"manual","headerExpect":["location: https://trade.ekodi.kr/"]}
     ]
   }
 }

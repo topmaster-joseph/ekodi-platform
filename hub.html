@@ -2,117 +2,47 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b1220">
-  <title>EKODI Hub</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07101d">
+  <title>EKODI Service</title>
   <style>
-    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e8eef8;background:#07101d;color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 0%,#17345c 0,transparent 38%),linear-gradient(180deg,#07101d,#0b1220);padding:28px}a{color:inherit;text-decoration:none}.shell{max-width:1100px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:56px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.04em}.mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#fff;color:#07101d}.home{font-size:14px;color:#b8c6da;padding:10px 14px;border:1px solid #30435f;border-radius:999px}.eyebrow{color:#84b9ff;font-weight:800;letter-spacing:.16em;font-size:12px;text-transform:uppercase}.hero h1{font-size:clamp(34px,6vw,68px);line-height:1.02;margin:10px 0 18px;letter-spacing:-.05em}.hero p{max-width:720px;color:#afbed2;font-size:17px;line-height:1.7;margin:0}.context{display:inline-flex;margin-top:18px;padding:7px 10px;border-radius:999px;background:#13233a;color:#cfe2ff;font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:42px}.grid.mail-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:760px}.card{min-height:180px;padding:22px;border:1px solid #253853;border-radius:22px;background:linear-gradient(180deg,rgba(22,38,61,.86),rgba(11,18,32,.86));display:flex;flex-direction:column;justify-content:space-between;transition:.18s transform,.18s border-color}.card:hover{transform:translateY(-3px);border-color:#638dcc}.card.primary{border-color:#4d7fba;background:linear-gradient(145deg,rgba(24,57,94,.96),rgba(11,24,43,.94))}.icon{font-size:28px}.card strong{display:block;font-size:19px;margin-top:18px}.card small{display:block;color:#96a8c2;margin-top:7px;line-height:1.5}.arrow{align-self:flex-end;color:#8fbcff}.note{margin-top:22px;padding:16px 18px;border-left:3px solid #568ee8;background:#101d30;color:#a9bad0;border-radius:0 14px 14px 0;font-size:13px;line-height:1.6}.domain-panel{display:none;margin-top:24px;padding:20px;border:1px solid #263b58;border-radius:18px;background:rgba(11,24,42,.72)}.domain-panel.visible{display:block}.domain-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:14px}.domain-head strong{font-size:16px}.domain-head span{font-size:11px;color:#7f93ae}.domain-row{display:grid;grid-template-columns:160px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)}.domain-row:first-of-type{border-top:0}.domain-name{font-weight:800;font-size:14px}.domain-detail{font-size:12px;line-height:1.55;color:#9fb1c8}.status{font-size:10px;font-weight:800;letter-spacing:.04em;padding:6px 9px;border-radius:999px;white-space:nowrap}.status.live{color:#bff5d2;background:#153827}.status.ready{color:#cfe4ff;background:#173659}.alias-note{margin-top:11px;padding-top:13px;border-top:1px solid rgba(255,255,255,.07);font-size:12px;line-height:1.65;color:#9fb1c8}.admin-links{display:none;margin-top:20px;gap:14px;align-items:center;font-size:11px;color:#7186a2}.admin-links.visible{display:flex}.admin-links a:hover{color:#b8d6ff}.footer{margin-top:42px;color:#6f829d;font-size:12px}@media(max-width:760px){body{padding:20px}.top{margin-bottom:38px}.grid,.grid.mail-grid{grid-template-columns:1fr;max-width:none}.hero p{font-size:15px}.domain-row{grid-template-columns:1fr auto}.domain-detail{grid-column:1/-1}.domain-head{align-items:flex-start;flex-direction:column;gap:5px}}
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#edf4ff;background:#07101d;color-scheme:dark;--line:#263b58;--muted:#9fb1c8;--accent:#8fc2ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 0,#17345c 0,transparent 34rem),linear-gradient(180deg,#07101d,#0b1220);padding:88px 24px 36px}a{color:inherit;text-decoration:none}.shell{max-width:1080px;margin:auto}.top{position:fixed;top:0;left:0;right:0;z-index:60;min-height:64px;padding:max(10px,env(safe-area-inset-top)) 24px 10px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(7,16,29,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.07)}.brand{font-weight:850;letter-spacing:.07em}.topnav{display:flex;gap:9px;flex-wrap:wrap}.pill{font-size:12px;color:#c7d7ea;border:1px solid var(--line);border-radius:999px;padding:8px 11px}.eyebrow{color:var(--accent);font-weight:850;letter-spacing:.16em;font-size:12px}.hero{padding:58px 0 20px}.hero h1{font-size:clamp(38px,7vw,72px);line-height:1;margin:10px 0 18px;letter-spacing:-.05em}.hero p{max-width:760px;color:#b3c2d5;font-size:17px;line-height:1.75}.context{display:inline-flex;margin-top:16px;padding:7px 10px;border-radius:999px;background:#13233a;color:#d5e8ff;font-size:12px}.statusline{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.statusline span{font-size:11px;border:1px solid #315073;border-radius:999px;padding:6px 9px;color:#b9d9ff}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:30px}.card{min-height:170px;padding:20px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,rgba(22,38,61,.9),rgba(11,18,32,.9));display:flex;flex-direction:column;justify-content:space-between}.card:hover{border-color:#638dcc;transform:translateY(-2px)}.card strong{font-size:18px}.card small{display:block;color:var(--muted);margin-top:7px;line-height:1.55}.icon{font-size:26px;margin-bottom:18px}.note{margin-top:20px;padding:16px 18px;border-left:3px solid #568ee8;background:#101d30;color:#a9bad0;border-radius:0 14px 14px 0;font-size:13px;line-height:1.65}.domain-panel{margin-top:20px;padding:18px;border:1px solid var(--line);border-radius:18px;background:rgba(11,24,42,.72)}.domain-row{display:grid;grid-template-columns:140px 1fr auto;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.07);align-items:center}.domain-row:first-child{border-top:0}.domain-row small{color:var(--muted)}.live{font-size:10px;color:#bff5d2;background:#153827;border-radius:999px;padding:6px 8px}.footer{margin-top:38px;color:#7287a4;font-size:12px}@media(max-width:760px){body{padding:96px 18px 28px}.top{padding-left:16px;padding-right:16px}.grid{grid-template-columns:1fr}.hero{padding-top:36px}.domain-row{grid-template-columns:1fr auto}.domain-row small{grid-column:1/-1}}
   </style>
 </head>
-<body>
+<body data-ekodi-surface="workspace">
+  <header class="top" data-ekodi-fixed-header><a class="brand" href="https://my.ekodi.kr/">EKODI</a><nav class="topnav"><a class="pill" href="https://my.ekodi.kr/">My EKODI</a><a class="pill" href="https://ekodi.kr/">전체 서비스</a></nav></header>
   <main class="shell">
-    <header class="top"><a class="brand" href="https://ekodi.kr"><span class="mark">E</span><span>EKODI</span></a><a class="home" href="https://ekodi.kr">ekodi.kr ↗</a></header>
-    <section class="hero"><div class="eyebrow" id="eyebrow">EKODI HUB</div><h1 id="title">EKODI 서비스 허브</h1><p id="description">관련 서비스를 한곳에서 연결하는 EKODI 디지털 로비입니다.</p><span class="context" id="context"></span></section>
+    <section class="hero"><div class="eyebrow" id="eyebrow">EKODI SERVICE</div><h1 id="title">EKODI</h1><p id="description"></p><span class="context" id="context"></span><div class="statusline"><span>EKODI Core</span><span>Universal FREE</span><span>AI 선택 기능</span><span>관리자 권한 분리</span></div></section>
     <section class="grid" id="cards" aria-label="서비스 바로가기"></section>
-    <section class="domain-panel" id="domainPanel" aria-label="메일 도메인 상태"></section>
+    <section class="domain-panel" id="domainPanel" hidden></section>
     <div class="note" id="note"></div>
-    <div class="admin-links" id="adminLinks"></div>
-    <footer class="footer">EKODI Digital Campus · One root, many doors.</footer>
+    <footer class="footer">Person + Space + Role + Capability · Core service continues without an external AI provider.</footer>
   </main>
   <script>
-    const host = location.hostname.toLowerCase();
-    const card = (icon,title,detail,href,kind='') => ({icon,title,detail,href,kind});
-    const common = {
-      admin: card('⌘','EKODI Admin','통합 관리 콘솔','https://admin.ekodi.kr'),
-      root: card('E','EKODI Portal','전체 서비스 정문','https://ekodi.kr'),
-    };
-    let model;
-    if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
-      model = {
-        eyebrow:'PAYMENT GATE', title:'EKODI Pay', context:host,
-        description:'상품, 교육, 무역, 서비스 결제는 하나의 주소 체계에서 연결하고 실제 회계 귀속은 조직과 사업부별로 분리합니다.',
-        note:'에코디비즈 상거래 결제는 기존 Toss Payments 계약을 기준으로 연결합니다. 교회·비영리 자금은 사업 결제·회계와 섞지 않고 별도 계약과 정산 체계를 사용합니다.',
-        cards:[
-          card('₩','에코디비즈 결제','서비스별 결제 화면으로 연결','https://biz.ekodi.kr'),
-          card('▦','결제 · 회계 관제','Toss 상태와 사업부별 원장','https://admin.ekodi.kr/#finance'),
-          common.admin, common.root
-        ]
+    (()=>{
+      const host=location.hostname.toLowerCase();
+      const card=(icon,title,detail,href)=>({icon,title,detail,href});
+      const common={my:card('◎','My EKODI','내 공간·서비스·멤버십으로 돌아가기','https://my.ekodi.kr/'),admin:card('⌘','EKODI Admin','운영자 전용 통합 관리 콘솔','https://admin.ekodi.kr/'),root:card('E','EKODI','전체 서비스 정문','https://ekodi.kr/')};
+      const models={
+        pay:{eyebrow:'PAYMENT & SETTLEMENT',title:'EKODI Pay',description:'결제와 정산의 진입점을 단순하게 연결합니다. 실제 결제·계약·회계 귀속은 해당 서비스와 조직의 권한·승인 경계를 따릅니다.',note:'결제는 자동 관리자 권한을 만들지 않습니다. 유료 멤버십은 서비스별로 분리되고, 실제 결제 실행은 명시적 사용자 동의와 서버측 결제 계약을 통과해야 합니다.',cards:[card('₩','결제 서비스','해당 EKODI 서비스에서 결제 흐름 시작','https://biz.ekodi.kr/'),card('▦','결제·정산 현황','관리자만 운영 상태 확인','https://admin.ekodi.kr/#finance'),common.my]},
+        mail:{eyebrow:'COMMUNICATION',title:'EKODI Mail',description:'EKODI의 사람과 조직을 기존 Google Workspace 메일 환경으로 안전하게 연결합니다.',note:'Google Workspace는 ekodibiz.kr을 기본 도메인으로 운영하고 ekodi.kr을 별칭 도메인으로 함께 사용합니다. 메일 데이터는 EKODI 다른 서비스가 직접 읽지 않으며, 필요한 연동은 명시적 권한을 통해서만 이뤄집니다.',cards:[card('✉','메일 열기','Google Workspace Gmail · ekodibiz.kr','https://mail.google.com/a/ekodibiz.kr'),card('◎','내 EKODI 계정','통합계정과 Workspace 확인','https://my.ekodi.kr/'),common.admin],domains:[['ekodibiz.kr','Google Workspace 기본 메일 도메인'],['ekodi.kr','사용자 별칭 도메인']]},
+        live:{eyebrow:'LIVE & BROADCAST',title:'EKODI Live',description:'교회·선교·사업·연구의 실시간 방송 입구를 한곳에서 연결합니다.',note:'방송 공급자가 일시적으로 중단되어도 EKODI의 계정·일정·기록 같은 Core 기능은 유지됩니다. 실제 송출 권한은 각 채널 소유자에게 남습니다.',cards:[card('▶','에코디교회 라이브','YouTube 교회 채널','https://www.youtube.com/@ekodichurch/live'),card('◉','에코디선교회 라이브','YouTube 커뮤니티 채널','https://www.youtube.com/@ekodicommunity/live'),common.my]},
+        cloud:{eyebrow:'FILES & COLLABORATION',title:'EKODI Cloud',description:'파일과 협업 자산을 한 주소에서 연결하되, 원본 권한과 저장소 소유권은 그대로 유지합니다.',note:'현재 기본 연결은 Google Drive/Docs입니다. EKODI는 다른 서비스의 비공개 파일을 직접 복제하거나 우회 접근하지 않습니다.',cards:[card('▣','Google Drive','문서·자료 원본 저장소','https://drive.google.com/'),card('▤','Google Docs','문서 작성과 협업','https://docs.google.com/'),common.my]},
+        insurance:{eyebrow:'INSURANCE ASSIST',title:'EKODI Insurance',description:'보험 정보를 정리하고 보장·청구 준비를 돕는 개인·조직용 허브입니다.',note:'현재 Beta는 정보 정리·서류 체크·청구 준비를 돕는 범위입니다. 가입 권유, 보험상품 최종 추천, 보장 확정, 청구 승인 판단 또는 자동 제출을 대신하지 않습니다.',cards:[card('▤','내 보험 여정','My EKODI에서 개인 맥락 확인','https://my.ekodi.kr/'),card('✓','청구 준비','필요 자료와 다음 행동을 정리하는 Beta 흐름','https://my.ekodi.kr/'),common.root]},
+        media:{eyebrow:'MEDIA & CREATION',title:'EKODI Media',description:'영상·라이브·콘텐츠 자산을 EKODI의 창작과 배포 흐름에 연결합니다.',note:'Media Beta는 콘텐츠 진입·연결 허브입니다. 외부 AI나 미디어 공급자가 없어도 저장된 정보·링크·Core 서비스는 유지되며, 게시·삭제 같은 외부 실행은 사용자 권한과 확인을 거칩니다.',cards:[card('◫','Creator AI','콘텐츠 기획과 제작 지원','https://author.ekodi.kr/'),card('▶','EKODI Live','실시간 방송 연결','https://live.ekodi.kr/'),common.my]}
       };
-    } else if (host.startsWith('mail.')) {
-      const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
-      model = {
-        eyebrow:'MAIL LOBBY', title:'EKODI Mail', context:`${host} · ${org}`,
-        description:'하나의 계정으로 EKODI의 사람과 조직을 연결합니다. 메일을 열고, 내 계정을 확인하고, 조직 주소는 중앙에서 관리합니다.',
-        note:'Google Workspace는 ekodibiz.kr을 기본 도메인으로 운영하고 ekodi.kr을 사용자 별칭 도메인으로 함께 사용합니다. ekodi.kr 주소는 별도 사용자 계정을 만드는 방식이 아니라 기존 ekodibiz.kr 사용자와 그룹에 같은 이름의 별칭 주소가 자동으로 제공되는 구조입니다.',
-        cards:[
-          card('✉','메일 열기','Google Workspace Gmail','https://mail.google.com/a/ekodibiz.kr','primary'),
-          card('◎','내 EKODI 계정','통합 인증 · 계정 확인','https://auth.ekodi.kr')
-        ],
-        domains:[
-          {name:'ekodibiz.kr',detail:'Google Workspace 기본 도메인 · Gmail 운영',status:'운영 중',statusClass:'live'},
-          {name:'ekodi.kr',detail:'사용자 별칭 도메인 · Gmail 활성 · 자동 별칭 주소 제공',status:'운영 중',statusClass:'live'}
-        ],
-        aliasNote:'예: admin@ekodibiz.kr 사용자가 실제로 존재하면 admin@ekodi.kr은 따로 생성하지 않아도 자동 별칭으로 제공되고 같은 Gmail 메일함으로 수신됩니다. 별칭 주소로 발신하려면 Gmail의 보내는 주소 설정이 필요할 수 있으며, 로그인은 기본 계정인 @ekodibiz.kr을 사용합니다.',
-        adminLinks:[
-          {label:'Workspace Admin',href:'https://admin.google.com'},
-          {label:'EKODI Admin',href:'https://admin.ekodi.kr'},
-          {label:'EKODI Portal',href:'https://ekodi.kr'}
-        ]
-      };
-    } else if (host.startsWith('live.')) {
-      const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
-      model = {
-        eyebrow:'LIVE LOBBY', title:'EKODI Live', context:`${host} · ${org}`,
-        description:'예배, 선교, 비즈니스, 연구의 생방송 입구를 하나의 방송 로비로 묶습니다.',
-        note:'교회·선교 채널은 바로 연결되어 있습니다. 비즈니스·연구 라이브는 채널이 확정되는 즉시 같은 주소 체계 안에서 확장합니다.',
-        cards:[
-          card('▶','에코디교회 라이브','YouTube @ekodichurch','https://www.youtube.com/@ekodichurch/live'),
-          card('◉','에코디선교회 라이브','YouTube @ekodicommunity','https://www.youtube.com/@ekodicommunity/live'),
-          common.admin, common.root
-        ]
-      };
-    } else if (host === 'cloud.ekodi.kr') {
-      model = {
-        eyebrow:'CLOUD LOBBY', title:'EKODI Cloud', context:host,
-        description:'문서와 자료가 흩어지지 않도록 EKODI의 업무 도구로 들어가는 자료 로비입니다.',
-        note:'현재 기본 저장소는 Google Drive입니다. 향후 조직별 공유드라이브와 자료실을 이 허브에서 분기합니다.',
-        cards:[
-          card('▣','Google Drive','EKODI 문서·자료 저장소','https://drive.google.com'),
-          card('▤','Google Docs','문서 작성과 협업','https://docs.google.com'),
-          common.admin, common.root
-        ]
-      };
-    } else {
-      model = {
-        eyebrow:'AUTH GATE', title:'EKODI Auth', context:host,
-        description:'EKODI 서비스의 인증과 관리자 접속을 모으는 통합 로그인 관문입니다.',
-        note:'관리자 인증과 서비스 운영 API는 서버에서 처리하며 각 공개 서비스의 실패와 분리합니다.',
-        cards:[
-          card('🔐','EKODI Admin Login','EKODI 관리 콘솔 인증','https://admin.ekodi.kr'),
-          card('G','Google Account','Google 계정 로그인','https://accounts.google.com'),
-          common.root
-        ]
-      };
-    }
-    document.title = `${model.title} · EKODI`;
-    document.querySelector('#eyebrow').textContent = model.eyebrow;
-    document.querySelector('#title').textContent = model.title;
-    document.querySelector('#description').textContent = model.description;
-    document.querySelector('#context').textContent = model.context;
-    document.querySelector('#note').textContent = model.note;
-    const cards = document.querySelector('#cards');
-    cards.classList.toggle('mail-grid',host.startsWith('mail.'));
-    cards.innerHTML = model.cards.map(x => `<a class="card ${x.kind || ''}" href="${x.href}" target="_blank" rel="noopener"><div><span class="icon">${x.icon}</span><strong>${x.title}</strong><small>${x.detail}</small></div><span class="arrow">↗</span></a>`).join('');
-    const domainPanel = document.querySelector('#domainPanel');
-    if (model.domains?.length) {
-      domainPanel.classList.add('visible');
-      domainPanel.innerHTML = `<div class="domain-head"><strong>Mail Domain</strong><span>Google Workspace 기준</span></div>${model.domains.map(x => `<div class="domain-row"><span class="domain-name">${x.name}</span><span class="domain-detail">${x.detail}</span><span class="status ${x.statusClass}">${x.status}</span></div>`).join('')}<div class="alias-note">${model.aliasNote}</div>`;
-    }
-    const adminLinks = document.querySelector('#adminLinks');
-    if (model.adminLinks?.length) {
-      adminLinks.classList.add('visible');
-      adminLinks.innerHTML = `<span>관리</span>${model.adminLinks.map(x => `<a href="${x.href}" target="_blank" rel="noopener">${x.label} ↗</a>`).join('')}`;
-    }
+      let key=host.startsWith('mail.')?'mail':host.startsWith('live.')?'live':host==='cloud.ekodi.kr'?'cloud':host==='ins.ekodi.kr'?'insurance':host==='media.ekodi.kr'?'media':'pay';
+      const m=models[key];
+      document.title=`${m.title} · EKODI`;
+      document.querySelector('#eyebrow').textContent=m.eyebrow;
+      document.querySelector('#title').textContent=m.title;
+      document.querySelector('#description').textContent=m.description;
+      document.querySelector('#context').textContent=host;
+      document.querySelector('#note').textContent=m.note;
+      const cards=document.querySelector('#cards');
+      m.cards.forEach(item=>{const a=document.createElement('a');a.className='card';a.href=item.href;a.target='_blank';a.rel='noopener';const top=document.createElement('div');const icon=document.createElement('div');icon.className='icon';icon.textContent=item.icon;const strong=document.createElement('strong');strong.textContent=item.title;const small=document.createElement('small');small.textContent=item.detail;top.append(icon,strong,small);const arrow=document.createElement('span');arrow.textContent='↗';a.append(top,arrow);cards.append(a)});
+      if(m.domains){const panel=document.querySelector('#domainPanel');panel.hidden=false;m.domains.forEach(([name,detail])=>{const row=document.createElement('div');row.className='domain-row';const n=document.createElement('strong');n.textContent=name;const d=document.createElement('small');d.textContent=detail;const s=document.createElement('span');s.className='live';s.textContent='운영 중';row.append(n,d,s);panel.append(row)})}
+    })();
   </script>
 </body>
 </html>

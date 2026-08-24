@@ -51,8 +51,8 @@ const MARKETING_ALIAS_SITES = marketingTenants.tenants.flatMap(row =>
   ])
 );
 
-// These are intentionally still marked planned in the service manifest, but their
-// public endpoints are already live and therefore remain part of operational checks.
+// Backward-compatible safety net. Once a service is activated in the canonical manifest,
+// uniqueSites removes any duplicate prelaunch entry automatically.
 const LIVE_PRELAUNCH_SITES = [
   ['prelaunch-mail', 'EKODI Mail', 'mail.ekodi.kr', 'https://mail.ekodi.kr/'],
   ['prelaunch-live', 'EKODI Live', 'live.ekodi.kr', 'https://live.ekodi.kr/'],

@@ -32,10 +32,28 @@ const HUB_HOSTS = new Set([
   'live.church.ekodi.kr',
   'live.lab.ekodi.kr',
   'cloud.ekodi.kr',
+  'ins.ekodi.kr',
+  'media.ekodi.kr',
 ]);
 
-const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
-const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
+const TRADE_CANONICAL_HOST = 'trade.ekodi.kr';
+const TRADE_LEGACY_HOSTS = new Set(['trade.biz.ekodi.kr']);
+const SERVICE_HOST_IDS = Object.freeze({
+  'trade.ekodi.kr':'trade',
+  'trade.biz.ekodi.kr':'trade',
+  'pay.ekodi.kr':'pay',
+  'pay.biz.ekodi.kr':'pay',
+  'mail.ekodi.kr':'mail',
+  'mail.biz.ekodi.kr':'mail',
+  'mail.church.ekodi.kr':'mail',
+  'live.ekodi.kr':'live',
+  'live.biz.ekodi.kr':'live',
+  'live.church.ekodi.kr':'live',
+  'live.lab.ekodi.kr':'live',
+  'cloud.ekodi.kr':'cloud',
+  'ins.ekodi.kr':'insurance',
+  'media.ekodi.kr':'media',
+});
 
 const ADMIN_ALIASES = new Set([
   '/',
@@ -182,6 +200,25 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   return secured;
 }
 
+function serviceHealth(host) {
+  const id = SERVICE_HOST_IDS[host];
+  if (!id) return null;
+  const response = new Response(JSON.stringify({
+    ok: true,
+    service: `ekodi-${id}`,
+    surface: 'service-hub',
+    identityModel: 'person-space-role',
+    shell: 'v2',
+    membership: 'universal-free-lazy',
+    aiDependency: 'optional',
+    providerFailureMode: 'core',
+    adminSeparated: true,
+    privateCrossServiceDataAccess: false
+  }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-EKODI-Service': id } });
+  applyBaseSecurityHeaders(response.headers);
+  return response;
+}
+
 function adminAssetCacheControl(url) {
   return url.searchParams.has('v')
     ? 'public, max-age=31536000, immutable'
@@ -254,6 +291,8 @@ export default {
     const host = url.hostname.toLowerCase();
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
+
+    if (url.pathname === '/health' && SERVICE_HOST_IDS[host]) return serviceHealth(host);
 
     if (host === PUBLIC_HOST) {
       if (url.pathname === '/' || url.pathname === '/index.html') {

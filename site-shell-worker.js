@@ -1,7 +1,22 @@
 import siteWorker from './site-worker.js';
 import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js';
 
-const SHELL_HOSTS = new Set(['trade.biz.ekodi.kr', 'pay.ekodi.kr', 'pay.biz.ekodi.kr']);
+const SHELL_HOSTS = new Set([
+  'trade.ekodi.kr',
+  'trade.biz.ekodi.kr',
+  'pay.ekodi.kr',
+  'pay.biz.ekodi.kr',
+  'mail.ekodi.kr',
+  'mail.biz.ekodi.kr',
+  'mail.church.ekodi.kr',
+  'live.ekodi.kr',
+  'live.biz.ekodi.kr',
+  'live.church.ekodi.kr',
+  'live.lab.ekodi.kr',
+  'cloud.ekodi.kr',
+  'ins.ekodi.kr',
+  'media.ekodi.kr'
+]);
 
 function effectiveRequest(request, env) {
   const original = new URL(request.url);
@@ -20,6 +35,8 @@ export default {
     const effective = effectiveRequest(request, env);
     const response = await siteWorker.fetch(effective.request, env, ctx);
     if (!SHELL_HOSTS.has(effective.host)) return response;
-    return injectEkodiShell(response, shellServiceForHost(effective.host));
+    const serviceId = shellServiceForHost(effective.host);
+    if (!serviceId) return response;
+    return injectEkodiShell(response, serviceId);
   },
 };

@@ -51,7 +51,7 @@ export function injectEkodiShell(response,serviceId,surface=''){
 export function shellServiceForHost(hostname){
   const host=String(hostname||'').toLowerCase();
   const exact={
-    'my.ekodi.kr':'my','marketing.ekodi.kr':'marketing','community.ekodi.kr':'community','church.ekodi.kr':'church','business.ekodi.kr':'business','biz.ekodi.kr':'biz','work.ekodi.kr':'work','author.ekodi.kr':'author','books.ekodi.kr':'books','lab.ekodi.kr':'lab','social.ekodi.kr':'social','energy.ekodi.kr':'energy','mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.ekodi.kr':'trade','trade.biz.ekodi.kr':'trade','pay.ekodi.kr':'pay','pay.biz.ekodi.kr':'pay','edu.ekodi.kr':'edu','media.ekodi.kr':'media','messenger.ekodi.kr':'messenger','invest.ekodi.kr':'invest','ins.ekodi.kr':'insurance','mail.ekodi.kr':'mail','live.ekodi.kr':'live','cloud.ekodi.kr':'cloud'
+    'my.ekodi.kr':'my','marketing.ekodi.kr':'marketing','community.ekodi.kr':'community','church.ekodi.kr':'church','business.ekodi.kr':'business','biz.ekodi.kr':'biz','work.ekodi.kr':'work','author.ekodi.kr':'author','books.ekodi.kr':'books','publishing.ekodi.kr':'publishing','lab.ekodi.kr':'lab','social.ekodi.kr':'social','energy.ekodi.kr':'energy','mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.ekodi.kr':'trade','trade.biz.ekodi.kr':'trade','pay.ekodi.kr':'pay','pay.biz.ekodi.kr':'pay','edu.ekodi.kr':'edu','media.ekodi.kr':'media','messenger.ekodi.kr':'messenger','invest.ekodi.kr':'invest','ins.ekodi.kr':'insurance','mail.ekodi.kr':'mail','mail.biz.ekodi.kr':'mail','mail.church.ekodi.kr':'mail','live.ekodi.kr':'live','live.biz.ekodi.kr':'live','live.church.ekodi.kr':'live','live.lab.ekodi.kr':'live','cloud.ekodi.kr':'cloud'
   };
   return exact[host]||'';
 }
