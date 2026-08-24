@@ -320,15 +320,23 @@
     finance.addEventListener('click', () => {
       if (finance.dataset.financeAssetsRequested === 'true') return;
       finance.dataset.financeAssetsRequested = 'true';
-      Promise.all([
-        loadStyle('control-center-finance.css'),
-        loadStyle('author-billing-admin.css'),
-      ]).then(async () => {
-        await loadScript('author-billing-admin.js');
-        await loadScript('finance-monitor.js');
-      }).catch(error => {
+      loadStyle('control-center-finance.css').then(() => loadScript('finance-monitor.js')).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
+      });
+    }, true);
+  }
+
+  function bindBooksEnhancements() {
+    if (!nav || nav.dataset.creatorBillingDemandBound === 'true') return;
+    nav.dataset.creatorBillingDemandBound = 'true';
+    nav.addEventListener('click', event => {
+      const books = event.target.closest('[data-section="books"], [data-lazy-section="books"]');
+      if (!books || nav.dataset.creatorBillingAssetsRequested === 'true') return;
+      nav.dataset.creatorBillingAssetsRequested = 'true';
+      loadStyle('author-billing-admin.css').then(() => loadScript('author-billing-admin.js')).catch(error => {
+        nav.dataset.creatorBillingAssetsRequested = 'false';
+        console.warn('[EKODI Admin] Creator Billing lazy load failed', error);
       });
     }, true);
   }
@@ -343,6 +351,7 @@
     if (!authenticated() || !nav) return;
     Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
     bindBaseEnhancements();
+    bindBooksEnhancements();
     window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
     if (requested) {
