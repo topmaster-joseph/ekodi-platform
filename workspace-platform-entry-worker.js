@@ -32,7 +32,7 @@ export default {
       const response=await handleProfileEvidenceApi(request,profileEnv(env));
       if(response)return response;
     }
-    if(url.pathname==='/v1/invest/context'||url.pathname==='/v1/invest/data-connections'){
+    if(['/v1/invest/context','/v1/invest/data-connections','/v1/invest/subjects'].includes(url.pathname)){
       const response=await handleInvestPersonalizationApi(request,env);
       if(response)return response;
     }
