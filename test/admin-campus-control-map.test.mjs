@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises';
 const js = await readFile(new URL('../compact-control-center.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../compact-control-center.css', import.meta.url), 'utf8');
 
-test('compact control center keeps Campus as the first screen but renders a simple site table', () => {
+test('compact control center keeps site management as the first screen and renders a simple site table', () => {
   assert.match(js, /dataset\.section = 'campus'/);
-  assert.match(js, /EKODI Digital Campus/);
+  assert.match(js, /campus: '사이트 관리'/);
   assert.match(js, /campusServiceRows/);
   assert.match(js, /class="finance-table campus-table"/);
   assert.match(js, /<th>Type<\/th><th>Service<\/th><th>Domain<\/th><th>Manage<\/th>/);

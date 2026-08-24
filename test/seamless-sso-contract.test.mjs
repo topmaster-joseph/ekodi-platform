@@ -18,27 +18,30 @@ test('normal user login is a pass-through instead of an auth dashboard stop',()=
   assert.match(router,/site==='admin'/);
 });
 
-test('generic SSO immediately routes an explicit or single authorized workspace',()=>{
+test('generic SSO immediately routes an explicit or authorized workspace',()=>{
   assert.match(auth,/requestedWorkspace/);
   assert.match(auth,/authorized\.find\(item=>item\.workspace_key===requestedWorkspace\)/);
-  assert.match(auth,/authorized\.length===1&&workspaces\.length===1/);
-  assert.match(auth,/await handoffToService\(authorized\[0\]\.workspace_key\)/);
+  assert.match(auth,/if\(requested\)/);
+  assert.match(auth,/if\(authorized\.length>0\)/);
+  assert.match(auth,/await handoffToService\(requested\.workspace_key\)/);
+  assert.match(auth,/await handoffToService\(\)/);
 });
 
-test('ambiguous multi-workspace access still requires an explicit safe choice',()=>{
+test('failed seamless handoff restores an explicit safe workspace choice',()=>{
   assert.match(auth,/if\(authorized\.length>0\)/);
   assert.match(auth,/renderWorkspacePanel\(workspaces\)/);
-  assert.match(auth,/이 서비스에서 사용할 공간을 선택해 주세요/);
+  assert.match(auth,/자동 복귀가 지연되어 사용할 공간을 선택할 수 있게 열었습니다/);
 });
 
-test('user-site special auth modules preserve only same-origin HTTPS return targets',()=>{
+test('user-site special auth modules preserve only allowed same-service HTTPS return targets',()=>{
   for(const source of [client,business,author]){
     assert.match(source,/params\.get\('return_to'\)/);
     assert.match(source,/target\.protocol!=='https:'/);
     assert.match(source,/target\.hash=''/);
     assert.match(source,/const RETURN_TO=safeReturn/);
   }
-  assert.match(client,/target\.origin!==fallback\.origin/);
+  assert.match(client,/const allowedOrigins=new Set\(config\.origins\|\|\[fallback\.origin\]\)/);
+  assert.match(client,/!allowedOrigins\.has\(target\.origin\)/);
   assert.match(business,/target\.origin!=='https:\/\/business\.ekodi\.kr'/);
   assert.match(author,/target\.origin!=='https:\/\/author\.ekodi\.kr'/);
 });

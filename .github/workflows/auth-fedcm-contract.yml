@@ -45,10 +45,11 @@ jobs:
           grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'cb=20260823-mobile-admin-handoff-1' auth-site/index.html
-          grep -Fq 'entry=20260817-workspace-entry-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260824-return-origin-1' auth-site/index.html
           grep -Fq "admin-auth.js?v=20260823-mobile-handoff-1" auth-site/auth-router.js
-          grep -Fq "marketing-auth-hotfix.js?v=20260817-workspace-entry-1" auth-site/auth-router.js
+          grep -Fq "marketing-auth-hotfix.js?v=20260824-return-origin-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260824-return-origin-1" auth-site/auth-router.js
+          grep -Fq "auth.js?v=20260824-return-origin-1" auth-site/auth-router.js
           grep -Fq "marketing-onboarding.js?v=20260817-workspace-label-1" auth-site/auth-router.js
           grep -Fq 'parts.slice(0,2)' auth-site/marketing-onboarding.js
           grep -Fq "return await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
