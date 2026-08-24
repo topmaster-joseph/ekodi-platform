@@ -26,12 +26,18 @@ export function normalizeAccount(account={}){
 
 export function classifyAccount(input){
   const account=normalizeAccount(input);
-  const relationships=account.autoDebits.length+Number(account.linkedLoan)+Number(account.linkedCard);
+  const hasStructuralLink=account.linkedLoan||account.linkedCard;
   if(account.restricted) return {status:'attention',reason:'제한·특수관계 가능성이 있어 금융기관 확인이 필요합니다.',account};
   if(account.primary||account.userMarkedKeep) return {status:'keep',reason:'주거래 또는 사용자가 유지로 지정한 계좌입니다.',account};
   if(account.linkedLoan) return {status:'attention',reason:'대출 연결 가능성이 있어 해지 전 확인이 필요합니다.',account};
-  if(account.inactiveDays>=365&&relationships===0) return {status:'cleanup',reason:'1년 이상 미사용이며 감지된 연결관계가 없습니다.',account};
-  if(account.inactiveDays>=180||relationships===0) return {status:'review',reason:'사용 빈도 또는 연결관계를 다시 확인할 가치가 있습니다.',account};
+  if(account.inactiveDays>=365&&!hasStructuralLink){
+    const reason=account.autoDebits.length
+      ? '1년 이상 미사용 계좌입니다. 자동이체를 먼저 이전한 뒤 해지를 검토할 수 있습니다.'
+      : '1년 이상 미사용이며 감지된 연결관계가 없습니다.';
+    return {status:'cleanup',reason,account};
+  }
+  if(account.linkedCard&&account.inactiveDays>=180) return {status:'review',reason:'카드 연결 가능성이 있어 해지 전에 카드 결제계좌 관계를 확인해야 합니다.',account};
+  if(account.inactiveDays>=180||account.autoDebits.length===0) return {status:'review',reason:'사용 빈도 또는 연결관계를 다시 확인할 가치가 있습니다.',account};
   return {status:'keep',reason:'현재 사용 또는 자동납부 연결이 감지됩니다.',account};
 }
 
