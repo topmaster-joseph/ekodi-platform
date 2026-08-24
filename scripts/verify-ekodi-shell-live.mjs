@@ -27,8 +27,8 @@ function includesAll(text,label,needles,failures){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
-  const [healthResult,manifestResult,shellResult,themeResult,styleResult]=await Promise.all([
-    read('/health',attempt),read('/manifest.json',attempt),read('/shell.js',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),
+  const [healthResult,manifestResult,shellResult,themeResult,styleResult,shellUiResult]=await Promise.all([
+    read('/health',attempt),read('/manifest.json',attempt),read('/shell.js',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/shell-ui.css',attempt),
   ]);
   const failures=[];
   const health=parseJson(healthResult,'health',failures);
