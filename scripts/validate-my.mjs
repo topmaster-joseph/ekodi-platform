@@ -69,7 +69,7 @@ mustNot('membershipJs','/api/membership/me');
 must('membershipCss','.membership-service-state');
 must('membershipCss','.membership-summary-warning');
 must('userServices','USER_SERVICES');
-must('userServices','"id": "support"');
+must('userServices',"id:'support'");
 must('workspaceSync','window.EKODIShell');
 must('workspaceSync','ekodiWorkspaceOrder');
 must('workspaceCss','--ekodi-shell-accent');
