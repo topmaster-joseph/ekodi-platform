@@ -1,8 +1,9 @@
 name: PR467 Contract Fix
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - feat/all-user-services-operating-baseline-20260824
     paths:
       - '.github/workflows/ops-pr467-contract-fix.yml'
 
@@ -11,16 +12,20 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           ref: feat/all-user-services-operating-baseline-20260824
-      - name: Apply validated contract fixes
+          fetch-depth: 0
+      - name: Merge latest main and apply validated contract fixes
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          git merge --no-edit origin/main
           python - <<'PY'
           from pathlib import Path
 
@@ -60,21 +65,50 @@ jobs:
           text=p.read_text().replace("assert.match(client,/target\\.origin!==fallback\\.origin/);", "assert.match(client,/allowedOrigins=new Set/);\n  assert.match(client,/!allowedOrigins\\.has\\(target\\.origin\\)/);")
           p.write_text(text)
 
-          p=Path('scripts/monitor-lib.mjs')
-          p.write_text(p.read_text().replace(".filter(row => row.publicSiteDomain && row.visibility !== 'private')", ".filter(row => row.publicSiteDomain)"))
+          p=Path('test/monitor.test.mjs')
+          text=p.read_text()
+          text=text.replace("assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.ekodi.kr');", "assert.equal(byId.get('marketing-private-cgma')?.[2], 'cgma.ekodi.kr');\n  assert.equal(byId.has('marketing-public-cgma'), false);")
+          p.write_text(text)
 
           p=Path('.github/workflows/stage-shared-site-shell.yml')
           text=p.read_text().replace("verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING'", "verify_shell 'trade.ekodi.kr' 'EKODI GLOBAL TRADING'")
           text=text.replace("echo 'Shared-site Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'", "echo 'Shared-site canonical Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'")
           p.write_text(text)
+
+          p=Path('scripts/build-shell-audit-matrix.mjs')
+          p.write_text("""import { readFile } from 'node:fs/promises';
+          import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
+
+          const registry=JSON.parse(await readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'));
+          const verifiedOnly=process.argv.includes('--verified-only');
+          const registryById=new Map((registry.services||[]).map(service=>[service.id,service]));
+          const include=(EKODI_SERVICE_MANIFEST.services||[])
+            .filter(service=>service.state!=='planned'&&service.shellIntegration!=='pending'&&service.shellIntegration!=='planned')
+            .filter(service=>!verifiedOnly||registryById.get(service.id)?.productionVerified===true)
+            .map(service=>({
+              id:service.id,
+              url:service.auditUrl||service.url,
+              integration:service.shellIntegration,
+            }));
+
+          if(!include.length)throw new Error(verifiedOnly?'No production-verified EKODI services available for Shell audit':'No active EKODI services available for production Shell audit');
+          process.stdout.write(JSON.stringify({include}));
+          """)
+
+          p=Path('.github/workflows/verify-shared-shell-production.yml')
+          text=p.read_text().replace('matrix=$(node scripts/build-shell-audit-matrix.mjs)', 'matrix=$(node scripts/build-shell-audit-matrix.mjs --verified-only)')
+          text=text.replace('Build active-service audit matrix from canonical manifest', 'Build production-verified service audit matrix from canonical registry')
+          text=text.replace('All active services from the canonical EKODI manifest were verified', 'All production-verified services from the canonical EKODI registry were verified')
+          p.write_text(text)
           PY
 
           node --check auth-site/auth.js
           node --test test/seamless-sso-contract.test.mjs test/auth-person-workspace-contract.test.mjs test/monitor.test.mjs
+          node scripts/build-shell-audit-matrix.mjs --verified-only >/tmp/shell-matrix.json
+          test -s /tmp/shell-matrix.json
 
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add auth-site/auth.js test/seamless-sso-contract.test.mjs test/auth-person-workspace-contract.test.mjs scripts/monitor-lib.mjs .github/workflows/stage-shared-site-shell.yml
-          git diff --cached --quiet && exit 0
-          git commit -m 'fix: align auth safety and staging contracts'
+          git add auth-site/auth.js test/seamless-sso-contract.test.mjs test/auth-person-workspace-contract.test.mjs test/monitor.test.mjs .github/workflows/stage-shared-site-shell.yml scripts/build-shell-audit-matrix.mjs .github/workflows/verify-shared-shell-production.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix: align promotion contracts with operating baseline'
+          fi
           git push origin HEAD:feat/all-user-services-operating-baseline-20260824
