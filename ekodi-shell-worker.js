@@ -8,28 +8,32 @@ async function bundledShell(request,env){
   const navUrl=new URL(request.url);navUrl.pathname='/user-global-nav.js';
   const contextUrl=new URL(request.url);contextUrl.pathname='/user-context.js';
   const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
-  const [shellResponse,navResponse,contextResponse,headerResponse]=await Promise.all([
+  const messageUrl=new URL(request.url);messageUrl.pathname='/message-ui.js';
+  const [shellResponse,navResponse,contextResponse,headerResponse,messageResponse]=await Promise.all([
     env.ASSETS.fetch(new Request(shellUrl,request)),
     env.ASSETS.fetch(new Request(navUrl,request)),
     env.ASSETS.fetch(new Request(contextUrl,request)),
     env.ASSETS.fetch(new Request(headerUrl,request)),
+    env.ASSETS.fetch(new Request(messageUrl,request)),
   ]);
   if(!shellResponse.ok)return withHeaders(shellResponse);
   const shell=await shellResponse.text();
   const globalNav=navResponse.ok?await navResponse.text():'';
   const userContext=contextResponse.ok?await contextResponse.text():'';
   const fixedHeader=headerResponse.ok?await headerResponse.text():'';
+  const messageUI=messageResponse.ok?await messageResponse.text():'';
   const headers=new Headers(shellResponse.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
-  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${fixedHeader}\n`,{status:200,headers}));
+  headers.set('x-ekodi-message-ui',messageUI?'v1':'missing');
+  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${fixedHeader}\n${messageUI}\n`,{status:200,headers}));
 }
 
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,messageUIVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/service'){
       const id=url.searchParams.get('id');const host=url.searchParams.get('host');const service=id?serviceForId(id):host?serviceForHost(host):null;
