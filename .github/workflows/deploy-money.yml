@@ -1,0 +1,151 @@
+name: Deploy EKODI Money
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'money/**'
+      - 'money-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'shell/theme.json'
+      - 'test/money-platform.test.mjs'
+      - 'wrangler.money.toml'
+      - 'wrangler.money.staging.toml'
+      - 'deploy/manifests/money.worker.json'
+      - '.github/workflows/deploy-money.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'money/**'
+      - 'money-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'shell/theme.json'
+      - 'test/money-platform.test.mjs'
+      - 'wrangler.money.toml'
+      - 'wrangler.money.staging.toml'
+      - 'deploy/manifests/money.worker.json'
+      - '.github/workflows/deploy-money.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-money-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Money contracts
+        run: |
+          set -euo pipefail
+          node --check money-worker.js
+          node --check money/core.js
+          node --check money/app.js
+          node --check ekodi-service-manifest.js
+          node --test test/money-platform.test.mjs
+          node scripts/validate-platform-boundaries.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/money.worker.json','utf8'))"
+          grep -Fq 'EKODI MONEY · FINANCIAL CLEANUP' money/index.html
+          grep -Fq '금융행위는 반드시 사람이 결정합니다.' money/index.html
+          grep -Fq "id:'money'" ekodi-service-manifest.js
+          grep -Fq '"money"' platform-boundaries.json
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-money-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.money.staging.toml
+      - name: Verify staging
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            gate=$(curl -sS -o /tmp/money-gate.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"action":"close-account"}' "$STAGING_URL/api/action-gate" || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$gate" == '200' ]] && grep -Fq '금융행위는 반드시 사람이 결정합니다.' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
+            sleep 4
+          done
+          cat /tmp/money-health.json || true
+          exit 1
+
+  production:
+    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Wait for Shell contract
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"id":"money"' /tmp/manifest.json; then break; fi
+            if [[ "$attempt" == '24' ]]; then exit 1; fi
+            sleep 5
+          done
+      - name: Bootstrap or guarded release
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.money.toml --json > /tmp/deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/money.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.money.toml
+          else
+            cat /tmp/deployments.log
+            exit 1
+          fi
+      - name: Reconcile production hostname trigger
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.money.toml
+      - name: Verify real production hostname
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/' || true)
+            health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/health' || true)
+            exec_code=$(curl -sS -o /tmp/money-exec.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://money.ekodi.kr/api/execution' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/money-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/admin' || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$exec_code" == '409' ]] && grep -Fq 'EKODI MONEY · FINANCIAL CLEANUP' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/money-admin-headers; then exit 0; fi
+            sleep 5
+          done
+          cat /tmp/money-health.json || true
+          exit 1
+      - name: Publish production verification status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+        run: |
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"EKODI Money Production\",\"description\":\"money.ekodi.kr production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

@@ -1,0 +1,19 @@
+name = "ekodi-money-staging"
+main = "money-worker.js"
+compatibility_date = "2026-08-24"
+workers_dev = true
+preview_urls = false
+
+[vars]
+DATA_MODE = "isolated-staging"
+AUTH_URL = "https://auth.ekodi.kr/?site=money"
+ACCOUNTINFO_URL = "https://www.payinfo.or.kr/main/main.do"
+
+[assets]
+directory = "./money"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
