@@ -20,13 +20,23 @@ const normalized = services.map((service) => {
   let parsed = null;
   try { parsed = new URL(sourceUrl); } catch {}
   const status = String(service?.status || 'planned').trim().toLowerCase();
+  const productionVerified = service?.productionVerified === true;
+  const homepageDefault = service?.homepage === true;
+  const homepageOrder = Number.isFinite(Number(service?.order)) ? Math.trunc(Number(service.order)) : 9999;
   return {
     id,
     name: String(service?.name || service?.nameEn || '').trim(),
+    nameEn: String(service?.nameEn || '').trim(),
+    label: String(service?.label || '').trim(),
+    url: parsed?.toString() || sourceUrl,
     domain: String(parsed?.hostname || service?.domain || '').trim().toLowerCase(),
     group: String(service?.category || service?.group || '').trim().toLowerCase(),
     status,
-    available: Boolean(service?.productionVerified === true && AVAILABLE_STATUSES.has(status)),
+    productionVerified,
+    available: Boolean(productionVerified && AVAILABLE_STATUSES.has(status)),
+    homepageEligible: Boolean(productionVerified && status === 'live'),
+    homepageDefault,
+    homepageOrder,
   };
 });
 
@@ -35,6 +45,9 @@ for (const service of normalized) {
   if (RESERVED_INTERNAL.has(service.id)) throw new Error(`Internal component cannot inherit user membership: ${service.id}`);
   if (!service.name) throw new Error(`Missing service name: ${service.id}`);
   if (!service.domain.endsWith('.ekodi.kr')) throw new Error(`Invalid EKODI user service domain: ${service.domain}`);
+  if (!Number.isInteger(service.homepageOrder) || service.homepageOrder < 0 || service.homepageOrder > 9999) {
+    throw new Error(`Invalid homepage order: ${service.id}`);
+  }
 }
 
 const ids = normalized.map((service) => service.id);
@@ -50,4 +63,4 @@ const browser = `${banner}export const USER_SERVICES = Object.freeze(${payload})
 fs.mkdirSync(path.dirname(serverPath), { recursive: true });
 fs.writeFileSync(serverPath, server);
 fs.writeFileSync(browserPath, browser);
-console.log(`Generated ${normalized.length} EKODI user services.`);
+console.log(`Generated ${normalized.length} EKODI user services with homepage presentation metadata.`);
