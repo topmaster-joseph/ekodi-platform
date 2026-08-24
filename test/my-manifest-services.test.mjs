@@ -43,10 +43,11 @@ test('Open SSO is declared centrally and can grow without a My-only allowlist ed
   }
 });
 
-test('Only planned services stay out of My while Education is active',()=>{
+test('Operational baseline services stay visible in My while Education remains active',()=>{
   const planned=EKODI_SERVICE_MANIFEST.services.filter(service=>service.state==='planned').map(service=>service.id);
-  assert.ok(!planned.includes('edu'));
-  assert.ok(planned.includes('media'));
+  for(const activeId of ['edu','media','insurance','mail','live','cloud']){
+    assert.ok(!planned.includes(activeId),`${activeId} must not regress to planned`);
+  }
   const education=EKODI_SERVICE_MANIFEST.services.find(service=>service.id==='edu');
   assert.equal(education?.openSso,true);
   assert.equal(education?.authMode,'client');
