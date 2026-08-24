@@ -58,12 +58,21 @@ const status = await jsonGet('/api/core/v1/status');
 assert(status.data?.ok === true, 'Core status is not ok');
 assert(status.data?.service === 'ekodi-core', 'Core service identity mismatch');
 assert(status.data?.architecture === 'hybrid-cloud', 'Core architecture is not hybrid-cloud');
-for (const principle of ['tenant-isolation', 'provider-independence', 'ai-optional', 'data-portability', 'graceful-degradation', 'observable-operations']) {
+for (const principle of ['tenant-isolation', 'provider-independence', 'ai-optional', 'data-portability', 'graceful-degradation', 'observable-operations', 'central-permission-fail-closed', 'service-owned-workflows', 'portable-evidence-provenance']) {
   assert(status.data?.principles?.includes(principle), `Core status missing principle: ${principle}`);
 }
 assert(status.data?.ai?.providerIndependent === true, 'Core status does not report provider-independent AI');
 assert(status.data?.ai?.aiOptional === true, 'Core status does not report AI as optional');
+assert(status.data?.centralContracts?.permission?.model === 'person-space-role-capability-resource', 'Core status missing central permission contract');
+assert(status.data?.centralContracts?.workflow?.model === 'service-owned-template-core-governed-transition', 'Core status missing central workflow contract');
+assert(status.data?.centralContracts?.evidence?.model === 'domain-owned-evidence-portable-provenance', 'Core status missing central evidence contract');
 report.core.status = status.data;
+
+const contracts = await jsonGet('/api/core/v1/contracts');
+assert(contracts.data?.permission?.defaultDecision === 'deny', 'Central permission contract must fail closed');
+assert(contracts.data?.workflow?.immutableHistory === true, 'Central workflow history must remain immutable');
+assert(Array.isArray(contracts.data?.evidence?.authorityLevels) && contracts.data.evidence.authorityLevels.includes('official'), 'Central evidence authority catalog is incomplete');
+report.core.contracts = contracts.data;
 
 const roles = await jsonGet('/api/core/v1/roles');
 const roleKeys = new Set((roles.data?.roles || []).map(item => item.role));
@@ -77,7 +86,7 @@ assert(ai.data?.providerIndependent === true, 'AI gateway is not provider-indepe
 assert(ai.data?.aiOptional === true, 'AI gateway is not optional');
 report.core.ai = ai.data;
 
-for (const path of ['/api/core/v1/me', '/api/core/v1/organizations', '/api/core/v1/recovery/status']) {
+for (const path of ['/api/core/v1/me', '/api/core/v1/organizations', '/api/core/v1/recovery/status', '/api/core/v1/permission?service=biz&action=read']) {
   const response = await fetchWithRetry(`${apiBase}${path}`);
   assert(response.status === 401, `${path} must fail closed with HTTP 401 without authentication, got ${response.status}`);
   report.protectedRoutes[path] = response.status;
@@ -98,4 +107,4 @@ report.securityHeaders = { strictTransportSecurity: hsts, xContentTypeOptions: n
 
 await mkdir('artifacts', { recursive: true });
 await writeFile('artifacts/ekodi-core-production-verification.json', `${JSON.stringify(report, null, 2)}\n`);
-console.log(`✅ EKODI Core production verification passed: ${Object.keys(report.hosts).length}/7 hosts live, Core API contracts live, protected routes fail closed.`);
+console.log(`✅ EKODI Core production verification passed: ${Object.keys(report.hosts).length}/7 hosts live, central contracts live, protected routes fail closed.`);
