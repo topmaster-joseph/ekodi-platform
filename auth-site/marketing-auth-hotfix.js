@@ -5,8 +5,9 @@ const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const MARKETING_API='https://marketing-api.ekodi.kr';
 const params=new URLSearchParams(location.search);
 const site='marketing';
-const returnOrigins=new Set(['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr']);
-const safeReturn=raw=>{try{const u=new URL(raw||'https://marketing.ekodi.kr');return u.protocol==='https:'&&returnOrigins.has(u.origin)?u.href:'https://marketing.ekodi.kr/'}catch{return'https://marketing.ekodi.kr/'}};
+const returnOrigins=new Set(['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr']);
+const isMarketingOrigin=origin=>{if(returnOrigins.has(origin))return true;try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}};
+const safeReturn=raw=>{try{const u=new URL(raw||'https://marketing.ekodi.kr');return u.protocol==='https:'&&!u.username&&!u.password&&isMarketingOrigin(u.origin)?u.href:'https://marketing.ekodi.kr/'}catch{return'https://marketing.ekodi.kr/'}};
 const returnTo=safeReturn(params.get('return_to'));
 const explicitPro=params.get('plan')==='pro'||params.get('intent')==='pro';
 const manageMode=params.get('manage')==='1';
@@ -64,10 +65,31 @@ function renderIdentityList(items){const host=$('linkedAccounts');host.replaceCh
 async function loadLinkedIdentities(){show('identityPanel',true);try{const data=await identity('/identities',{method:'GET',authenticated:true});renderIdentityList(data.identities||[]);$('addGoogleAccount').disabled=Boolean(data.reloginRequired);if(data.reloginRequired)notice('identityLinkStatus','새 통합 프로필 연결을 위해 한 번 다시 로그인해 주세요.','warn');else show('identityLinkStatus',false)}catch(error){console.error('linked identities',error);$('addGoogleAccount').disabled=false;notice('identityLinkStatus','로그인 계정 목록은 나중에 다시 확인할 수 있습니다.','warn')}}
 async function loadWorkspaces(){const data=await api('/workspaces?site=marketing');currentWorkspaces=Array.isArray(data.workspaces)?data.workspaces:[];return currentWorkspaces}
 
-async function handoffToService(workspaceKey){if(!currentSession)throw new Error('login_required');const r=await fetchTimed(MARKETING_API+'/api/marketing/handoff/start',{method:'POST',credentials:'include',headers:{Authorization:`Bearer ${currentSession.access_token}`,'content-type':'application/json'},body:JSON.stringify({return_to:returnTo,workspace_key:workspaceKey||undefined}),cache:'no-store'});const text=await r.text();let d={};try{d=text?JSON.parse(text):{}}catch{}if(!r.ok||!d.returnTo)throw Object.assign(new Error(d.error||'handoff_unavailable'),{status:r.status,data:d});location.assign(d.returnTo)}
+async function handoffToService(workspaceKey=null){if(!currentSession)throw new Error('login_required');const r=await fetchTimed(MARKETING_API+'/api/marketing/handoff/start',{method:'POST',credentials:'include',headers:{Authorization:`Bearer ${currentSession.access_token}`,'content-type':'application/json'},body:JSON.stringify({return_to:returnTo,workspace_key:workspaceKey||undefined}),cache:'no-store'});const text=await r.text();let d={};try{d=text?JSON.parse(text):{}}catch{}if(!r.ok||!d.returnTo)throw Object.assign(new Error(d.error||'handoff_unavailable'),{status:r.status,data:d});location.assign(d.returnTo)}
 async function openWorkspace(item,button){if(button){button.disabled=true;button.classList.add('loading')}try{if(item.requires_handoff===false){location.assign(marketingFreeTarget());return}await handoffToService(item.workspace_key)}catch(error){console.error('workspace handoff',error);notice('accessStatus','선택한 공간 연결이 지연되고 있습니다. 무료 기능으로 이동하거나 다시 시도해 주세요.','error');show('freeActions',true);if(button){button.disabled=false;button.classList.remove('loading')}}}
 
-async function renderAccess(s){currentSession=s;routing=false;showSignedIn(s);resetPanels();notice('accessStatus','내 Marketing AI 공간을 확인하고 있습니다.');let workspaces;try{workspaces=await loadWorkspaces()}catch(error){console.error('workspace list',error);showAccessFailure('공간 정보를 불러오지 못했습니다. 화면을 잠그지 않고 무료 기능을 사용할 수 있게 열어 두었습니다.');return}renderWorkspacePanel(workspaces);const active=authorized(workspaces);fallbackWorkspaceKey=active[0]?.workspace_key||null;if(active.length===1&&workspaces.length===1&&!explicitPro&&!manageMode){routing=true;$('serviceBadge').textContent=`${workspacePlanLabel(active[0].plan)} 이용중`;notice('accessStatus','인증되었습니다. Marketing AI로 이동합니다.');try{await handoffToService(active[0].workspace_key);return}catch(error){console.error('automatic handoff',error);routing=false;show('approvedActions',true);show('freeActions',true);notice('accessStatus','자동 연결이 지연되어 직접 이동 버튼을 열었습니다.','warn')}}else if(active.length){$('serviceBadge').textContent=workspaces.length>1?`${workspaces.length}개 공간`:`${workspacePlanLabel(active[0].plan)} 이용중`;notice('accessStatus',workspaces.length>1?'사용할 개인·사업장·단체 공간을 선택해 주세요.':'Marketing AI 이용 권한이 확인되었습니다.');if(workspaces.length===1)show('approvedActions',true)}else{$('serviceBadge').textContent='무료회원';notice('accessStatus','무료 기능을 바로 이용할 수 있습니다.');show('freeActions',true)}if(explicitPro)show('requestActions',true);await loadLinkedIdentities()}
+async function renderAccess(s){
+  currentSession=s;routing=false;showSignedIn(s);resetPanels();notice('accessStatus','내 Marketing AI 공간을 확인하고 있습니다.');
+  let workspaces;
+  try{workspaces=await loadWorkspaces()}catch(error){console.error('workspace list',error);showAccessFailure('공간 정보를 불러오지 못했습니다. 화면을 잠그지 않고 무료 기능을 사용할 수 있게 열어 두었습니다.');return}
+  renderWorkspacePanel(workspaces);
+  const active=authorized(workspaces);fallbackWorkspaceKey=active[0]?.workspace_key||null;
+  if(!explicitPro&&!manageMode){
+    if(active.length){
+      routing=true;$('serviceBadge').textContent='인증 완료';notice('accessStatus','인증되었습니다. 원래 이용하던 Marketing AI로 돌아갑니다.');
+      try{await handoffToService();return}catch(error){console.error('automatic handoff',error);routing=false;show('approvedActions',true);show('freeActions',true);notice('accessStatus','자동 복귀가 지연되어 직접 이동 버튼을 열었습니다.','warn')}
+    }else{
+      location.assign(marketingFreeTarget());return;
+    }
+  }else if(active.length){
+    $('serviceBadge').textContent=workspaces.length>1?`${workspaces.length}개 공간`:`${workspacePlanLabel(active[0].plan)} 이용중`;
+    notice('accessStatus',workspaces.length>1?'사용할 개인·사업장·단체 공간을 선택해 주세요.':'Marketing AI 이용 권한이 확인되었습니다.');
+    if(workspaces.length===1)show('approvedActions',true);
+  }else{
+    $('serviceBadge').textContent='무료회원';notice('accessStatus','무료 기능을 바로 이용할 수 있습니다.');show('freeActions',true);
+  }
+  if(explicitPro)show('requestActions',true);await loadLinkedIdentities();
+}
 
 async function handleGoogleCredential(response,challenge){if(!response?.credential){showFailure('Google 계정을 선택하지 못했습니다. 다시 시도해 주세요.');return}$('serviceBadge').textContent='확인 중';notice('authStatus','Google 계정을 확인하고 있습니다.');show('googleButtonHost',false);show('cancelSignedOut',true);try{const proof=await identity('/google/exchange',{method:'POST',body:JSON.stringify({credential:response.credential,nonce:challenge.nonce})});const result=await timeout(sb.auth.verifyOtp({token_hash:proof.tokenHash,type:'email'}),10000,'verify_otp_timeout');if(result.error)throw result.error;currentSession=result.data?.session||null;if(!currentSession){const sessionResult=await timeout(sb.auth.getSession(),5000,'session_timeout');currentSession=sessionResult.data.session}if(!currentSession)throw new Error('session_not_created');cleanUrl();await renderAccess(currentSession)}catch(error){console.error('google exchange',error);showFailure(error.message==='identity_conflict'?'이 Google 계정은 다른 EKODI 사용자에 연결되어 있습니다. 관리자 확인이 필요합니다.':'로그인이 지연되거나 실패했습니다. 다시 시도해 주세요.')}}
 async function prepareGoogle(){routing=false;const host=$('googleButtonHost');host.replaceChildren();show('signedIn',false);show('signedOut',true);show('googleButtonHost',true);show('googleRetry',false);show('cancelSignedOut',true);$('serviceBadge').textContent='인증 필요';notice('authStatus','Google 인증을 준비하고 있습니다.');try{const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleGoogleCredential(r,challenge)});window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});notice('authStatus','Google 계정으로 본인을 확인해 주세요.')}catch(error){console.error('prepare google',error);showFailure('Google 인증 준비가 지연되고 있습니다. 다시 시도하거나 Marketing AI로 돌아가 주세요.')}}
