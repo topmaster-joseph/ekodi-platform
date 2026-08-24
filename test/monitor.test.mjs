@@ -29,7 +29,7 @@ test('checkSite uses an injected fetch implementation', async () => {
   assert.equal(result.responseTime, 140);
 });
 
-test('monitor covers official services, shared infrastructure, Marketing AI tenants, public sites and legacy aliases', () => {
+test('monitor covers activated services, shared infrastructure, private Marketing sites and aliases without prelaunch duplication', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
   assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
@@ -37,14 +37,20 @@ test('monitor covers official services, shared infrastructure, Marketing AI tena
   assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
   assert.equal(byId.get('publishing')?.[2], 'publishing.ekodi.kr');
   assert.equal(byId.get('books')?.[2], 'books.ekodi.kr');
+  assert.equal(byId.get('mail')?.[2], 'mail.ekodi.kr');
+  assert.equal(byId.get('live')?.[2], 'live.ekodi.kr');
+  assert.equal(byId.get('cloud')?.[2], 'cloud.ekodi.kr');
+  assert.equal(byId.get('insurance')?.[2], 'ins.ekodi.kr');
+  assert.equal(byId.get('media')?.[2], 'media.ekodi.kr');
+  assert.equal(byId.has('prelaunch-mail'), false);
+  assert.equal(byId.has('prelaunch-live'), false);
+  assert.equal(byId.has('prelaunch-cloud'), false);
   assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'jadam.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
-  assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.ekodi.kr');
-  assert.equal(byId.get('prelaunch-mail')?.[2], 'mail.ekodi.kr');
-  assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
-  assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');
+  assert.equal(byId.get('marketing-private-cgma')?.[2], 'cgma.ekodi.kr');
+  assert.equal(byId.has('marketing-public-cgma'), false);
   assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-jadam-')));
   assert.ok(SITE_DEFINITIONS.length >= 46);
 });
