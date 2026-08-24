@@ -6,6 +6,7 @@ on:
       - '.github/workflows/deploy-admin-ai-ops.yml'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
+      - 'user-ai-tier-panel.js'
       - 'admin-demand-loader.js'
       - 'admin-lazy-features.js'
       - 'admin-readable-command.js'
@@ -28,6 +29,7 @@ on:
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-health-menu.test.mjs'
       - 'test/admin-deploy-report.test.mjs'
+      - 'test/admin-ai-membership-menu.test.mjs'
   workflow_run:
     workflows: ['Deploy Admin True Lazy Gate']
     types: [completed]
@@ -67,9 +69,10 @@ jobs:
           node --check admin-authenticated-shell.js
           node --check admin-perf-diagnostics.js
           node --check ai-ops-admin.js
+          node --check user-ai-tier-panel.js
           node --check release-control-admin.js
           node --check system-health-admin.js
-          node --test test/admin-readable-command.test.mjs test/admin-true-lazy.test.mjs test/admin-health-menu.test.mjs test/admin-deploy-report.test.mjs
+          node --test test/admin-readable-command.test.mjs test/admin-true-lazy.test.mjs test/admin-health-menu.test.mjs test/admin-deploy-report.test.mjs test/admin-ai-membership-menu.test.mjs
           npm run check
 
       - name: Build fingerprinted Admin contract
@@ -93,6 +96,11 @@ jobs:
           grep -Fq "hashes: ['#health']" dist/admin-demand-loader.js
           ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
+          grep -Fq 'aimembers:' dist/admin-demand-loader.js
+          grep -Fq "label: 'AI 회원운영'" dist/admin-demand-loader.js
+          grep -Fq "hashes: ['#ai-membership']" dist/admin-demand-loader.js
+          grep -Fq 'AI 회원운영' dist/ai-ops-admin.js
+          grep -Fq '개인 API 여부' dist/ai-ops-admin.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '재구성' dist/admin-lazy-features.js
@@ -164,6 +172,10 @@ jobs:
             if verify_root \
               && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js']" \
               && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
+              && verify_asset 'admin-demand-loader.js' "label: 'AI 회원운영'" \
+              && verify_asset 'admin-demand-loader.js' "hashes: ['#ai-membership']" \
+              && verify_asset 'ai-ops-admin.js' 'AI 회원운영' \
+              && verify_asset 'ai-ops-admin.js' '개인 API 여부' \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = 'Health'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = 'System Health'" \
               && verify_asset 'system-health-admin.css' '.system-health-overall' \
@@ -173,7 +185,7 @@ jobs:
               && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-ops-side' \
               && verify_asset 'admin-perf-diagnostics.js' 'PerformanceObserver' \
               && verify_compact_without_readable_css; then
-              echo "Production Admin verified: version=$LIVE_VERSION, fingerprinted immutable assets, standalone Health, thin shell and flat AI Ops."
+              echo "Production Admin verified: version=$LIVE_VERSION, AI membership operations, fingerprinted immutable assets, standalone Health and thin shell."
               exit 0
             fi
             echo "Admin production verification pending (attempt $attempt/24, expected=$EXPECTED_VERSION, live=${LIVE_VERSION:-none})."
@@ -201,7 +213,7 @@ jobs:
           - production check: \`$outcome\`
           - upstream true-lazy gate: \`$UPSTREAM_OUTCOME\`
           - canonical: https://admin.ekodi.kr/
-          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
+          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · AI 회원운영
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
