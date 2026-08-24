@@ -12,8 +12,13 @@ test('AI membership operations is a separate lazy admin menu', async () => {
   assert.match(loader, /real: '\[data-section="ai-membership"\]'/);
   assert.match(loader, /hashes: \['#ai-membership'\]/);
   assert.match(loader, /scripts: \['ai-ops-admin\.js'\]/);
+  assert.match(loader, /insert: 'after-deployments'/);
 
   assert.match(panel, /button\.dataset\.section = SECTION/);
+  assert.match(panel, /data-demand-feature="aimembers"/);
+  assert.match(panel, /placeholder\.replaceWith\(button\)/);
+  assert.match(panel, /data-section="deployments"/);
+  assert.doesNotMatch(panel, /const aiOps = root\.querySelector\('\[data-section="aiops"\]'\)/);
   assert.match(panel, /AI 회원운영/);
   assert.match(panel, /회원단계/);
   assert.match(panel, /AI 허용량/);
