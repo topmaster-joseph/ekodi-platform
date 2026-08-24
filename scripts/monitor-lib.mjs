@@ -34,12 +34,21 @@ const MARKETING_TENANT_SITES = marketingTenants.tenants.map(row => [
 ]);
 
 const MARKETING_PUBLIC_SITES = marketingTenants.tenants
-  .filter(row => row.publicSiteDomain)
+  .filter(row => row.publicSiteDomain && row.visibility !== 'private')
   .map(row => [
     `marketing-public-${row.tenant}`,
     `${row.name} public site`,
     row.publicSiteDomain,
     `https://${row.publicSiteDomain}/`
+  ]);
+
+const MARKETING_PRIVATE_SITES = marketingTenants.tenants
+  .filter(row => row.privateSiteDomain && row.visibility === 'private')
+  .map(row => [
+    `marketing-private-${row.tenant}`,
+    `${row.name} private site`,
+    row.privateSiteDomain,
+    `https://${row.privateSiteDomain}/`
   ]);
 
 const MARKETING_ALIAS_SITES = marketingTenants.tenants.flatMap(row =>
@@ -78,6 +87,7 @@ export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
   ...SERVICE_SITES,
   ...MARKETING_TENANT_SITES,
   ...MARKETING_PUBLIC_SITES,
+  ...MARKETING_PRIVATE_SITES,
   ...MARKETING_ALIAS_SITES,
   ...LIVE_PRELAUNCH_SITES,
   ...EXTRA_SITES
@@ -100,7 +110,7 @@ export async function checkSite(
     const response = await fetchImpl(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(12000),
-      headers: { 'user-agent': 'EKODI-Monitor/3.1' }
+      headers: { 'user-agent': 'EKODI-Monitor/3.2' }
     });
     await response.body?.cancel();
     const responseTime = Math.round(clock() - started);
