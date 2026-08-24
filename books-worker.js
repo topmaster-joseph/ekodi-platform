@@ -10,7 +10,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/health') {
-      return new Response(JSON.stringify({ ok: true, service: 'ekodi-books', bookstore: true, publishingService: 'https://publishing.ekodi.kr/' }), {
+      return new Response(JSON.stringify({ ok: true, service: 'ekodi-books', bookstore: true, publishingNetwork: true, publishingService: 'https://publishing.ekodi.kr/' }), {
         headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
       });
     }
