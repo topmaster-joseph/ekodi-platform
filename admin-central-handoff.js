@@ -15,7 +15,7 @@
   const sidebar = document.querySelector('.sidebar');
   const loginForm = document.querySelector('#loginForm');
   const legacyLink = document.querySelector('.login-screen .legacy-link');
-  const superAdminAccountsNav = document.querySelector('#superAdminAccountsNav');
+  let superAdminAccountsNav = document.querySelector('#superAdminAccountsNav');
   let loginLink = document.querySelector('#centralAdminLogin');
   const logoutButton = document.querySelector('#logoutButton');
   const menuButton = document.querySelector('#menuButton');
@@ -46,8 +46,25 @@
     document.body.dataset.scope = scope.toLowerCase();
   }
   function syncSuperAdminNavigation(session = null) {
-    if (!superAdminAccountsNav) return;
     const allowed = location.hostname.toLowerCase() === 'admin.ekodi.kr' && session?.role === 'super_admin';
+    if (!superAdminAccountsNav && allowed) {
+      const nav = document.querySelector('.sidebar nav');
+      if (nav) {
+        const link = document.createElement('a');
+        link.id = 'superAdminAccountsNav';
+        link.className = 'nav';
+        link.href = '/admins';
+        link.dataset.section = 'admins';
+        link.append(document.createTextNode('♛ '));
+        const label = document.createElement('span');
+        label.textContent = '관리자 계정·권한';
+        link.append(label);
+        nav.append(link);
+        superAdminAccountsNav = link;
+        window.dispatchEvent(new CustomEvent('ekodi-nav-changed'));
+      }
+    }
+    if (!superAdminAccountsNav) return;
     superAdminAccountsNav.hidden = !allowed;
     superAdminAccountsNav.setAttribute('aria-hidden', allowed ? 'false' : 'true');
     superAdminAccountsNav.tabIndex = allowed ? 0 : -1;
