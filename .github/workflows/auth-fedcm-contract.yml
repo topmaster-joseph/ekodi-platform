@@ -45,7 +45,7 @@ jobs:
           grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq '/auth-router.js?v=20260824-return-origin-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260824-business-resume-1' auth-site/index.html
           grep -Fq "admin-auth.js?v=20260823-mobile-handoff-1" auth-site/auth-router.js
           grep -Fq "marketing-auth-hotfix.js?v=20260824-return-origin-1" auth-site/auth-router.js
           grep -Fq "client-auth.js?v=20260824-return-origin-1" auth-site/auth-router.js
