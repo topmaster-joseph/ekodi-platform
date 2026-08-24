@@ -10,6 +10,7 @@ const client=read('auth-site/client-auth.js');
 const business=read('auth-site/business-auth.js');
 const author=read('auth-site/author-auth.js');
 const marketing=read('auth-site/marketing-auth-hotfix.js');
+const myShell=read('my/auth-session-shell.js');
 
 test('normal user login is a pass-through instead of an auth dashboard stop',()=>{
   assert.doesNotMatch(router,/marketingHomeMode/);
@@ -49,8 +50,18 @@ test('user-site special auth modules preserve only allowed same-service HTTPS re
 test('existing central sessions bypass repeated Google selection on user services',()=>{
   assert.match(client,/sb\.auth\.getSession/);
   assert.match(client,/if\(await handoffExistingSession\(\)\)return/);
-  assert.match(business,/const existing=await session\(\);if\(existing\)/);
+  assert.match(business,/const existing=await session\(\);\s*if\(existing\)/);
   assert.match(author,/const existing=await session\(\)/);
+  assert.match(myShell,/searchParams\.set\('probe','1'\)/);
+  assert.match(router,/params\.get\('probe'\)==='1'&&site==='my'/);
+});
+
+test('first client-service visit is confirmation, not a second Google authentication',()=>{
+  assert.match(router,/ekodi:client-confirmed:/);
+  assert.match(router,/확인하고 시작/);
+  assert.match(router,/\/session\/handoff/);
+  assert.match(router,/markConfirmed\(site\)/);
+  assert.match(router,/site==='my'\|\|params\.get\('manage'\)==='1'/);
 });
 
 test('Marketing keeps credential handoff out of the browser URL',()=>{
@@ -60,7 +71,7 @@ test('Marketing keeps credential handoff out of the browser URL',()=>{
 });
 
 test('modified auth modules remain syntactically valid',()=>{
-  for(const path of ['auth-site/auth-router.js','auth-site/client-auth.js','auth-site/business-auth.js','auth-site/author-auth.js']){
+  for(const path of ['auth-site/auth-router.js','auth-site/client-auth.js','auth-site/business-auth.js','auth-site/author-auth.js','my/auth-session-shell.js']){
     const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
