@@ -6,12 +6,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'scripts/monitor.mjs'
-      - 'scripts/monitor-lib.mjs'
-      - 'admin.html'
-      - 'script.js'
-      - '.github/workflows/monitor.yml'
 
 permissions:
   contents: write
@@ -29,9 +23,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Verify monitor logic only
-        run: node --test test/monitor.test.mjs
-      - name: Check EKODI services
+      - name: Verify monitor registry and logic
+        run: |
+          node --check scripts/monitor-lib.mjs
+          node --test test/monitor.test.mjs
+      - name: Check EKODI services, shared infrastructure and Marketing AI tenants
         run: npm run monitor
       - name: Publish latest status without deployment cascade
         run: |
