@@ -111,6 +111,7 @@ const PUBLIC_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
+  "connect-src 'self' https://api.ekodi.kr",
   "img-src 'self' data:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
