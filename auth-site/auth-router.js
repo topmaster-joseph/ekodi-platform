@@ -41,7 +41,7 @@ async function loadMarketingAuth(){
 
 if(site==='admin')await import('./admin-auth.js?v=20260823-mobile-handoff-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
-else if(site==='business')await import('./business-auth.js?v=20260817-business-live-1');
+else if(site==='business')await import('./business-auth.js?v=20260824-business-resume-1');
 else if(site==='my'||site==='work'||site==='community'||site==='cgma-client'||site==='jadam-client'||site==='pizzamaru-client'||site==='yogurt-client')await import('./client-auth.js?v=20260824-return-origin-1');
 else{
   const manifestRealm=await manifestService(site);
