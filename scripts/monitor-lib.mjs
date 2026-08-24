@@ -17,6 +17,18 @@ const INFRA_SITES = [
   ['shell-workspace', 'EKODI Workspace CSS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/workspace.css']
 ];
 
+const BUSINESS_CHAIN_SITES = [
+  ['business-health', 'Business OS Health', 'business.ekodi.kr', 'https://business.ekodi.kr/health'],
+  ['business-config', 'Business OS Runtime Config', 'business.ekodi.kr', 'https://business.ekodi.kr/config.js'],
+  ['business-workspaces', 'Business OS Workspaces', 'business.ekodi.kr', 'https://business.ekodi.kr/api/workspaces'],
+  ['business-auth-entry', 'Business OS Auth Entry', 'auth.ekodi.kr', 'https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F'],
+  ['business-auth-module', 'Business OS Auth Module', 'auth.ekodi.kr', 'https://auth.ekodi.kr/business-auth.js?v=20260824-business-resume-1'],
+  ['business-biz', 'EKODIBIZ Business Hub', 'biz.ekodi.kr', 'https://biz.ekodi.kr/'],
+  ['business-pay', 'EKODI Business Pay', 'pay.biz.ekodi.kr', 'https://pay.biz.ekodi.kr/'],
+  ['business-mail', 'EKODI Business Mail', 'mail.biz.ekodi.kr', 'https://mail.biz.ekodi.kr/'],
+  ['business-trade', 'EKODI Business Trade', 'trade.biz.ekodi.kr', 'https://trade.biz.ekodi.kr/']
+];
+
 const SERVICE_SITES = EKODI_SERVICE_MANIFEST.services
   .filter(service => service.state !== 'planned')
   .map(service => [
@@ -84,6 +96,7 @@ function uniqueSites(sites) {
 
 export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
   ...INFRA_SITES,
+  ...BUSINESS_CHAIN_SITES,
   ...SERVICE_SITES,
   ...MARKETING_TENANT_SITES,
   ...MARKETING_PUBLIC_SITES,
