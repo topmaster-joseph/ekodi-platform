@@ -93,9 +93,17 @@ function validateRegistry(registry) {
 
 export async function loadHomepageServices() {
   const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
-  return registry.services
+  const candidates = registry.services
     .filter(service => service.productionVerified === true && service.status === 'live')
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.id.localeCompare(b.id));
+  const services = candidates.filter(service => service.homepage === true);
+  Object.defineProperty(services, 'presentationCandidates', {
+    value: candidates,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  return services;
 }
 
 function serviceIsClickable(service) {
@@ -127,8 +135,9 @@ function renderServiceCard(service) {
 }
 
 export function renderServiceCards(services) {
+  const renderServices = Array.isArray(services?.presentationCandidates) ? services.presentationCandidates : services;
   return CATEGORY_DEFINITIONS.map(category => {
-    const categoryServices = services.filter(service => service.category === category.id);
+    const categoryServices = renderServices.filter(service => service.category === category.id);
     if (!categoryServices.length) return '';
     const cards = categoryServices.map(renderServiceCard).join('\n');
     const visibleCount = categoryServices.filter(service => service.homepage === true).length;
