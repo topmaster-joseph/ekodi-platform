@@ -75,6 +75,12 @@ function cloudflareReady(env) {
   return Boolean(env.CLOUDFLARE_SECRET_MANAGER_TOKEN && env.CLOUDFLARE_ACCOUNT_ID);
 }
 
+function maskId(value) {
+  const text = String(value || '');
+  if (text.length <= 10) return text ? '••••' : '';
+  return `${text.slice(0, 4)}…${text.slice(-4)}`;
+}
+
 function cfUrl(env, scriptName, suffix = '') {
   const account = encodeURIComponent(String(env.CLOUDFLARE_ACCOUNT_ID || ''));
   const script = encodeURIComponent(scriptName);
@@ -86,6 +92,108 @@ async function cfRequest(env, url, init = {}) {
   headers.set('authorization', `Bearer ${env.CLOUDFLARE_SECRET_MANAGER_TOKEN}`);
   headers.set('content-type', 'application/json');
   return fetch(url, { ...init, headers });
+}
+
+async function cfJson(env, url) {
+  const response = await cfRequest(env, url, { method:'GET' });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success === false) {
+    const error = new Error(`Cloudflare inventory lookup failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+async function cloudflareInventory(env) {
+  const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || '');
+  const fallbackWorkers = allowedScripts(env).map(name => ({ name, allowed:true, source:'configured' }));
+  const result = {
+    configured:cloudflareReady(env),
+    account:{ name:String(env.CLOUDFLARE_ACCOUNT_LABEL || 'EKODI Cloudflare'), idMasked:maskId(accountId) },
+    zones:[],
+    workers:fallbackWorkers,
+    warnings:[],
+  };
+  if (!result.configured) return result;
+  const accountUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}`;
+  const zonesUrl = `https://api.cloudflare.com/client/v4/zones?account.id=${encodeURIComponent(accountId)}&per_page=50`;
+  const workersUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts`;
+  const [account, zones, workers] = await Promise.allSettled([
+    cfJson(env, accountUrl),
+    cfJson(env, zonesUrl),
+    cfJson(env, workersUrl),
+  ]);
+  if (account.status === 'fulfilled' && account.value?.result) {
+    result.account.name = String(account.value.result.name || result.account.name);
+  } else if (account.status === 'rejected') result.warnings.push('account_read_unavailable');
+  if (zones.status === 'fulfilled') {
+    result.zones = (zones.value?.result || []).map(zone => ({
+      idMasked:maskId(zone.id), name:String(zone.name || ''), status:String(zone.status || 'unknown')
+    })).filter(zone => zone.name);
+  } else result.warnings.push('zone_read_unavailable');
+  if (workers.status === 'fulfilled') {
+    const allowed = new Set(allowedScripts(env));
+    const rows = Array.isArray(workers.value?.result) ? workers.value.result : [];
+    result.workers = rows.map(worker => {
+      const name = String(worker.id || worker.name || '');
+      return { name, allowed:allowed.has(name), source:'cloudflare' };
+    }).filter(worker => worker.name);
+    for (const name of allowed) {
+      if (!result.workers.some(worker => worker.name === name)) result.workers.push({ name, allowed:true, source:'configured' });
+    }
+  } else result.warnings.push('worker_list_unavailable');
+  return result;
+}
+
+async function githubInventory(env) {
+  const owner = String(env.GITHUB_CONTROL_OWNER || 'topmaster-joseph').trim();
+  const token = String(env.GITHUB_CONTROL_TOKEN || '').trim();
+  const allowed = new Set(splitList(env.GITHUB_CONTROL_ALLOWED_REPOS));
+  const headers = new Headers({
+    accept:'application/vnd.github+json',
+    'user-agent':'EKODI-Admin-Control-Plane',
+    'x-github-api-version':'2022-11-28',
+  });
+  if (token) headers.set('authorization', `Bearer ${token}`);
+  const endpoint = token
+    ? 'https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member'
+    : `https://api.github.com/users/${encodeURIComponent(owner)}/repos?per_page=100&sort=updated`;
+  try {
+    const response = await fetch(endpoint, { headers, method:'GET' });
+    if (!response.ok) return { configured:Boolean(token), owner, repositories:[], warning:`github_http_${response.status}`, mode:token ? 'authenticated' : 'public' };
+    const rows = await response.json().catch(() => []);
+    const repositories = (Array.isArray(rows) ? rows : []).map(repo => ({
+      name:String(repo.name || ''),
+      fullName:String(repo.full_name || ''),
+      private:Boolean(repo.private),
+      defaultBranch:String(repo.default_branch || 'main'),
+      updatedAt:String(repo.updated_at || ''),
+      url:String(repo.html_url || ''),
+      allowed:allowed.size ? allowed.has(String(repo.full_name || '')) || allowed.has(String(repo.name || '')) : String(repo.owner?.login || '') === owner,
+    })).filter(repo => repo.name);
+    return { configured:Boolean(token), owner, repositories, warning:'', mode:token ? 'authenticated' : 'public' };
+  } catch (error) {
+    return { configured:Boolean(token), owner, repositories:[], warning:'github_inventory_unavailable', mode:token ? 'authenticated' : 'public' };
+  }
+}
+
+async function providerInventory(env) {
+  const [cloudflare, github] = await Promise.all([
+    cloudflareInventory(env).catch(() => ({ configured:cloudflareReady(env), account:{ name:String(env.CLOUDFLARE_ACCOUNT_LABEL || 'EKODI Cloudflare'), idMasked:maskId(env.CLOUDFLARE_ACCOUNT_ID) }, zones:[], workers:allowedScripts(env).map(name => ({ name, allowed:true, source:'configured' })), warnings:['inventory_unavailable'] })),
+    githubInventory(env),
+  ]);
+  return {
+    schemaVersion:1,
+    controlPlane:'EKODI Admin AI',
+    primaryAgent:'chief',
+    specialists:['infrastructure','development','devops','security','data','ai_gateway'],
+    cloudflare,
+    github,
+    highImpactRequiresHuman:true,
+    providerConsoles:'advanced_or_emergency_only',
+    generatedAt:new Date().toISOString(),
+  };
 }
 
 async function secretExists(env, scriptName, name) {
@@ -121,9 +229,14 @@ export async function handleCloudflareSecretControl(request, env) {
   if (!auth.session) return auth.response;
 
   if (url.pathname === `${BASE_PATH}/status` && request.method === 'GET') {
+    const inventory = await cloudflareInventory(env).catch(() => null);
     return json({
-      schemaVersion:1,
+      schemaVersion:2,
       configured:cloudflareReady(env),
+      account:inventory?.account || { name:String(env.CLOUDFLARE_ACCOUNT_LABEL || 'EKODI Cloudflare'), idMasked:maskId(env.CLOUDFLARE_ACCOUNT_ID) },
+      zones:inventory?.zones || [],
+      workers:inventory?.workers || allowedScripts(env).map(name => ({ name, allowed:true, source:'configured' })),
+      inventoryWarnings:inventory?.warnings || ['inventory_unavailable'],
       scripts:allowedScripts(env),
       types:[{ value:'secret_text', label:'Secret' }],
       bytes:[32,48,64],
@@ -132,6 +245,10 @@ export async function handleCloudflareSecretControl(request, env) {
       existingSecretRequiresExplicitReplace:true,
       controllerCredentialsProtected:true,
     }, 200, auth.response.headers);
+  }
+
+  if (url.pathname === `${BASE_PATH}/providers` && request.method === 'GET') {
+    return json(await providerInventory(env), 200, auth.response.headers);
   }
 
   if (url.pathname !== `${BASE_PATH}/generate` || request.method !== 'POST') return null;
