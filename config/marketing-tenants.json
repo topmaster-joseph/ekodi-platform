@@ -92,7 +92,8 @@
       "domain": "cgma.ai.ekodi.kr",
       "landingPath": "/market-ai",
       "domainEntitlement": "organization",
-      "publicSiteDomain": "cgma.ekodi.kr",
+      "visibility": "private",
+      "privateSiteDomain": "cgma.ekodi.kr",
       "legacyDomains": [
         "marketing.cheonggye.ekodi.kr"
       ],
