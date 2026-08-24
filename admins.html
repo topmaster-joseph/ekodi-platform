@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="EKODI 생태계 최고관리자와 운영관리자 Google 계정 권한을 관리합니다.">
+  <meta name="theme-color" content="#07111f">
+  <title>관리자 계정·권한 · EKODI Control Center</title>
+  <link rel="stylesheet" href="/control-center.css">
+  <link rel="stylesheet" href="/admin-accounts.css">
+</head>
+<body class="admin-accounts-page">
+  <header class="accounts-topbar">
+    <a class="accounts-back" href="/">← Control Center</a>
+    <div>
+      <p class="accounts-kicker">EKODI CORE ACCESS</p>
+      <h1>관리자 계정·권한</h1>
+    </div>
+    <span class="accounts-role-badge" id="currentRole">확인 중</span>
+  </header>
+
+  <main class="accounts-shell">
+    <section class="accounts-hero">
+      <div class="accounts-hero-icon" aria-hidden="true">♛</div>
+      <div>
+        <p class="accounts-kicker">PLATFORM SUPER ADMIN</p>
+        <h2>생태계 전체 권한은 여기에서만 관리합니다.</h2>
+        <p>교회·비즈·연구소·무역 등 하위서비스의 테넌트 역할과 분리된 EKODI Core 전역 관리자 허용목록입니다. 등록된 Google 계정만 관리자 인증을 통과할 수 있습니다.</p>
+      </div>
+    </section>
+
+    <section class="accounts-status" id="statusBox" aria-live="polite">
+      <div class="accounts-status-icon" aria-hidden="true">◌</div>
+      <div><strong id="statusTitle">관리자 권한을 확인하고 있습니다.</strong><p id="statusCopy">인증된 최고관리자 세션과 Google 허용목록을 안전하게 불러옵니다.</p></div>
+    </section>
+
+    <section class="accounts-section" id="management" hidden>
+      <div class="accounts-section-head">
+        <div><p class="accounts-kicker">ADD ADMIN</p><h2>관리자 Google 계정 등록</h2></div>
+        <p>비밀번호는 만들지 않습니다. 이메일을 먼저 등록한 뒤 해당 Google 계정으로 통합인증센터에서 로그인합니다.</p>
+      </div>
+      <form id="addAdminForm" class="accounts-add-form">
+        <label>Google 계정 이메일
+          <input id="adminEmail" name="email" type="email" autocomplete="off" placeholder="name@example.com" required>
+        </label>
+        <label>권한
+          <select id="adminRole" name="role">
+            <option value="operator">운영관리자</option>
+            <option value="viewer">조회관리자</option>
+            <option value="super_admin">최고관리자</option>
+          </select>
+        </label>
+        <button class="accounts-primary" type="submit" id="addAdminButton">관리자 등록</button>
+      </form>
+      <p class="accounts-help">최고관리자는 관리자 계정·권한을 변경할 수 있습니다. 운영관리자와 조회관리자는 이 화면에서 최고권한을 변경할 수 없습니다.</p>
+    </section>
+
+    <section class="accounts-section" id="accountsListSection" hidden>
+      <div class="accounts-section-head">
+        <div><p class="accounts-kicker">ACCESS LIST</p><h2>등록된 관리자</h2></div>
+        <button class="accounts-secondary" type="button" id="refreshAccounts">↻ 새로고침</button>
+      </div>
+      <div class="accounts-list" id="accountsList"></div>
+    </section>
+
+    <section class="accounts-guardrails">
+      <article><span aria-hidden="true">🔐</span><div><strong>마지막 최고관리자 보호</strong><p>활성 최고관리자는 항상 최소 1명 이상 유지됩니다.</p></div></article>
+      <article><span aria-hidden="true">🧭</span><div><strong>하위서비스 역할 분리</strong><p>플랫폼 최고관리자 권한을 교회·비즈·연구소 등 테넌트 역할로 자동 전파하지 않습니다.</p></div></article>
+      <article><span aria-hidden="true">🧾</span><div><strong>변경 이력 기록</strong><p>관리자 등록과 권한·상태 변경은 Core 감사로그에 기록됩니다.</p></div></article>
+    </section>
+  </main>
+
+  <script src="/admin-central-handoff.js"></script>
+  <script type="module" src="/admin-accounts.js"></script>
+</body>
+</html>
