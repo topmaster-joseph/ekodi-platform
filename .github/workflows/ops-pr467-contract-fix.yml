@@ -1,0 +1,103 @@
+name: PR467 Contract Fix
+
+on:
+  push:
+    branches:
+      - feat/all-user-services-operating-baseline-20260824
+    paths:
+      - '.github/workflows/ops-pr467-contract-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/all-user-services-operating-baseline-20260824
+      - name: Apply validated contract fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path)
+              text=p.read_text()
+              if old not in text:
+                  raise SystemExit(f'missing expected block in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old,new,1))
+
+          # Keep seamless SSO only when there is one unambiguous authorized workspace.
+          old="""    if(authorized.length>0){
+              routing=true;showProcessing('Google 인증이 완료되었습니다. 원래 이용하던 서비스로 돌아가는 중입니다.');
+              try{await handoffToService();return;}
+              catch(e){
+                console.error('seamless central handoff',e);
+                routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();
+                $('serviceBadge').textContent=workspaces.length>1?`${workspaces.length}개 공간`:'연결 재시도';
+                notice('accessStatus','자동 복귀가 지연되어 사용할 공간을 선택할 수 있게 열었습니다.','warn');
+                if(workspaces.length===1)show('approvedActions',true);
+                return;
+              }
+            }
+          """
+          new="""    if(authorized.length===1&&workspaces.length===1){
+              routing=true;showProcessing('Google 인증이 완료되었습니다. 원래 이용하던 서비스로 돌아가는 중입니다.');
+              try{await handoffToService(authorized[0].workspace_key);return;}
+              catch(e){
+                console.error('seamless central handoff',e);
+                routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();
+                $('serviceBadge').textContent='연결 재시도';
+                notice('accessStatus','자동 복귀가 지연되어 사용할 공간을 선택할 수 있게 열었습니다.','warn');
+                show('approvedActions',true);
+                return;
+              }
+            }
+            if(authorized.length>0){
+              routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();
+              $('serviceBadge').textContent=`${workspaces.length}개 공간`;
+              notice('accessStatus','이 서비스에서 사용할 공간을 선택해 주세요.');
+              return;
+            }
+          """
+          replace('auth-site/auth.js', old, new)
+
+          # The central auth entry now uses a semantic current cache-bust token.
+          p=Path('test/auth-person-workspace-contract.test.mjs')
+          text=p.read_text()
+          text=text.replace("assert.match(authHtml,/auth-router\\.js\\?v=20260815-mall-seller-return-1&cb=20260823-mobile-admin-handoff-1&workspace=20260817-sso-1&entry=20260817-workspace-entry-1/);", "assert.match(authHtml,/auth-router\\.js\\?v=20260824-return-origin-1/);")
+          text=text.replace("assert.match(authHtml,/entry=20260817-workspace-entry-1/);", "assert.match(authHtml,/auth-router\\.js\\?v=20260824-return-origin-1/);")
+          p.write_text(text)
+
+          # Client auth intentionally supports an explicit HTTPS origin allowlist.
+          p=Path('test/seamless-sso-contract.test.mjs')
+          text=p.read_text()
+          text=text.replace("assert.match(client,/target\\.origin!==fallback\\.origin/);", "assert.match(client,/allowedOrigins=new Set/);\n  assert.match(client,/!allowedOrigins\\.has\\(target\\.origin\\)/);")
+          p.write_text(text)
+
+          # Public Marketing sites remain monitored even when their AI workspace is private.
+          p=Path('scripts/monitor-lib.mjs')
+          text=p.read_text().replace(".filter(row => row.publicSiteDomain && row.visibility !== 'private')", ".filter(row => row.publicSiteDomain)")
+          p.write_text(text)
+
+          # Trade canonical host is trade.ekodi.kr; the biz host is a compatibility redirect.
+          p=Path('.github/workflows/stage-shared-site-shell.yml')
+          text=p.read_text()
+          text=text.replace("verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING'", "verify_shell 'trade.ekodi.kr' 'EKODI GLOBAL TRADING'")
+          text=text.replace("echo 'Shared-site Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'", "echo 'Shared-site canonical Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'")
+          p.write_text(text)
+          PY
+
+          node --check auth-site/auth.js
+          node --test test/seamless-sso-contract.test.mjs test/auth-person-workspace-contract.test.mjs test/monitor.test.mjs
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add auth-site/auth.js test/seamless-sso-contract.test.mjs test/auth-person-workspace-contract.test.mjs scripts/monitor-lib.mjs .github/workflows/stage-shared-site-shell.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: align auth safety and staging contracts'
+          git push origin HEAD:feat/all-user-services-operating-baseline-20260824
