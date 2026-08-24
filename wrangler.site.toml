@@ -33,6 +33,10 @@ pattern = "pay.biz.ekodi.kr"
 custom_domain = true
 
 [[routes]]
+pattern = "tax.ekodi.kr"
+custom_domain = true
+
+[[routes]]
 pattern = "messenger.ekodi.kr"
 custom_domain = true
 
