@@ -165,7 +165,7 @@ export async function handleHomepagePresentation(request, env) {
   if (path !== PUBLIC_PATH && path !== CONTROL_PATH) return null;
 
   const origin = allowedOrigin(request, env, path === PUBLIC_PATH);
-  if (request.method === 'OPTIONS') return json({ ok: true }, 204, origin, path === PUBLIC_PATH ? 'GET, OPTIONS' : 'GET, PUT, OPTIONS');
+  if (request.method === 'OPTIONS') return json({ ok: true }, 200, origin, path === PUBLIC_PATH ? 'GET, OPTIONS' : 'GET, PUT, OPTIONS');
   if (path === PUBLIC_PATH) {
     if (request.method !== 'GET') return json({ error: 'Method Not Allowed' }, 405, origin, 'GET, OPTIONS');
     return publicPresentation(request, env);
