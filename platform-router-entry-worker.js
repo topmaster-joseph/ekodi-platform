@@ -1,8 +1,10 @@
 import legacyPlatformRouter from './platform-router-worker.js';
+import financeEntryWorker from './finance-entry-worker.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
+const TAX_HOST='tax.ekodi.kr';
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -20,6 +22,9 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+    if(host===TAX_HOST&&url.pathname.startsWith('/api/finance/tax-')){
+      return financeEntryWorker.fetch(request,env,ctx);
+    }
     if(host===MESSENGER_HOST&&request.method==='GET'){
       if(url.pathname==='/'||url.pathname===''){
         const response=await withReleaseMarker(messengerUserPage());
