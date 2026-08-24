@@ -28,6 +28,14 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    aimembers: {
+      label: 'AI 회원운영', icon: '◈',
+      styles: ['ai-ops-admin.css'],
+      scripts: ['ai-ops-admin.js'],
+      real: '[data-section="ai-membership"]',
+      hashes: ['#ai-membership'],
+      insert: 'after-deployments',
+    },
     health: {
       label: 'Health', icon: '◉',
       styles: ['system-health-admin.css'],
@@ -170,6 +178,10 @@
       const anchor = nav.querySelector('[data-demand-feature="security"], [data-section="security"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
+    if (feature.insert === 'after-deployments') {
+      const anchor = nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');
+      if (anchor) return anchor.insertAdjacentElement('afterend', button);
+    }
     if (feature.insert === 'after-services') {
       const anchor = nav.querySelector('[data-section="services"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
@@ -280,7 +292,7 @@
     button.type = 'button';
     button.className = 'nav';
     button.dataset.demandFeature = key;
-    button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key;
+    button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
     button.append(document.createTextNode(`${feature.icon} `));
     const label = document.createElement('span');
     label.textContent = feature.label;
