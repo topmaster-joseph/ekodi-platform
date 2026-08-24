@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildPayload, checkSite, classifyStatus, shouldPublish } from '../scripts/monitor-lib.mjs';
+import { buildPayload, checkSite, classifyStatus, shouldPublish, SITE_DEFINITIONS } from '../scripts/monitor-lib.mjs';
 
 test('classifyStatus maps response health consistently', () => {
   assert.equal(classifyStatus(200, 100), 'online');
@@ -27,6 +27,22 @@ test('checkSite uses an injected fetch implementation', async () => {
   });
   assert.equal(result.status, 'online');
   assert.equal(result.responseTime, 140);
+});
+
+test('monitor covers official services, shared infrastructure, Marketing AI tenants and legacy aliases', () => {
+  const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
+  assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
+  assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
+  assert.equal(byId.get('shell-js')?.[3], 'https://shell.ekodi.kr/shell.js');
+  assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
+  assert.equal(byId.get('publishing')?.[2], 'publishing.ekodi.kr');
+  assert.equal(byId.get('books')?.[2], 'books.ekodi.kr');
+  assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'jadam.ai.ekodi.kr');
+  assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
+  assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
+  assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
+  assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-jadam-')));
+  assert.ok(SITE_DEFINITIONS.length >= 35);
 });
 
 test('shouldPublish ignores timing jitter but publishes state changes and refreshes stale data', () => {
