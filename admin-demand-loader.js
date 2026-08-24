@@ -34,7 +34,7 @@
       scripts: ['ai-ops-admin.js'],
       real: '[data-section="ai-membership"]',
       hashes: ['#ai-membership'],
-      insert: 'after-aiops',
+      insert: 'after-health',
     },
     health: {
       label: 'Health', icon: '◉',
@@ -42,7 +42,7 @@
       scripts: ['system-health-admin.js'],
       real: '[data-section="health"]',
       hashes: ['#health'],
-      insert: 'after-aimembers',
+      insert: 'after-aiops',
     },
     security: {
       label: 'Security', icon: '◆',
@@ -50,7 +50,7 @@
       scripts: ['admin-secret-generator.js'],
       real: '[data-section="security"]',
       hashes: ['#security'],
-      insert: 'after-health',
+      insert: 'after-aimembers',
     },
     deployments: {
       label: 'Deployments', icon: '↑',
