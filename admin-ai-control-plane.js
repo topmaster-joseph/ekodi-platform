@@ -63,9 +63,11 @@
     const sync=()=>{
       if(!original||!workerSelect?.value)return;
       const target=[...original.options].find(option=>option.value===workerSelect.value);
-      if(target)original.value=workerSelect.value;
+      if(target){original.value=workerSelect.value;original.dispatchEvent(new Event('change',{bubbles:true}))}
     };
-    workerSelect?.addEventListener('change',sync);sync();
+    workerSelect?.addEventListener('change',sync);
+    if(original)new MutationObserver(sync).observe(original,{childList:true,subtree:true});
+    queueMicrotask(sync);
     const oldField=original?.closest('.admin-secret-field');
     if(oldField){oldField.style.display='none';oldField.setAttribute('aria-hidden','true')}
   }
