@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-24T14:43:00+09:00",
+  "updatedAt": "2026-08-24T15:38:00+09:00",
   "services": [
     {"id":"biz","name":"에코디비즈","label":"Business","domain":"biz.ekodi.kr","href":"https://biz.ekodi.kr","icon":"B","qaVerified":false,"healthCheck":true},
     {"id":"business","name":"EKODI Business OS","label":"AI Business OS","domain":"business.ekodi.kr","href":"https://business.ekodi.kr","icon":"O","qaVerified":true,"healthCheck":true},
@@ -7,6 +7,7 @@
     {"id":"mall","name":"에코디몰","label":"Mall","domain":"mall.ekodi.kr","href":"https://mall.ekodi.kr","icon":"M","qaVerified":true,"healthCheck":true},
     {"id":"pay","name":"에코디결제","label":"Payments","domain":"pay.ekodi.kr","href":"https://pay.ekodi.kr","icon":"P","qaVerified":false,"healthCheck":true},
     {"id":"books","name":"에코디서점","label":"Bookstore","domain":"books.ekodi.kr","href":"https://books.ekodi.kr","icon":"K","qaVerified":true,"healthCheck":true},
+    {"id":"publishing","name":"에코디출판","label":"Publishing","domain":"publishing.ekodi.kr","href":"https://publishing.ekodi.kr","icon":"P","qaVerified":false,"healthCheck":true},
     {"id":"church","name":"에코디교회","label":"Church","domain":"church.ekodi.kr","href":"https://church.ekodi.kr","icon":"C","qaVerified":true,"healthCheck":true},
     {"id":"lab","name":"에코디연구소","label":"Lab","domain":"lab.ekodi.kr","href":"https://lab.ekodi.kr","icon":"L","qaVerified":true,"healthCheck":true},
     {"id":"mission","name":"에코디선교회","label":"Mission","domain":"mission.ekodi.kr","href":"https://mission.ekodi.kr","icon":"S","qaVerified":false,"healthCheck":true},
