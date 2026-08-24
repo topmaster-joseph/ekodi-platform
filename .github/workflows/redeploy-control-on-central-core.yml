@@ -1,0 +1,43 @@
+name: Redeploy Control on Central Core Change
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'core-permission.js'
+      - 'core-workflow.js'
+      - 'core-evidence.js'
+      - 'ekodi-service-manifest.js'
+      - 'scripts/validate-central-modules.mjs'
+      - '.github/workflows/redeploy-control-on-central-core.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: central-core-control-dispatch
+  cancel-in-progress: false
+
+jobs:
+  validate-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate central Core modules before release routing
+        run: |
+          set -euo pipefail
+          node --check core-permission.js
+          node --check core-workflow.js
+          node --check core-evidence.js
+          node --check scripts/validate-central-modules.mjs
+          node scripts/validate-central-modules.mjs
+      - name: Dispatch existing guarded Control API release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-control-api.yml --ref main
