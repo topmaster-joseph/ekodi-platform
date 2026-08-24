@@ -6,6 +6,9 @@ on:
       - 'supabase/functions/identity-api/**'
       - 'site-worker.js'
       - 'admin-central-handoff.js'
+      - 'admins.html'
+      - 'admin-accounts.js'
+      - 'admin-accounts.css'
       - 'control-center.html'
       - 'customer-entry-worker.js'
       - 'customer-federated-auth.js'
@@ -33,6 +36,7 @@ jobs:
           node --check auth-site/client-auth.js
           node --check site-worker.js
           node --check admin-central-handoff.js
+          node --check admin-accounts.js
           node --check customer-entry-worker.js
           node --check customer-federated-auth.js
           node --check api-worker.js
@@ -99,7 +103,9 @@ jobs:
           grep -Fq "sessionStorage.setItem('ekodi-auth-token'" admin-central-handoff.js
           grep -Fq 'https://auth.ekodi.kr/?site=admin' admin-central-handoff.js
           grep -Fq 'admin-central-handoff.js' control-center.html
-          grep -Fq "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co" site-worker.js
+          grep -Fq "connect-src 'self' https://api.ekodi.kr" site-worker.js
+          grep -Fq 'https://finance-api.ekodi.kr' site-worker.js
+          grep -Fq 'https://renzehysxirjilvdxacv.supabase.co' site-worker.js
           grep -Fq '/auth-workspace-target.js' site-worker.js
           grep -Fq 'functions/v1/access-api' auth-site/auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/auth.js
