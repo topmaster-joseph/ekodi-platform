@@ -41,6 +41,10 @@ export function getCoreStatus(request, env) {
   return coreRequest(request, env, '/status');
 }
 
+export function getCoreContracts(request, env) {
+  return coreRequest(request, env, '/contracts');
+}
+
 export function getCoreMe(request, env) {
   return coreRequest(request, env, '/me');
 }
@@ -57,4 +61,33 @@ export function getCoreOrganization(request, env, slug) {
     throw error;
   }
   return coreRequest(request, env, `/organizations/${encodeURIComponent(normalized)}`);
+}
+
+export function getCorePermission(request, env, { serviceId, action = 'read', capability = '', scope = 'service', reversible = true } = {}) {
+  const service = String(serviceId || '').trim().toLowerCase();
+  const normalizedAction = String(action || 'read').trim().toLowerCase();
+  const normalizedCapability = String(capability || '').trim().toLowerCase();
+  if (!/^[a-z0-9-]{1,80}$/.test(service)) {
+    const error = new Error('Invalid EKODI Core service id');
+    error.code = 'CORE_SERVICE_ID_INVALID';
+    throw error;
+  }
+  if (!/^[a-z0-9._-]{1,80}$/.test(normalizedAction)) {
+    const error = new Error('Invalid EKODI Core action');
+    error.code = 'CORE_ACTION_INVALID';
+    throw error;
+  }
+  if (normalizedCapability && !/^[a-z0-9._-]{1,120}$/.test(normalizedCapability)) {
+    const error = new Error('Invalid EKODI Core capability');
+    error.code = 'CORE_CAPABILITY_INVALID';
+    throw error;
+  }
+  const params = new URLSearchParams({
+    service,
+    action: normalizedAction,
+    scope: scope === 'tenant' ? 'tenant' : 'service',
+    reversible: reversible === false ? 'false' : 'true',
+  });
+  if (normalizedCapability) params.set('capability', normalizedCapability);
+  return coreRequest(request, env, `/permission?${params.toString()}`);
 }
