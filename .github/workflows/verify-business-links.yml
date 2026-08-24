@@ -1,0 +1,140 @@
+name: Verify Business OS Links
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 0 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'business/**'
+      - 'business-worker.js'
+      - 'business-live-worker.js'
+      - 'auth-site/index.html'
+      - 'auth-site/auth-router.js'
+      - 'auth-site/business-auth.js'
+      - 'site-worker.js'
+      - 'scripts/build.mjs'
+      - 'wrangler.business.toml'
+      - 'supabase/functions/business-handoff-api/**'
+      - 'config/ecosystem-services.json'
+      - 'service-registry.json'
+      - '.github/workflows/verify-business-links.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-business-links
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Business OS auth and link source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check business-worker.js
+          node --check business-live-worker.js
+          node --check business/app.js
+          node --check auth-site/auth-router.js
+          node --check auth-site/business-auth.js
+          node --check site-worker.js
+
+          grep -Fq 'site=business&amp;return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' business/index.html
+          grep -Fq 'AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"' wrangler.business.toml
+          grep -Fq "business-auth.js?v=20260824-business-resume-1" auth-site/auth-router.js
+          grep -Fq "'/business-auth.js'" site-worker.js
+          grep -Fq "'business-auth.js'" scripts/build.mjs
+          grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
+          grep -Fq '/api/auth/exchange' business/app.js
+          grep -Fq "history.replaceState(null,'',location.pathname+location.search)" business/app.js
+          grep -Fq "sessionStorage.setItem(SESSION_KEY" business/app.js
+          grep -Fq 'const RETURN_TO="https://business.ekodi.kr/"' supabase/functions/business-handoff-api/index.ts
+          grep -Fq 'business_os_snapshot' supabase/functions/business-handoff-api/index.ts
+
+          for url in \
+            'https://biz.ekodi.kr' \
+            'https://marketing.ekodi.kr' \
+            'https://work.ekodi.kr' \
+            'https://jadam.ai.ekodi.kr'; do
+            grep -Fq "$url" business-worker.js business/index.html business/app.js || { echo "Missing Business OS link contract: $url"; exit 1; }
+          done
+
+  live-core:
+    needs: source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify central auth and Business OS core routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe() {
+            local name="$1" url="$2" expect="$3"
+            local code
+            code=$(curl -L -sS -D "/tmp/${name}.headers" -o "/tmp/${name}.body" -w '%{http_code}' --connect-timeout 6 --max-time 20 "$url" || true)
+            if [[ "$code" != "$expect" ]]; then
+              echo "$name expected HTTP $expect but got $code"
+              return 1
+            fi
+          }
+
+          probe business 'https://business.ekodi.kr/' 200
+          grep -Fq 'BUSINESS OS' /tmp/business.body
+          probe business_config 'https://business.ekodi.kr/config.js' 200
+          grep -Fq 'https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' /tmp/business_config.body
+          probe business_workspaces 'https://business.ekodi.kr/api/workspaces' 200
+          grep -Fq '"id":"ekodibiz"' /tmp/business_workspaces.body
+          grep -Fq '"id":"jadam"' /tmp/business_workspaces.body
+
+          probe auth_business 'https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' 200
+          grep -Fq 'EKODI 인증센터' /tmp/auth_business.body
+          probe auth_router 'https://auth.ekodi.kr/auth-router.js?v=20260824-business-resume-1' 200
+          grep -Fq "site==='business'" /tmp/auth_router.body
+          probe business_auth_asset 'https://auth.ekodi.kr/business-auth.js?v=20260824-business-resume-1' 200
+          grep -Fq 'functions/v1/business-handoff-api' /tmp/business_auth_asset.body
+          grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/business_auth_asset.headers
+          grep -Fiq 'cache-control: no-store' /tmp/business_auth_asset.headers
+
+      - name: Verify active Business OS downstream services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for entry in \
+            'EKODIBIZ|https://biz.ekodi.kr/' \
+            'MarketingAI|https://marketing.ekodi.kr/' \
+            'Work|https://work.ekodi.kr/' \
+            'JadamMarketingAI|https://jadam.ai.ekodi.kr/'; do
+            name=${entry%%|*}
+            url=${entry#*|}
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 6 --max-time 20 "$url" || true)
+            case "$code" in
+              200|204) echo "$name OK ($code)" ;;
+              *) echo "$name unavailable or redirected to error ($code): $url"; exit 1 ;;
+            esac
+          done
+
+      - name: Inspect auxiliary Business hubs without blocking core release
+        shell: bash
+        run: |
+          set -u
+          for entry in \
+            'Pay|https://pay.biz.ekodi.kr/' \
+            'Mail|https://mail.biz.ekodi.kr/' \
+            'Trade|https://trade.biz.ekodi.kr/'; do
+            name=${entry%%|*}
+            url=${entry#*|}
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 6 --max-time 20 "$url" || true)
+            case "$code" in
+              200|204) echo "$name auxiliary hub OK ($code)" ;;
+              *) echo "::warning::$name auxiliary hub returned HTTP $code: $url" ;;
+            esac
+          done
