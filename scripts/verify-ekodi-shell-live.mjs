@@ -42,6 +42,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(health.shellVersion)<2)failures.push(`health:shellVersion:${health.shellVersion||'missing'}`);
     if(Number(health.messageUIVersion)<1)failures.push(`health:messageUIVersion:${health.messageUIVersion||'missing'}`);
     if(Number(health.illustrationSystemVersion)<1)failures.push(`health:illustrationSystemVersion:${health.illustrationSystemVersion||'missing'}`);
+    if(Number(health.serviceDesignVersion)<1)failures.push(`health:serviceDesignVersion:${health.serviceDesignVersion||'missing'}`);
     if(Number(health.linkCompatVersion)<1)failures.push(`health:linkCompatVersion:${health.linkCompatVersion||'missing'}`);
   }
   if(manifest){
@@ -60,17 +61,18 @@ for(let attempt=1;attempt<=attempts;attempt++){
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','공간 전환 · My EKODI','EKODI 서비스 전환','ekodi:public-experience',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
-    'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem',
+    'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'"
   ],failures);
   if(shellResult.headers?.get?.('x-ekodi-message-ui')!=='v1')failures.push(`shell:message-ui-header:${shellResult.headers?.get?.('x-ekodi-message-ui')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-illustration-system')!=='v1')failures.push(`shell:illustration-header:${shellResult.headers?.get?.('x-ekodi-illustration-system')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-link-compat')!=='v1')failures.push(`shell:link-compat-header:${shellResult.headers?.get?.('x-ekodi-link-compat')||'missing'}`);
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
 
   const statuses=[healthResult,manifestResult,shellResult,themeResult,styleResult].map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, messageUI=v1, illustrations=v1, linkCompat=v1, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);
