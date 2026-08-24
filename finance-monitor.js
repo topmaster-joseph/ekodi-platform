@@ -152,17 +152,38 @@ async function loadFinance(force = false) {
   }
 }
 
+function ensureTaxProfessionalLink() {
+  const pane = document.querySelector('[data-finance-pane="tax"]');
+  if (!pane || document.querySelector('#taxProfessionalServiceLink')) return;
+  const card = document.createElement('div');
+  card.id = 'taxProfessionalServiceLink';
+  card.className = 'finance-note good';
+  const copy = document.createElement('span');
+  copy.textContent = '세금계산서 상세 업무는 EKODI Tax 전문서비스와 같은 Finance Core를 사용합니다.';
+  const link = document.createElement('a');
+  link.href = 'https://tax.ekodi.kr/';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.className = 'primary compact';
+  link.textContent = '세금 · 증빙 열기 ↗';
+  card.append(copy, link);
+  const marker = pane.querySelector('#financeNotice');
+  if (marker) marker.insertAdjacentElement('beforebegin', card); else pane.prepend(card);
+}
+
 function activateFinanceView(view) {
   financeView = ['tax','payments','accounting','structure'].includes(view) ? view : 'tax';
   const pageTitle = document.querySelector('#pageTitle');
   if (pageTitle) pageTitle.textContent = '재무 · 세금';
   financeViewButtons.forEach(button => button.classList.toggle('active', button.dataset.financeView === financeView));
   financeViewPanes.forEach(pane => { pane.hidden = pane.dataset.financePane !== financeView; });
-  if (financeView !== 'tax') loadFinance(false);
+  if (financeView === 'tax') ensureTaxProfessionalLink();
+  else loadFinance(false);
 }
 
 financeViewButtons.forEach(button => button.addEventListener('click', () => activateFinanceView(button.dataset.financeView)));
 financeRefresh?.addEventListener('click', () => loadFinance(true));
 financeSectionButton?.addEventListener('click', () => activateFinanceView('tax'));
+ensureTaxProfessionalLink();
 
 if ((location.hash === '#finance' || financeSectionButton?.classList.contains('active')) && financeToken()) setTimeout(() => activateFinanceView('tax'), 0);
