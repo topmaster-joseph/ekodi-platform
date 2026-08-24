@@ -46,7 +46,11 @@ for (const file of [
   'core-api.js',
   'core-ai-gateway.js',
   'core-client.js',
+  'core-permission.js',
+  'core-workflow.js',
+  'core-evidence.js',
   'ekodi-principal.js',
+  'scripts/validate-central-modules.mjs',
   'scripts/verify-ekodi-core-production.mjs',
   '.github/workflows/verify-ekodi-core-completion.yml',
   '.github/workflows/backup-ekodi-core.yml',
@@ -93,6 +97,12 @@ if (!String(packageJson.scripts?.['validate:core-completion'] || '').includes('v
 }
 if (!String(packageJson.scripts?.['verify:core-production'] || '').includes('verify-ekodi-core-production.mjs')) {
   fail('package.json', 'verify:core-production script is required');
+}
+
+try {
+  await import('./validate-central-modules.mjs');
+} catch (error) {
+  fail('scripts/validate-central-modules.mjs', error?.message || 'central module validation failed');
 }
 
 if (failed) {
