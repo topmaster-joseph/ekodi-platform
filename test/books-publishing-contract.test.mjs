@@ -42,7 +42,7 @@ test('Books admin ships with the Control Center, stays visible in navigation, an
   assert.match(featureLoader, /installStaticBooksNavigation/);
   assert.match(featureLoader, /button\.dataset\.section = 'books'/);
   assert.match(featureLoader, /await loadBooks\(\)/);
-  assert.match(admin, /Books Control/);
+  assert.match(admin, /에코디서점 관리/);
   assert.match(admin, /Pricing & Services/);
   assert.match(admin, /Consultations/);
   assert.match(siteWorker, /'\/books'/);
