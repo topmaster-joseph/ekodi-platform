@@ -4,11 +4,13 @@ import assert from 'node:assert/strict';
 
 const workflow = fs.readFileSync('.github/workflows/ecosystem-performance-watch.yml', 'utf8');
 
-test('performance guard covers canonical public and admin entry points', () => {
+test('performance guard covers canonical public, admin, and Support entry points', () => {
   for (const target of [
     "https://ekodi.kr/",
     "https://admin.ekodi.kr/",
     "https://ekodi.kr/admin",
+    "https://support.ekodi.kr/",
+    "https://support.ekodi.kr/health",
   ]) assert.match(workflow, new RegExp(target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
