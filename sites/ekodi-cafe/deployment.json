@@ -3,5 +3,7 @@
   "publicUrl": "https://cafe.ekodi.kr",
   "pagesUrl": "https://ekodi-cafe.pages.dev",
   "productionBranch": "main",
-  "status": "preparing"
+  "status": "preview",
+  "releaseMode": "public-preview",
+  "updatedAt": "2026-08-24"
 }
