@@ -24,44 +24,20 @@ html = html
   .replace('<script src="admin-central-handoff.js"></script>', '<script src="admin-central-handoff.js" defer></script>');
 
 // Only the overview hero participates in first authenticated layout. Operational DOM remains
-// for compatibility but is display:none until its workspace is explicitly selected.
+// for compatibility but is display:none until its workspace is explicitly selected. The source
+// HTML already owns single-responsibility panel names, so postbuild only adds the hidden guard.
 mustReplace('<section class="metrics" data-panel="overview services"', '<section class="metrics hidden-panel" data-panel="services"', 'services metrics panel');
-mustReplace('<section class="section operations-section" data-panel="overview services"', '<section class="section operations-section hidden-panel" data-panel="services"', 'services operations panel');
-mustReplace('<section class="section" data-panel="overview finance"', '<section class="section hidden-panel" data-panel="finance"', 'finance panel');
+mustReplace('<section class="section operations-section" data-panel="services"', '<section class="section operations-section hidden-panel" data-panel="services"', 'services operations panel');
+mustReplace('<section class="section" data-panel="finance"', '<section class="section hidden-panel" data-panel="finance"', 'finance panel');
 for (const section of ['communication', 'workspace', 'organization']) {
   html = html.replace(`<section class="section" data-panel="${section}"`, `<section class="section hidden-panel" data-panel="${section}"`);
 }
 
-// Finance polling exists only while Finance is visible and the tab is active.
+// Finance is event-driven. Perpetual polling is rejected at source and postbuild never rewrites
+// business logic, which keeps this layer stable when Finance menu markup evolves.
 const financePath = `${dist}finance-monitor.js`;
-let finance = await readFile(financePath, 'utf8');
-const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
-if (!financeTail.test(finance)) throw new Error('finance polling tail marker missing');
-finance = finance.replace(financeTail, `let financeRefreshTimer = 0;
-function cancelFinanceRefresh() {
-  if (financeRefreshTimer) clearTimeout(financeRefreshTimer);
-  financeRefreshTimer = 0;
-}
-function scheduleFinanceRefresh() {
-  cancelFinanceRefresh();
-  const visible = financeSectionButton?.classList.contains('active') && document.visibilityState !== 'hidden' && financeToken();
-  if (!visible) return;
-  financeRefreshTimer = window.setTimeout(async () => {
-    await loadFinance(false);
-    scheduleFinanceRefresh();
-  }, 120000);
-}
-financeRefresh.addEventListener('click', () => loadFinance(true));
-financeSectionButton.addEventListener('click', () => {
-  document.querySelector('#pageTitle').textContent = '결제 · 회계';
-  loadFinance(false).finally(scheduleFinanceRefresh);
-});
-document.addEventListener('visibilitychange', scheduleFinanceRefresh);
-window.addEventListener('hashchange', scheduleFinanceRefresh);
-if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
-  queueMicrotask(() => loadFinance(false).finally(scheduleFinanceRefresh));
-}`);
-await writeFile(financePath, finance);
+const finance = await readFile(financePath, 'utf8');
+if (finance.includes('setInterval(')) throw new Error('Finance monitor contains perpetual polling');
 
 // Mobile browsers pay heavily for backdrop blur and off-screen panel painting.
 const cssPath = `${dist}control-center.css`;
