@@ -10,7 +10,7 @@ const demand = await readFile(new URL('../admin-demand-loader.js', import.meta.u
 const postbuild = await readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8');
 
 test('Campus first screen renders the full site catalog with direct operational actions', () => {
-  assert.match(js, /All EKODI Sites/);
+  assert.match(js, /사이트 관리 ·/);
   assert.match(js, /청계면상인회/);
   assert.match(js, /자담치킨 목포대점/);
   assert.match(js, /피자마루 목포대점/);
@@ -39,7 +39,7 @@ test('Campus includes verified ecosystem services that were missing from the old
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /Work & Life/);
-  assert.match(js, /운영 중인 사이트와 오픈 전 플랫폼을 함께 보여주며/);
+  assert.match(js, /에코디 생태계의 전체 사이트를 한곳에서 보고/);
 });
 
 test('Campus groups related services into a compact two-column layout', () => {

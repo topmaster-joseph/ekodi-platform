@@ -11,9 +11,9 @@ function installStyle() {
   style.textContent = `
     .homepage-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}.homepage-admin-head p{max-width:760px}.homepage-admin-actions{display:flex;gap:8px;flex-wrap:wrap}
     .homepage-admin-notice{display:flex;gap:12px;align-items:center;margin:16px 0;padding:13px 15px;border:1px solid rgba(125,211,252,.18);border-radius:12px;background:rgba(15,23,42,.38)}.homepage-admin-notice>span{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:11px;background:rgba(56,189,248,.12);font-size:20px}.homepage-admin-notice strong{display:block}.homepage-admin-notice small{display:block;margin-top:3px;opacity:.72;line-height:1.45}
-    .homepage-admin-grid{display:grid;gap:8px}.homepage-site-row{display:grid;grid-template-columns:minmax(190px,1fr) 92px 92px 96px minmax(120px,.55fr);align-items:center;gap:10px;padding:11px 12px;border:1px solid rgba(148,163,184,.14);border-radius:12px;background:rgba(15,23,42,.32)}.homepage-site-row[data-eligible="false"]{opacity:.62}.homepage-site-identity strong,.homepage-site-identity small{display:block}.homepage-site-identity small{margin-top:3px;opacity:.62;word-break:break-all}.homepage-site-control{display:flex;align-items:center;gap:7px;font-size:12px}.homepage-site-control input[type="checkbox"]{width:16px;height:16px}.homepage-site-order input{width:78px;padding:7px 8px}.homepage-site-status{font-size:11px;line-height:1.35}.homepage-site-status b,.homepage-site-status span{display:block}.homepage-site-status span{opacity:.62;margin-top:3px}
+    .homepage-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.homepage-site-row{display:grid;grid-template-columns:minmax(170px,1fr) 82px 82px minmax(110px,.55fr);align-items:center;gap:10px;padding:11px 12px;border:1px solid rgba(148,163,184,.14);border-radius:12px;background:rgba(15,23,42,.32)}.homepage-site-row[data-eligible="false"]{opacity:.62}.homepage-site-identity strong,.homepage-site-identity small{display:block}.homepage-site-identity small{margin-top:3px;opacity:.62;word-break:break-all}.homepage-site-control{display:flex;align-items:center;gap:7px;font-size:12px}.homepage-site-control input[type="checkbox"]{width:16px;height:16px}.homepage-site-grip{cursor:grab;user-select:none;opacity:.68;font-size:12px}.homepage-site-row.is-dragging{opacity:.42}.homepage-site-row.drag-over{outline:1px solid rgba(125,211,252,.6)}.homepage-site-status{font-size:11px;line-height:1.35}.homepage-site-status b,.homepage-site-status span{display:block}.homepage-site-status span{opacity:.62;margin-top:3px}
     .homepage-preview{margin-top:16px;padding:14px;border:1px dashed rgba(125,211,252,.24);border-radius:12px}.homepage-preview[hidden]{display:none}.homepage-preview-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.homepage-preview-chip{padding:8px 10px;border-radius:10px;background:rgba(30,41,59,.65);font-size:12px}.homepage-preview-chip.featured{outline:1px solid rgba(250,204,21,.48)}
-    @media(max-width:760px){.homepage-site-row{grid-template-columns:1fr 1fr}.homepage-site-identity,.homepage-site-status{grid-column:1/-1}.homepage-admin-actions{width:100%}.homepage-admin-actions button{flex:1 1 auto}}
+    @media(max-width:1000px){.homepage-admin-grid{grid-template-columns:1fr}}@media(max-width:760px){.homepage-site-row{grid-template-columns:1fr 1fr}.homepage-site-identity,.homepage-site-status{grid-column:1/-1}.homepage-admin-actions{width:100%}.homepage-admin-actions button{flex:1 1 auto}}
   `;
   document.head.append(style);
 }
@@ -71,17 +71,12 @@ function rowFor(service) {
   feature.disabled = !service.homepageEligible || !show.checked;
   featureLabel.append(feature, document.createTextNode(' ★ 주요'));
 
-  const orderLabel = document.createElement('label');
-  orderLabel.className = 'homepage-site-control homepage-site-order';
-  const order = document.createElement('input');
-  order.type = 'number';
-  order.min = '0';
-  order.max = '9999';
-  order.step = '1';
-  order.value = String(service.order ?? service.defaultOrder ?? 9999);
-  order.dataset.homepageOrder = 'true';
-  order.setAttribute('aria-label', `${service.name || service.id} 표시 순서`);
-  orderLabel.append(document.createTextNode('순서 '), order);
+  const grip = document.createElement('span');
+  grip.className = 'homepage-site-grip';
+  grip.textContent = '↕ 순서';
+  grip.title = '드래그해서 첫화면 표시 순서를 변경합니다.';
+  row.draggable = service.homepageEligible === true;
+  row.dataset.homepageOrder = String(service.order ?? service.defaultOrder ?? 9999);
 
   const state = document.createElement('div');
   state.className = 'homepage-site-status';
@@ -99,14 +94,48 @@ function rowFor(service) {
     if (feature.checked) show.checked = true;
     feature.disabled = !service.homepageEligible || !show.checked;
   });
-  row.append(identity, showLabel, featureLabel, orderLabel, state);
+  row.append(identity, showLabel, featureLabel, grip, state);
   return row;
+}
+
+function bindDragOrdering(grid) {
+  let dragging = null;
+  grid.addEventListener('dragstart', event => {
+    const row = event.target.closest('[data-homepage-service]');
+    if (!row || row.draggable !== true) return;
+    dragging = row;
+    row.classList.add('is-dragging');
+    event.dataTransfer?.setData('text/plain', row.dataset.homepageService || '');
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  });
+  grid.addEventListener('dragover', event => {
+    const target = event.target.closest('[data-homepage-service]');
+    if (!dragging || !target || target === dragging) return;
+    event.preventDefault();
+    grid.querySelectorAll('.drag-over').forEach(item => item.classList.remove('drag-over'));
+    target.classList.add('drag-over');
+  });
+  grid.addEventListener('drop', event => {
+    const target = event.target.closest('[data-homepage-service]');
+    if (!dragging || !target || target === dragging) return;
+    event.preventDefault();
+    const rows = [...grid.children];
+    const from = rows.indexOf(dragging);
+    const to = rows.indexOf(target);
+    grid.insertBefore(dragging, to > from ? target.nextSibling : target);
+  });
+  grid.addEventListener('dragend', () => {
+    grid.querySelectorAll('.drag-over,.is-dragging').forEach(item => item.classList.remove('drag-over', 'is-dragging'));
+    dragging = null;
+  });
 }
 
 function render(services) {
   const grid = document.querySelector('#homepageAdminGrid');
   if (!grid) return;
-  grid.replaceChildren(...(services || []).map(rowFor));
+  const sorted = [...(services || [])].sort((a, b) => (a.order ?? a.defaultOrder ?? 9999) - (b.order ?? b.defaultOrder ?? 9999) || String(a.id).localeCompare(String(b.id)));
+  grid.replaceChildren(...sorted.map(rowFor));
+  bindDragOrdering(grid);
   status('첫화면 표시 설정을 불러왔습니다.', '체크는 노출, ★ 주요는 강조만 바꿉니다. 운영 검증이 안 된 사이트는 자동 차단됩니다.', 'ready');
 }
 
@@ -114,12 +143,12 @@ function draft() {
   return [...document.querySelectorAll('[data-homepage-service]')].map(row => {
     const show = row.querySelector('[data-homepage-show]');
     const featured = row.querySelector('[data-homepage-featured]');
-    const order = row.querySelector('[data-homepage-order]');
     const eligible = row.dataset.eligible === 'true';
+    const position = [...row.parentElement.children].indexOf(row);
     return {
       id: row.dataset.homepageService,
       visibility: !eligible || !show?.checked ? 'hidden' : featured?.checked ? 'featured' : 'normal',
-      order: Math.max(0, Math.min(9999, Math.trunc(Number(order?.value) || 9999))),
+      order: Math.max(0, position * 10 + 10),
       name: row.querySelector('.homepage-site-identity strong')?.textContent || row.dataset.homepageService,
       eligible,
     };
@@ -185,12 +214,13 @@ export function mountHomepageAdmin() {
     panel.innerHTML = `
       <div class="homepage-admin-head">
         <div><p class="kicker">SITE MANAGEMENT · PUBLIC GATEWAY</p><h2>사이트 관리 · EKODI.KR 첫화면</h2><p>생태계 사이트의 존재와 첫화면 노출을 분리해 관리합니다. 새 사이트는 중앙 레지스트리에 등록되면 자동으로 나타나며, 운영 검증이 끝난 사이트만 공개할 수 있습니다.</p></div>
-        <div class="homepage-admin-actions"><button class="secondary" id="homepageAdminRefresh" type="button">↻ 새로고침</button><button class="secondary" id="homepageAdminPreviewButton" type="button">미리보기</button><button class="primary" id="homepageAdminApply" type="button">적용</button></div>
+        <div class="homepage-admin-actions"><button class="secondary" id="homepageAdminAllSites" type="button">전체 사이트</button><button class="secondary" id="homepageAdminRefresh" type="button">↻ 새로고침</button><button class="secondary" id="homepageAdminPreviewButton" type="button">미리보기</button><button class="primary" id="homepageAdminApply" type="button">적용</button></div>
       </div>
       <div class="homepage-admin-notice" id="homepageAdminNotice" role="status" aria-live="polite"><span aria-hidden="true">▦</span><div><strong>첫화면 설정을 준비합니다.</strong><small>사이트별 공개 상태와 다음 행동을 바로 확인할 수 있습니다.</small></div></div>
       <div class="homepage-admin-grid" id="homepageAdminGrid"></div>
       <div class="homepage-preview" id="homepageAdminPreview" hidden><strong>공개 순서 미리보기</strong><div class="homepage-preview-list" id="homepageAdminPreviewList"></div></div>`;
     document.querySelector('.content')?.append(panel);
+    panel.querySelector('#homepageAdminAllSites')?.addEventListener('click', () => window.EKODIAdminPanels?.activate?.('campus'));
     panel.querySelector('#homepageAdminRefresh')?.addEventListener('click', load);
     panel.querySelector('#homepageAdminPreviewButton')?.addEventListener('click', preview);
     panel.querySelector('#homepageAdminApply')?.addEventListener('click', save);

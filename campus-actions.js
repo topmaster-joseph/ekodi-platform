@@ -184,8 +184,19 @@
 
     const heading = panel.querySelector('.campus-toolbar h2');
     const copy = panel.querySelector('.campus-toolbar > div > p:not(.kicker)');
-    if (heading) heading.textContent = `All EKODI Sites · ${ALL_SITES.length}`;
-    if (copy) copy.textContent = '운영 중인 사이트와 오픈 전 플랫폼을 함께 보여주며, 성격이 비슷한 사이트끼리 묶어 상태·관리·공개 화면을 한곳에서 확인합니다.';
+    if (heading) heading.textContent = `사이트 관리 · ${ALL_SITES.length}`;
+    if (copy) copy.textContent = '에코디 생태계의 전체 사이트를 한곳에서 보고, 운영 상태와 공개 설정으로 바로 이동합니다.';
+
+    const toolbarActions = panel.querySelector('.campus-toolbar-actions');
+    if (toolbarActions && !toolbarActions.querySelector('[data-site-management-homepage]')) {
+      const homepageButton = document.createElement('button');
+      homepageButton.type = 'button';
+      homepageButton.className = 'secondary';
+      homepageButton.dataset.siteManagementHomepage = 'true';
+      homepageButton.textContent = '첫화면 노출';
+      homepageButton.addEventListener('click', () => window.EKODIAdminPanels?.activate?.('sites'));
+      toolbarActions.prepend(homepageButton);
+    }
 
     const grid = document.createElement('div');
     grid.id = 'campusSiteGroups';

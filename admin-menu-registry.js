@@ -1,5 +1,5 @@
 export const ADMIN_MENU_REGISTRY = Object.freeze([
-  { id: 'campus', icon: '⌂', labels: { ko: '디지털 캠퍼스', en: 'Digital Campus' } },
+  { id: 'campus', icon: '⌂', labels: { ko: '사이트 관리', en: 'Site Management' } },
   { id: 'aiops', icon: 'AI', labels: { ko: '운영 AI', en: 'AI Operations' } },
   { id: 'health', icon: '♥', labels: { ko: '서비스 상태', en: 'Service Health' } },
   { id: 'security', icon: 'S', labels: { ko: '보안', en: 'Security' } },
