@@ -213,7 +213,7 @@ jobs:
           - production check: \`$outcome\`
           - upstream true-lazy gate: \`$UPSTREAM_OUTCOME\`
           - canonical: https://admin.ekodi.kr/
-          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · AI 회원운영
+          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing · AI 회원운영
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
