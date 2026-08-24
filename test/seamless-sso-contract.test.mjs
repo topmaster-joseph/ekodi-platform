@@ -49,7 +49,8 @@ test('user-site special auth modules preserve only allowed same-service HTTPS re
 test('existing central sessions bypass repeated Google selection on user services',()=>{
   assert.match(client,/sb\.auth\.getSession/);
   assert.match(client,/if\(await handoffExistingSession\(\)\)return/);
-  assert.match(business,/const existing=await session\(\);if\(existing\)/);
+  assert.match(business,/const existing=await session\(\);\s*if\(existing\)/);
+  assert.match(business,/await issueHandoff\(existing\)/);
   assert.match(author,/const existing=await session\(\)/);
 });
 
