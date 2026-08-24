@@ -1,4 +1,5 @@
 name: Deploy EKODI Publishing
+# 2026-08-24 operational activation and live-route verification
 
 on:
   workflow_dispatch:
