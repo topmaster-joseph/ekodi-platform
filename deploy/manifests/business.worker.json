@@ -4,9 +4,13 @@
     "name": "ekodi-business",
     "config": "wrangler.business.toml",
     "requests": [
-      {"url":"https://business.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI","BUSINESS OS","SAFE OPERATIONS","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://business.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI","BUSINESS OS","SAFE OPERATIONS","site=business&amp;return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://business.ekodi.kr/config.js","statuses":[200],"expect":["production-readonly-mvp","https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F","\"executionEnabled\":false","\"dataEnabled\":true"]},
+      {"url":"https://business.ekodi.kr/app.js","statuses":[200],"expect":["AUTH_FALLBACK","/api/auth/exchange","sessionStorage.setItem","history.replaceState"]},
       {"url":"https://business.ekodi.kr/health","statuses":[200],"expect":["ekodi-business-os","production-readonly-mvp","\"executionEnabled\":false","\"integrationsEnabled\":true"]},
-      {"url":"https://business.ekodi.kr/api/workspaces","statuses":[200],"expect":["ekodibiz","jadam","자담치킨 목포대점"]}
+      {"url":"https://business.ekodi.kr/api/workspaces","statuses":[200],"expect":["ekodibiz","jadam","자담치킨 목포대점"]},
+      {"url":"https://business.ekodi.kr/ekodibiz","statuses":[200],"redirect":"follow","expect":["EKODI","BUSINESS OS","에코디비즈"]},
+      {"url":"https://business.ekodi.kr/jadam","statuses":[200],"redirect":"follow","expect":["EKODI","BUSINESS OS","자담치킨 목포대점"]}
     ]
   }
 }
