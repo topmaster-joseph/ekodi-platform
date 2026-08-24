@@ -71,7 +71,7 @@ await writeFile(`${output}books-finance-admin.css`, `${financeCss}\n${distributi
 await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distributionJs}\n${pipelineJs}\n${pipelineBridgeJs}\n${royaltyJs}\n`);
 
 await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
-for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'marketing-onboarding.js', 'membership-ui.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
+for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 
 const homepageServices = await loadHomepageServices();
 const homepageCards = renderServiceCards(homepageServices);
