@@ -1,9 +1,11 @@
 import legacyPlatformRouter from './platform-router-worker.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
+import { investUserPage, investUiScript } from './invest-user-page.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
+const INVEST_HOST='invest.ekodi.kr';
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -35,6 +37,11 @@ export default {
         return injectEkodiShell(response,'messenger');
       }
       if(url.pathname==='/messenger-ui.js')return messengerUiScript();
+    }
+
+    if(host===INVEST_HOST&&request.method==='GET'){
+      if(url.pathname==='/'||url.pathname==='')return injectEkodiShell(investUserPage(),'invest');
+      if(url.pathname==='/invest-ui.js')return investUiScript();
     }
     return legacyPlatformRouter.fetch(request,env,ctx);
   },
