@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "name": "EKODI Illustration System",
+  "purpose": "Make EKODI feel like a warm, inhabited digital village while preserving clarity, accessibility and service identity.",
+  "principles": {
+    "humanFirst": true,
+    "cuteNotChildish": true,
+    "functionalClarityFirst": true,
+    "sharedFamilyLanguage": true,
+    "serviceSpecificScenes": true,
+    "aiAsCompanionNotRobotMascot": true,
+    "adminDensity": "restrained",
+    "userDensity": "expressive",
+    "avoidStyleImitation": true
+  },
+  "visualLanguage": {
+    "shape": "soft rounded geometry with hand-drawn restraint",
+    "people": "warm everyday characters across ages and roles",
+    "motifs": ["people", "home", "path", "tree", "shop", "book", "table", "light", "garden", "window"],
+    "motion": "subtle breathing, floating and arrival motion only",
+    "texture": "light paper-like or soft flat-vector feel",
+    "imageRole": "explain, welcome, orient or encourage action; never decorate without purpose"
+  },
+  "surfaces": {
+    "public": {"density":"medium-high","use":["hero", "service-entry", "story-section", "empty-state", "transition"]},
+    "workspace": {"density":"medium","use":["welcome", "empty-state", "milestone", "assistant"]},
+    "admin": {"density":"low","use":["empty-state", "completion", "warning", "system-state"]},
+    "message": {"density":"medium","use":["success", "info", "warning", "error", "permission", "security", "system", "waiting"]}
+  },
+  "services": {
+    "church":{"scene":"people-gathering","objects":["table","book","tree","warm-window"]},
+    "community":{"scene":"neighborhood-circle","objects":["people","bench","tree","path"]},
+    "social":{"scene":"signal-picnic","objects":["people","speech-bubbles","phone","spark"]},
+    "cafe":{"scene":"harbor-cafe","objects":["cup","table","window","plant"]},
+    "biz":{"scene":"small-business-day","objects":["shop","clipboard","people","plant"]},
+    "business":{"scene":"operator-table","objects":["people","dashboard","notes","lamp"]},
+    "mall":{"scene":"market-street","objects":["shop","bag","people","awning"]},
+    "marketing":{"scene":"creative-studio","objects":["people","megaphone","canvas","spark"]},
+    "trade":{"scene":"connected-route","objects":["boxes","route","people","globe"]},
+    "invest":{"scene":"diligence-table","objects":["documents","people","plant","lamp"]},
+    "support":{"scene":"opportunity-desk","objects":["document","calendar","people","spark"]},
+    "pay":{"scene":"trust-ledger","objects":["receipt","people","shield","coin"]},
+    "books":{"scene":"reading-room","objects":["books","shelf","people","lamp"]},
+    "publishing":{"scene":"publishing-desk","objects":["book","paper","people","press"]},
+    "author":{"scene":"creator-room","objects":["paper","pen","people","light"]},
+    "lab":{"scene":"field-research","objects":["notebook","sample","people","magnifier"]},
+    "edu":{"scene":"learning-table","objects":["book","board","people","sun"]},
+    "my":{"scene":"personal-journey","objects":["person","path","home","constellation"]},
+    "work":{"scene":"project-workbench","objects":["people","board","tools","plant"]},
+    "energy":{"scene":"sunny-grid","objects":["home","sun","leaf","meter"]},
+    "insurance":{"scene":"protective-home","objects":["home","umbrella","people","document"]},
+    "messenger":{"scene":"conversation-bridge","objects":["people","speech-bubbles","bridge","spark"]},
+    "mail":{"scene":"correspondence-desk","objects":["letter","desk","people","plant"]},
+    "live":{"scene":"small-stage","objects":["people","camera","stage","signal"]},
+    "cloud":{"scene":"shared-library","objects":["folders","people","shelf","cloud"]},
+    "media":{"scene":"story-studio","objects":["camera","people","frame","light"]}
+  },
+  "automaticUse": {
+    "selectors": ["[data-ekodi-illustration]", "[data-ekodi-empty-state]", "[data-ekodi-welcome]"],
+    "messageUI": true,
+    "futureServicesInherit": true,
+    "neverAutoInjectInto": ["input", "textarea", "table", "code", "pre", "critical-confirmation"]
+  },
+  "accessibility": {
+    "decorativeScenesAriaHidden": true,
+    "meaningMustExistInText": true,
+    "reducedMotion": true,
+    "contrastIndependentOfIllustration": true
+  }
+}
