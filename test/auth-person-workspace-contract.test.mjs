@@ -22,6 +22,8 @@ const marketingOnboarding=read('auth-site/marketing-onboarding.js');
 const myHtml=read('my/index.html');
 const myApp=read('my/app.js');
 const myUserAiUi=read('my/user-ai-ui.js');
+const myAuthShell=read('my/auth-session-shell.js');
+const myWorkspaceSync=read('my/workspace-selector-sync.js');
 
 test('person and login identity schema stays separate from organization membership',()=>{
   assert.match(migration,/create table if not exists public\.people/i);
@@ -58,7 +60,7 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260824-return-origin-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260824-business-resume-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -112,7 +114,7 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-router\.js\?v=20260824-return-origin-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260824-business-resume-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
@@ -163,8 +165,17 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
   assert.match(myUserAiUi,/buildUserSuggestions/);
 });
 
+test('My EKODI silently resumes central login and keeps logged-out home minimal',()=>{
+  assert.match(myWorkspaceSync,/auth-session-shell\.js\?v=20260824-seamless-sso-1/);
+  assert.match(myAuthShell,/searchParams\.set\('probe','1'\)/);
+  assert.match(myAuthShell,/sso_checked/);
+  assert.match(myAuthShell,/body\[data-auth-state="signed-out"\] main>section:not\(\.welcome-shell\)/);
+  assert.match(myAuthShell,/EKODI 시작하기/);
+  assert.match(myAuthShell,/arrangeSignedInHome/);
+});
+
 test('browser auth and My router scripts parse as JavaScript',()=>{
-  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
+  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js','my/auth-session-shell.js','my/workspace-selector-sync.js']){
     const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
