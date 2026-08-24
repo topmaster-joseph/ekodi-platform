@@ -18,6 +18,16 @@
     { keyword:'TODAY', title:'오늘의 EKODI를 엽니다', sub:'매일 조금 다른 표정으로, 같은 길을 더 쉽게 찾을 수 있게 합니다.' },
   ];
 
+  function installMessageUI() {
+    if (window.EKODIMessage || document.querySelector('script[data-ekodi-message-runtime]')) return;
+    const script = document.createElement('script');
+    script.src = '/ekodi-message-ui.js';
+    script.defer = true;
+    script.dataset.ekodiMessageRuntime = 'v1';
+    script.addEventListener('error', () => console.warn('[EKODI] shared message UI runtime failed to load.'), { once:true });
+    document.head.appendChild(script);
+  }
+
   function seoulDateKey(now = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit'
@@ -108,6 +118,7 @@
     host.append(panel);
   }
 
+  installMessageUI();
   installHistoryEntry();
 
   const root = document.documentElement;
