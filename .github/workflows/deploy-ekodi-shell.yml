@@ -7,6 +7,7 @@ on:
       - 'ekodi-service-manifest.js'
       - 'ekodi-shell-worker.js'
       - 'ekodi-shell-injector.js'
+      - 'ekodi-message-ui.js'
       - 'shell/**'
       - 'config/internal-ui-rollout.json'
       - 'config/seasonal-design-governance.json'
@@ -43,17 +44,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Shell contracts and mobile fixed-header runtime
+      - name: Validate Shell contracts, mobile header and shared Message UI
         run: |
           set -euo pipefail
           node --check ekodi-shell-worker.js
           node --check ekodi-shell-injector.js
+          node --check ekodi-message-ui.js
           node --check shell/shell.js
           node --check shell/mobile-fixed-header.js
           node --check scripts/verify-ekodi-shell-live.mjs
           test -f shell/workspace.css
           grep -Fq 'data-ekodi-shell-surface="workspace"' shell/workspace.css
           grep -Fq 'data-ekodi-document-surface' shell/workspace.css
+          grep -Fq "messageUrl.pathname='/message-ui.js'" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-message-ui" ekodi-shell-worker.js
+          grep -Fq 'window.EKODIMessage' ekodi-message-ui.js
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
@@ -77,6 +82,8 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Prepare shared Message UI asset
+        run: cp ekodi-message-ui.js shell/message-ui.js
       - name: Deploy isolated Shell staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.staging.toml
       - name: Verify Shell staging with release cache busting
@@ -103,6 +110,8 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Prepare shared Message UI asset
+        run: cp ekodi-message-ui.js shell/message-ui.js
       - name: Deploy Shell production
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.toml
       - name: Verify real Shell hostname with release cache busting
