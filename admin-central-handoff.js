@@ -15,6 +15,7 @@
   const sidebar = document.querySelector('.sidebar');
   const loginForm = document.querySelector('#loginForm');
   const legacyLink = document.querySelector('.login-screen .legacy-link');
+  let superAdminAccountsNav = document.querySelector('#superAdminAccountsNav');
   let loginLink = document.querySelector('#centralAdminLogin');
   const logoutButton = document.querySelector('#logoutButton');
   const menuButton = document.querySelector('#menuButton');
@@ -43,6 +44,30 @@
     const scope = hostScope();
     if (scopeBadge) scopeBadge.textContent = scope;
     document.body.dataset.scope = scope.toLowerCase();
+  }
+  function syncSuperAdminNavigation(session = null) {
+    const allowed = location.hostname.toLowerCase() === 'admin.ekodi.kr' && session?.role === 'super_admin';
+    if (!superAdminAccountsNav && allowed) {
+      const nav = document.querySelector('.sidebar nav');
+      if (nav) {
+        const link = document.createElement('a');
+        link.id = 'superAdminAccountsNav';
+        link.className = 'nav';
+        link.href = '/admins';
+        link.dataset.section = 'admins';
+        link.append(document.createTextNode('♛ '));
+        const label = document.createElement('span');
+        label.textContent = '관리자 계정·권한';
+        link.append(label);
+        nav.append(link);
+        superAdminAccountsNav = link;
+        window.dispatchEvent(new CustomEvent('ekodi-nav-changed'));
+      }
+    }
+    if (!superAdminAccountsNav) return;
+    superAdminAccountsNav.hidden = !allowed;
+    superAdminAccountsNav.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+    superAdminAccountsNav.tabIndex = allowed ? 0 : -1;
   }
   function ensureCentralLoginFallback() {
     if (!loginScreen) return;
@@ -84,6 +109,7 @@
     if (app) app.hidden = true;
     if (loginScreen) loginScreen.hidden = false;
     if (apiState) apiState.textContent = message || '통합인증 필요';
+    syncSuperAdminNavigation(null);
     safeSession.remove(TOKEN_KEY);
     safeSession.remove(EMAIL_KEY);
     ensureCentralLoginFallback();
@@ -122,10 +148,12 @@
       if (!response.ok) throw new Error(`session ${response.status}`);
       const result = await response.json();
       updateSessionState(result.email || safeSession.get(EMAIL_KEY), '인증 세션 정상');
+      syncSuperAdminNavigation(result);
       mark('ekodi-admin-session-validated');
       window.dispatchEvent(new CustomEvent('ekodi-session-validated', { detail: result }));
     } catch (error) {
       if (token()) {
+        syncSuperAdminNavigation(null);
         updateSessionState(safeSession.get(EMAIL_KEY), error?.name === 'AbortError' ? '세션 확인 지연' : '네트워크 확인 필요');
         document.documentElement.dataset.ekodiSessionDegraded = 'true';
       } else showLogin('통합인증 필요');
@@ -147,6 +175,7 @@
   mark('ekodi-admin-entry-start');
   acceptCentralHandoff();
   ensureCentralLoginFallback();
+  syncSuperAdminNavigation(null);
   if (loginForm) loginForm.hidden = true;
   if (legacyLink) legacyLink.hidden = true;
   if (loginLink) loginLink.style.pointerEvents = 'auto';
