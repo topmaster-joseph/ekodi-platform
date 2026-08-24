@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "name": "EKODI Message UI",
+  "scope": ["user", "admin", "auth", "system-transition"],
+  "principles": {
+    "composition": "illustration + short title + optional one-line description",
+    "nextActionFirst": true,
+    "hideTechnicalDetailsByDefault": true,
+    "detailsDisclosureLabel": "자세히 보기",
+    "mobileFirst": true,
+    "themeAware": true,
+    "serviceBrandAccentAllowed": true,
+    "sharedLayoutRequired": true
+  },
+  "types": {
+    "success": {"label":"성공","defaultTitle":"처리가 완료되었습니다.","defaultDescription":"요청하신 작업이 정상적으로 완료되었습니다."},
+    "info": {"label":"안내","defaultTitle":"확인해 주세요.","defaultDescription":"아래 내용을 확인해 주세요."},
+    "warning": {"label":"주의","defaultTitle":"주의가 필요합니다.","defaultDescription":"입력하신 내용을 다시 확인해 주세요."},
+    "error": {"label":"오류","defaultTitle":"처리에 실패했습니다.","defaultDescription":"잠시 후 다시 시도해 주세요."},
+    "permission": {"label":"권한","defaultTitle":"권한이 없습니다.","defaultDescription":"접근 권한이 필요한 기능입니다."},
+    "security": {"label":"보안","defaultTitle":"보안 인증이 필요합니다.","defaultDescription":"계정 보호를 위해 다시 인증해 주세요."},
+    "system": {"label":"시스템","defaultTitle":"시스템을 점검하고 있습니다.","defaultDescription":"더 나은 서비스를 위해 점검을 진행하고 있습니다."},
+    "waiting": {"label":"대기","defaultTitle":"잠시만 기다려 주세요.","defaultDescription":"요청하신 작업을 처리 중입니다."}
+  },
+  "technicalDetailPolicy": {
+    "defaultVisible": false,
+    "allowedBehindDisclosure": ["request id", "timestamp", "safe error summary"],
+    "neverExpose": ["secret", "token", "stack trace", "internal credential", "raw provider response"]
+  },
+  "accessibility": {
+    "textMustRemainReadableWithoutIllustration": true,
+    "reducedMotion": true,
+    "keyboardActions": true,
+    "assertiveTypes": ["warning", "error"],
+    "politeTypes": ["success", "info", "permission", "security", "system", "waiting"]
+  }
+}

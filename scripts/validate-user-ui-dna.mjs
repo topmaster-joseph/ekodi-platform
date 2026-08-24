@@ -4,6 +4,7 @@ const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`,
 
 const registry = await readJson('config/ecosystem-services.json');
 const dna = await readJson('config/user-ui-dna.json');
+const messageUI = await readJson('config/message-ui.json');
 
 const errors = [];
 const services = dna.services ?? {};
@@ -42,10 +43,31 @@ for (const [id, alias] of Object.entries(aliases)) {
   }
 }
 
+const requiredMessageTypes = ['success', 'info', 'warning', 'error', 'permission', 'security', 'system', 'waiting'];
+if (messageUI?.name !== 'EKODI Message UI') errors.push('Message UI policy must be named "EKODI Message UI".');
+if (!Array.isArray(messageUI?.scope) || !['user', 'admin'].every(scope => messageUI.scope.includes(scope))) {
+  errors.push('Message UI policy must cover both user and admin surfaces.');
+}
+if (messageUI?.principles?.composition !== 'illustration + short title + optional one-line description') {
+  errors.push('Message UI must preserve the shared illustration + concise copy composition.');
+}
+if (messageUI?.principles?.hideTechnicalDetailsByDefault !== true) {
+  errors.push('Message UI must hide technical details by default.');
+}
+for (const type of requiredMessageTypes) {
+  const profile = messageUI?.types?.[type];
+  if (!profile?.label || !profile?.defaultTitle || !profile?.defaultDescription) {
+    errors.push(`Message UI type "${type}" is incomplete.`);
+  }
+}
+if (!messageUI?.technicalDetailPolicy?.neverExpose?.includes('token') || !messageUI?.technicalDetailPolicy?.neverExpose?.includes('secret')) {
+  errors.push('Message UI technical detail policy must explicitly block secrets and tokens.');
+}
+
 if (errors.length) {
   console.error('EKODI user-site UI DNA validation failed:');
   for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
 
-console.log(`EKODI UI DNA OK: ${Object.keys(services).length} distinct families, ${Object.keys(aliases).length} alias(es), all current public services covered.`);
+console.log(`EKODI UI DNA OK: ${Object.keys(services).length} distinct families, ${Object.keys(aliases).length} alias(es), all current public services covered, shared message UI policy valid.`);
