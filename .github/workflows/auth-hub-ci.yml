@@ -46,8 +46,8 @@ jobs:
           set -euo pipefail
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'id="googleButtonHost"' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260815-mall-seller-return-1' auth-site/index.html
-          grep -Fq 'workspace=20260817-sso-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260824-return-origin-1' auth-site/index.html
+          grep -Fq 'dataset.seamlessSso' auth-site/auth-router.js
           grep -Fq "'mall-seller':'mall'" auth-site/auth-router.js
           grep -Fq "https://mall.ekodi.kr/seller/" auth-site/auth-router.js
           grep -Fq "site==='admin'" auth-site/auth-router.js
