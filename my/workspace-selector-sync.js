@@ -1,3 +1,5 @@
+import './auth-session-shell.js?v=20260824-seamless-sso-1';
+
 const KIND_PRIORITY=Object.freeze({personal:10,business:20,organization:30,church:40,community:50,project:60});
 const locale=new Intl.Collator('ko',{numeric:true,sensitivity:'base'});
 let scheduled=false;
