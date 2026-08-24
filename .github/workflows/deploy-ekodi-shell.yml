@@ -9,6 +9,7 @@ on:
       - 'ekodi-shell-injector.js'
       - 'ekodi-message-ui.js'
       - 'shell/**'
+      - 'config/ecosystem-services.json'
       - 'config/internal-ui-rollout.json'
       - 'config/seasonal-design-governance.json'
       - 'docs/ekodi-shell-contract.md'
