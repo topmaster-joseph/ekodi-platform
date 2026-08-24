@@ -44,7 +44,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Shell contracts, mobile header and shared Message UI
+      - name: Validate Shell contracts, mobile header, Message UI and ecosystem links
         run: |
           set -euo pipefail
           node --check ekodi-shell-worker.js
@@ -52,13 +52,17 @@ jobs:
           node --check ekodi-message-ui.js
           node --check shell/shell.js
           node --check shell/mobile-fixed-header.js
+          node --check shell/ecosystem-link-compat.js
           node --check scripts/verify-ekodi-shell-live.mjs
           test -f shell/workspace.css
           grep -Fq 'data-ekodi-shell-surface="workspace"' shell/workspace.css
           grep -Fq 'data-ekodi-document-surface' shell/workspace.css
           grep -Fq "messageUrl.pathname='/message-ui.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-message-ui" ekodi-shell-worker.js
+          grep -Fq "linkCompatUrl.pathname='/ecosystem-link-compat.js'" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-link-compat" ekodi-shell-worker.js
           grep -Fq 'window.EKODIMessage' ekodi-message-ui.js
+          grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           node --test test/ekodi-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
