@@ -58,7 +58,7 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260824-return-origin-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260824-business-resume-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -112,7 +112,7 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-router\.js\?v=20260824-return-origin-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260824-business-resume-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
