@@ -35,7 +35,11 @@ const reviewMode=marketing&&params.get('review')==='1';
 const explicitPro=marketing&&(params.get('plan')==='pro'||params.get('intent')==='pro');
 const manageMode=params.get('manage')==='1';
 const interactiveMode=reviewMode||explicitPro||manageMode;
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);return target.protocol==='https:'&&config.origins.includes(target.origin)?target.href:config.returnTo}catch{return config.returnTo}};
+function isMarketingReturnOrigin(origin){
+  if(config.origins.includes(origin))return true;
+  try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
+}
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;return (config.origins.includes(target.origin)||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
@@ -316,13 +320,17 @@ async function renderAccess(s){
       try{await handoffToService(requested.workspace_key);return;}
       catch(e){console.error('requested workspace handoff',e);showAccessFallback(s,'선택한 Workspace를 다시 확인하지 못했습니다. 다른 공간을 선택하거나 다시 인증해 주세요.','error');await loadLinkedIdentities();return;}
     }
-    if(authorized.length===1&&workspaces.length===1){
-      routing=true;showProcessing();
-      try{await handoffToService(authorized[0].workspace_key);return;}
-      catch(e){console.error('central handoff',e);showAccessFallback(s,'본인 인증은 완료되었지만 서비스 연결에 실패했습니다. 다시 이동을 시도하거나 취소해 주세요.','error');show('approvedActions',true);await loadLinkedIdentities();return;}
-    }
     if(authorized.length>0){
-      routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();$('serviceBadge').textContent=`${workspaces.length}개 공간`;notice('accessStatus','이 서비스에서 사용할 공간을 선택해 주세요. 같은 로그인 계정이어도 공간별 데이터와 권한은 분리됩니다.');await loadReviewConsole();return;
+      routing=true;showProcessing('Google 인증이 완료되었습니다. 원래 이용하던 서비스로 돌아가는 중입니다.');
+      try{await handoffToService();return;}
+      catch(e){
+        console.error('seamless central handoff',e);
+        routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();
+        $('serviceBadge').textContent=workspaces.length>1?`${workspaces.length}개 공간`:'연결 재시도';
+        notice('accessStatus','자동 복귀가 지연되어 사용할 공간을 선택할 수 있게 열었습니다.','warn');
+        if(workspaces.length===1)show('approvedActions',true);
+        return;
+      }
     }
     if(marketing){location.assign(marketingFreeTarget());return;}
     showAccessFallback(s,config.requestable?'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 권한을 신청하거나 다른 계정으로 다시 시도할 수 있습니다.':'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 다른 계정으로 다시 시도하거나 취소해 주세요.','warn');
