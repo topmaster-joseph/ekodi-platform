@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      LOAD_TARGETS_JSON: >-
+        [{"label":"root","url":"https://ekodi.kr/"},{"label":"admin","url":"https://admin.ekodi.kr/"},{"label":"api-health","url":"https://api.ekodi.kr/health"},{"label":"biz","url":"https://biz.ekodi.kr/"},{"label":"marketing","url":"https://marketing.ekodi.kr/"},{"label":"church","url":"https://church.ekodi.kr/"},{"label":"lab","url":"https://lab.ekodi.kr/"},{"label":"support","url":"https://support.ekodi.kr/"}]
       LOAD_CONCURRENCY: '1,10,20,50'
       LOAD_REQUESTS_PER_STAGE: '60'
       LOAD_TIMEOUT_MS: '5000'
