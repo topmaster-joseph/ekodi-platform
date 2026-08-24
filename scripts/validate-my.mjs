@@ -5,10 +5,13 @@ const files={
   app:'my/app.js',
   userAi:'my/user-ai.js',
   userAiUi:'my/user-ai-ui.js',
+  userAiProviderUi:'my/user-ai-provider-ui.js',
   userUiCss:'my/user-ui.css',
   membershipJs:'my/membership-summary.js',
   membershipCss:'my/membership-summary.css',
   userServices:'my/user-services.js',
+  workspaceSync:'my/workspace-selector-sync.js',
+  workspaceCss:'my/workspace-selector-shell.css',
   worker:'my-worker.js',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
@@ -47,13 +50,29 @@ must('userAi','dependsOnExternalAI:false');
 must('userAi','specialistDirectControl:false');
 must('userAiUi','buildUserSuggestions');
 must('userAiUi','collectContext');
+must('userAiProviderUi','connectionGuide');
+must('userAiProviderUi','AI 연결 변경');
 must('userUiCss','position:fixed');
+must('userUiCss','body[data-ekodi-ui="USER"] .topbar{position:fixed');
+must('userUiCss','padding-top:calc(62px + env(safe-area-inset-top))');
 mustNot('userUiCss','.workspace-control{display:none!important}');
 mustNot('html','class="workspace-control"');
 must('membershipJs','/api/membership/portfolio');
 must('membershipJs','USER_SERVICES');
-must('membershipCss','.membership-summary');
+must('membershipJs','function portfolioRows(data)');
+must('membershipJs',"return { label: '이용 가능'");
+must('membershipJs',"return { label: '사용 중'");
+must('membershipJs',"return { label: '구독 중'");
+must('membershipJs','상태 확인 지연');
+must('membershipJs','renderPortfolio(null, { degraded: true })');
+mustNot('membershipJs','/api/membership/me');
+must('membershipCss','.membership-service-state');
+must('membershipCss','.membership-summary-warning');
 must('userServices','USER_SERVICES');
+must('userServices','"id": "support"');
+must('workspaceSync','window.EKODIShell');
+must('workspaceSync','ekodiWorkspaceOrder');
+must('workspaceCss','--ekodi-shell-accent');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
@@ -77,4 +96,4 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: USER UI, EKODI User AI suggest-and-handoff boundary, universal membership summary, single visible Workspace chooser, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
+console.log('My EKODI validation passed: USER UI, truthful universal membership lifecycle states, Support AI registry coverage, EKODI User AI onboarding, Shell-synced Workspace context, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
