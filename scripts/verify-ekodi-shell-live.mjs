@@ -27,8 +27,8 @@ function includesAll(text,label,needles,failures){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
-  const [healthResult,manifestResult,shellResult,themeResult,styleResult]=await Promise.all([
-    read('/health',attempt),read('/manifest.json',attempt),read('/shell.js',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),
+  const [healthResult,manifestResult,shellResult,themeResult,styleResult,shellUiResult]=await Promise.all([
+    read('/health',attempt),read('/manifest.json',attempt),read('/shell.js',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/shell-ui.css',attempt),
   ]);
   const failures=[];
   const health=parseJson(healthResult,'health',failures);
@@ -36,6 +36,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   const theme=parseJson(themeResult,'theme',failures);
   if(!shellResult.ok)failures.push(`shell:http-${shellResult.status||'network'}`);
   if(!styleResult.ok)failures.push(`workspace:http-${styleResult.status||'network'}`);
+  if(!shellUiResult.ok)failures.push(`shell-ui:http-${shellUiResult.status||'network'}`);
 
   if(health){
     if(health.identityModel!=='person-space-role')failures.push(`health:identityModel:${health.identityModel||'missing'}`);
@@ -69,8 +70,9 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-link-compat')!=='v1')failures.push(`shell:link-compat-header:${shellResult.headers?.get?.('x-ekodi-link-compat')||'missing'}`);
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
+  includesAll(shellUiResult.text,'shell-ui',[':host{all:initial;position:fixed','data-ekodi-service="my"','.panel[hidden]{display:none}'],failures);
 
-  const statuses=[healthResult,manifestResult,shellResult,themeResult,styleResult].map(item=>item.status).join('/');
+  const statuses=[healthResult,manifestResult,shellResult,themeResult,styleResult,shellUiResult].map(item=>item.status).join('/');
   if(!failures.length){
     console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);

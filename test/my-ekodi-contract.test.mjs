@@ -37,15 +37,13 @@ test('My EKODI reuses central identity and consumes one-time auth handoff',async
   assert.match(router,/site==='my'/);
 });
 
-test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
+test('My workspace selection changes context first and keeps service choice separate',async()=>{
   const app=await read('my/app.js');
-  assert.match(app,/function workspaceDestination\(workspace\)/);
-  assert.match(app,/requires_handoff/);
-  assert.match(app,/function enterWorkspace\(key\)/);
-  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/function enterWorkspace\(key\)\{\s*setActiveWorkspace\(key\);?\s*\}/);
+  assert.doesNotMatch(app,/function workspaceDestination\(/);
+  assert.doesNotMatch(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/이 공간 사용/);
   assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
-  assert.match(app,/return_to/);
-  assert.match(app,/new URL\(url\)\.origin===target\.origin/);
 });
 
 test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
@@ -54,7 +52,7 @@ test('My keeps the active workspace when opening Social or Energy and when retur
   assert.match(app,/TARGETABLE_WORKSPACE_SITES=new Set\(\[[^\]]*'social','energy'/);
   assert.match(app,/\(!connected\(id\)&&!open\)/);
   assert.match(app,/current\.services\?\.includes\(id\)\|\|open/);
-  assert.match(app,/workspace\.services\?\.includes\(contextual\.id\)\|\|OPEN_SSO_SITES\.has\(contextual\.id\)/);
+  assert.match(app,/target\.searchParams\.set\('workspace',current\.workspace_key\)/);
   assert.match(app,/open\?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.'/);
 });
 

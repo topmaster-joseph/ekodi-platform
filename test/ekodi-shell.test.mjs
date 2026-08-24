@@ -66,8 +66,13 @@ test('browser shell preserves workspace context and exposes bounded visual surfa
 });
 
 test('shell injector is isolated in Shadow DOM and applies shared style only to internal surfaces',async()=>{
-  const [client,injector,workspaceCss]=await Promise.all([read('shell/shell.js'),read('ekodi-shell-injector.js'),read('shell/workspace.css')]);
+  const [client,injector,workspaceCss,shellUiCss]=await Promise.all([read('shell/shell.js'),read('ekodi-shell-injector.js'),read('shell/workspace.css'),read('shell/shell-ui.css')]);
   assert.match(client,/attachShadow\(\{mode:'open'\}\)/);
+  assert.match(client,/shell-ui\.css/);
+  assert.doesNotMatch(client,/style\.textContent=`/);
+  assert.doesNotMatch(client,/host\.style\.cssText/);
+  assert.match(shellUiCss,/:host\{[^}]*position:fixed/);
+  assert.match(shellUiCss,/:host\(\[data-ekodi-service=\"my\"\]\)/);
   assert.match(injector,/HTMLRewriter/);
   assert.match(injector,/script-src/);
   assert.match(injector,/style-src/);
