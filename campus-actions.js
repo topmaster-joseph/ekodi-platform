@@ -9,20 +9,20 @@
     { type: '출판', name: '에코디북스', domain: 'books.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
     { type: '작가AI', name: 'EKODI Creator AI', domain: 'author.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
     { type: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services', group: 'knowledge' },
-    { type: '교육', name: 'EKODI Education', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge', lifecycle: 'planned' },
+    { type: '교육', name: 'EKODI Education', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
     { type: '커뮤니티', name: '에코디커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
     { type: '소셜', name: 'EKODI Social', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
     { type: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services', group: 'business' },
     { type: '마케팅', name: 'EKODI Marketing AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },
     { type: '무역', name: 'EKODI Trading', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
     { type: '결제', name: 'EKODI Pay', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
-    { type: 'My', name: 'My EKODI', domain: 'my.ekodi.kr', section: 'services', group: 'worklife', lifecycle: 'planned' },
+    { type: 'My', name: 'My EKODI', domain: 'my.ekodi.kr', section: 'services', group: 'worklife' },
     { type: '워크', name: 'EKODI Work', domain: 'work.ekodi.kr', section: 'work', fallback: 'services', group: 'worklife' },
     { type: '에너지', name: 'EKODI Energy AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
     { type: '보험', name: 'EKODI Insurance', domain: 'ins.ekodi.kr', section: 'services', group: 'worklife', lifecycle: 'planned' },
-    { type: '메일', name: 'EKODI Mail', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication' },
-    { type: '라이브', name: 'EKODI Live', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication' },
-    { type: '클라우드', name: 'EKODI Cloud', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication' },
+    { type: '메일', name: 'EKODI Mail', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '라이브', name: 'EKODI Live', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '클라우드', name: 'EKODI Cloud', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '미디어', name: '에코디미디어', domain: 'media.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
@@ -244,6 +244,7 @@
     const group = REGISTRY_GROUP_MAP[service?.group] || 'other';
     const type = existing?.querySelector('.campus-site-type')?.textContent?.trim()
       || REGISTRY_TYPE_MAP[service?.group] || '서비스';
+    const lifecycle = String(existing?.dataset?.siteLifecycle || service?.status || 'live').trim().toLowerCase();
     return {
       id,
       type,
@@ -252,7 +253,7 @@
       section,
       fallback,
       group,
-      lifecycle: String(service?.status || 'live').trim().toLowerCase(),
+      lifecycle,
     };
   }
 
