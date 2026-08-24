@@ -2,6 +2,8 @@ import legacyWorkspaceWorker from './workspace-platform-api-worker.js';
 import { handleWorkspaceMessengerV2 } from './workspace-messenger-v2.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence-runtime.js';
+import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
+import { handleInvestPersonalizationApi } from './invest-personalization-runtime.js';
 
 async function conversationSchemaReady(env){
   if(!env?.DB)return false;
@@ -18,16 +20,23 @@ function scheduleOutboxRecovery(env,ctx,limit=8){
   return task;
 }
 
+function profileEnv(env){
+  if(env?.PROFILE_DATA&&typeof env.PROFILE_DATA.fetch==='function')return env;
+  return {...env,PROFILE_DATA:createOfficialProfileDataBinding(env)};
+}
+
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     if(url.pathname==='/v1/profiles'||url.pathname.startsWith('/v1/profiles/')){
-      const response=await handleProfileEvidenceApi(request,env);
+      const response=await handleProfileEvidenceApi(request,profileEnv(env));
+      if(response)return response;
+    }
+    if(url.pathname==='/v1/invest/context'||url.pathname==='/v1/invest/data-connections'){
+      const response=await handleInvestPersonalizationApi(request,env);
       if(response)return response;
     }
     if(url.pathname.startsWith('/v1/messenger/')){
-      // User traffic also heals pending/failed events. Writes still schedule their own
-      // immediate drain, while reads provide a free recovery path between shared cron runs.
       scheduleOutboxRecovery(env,ctx,8);
       const response=await handleWorkspaceMessengerV2(request,env,ctx);
       if(response)return response;
@@ -37,7 +46,8 @@ export default {
       try{
         const data=await response.clone().json();
         const [foundationReady,profileReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env)]);
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true}),{status:response.status,headers:response.headers});
+        const connections=officialDataConnections(env).map(({id,status})=>({id,status}));
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investDataConnections:connections}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);
