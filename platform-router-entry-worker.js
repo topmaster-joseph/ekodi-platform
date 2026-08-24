@@ -2,6 +2,7 @@ import legacyPlatformRouter from './platform-router-worker.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
+import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
@@ -17,6 +18,12 @@ function resolvedHost(request,env){
 async function withReleaseMarker(response){
   const text=await response.text();
   return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
+}
+async function withInvestSubjectScript(response){
+  const text=await response.text();
+  const marker='<script src="/invest-ui.js" defer></script>';
+  const patched=text.replace(marker,'<script src="/invest-subject-ui.js" defer></script>'+marker);
+  return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 
 export default {
@@ -40,8 +47,9 @@ export default {
     }
 
     if(host===INVEST_HOST&&request.method==='GET'){
-      if(url.pathname==='/'||url.pathname==='')return injectEkodiShell(investUserPage(),'invest');
+      if(url.pathname==='/'||url.pathname==='')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');
       if(url.pathname==='/invest-ui.js')return investUiScript();
+      if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     return legacyPlatformRouter.fetch(request,env,ctx);
   },
