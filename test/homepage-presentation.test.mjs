@@ -9,6 +9,11 @@ const registry = JSON.parse(fs.readFileSync(new URL('../config/ecosystem-service
 const { loadHomepageServices, renderServiceCards } = await import('../scripts/ecosystem-registry.mjs');
 const { handleHomepagePresentation } = await import('../homepage-presentation-control.js');
 const { USER_SERVICES } = await import('../generated/user-services.js');
+const { mountHomepageAdmin } = await import('../homepage-admin.js');
+
+test('homepage admin stays an import-safe on-demand module', () => {
+  assert.equal(typeof mountHomepageAdmin, 'function');
+});
 
 test('public homepage candidates are production-verified live services only', async () => {
   const candidates = await loadHomepageServices();
