@@ -15,9 +15,12 @@ test('homepage admin stays an import-safe on-demand module', () => {
   assert.equal(typeof mountHomepageAdmin, 'function');
 });
 
-test('public homepage candidates are production-verified live services only', async () => {
-  const candidates = await loadHomepageServices();
-  assert.ok(candidates.length > 0);
+test('public homepage services keep the legacy published contract while admin candidates cover every verified live service', async () => {
+  const services = await loadHomepageServices();
+  const candidates = services.presentationCandidates;
+  assert.ok(services.length > 0);
+  assert.ok(services.every(service => service.homepage === true && service.productionVerified === true && service.status === 'live'));
+  assert.ok(Array.isArray(candidates) && candidates.length >= services.length);
   assert.ok(candidates.every(service => service.productionVerified === true && service.status === 'live'));
 
   const expected = registry.services
@@ -28,8 +31,9 @@ test('public homepage candidates are production-verified live services only', as
 });
 
 test('rendered homepage candidates keep static defaults without exposing unsafe services', async () => {
-  const candidates = await loadHomepageServices();
-  const html = renderServiceCards(candidates);
+  const services = await loadHomepageServices();
+  const candidates = services.presentationCandidates;
+  const html = renderServiceCards(services);
   for (const service of candidates) {
     assert.match(html, new RegExp(`data-service-id="${service.id}"`));
     assert.match(html, new RegExp(`data-homepage-default="${service.homepage === true ? 'normal' : 'hidden'}"`));
