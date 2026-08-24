@@ -22,25 +22,52 @@ V1 cannot:
 - transfer money, close an account, cancel/change automatic payment, sign, withdraw, or make a payment;
 - treat AI output as a substitute for a user's informed decision or a financial institution's eligibility check.
 
+## V2 integration-readiness layer
+
+V2 adds a regulated connection layer without pretending that uncontracted financial APIs are live.
+
+Provider states:
+- `accountinfo`: available as an official handoff. EKODI does not receive the user's financial credentials or AccountInfo session.
+- `kftc-openbanking`: contract-required. The server adapter remains disabled until an institutional contract, client configuration, redirect configuration and OAuth state-store readiness are all present.
+- `financial-mydata`: legal-review. The product must first establish the applicable licensed/contracted data-access model and minimum processing scope.
+
+V2 APIs:
+- `GET /api/integrations` returns provider readiness and capability boundaries.
+- `POST /api/consent/preview` returns a minimum-scope consent preview for supported read scopes.
+- `POST /api/consent/revoke` confirms revocation semantics. In the readiness phase no durable financial connection is stored.
+- `POST /api/connect/begin` opens AccountInfo as an official handoff and returns `503 provider_not_live` for uncontracted API providers.
+- `POST /api/execution` continues to return `409 financial_execution_disabled`.
+
+Allowed consent-preview scopes are read-only: `accounts:read`, `balances:read`, `transactions:read`, `cards:read`, `insurance:read`, `loans:read`, `autopay:read`. Write/payment scopes are intentionally excluded.
+
 ## Human gate
 
 The following actions always require a human gate: `transfer-balance`, `close-account`, `change-autopay`, `cancel-autopay`, `close-card`, `payment`, `withdraw`, `sign`.
 
-The Worker returns `409 financial_execution_disabled` for `/api/execution` in V1. This is a product boundary, not a temporary UI omission.
+The Worker returns `409 financial_execution_disabled` for `/api/execution`. This is a product boundary, not a temporary UI omission.
 
 ## Data boundary
 
-V1 persists no financial planning payload. Browser UI uses demonstration aliases and relationship metadata only. Any future persistent `money_*` namespace or financial API adapter requires explicit legal, privacy, security, authorization, audit, revocation, retention and incident-response review.
+The V2 readiness phase persists no financial planning payload, OAuth token, financial account identifier or financial credential. Browser UI uses demonstration aliases and relationship metadata only.
 
-## Future integration gate
+The Worker may emit privacy-minimized security events containing only event type, provider id, action label, scope count and timestamp. Those events must not contain account numbers, card numbers, resident-registration numbers, tokens, secrets, balances or transaction content.
 
-AccountInfo, Open Banking, MyData or another financial integration may be added only through a reviewed server-side contract with:
-- explicit user consent and revocation;
+Any future persistent `money_*` namespace or financial API adapter requires explicit legal, privacy, security, authorization, audit, revocation, retention and incident-response review.
+
+## Activation gate for Open Banking
+
+A live Open Banking adapter must not be activated merely by adding a client id. Production readiness requires all of the following:
+- institutional application/contract approval for the intended API use;
+- server-side client configuration and approved redirect URI;
+- cryptographically protected OAuth state/session storage and replay protection;
+- explicit user authentication, consent and revocation;
 - purpose limitation and minimum data collection;
 - server-side encrypted secrets/tokens where applicable;
-- Person + Space + Role re-authorization;
+- Person + Space + Role re-authorization inside EKODI;
 - immutable audit events for high-impact actions;
 - human confirmation immediately before irreversible financial execution;
-- production verification and rollback/incident controls.
+- production verification, rollback and incident controls.
+
+Even after read APIs are enabled, transfer, withdrawal, account closure and autopay modification remain separately gated high-impact actions.
 
 No consumer browser session or AI-provider session may be used as a substitute for an authorized financial API.
