@@ -1,0 +1,99 @@
+name: Deploy Admin AI Control Plane
+
+on:
+  pull_request:
+    paths: &control_plane_paths
+      - '.github/workflows/deploy-admin-control-plane.yml'
+      - 'admin-ai-control-plane.js'
+      - 'admin-ai-governor.js'
+      - 'admin-secret-generator.js'
+      - 'scripts/build.mjs'
+      - 'site-worker.js'
+      - 'wrangler.site.toml'
+      - 'deploy/manifests/shared-site.worker.json'
+  push:
+    branches: [main]
+    paths: *control_plane_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Admin AI control plane and build contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check admin-ai-control-plane.js
+          node --check admin-ai-governor.js
+          node --check admin-secret-generator.js
+          npm run build
+          test -f dist/admin-secret-generator.js
+          test -f dist/ai-ops-admin.js
+          grep -Fq 'EKODIAdminAIControlPlane' dist/admin-secret-generator.js
+          grep -Fq 'EKODIAdminAIGovernor' dist/admin-secret-generator.js
+          grep -Fq '다시 조회' dist/admin-secret-generator.js
+          grep -Fq 'Worker가 0개로 조회되었습니다.' dist/admin-secret-generator.js
+          grep -Fq 'API Token의 Account/Zone/Workers 읽기 권한' dist/admin-secret-generator.js
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Build release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          grep -Fq '다시 조회' dist/admin-secret-generator.js
+          grep -Fq 'Worker가 0개로 조회되었습니다.' dist/admin-secret-generator.js
+      - name: Guarded shared-site deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+      - name: Verify live Worker diagnostics asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -D /tmp/h -o /tmp/b -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-secret-generator.js?control-plane=worker-diagnostics' || true)
+            if [ "$code" = '200' ] \
+              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/h \
+              && grep -Fq '다시 조회' /tmp/b \
+              && grep -Fq 'Worker가 0개로 조회되었습니다.' /tmp/b \
+              && grep -Fq 'API Token의 Account/Zone/Workers 읽기 권한' /tmp/b; then
+              echo 'Production Worker diagnostics verified.'
+              exit 0
+            fi
+            echo "Worker diagnostics deployment pending ($attempt/24)."
+            sleep 4
+          done
+          echo 'Production Worker diagnostics verification failed.'
+          exit 1
