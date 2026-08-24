@@ -13,7 +13,7 @@
     const response = await fetch(`${API}${path}`, { ...options, headers, cache: 'no-store' });
     let data = {};
     try { data = await response.json(); } catch {}
-    if (!response.ok) throw new Error(data.error || `Books API 요청 실패 (${response.status})`);
+    if (!response.ok) throw new Error(data.error || `에코디서점 API 요청 실패 (${response.status})`);
     return data;
   }
 
@@ -47,7 +47,7 @@
     button.type = 'button';
     button.className = 'nav';
     button.dataset.section = 'books';
-    button.innerHTML = '▤ <span>Books</span>';
+    button.innerHTML = '▤ <span>에코디서점</span>';
     const finance = nav.querySelector('[data-section="finance"]');
     if (finance) nav.insertBefore(button, finance);
     else nav.append(button);
@@ -58,8 +58,8 @@
     section.dataset.panel = 'books';
     section.innerHTML = `
       <div class="section-head books-head">
-        <div><p class="kicker">EKODI BOOKS · PUBLISHING OPERATIONS</p><h2>Books Control</h2><p>출판물, 상담, 출판대행 서비스, 요금과 기능 노출을 한곳에서 관리합니다.</p></div>
-        <div class="books-head-actions"><a class="secondary books-public-link" href="https://books.ekodi.kr/publishing/" target="_blank" rel="noopener">Publishing Service ↗</a><button class="secondary" id="refreshBooksAdmin" type="button">↻ Refresh</button></div>
+        <div><p class="kicker">에코디서점 · 출판 운영</p><h2>에코디서점 관리</h2><p>출판물, 상담, 출판대행 서비스, 요금과 기능 노출을 한곳에서 관리합니다.</p></div>
+        <div class="books-head-actions"><a class="secondary books-public-link" href="https://books.ekodi.kr/publishing/" target="_blank" rel="noopener">에코디서점 출판 ↗</a><button class="secondary" id="refreshBooksAdmin" type="button">↻ Refresh</button></div>
       </div>
       <p class="books-flash" id="booksFlash" role="status"></p>
       <div class="books-tabs" role="tablist">
@@ -123,7 +123,7 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'books'));
       const title = document.querySelector('#pageTitle');
-      if (title) title.textContent = 'Books';
+      if (title) title.textContent = '에코디서점';
       document.querySelector('.sidebar')?.classList.remove('open');
       if (location.hash !== '#books') history.replaceState(null, '', '#books');
       if (!loaded) load();
@@ -146,9 +146,9 @@
 
   async function load() {
     if (loading) return;
-    if (!token()) { flash('관리자 인증 후 Books 데이터를 불러올 수 있습니다.', true); return; }
+    if (!token()) { flash('관리자 인증 후 에코디서점 데이터를 불러올 수 있습니다.', true); return; }
     loading = true;
-    flash('Books 운영정보를 불러오는 중입니다.');
+    flash('에코디서점 운영정보를 불러오는 중입니다.');
     try {
       state = await request('/api/books/admin/overview');
       loaded = true;

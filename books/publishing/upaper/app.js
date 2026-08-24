@@ -31,7 +31,7 @@ function normalizedBook(book){
   const price = String(priceText).replace(/[^0-9]/g,'') || '8900';
   return {
     title: book.title || '', subtitle: book.subtitle || '', author: book.author || '',
-    publisher: 'EKODI BOOKS', description: book.abstract || '', price,
+    publisher: '에코디서점', description: book.abstract || '', price,
     keywords: ['에코디언','에클레시아','코이노니아','디아스포라','희년'].join(', '),
     isbn: book?.identifiers?.isbnEbook || '', edition: book.edition || '',
     cover: book.coverImage || '', detailUrl: book.detailUrl || ''
@@ -87,7 +87,7 @@ async function load(){
     bookSelect.addEventListener('change',()=>{ currentBook=catalog[Number(bookSelect.value)] || catalog[0]; render(); });
     render();
   }catch{
-    summary.innerHTML='<p>도서 데이터를 불러오지 못했습니다. Publishing Studio에서 도서 정보를 먼저 확인해 주세요.</p>';
+    summary.innerHTML='<p>도서 데이터를 불러오지 못했습니다. 에코디서점 출판 스튜디오에서 도서 정보를 먼저 확인해 주세요.</p>';
   }
 }
 matchMedia('(max-width: 760px)').addEventListener?.('change',()=>{ if(forcedMode==='auto') applyMode(); });

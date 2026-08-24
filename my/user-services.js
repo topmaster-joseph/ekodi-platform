@@ -98,7 +98,7 @@ export const USER_SERVICES = Object.freeze([
   },
   {
     "id": "books",
-    "name": "에코디북스",
+    "name": "에코디서점",
     "domain": "books.ekodi.kr",
     "group": "knowledge-creation",
     "status": "live",
