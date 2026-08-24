@@ -9,7 +9,7 @@
     { type: '출판', name: '에코디북스', domain: 'books.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
     { type: '작가AI', name: 'EKODI Creator AI', domain: 'author.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
     { type: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services', group: 'knowledge' },
-    { type: '교육', name: 'EKODI Education', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
+    { type: '교육', name: 'EKODI Education', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge', lifecycle: 'planned' },
     { type: '커뮤니티', name: '에코디커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
     { type: '소셜', name: 'EKODI Social', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
     { type: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services', group: 'business' },
@@ -32,16 +32,57 @@
 
   const SITE_GROUPS = [
     { key: 'core', title: 'Core & Access', description: '홈 · 관리자 · 통합인증' },
-    { key: 'business', title: 'Business & Commerce', description: '비즈 · OS · 몰 · 마케팅 · 무역 · 결제' },
-    { key: 'community', title: 'Community', description: '교회 · 커뮤니티 · 소셜' },
+    { key: 'business', title: 'Business & Commerce', description: '비즈 · OS · 몰 · 마케팅 · 무역 · 결제 · 투자 · 지원' },
+    { key: 'community', title: 'Community', description: '교회 · 커뮤니티 · 소셜 · 카페' },
     { key: 'clients', title: 'Client Sites', description: '외부 고객 · 상권 · 매장' },
-    { key: 'knowledge', title: 'Knowledge & Content', description: '출판 · 작가AI · 연구 · 교육' },
-    { key: 'communication', title: 'Communication & Cloud', description: '메일 · 라이브 · 클라우드 · 미디어' },
+    { key: 'knowledge', title: 'Knowledge & Content', description: '서점 · 출판 · 작가AI · 연구 · 교육' },
+    { key: 'communication', title: 'Communication & Cloud', description: '메신저 · 메일 · 라이브 · 클라우드 · 미디어' },
     { key: 'worklife', title: 'Work & Life', description: 'My · 업무 · 에너지 · 보험' },
+    { key: 'other', title: 'Other Services', description: '중앙 레지스트리에 새로 등록된 서비스' },
   ];
+
+  const REGISTRY_GROUP_MAP = Object.freeze({
+    'community-ministry': 'community',
+    'business-growth': 'business',
+    'knowledge-creation': 'knowledge',
+    'work-life': 'worklife',
+    'communication-cloud': 'communication',
+  });
+
+  const REGISTRY_SECTION_MAP = Object.freeze({
+    biz: ['organization', 'services'],
+    trade: ['organization', 'services'],
+    pay: ['finance', 'services'],
+    money: ['finance', 'services'],
+    books: ['books', 'services'],
+    publishing: ['books', 'services'],
+    author: ['books', 'services'],
+    community: ['community', 'services'],
+    social: ['social', 'services'],
+    work: ['work', 'services'],
+    messenger: ['communication', 'services'],
+    mail: ['communication', 'services'],
+    live: ['communication', 'services'],
+    cloud: ['workspace', 'services'],
+    media: ['communication', 'services'],
+  });
+
+  const REGISTRY_TYPE_MAP = Object.freeze({
+    'community-ministry': '커뮤니티',
+    'business-growth': '비즈',
+    'knowledge-creation': '콘텐츠',
+    'work-life': '워크',
+    'communication-cloud': '소통',
+  });
+
+  let homepageModulePromise = null;
 
   function nav() {
     return document.querySelector('.sidebar nav');
+  }
+
+  function normalizeDomain(value) {
+    return String(value || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   }
 
   function sectionControl(section, fallback = '') {
@@ -105,13 +146,14 @@
     return link;
   }
 
-  function renderSiteItem(site) {
-    const item = document.createElement('article');
-    item.className = 'campus-site-item';
-    item.dataset.siteDomain = site.domain;
-    item.dataset.siteLifecycle = site.lifecycle || 'live';
-    if (site.lifecycle === 'planned') item.classList.add('is-planned');
+  function stageLabel(lifecycle) {
+    if (lifecycle === 'planned') return '오픈 전';
+    if (lifecycle === 'preparing') return '준비중';
+    if (lifecycle === 'beta') return '베타';
+    return '';
+  }
 
+  function makeIdentity(site) {
     const identity = document.createElement('div');
     identity.className = 'campus-site-identity';
     const type = document.createElement('span');
@@ -120,13 +162,17 @@
     const strong = document.createElement('strong');
     strong.textContent = site.name;
     identity.append(type, strong);
-    if (site.lifecycle === 'planned') {
+    const stageText = stageLabel(site.lifecycle);
+    if (stageText) {
       const stage = document.createElement('span');
       stage.className = 'campus-site-stage';
-      stage.textContent = '오픈 전';
+      stage.textContent = stageText;
       identity.append(stage);
     }
+    return identity;
+  }
 
+  function makeDomainControl(site) {
     const domain = site.lifecycle === 'planned' ? document.createElement('span') : document.createElement('a');
     domain.className = 'campus-site-domain';
     if (domain.tagName === 'A') {
@@ -135,7 +181,10 @@
       domain.rel = 'noopener';
     }
     domain.textContent = site.domain;
+    return domain;
+  }
 
+  function makeOperationalActions(site) {
     const actions = document.createElement('div');
     actions.className = 'campus-row-actions';
     actions.append(
@@ -143,8 +192,19 @@
       makeButton('Status', 'secondary', 'status', site),
       makeOpenControl(site),
     );
+    return actions;
+  }
 
-    item.append(identity, domain, actions);
+  function renderSiteItem(site) {
+    const item = document.createElement('article');
+    item.className = 'campus-site-item';
+    item.dataset.siteDomain = site.domain;
+    item.dataset.siteLifecycle = site.lifecycle || 'live';
+    if (site.id) item.dataset.siteId = site.id;
+    if (site.lifecycle === 'planned') item.classList.add('is-planned');
+    if (site.lifecycle === 'preparing') item.classList.add('is-preparing');
+    if (site.lifecycle === 'beta') item.classList.add('is-beta');
+    item.append(makeIdentity(site), makeDomainControl(site), makeOperationalActions(site));
     return item;
   }
 
@@ -173,35 +233,122 @@
     list.className = 'campus-group-list';
     list.append(...sites.map(renderSiteItem));
     card.append(header, list);
+    if (!sites.length) card.hidden = true;
     return card;
+  }
+
+  function registrySite(service, existing = null) {
+    const id = String(service?.id || '').trim().toLowerCase();
+    const domain = normalizeDomain(service?.domain || service?.label || service?.url);
+    const [section, fallback = 'services'] = REGISTRY_SECTION_MAP[id] || ['services', ''];
+    const group = REGISTRY_GROUP_MAP[service?.group] || 'other';
+    const type = existing?.querySelector('.campus-site-type')?.textContent?.trim()
+      || REGISTRY_TYPE_MAP[service?.group] || '서비스';
+    return {
+      id,
+      type,
+      name: String(service?.name || id || domain).trim(),
+      domain,
+      section,
+      fallback,
+      group,
+      lifecycle: String(service?.status || 'live').trim().toLowerCase(),
+    };
+  }
+
+  function updateSiteItem(item, site) {
+    item.dataset.siteDomain = site.domain;
+    item.dataset.siteLifecycle = site.lifecycle || 'live';
+    if (site.id) item.dataset.siteId = site.id;
+    item.classList.toggle('is-planned', site.lifecycle === 'planned');
+    item.classList.toggle('is-preparing', site.lifecycle === 'preparing');
+    item.classList.toggle('is-beta', site.lifecycle === 'beta');
+
+    const identity = item.querySelector('.campus-site-identity');
+    if (identity) identity.replaceWith(makeIdentity(site));
+    const domain = item.querySelector('.campus-site-domain');
+    if (domain) domain.replaceWith(makeDomainControl(site));
+    const actions = item.querySelector('.campus-row-actions');
+    if (actions) actions.replaceWith(makeOperationalActions(site));
+  }
+
+  function refreshCampusCounts() {
+    const grid = document.querySelector('#campusSiteGroups');
+    if (!grid) return;
+    let total = 0;
+    for (const card of grid.querySelectorAll('.campus-group-card')) {
+      const count = card.querySelectorAll('.campus-site-item').length;
+      total += count;
+      card.hidden = count === 0;
+      const badge = card.querySelector('.campus-group-count');
+      if (badge) {
+        badge.textContent = String(count);
+        badge.setAttribute('aria-label', `${count}개 사이트`);
+      }
+    }
+    const heading = document.querySelector('#campusPanel .campus-toolbar h2');
+    if (heading) heading.textContent = `사이트 관리 · ${total}`;
+  }
+
+  function reconcileRegistryServices(services = []) {
+    const grid = document.querySelector('#campusSiteGroups');
+    if (!grid || !Array.isArray(services)) return false;
+
+    for (const service of services) {
+      const domain = normalizeDomain(service?.domain || service?.label || service?.url);
+      if (!domain) continue;
+      let item = [...grid.querySelectorAll('.campus-site-item')].find(row => normalizeDomain(row.dataset.siteDomain) === domain);
+      const site = registrySite(service, item);
+      if (!site.domain) continue;
+
+      const targetList = grid.querySelector(`[data-campus-group="${site.group}"] .campus-group-list`)
+        || grid.querySelector('[data-campus-group="other"] .campus-group-list');
+      if (!targetList) continue;
+
+      if (!item) {
+        item = renderSiteItem(site);
+        targetList.append(item);
+      } else {
+        updateSiteItem(item, site);
+        if (item.parentElement !== targetList) targetList.append(item);
+      }
+    }
+
+    refreshCampusCounts();
+    window.dispatchEvent(new CustomEvent('ekodi-campus-registry-reconciled', { detail: { count: services.length } }));
+    return true;
+  }
+
+  function loadHomepageAdmin() {
+    if (homepageModulePromise) return homepageModulePromise;
+    homepageModulePromise = import('./homepage-admin.js')
+      .then(module => {
+        module.mountHomepageAdmin();
+        return module;
+      })
+      .catch(error => {
+        homepageModulePromise = null;
+        console.warn('[EKODI Admin] 첫화면 관리 모듈을 불러오지 못했습니다.', error);
+      });
+    return homepageModulePromise;
   }
 
   function renderCampus() {
     const panel = document.querySelector('#campusPanel');
     const wrapper = panel?.querySelector('.campus-table-wrap');
     if (!panel || !wrapper) return false;
-    if (wrapper.dataset.allSitesReady === 'true') return true;
-
-    const heading = panel.querySelector('.campus-toolbar h2');
-    const copy = panel.querySelector('.campus-toolbar > div > p:not(.kicker)');
-    if (heading) heading.textContent = `사이트 관리 · ${ALL_SITES.length}`;
-    if (copy) copy.textContent = '에코디 생태계의 전체 사이트를 한곳에서 보고, 운영 상태와 공개 설정으로 바로 이동합니다.';
-
-    const toolbarActions = panel.querySelector('.campus-toolbar-actions');
-    if (toolbarActions && !toolbarActions.querySelector('[data-site-management-homepage]')) {
-      const homepageButton = document.createElement('button');
-      homepageButton.type = 'button';
-      homepageButton.className = 'secondary';
-      homepageButton.dataset.siteManagementHomepage = 'true';
-      homepageButton.textContent = '첫화면 노출';
-      homepageButton.addEventListener('click', () => window.EKODIAdminPanels?.activate?.('sites'));
-      toolbarActions.prepend(homepageButton);
+    if (wrapper.dataset.allSitesReady === 'true') {
+      loadHomepageAdmin();
+      return true;
     }
+
+    const copy = panel.querySelector('.campus-toolbar > div > p:not(.kicker)');
+    if (copy) copy.textContent = '에코디 생태계의 전체 사이트와 EKODI.KR 첫화면 공개 설정을 한 목록에서 관리합니다.';
 
     const grid = document.createElement('div');
     grid.id = 'campusSiteGroups';
     grid.className = 'campus-groups-grid';
-    grid.setAttribute('aria-label', 'EKODI 전체 사이트 및 오픈 전 플랫폼 목록');
+    grid.setAttribute('aria-label', 'EKODI 전체 사이트, 운영 상태 및 첫화면 공개 설정');
     grid.append(...SITE_GROUPS.map(renderGroup));
 
     wrapper.classList.add('campus-groups-wrap');
@@ -219,6 +366,9 @@
       openSection(target, domain, fallback);
       if (action === 'status' && location.hash !== '#operations') history.replaceState(null, '', '#operations');
     });
+
+    refreshCampusCounts();
+    loadHomepageAdmin();
     return true;
   }
 
@@ -301,6 +451,12 @@
 
     window.addEventListener('ekodi-feature-installed', normalizeSidebar);
   }
+
+  window.EKODICampus = Object.freeze({
+    reconcileRegistryServices,
+    refreshCounts: refreshCampusCounts,
+    loadHomepageAdmin,
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
