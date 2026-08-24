@@ -128,7 +128,7 @@
 
   function staticPresentation(card) {
     return {
-      visibility: card.dataset.homepageDefault || (card.hidden ? 'hidden' : 'normal'),
+      visibility: card.dataset.homepageDefault || (card.hasAttribute('hidden') ? 'hidden' : 'normal'),
       order: Math.max(0, Math.min(9999, Math.trunc(Number(card.dataset.homepageOrder) || 9999))),
     };
   }
@@ -136,8 +136,8 @@
   function updateServiceGroups() {
     document.querySelectorAll('.service-group').forEach(group => {
       const cards = [...group.querySelectorAll('.service-card[data-service-id]')];
-      const visible = cards.filter(card => !card.hidden);
-      group.hidden = visible.length === 0;
+      const visible = cards.filter(card => !card.hasAttribute('hidden'));
+      group.toggleAttribute('hidden', visible.length === 0);
       group.querySelectorAll('[data-service-count]').forEach(node => { node.textContent = String(visible.length); });
     });
   }
@@ -169,7 +169,7 @@
     for (const card of cards) {
       const fallback = staticPresentation(card);
       const current = settings.get(card.dataset.serviceId) || fallback;
-      card.hidden = current.visibility === 'hidden';
+      card.toggleAttribute('hidden', current.visibility === 'hidden');
       card.classList.toggle('is-admin-featured', current.visibility === 'featured');
       card.dataset.homepageVisibility = current.visibility;
       card.dataset.homepageOrder = String(current.order);
@@ -203,7 +203,7 @@
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);
-    const cards = allCards.filter(card => !card.hidden);
+    const cards = allCards.filter(card => !card.hasAttribute('hidden'));
     const liveCards = cards.filter(card => card.dataset.serviceStatus === 'live');
     for (const status of ['live', 'beta']) {
       const count = cards.filter(card => card.dataset.serviceStatus === status).length;
