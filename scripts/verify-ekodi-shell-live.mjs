@@ -60,7 +60,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','공간 전환 · My EKODI','EKODI 서비스 전환','ekodi:public-experience',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
-    'window.EKODIMessage','window.EKODIIllustration','data-ekodi-illustration-system',
+    'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem',
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'"
   ],failures);
   if(shellResult.headers?.get?.('x-ekodi-message-ui')!=='v1')failures.push(`shell:message-ui-header:${shellResult.headers?.get?.('x-ekodi-message-ui')||'missing'}`);
