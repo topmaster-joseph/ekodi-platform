@@ -1,5 +1,5 @@
 name: EKODI Cafe · Validate and Deploy
-# 2026-08-24 operational activation and live-route verification
+# 2026-08-24 operational activation, deterministic DNS and live-route verification
 
 on:
   pull_request:
@@ -28,6 +28,7 @@ env:
   WRANGLER_VERSION: '4.119.0'
   PROJECT: ekodi-cafe
   PUBLIC_URL: https://cafe.ekodi.kr
+  PUBLIC_HOST: cafe.ekodi.kr
 
 jobs:
   validate:
@@ -79,21 +80,44 @@ jobs:
           fi
       - name: Deploy exact Cafe artifact
         run: npx --yes wrangler@${WRANGLER_VERSION} pages deploy sites/ekodi-cafe --project-name="$PROJECT" --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
-      - name: Ensure cafe.ekodi.kr custom domain
+      - name: Ensure cafe.ekodi.kr custom domain and DNS
         shell: bash
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/cafe-domain.json -w '%{http_code}' -X POST \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/domains" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data '{"name":"cafe.ekodi.kr"}' || true)
-          if [[ "$code" =~ ^20 ]] || grep -Eqi 'already|exists|duplicate' /tmp/cafe-domain.json; then
-            cat /tmp/cafe-domain.json
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+
+          project_json=$(curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT")
+          pages_target=$(printf '%s' "$project_json" | python -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])")
+          test -n "$pages_target" || { echo 'Cafe Pages target not found'; exit 1; }
+
+          domain_code=$(curl -sS -o /tmp/cafe-domain.json -w '%{http_code}' -X POST \
+            "${auth[@]}" --data "{\"name\":\"$PUBLIC_HOST\"}" \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/domains" || true)
+          if [[ "$domain_code" =~ ^20 ]] || grep -Eqi 'already|exists|duplicate' /tmp/cafe-domain.json; then
+            echo "Cafe Pages domain attached: $PUBLIC_HOST"
           else
             cat /tmp/cafe-domain.json
+            echo "Cafe Pages custom-domain attach failed: HTTP $domain_code"
             exit 1
           fi
+
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr&account.id=$CLOUDFLARE_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          test -n "$zone_id" || { echo 'ekodi.kr zone not found'; exit 1; }
+
+          curl -fsS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$PUBLIC_HOST" > /tmp/cafe-dns-existing.json
+          record_id=$(python -c "import json; d=json.load(open('/tmp/cafe-dns-existing.json')); print(d['result'][0]['id'] if d.get('result') else '')")
+          payload="{\"type\":\"CNAME\",\"name\":\"$PUBLIC_HOST\",\"content\":\"$pages_target\",\"ttl\":1,\"proxied\":true,\"comment\":\"EKODI Cafe production\"}"
+          if [ -n "$record_id" ]; then
+            dns_code=$(curl -sS -o /tmp/cafe-dns.json -w '%{http_code}' -X PUT "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records/$record_id")
+          else
+            dns_code=$(curl -sS -o /tmp/cafe-dns.json -w '%{http_code}' -X POST "${auth[@]}" --data "$payload" "$api/zones/$zone_id/dns_records")
+          fi
+          case "$dns_code" in
+            200|201) echo "$PUBLIC_HOST -> $pages_target" ;;
+            *) cat /tmp/cafe-dns.json; echo "Cafe DNS upsert failed: HTTP $dns_code"; exit 1 ;;
+          esac
       - name: Verify real production hostname
         shell: bash
         run: |
@@ -101,6 +125,7 @@ jobs:
           for attempt in $(seq 1 24); do
             code=$(curl -L -sS -o /tmp/cafe.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PUBLIC_URL/" || true)
             app=$(curl -L -sS -o /tmp/cafe-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PUBLIC_URL/app.js" || true)
+            echo "attempt=$attempt page=$code app=$app"
             if [[ "$code" == '200' && "$app" == '200' ]] && grep -Fq '아직 문을 열지 않은 카페입니다' /tmp/cafe.html && grep -Fq 'ekodi_cafe_ideas_v1' /tmp/cafe-app.js; then
               echo 'EKODI Cafe production hostname verified.'
               exit 0
