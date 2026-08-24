@@ -6,6 +6,7 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'admin-demand-loader.js'
       - 'ekodi-device-bootstrap.cmd'
       - 'scripts/build.mjs'
       - 'tools/ekodi-device-agent/windows/**'
@@ -19,6 +20,7 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'admin-demand-loader.js'
       - 'ekodi-device-bootstrap.cmd'
       - 'scripts/build.mjs'
       - 'tools/ekodi-device-agent/windows/**'
@@ -43,19 +45,27 @@ jobs:
         run: |
           node --check device-control.js
           node --check device-control-admin.js
+          node --check admin-demand-loader.js
           node --test test/device-control-contract.test.mjs
-      - name: Build authenticated Admin bundle with Device AI
+      - name: Build authenticated true-lazy Admin with Device AI
         run: |
+          set -euo pipefail
           npm run build
-          test -f dist/compact-control-center.js
-          test -f dist/compact-control-center.css
+          test -f dist/device-control-admin.js
+          test -f dist/device-control-admin.css
+          test -f dist/admin-demand-loader.js
           test -f dist/ekodi-device-bootstrap.cmd
-          grep -Fq 'EKODI DEVICE AI' dist/compact-control-center.js
-          grep -Fq 'AI 운영 제안' dist/compact-control-center.js
-          grep -Fq '.device-health' dist/compact-control-center.css
+          grep -Fq 'AI 운영 제안' dist/device-control-admin.js
+          grep -Fq '.device-health' dist/device-control-admin.css
+          grep -Fq "styles: ['device-control-admin.css']" dist/admin-demand-loader.js
+          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq 'RegisterProtocol' dist/ekodi-device-bootstrap.cmd
-          if grep -Fq 'device-control-admin.js' dist/control-center.html; then
-            echo 'Device Control must not be loaded as a separate pre-auth asset.'
+          if grep -Fq '<script src="device-control-admin.js"' dist/control-center.html; then
+            echo 'Device Control must remain demand-loaded after authentication.'
+            exit 1
+          fi
+          if grep -Fq '<link rel="stylesheet" href="device-control-admin.css"' dist/control-center.html; then
+            echo 'Device Control CSS must remain out of the pre-auth path.'
             exit 1
           fi
 
@@ -108,19 +118,15 @@ jobs:
         run: |
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
           . $path
-
           function Save-PowerBackup { }
           function Get-AgentSettings { return @{} }
           function Restore-PowerBackup { return '11111111-1111-1111-1111-111111111111' }
           function Open-AutologonManager { return 'local-only' }
-
           function Assert-ContainsCall([string[]]$Calls, [string]$Expected) {
             if ($Calls -notcontains $Expected) { throw "Expected powercfg mapping missing: $Expected`nActual: $($Calls -join '; ')" }
           }
-
           $script:PowerCalls = @()
           function Invoke-PowerCfg([string[]]$Arguments) { $script:PowerCalls += ($Arguments -join ' '); return '' }
-
           [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.always_on' }))
           Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 0'
           Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 0'
@@ -128,32 +134,27 @@ jobs:
           Assert-ContainsCall $script:PowerCalls '/change hibernate-timeout-dc 0'
           Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 30'
           Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 15'
-
           $script:PowerCalls = @()
           [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.presentation' }))
           Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 0'
           Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 0'
           Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 0'
           Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 0'
-
           $script:PowerCalls = @()
           [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.normal' }))
           Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 15'
           Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 5'
           Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 30'
           Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 15'
-
           $script:PowerCalls = @()
           [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'lock.resume_off' }))
           Assert-ContainsCall $script:PowerCalls '/SETACVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 0'
           Assert-ContainsCall $script:PowerCalls '/SETDCVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 0'
           Assert-ContainsCall $script:PowerCalls '/SETACTIVE SCHEME_CURRENT'
-
           $script:PowerCalls = @()
           [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'lock.resume_on' }))
           Assert-ContainsCall $script:PowerCalls '/SETACVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 1'
           Assert-ContainsCall $script:PowerCalls '/SETDCVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 1'
-
           $restore = Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.restore' })
           if ($restore.restoredScheme -ne '11111111-1111-1111-1111-111111111111') { throw 'Restore mapping did not call Restore-PowerBackup.' }
           $autologon = Invoke-DeviceCommand ([pscustomobject]@{ type = 'autologon.open' })
