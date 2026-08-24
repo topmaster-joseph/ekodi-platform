@@ -166,8 +166,3 @@ financeRefresh?.addEventListener('click', () => loadFinance(true));
 financeSectionButton?.addEventListener('click', () => activateFinanceView('tax'));
 
 if ((location.hash === '#finance' || financeSectionButton?.classList.contains('active')) && financeToken()) setTimeout(() => activateFinanceView('tax'), 0);
-
-setInterval(() => {
-  const financeVisible = financeSectionButton?.classList.contains('active');
-  if (financeVisible && financeToken() && financeView !== 'tax') loadFinance(false);
-}, 120000);
