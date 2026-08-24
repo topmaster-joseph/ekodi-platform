@@ -7,6 +7,7 @@ on:
       - 'money/**'
       - 'money-worker.js'
       - 'ekodi-service-manifest.js'
+      - 'config/ecosystem-services.json'
       - 'platform-boundaries.json'
       - 'shell/theme.json'
       - 'test/money-platform.test.mjs'
@@ -20,6 +21,7 @@ on:
       - 'money/**'
       - 'money-worker.js'
       - 'ekodi-service-manifest.js'
+      - 'config/ecosystem-services.json'
       - 'platform-boundaries.json'
       - 'shell/theme.json'
       - 'test/money-platform.test.mjs'
@@ -59,6 +61,7 @@ jobs:
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/money.worker.json','utf8'))"
+          node -e "const r=require('./config/ecosystem-services.json');if(!r.services.some(s=>s.id==='money'))process.exit(1)"
           grep -Fq 'EKODI MONEY · FINANCIAL CLEANUP' money/index.html
           grep -Fq '금융행위는 반드시 사람이 결정합니다.' money/index.html
           grep -Fq "id:'money'" ekodi-service-manifest.js
