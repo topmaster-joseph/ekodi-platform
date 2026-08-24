@@ -1,4 +1,4 @@
-import { resolveWorkspacePrincipal, auditPrincipal } from './ekodi-principal.js';
+import { resolveWorkspacePrincipal, principalFromSupabaseRequest, auditPrincipal } from './ekodi-principal.js';
 import { buildCanonicalProfile } from './profile-evidence-runtime.js';
 import { officialDataConnections } from './profile-official-data-adapter.js';
 
@@ -15,7 +15,7 @@ function json(request,env,data,status=200){const {headers}=cors(request,env);ret
 function lensKey(entityType,subjectType){if(entityType&&LENSES[entityType])return entityType;return subjectType==='tenant'?'organization':'person'}
 
 async function latestProfile(env,subject,requested=''){
-  if(requested){return env.DB.prepare(`SELECT profile_key,entity_type,display_name,review_state,updated_at FROM ekodi_profiles WHERE profile_key=? AND subject_type=? AND subject_key=? AND status='active'`).bind(clean(requested,120),subject.type,subject.key).first()}
+  if(requested)return env.DB.prepare(`SELECT profile_key,entity_type,display_name,review_state,updated_at FROM ekodi_profiles WHERE profile_key=? AND subject_type=? AND subject_key=? AND status='active'`).bind(clean(requested,120),subject.type,subject.key).first();
   return env.DB.prepare(`SELECT profile_key,entity_type,display_name,review_state,updated_at FROM ekodi_profiles WHERE subject_type=? AND subject_key=? AND status='active' ORDER BY updated_at DESC LIMIT 1`).bind(subject.type,subject.key).first();
 }
 async function canonicalFor(env,profileKey){
@@ -23,20 +23,22 @@ async function canonicalFor(env,profileKey){
   const rows=await env.DB.prepare(`SELECT id,evidence_key,field_path,value_json,source_class,source_name,source_url,source_record_id,observed_at,confidence,review_state,is_current FROM ekodi_profile_evidence WHERE profile_key=? AND is_current=1 ORDER BY field_path,id DESC`).bind(profileKey).all();
   return buildCanonicalProfile(rows.results||[]);
 }
-function questionStatus(question,fields){
-  const found=fields.find(item=>item.fieldPath===question[0]);
-  return {fieldPath:question[0],question:question[1],status:found?(found.humanConfirmed?'confirmed':'known_needs_confirmation'):'missing',sourceClass:found?.sourceClass||'needs_check',value:found?.value??null};
-}
-export function buildInvestLens(entityType='person',subjectType='person',fields=[]){
-  const key=lensKey(entityType,subjectType),lens=LENSES[key];
-  return {key,label:lens.label,summary:lens.summary,sections:lens.sections.map(([title,body])=>({title,body})),questions:lens.questions.map(question=>questionStatus(question,fields))};
+function questionStatus(question,fields){const found=fields.find(item=>item.fieldPath===question[0]);return {fieldPath:question[0],question:question[1],status:found?(found.humanConfirmed?'confirmed':'known_needs_confirmation'):'missing',sourceClass:found?.sourceClass||'needs_check',value:found?.value??null}}
+export function buildInvestLens(entityType='person',subjectType='person',fields=[]){const key=lensKey(entityType,subjectType),lens=LENSES[key];return {key,label:lens.label,summary:lens.summary,sections:lens.sections.map(([title,body])=>({title,body})),questions:lens.questions.map(question=>questionStatus(question,fields))}}
+
+async function subjectOptions(request,env){
+  const base=await principalFromSupabaseRequest(request);if(!base)return json(request,env,{error:'AUTH_REQUIRED'},401);
+  const grants=await env.DB.prepare(`SELECT t.slug,t.name,g.role FROM customer_access_grants g JOIN customer_tenants t ON t.id=g.tenant_id WHERE g.email=? AND g.enabled=1 AND t.status='active' ORDER BY t.name`).bind(base.email).all();
+  const subjects=[{type:'person',key:base.subject.key,label:'내 개인 공간',role:'owner'}];
+  for(const row of grants.results||[])subjects.push({type:'tenant',key:String(row.slug),label:String(row.name||row.slug),role:String(row.role||'member')});
+  return json(request,env,{subjects,policy:{onlyAuthorizedSubjects:true}});
 }
 
 export async function handleInvestPersonalizationApi(request,env){
   const url=new URL(request.url);const path=url.pathname.replace(/\/+$/,'')||'/';
-  if(path!=='/v1/invest/context'&&path!=='/v1/invest/data-connections')return null;
-  const {ok,headers}=cors(request,env);if(request.method==='OPTIONS')return new Response(null,{status:ok?204:403,headers});if(!ok)return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);if(request.method!=='GET')return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
-  if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
+  if(!['/v1/invest/context','/v1/invest/data-connections','/v1/invest/subjects'].includes(path))return null;
+  const {ok,headers}=cors(request,env);if(request.method==='OPTIONS')return new Response(null,{status:ok?204:403,headers});if(!ok)return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);if(request.method!=='GET')return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
+  if(path==='/v1/invest/subjects')return subjectOptions(request,env);
   const ctx=await resolveWorkspacePrincipal(request,env,{write:false});if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
   const connections=officialDataConnections(env);
   if(path==='/v1/invest/data-connections'){
@@ -48,13 +50,5 @@ export async function handleInvestPersonalizationApi(request,env){
   const lens=buildInvestLens(profile?.entity_type||'',ctx.subject.type,canonical.fields);
   const unresolved=lens.questions.filter(item=>item.status!=='confirmed');
   await auditPrincipal(env,ctx.principal,'invest:context');
-  return json(request,env,{
-    subject:ctx.subject,
-    profile:profile?{profileKey:profile.profile_key,entityType:profile.entity_type,displayName:profile.display_name,reviewState:profile.review_state,updatedAt:profile.updated_at}:null,
-    lens,
-    evidence:{readiness:canonical.readiness,sourceCounts:canonical.sourceCounts},
-    nextQuestions:unresolved,
-    connections,
-    policy:{informationAndAnalysisOnly:true,personalizedPerspective:true,investmentAdvice:false,buySellInstruction:false,portfolioAllocation:false,transactionExecution:false,custody:false,guaranteedReturn:false,aiInferenceNeverOverridesEvidence:true},
-  });
+  return json(request,env,{subject:ctx.subject,profile:profile?{profileKey:profile.profile_key,entityType:profile.entity_type,displayName:profile.display_name,reviewState:profile.review_state,updatedAt:profile.updated_at}:null,lens,evidence:{readiness:canonical.readiness,sourceCounts:canonical.sourceCounts},nextQuestions:unresolved,connections,policy:{informationAndAnalysisOnly:true,personalizedPerspective:true,investmentAdvice:false,buySellInstruction:false,portfolioAllocation:false,transactionExecution:false,custody:false,guaranteedReturn:false,aiInferenceNeverOverridesEvidence:true}});
 }
