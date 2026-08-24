@@ -1,6 +1,6 @@
 (() => {
   const TITLE_MAP = {
-    campus: 'Campus',
+    campus: '사이트 관리',
     overview: 'Operations',
     services: 'Services',
     clients: 'Clients',
@@ -18,7 +18,7 @@
   };
 
   const NAV_MAP = {
-    campus: 'Campus',
+    campus: '사이트 관리',
     overview: 'Operations',
     services: 'Services',
     clients: 'Clients',
@@ -73,7 +73,7 @@
     const logout = document.querySelector('#logoutButton');
     if (logout) logout.textContent = 'Logout';
 
-    setText('#pageTitle', 'Campus');
+    setText('#pageTitle', '사이트 관리');
     const hero = document.querySelector('.hero[data-panel~="overview"]');
     if (hero) {
       const kicker = hero.querySelector('.kicker');
@@ -121,7 +121,7 @@
     document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => {
       item.classList.toggle('active', item.dataset.section === section);
     });
-    setText('#pageTitle', TITLE_MAP[section] || 'Campus');
+    setText('#pageTitle', TITLE_MAP[section] || '사이트 관리');
     document.querySelector('.sidebar')?.classList.remove('open');
   }
 
@@ -196,7 +196,7 @@
       button.dataset.section = 'campus';
       button.append(document.createTextNode('⌂ '));
       const span = document.createElement('span');
-      span.textContent = 'Campus';
+      span.textContent = '사이트 관리';
       button.append(span);
       nav.prepend(button);
     }
@@ -211,7 +211,7 @@
         <div class="campus-toolbar">
           <div>
             <p class="kicker">EKODI SITES</p>
-            <h2>EKODI Digital Campus</h2>
+            <h2>사이트 관리</h2>
             <p>사이트 목록에서 공개 화면을 열거나 관련 관리 메뉴로 바로 이동합니다.</p>
           </div>
           <div class="campus-toolbar-actions">

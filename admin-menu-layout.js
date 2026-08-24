@@ -9,7 +9,7 @@
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
   const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'sites', 'work', 'clients', 'admins', 'community', 'books',
+    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
     'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
   ]);
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
@@ -114,16 +114,8 @@
   }
 
   function installSitesEntry() {
-    if (nav.querySelector('[data-section="sites"]')) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'nav';
-    button.dataset.section = 'sites';
-    button.append(document.createTextNode('▦ '));
-    const label = document.createElement('span');
-    label.textContent = '사이트 관리';
-    button.append(label);
-    nav.append(button);
+    // Site presentation controls live under the canonical Site Management menu.
+    // Do not create a second top-level Sites item.
   }
 
   async function openSites() {
@@ -144,6 +136,8 @@
     await sitesLoading;
     applyStableNavigationOrder();
     activatePanel('sites');
+    navItemFor('campus')?.classList.add('active');
+    syncTitle('campus');
   }
 
   function openDemand(section) {
