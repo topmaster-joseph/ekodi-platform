@@ -6,13 +6,15 @@ const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'ut
 const authIndex = await readFile(new URL('../auth-site/index.html', import.meta.url), 'utf8');
 const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 
-test('critical admin auth assets cannot remain stale in the browser cache', () => {
-  assert.match(worker, /AUTH_CRITICAL_ASSETS = new Set\(\['\/auth-router\.js','\/admin-auth\.js'\]\)/);
+test('critical admin and specialist auth assets cannot remain stale in the browser cache', () => {
+  for (const asset of ['/auth-router.js', '/admin-auth.js', '/author-auth.js', '/business-auth.js']) {
+    assert.match(worker, new RegExp(`AUTH_CRITICAL_ASSETS[\\s\\S]*?${asset.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`));
+  }
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
-  assert.match(authIndex, /auth-router\.js\?v=20260824-return-origin-1/);
+  assert.match(authIndex, /auth-router\.js\?v=20260824-business-resume-1/);
 });
 
-test('guarded production release verifies current return-origin and mobile-safe admin auth assets', () => {
+test('guarded production release verifies current auth entry and mobile-safe admin auth assets', () => {
   const requests = manifest.worker.requests;
   const root = requests.find(item => item.url === 'https://auth.ekodi.kr/');
   const router = requests.find(item => item.url === 'https://auth.ekodi.kr/auth-router.js');
@@ -20,7 +22,7 @@ test('guarded production release verifies current return-origin and mobile-safe 
   assert.ok(root);
   assert.ok(router);
   assert.ok(admin);
-  assert.ok(root.expect.includes('/auth-router.js?v=20260824-return-origin-1'));
+  assert.ok(root.expect.includes('/auth-router.js?v=20260824-business-resume-1'));
   assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
   assert.ok(admin.expect.includes('use_fedcm_for_button:supportsFedCmButton()'));
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
