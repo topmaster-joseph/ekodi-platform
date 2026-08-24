@@ -28,6 +28,14 @@
     document.head.appendChild(script);
   }
 
+  function installPresentationStyle() {
+    if (document.querySelector('#ekodi-homepage-presentation-style')) return;
+    const style = document.createElement('style');
+    style.id = 'ekodi-homepage-presentation-style';
+    style.textContent = '.service-card.is-admin-featured{outline:1px solid rgba(250,204,21,.42);box-shadow:0 12px 34px rgba(15,23,42,.10)}.service-card.is-admin-featured .service-title strong::after{content:" · Featured";font-size:.65em;font-weight:600;opacity:.48}.service-group[hidden],.service-card[hidden]{display:none!important}';
+    document.head.appendChild(style);
+  }
+
   function seoulDateKey(now = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit'
@@ -118,41 +126,106 @@
     host.append(panel);
   }
 
-  installMessageUI();
-  installHistoryEntry();
+  function staticPresentation(card) {
+    return {
+      visibility: card.dataset.homepageDefault || (card.hidden ? 'hidden' : 'normal'),
+      order: Math.max(0, Math.min(9999, Math.trunc(Number(card.dataset.homepageOrder) || 9999))),
+    };
+  }
 
-  const root = document.documentElement;
-  const dateKey = seoulDateKey();
-  const seed = dailySeed(dateKey);
-  const palette = palettes[seed % palettes.length];
-  const story = dailyStories[(seed >>> 4) % dailyStories.length];
-  const keys = ['--ambient-a','--ambient-b','--ambient-c','--ambient-x1','--ambient-y1','--ambient-x2','--ambient-y2','--ambient-x3','--ambient-y3'];
-  keys.forEach((key,index) => root.style.setProperty(key,palette[index]));
-  root.dataset.ambientTheme = String((seed % palettes.length) + 1);
-  root.dataset.dailyDate = dateKey;
-  root.dataset.dailyKeyword = story.keyword;
-  document.body.dataset.livingGateway = 'v1';
-
-  const cards = [...document.querySelectorAll('.service-card[data-service-status]')];
-  const liveCards = cards.filter(card => card.dataset.serviceStatus === 'live');
-  for (const status of ['live', 'beta']) {
-    const count = cards.filter(card => card.dataset.serviceStatus === status).length;
-    document.querySelectorAll(`[data-status-count="${status}"]`).forEach(node => {
-      node.textContent = String(count);
+  function updateServiceGroups() {
+    document.querySelectorAll('.service-group').forEach(group => {
+      const cards = [...group.querySelectorAll('.service-card[data-service-id]')];
+      const visible = cards.filter(card => !card.hidden);
+      group.hidden = visible.length === 0;
+      group.querySelectorAll('[data-service-count]').forEach(node => { node.textContent = String(visible.length); });
     });
   }
 
-  const dateLabel = new Intl.DateTimeFormat('ko-KR', {
-    timeZone:'Asia/Seoul', month:'long', day:'numeric', weekday:'short'
-  }).format(new Date());
-  setHeroStory(story, dateLabel);
+  async function applyHomepagePresentation(cards) {
+    const settings = new Map();
+    try {
+      const response = await fetch('https://api.ekodi.kr/api/homepage/presentation', {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      for (const item of data.services || []) {
+        if (!item?.id) continue;
+        const visibility = ['hidden', 'normal', 'featured'].includes(item.visibility) ? item.visibility : 'hidden';
+        const order = Math.max(0, Math.min(9999, Math.trunc(Number(item.order) || 9999)));
+        settings.set(String(item.id), { visibility, order });
+      }
+      document.documentElement.dataset.homepagePresentation = 'live';
+    } catch (error) {
+      console.warn('[EKODI] homepage presentation API unavailable; using registry defaults.', error);
+      document.documentElement.dataset.homepagePresentation = 'default';
+    }
 
-  if (liveCards.length) {
-    const focus = liveCards[(seed >>> 9) % liveCards.length];
-    focus.classList.add('is-daily-feature');
-    focus.setAttribute('aria-current', 'true');
-    buildDailyPanel(focus, liveCards.length, story, dateLabel);
+    for (const card of cards) {
+      const fallback = staticPresentation(card);
+      const current = settings.get(card.dataset.serviceId) || fallback;
+      card.hidden = current.visibility === 'hidden';
+      card.classList.toggle('is-admin-featured', current.visibility === 'featured');
+      card.dataset.homepageVisibility = current.visibility;
+      card.dataset.homepageOrder = String(current.order);
+    }
+
+    document.querySelectorAll('.service-list').forEach(list => {
+      const serviceCards = [...list.querySelectorAll('.service-card[data-service-id]')];
+      serviceCards.sort((a, b) => Number(a.dataset.homepageOrder || 9999) - Number(b.dataset.homepageOrder || 9999)
+        || String(a.dataset.serviceId || '').localeCompare(String(b.dataset.serviceId || '')));
+      serviceCards.forEach(card => list.append(card));
+    });
+    updateServiceGroups();
   }
 
-  // Legacy random behavior used crypto.getRandomValues; the Living Gateway now uses one stable Seoul-date seed per day.
+  async function start() {
+    installMessageUI();
+    installHistoryEntry();
+    installPresentationStyle();
+
+    const root = document.documentElement;
+    const dateKey = seoulDateKey();
+    const seed = dailySeed(dateKey);
+    const palette = palettes[seed % palettes.length];
+    const story = dailyStories[(seed >>> 4) % dailyStories.length];
+    const keys = ['--ambient-a','--ambient-b','--ambient-c','--ambient-x1','--ambient-y1','--ambient-x2','--ambient-y2','--ambient-x3','--ambient-y3'];
+    keys.forEach((key,index) => root.style.setProperty(key,palette[index]));
+    root.dataset.ambientTheme = String((seed % palettes.length) + 1);
+    root.dataset.dailyDate = dateKey;
+    root.dataset.dailyKeyword = story.keyword;
+    document.body.dataset.livingGateway = 'v2';
+
+    const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
+    await applyHomepagePresentation(allCards);
+    const cards = allCards.filter(card => !card.hidden);
+    const liveCards = cards.filter(card => card.dataset.serviceStatus === 'live');
+    for (const status of ['live', 'beta']) {
+      const count = cards.filter(card => card.dataset.serviceStatus === status).length;
+      document.querySelectorAll(`[data-status-count="${status}"]`).forEach(node => {
+        node.textContent = String(count);
+      });
+    }
+
+    const dateLabel = new Intl.DateTimeFormat('ko-KR', {
+      timeZone:'Asia/Seoul', month:'long', day:'numeric', weekday:'short'
+    }).format(new Date());
+    setHeroStory(story, dateLabel);
+
+    if (liveCards.length) {
+      const preferred = liveCards.filter(card => card.classList.contains('is-admin-featured'));
+      const pool = preferred.length ? preferred : liveCards;
+      const focus = pool[(seed >>> 9) % pool.length];
+      focus.classList.add('is-daily-feature');
+      focus.setAttribute('aria-current', 'true');
+      buildDailyPanel(focus, liveCards.length, story, dateLabel);
+    }
+  }
+
+  start().catch(error => console.warn('[EKODI] living gateway failed to initialize.', error));
 })();
