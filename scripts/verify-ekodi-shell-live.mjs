@@ -11,9 +11,9 @@ async function read(path,attempt){
   url.searchParams.set('attempt',String(attempt));
   try{
     const response=await fetch(url,{headers:{'cache-control':'no-cache','pragma':'no-cache'}});
-    return {ok:response.ok,status:response.status,text:await response.text(),url:String(url)};
+    return {ok:response.ok,status:response.status,text:await response.text(),url:String(url),headers:response.headers};
   }catch(error){
-    return {ok:false,status:0,text:'',url:String(url),error:String(error?.message||error)};
+    return {ok:false,status:0,text:'',url:String(url),error:String(error?.message||error),headers:new Headers()};
   }
 }
 
@@ -40,6 +40,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(health){
     if(health.identityModel!=='person-space-role')failures.push(`health:identityModel:${health.identityModel||'missing'}`);
     if(Number(health.shellVersion)<2)failures.push(`health:shellVersion:${health.shellVersion||'missing'}`);
+    if(Number(health.linkCompatVersion)<1)failures.push(`health:linkCompatVersion:${health.linkCompatVersion||'missing'}`);
   }
   if(manifest){
     if(manifest.shellPolicy!=='required-for-user-facing-services')failures.push(`manifest:shellPolicy:${manifest.shellPolicy||'missing'}`);
@@ -47,6 +48,8 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(manifest.services?.some(service=>service.shellIntegration==='pending'))failures.push('manifest:pending-shell-integration');
     if(!manifest.services?.some(service=>service.defaultSurface==='workspace'))failures.push('manifest:no-workspace-surface');
     if(!manifest.services?.some(service=>service.defaultSurface==='public'))failures.push('manifest:no-public-surface');
+    const biz=manifest.services?.find(service=>service.id==='biz');
+    if(biz?.url!=='https://biz.ekodi.kr/')failures.push(`manifest:biz-url:${biz?.url||'missing'}`);
   }
   if(theme){
     if(theme.publicExperience?.rotation!=='weekly-deterministic')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
@@ -54,13 +57,15 @@ for(let attempt=1;attempt<=attempts;attempt++){
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','공간 전환 · My EKODI','EKODI 서비스 전환','ekodi:public-experience',
-    'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'
+    'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
+    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'"
   ],failures);
+  if(shellResult.headers?.get?.('x-ekodi-link-compat')!=='v1')failures.push(`shell:link-compat-header:${shellResult.headers?.get?.('x-ekodi-link-compat')||'missing'}`);
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
 
   const statuses=[healthResult,manifestResult,shellResult,themeResult,styleResult].map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);
