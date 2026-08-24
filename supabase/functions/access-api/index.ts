@@ -55,6 +55,14 @@ async function personAuthUserIds(userId:string){
   const ids=(data??[]).map((item:any)=>item.auth_user_id).filter(Boolean);
   return ids.length?[...new Set(ids)]:[userId];
 }
+function validMarketingOrigin(origin:string){
+  const fixed=["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"];
+  if(fixed.includes(origin))return true;
+  try{
+    const target=new URL(origin);
+    return target.protocol==="https:"&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(target.hostname)&&target.origin===origin;
+  }catch{return false}
+}
 function validHandoff(site:string,raw:string){
   const origins:Record<string,string[]>={
     cgma:["https://cgma.ekodi.kr"],
@@ -73,7 +81,12 @@ function validHandoff(site:string,raw:string){
     admin:["https://admin.ekodi.kr"],
     portal:["https://ekodi.kr"]
   };
-  try{const target=new URL(raw);return target.protocol==="https:"&&(origins[site]||[]).includes(target.origin)?target.href:null}catch{return null}
+  try{
+    const target=new URL(raw);
+    if(target.protocol!=="https:"||target.username||target.password)return null;
+    if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
+    return (origins[site]||[]).includes(target.origin)?target.href:null;
+  }catch{return null}
 }
 function tenantSlugBase(name:string,email:string){
   const local=(email.split("@")[0]||"").normalize("NFKD").toLowerCase();
