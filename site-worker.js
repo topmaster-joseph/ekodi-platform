@@ -9,8 +9,9 @@ const PUBLIC_ASSETS = new Set([
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
 
+const ADMIN_APEX_HOST = 'admin.ekodi.kr';
 const ADMIN_HOSTS = new Set([
-  'admin.ekodi.kr',
+  ADMIN_APEX_HOST,
   'admin.biz.ekodi.kr',
   'admin.church.ekodi.kr',
   'admin.lab.ekodi.kr',
@@ -52,7 +53,10 @@ const ADMIN_ALIASES = new Set([
   '/books/',
   '/work',
   '/work/',
+  '/admins',
+  '/admins/',
 ]);
+const ADMIN_ACCOUNTS_PATHS = new Set(['/admins','/admins/','/admins.html']);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
@@ -67,6 +71,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
+  '/admin-accounts.css',
+  '/admin-accounts.js',
   '/homepage-admin.js',
   '/finance-monitor.js',
   '/compact-control-center.css',
@@ -290,6 +296,13 @@ export default {
           return response;
         }
         return adminAuthRedirect(url.searchParams.get('return_to'));
+      }
+      if (ADMIN_ACCOUNTS_PATHS.has(url.pathname)) {
+        if (host !== ADMIN_APEX_HOST) {
+          return withHostSecurity(new Response('Not Found', { status: 404 }), ADMIN_CSP, 'no-store', 'admin-accounts-denied');
+        }
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admins'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-accounts');
       }
       if (ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
