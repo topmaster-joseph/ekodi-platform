@@ -80,7 +80,7 @@
     const personal = usage(planId, 'personal');
     const connections = connectionCount();
     if (personal > 0) return `사용 중 · ${personal.toLocaleString('ko-KR')}회`;
-    if (connections > 0) return `가능 · ${connections.toLocaleString('ko-KR')}건 연결`;
+    if (connections > 0) return `가능 · 전체 ${connections.toLocaleString('ko-KR')}건 연결`;
     return '연결 없음';
   }
 
@@ -115,7 +115,7 @@
       <thead><tr><th>회원단계</th><th>AI 허용량</th><th>사용량</th><th>비용</th><th>현재 공급자</th><th>장애상태</th><th>Fallback</th><th>개인 API 여부</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div></div>
-    <p class="uam-note">사용량은 이번 달 성공 호출 기준입니다. 비용은 현재 EKODI 부담 여부를 표시하며, 공급자 실비 금액은 별도 청구 원장 연동 전까지 과장된 추정값을 표시하지 않습니다. 허용량 0은 EKODI 지원 AI만 중지하고 Core와 개인 API 경로는 유지합니다.</p>`;
+    <p class="uam-note">사용량은 이번 달 성공 호출 기준입니다. 비용은 현재 EKODI 부담 여부를 표시하며, 공급자 실비 금액은 별도 청구 원장 연동 전까지 과장된 추정값을 표시하지 않습니다. 개인 API 연결 수는 전체 연결 현황이며, 해당 회원단계에서 실제 개인 API 사용이 있으면 사용 횟수를 우선 표시합니다. 허용량 0은 EKODI 지원 AI만 중지하고 Core와 개인 API 경로는 유지합니다.</p>`;
   }
 
   async function load() {
@@ -183,10 +183,14 @@
       button.className = 'nav';
       button.dataset.section = SECTION;
       button.innerHTML = '<span aria-hidden="true">◈</span><span>AI 회원운영</span>';
-      const aiOps = root.querySelector('[data-section="aiops"]');
-      if (aiOps?.nextSibling) root.insertBefore(button, aiOps.nextSibling);
-      else if (aiOps) aiOps.insertAdjacentElement('afterend', button);
-      else root.prepend(button);
+      const placeholder = root.querySelector('[data-demand-feature="aimembers"]');
+      if (placeholder) placeholder.replaceWith(button);
+      else {
+        const deployments = root.querySelector('[data-section="deployments"]');
+        if (deployments?.nextSibling) root.insertBefore(button, deployments.nextSibling);
+        else if (deployments) deployments.insertAdjacentElement('afterend', button);
+        else root.append(button);
+      }
     }
     if (button.dataset.userAiMembershipBound !== 'true') {
       button.dataset.userAiMembershipBound = 'true';
