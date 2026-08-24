@@ -33,6 +33,15 @@ const MARKETING_TENANT_SITES = marketingTenants.tenants.map(row => [
   `https://${row.domain}${row.landingPath || '/'}`
 ]);
 
+const MARKETING_PUBLIC_SITES = marketingTenants.tenants
+  .filter(row => row.publicSiteDomain)
+  .map(row => [
+    `marketing-public-${row.tenant}`,
+    `${row.name} public site`,
+    row.publicSiteDomain,
+    `https://${row.publicSiteDomain}/`
+  ]);
+
 const MARKETING_ALIAS_SITES = marketingTenants.tenants.flatMap(row =>
   (row.legacyDomains || []).map((domain, index) => [
     `marketing-alias-${row.tenant}-${index + 1}`,
@@ -41,6 +50,14 @@ const MARKETING_ALIAS_SITES = marketingTenants.tenants.flatMap(row =>
     `https://${domain}/`
   ])
 );
+
+// These are intentionally still marked planned in the service manifest, but their
+// public endpoints are already live and therefore remain part of operational checks.
+const LIVE_PRELAUNCH_SITES = [
+  ['prelaunch-mail', 'EKODI Mail', 'mail.ekodi.kr', 'https://mail.ekodi.kr/'],
+  ['prelaunch-live', 'EKODI Live', 'live.ekodi.kr', 'https://live.ekodi.kr/'],
+  ['prelaunch-cloud', 'EKODI Cloud', 'cloud.ekodi.kr', 'https://cloud.ekodi.kr/']
+];
 
 const EXTRA_SITES = [
   ['mission', '에코디선교회', 'youtube.com/@ekodicommunity', 'https://youtube.com/@ekodicommunity']
@@ -60,7 +77,9 @@ export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
   ...INFRA_SITES,
   ...SERVICE_SITES,
   ...MARKETING_TENANT_SITES,
+  ...MARKETING_PUBLIC_SITES,
   ...MARKETING_ALIAS_SITES,
+  ...LIVE_PRELAUNCH_SITES,
   ...EXTRA_SITES
 ]));
 
@@ -81,7 +100,7 @@ export async function checkSite(
     const response = await fetchImpl(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(12000),
-      headers: { 'user-agent': 'EKODI-Monitor/3.0' }
+      headers: { 'user-agent': 'EKODI-Monitor/3.1' }
     });
     await response.body?.cancel();
     const responseTime = Math.round(clock() - started);
