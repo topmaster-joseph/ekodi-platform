@@ -1,39 +1,55 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const HANDOFF=`${SUPABASE_URL}/functions/v1/business-handoff-api`;
 const BUSINESS_HOME='https://business.ekodi.kr/';
 const params=new URLSearchParams(location.search);
+const $=id=>document.getElementById(id);
+const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
+const notice=(id,text,type='')=>{const el=$(id);if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')};
+const timeout=(promise,ms,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'timeout')),ms))]);
+function fetchTimed(url,options={},ms=12000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),ms);return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
 function safeReturn(raw){
   if(!raw)return BUSINESS_HOME;
   try{
     const target=new URL(raw);
-    if(target.protocol!=='https:'||target.origin!=='https://business.ekodi.kr')return BUSINESS_HOME;
+    if(target.protocol!=='https:'||target.username||target.password||target.origin!=='https://business.ekodi.kr')return BUSINESS_HOME;
     target.hash='';
     return target.href;
   }catch{return BUSINESS_HOME}
 }
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
-const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
-const $=id=>document.getElementById(id);
-const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
-const notice=(id,text,type='')=>{const el=$(id);if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')};
 
 $('serviceName').textContent='EKODI Business OS';
 $('signedOutCopy').textContent='Google 계정으로 본인을 확인한 뒤 EKODIBIZ 또는 연결된 점포의 Business OS 권한만 확인합니다.';
 show('membershipPanel',false);show('identityPanel',false);show('requestActions',false);show('freeActions',false);show('approvedActions',false);show('workspacePanel',false);
+notice('authStatus','EKODI Business OS 로그인 상태를 확인하고 있습니다.');
 
-async function session(){return (await sb.auth.getSession()).data.session}
+let createClient;
+try{
+  ({createClient}=await timeout(import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'),6000,'supabase_cdn_timeout'));
+}catch(firstError){
+  console.warn('Supabase primary CDN failed, using fallback',firstError);
+  try{({createClient}=await timeout(import('https://esm.sh/@supabase/supabase-js@2?bundle'),6000,'supabase_fallback_timeout'));}
+  catch(error){
+    console.error('Supabase client unavailable',error);
+    $('serviceBadge').textContent='연결 실패';
+    notice('authStatus','인증 모듈을 불러오지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.','error');
+    show('googleRetry',true);show('cancelSignedOut',true);
+    throw error;
+  }
+}
+
+const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
+async function session(){const result=await timeout(sb.auth.getSession(),8000,'session_timeout');if(result.error)throw result.error;return result.data.session}
 async function identity(path,options={}){
   const headers={apikey:PUBLISHABLE_KEY,...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';
-  const response=await fetch(`${IDENTITY}${path}`,{...options,headers,cache:'no-store'});const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
+  const response=await fetchTimed(`${IDENTITY}${path}`,{...options,headers,cache:'no-store'});const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
   if(!response.ok)throw Object.assign(new Error(data.error||`http_${response.status}`),{status:response.status,data});return data;
 }
 function loadGoogleLibrary(){
   if(window.google?.accounts?.id)return Promise.resolve();
-  return new Promise((resolve,reject)=>{const existing=document.querySelector('script[data-ekodi-google-identity]');if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.ekodiGoogleIdentity='true';script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(script)});
+  return timeout(new Promise((resolve,reject)=>{const existing=document.querySelector('script[data-ekodi-google-identity]');if(existing){if(window.google?.accounts?.id){resolve();return}existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});return}const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.ekodiGoogleIdentity='true';script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(script)}),8000,'google_library_timeout');
 }
 function showSignedIn(s){show('signedOut',false);show('signedIn',true);$('accountEmail').textContent=s?.user?.email||'인증 계정';$('serviceBadge').textContent='권한 확인'}
 function showSignedOut(text='Google 계정으로 본인을 확인해 주세요.'){
@@ -41,7 +57,7 @@ function showSignedOut(text='Google 계정으로 본인을 확인해 주세요.'
 }
 async function issueHandoff(s){
   showSignedIn(s);notice('accessStatus','EKODIBIZ와 연결 점포의 Business OS 권한을 확인하고 있습니다.');
-  const response=await fetch(HANDOFF,{method:'POST',headers:{apikey:PUBLISHABLE_KEY,authorization:`Bearer ${s.access_token}`,'content-type':'application/json'},body:'{}',cache:'no-store'});
+  const response=await fetchTimed(HANDOFF,{method:'POST',headers:{apikey:PUBLISHABLE_KEY,authorization:`Bearer ${s.access_token}`,'content-type':'application/json'},body:'{}',cache:'no-store'});
   const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
   if(response.status===403){notice('accessStatus','이 계정에는 아직 EKODIBIZ 또는 연결 점포의 Business OS 권한이 없습니다. 조직 관리자에게 권한을 요청해 주세요.','warn');return}
   if(!response.ok||!data.tokenHash)throw new Error(data.error||`handoff_${response.status}`);
@@ -52,24 +68,32 @@ async function handleGoogleCredential(response,challenge){
   notice('authStatus','Google 계정을 확인하고 있습니다.');
   try{
     const proof=await identity('/google/exchange',{method:'POST',body:JSON.stringify({credential:response.credential,nonce:challenge.nonce})});
-    const {error}=await sb.auth.verifyOtp({token_hash:proof.tokenHash,type:'email'});if(error)throw error;
+    const {error}=await timeout(sb.auth.verifyOtp({token_hash:proof.tokenHash,type:'email'}),10000,'verify_timeout');if(error)throw error;
     const s=await session();if(!s)throw new Error('session_not_created');await issueHandoff(s);
-  }catch(error){console.error('business auth',error);showSignedOut('Business OS 인증을 완료하지 못했습니다. 다시 시도해 주세요.');show('googleRetry',true)}
+  }catch(error){console.error('business auth',error);showSignedOut('Business OS 인증을 완료하지 못했습니다. 다시 시도해 주세요.');show('googleRetry',true);show('cancelSignedOut',true)}
 }
 async function prepareGoogle(){
   const host=$('googleButtonHost');host.replaceChildren();showSignedOut('Google 인증을 준비하고 있습니다.');
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
-    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:r=>handleGoogleCredential(r,challenge)});
-    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
+    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>handleGoogleCredential(r,challenge)});
+    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
     notice('authStatus','Google 계정으로 EKODI Business OS 권한을 확인합니다.');
-  }catch(error){console.error(error);notice('authStatus','Google 인증을 준비하지 못했습니다. 다시 시도해 주세요.','error');show('googleRetry',true)}
+    show('cancelSignedOut',true);
+  }catch(error){console.error(error);notice('authStatus','Google 인증을 준비하지 못했습니다. 다시 시도해 주세요.','error');show('googleRetry',true);show('cancelSignedOut',true)}
 }
-async function logout(){await sb.auth.signOut();prepareGoogle()}
+async function logout(){try{await timeout(sb.auth.signOut(),8000,'logout_timeout')}catch(error){console.warn('business logout',error)}prepareGoogle()}
 
 $('googleRetry')?.addEventListener('click',prepareGoogle);
 $('cancelSignedOut')?.addEventListener('click',()=>location.assign(RETURN_TO));
 $('cancelSignedIn')?.addEventListener('click',()=>location.assign(RETURN_TO));
 $('logout')?.addEventListener('click',logout);
 
-const existing=await session();if(existing){try{await issueHandoff(existing)}catch(error){console.error(error);showSignedIn(existing);notice('accessStatus','Business OS 연결을 완료하지 못했습니다. 다시 인증하거나 잠시 후 다시 시도해 주세요.','error')}}else await prepareGoogle();
+try{
+  const existing=await session();
+  if(existing){try{await issueHandoff(existing)}catch(error){console.error(error);showSignedIn(existing);notice('accessStatus','Business OS 연결을 완료하지 못했습니다. 다시 인증하거나 잠시 후 다시 시도해 주세요.','error')}}
+  else await prepareGoogle();
+}catch(error){
+  console.error('business session bootstrap',error);
+  await prepareGoogle();
+}
