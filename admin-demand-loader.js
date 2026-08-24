@@ -34,7 +34,7 @@
       scripts: ['ai-ops-admin.js'],
       real: '[data-section="ai-membership"]',
       hashes: ['#ai-membership'],
-      insert: 'after-health',
+      insert: 'after-deployments',
     },
     health: {
       label: 'Health', icon: '◉',
@@ -50,7 +50,7 @@
       scripts: ['admin-secret-generator.js'],
       real: '[data-section="security"]',
       hashes: ['#security'],
-      insert: 'after-aimembers',
+      insert: 'after-health',
     },
     deployments: {
       label: 'Deployments', icon: '↑',
@@ -170,16 +170,16 @@
       const anchor = nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
-    if (feature.insert === 'after-aimembers') {
-      const anchor = nav.querySelector('[data-demand-feature="aimembers"], [data-section="ai-membership"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
     if (feature.insert === 'after-health') {
       const anchor = nav.querySelector('[data-demand-feature="health"], [data-section="health"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
     if (feature.insert === 'after-security') {
       const anchor = nav.querySelector('[data-demand-feature="security"], [data-section="security"]');
+      if (anchor) return anchor.insertAdjacentElement('afterend', button);
+    }
+    if (feature.insert === 'after-deployments') {
+      const anchor = nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');
       if (anchor) return anchor.insertAdjacentElement('afterend', button);
     }
     if (feature.insert === 'after-services') {
