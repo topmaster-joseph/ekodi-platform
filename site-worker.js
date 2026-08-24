@@ -5,6 +5,7 @@ const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
 const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
+  '/ekodi-message-ui.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
 
@@ -54,6 +55,7 @@ const ADMIN_ALIASES = new Set([
 ]);
 const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 const ADMIN_ASSETS = new Set([
+  '/ekodi-message-ui.js',
   '/control-center.css',
   '/control-center-ops.css',
   '/control-center-finance.css',
