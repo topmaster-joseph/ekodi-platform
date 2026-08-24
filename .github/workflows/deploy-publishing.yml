@@ -1,5 +1,5 @@
 name: Deploy EKODI Publishing
-# 2026-08-24 operational activation, safe bootstrap and live-route verification
+# 2026-08-24 operational activation, live-state bootstrap, guarded updates and diagnostics
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
       - '.github/workflows/deploy-publishing.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ekodi-publishing-production
@@ -48,28 +48,18 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Bootstrap once or use guarded release thereafter
+      - name: Bootstrap unavailable production or use guarded release when stable
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/services/ekodi-publishing"
-          service_code=$(curl -sS -o /tmp/publishing-service.json -w '%{http_code}' \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
-          case "$service_code" in
-            200)
-              echo 'Existing Publishing Worker found; using guarded candidate release.'
-              node scripts/guarded-worker-release.mjs --manifest deploy/manifests/publishing.worker.json
-              ;;
-            404)
-              echo 'Publishing Worker does not exist yet; performing one-time bootstrap deploy.'
-              npx --yes wrangler@$WRANGLER_VERSION deploy --config wrangler.publishing.toml
-              ;;
-            *)
-              cat /tmp/publishing-service.json || true
-              echo "Unable to determine Publishing Worker state (HTTP $service_code)."
-              exit 1
-              ;;
-          esac
+          live_code=$(curl -L -sS -o /tmp/publishing-before.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/' || true)
+          if [[ "$live_code" =~ ^[23] ]] && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/publishing-before.html; then
+            echo 'Stable Publishing production is reachable; using guarded candidate release.'
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/publishing.worker.json
+          else
+            echo "Publishing production is unavailable or incomplete (HTTP $live_code); performing recovery bootstrap deploy."
+            npx --yes wrangler@$WRANGLER_VERSION deploy --config wrangler.publishing.toml
+          fi
       - name: Deep verify Publishing production hostname
         shell: bash
         run: |
@@ -90,3 +80,38 @@ jobs:
             sleep 5
           done
           exit 1
+      - name: Persist Publishing production probe
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p ops/deploy-status
+          root_meta=$(curl -L -sS -o /tmp/probe-root.html -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/' 2>/tmp/probe-root.err)
+          studio_meta=$(curl -L -sS -o /tmp/probe-studio.html -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/studio/' 2>/tmp/probe-studio.err)
+          admin_meta=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}|%{remote_ip}|%{errormsg}' --connect-timeout 5 --max-time 15 'https://publishing.ekodi.kr/admin' 2>/tmp/probe-admin.err)
+          ROOT_META="$root_meta" STUDIO_META="$studio_meta" ADMIN_META="$admin_meta" python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          def split(value):
+              parts=(value or '').split('|',2)
+              parts += ['']*(3-len(parts))
+              return {'http': parts[0], 'remoteIp': parts[1], 'error': parts[2]}
+          payload={
+              'service':'publishing',
+              'checkedAt':datetime.now(timezone.utc).isoformat(),
+              'githubRunId':os.environ.get('GITHUB_RUN_ID',''),
+              'githubSha':os.environ.get('GITHUB_SHA',''),
+              'root':split(os.environ.get('ROOT_META')),
+              'studio':split(os.environ.get('STUDIO_META')),
+              'admin':split(os.environ.get('ADMIN_META')),
+          }
+          open('ops/deploy-status/publishing.json','w').write(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
+          PY
+          cat ops/deploy-status/publishing.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ops/deploy-status/publishing.json
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore(ops): record Publishing production probe [skip ci]'
+          git pull --rebase origin main || true
+          git push || true
