@@ -93,9 +93,17 @@ function validateRegistry(registry) {
 
 export async function loadHomepageServices() {
   const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
-  return registry.services
-    .filter(service => service.homepage === true && service.productionVerified === true && service.status === 'live')
+  const candidates = registry.services
+    .filter(service => service.productionVerified === true && service.status === 'live')
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.id.localeCompare(b.id));
+  const services = candidates.filter(service => service.homepage === true);
+  Object.defineProperty(services, 'presentationCandidates', {
+    value: candidates,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  return services;
 }
 
 function serviceIsClickable(service) {
@@ -106,17 +114,19 @@ function renderServiceCard(service) {
   const id = escapeHtml(service.id);
   const url = escapeHtml(service.url);
   const name = escapeHtml(service.name);
-  const nameEn = escapeHtml(service.nameEn);
-  const descriptionKo = escapeHtml(service.descriptionKo);
-  const descriptionEn = escapeHtml(service.descriptionEn);
+  const nameEn = escapeHtml(service.nameEn || service.name);
+  const descriptionKo = escapeHtml(service.descriptionKo || service.name);
+  const descriptionEn = escapeHtml(service.descriptionEn || service.nameEn || service.name);
   const label = escapeHtml(service.label);
   const statusId = escapeHtml(service.status);
   const status = STATUS_DEFINITIONS[service.status];
   const clickable = serviceIsClickable(service);
+  const defaultVisibility = service.homepage === true ? 'normal' : 'hidden';
+  const displayOrder = Number.isFinite(Number(service.order)) ? Math.trunc(Number(service.order)) : 9999;
   const icon = `<span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span>`;
   const copy = `<span class="service-copy"><span class="service-title"><strong>${name}</strong><span class="service-name-en">${nameEn}</span></span><span class="service-description"><span>${descriptionKo}</span><small>${descriptionEn}</small></span><span class="service-domain">${label}</span></span>`;
   const badge = `<span class="service-status" data-status-badge="${statusId}"><b>${escapeHtml(status.label)}</b><span>${escapeHtml(status.labelEn)}</span></span>`;
-  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}"`;
+  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
 
   if (clickable) {
     return `          <a ${common} href="${url}">${icon}${copy}<span class="service-card-side">${badge}<span class="arrow" aria-hidden="true">→</span></span></a>`;
@@ -125,12 +135,14 @@ function renderServiceCard(service) {
 }
 
 export function renderServiceCards(services) {
+  const renderServices = Array.isArray(services?.presentationCandidates) ? services.presentationCandidates : services;
   return CATEGORY_DEFINITIONS.map(category => {
-    const categoryServices = services.filter(service => service.category === category.id);
+    const categoryServices = renderServices.filter(service => service.category === category.id);
     if (!categoryServices.length) return '';
     const cards = categoryServices.map(renderServiceCard).join('\n');
-    return `      <section class="service-group" data-service-category="${escapeHtml(category.id)}">
-        <div class="service-group-heading"><h3><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(category.labelEn)}</small></h3><span data-service-count>${categoryServices.length}</span></div>
+    const visibleCount = categoryServices.filter(service => service.homepage === true).length;
+    return `      <section class="service-group" data-service-category="${escapeHtml(category.id)}"${visibleCount ? '' : ' hidden'}>
+        <div class="service-group-heading"><h3><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(category.labelEn)}</small></h3><span data-service-count>${visibleCount}</span></div>
         <div class="service-list">
 ${cards}
         </div>

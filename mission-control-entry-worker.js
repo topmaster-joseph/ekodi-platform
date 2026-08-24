@@ -17,6 +17,7 @@ import { handleSystemHealthControl } from './system-health-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
+import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -50,6 +51,11 @@ export default {
     if (path === '/api/session' && request.method === 'GET') {
       try { const response = await handleAdminSessionFastPath(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Admin session fast path error', error); return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR'); }
+    }
+
+    if (path === '/api/homepage/presentation' || path === '/api/control/homepage') {
+      try { const response = await handleHomepagePresentation(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Homepage presentation control error', error); return errorResponse('EKODI 첫화면 표시 설정 처리 중 오류가 발생했습니다.', 'HOMEPAGE_PRESENTATION_ERROR'); }
     }
 
     if (path.startsWith('/api/user-ai/')) {

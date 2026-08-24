@@ -64,7 +64,7 @@ jobs:
             [[ "$code" == '200' ]]
             grep -Fq "$needle" /tmp/shared-stage.html
             grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared-stage.html
-            grep -Fiq 'x-ekodi-shell: v1' /tmp/shared-stage.headers
+            grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
           }
           for attempt in $(seq 1 18); do
             if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
@@ -72,7 +72,7 @@ jobs:
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment'; then
-              echo 'Shared-site Trade, Pay, Messenger and Investment staging verified.'
+              echo 'Shared-site Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'
               exit 0
             fi
             sleep 4

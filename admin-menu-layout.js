@@ -9,17 +9,20 @@
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
   const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
+    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'sites', 'work', 'clients', 'admins', 'community', 'books',
     'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
   ]);
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
   const HASH_SECTIONS = new Map([
-    ['#ai-ops', 'aiops'], ['#health', 'health'], ['#security', 'security'], ['#devices', 'devices'], ['#campus', 'campus'],
+    ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#health', 'health'], ['#security', 'security'], ['#devices', 'devices'], ['#campus', 'campus'],
     ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
   ]);
-  const CANONICAL_HASH = new Map([['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus']]);
+  const CANONICAL_HASH = new Map([
+    ['sites', '#sites'], ['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus'],
+  ]);
 
   let requestedSection = '';
+  let sitesLoading = null;
 
   function installCompactNavigationStyle() {
     if (document.querySelector('#ekodi-admin-menu-density')) return;
@@ -110,6 +113,39 @@
     return true;
   }
 
+  function installSitesEntry() {
+    if (nav.querySelector('[data-section="sites"]')) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'nav';
+    button.dataset.section = 'sites';
+    button.append(document.createTextNode('▦ '));
+    const label = document.createElement('span');
+    label.textContent = '사이트 관리';
+    button.append(label);
+    nav.append(button);
+  }
+
+  async function openSites() {
+    requestedSection = 'sites';
+    if (!sitesLoading) {
+      sitesLoading = import('./homepage-admin.js')
+        .then(module => {
+          module.mountHomepageAdmin();
+          window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail: { section: 'sites' } }));
+          return module;
+        })
+        .catch(error => {
+          sitesLoading = null;
+          console.error('EKODI homepage admin failed to load.', error);
+          throw error;
+        });
+    }
+    await sitesLoading;
+    applyStableNavigationOrder();
+    activatePanel('sites');
+  }
+
   function openDemand(section) {
     const selector = section === 'aiops'
       ? '[data-demand-feature="aiops"], [data-section="aiops"]'
@@ -129,7 +165,9 @@
 
   function reconcileNavigation() {
     enforceInternalNavigationPolicy();
-    if (requestedSection) activatePanel(requestedSection);
+    if (!requestedSection) return;
+    if (requestedSection === 'sites' && !hasPanel('sites')) openSites();
+    else activatePanel(requestedSection);
   }
 
   nav.addEventListener('click', event => {
@@ -143,6 +181,12 @@
     }
     const section = sectionOf(item);
     if (!section) return;
+    if (section === 'sites') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openSites();
+      return;
+    }
     requestedSection = section;
     queueMicrotask(() => activatePanel(section));
   }, true);
@@ -162,6 +206,7 @@
     enforceInternalNavigationPolicy();
     const explicit = explicitHashSection();
     if (explicit && isInternalSection(explicit)) routeInternalToAiOps();
+    else if (explicit === 'sites') openSites();
     else if (explicit) requestedSection = explicit;
   });
 
@@ -169,19 +214,23 @@
     const explicit = explicitHashSection();
     if (!explicit) return;
     if (isInternalSection(explicit)) return routeInternalToAiOps();
+    if (explicit === 'sites') return openSites();
     requestedSection = explicit;
     if (!activatePanel(explicit)) openDemand(explicit);
   });
 
   installCompactNavigationStyle();
+  installSitesEntry();
   enforceInternalNavigationPolicy();
   const initialHash = explicitHashSection();
   if (initialHash && isInternalSection(initialHash)) routeInternalToAiOps();
+  else if (initialHash === 'sites') openSites();
   else if (initialHash) requestedSection = initialHash;
 
   window.EKODIAdminPanels = Object.freeze({
     activate: section => {
       if (isInternalSection(section)) return routeInternalToAiOps();
+      if (section === 'sites') return openSites();
       requestedSection = section;
       if (!activatePanel(section)) openDemand(section);
     },
