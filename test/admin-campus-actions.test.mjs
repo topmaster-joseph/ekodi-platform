@@ -21,10 +21,12 @@ test('Campus first screen renders the full site catalog with direct operational 
 });
 
 test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
-  for (const domain of ['my.ekodi.kr', 'ins.ekodi.kr', 'edu.ekodi.kr', 'media.ekodi.kr']) {
+  for (const domain of ['ins.ekodi.kr', 'media.ekodi.kr', 'mail.ekodi.kr', 'live.ekodi.kr', 'cloud.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /lifecycle: 'planned'/);
+  assert.doesNotMatch(js, /domain: 'my\.ekodi\.kr'[^\n]*lifecycle: 'planned'/);
+  assert.doesNotMatch(js, /domain: 'edu\.ekodi\.kr'[^\n]*lifecycle: 'planned'/);
   assert.match(js, /dataset\.siteLifecycle = site\.lifecycle \|\| 'live'/);
   assert.match(js, /if \(lifecycle === 'planned'\) return '오픈 전'/);
   assert.match(js, /button\.textContent = '오픈 전'/);
@@ -49,6 +51,7 @@ test('Campus reconciles the canonical homepage registry so the two old lists can
   assert.match(js, /window\.EKODICampus = Object\.freeze/);
   assert.match(js, /import\('\.\/homepage-admin\.js'\)/);
   assert.match(js, /Other Services/);
+  assert.match(js, /existing\?\.dataset\?\.siteLifecycle \|\| service\?\.status/);
 });
 
 test('Campus groups related services into a compact two-column layout', () => {
