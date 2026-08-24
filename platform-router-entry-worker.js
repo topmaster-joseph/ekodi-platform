@@ -1,4 +1,6 @@
 import legacyPlatformRouter from './platform-router-worker.js';
+import financeEntryWorker from './finance-entry-worker.js';
+import taxPortalWorker from './tax-portal-worker.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
@@ -7,6 +9,7 @@ import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } fr
 
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
+const TAX_HOST='tax.ekodi.kr';
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -30,6 +33,13 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+
+    if(host===TAX_HOST){
+      if(url.pathname.startsWith('/api/finance/tax-'))return financeEntryWorker.fetch(request,env,ctx);
+      const portal=taxPortalWorker.fetch(request,env,ctx);
+      if(portal)return portal;
+      return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
+    }
 
     if(host===AI_GATEWAY_HOST){
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return aiGatewayPage();
