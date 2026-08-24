@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "ekodi-workspace-platform-api",
     "config": "wrangler.workspace-platform.toml",
@@ -8,7 +8,7 @@
         "url": "https://workspace-api.ekodi.kr/health",
         "statuses": [200],
         "redirect": "follow",
-        "expect": ["\"service\":\"ekodi-workspace-platform-api\"","\"schemaReady\":true","\"mutations\":true","\"transactionExecution\":false","\"conversationFoundation\":\"v2\"","\"eventOutbox\":true","\"conversationSchemaReady\":true"]
+        "expect": ["\"service\":\"ekodi-workspace-platform-api\"","\"schemaReady\":true","\"mutations\":true","\"transactionExecution\":false","\"conversationFoundation\":\"v2\"","\"eventOutbox\":true","\"conversationSchemaReady\":true","\"profileEvidenceFoundation\":\"v1\"","\"profileSchemaReady\":true","\"officialDataFirst\":true","\"officialDataProvider\":\"embedded-v1\"","\"investPersonalization\":\"v1\""]
       }
     ]
   }
