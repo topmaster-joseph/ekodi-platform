@@ -8,6 +8,7 @@
   const loginLink = document.querySelector('#centralAdminLogin');
   const postAuthStyles = ['compact-control-center.css'];
   const criticalPostAuthScripts = [
+    'ekodi-message-ui.js',
     'compact-control-center.js',
     'admin-menu-layout.js',
     'admin-demand-loader.js',
