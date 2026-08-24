@@ -17,6 +17,9 @@ on:
       - 'admin-readable-command.js'
       - 'admin-readable-command.css'
       - 'admin-menu-layout.js'
+      - 'admins.html'
+      - 'admin-accounts.js'
+      - 'admin-accounts.css'
       - 'finance-monitor.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
@@ -35,6 +38,7 @@ on:
       - 'scripts/admin-performance-postbuild.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
+      - 'test/admin-access-management.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
       - 'test/admin-health-menu.test.mjs'
@@ -71,6 +75,7 @@ jobs:
           node --check admin-demand-loader.js
           node --check admin-perf-diagnostics.js
           node --check admin-menu-layout.js
+          node --check admin-accounts.js
           node --check admin-lazy-features.js
           node --check admin-readable-command.js
           node --check ai-ops-admin.js
@@ -79,10 +84,10 @@ jobs:
           node --check scripts/admin-thin-postbuild.mjs
           node --check scripts/admin-readable-command-postbuild.mjs
           node --check scripts/admin-performance-postbuild.mjs
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs
+          node --test test/admin-access-management.test.mjs test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css; do
+          for asset in admins.html admin-accounts.js admin-accounts.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
 
@@ -121,6 +126,8 @@ jobs:
           ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
           grep -Fq "navLabel.textContent = 'Health'" dist/system-health-admin.js
           grep -Fq "pageTitle.textContent = 'System Health'" dist/system-health-admin.js
+          grep -Fq '관리자 계정·권한' dist/admins.html
+          grep -Fq '/api/admin-access/google-accounts' dist/admin-accounts.js
 
           handoff_bytes=$(wc -c < dist/admin-central-handoff.js)
           shell_bytes=$(wc -c < dist/admin-authenticated-shell.js)
@@ -170,6 +177,7 @@ jobs:
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          grep -Fq '관리자 계정·권한' dist/admins.html
 
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
@@ -199,8 +207,12 @@ jobs:
             ai_css_code=$(curl -sS -D /tmp/ai-css-headers -o /tmp/ai-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/ai-ops-admin.css$q" || true)
             health_js_code=$(curl -sS -D /tmp/health-js-headers -o /tmp/health-js-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/system-health-admin.js$q" || true)
             health_css_code=$(curl -sS -D /tmp/health-css-headers -o /tmp/health-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/system-health-admin.css$q" || true)
+            admins_code=$(curl -sS -D /tmp/admins-headers -o /tmp/admins-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admins' || true)
+            accounts_js_code=$(curl -sS -D /tmp/accounts-js-headers -o /tmp/accounts-js-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-accounts.js' || true)
+            accounts_css_code=$(curl -sS -D /tmp/accounts-css-headers -o /tmp/accounts-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-accounts.css' || true)
+            sub_admin_code=$(curl -sS -o /tmp/sub-admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.biz.ekodi.kr/admins' || true)
 
-            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$lazy_code" == '200' && "$ai_css_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' ]] \
+            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$lazy_code" == '200' && "$ai_css_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' && "$admins_code" == '200' && "$accounts_js_code" == '200' && "$accounts_css_code" == '200' && "$sub_admin_code" == '404' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers \
               && grep -Fiq 'cache-control: no-store' /tmp/admin-headers \
               && grep -Fq "control-center.css?v=$live_version" /tmp/admin-body \
@@ -214,6 +226,10 @@ jobs:
               && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/perf-headers \
               && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/health-js-headers \
               && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/health-css-headers \
+              && grep -Fiq 'cache-control: no-store' /tmp/admins-headers \
+              && grep -Fq '관리자 계정·권한' /tmp/admins-body \
+              && grep -Fq '/api/admin-access/google-accounts' /tmp/accounts-js-body \
+              && grep -Fq '.admin-accounts-page' /tmp/accounts-css-body \
               && grep -Fq 'AbortController' /tmp/handoff-body \
               && ! grep -Fq 'PerformanceObserver' /tmp/handoff-body \
               && grep -Fq 'PerformanceObserver' /tmp/perf-body \
@@ -232,10 +248,10 @@ jobs:
               && grep -Fq "navLabel.textContent = 'Health'" /tmp/health-js-body \
               && grep -Fq "pageTitle.textContent = 'System Health'" /tmp/health-js-body \
               && grep -Fq '.system-health-overall' /tmp/health-css-body; then
-              echo "Production admin verified: version=$live_version, no-store HTML, immutable fingerprinted assets, standalone Health, thin shell and latest flat AI Ops."
+              echo "Production admin verified: version=$live_version, super-admin management live, sub-admin global access denied, no-store HTML, immutable fingerprinted assets, standalone Health, thin shell and latest flat AI Ops."
               exit 0
             fi
-            echo "Production verification pending (attempt $attempt/24, version=$live_version)."
+            echo "Production verification pending (attempt $attempt/24, version=$live_version, admins=$admins_code, sub-admin=$sub_admin_code)."
             sleep 4
           done
           echo 'Production admin verification failed.'
