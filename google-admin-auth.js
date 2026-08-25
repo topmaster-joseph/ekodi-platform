@@ -166,7 +166,7 @@
     const email = document.createElement('input');
     email.type = 'email';
     email.name = 'email';
-    email.placeholder = 'name@ekodibiz.kr';
+    email.placeholder = 'name@ekodi.kr';
     email.autocomplete = 'email';
     email.required = true;
     const role = document.createElement('select');
