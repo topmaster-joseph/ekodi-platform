@@ -45,6 +45,14 @@ test('Marketing CRM is aggregated without returning pseudonymous customer keys',
   assert.doesNotMatch(source, /customerKey:/);
 });
 
+test('Marketing admin includes EKODIBIZ as the internal tenant workspace beside external stores', () => {
+  assert.match(source, /publicInternalWorkspace/);
+  assert.match(source, /workspaceType:'tenant'/);
+  assert.match(source, /workspace_key === 'ekodibiz'/);
+  assert.match(source, /canonicalDomain:'marketing\.ekodi\.kr'/);
+  assert.match(source, /internal:true/);
+});
+
 test('Marketing admin narrows shared AI actions to Marketing-related scope', () => {
   assert.match(source, /MARKETING_ACTION_RE/);
   assert.match(source, /MARKETING_TARGET_RE/);
