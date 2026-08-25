@@ -34,8 +34,8 @@ test('legacy #sites entry converges into Campus instead of creating a second lis
 });
 
 test('Homepage ordering stays keyboard-accessible inside grouped Campus cards', () => {
-  assert.match(homepage, /data\.homepageMove = '-1'/);
-  assert.match(homepage, /data\.homepageMove = '1'/);
+  assert.match(homepage, /up\.dataset\.homepageMove = '-1'/);
+  assert.match(homepage, /down\.dataset\.homepageMove = '1'/);
   assert.match(homepage, /moveRow\(row, Number\(button\.dataset\.homepageMove\)\)/);
   assert.match(homepage, /normalizeOrderValues/);
   assert.doesNotMatch(homepage, /order\.type = 'number'/);
