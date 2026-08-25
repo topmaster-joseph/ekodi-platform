@@ -1,0 +1,32 @@
+name = "ekodi-storage-control"
+main = "storage-worker.js"
+compatibility_date = "2026-08-25"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "drive.ekodi.kr"
+custom_domain = true
+
+[vars]
+ENVIRONMENT = "production"
+GOOGLE_DRIVE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr,ekodibiz.kr"
+ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://ekodi.kr,https://my.ekodi.kr"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[ratelimits]]
+name = "SENSITIVE_RATE_LIMITER"
+namespace_id = "2401"
+  [ratelimits.simple]
+  limit = 90
+  period = 60
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
