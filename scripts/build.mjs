@@ -16,6 +16,8 @@ const [aiOpsBaseJs, userAiTierPanelJs] = await Promise.all([
   readFile(`${output}ai-ops-admin.js`, 'utf8'),
   readFile(`${root}user-ai-tier-panel.js`, 'utf8'),
 ]);
+if (!userAiTierPanelJs.includes('Core 우선 · AI 필요 시 자동 선택')) throw new Error('Core-first User AI membership policy marker missing');
+if (userAiTierPanelJs.includes('개인 API → EKODI → 개인 Web → Core')) throw new Error('Legacy User AI fallback chain returned');
 await writeFile(`${output}ai-ops-admin.js`, `${aiOpsBaseJs}\n${userAiTierPanelJs}\n`);
 
 // Admin AI operating intelligence stays behind the existing AI Ops/Security lazy boundary.
