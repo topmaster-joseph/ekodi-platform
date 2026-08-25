@@ -16,8 +16,9 @@ test('Google Drive credentials are encrypted and never committed', () => {
   assert.doesNotMatch(config, /STORAGE_CREDENTIAL_KEY\s*=\s*".+"/);
 });
 
-test('primary Drive is organization-bound while secondary accounts remain possible', () => {
-  assert.match(config, /ekodi\.kr,ekodibiz\.kr/);
+test('primary Drive is ekodi.kr organization-bound while secondary accounts remain possible', () => {
+  assert.match(config, /STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi\.kr"/);
+  assert.doesNotMatch(config, /STORAGE_PRIMARY_GOOGLE_DOMAINS = "[^"]*ekodibiz\.kr/);
   assert.match(control, /role === 'secondary'/);
   assert.match(migration, /'primary','secondary'/);
   assert.match(admin, /다른 Google 계정 추가/);
