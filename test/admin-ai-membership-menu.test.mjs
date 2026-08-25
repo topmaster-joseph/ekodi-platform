@@ -19,9 +19,10 @@ test('AI membership operations is a separate lazy admin menu', async () => {
   assert.match(panel, /AI 허용량/);
   assert.match(panel, /사용량/);
   assert.match(panel, /비용/);
-  assert.match(panel, /현재 공급자/);
-  assert.match(panel, /장애상태/);
-  assert.match(panel, /Fallback/);
+  assert.match(panel, /AI 경로 상태/);
+  assert.match(panel, /상태/);
+  assert.match(panel, /실행 정책/);
+  assert.match(panel, /Core 우선/);
   assert.match(panel, /개인 API 여부/);
   assert.match(panel, /\/api\/control\/ai\/provider-status/);
   assert.match(panel, /\/api\/control\/user-ai/);
