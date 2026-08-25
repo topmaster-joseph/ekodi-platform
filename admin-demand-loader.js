@@ -44,6 +44,14 @@
       hashes: ['#health'],
       insert: 'after-aiops',
     },
+    storage: {
+      label: 'Storage', icon: '▣',
+      styles: ['storage-admin.css'],
+      scripts: ['storage-admin.js'],
+      real: '[data-section="storage"]',
+      hashes: ['#storage'],
+      insert: 'after-health',
+    },
     security: {
       label: 'Security', icon: '◆',
       styles: ['admin-secret-generator.css'],

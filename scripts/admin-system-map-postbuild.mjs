@@ -16,10 +16,18 @@ if (!mapJs.includes("fetch('/platform-boundaries.json'")) throw new Error('Syste
 if (!mapJs.includes("fetch('/monitor-status.json'")) throw new Error('System Map must read monitor-status.json');
 if (mapJs.includes('setInterval(')) throw new Error('System Map must stay event-driven');
 
+const storageAwareMapJs = mapJs.replace(
+  "    ['R2', 'Durable Storage', '파일 · 장기 백업'],",
+  "    ['Google Drive', 'Archive Storage', '원본 · 문서 · 미디어 · 장기보관'],\n    ['R2', 'Web Object Storage', '웹 배포 파일 · 백업 복제본'],",
+);
+if (!storageAwareMapJs.includes("['Google Drive', 'Archive Storage'")) throw new Error('System Map Google Drive storage role missing');
+
 await Promise.all([
-  writeFile(`${output}system-health-admin.js`, `${healthJs}\n${mapJs}\n`),
+  writeFile(`${output}system-health-admin.js`, `${healthJs}\n${storageAwareMapJs}\n`),
   writeFile(`${output}system-health-admin.css`, `${healthCss}\n${mapCss}\n`),
   cp(`${root}platform-boundaries.json`, `${output}platform-boundaries.json`),
+  cp(`${root}storage-admin.js`, `${output}storage-admin.js`),
+  cp(`${root}storage-admin.css`, `${output}storage-admin.css`),
 ]);
 
-console.log('Admin System Map appended to lazy Health bundle with platform boundaries + monitor status sources.');
+console.log('Admin System Map + Drive-first Storage assets prepared with canonical boundary data.');
