@@ -2,7 +2,7 @@ import authWorker, { isAllowedOrigin } from './auth-worker.js';
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
 const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
-const MARKETING_TARGET_RE = /(marketing\.ekodi\.kr|\.ai\.ekodi\.kr|jadam|pizzamaru|yogurt|cgma)/i;
+const MARKETING_TARGET_RE = /(marketing\.ekodi\.kr|\.ai\.ekodi\.kr|ekodibiz|jadam|pizzamaru|yogurt|cgma)/i;
 
 function cors(origin, env = {}) {
   const headers = {
@@ -39,6 +39,10 @@ async function adminSession(request, env) {
 function publicWorkspace(row) {
   return {
     id:Number(row.id),
+    workspaceType:'store',
+    workspaceKey:String(row.store_id || ''),
+    internal:false,
+    dedicatedDomain:true,
     storeId:String(row.store_id || ''),
     tenantSlug:String(row.tenant_slug || ''),
     slug:String(row.workspace_slug || ''),
@@ -51,6 +55,15 @@ function publicWorkspace(row) {
     cancelAtPeriodEnd:Boolean(row.cancel_at_period_end),
     currentPeriodEnd:row.current_period_end || null,
     updatedAt:row.updated_at || null,
+  };
+}
+
+function publicInternalWorkspace(template) {
+  return {
+    id:`tenant:${template.workspace_key}`,workspaceType:'tenant',workspaceKey:String(template.workspace_key || ''),
+    internal:true,dedicatedDomain:false,storeId:'',tenantSlug:String(template.tenant_slug || ''),slug:String(template.workspace_key || ''),
+    canonicalDomain:'marketing.ekodi.kr',canonicalUrl:'https://marketing.ekodi.kr/',status:'active',planId:'internal',subscriptionStatus:'internal',monthlyFee:0,
+    cancelAtPeriodEnd:false,currentPeriodEnd:null,updatedAt:template.updated_at || null,
   };
 }
 
@@ -238,15 +251,17 @@ async function overview(request, env) {
 
   const subscriptions = subscriptionsResult.results || [];
   const charges = chargesResult.results || [];
-  const workspaces = (workspacesResult.results || []).map(publicWorkspace);
+  const storeWorkspaces = (workspacesResult.results || []).map(publicWorkspace);
   const templates = templatesResult.results || [];
+  const internalWorkspaces = templates.filter(row => row.workspace_type === 'tenant' && row.workspace_key === 'ekodibiz').map(publicInternalWorkspace);
+  const workspaces = [...internalWorkspaces, ...storeWorkspaces];
   const campaigns = (campaignsResult.results || []).map(publicCampaign);
   const marketingEvents = marketingEventsResult.results || [];
   const activePaid = subscriptions.filter(row => String(row.status || '').toLowerCase() === 'active'
     && Number(row.monthly_fee || 0) > 0);
   const activeWorkspaces = workspaces.filter(row => row.status === 'active');
   const customerCount = new Set(subscriptions.map(customerKey)).size;
-  const activeWorkspaceStoreIds = new Set(activeWorkspaces.map(row => row.storeId));
+  const activeWorkspaceStoreIds = new Set(activeWorkspaces.map(row => row.storeId).filter(Boolean));
   const attention = [];
 
   for (const row of subscriptions) {
@@ -283,7 +298,7 @@ async function overview(request, env) {
     if (workspace.status !== 'active') {
       attention.push({
         kind:'workspace', severity:workspace.status === 'suspended' ? 'high' : 'medium', code:`workspace_${workspace.status}`,
-        subjectType:'store', subjectKey:workspace.storeId,
+        subjectType:workspace.workspaceType || 'store', subjectKey:workspace.workspaceKey || workspace.storeId,
         title:'Workspace 상태 확인', detail:`${workspace.canonicalDomain || workspace.slug || workspace.storeId} · ${workspace.status}`,
         updatedAt:workspace.updatedAt,
       });

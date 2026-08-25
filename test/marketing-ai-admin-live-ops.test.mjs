@@ -14,6 +14,7 @@ test('live Marketing admin views reuse the authenticated overview endpoint', () 
   assert.match(js, /CHANNEL REGISTRY/);
   assert.match(js, /AI AUTOMATION/);
   assert.match(js, /HUMAN GATE/);
+  assert.match(js, /'tenant:ekodibiz':'EKODIBIZ'/);
 });
 
 test('live Marketing admin views remain observation-only and do not expose customer keys', () => {

@@ -13,6 +13,16 @@ test('customer AI workspaces live under ai.ekodi.kr', () => {
   }
 });
 
+test('EKODIBIZ is a first-party Marketing AI consumer without a separate customer domain', () => {
+  const biz = cfg.internalConsumers.find((row) => row.id === 'ekodibiz');
+  assert.ok(biz);
+  assert.equal(biz.workspaceType, 'tenant');
+  assert.equal(biz.workspaceKey, 'ekodibiz');
+  assert.equal(biz.entryDomain, cfg.namespace.productHub);
+  assert.equal(biz.templateKey, 'service_b2b');
+  assert.equal(biz.dedicatedEkodiDomain, false);
+});
+
 test('organization and store domain entitlements stay separate', () => {
   assert.equal(cfg.policy.organizationWorkspace.dedicatedEkodiDomain, true);
   assert.equal(cfg.policy.storeBasic.dedicatedEkodiDomain, false);
