@@ -37,4 +37,12 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
 
+test('AI membership admin presents the Core-first execution policy', async () => {
+  const panel = await read('user-ai-tier-panel.js');
+  assert.match(panel, /Core 우선 · AI 필요 시 자동 선택/);
+  assert.match(panel, /대체 경로 준비됨/);
+  assert.doesNotMatch(panel, /개인 API → EKODI → 개인 Web → Core/);
+  assert.match(panel, /자동화·백그라운드·관리자·시스템 실행은 소비자 Web 세션에 의존하지 않습니다/);
+});
+
 // Release trigger checkpoint: shared-site manifest v8 is validated by the guarded production gate.
