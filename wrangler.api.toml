@@ -16,7 +16,7 @@ crons = ["*/10 * * * *"]
 ENVIRONMENT = "production"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
 ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
-ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
+ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 OPENAI_MODEL = "gpt-5.6-terra"
 # User AI is intentionally seamless: a user does not need to know or configure an AI provider.
