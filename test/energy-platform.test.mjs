@@ -57,3 +57,11 @@ test('control policy requires observation before bounded automation',()=>{
   assert.match(worker,/human_approval_required/);
   assert.match(worker,/policy_allows_but_control_adapter_disabled/);
 });
+
+test('Jadam Mokpo pilot is a real bill-baseline first model',()=>{
+  const pilot=readFileSync(new URL('../energy/jadam-pilot.js',import.meta.url),'utf8');
+  for(const term of ['자담치킨 목포대점','jadam-mokpo-01','고지서','AMI','분전반 CT','초과비용 후보']) assert.match(pilot,new RegExp(term,'i'));
+  assert.match(worker,/buildBillInsight/);
+  assert.match(worker,/api\/pilot\/jadam-mokpo-01/);
+  assert.match(worker,/url\.pathname==='\/jadam'/);
+});
