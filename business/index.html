@@ -4,10 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <meta name="description" content="EKODI Business OS, 에코디비즈와 자담치킨을 위한 AI 경영 운영체계">
+  <meta name="description" content="EKODI Business OS. 사업자의 문제를 발견하고 다음 행동과 실제 실행을 연결합니다.">
   <title>EKODI Business OS</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/customer-next.css">
   <style>.workspace-picker.session-only{display:none}.topbar:has(#authLink[href="#logout"]) .workspace-picker.session-only{display:flex}</style>
 </head>
 <body>
@@ -34,13 +35,17 @@
     <section class="hero shell">
       <div>
         <div class="workspace-heading"><p id="workspaceKind" class="workspace-kind">EKODI INTERNAL</p><p id="workspaceEnglish" class="eyebrow">EKODIBIZ</p></div>
-        <h1><span id="workspaceName">에코디비즈</span><br>오늘의 사업을 읽고,<br><span>다음 행동을 정리합니다.</span></h1>
-        <p id="heroCopy" class="hero-copy">고객, 프로젝트, 마케팅, 업무, 매출과 재무 신호를 하나의 운영 흐름으로 묶습니다.</p>
+        <div class="hero-question-context"><span id="workspaceName">에코디비즈</span><span>· 다음 행동 찾기</span></div>
+        <h1 id="businessQuestion">사업하면서 지금 가장 해결하고 싶은 것은 무엇인가요?</h1>
+        <p id="heroCopy" class="hero-copy" hidden>고객, 프로젝트, 마케팅, 업무, 매출과 재무 신호를 하나의 운영 흐름으로 묶습니다.</p>
+        <p id="problemIntro" class="customer-promise">문제를 고르면 에코디가 지금 필요한 다음 행동과 실제 실행 방법을 연결합니다.</p>
       </div>
-      <aside class="readiness-card" aria-label="현재 운영 준비 상태">
-        <div class="readiness-head"><span>READINESS</span><strong id="readinessScore">62%</strong></div>
+      <aside class="readiness-card" aria-label="에코디 가치 원칙과 운영 준비 상태">
+        <span class="value-rule-title">VALUE RULE</span>
+        <p class="value-rule-copy">에코디는 기능을 많이 보여주는 대신, 고객에게 실제 가치가 만들어지는 지점에서 함께 수익을 얻습니다.</p>
+        <div class="readiness-head"><span>OPERATING READINESS</span><strong id="readinessScore">62%</strong></div>
         <div class="meter"><i id="readinessBar"></i></div>
-        <p>스테이징 검증 후 운영으로 승격하는 구조를 유지합니다. 금전·법률·고용 확정과 외부 발송은 사람의 승인 없이 자동 실행하지 않습니다.</p>
+        <p>진단은 가볍게 시작하고 실제 실행·지속관리·성과가 생길 때 과금합니다. 금전·법률·고용 확정과 외부 발송은 사람의 승인 없이 자동 실행하지 않습니다.</p>
       </aside>
     </section>
 
@@ -49,7 +54,46 @@
       <span id="dataNotice">운영 데이터를 연결하고 있습니다. 연결 전에는 임의의 샘플 숫자를 경영지표처럼 표시하지 않습니다.</span>
     </section>
 
-    <section class="kpi-grid shell" aria-label="핵심 경영 지표">
+    <section class="problem-section shell" aria-labelledby="problemTitle">
+      <div class="section-head problem-head">
+        <div><p class="eyebrow">START WITH THE PROBLEM</p><h2 id="problemTitle">지금 가장 필요한 한 가지를 골라주세요.</h2></div>
+        <p>기능을 고를 필요가 없습니다. 문제를 고르면 필요한 AI·사람·서비스를 뒤에서 연결합니다.</p>
+      </div>
+      <div id="problemGrid" class="problem-grid">
+        <button class="problem-choice" type="button" data-next-problem="sales" aria-pressed="false"><span class="problem-icon">↗</span><strong data-problem-label>매출을 늘리고 싶어요</strong></button>
+        <button class="problem-choice" type="button" data-next-problem="repeat" aria-pressed="false"><span class="problem-icon">↻</span><strong data-problem-label>단골을 늘리고 싶어요</strong></button>
+        <button class="problem-choice" type="button" data-next-problem="marketing" aria-pressed="false"><span class="problem-icon">✦</span><strong data-problem-label>홍보를 맡기고 싶어요</strong></button>
+        <button class="problem-choice" type="button" data-next-problem="cost" aria-pressed="false"><span class="problem-icon">↓</span><strong data-problem-label>비용을 줄이고 싶어요</strong></button>
+        <button class="problem-choice" type="button" data-next-problem="people" aria-pressed="false"><span class="problem-icon">+</span><strong data-problem-label>사람이 필요해요</strong></button>
+        <button class="problem-choice active" type="button" data-next-problem="unsure" aria-pressed="true"><span class="problem-icon">?</span><strong data-problem-label>잘 모르겠어요. 한번 봐주세요</strong></button>
+      </div>
+      <article id="nextStepPanel" class="next-step-panel" aria-live="polite">
+        <div class="next-step-copy">
+          <span id="nextStepBadge" class="next-step-badge">이번 주 1순위</span>
+          <h3 id="nextStepTitle">전체 상태를 보고 이번 주 1순위를 정합니다.</h3>
+          <p id="nextStepBody">문제를 미리 정하지 않아도 됩니다. 연결된 데이터를 읽어 지금 가장 먼저 움직여야 할 한 가지를 찾습니다.</p>
+          <div class="next-step-meta"><span id="nextStepValue">목표: 우선순위 명확화 · 시행착오 감소</span><span id="nextStepPrice">기본 진단 무료 · 실행을 맡길 때 과금</span></div>
+        </div>
+        <div class="next-step-actions">
+          <button id="doItForMe" class="do-it-button" type="button">에코디가 해주세요</button>
+          <a id="nextStepLink" class="next-step-link" hidden>전문 실행 화면 열기</a>
+        </div>
+        <div id="nextStepStatus" class="next-step-status">먼저 안전하게 준비할 수 있는 범위를 확인합니다.</div>
+      </article>
+      <p class="customer-principle">원칙: 무료 진단 → 건별 실행 → 반복 사용 → 구독·성과형으로 이동합니다.</p>
+    </section>
+
+    <section class="value-ledger shell" aria-labelledby="valueTitle">
+      <div class="value-ledger-head"><div><p class="eyebrow">VALUE CREATED</p><h2 id="valueTitle">결과가 생기면 여기 기록됩니다.</h2></div><p>숫자를 꾸며내지 않습니다. 실제 데이터가 연결된 뒤 추가매출·절감비용·시간절감·완료행동을 계산합니다.</p></div>
+      <div class="value-grid">
+        <article class="value-card"><small>추가 매출</small><strong>—</strong><span>실제 성과 연결 후</span></article>
+        <article class="value-card"><small>절감 비용</small><strong>—</strong><span>기준선 비교 후</span></article>
+        <article class="value-card"><small>절약한 시간</small><strong>—</strong><span>대행·자동화 기록 후</span></article>
+        <article class="value-card"><small>완료한 다음 행동</small><strong>—</strong><span>실행 이력 연결 후</span></article>
+      </div>
+    </section>
+
+    <section class="kpi-grid shell" aria-label="현재 읽을 수 있는 핵심 경영 지표">
       <article class="kpi"><span>Today Sales</span><strong id="salesValue">—</strong><small id="salesDelta">읽기 전용 매출 데이터 연결 대기</small></article>
       <article class="kpi"><span>Customers</span><strong id="customerValue">—</strong><small id="customerMeta">고객 원장 연결 대기</small></article>
       <article class="kpi"><span>Repeat Rate</span><strong id="repeatValue">—</strong><small id="repeatMeta">재방문 지표 연결 대기</small></article>
@@ -58,39 +102,24 @@
 
     <section class="workspace shell">
       <div class="brief-panel panel">
-        <div class="panel-head">
-          <div><p class="eyebrow">CHIEF AI BRIEF</p><h2>오늘의 경영 브리핑</h2></div>
-          <button id="refreshBrief" type="button">다시 분석</button>
-        </div>
-        <ol id="briefList" class="brief-list" aria-live="polite">
-          <li><span>01</span><div><strong>워크스페이스를 준비하고 있습니다.</strong><p>실제 데이터 연결 상태와 다음 구축 순서를 확인합니다.</p></div></li>
-        </ol>
+        <div class="panel-head"><div><p class="eyebrow">CHIEF AI BRIEF</p><h2>오늘의 다음 행동</h2></div><button id="refreshBrief" type="button">다시 분석</button></div>
+        <ol id="briefList" class="brief-list" aria-live="polite"><li><span>01</span><div><strong>워크스페이스를 준비하고 있습니다.</strong><p>실제 데이터 연결 상태와 다음 구축 순서를 확인합니다.</p></div></li></ol>
         <p id="briefMeta" class="meta"></p>
       </div>
-
       <aside class="action-panel panel">
-        <p class="eyebrow">ACTION GATE</p>
-        <h2>AI 실행 경계 확인</h2>
-        <p class="panel-copy">에코디비즈와 자담치킨 모두 같은 정책 엔진을 사용하지만, 행동과 데이터 범위는 각 워크스페이스 안에서 분리합니다.</p>
-        <label for="actionSelect">테스트할 행동</label>
+        <p class="eyebrow">ACTION GATE</p><h2>안전한 실행 경계</h2>
+        <p class="panel-copy">고객이 “해달라”고 눌러도 에코디가 모든 것을 자동 실행하지 않습니다. 영향이 큰 행동은 사람의 명시적 확인을 거칩니다.</p>
+        <label for="actionSelect">확인할 행동</label>
         <select id="actionSelect">
-          <option value="draft_campaign">캠페인 초안 만들기</option>
-          <option value="draft_review_reply">리뷰 답변 초안</option>
-          <option value="create_followup_task">후속 업무 만들기</option>
-          <option value="send_customer_message">고객 메시지 발송</option>
-          <option value="change_ad_budget">광고 예산 변경</option>
-          <option value="transfer_money">자금 이체</option>
-          <option value="sign_contract">계약 체결</option>
-          <option value="terminate_employee">고용 종료 결정</option>
-          <option value="bind_insurance">보험 계약 확정</option>
+          <option value="draft_campaign">캠페인 초안 만들기</option><option value="draft_review_reply">리뷰 답변 초안</option><option value="create_followup_task">후속 업무 만들기</option><option value="send_customer_message">고객 메시지 발송</option><option value="change_ad_budget">광고 예산 변경</option><option value="transfer_money">자금 이체</option><option value="sign_contract">계약 체결</option><option value="terminate_employee">고용 종료 결정</option><option value="bind_insurance">보험 계약 확정</option>
         </select>
         <button id="checkAction" class="action-button" type="button">권한 확인</button>
         <div id="actionResult" class="action-result" aria-live="polite">아직 확인하지 않았습니다.</div>
       </aside>
     </section>
 
-    <section class="module-section shell">
-      <div class="section-head"><div><p class="eyebrow">SPECIALIST NETWORK</p><h2>전문 AI 모듈</h2></div><p>로그인 후 권한과 회원 단계에 따라 필요한 모듈이 연결됩니다.</p></div>
+    <section class="module-section customer-backstage shell">
+      <div class="section-head"><div><p class="eyebrow">BACKSTAGE NETWORK</p><h2>문제 해결 뒤에서 작동하는 전문 서비스</h2></div><p>고객은 AI 모듈을 고를 필요가 없습니다. 선택한 문제에 맞춰 필요한 서비스만 연결합니다.</p></div>
       <div id="moduleGrid" class="module-grid">
         <a class="module live" href="https://marketing.ekodi.kr"><span class="module-code">MKT</span><strong>Marketing AI</strong><p>콘텐츠, 캠페인, 채널 운영</p><small>연결 가능</small></a>
         <article class="module stage"><span class="module-code">CRM</span><strong>Customer AI</strong><p>고객, 재방문, 관계 관리</p><small>데이터 연결 대기</small></article>
@@ -101,14 +130,12 @@
       </div>
     </section>
 
-    <section class="loop shell" aria-label="Business OS 운영 루프">
-      <p class="eyebrow">OPERATING LOOP</p>
-      <div class="loop-line"><span>Observe</span><i></i><span>Discern</span><i></i><span>Suggest</span><i></i><span>Approve</span><i></i><span>Act</span><i></i><span>Verify</span><i></i><span>Report</span></div>
-    </section>
+    <section class="loop shell" aria-label="Business OS 운영 루프"><p class="eyebrow">OPERATING LOOP</p><div class="loop-line"><span>Observe</span><i></i><span>Discern</span><i></i><span>Suggest</span><i></i><span>Approve</span><i></i><span>Act</span><i></i><span>Verify</span><i></i><span>Report</span></div></section>
   </main>
 
-  <footer class="footer shell"><span>EKODI Business OS · tenant-isolated stewardship-first operations</span><a href="https://ekodi.kr">ekodi.kr</a></footer>
+  <footer class="footer shell"><span>EKODI Business OS · problem → next action → execution → result → value</span><a href="https://ekodi.kr">ekodi.kr</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js"></script>
+  <script src="/customer-next.js" defer></script>
 </body>
 </html>
