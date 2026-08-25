@@ -81,14 +81,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 secret list --config wrangler.storage.toml --json > /tmp/storage-secret-list.json
-          if node -e "const s=require('/tmp/storage-secret-list.json'); process.exit(s.some(x => x.name === 'STORAGE_CREDENTIAL_KEY') ? 0 : 1)"; then
+          npx --yes wrangler@4.119.0 secret list --config wrangler.storage.toml > /tmp/storage-secret-list.txt
+          if grep -Fq 'STORAGE_CREDENTIAL_KEY' /tmp/storage-secret-list.txt; then
             echo 'Storage credential key already exists; keeping it unchanged.' >> "$GITHUB_STEP_SUMMARY"
           else
             openssl rand -hex 32 | npx --yes wrangler@4.119.0 secret put STORAGE_CREDENTIAL_KEY --config wrangler.storage.toml >/dev/null
             echo 'Generated the persistent Storage credential encryption key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
           fi
-          rm -f /tmp/storage-secret-list.json
+          rm -f /tmp/storage-secret-list.txt
       - name: Provision existing Google OAuth secret when available
         id: google_secret
         shell: bash
