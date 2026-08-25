@@ -13,7 +13,7 @@ test('admin system map reads canonical structure and monitor status', () => {
 });
 
 test('postbuild keeps system map inside lazy Health bundle', () => {
-  assert.match(postbuild, /dist\/system-health-admin\.js/);
-  assert.match(postbuild, /dist\/system-health-admin\.css/);
+  assert.match(postbuild, /\$\{output\}system-health-admin\.js/);
+  assert.match(postbuild, /\$\{output\}system-health-admin\.css/);
   assert.match(postbuild, /platform-boundaries\.json/);
 });
