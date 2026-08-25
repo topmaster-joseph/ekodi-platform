@@ -1,7 +1,7 @@
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
-const REDIRECT_URI = 'https://api.ekodi.kr/api/control/storage/google/callback';
+const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
 const ADMIN_RETURN = 'https://admin.ekodi.kr/#storage';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -122,7 +122,7 @@ async function driveFetch(access, path, init = {}) {
 }
 async function about(access) { return driveFetch(access, '/about?fields=user(displayName,emailAddress,permissionId),storageQuota'); }
 async function connectionRows(env) {
-  const rows = await env.DB.prepare(`SELECT id,provider,role,account_email,account_domain,display_name,drive_id,drive_name,drive_root_id,archive_root_id,status,scopes,created_by,created_at,updated_at,last_verified_at FROM storage_connections ORDER BY CASE role WHEN 'primary' THEN 0 ELSE 1 END, created_at`).all();
+  const rows = await env.DB.prepare(`SELECT id,provider,role,account_email,account_domain,display_name,drive_id,drive_name,drive_root_id,archive_root_id,status,scopes,created_by,created_at,updated_at,last_verified_at FROM storage_connections WHERE status != 'disabled' ORDER BY CASE role WHEN 'primary' THEN 0 ELSE 1 END, created_at`).all();
   return rows.results || [];
 }
 async function rowById(env, id) { return env.DB.prepare('SELECT * FROM storage_connections WHERE id=? AND status != ?').bind(id,'disabled').first(); }
@@ -159,13 +159,15 @@ async function bootstrap(env, row) {
     await env.DB.prepare('UPDATE storage_routes SET folder_id=?,updated_at=? WHERE service_key=?').bind(folder.id,new Date().toISOString(),route.service_key).run();
     created.push({serviceKey:route.service_key,name:route.folder_name,id:folder.id,reused:false});
   }
-  await env.DB.prepare(`UPDATE storage_connections SET status='ready',last_verified_at=?,updated_at=? WHERE id=?`).bind(new Date().toISOString(),new Date().toISOString(),row.id).run();
+  const now = new Date().toISOString();
+  await env.DB.prepare(`UPDATE storage_connections SET status='ready',last_verified_at=?,updated_at=? WHERE id=?`).bind(now,now,row.id).run();
   return { archiveRootId:archiveRoot, folders:created };
 }
 
 export async function handleGoogleDriveStorageControl(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(BASE)) return null;
+  if (!env.DB) return json({error:'Storage registry database unavailable',code:'STORAGE_DB_UNAVAILABLE'},503);
   await ensureSchema(env.DB);
 
   if (url.pathname === `${BASE}/callback` && request.method === 'GET') {
@@ -211,7 +213,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
   const driveMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/drives$`));
   if (driveMatch && request.method === 'GET') {
     const row=await rowById(env,decodeURIComponent(driveMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
-    try { return json(await listDrives(env,row),200,auth.response.headers); } catch(error) { return json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
+    try { return json(await listDrives(env,row),200,auth.response.headers); } catch(error) { console.error('Drive list failed',error); return json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
   }
   const selectMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/select$`));
   if (selectMatch && request.method === 'POST') {
