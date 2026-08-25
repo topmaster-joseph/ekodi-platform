@@ -26,6 +26,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   BACKUP_DATABASE: ${{ github.event_name == 'pull_request' && 'ekodi-auth-staging' || 'ekodi-auth' }}
+  R2_BACKUP_BUCKET: 'ekodi-backups'
 
 jobs:
   backup-and-restore-test:
@@ -46,6 +47,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$BACKUP_DATABASE"
+          test -n "$R2_BACKUP_BUCKET"
 
       - name: Export EKODI Core D1
         run: |
@@ -84,6 +86,33 @@ jobs:
           verified_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           EOF
 
+      - name: Ensure private R2 backup bucket
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          if ! npx --yes wrangler@${WRANGLER_VERSION} r2 bucket info "$R2_BACKUP_BUCKET" >/dev/null 2>&1; then
+            npx --yes wrangler@${WRANGLER_VERSION} r2 bucket create "$R2_BACKUP_BUCKET"
+          fi
+
+      - name: Persist verified backup to R2
+        if: github.event_name != 'pull_request'
+        env:
+          ARTIFACT: ${{ steps.verify.outputs.artifact }}
+          EXPECTED_CHECKSUM: ${{ steps.verify.outputs.checksum }}
+        run: |
+          set -euo pipefail
+          PREFIX="core/${BACKUP_DATABASE}/${ARTIFACT}"
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object put "$R2_BACKUP_BUCKET/$PREFIX/ekodi-auth.sql" \
+            --remote --force --file=backup/ekodi-auth.sql
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object put "$R2_BACKUP_BUCKET/$PREFIX/restore-report.txt" \
+            --remote --force --file=backup/restore-report.txt
+          rm -f backup/r2-verify.sql
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object get "$R2_BACKUP_BUCKET/$PREFIX/ekodi-auth.sql" \
+            --remote --file=backup/r2-verify.sql
+          ACTUAL_CHECKSUM=$(sha256sum backup/r2-verify.sql | awk '{print $1}')
+          test "$ACTUAL_CHECKSUM" = "$EXPECTED_CHECKSUM"
+          echo "r2_object=$PREFIX/ekodi-auth.sql" >> "$GITHUB_OUTPUT"
+
       - name: Record successful recovery drill
         env:
           CHECKSUM: ${{ steps.verify.outputs.checksum }}
@@ -116,3 +145,6 @@ jobs:
           echo '- Integrity: ${{ steps.verify.outputs.integrity }}' >> "$GITHUB_STEP_SUMMARY"
           echo '- Required Core tables: ${{ steps.verify.outputs.required_tables }}/6' >> "$GITHUB_STEP_SUMMARY"
           echo '- SHA-256: ${{ steps.verify.outputs.checksum }}' >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "- Durable copy: R2 private bucket $R2_BACKUP_BUCKET" >> "$GITHUB_STEP_SUMMARY"
+          fi
