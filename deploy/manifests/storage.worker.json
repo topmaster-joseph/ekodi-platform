@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-storage-control",
+    "config": "wrangler.storage.toml",
+    "requests": [
+      {
+        "url": "https://drive.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["\"service\":\"ekodi-storage-control\"", "\"provider\":\"google_drive\""]
+      }
+    ]
+  }
+}
