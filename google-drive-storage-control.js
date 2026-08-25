@@ -40,7 +40,7 @@ function html(message, ok = false) {
 function splitList(value) { return String(value || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean); }
 function primaryDomains(env) {
   const configured = splitList(env.STORAGE_PRIMARY_GOOGLE_DOMAINS);
-  return configured.length ? configured : ['ekodi.kr','ekodibiz.kr'];
+  return configured.length ? configured : ['ekodi.kr'];
 }
 function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
