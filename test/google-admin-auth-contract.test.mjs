@@ -91,7 +91,7 @@ test('production build and CSP allow only required Google Identity Services reso
 test('personal Gmail super administrator and production OAuth client are exact contracts', () => {
   assert.match(wrangler, /ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster\.joseph@gmail\.com"/);
   assert.match(wrangler, /GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5\.apps\.googleusercontent\.com"/);
-  assert.match(wrangler, /ADMIN_WORKSPACE_DOMAIN = "ekodibiz\.kr"/);
+  assert.match(wrangler, /ADMIN_WORKSPACE_DOMAIN = "ekodi\.kr"/);
   assert.match(migration, /admin_google_accounts/);
   assert.match(migration, /google_login_challenges/);
 });
