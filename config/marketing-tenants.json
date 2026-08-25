@@ -50,6 +50,10 @@
       "domain": "jadam.ai.ekodi.kr",
       "landingPath": "/",
       "domainEntitlement": "grandfathered",
+      "visibility": "private",
+      "privateSiteDomain": "jadam.ekodi.kr",
+      "accessRealm": "jadam-client",
+      "accessPolicy": "pre_registered_customer_only",
       "legacyDomains": [
         "jadam.ekodi.kr",
         "marketing.jadam.ekodi.kr"
