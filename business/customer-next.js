@@ -47,6 +47,11 @@ const NEXT_STEP_PROBLEMS={
 
 let activeProblem='unsure';
 
+function initialProblemFromUrl(){
+  const requested=new URLSearchParams(location.search).get('problem');
+  return requested&&requested in NEXT_STEP_PROBLEMS?requested:'unsure';
+}
+
 function currentNextWorkspace(){
   const path=location.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
   if(path==='jadam')return'jadam';
@@ -128,10 +133,10 @@ function installCustomerNextStep(){
   document.querySelectorAll('[data-next-problem]').forEach(button=>button.addEventListener('click',()=>renderNextStep(button.dataset.nextProblem)));
   nextStepEl('doItForMe')?.addEventListener('click',requestDoItForMe);
   nextStepEl('workspaceSelect')?.addEventListener('change',()=>setTimeout(()=>renderNextStep(activeProblem),0));
-  window.addEventListener('popstate',()=>setTimeout(()=>renderNextStep(activeProblem),0));
+  window.addEventListener('popstate',()=>setTimeout(()=>renderNextStep(initialProblemFromUrl()),0));
   const name=nextStepEl('workspaceName');
   if(name)new MutationObserver(()=>renderNextStep(activeProblem)).observe(name,{childList:true,subtree:true,characterData:true});
-  renderNextStep('unsure');
+  renderNextStep(initialProblemFromUrl());
 }
 
 window.addEventListener('DOMContentLoaded',installCustomerNextStep);
