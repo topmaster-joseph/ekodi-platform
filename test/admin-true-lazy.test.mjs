@@ -37,4 +37,11 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
 
+test('immutable Admin fingerprint includes unified homepage management', async () => {
+  const performancePostbuild = await read('scripts/admin-performance-postbuild.mjs');
+  const versionBlock = performancePostbuild.match(/const versionInputs = \[([\s\S]*?)\];/)?.[1] || '';
+  assert.match(versionBlock, /'campus-actions\.js'/);
+  assert.match(versionBlock, /'homepage-admin\.js'/);
+});
+
 // Release trigger checkpoint: shared-site manifest v8 is validated by the guarded production gate.
