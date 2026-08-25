@@ -14,18 +14,30 @@ test('Campus and Sites are one canonical Site Management entry', () => {
   assert.match(layout, /Do not create a second top-level Sites item/);
 });
 
-test('Site Management contains all-sites and homepage-presentation nested views', () => {
-  assert.match(campus, /사이트 관리 ·/);
-  assert.match(campus, /dataset\.siteManagementHomepage/);
-  assert.match(campus, /'첫화면 노출'/);
-  assert.match(homepage, /homepageAdminAllSites/);
-  assert.match(homepage, /activate\?\.\('campus'\)/);
+test('Site Management renders one shared list for operations and homepage presentation', () => {
+  assert.match(campus, /import\('\.\/homepage-admin\.js'\)/);
+  assert.match(campus, /reconcileRegistryServices/);
+  assert.match(campus, /EKODI\.KR 첫화면 공개 설정을 한 목록에서 관리합니다/);
+  assert.match(homepage, /document\.querySelector\('#campusPanel'\)/);
+  assert.match(homepage, /targets\.add\('sites'\)/);
+  assert.match(homepage, /querySelectorAll\('#campusSiteGroups \.campus-site-item'\)/);
+  assert.match(homepage, /EKODI\.KR 첫화면 비대상/);
+  assert.doesNotMatch(homepage, /homepage-admin-grid/);
 });
 
-test('Homepage ordering uses drag position instead of exposed numeric order input', () => {
-  assert.match(homepage, /bindDragOrdering/);
-  assert.match(homepage, /row\.draggable/);
-  assert.match(homepage, /position \* 10 \+ 10/);
+test('legacy #sites entry converges into Campus instead of creating a second list', () => {
+  assert.match(layout, /\['#sites', 'sites'\]/);
+  assert.match(homepage, /mountWhenCampusReady/);
+  assert.match(homepage, /data-demand-feature="campus"/);
+  assert.match(homepage, /window\.EKODIAdminPanels\?\.activate\?\.\('sites'\)/);
+  assert.match(homepage, /document\.querySelector\('#homepageAdminPanel'\)\?\.remove\(\)/);
+});
+
+test('Homepage ordering stays keyboard-accessible inside grouped Campus cards', () => {
+  assert.match(homepage, /up\.dataset\.homepageMove = '-1'/);
+  assert.match(homepage, /down\.dataset\.homepageMove = '1'/);
+  assert.match(homepage, /moveRow\(row, Number\(button\.dataset\.homepageMove\)\)/);
+  assert.match(homepage, /normalizeOrderValues/);
   assert.doesNotMatch(homepage, /order\.type = 'number'/);
-  assert.match(homepage, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.doesNotMatch(homepage, /row\.draggable/);
 });
