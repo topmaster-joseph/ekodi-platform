@@ -3,6 +3,7 @@
   "worker": {
     "name": "ekodi-storage-control",
     "config": "wrangler.storage.toml",
+    "allowFirstDeploy": true,
     "requests": [
       {
         "url": "https://drive.ekodi.kr/health",

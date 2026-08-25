@@ -35,6 +35,7 @@ const worker = manifest.worker || {};
 if (!worker.name || !worker.config || !Array.isArray(worker.requests) || !worker.requests.length) {
   throw new Error('Worker manifest requires worker.name, worker.config and worker.requests.');
 }
+const allowFirstDeploy = worker.allowFirstDeploy === true;
 
 const configPath = path.resolve(root, worker.config);
 if (!configPath.startsWith(root + path.sep) || !fs.existsSync(configPath)) {
@@ -77,7 +78,9 @@ function command(argv, { json = false } = {}) {
   if (!json) process.stdout.write(`${stdout}${stderr}`);
   if (result.status !== 0) {
     if (json) process.stdout.write(`${stdout}${stderr}`);
-    throw new Error(`wrangler ${argv.join(' ')} failed with exit code ${result.status}`);
+    const error = new Error(`wrangler ${argv.join(' ')} failed with exit code ${result.status}`);
+    error.providerOutput = `${stdout}${stderr}`;
+    throw error;
   }
   return json ? stdout.trim() : `${stdout}${stderr}`;
 }
@@ -222,11 +225,40 @@ function appendSummary(lines) {
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
 }
 
+function isMissingWorker(error) {
+  const text = `${error?.message || ''}\n${error?.providerOutput || ''}`;
+  return /does not exist|code:\s*10007/i.test(text);
+}
+
+async function bootstrapFirstDeploy() {
+  if (!allowFirstDeploy) throw new Error(`First deployment is not allowed by manifest for ${worker.name}.`);
+  console.log(`No existing ${worker.name} deployment found. Manifest explicitly allows one first deployment bootstrap.`);
+  const deployArgs = ['deploy', '--config', worker.config];
+  if (secretsFilePath) deployArgs.push('--secrets-file', secretsFilePath);
+  command(deployArgs);
+  await verifyAll('');
+  appendSummary([
+    `## EKODI first Worker deployment: ${worker.name}`,
+    '',
+    '- Manifest explicitly allowed first-deploy bootstrap.',
+    '- AI_PROVIDER=NONE resilience gate passed before deployment.',
+    '- The new Worker was deployed once, then production smoke verification passed.',
+    '- Future releases return to the normal 0% candidate, smoke-test, 100% promotion guard.',
+  ]);
+  console.log('✅ First Worker deployment bootstrap complete. Future releases will use the normal guarded promotion path.');
+}
+
 try {
   console.log(`Worker guarded release: ${worker.name}`);
   runProviderIndependenceGate();
   if (secretsFilePath) console.log('Candidate will include the supplied secret set without printing secret values.');
-  previousVersion = currentSingleVersion();
+  try {
+    previousVersion = currentSingleVersion();
+  } catch (error) {
+    if (!allowFirstDeploy || !isMissingWorker(error)) throw error;
+    await bootstrapFirstDeploy();
+    process.exit(0);
+  }
   console.log(`Stable production version: ${previousVersion}`);
 
   candidateVersion = uploadCandidate();
