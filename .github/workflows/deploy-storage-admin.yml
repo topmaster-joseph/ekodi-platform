@@ -5,7 +5,7 @@ on:
     paths: &storage_admin_paths
       - 'storage-admin.js'
       - 'storage-admin.css'
-      - 'storage-admin-demand.js'
+      - 'admin-demand-loader.js'
       - 'scripts/admin-system-map-postbuild.mjs'
       - '.github/workflows/deploy-storage-admin.yml'
   push:
@@ -32,14 +32,17 @@ jobs:
         run: |
           set -euo pipefail
           node --check storage-admin.js
-          node --check storage-admin-demand.js
+          node --check admin-demand-loader.js
           npm run build
           test -f dist/storage-admin.js
           test -f dist/storage-admin.css
-          grep -Fq "loadScript('storage-admin.js')" dist/admin-demand-loader.js
+          grep -Fq 'storage:' dist/admin-demand-loader.js
+          grep -Fq "scripts: ['storage-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "hashes: ['#storage']" dist/admin-demand-loader.js
           ! grep -Fq '<script src="storage-admin.js"' dist/control-center.html
-          ! grep -Fq 'setInterval(' storage-admin-demand.js
-          ! grep -Fq 'MutationObserver' storage-admin-demand.js
+          demand_bytes=$(wc -c < dist/admin-demand-loader.js)
+          echo "Storage demand-loader budget: ${demand_bytes}B"
+          test "$demand_bytes" -le 14000
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
