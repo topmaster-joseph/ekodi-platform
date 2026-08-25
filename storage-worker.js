@@ -14,7 +14,7 @@ export default {
       if(allowed.includes(origin))headers.set('access-control-allow-origin',origin);
       return new Response(null,{status:204,headers});
     }
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-storage-control',provider:'google_drive',configured:Boolean(env.GOOGLE_DRIVE_CLIENT_SECRET&&env.STORAGE_CREDENTIAL_KEY),primaryDomains:String(env.STORAGE_PRIMARY_GOOGLE_DOMAINS||'ekodi.kr,ekodibiz.kr').split(',')});
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-storage-control',provider:'google_drive',configured:Boolean(env.GOOGLE_DRIVE_CLIENT_SECRET&&env.STORAGE_CREDENTIAL_KEY),primaryDomains:String(env.STORAGE_PRIMARY_GOOGLE_DOMAINS||'ekodi.kr').split(',')});
     if(url.pathname.startsWith('/api/control/storage/google')){
       try{const response=await handleGoogleDriveStorageControl(request,env);if(response)return applyApiSecurityHeaders(response);}
       catch(error){console.error('Google Drive Storage Control error',error);return json({error:'Google Drive Storage 처리 중 오류가 발생했습니다.',code:'STORAGE_CONTROL_ERROR'},500);}
