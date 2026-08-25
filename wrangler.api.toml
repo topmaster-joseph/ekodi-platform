@@ -1,4 +1,5 @@
 # Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations/publishing network + membership billing + Author billing + AI Mission Control
+# 2026-08-26: deploy User AI admin CORS preflight fix before authenticated control requests.
 name = "ekodi-auth-api"
 main = "mission-control-entry-worker.js"
 compatibility_date = "2026-08-12"
