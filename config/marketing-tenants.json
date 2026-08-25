@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "domainPattern": "{tenant}.ai.ekodi.kr",
   "namespace": {
     "domain": "ai.ekodi.kr",
@@ -102,6 +102,20 @@
         "marketing.cheonggye.ekodi.kr"
       ],
       "customDomains": []
+    }
+  ],
+  "internalConsumers": [
+    {
+      "id": "ekodibiz",
+      "workspaceType": "tenant",
+      "workspaceKey": "ekodibiz",
+      "tenant": "ekodibiz",
+      "name": "에코디비즈",
+      "entryDomain": "marketing.ekodi.kr",
+      "entryUrl": "https://marketing.ekodi.kr/",
+      "templateKey": "service_b2b",
+      "role": "first_party_customer",
+      "dedicatedEkodiDomain": false
     }
   ]
 }
