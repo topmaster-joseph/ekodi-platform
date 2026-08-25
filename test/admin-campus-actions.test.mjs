@@ -20,13 +20,13 @@ test('Campus first screen renders the full site catalog with direct operational 
   assert.match(js, /link\.textContent = 'Open ↗'/);
 });
 
-test('Campus always keeps pre-open platforms visible and prevents dead public links', () => {
+test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
   for (const domain of ['my.ekodi.kr', 'ins.ekodi.kr', 'edu.ekodi.kr', 'media.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /lifecycle: 'planned'/);
   assert.match(js, /dataset\.siteLifecycle = site\.lifecycle \|\| 'live'/);
-  assert.match(js, /stage\.textContent = '오픈 전'/);
+  assert.match(js, /if \(lifecycle === 'planned'\) return '오픈 전'/);
   assert.match(js, /button\.textContent = '오픈 전'/);
   assert.match(js, /if \(site\.lifecycle === 'planned'\)/);
   assert.match(css, /\.campus-site-item\.is-planned/);
@@ -34,12 +34,21 @@ test('Campus always keeps pre-open platforms visible and prevents dead public li
   assert.match(css, /\.campus-site-planned-action:disabled/);
 });
 
-test('Campus includes verified ecosystem services that were missing from the old 20-site view', () => {
+test('Campus includes verified ecosystem services that were missing from the old view', () => {
   for (const domain of ['author.ekodi.kr', 'work.ekodi.kr', 'energy.ekodi.kr', 'business.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
   assert.match(js, /Work & Life/);
-  assert.match(js, /에코디 생태계의 전체 사이트를 한곳에서 보고/);
+  assert.match(js, /에코디 생태계의 전체 사이트와 EKODI\.KR 첫화면 공개 설정을 한 목록에서 관리합니다/);
+});
+
+test('Campus reconciles the canonical homepage registry so the two old lists cannot drift', () => {
+  assert.match(js, /REGISTRY_GROUP_MAP/);
+  assert.match(js, /reconcileRegistryServices/);
+  assert.match(js, /normalizeDomain\(service\?\.domain \|\| service\?\.label \|\| service\?\.url\)/);
+  assert.match(js, /window\.EKODICampus = Object\.freeze/);
+  assert.match(js, /import\('\.\/homepage-admin\.js'\)/);
+  assert.match(js, /Other Services/);
 });
 
 test('Campus groups related services into a compact two-column layout', () => {
@@ -58,6 +67,14 @@ test('Campus groups related services into a compact two-column layout', () => {
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.campus-group-card/);
   assert.match(css, /\.campus-site-item/);
+});
+
+test('Homepage controls share the same Campus row and remain responsive', () => {
+  assert.match(css, /\.campus-homepage-controls/);
+  assert.match(css, /\.campus-homepage-notice/);
+  assert.match(css, /\.campus-homepage-preview/);
+  assert.match(css, /word-break:keep-all/);
+  assert.match(css, /@media \(max-width:720px\)/);
 });
 
 test('public site Open links never inherit monitor-only health endpoints', () => {
@@ -86,6 +103,7 @@ test('sidebar normalization is idempotent and cannot feed its own MutationObserv
 test('Campus action assets are shipped but fetched only after the administrator opens Campus', () => {
   assert.match(build, /'campus-actions\.css'/);
   assert.match(build, /'campus-actions\.js'/);
+  assert.match(build, /'homepage-admin\.js'/);
   assert.doesNotMatch(shell, /'campus-actions\.css'/);
   assert.doesNotMatch(shell, /'campus-actions\.js'/);
   assert.match(demand, /campus:\s*\{/);
