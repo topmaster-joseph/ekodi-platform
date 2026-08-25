@@ -196,6 +196,7 @@ async function resetLimit(request, env, auth, planId) {
 export async function handleUserAiAdminControl(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(CONTROL_ROOT)) return null;
+  if (request.method === 'OPTIONS') return authWorker.fetch(request, env);
   if (!env.DB) return json({ error:'데이터베이스 연결이 설정되지 않았습니다.', code:'USER_AI_ADMIN_DATABASE_UNAVAILABLE' }, 503);
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
