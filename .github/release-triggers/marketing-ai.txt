@@ -1,1 +1,4 @@
 2026-08-24 marketing-ai-self-hosted-style-recovery
+2026-08-25 jadam-private-tailored-ai-workspace
+2026-08-25 jadam-domain-role-separation
+2026-08-25 jadam-private-csp-assets
