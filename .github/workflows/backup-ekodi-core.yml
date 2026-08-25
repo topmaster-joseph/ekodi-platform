@@ -87,7 +87,9 @@ jobs:
           EOF
 
       - name: Ensure private R2 backup bucket
+        id: r2_bucket
         if: github.event_name != 'pull_request'
+        continue-on-error: true
         run: |
           set -euo pipefail
           if ! npx --yes wrangler@${WRANGLER_VERSION} r2 bucket info "$R2_BACKUP_BUCKET" >/dev/null 2>&1; then
@@ -95,7 +97,9 @@ jobs:
           fi
 
       - name: Persist verified backup to R2
-        if: github.event_name != 'pull_request'
+        id: r2_persist
+        if: github.event_name != 'pull_request' && steps.r2_bucket.outcome == 'success'
+        continue-on-error: true
         env:
           ARTIFACT: ${{ steps.verify.outputs.artifact }}
           EXPECTED_CHECKSUM: ${{ steps.verify.outputs.checksum }}
@@ -111,9 +115,9 @@ jobs:
             --remote --file=backup/r2-verify.sql
           ACTUAL_CHECKSUM=$(sha256sum backup/r2-verify.sql | awk '{print $1}')
           test "$ACTUAL_CHECKSUM" = "$EXPECTED_CHECKSUM"
-          echo "r2_object=$PREFIX/ekodi-auth.sql" >> "$GITHUB_OUTPUT"
 
       - name: Record successful recovery drill
+        if: steps.verify.outcome == 'success'
         env:
           CHECKSUM: ${{ steps.verify.outputs.checksum }}
           BYTES: ${{ steps.verify.outputs.bytes }}
@@ -128,6 +132,7 @@ jobs:
             --remote --yes --config wrangler.api.toml --command "$SQL"
 
       - name: Upload independent backup artifact
+        if: always() && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.verify.outputs.artifact }}
@@ -138,6 +143,7 @@ jobs:
           retention-days: 30
 
       - name: Backup summary
+        if: always() && steps.verify.outcome == 'success'
         run: |
           echo '### EKODI Core backup verified' >> "$GITHUB_STEP_SUMMARY"
           echo "- D1 source: $BACKUP_DATABASE" >> "$GITHUB_STEP_SUMMARY"
@@ -145,6 +151,10 @@ jobs:
           echo '- Integrity: ${{ steps.verify.outputs.integrity }}' >> "$GITHUB_STEP_SUMMARY"
           echo '- Required Core tables: ${{ steps.verify.outputs.required_tables }}/6' >> "$GITHUB_STEP_SUMMARY"
           echo '- SHA-256: ${{ steps.verify.outputs.checksum }}' >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "- Durable copy: R2 private bucket $R2_BACKUP_BUCKET" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo '- R2: skipped on pull request' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.r2_persist.outcome }}" = "success" ]; then
+            echo "- R2: verified private copy in $R2_BACKUP_BUCKET" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '- R2: unavailable; GitHub Artifact fallback retained' >> "$GITHUB_STEP_SUMMARY"
           fi
