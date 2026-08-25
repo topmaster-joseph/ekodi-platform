@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 
 const html=readFileSync(new URL('../business/index.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../business/app.js',import.meta.url),'utf8');
+const customerNext=readFileSync(new URL('../business/customer-next.js',import.meta.url),'utf8');
+const customerNextCss=readFileSync(new URL('../business/customer-next.css',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../business-worker.js',import.meta.url),'utf8');
 const liveWorker=readFileSync(new URL('../business-live-worker.js',import.meta.url),'utf8');
 const authRouter=readFileSync(new URL('../auth-site/auth-router.js',import.meta.url),'utf8');
@@ -22,6 +24,29 @@ test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
   assert.match(worker,/internal/);
 });
 
+test('Business OS starts from a customer problem instead of a module catalog',()=>{
+  for(const term of ['사업하면서 지금 가장 해결하고 싶은 것은 무엇인가요','매출을 늘리고 싶어요','단골을 늘리고 싶어요','홍보를 맡기고 싶어요','비용을 줄이고 싶어요','사람이 필요해요','잘 모르겠어요. 한번 봐주세요','에코디가 해주세요']) assert.match(html,new RegExp(term));
+  assert.match(html,/id="problemGrid"/);
+  assert.match(html,/id="nextStepPanel"/);
+  assert.match(html,/VALUE CREATED/);
+  assert.match(html,/실제 데이터가 연결된 뒤/);
+  assert.match(customerNext,/NEXT_STEP_PROBLEMS/);
+  assert.match(customerNext,/requestDoItForMe/);
+  assert.match(customerNext,/\/api\/action-check/);
+  assert.match(customerNext,/https:\/\/energy\.ekodi\.kr\/jadam/);
+  assert.match(customerNext,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  assert.match(customerNextCss,/\.problem-grid/);
+  assert.match(customerNextCss,/\.next-step-panel/);
+});
+
+test('customer-first layer monetizes execution rather than inventing a subscription-first promise',()=>{
+  assert.match(html,/기본 진단 무료/);
+  assert.match(html,/무료 진단 → 건별 실행 → 반복 사용 → 구독·성과형/);
+  assert.match(customerNext,/실제 실행부터 과금/);
+  assert.match(customerNext,/실제 연결·성사 시 과금/);
+  assert.doesNotMatch(html,/무조건 자동 실행/);
+});
+
 test('public Business OS header stays local and keeps workspace chrome behind sign-in',()=>{
   assert.match(html,/class="brand" href="\/" aria-label="EKODI Business OS 홈으로 이동"/);
   assert.doesNotMatch(html,/class="brand" href="https:\/\/ekodi\.kr"/);
@@ -38,6 +63,8 @@ test('Business OS does not present fabricated sample metrics as live data',()=>{
   assert.match(worker,/sales:null/);
   assert.match(worker,/customers:null/);
   assert.match(app,/\/api\/snapshot/);
+  assert.match(html,/추가 매출<\/small><strong>—<\/strong>/);
+  assert.match(html,/절감 비용<\/small><strong>—<\/strong>/);
 });
 
 test('workspace routes and APIs are explicit and tenant-scoped',()=>{
@@ -90,6 +117,7 @@ test('high-impact business decisions are permanently human-only',()=>{
   assert.match(worker,/high_impact_human_only/);
   assert.match(migration,/high_impact_human_only/);
   assert.match(migration,/executed.*false/);
+  assert.match(customerNext,/action-check/);
 });
 
 test('customer PII is used only for internal aggregation and never emitted by the snapshot',()=>{
