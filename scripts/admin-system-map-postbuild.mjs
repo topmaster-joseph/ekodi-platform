@@ -20,8 +20,14 @@ if (mapJs.includes('setInterval(')) throw new Error('System Map must stay event-
 if (!storageDemand.includes("loadScript('storage-admin.js')")) throw new Error('Storage must remain demand-loaded');
 if (storageDemand.includes('setInterval(') || storageDemand.includes('MutationObserver')) throw new Error('Storage demand shim must stay event-driven');
 
+const storageAwareMapJs = mapJs.replace(
+  "    ['R2', 'Durable Storage', '파일 · 장기 백업'],",
+  "    ['Google Drive', 'Archive Storage', '원본 · 문서 · 미디어 · 장기보관'],\n    ['R2', 'Web Object Storage', '웹 배포 파일 · 백업 복제본'],",
+);
+if (!storageAwareMapJs.includes("['Google Drive', 'Archive Storage'")) throw new Error('System Map Google Drive storage role missing');
+
 await Promise.all([
-  writeFile(`${output}system-health-admin.js`, `${healthJs}\n${mapJs}\n`),
+  writeFile(`${output}system-health-admin.js`, `${healthJs}\n${storageAwareMapJs}\n`),
   writeFile(`${output}system-health-admin.css`, `${healthCss}\n${mapCss}\n`),
   writeFile(`${output}admin-demand-loader.js`, `${demandJs}\n${storageDemand}\n`),
   cp(`${root}platform-boundaries.json`, `${output}platform-boundaries.json`),
@@ -29,4 +35,4 @@ await Promise.all([
   cp(`${root}storage-admin.css`, `${output}storage-admin.css`),
 ]);
 
-console.log('Admin System Map + lazy Storage workspace prepared with canonical boundary data.');
+console.log('Admin System Map + Drive-first lazy Storage workspace prepared with canonical boundary data.');
