@@ -1,0 +1,83 @@
+name: Deploy EKODI Storage Control
+
+on:
+  pull_request:
+    paths:
+      - 'google-drive-storage-control.js'
+      - 'storage-worker.js'
+      - 'storage-admin.js'
+      - 'storage-admin.css'
+      - 'wrangler.storage.toml'
+      - 'deploy/manifests/storage.worker.json'
+      - 'migrations/0038_google_drive_storage.sql'
+      - 'test/google-drive-storage.test.mjs'
+      - '.github/workflows/deploy-storage.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'google-drive-storage-control.js'
+      - 'storage-worker.js'
+      - 'storage-admin.js'
+      - 'storage-admin.css'
+      - 'wrangler.storage.toml'
+      - 'deploy/manifests/storage.worker.json'
+      - 'migrations/0038_google_drive_storage.sql'
+      - 'test/google-drive-storage.test.mjs'
+      - '.github/workflows/deploy-storage.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-storage-control-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Drive storage boundary
+        run: |
+          set -euo pipefail
+          node --check google-drive-storage-control.js
+          node --check storage-worker.js
+          node --check storage-admin.js
+          node --test test/google-drive-storage.test.mjs
+          node scripts/validate-additive-migrations.mjs
+          grep -Fq 'drive.ekodi.kr' wrangler.storage.toml
+          grep -Fq 'STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr,ekodibiz.kr"' wrangler.storage.toml
+          ! grep -Eq 'GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+' wrangler.storage.toml
+          ! grep -Eq 'STORAGE_CREDENTIAL_KEY\s*=\s*".+' wrangler.storage.toml
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Apply additive D1 storage registry
+        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.storage.toml
+      - name: Guarded Storage Worker release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/storage.worker.json
+      - name: Verify public health
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 6 --retry-delay 3 https://drive.ekodi.kr/health | tee /tmp/storage-health.json
+          grep -Fq '"service":"ekodi-storage-control"' /tmp/storage-health.json
+          grep -Fq '"provider":"google_drive"' /tmp/storage-health.json
