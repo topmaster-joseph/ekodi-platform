@@ -42,6 +42,8 @@ function primaryDomains(env) {
   const configured = splitList(env.STORAGE_PRIMARY_GOOGLE_DOMAINS);
   return configured.length ? configured : ['ekodi.kr','ekodibiz.kr'];
 }
+function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
+function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
 function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
 function ready(env) { return Boolean(googleClientId(env) && env.GOOGLE_DRIVE_CLIENT_SECRET && env.STORAGE_CREDENTIAL_KEY && env.DB); }
 function b64url(bytes) {
@@ -133,9 +135,14 @@ async function listDrives(env, row) {
     about(access), driveFetch(access, '/drives?pageSize=100&fields=drives(id,name,createdTime,hidden,capabilities(canAddChildren,canManageMembers))')
   ]);
   const root = await driveFetch(access, '/files/root?fields=id,name&supportsAllDrives=true');
+  const preferredId = primarySharedDriveId(env);
+  const sharedDrives = (shared.drives || [])
+    .filter(d => !d.hidden)
+    .map(d => ({...d,rootId:d.id,type:'shared-drive',preferred:Boolean(preferredId && d.id === preferredId)}))
+    .sort((a,b) => Number(b.preferred) - Number(a.preferred) || String(a.name).localeCompare(String(b.name),'ko'));
   return {
     account:profile.user,
-    drives:[{id:'my-drive',name:'내 드라이브',rootId:root.id,type:'my-drive'}, ...(shared.drives || []).filter(d => !d.hidden).map(d => ({...d,rootId:d.id,type:'shared-drive'}))]
+    drives:[{id:'my-drive',name:'내 드라이브',rootId:root.id,type:'my-drive',preferred:false}, ...sharedDrives]
   };
 }
 async function createFolder(access, name, parentId) {
@@ -143,21 +150,45 @@ async function createFolder(access, name, parentId) {
     method:'POST', body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parentId]})
   });
 }
+function driveQueryValue(value) { return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+async function findFolder(access, name, parentId) {
+  const q = `'${driveQueryValue(parentId)}' in parents and name = '${driveQueryValue(name)}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+  const params = new URLSearchParams({
+    q, spaces:'drive', pageSize:'10',
+    supportsAllDrives:'true', includeItemsFromAllDrives:'true',
+    fields:'files(id,name,parents)',
+  });
+  const result = await driveFetch(access, `/files?${params}`);
+  return (result.files || [])[0] || null;
+}
+function isCanonicalSharedDrive(env, row) {
+  const configuredId = primarySharedDriveId(env);
+  return row.role === 'primary' && row.drive_id && row.drive_id !== 'my-drive' && (
+    (configuredId && row.drive_id === configuredId) ||
+    (!configuredId && String(row.drive_name || '').trim().toLowerCase() === primarySharedDriveName(env).toLowerCase())
+  );
+}
 async function bootstrap(env, row) {
   if (!row.drive_root_id) throw new Error('저장할 Google Drive를 먼저 선택해 주세요.');
   const access = await accessToken(env,row);
   let archiveRoot = row.archive_root_id;
   if (!archiveRoot) {
-    archiveRoot = (await createFolder(access,'EKODI',row.drive_root_id)).id;
+    if (isCanonicalSharedDrive(env,row)) {
+      archiveRoot = row.drive_root_id;
+    } else {
+      const existingArchive = await findFolder(access,'EKODI',row.drive_root_id);
+      archiveRoot = existingArchive?.id || (await createFolder(access,'EKODI',row.drive_root_id)).id;
+    }
     await env.DB.prepare('UPDATE storage_connections SET archive_root_id=?, updated_at=? WHERE id=?').bind(archiveRoot,new Date().toISOString(),row.id).run();
   }
   const routeRows = await env.DB.prepare(`SELECT service_key,folder_name,folder_id FROM storage_routes WHERE connection_role='primary' ORDER BY folder_name`).all();
   const created=[];
   for (const route of routeRows.results || []) {
     if (route.folder_id) { created.push({serviceKey:route.service_key,name:route.folder_name,id:route.folder_id,reused:true}); continue; }
-    const folder = await createFolder(access,route.folder_name,archiveRoot);
+    const existing = await findFolder(access,route.folder_name,archiveRoot);
+    const folder = existing || await createFolder(access,route.folder_name,archiveRoot);
     await env.DB.prepare('UPDATE storage_routes SET folder_id=?,updated_at=? WHERE service_key=?').bind(folder.id,new Date().toISOString(),route.service_key).run();
-    created.push({serviceKey:route.service_key,name:route.folder_name,id:folder.id,reused:false});
+    created.push({serviceKey:route.service_key,name:route.folder_name,id:folder.id,reused:Boolean(existing)});
   }
   const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE storage_connections SET status='ready',last_verified_at=?,updated_at=? WHERE id=?`).bind(now,now,row.id).run();
@@ -191,14 +222,14 @@ export async function handleGoogleDriveStorageControl(request, env) {
       if (payload.role === 'primary') await env.DB.prepare(`UPDATE storage_connections SET status='disabled',updated_at=? WHERE role='primary' AND status!='disabled'`).bind(now).run();
       await env.DB.prepare(`INSERT INTO storage_connections(id,provider,role,account_email,account_domain,display_name,status,credential_ciphertext,credential_iv,scopes,created_by,created_at,updated_at,last_verified_at) VALUES(?,'google_drive',?,?,?,?, 'connected',?,?,?,?,?,?,?)`)
         .bind(id,payload.role,email,domain,String(profile.user?.displayName || ''),encrypted.ciphertext,encrypted.iv,SCOPES.join(' '),payload.adminEmail,now,now,now).run();
-      return html(`${email} 계정이 ${payload.role === 'primary' ? 'EKODI 기본 저장소' : '보조 저장소'}로 연결되었습니다. 이제 사용할 Drive를 선택하고 EKODI 폴더를 생성할 수 있습니다.`,true);
+      return html(`${email} 계정이 ${payload.role === 'primary' ? 'EKODI 기본 저장소' : '보조 저장소'}로 연결되었습니다. 이제 사용할 Drive를 선택하고 EKODI 폴더를 확인할 수 있습니다.`,true);
     } catch (error) { console.error('Google Drive OAuth callback failed',error); return html('Google Drive 계정 연결 중 오류가 발생했습니다.'); }
   }
 
   const auth = await adminSession(request,env); if (!auth.session) return auth.response;
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
-    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),redirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'EKODI Workspace Drive',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
+    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
   }
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
@@ -221,9 +252,10 @@ export async function handleGoogleDriveStorageControl(request, env) {
     const body=await request.json().catch(() => ({})); const available=await listDrives(env,row); const selected=available.drives.find(d => d.id === String(body.driveId || ''));
     if (!selected) return json({error:'이 계정에서 사용할 수 없는 Drive입니다.'},400,auth.response.headers);
     const now=new Date().toISOString();
-    await env.DB.prepare(`UPDATE storage_connections SET drive_id=?,drive_name=?,drive_root_id=?,archive_root_id='',status='connected',last_verified_at=?,updated_at=? WHERE id=?`).bind(selected.id,selected.name,selected.rootId,now,now,row.id).run();
+    const canonicalRoot = row.role === 'primary' && selected.id === primarySharedDriveId(env) ? selected.rootId : '';
+    await env.DB.prepare(`UPDATE storage_connections SET drive_id=?,drive_name=?,drive_root_id=?,archive_root_id=?,status='connected',last_verified_at=?,updated_at=? WHERE id=?`).bind(selected.id,selected.name,selected.rootId,canonicalRoot,now,now,row.id).run();
     if (row.role === 'primary') await env.DB.prepare(`UPDATE storage_routes SET folder_id='',connection_role='primary',updated_at=?`).bind(now).run();
-    return json({ok:true,drive:selected},200,auth.response.headers);
+    return json({ok:true,drive:selected,archiveRootId:canonicalRoot || null},200,auth.response.headers);
   }
   const bootstrapMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/bootstrap$`));
   if (bootstrapMatch && request.method === 'POST') {
