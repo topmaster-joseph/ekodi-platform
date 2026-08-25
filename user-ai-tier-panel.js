@@ -10,7 +10,7 @@
   let loading = false;
 
   const token = () => { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const authHeaders = extra => ({ ...(token() ? { authorization:`Bearer ${token()}` } : {}), ...(extra || {}) });
 
   async function api(path, options = {}) {
@@ -25,27 +25,29 @@
     const node = document.createElement('style');
     node.id = 'userAiMembershipStyle';
     node.textContent = `
-      #${PANEL_ID}{max-width:1500px;margin:0 auto}
-      #${PANEL_ID} .uam-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
-      #${PANEL_ID} .uam-head h2{margin:3px 0 5px;font-size:24px}
-      #${PANEL_ID} .uam-head p{margin:0;opacity:.72;font-size:13px;line-height:1.45}
-      #${PANEL_ID} .uam-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;opacity:.58}
-      #${PANEL_ID} .uam-card{border:1px solid var(--ekodi-ui-border,#24425E);border-radius:14px;overflow:hidden;background:rgba(8,20,34,.38)}
+      #${PANEL_ID}{max-width:1500px;margin:0 auto;color:var(--ekodi-ui-text,#10233b)}
+      #${PANEL_ID} .uam-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px;padding:4px 2px}
+      #${PANEL_ID} .uam-head h2{margin:4px 0 6px;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-.02em;color:var(--ekodi-ui-text,#10233b)}
+      #${PANEL_ID} .uam-head p{margin:0;color:var(--ekodi-ui-muted,#526173);font-size:13px;line-height:1.55;font-weight:600}
+      #${PANEL_ID} .uam-kicker{font-size:11px;font-weight:900;letter-spacing:.12em;color:#4f7ccf;text-transform:uppercase}
+      #${PANEL_ID} .uam-card{border:1px solid var(--ekodi-ui-border,#9aabbd);border-radius:14px;overflow:hidden;background:var(--ekodi-ui-card,#fff);box-shadow:0 8px 24px rgba(15,35,58,.06)}
       #${PANEL_ID} .uam-scroll{overflow:auto;max-width:100%}
       #${PANEL_ID} table{width:100%;min-width:1130px;border-collapse:collapse}
-      #${PANEL_ID} th,#${PANEL_ID} td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--ekodi-ui-border,#24425E);font-size:12px;vertical-align:middle}
-      #${PANEL_ID} th{position:sticky;top:0;z-index:1;background:rgba(9,24,39,.96);font-size:11px;opacity:.7;white-space:nowrap}
+      #${PANEL_ID} th,#${PANEL_ID} td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--ekodi-ui-border,#c7d1dc);font-size:12px;vertical-align:middle;color:var(--ekodi-ui-text,#10233b)}
+      #${PANEL_ID} th{position:sticky;top:0;z-index:1;background:#e8eef5;font-size:11px;font-weight:900;color:#2e4054;white-space:nowrap;letter-spacing:.01em}
+      #${PANEL_ID} tbody tr:nth-child(even){background:rgba(59,92,128,.035)}
       #${PANEL_ID} tbody tr:last-child td{border-bottom:0}
-      #${PANEL_ID} .uam-plan{font-weight:850;font-size:13px}
+      #${PANEL_ID} .uam-plan{font-weight:900;font-size:13px}
       #${PANEL_ID} .uam-limit{display:flex;align-items:center;gap:6px;white-space:nowrap}
-      #${PANEL_ID} input{width:74px;padding:7px 8px;border-radius:8px;border:1px solid var(--ekodi-ui-border,#24425E);background:rgba(0,0,0,.16);color:inherit}
-      #${PANEL_ID} .uam-save{padding:7px 9px;min-height:0}
-      #${PANEL_ID} .uam-badge{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--ekodi-ui-border,#24425E);border-radius:999px;padding:5px 8px;white-space:nowrap}
+      #${PANEL_ID} input{width:74px;padding:7px 8px;border-radius:8px;border:1px solid #8497aa;background:#fff;color:#10233b;font-weight:700}
+      #${PANEL_ID} .uam-save{padding:7px 9px;min-height:0;font-weight:800}
+      #${PANEL_ID} .uam-badge{display:inline-flex;align-items:center;gap:5px;border:1px solid #9aabbd;border-radius:999px;padding:5px 8px;white-space:nowrap;font-weight:800;background:#f8fafc}
       #${PANEL_ID} .uam-badge[data-state="ok"]:before{content:'●';font-size:8px}
-      #${PANEL_ID} .uam-badge[data-state="fallback"]:before{content:'◆';font-size:8px}
+      #${PANEL_ID} .uam-badge[data-state="ready"]:before{content:'◆';font-size:8px}
       #${PANEL_ID} .uam-badge[data-state="idle"]:before{content:'○';font-size:8px}
-      #${PANEL_ID} .uam-note{margin:10px 2px 0;font-size:11px;line-height:1.5;opacity:.62}
-      #${PANEL_ID} .uam-error{padding:14px;border:1px solid var(--ekodi-ui-border,#24425E);border-radius:12px}
+      #${PANEL_ID} .uam-policy{font-weight:800;color:#173f68;white-space:nowrap}
+      #${PANEL_ID} .uam-note{margin:11px 2px 0;font-size:11px;line-height:1.6;color:var(--ekodi-ui-muted,#617083)}
+      #${PANEL_ID} .uam-error{padding:14px;border:1px solid var(--ekodi-ui-border,#9aabbd);border-radius:12px;background:#fff;color:#10233b}
       @media(max-width:760px){#${PANEL_ID} .uam-head{flex-direction:column}#${PANEL_ID} .uam-head button{width:100%}}
     `;
     document.head.appendChild(node);
@@ -64,10 +66,16 @@
   function providerView(plan) {
     const openai = providerSnapshot?.openai || {};
     const allowed = Number(plan?.monthlyRequests || 0) > 0;
-    if (!allowed) return { provider:'개인 API 우선', state:'idle', outage:'EKODI AI 중지' };
-    if (openai.available) return { provider:`OpenAI · ${openai.model || 'EKODI'}`, state:'ok', outage:'장애 감지 없음' };
-    if (providerSnapshot) return { provider:'개인 API 우선', state:'fallback', outage:'Fallback 작동' };
-    return { provider:'확인 중', state:'idle', outage:'확인 중' };
+    if (!allowed) return { provider:'Core · 개인 API', state:'idle', status:'EKODI 지원 중지' };
+    if (openai.available) return { provider:`EKODI 지원 가능 · ${openai.model || 'OpenAI'}`, state:'ok', status:'정상' };
+    if (providerSnapshot) return { provider:'Core · 개인 API', state:'ready', status:'대체 경로 준비됨' };
+    return { provider:'확인 중', state:'idle', status:'확인 중' };
+  }
+
+  function executionPolicy(plan) {
+    return Number(plan?.monthlyRequests || 0) > 0
+      ? 'Core 우선 · AI 필요 시 자동 선택'
+      : 'Core 우선 · 개인 API 사용 가능';
   }
 
   function costView(planId) {
@@ -92,7 +100,6 @@
       return;
     }
 
-    const fallback = '개인 API → EKODI → 개인 Web → Core';
     const rows = (snapshot.plans || []).map(plan => {
       const sponsored = usage(plan.planId, 'ekodi');
       const personal = usage(plan.planId, 'personal');
@@ -105,17 +112,17 @@
         <td>${esc(usedText)}${esc(personalHint)}</td>
         <td>${esc(costView(plan.planId))}</td>
         <td>${esc(provider.provider)}</td>
-        <td><span class="uam-badge" data-state="${esc(provider.state)}">${esc(provider.outage)}</span></td>
-        <td>${esc(fallback)}</td>
+        <td><span class="uam-badge" data-state="${esc(provider.state)}">${esc(provider.status)}</span></td>
+        <td><span class="uam-policy">${esc(executionPolicy(plan))}</span></td>
         <td>${esc(personalView(plan.planId))}</td>
       </tr>`;
     }).join('');
 
     body.innerHTML = `<div class="uam-card"><div class="uam-scroll"><table>
-      <thead><tr><th>회원단계</th><th>AI 허용량</th><th>사용량</th><th>비용</th><th>현재 공급자</th><th>장애상태</th><th>Fallback</th><th>개인 API 여부</th></tr></thead>
+      <thead><tr><th>회원단계</th><th>AI 허용량</th><th>사용량</th><th>비용</th><th>AI 경로 상태</th><th>상태</th><th>실행 정책</th><th>개인 API 여부</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div></div>
-    <p class="uam-note">사용량은 이번 달 성공 호출 기준입니다. 비용은 현재 EKODI 부담 여부를 표시하며, 공급자 실비 금액은 별도 청구 원장 연동 전까지 과장된 추정값을 표시하지 않습니다. 허용량 0은 EKODI 지원 AI만 중지하고 Core와 개인 API 경로는 유지합니다.</p>`;
+    <p class="uam-note">기본 원칙은 Core 우선입니다. AI가 꼭 필요한 요청에서만 개인 API 또는 EKODI 지원 AI를 자동 선택합니다. 개인 Web 전환은 사용자가 직접 참여하는 대화형 요청에서만 사용할 수 있으며, 자동화·백그라운드·관리자·시스템 실행은 소비자 Web 세션에 의존하지 않습니다. 허용량 0은 EKODI 지원 AI만 중지하며 Core와 개인 API 경로는 유지합니다.</p>`;
   }
 
   async function load() {
@@ -208,7 +215,7 @@
     section.dataset.panel = SECTION;
     section.innerHTML = `
       <div class="uam-head">
-        <div><div class="uam-kicker">AI MEMBERSHIP OPERATIONS</div><h2>AI 회원운영</h2><p>회원단계별 AI 사용 상태를 운영자가 필요한 정보만 간단히 확인하고 허용량을 바로 조정합니다.</p></div>
+        <div><div class="uam-kicker">AI MEMBERSHIP OPERATIONS</div><h2>AI 회원운영</h2><p>Core를 기본 실행층으로 두고, AI가 필요한 경우에만 회원단계와 연결상태에 따라 적절한 AI 경로를 선택합니다.</p></div>
         <button class="secondary" data-refresh type="button">↻ 새로고침</button>
       </div>
       <div data-uam-body><div class="uam-error">AI 회원 운영정보를 불러오는 중입니다.</div></div>`;
