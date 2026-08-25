@@ -28,9 +28,13 @@ on:
       - 'release-control-admin.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
+      - 'system-map-admin.js'
+      - 'system-map-admin.css'
+      - 'platform-boundaries.json'
       - 'site-worker.js'
       - 'scripts/build.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
+      - 'scripts/admin-system-map-postbuild.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
       - 'scripts/guarded-worker-release.mjs'
@@ -38,6 +42,7 @@ on:
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
       - 'test/admin-health-menu.test.mjs'
+      - 'test/admin-system-map.test.mjs'
       - 'test/admin-preauth-shell.test.mjs'
       - 'test/admin-performance-hardening.test.mjs'
       - 'test/admin-readable-command.test.mjs'
@@ -76,13 +81,15 @@ jobs:
           node --check ai-ops-admin.js
           node --check release-control-admin.js
           node --check system-health-admin.js
+          node --check system-map-admin.js
           node --check scripts/admin-thin-postbuild.mjs
+          node --check scripts/admin-system-map-postbuild.mjs
           node --check scripts/admin-readable-command-postbuild.mjs
           node --check scripts/admin-performance-postbuild.mjs
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs
+          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-system-map.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css; do
+          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css platform-boundaries.json; do
             test -f "dist/$asset"
           done
 
@@ -121,6 +128,9 @@ jobs:
           ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
           grep -Fq "navLabel.textContent = 'Health'" dist/system-health-admin.js
           grep -Fq "pageTitle.textContent = 'System Health'" dist/system-health-admin.js
+          grep -Fq 'EKODISystemMap' dist/system-health-admin.js
+          grep -Fq "fetch('/platform-boundaries.json'" dist/system-health-admin.js
+          grep -Fq '"principle"' dist/platform-boundaries.json
 
           handoff_bytes=$(wc -c < dist/admin-central-handoff.js)
           shell_bytes=$(wc -c < dist/admin-authenticated-shell.js)
@@ -166,6 +176,8 @@ jobs:
           grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
+          grep -Fq 'EKODISystemMap' dist/system-health-admin.js
+          test -f dist/platform-boundaries.json
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
@@ -199,8 +211,9 @@ jobs:
             ai_css_code=$(curl -sS -D /tmp/ai-css-headers -o /tmp/ai-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/ai-ops-admin.css$q" || true)
             health_js_code=$(curl -sS -D /tmp/health-js-headers -o /tmp/health-js-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/system-health-admin.js$q" || true)
             health_css_code=$(curl -sS -D /tmp/health-css-headers -o /tmp/health-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/system-health-admin.css$q" || true)
+            map_data_code=$(curl -sS -D /tmp/map-data-headers -o /tmp/map-data-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/platform-boundaries.json' || true)
 
-            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$lazy_code" == '200' && "$ai_css_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' ]] \
+            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$lazy_code" == '200' && "$ai_css_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' && "$map_data_code" == '200' ]] \
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers \
               && grep -Fiq 'cache-control: no-store' /tmp/admin-headers \
               && grep -Fq "control-center.css?v=$live_version" /tmp/admin-body \
@@ -231,8 +244,11 @@ jobs:
               && grep -Fq 'admin-readable-command.css' /tmp/ai-css-body \
               && grep -Fq "navLabel.textContent = 'Health'" /tmp/health-js-body \
               && grep -Fq "pageTitle.textContent = 'System Health'" /tmp/health-js-body \
-              && grep -Fq '.system-health-overall' /tmp/health-css-body; then
-              echo "Production admin verified: version=$live_version, no-store HTML, immutable fingerprinted assets, standalone Health, thin shell and latest flat AI Ops."
+              && grep -Fq 'EKODISystemMap' /tmp/health-js-body \
+              && grep -Fq '.system-health-overall' /tmp/health-css-body \
+              && grep -Fq '.ekodi-architecture-map' /tmp/health-css-body \
+              && grep -Fq '"platforms"' /tmp/map-data-body; then
+              echo "Production admin verified: version=$live_version, no-store HTML, immutable fingerprinted assets, standalone Health + System Map, thin shell and latest flat AI Ops."
               exit 0
             fi
             echo "Production verification pending (attempt $attempt/24, version=$live_version)."
