@@ -1,6 +1,9 @@
 name: Diagnose Marketing Access
 
 on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-marketing-access.yml'
   pull_request:
     paths:
       - '.github/workflows/diagnose-marketing-access.yml'
