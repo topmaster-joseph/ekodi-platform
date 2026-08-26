@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "entitlement_id": "organization.pro.marketing-ai",
+  "subject_scope": "organization",
+  "plan_id": "pro",
+  "enabled": true,
+  "capabilities": [
+    "content.generate",
+    "campaign.plan",
+    "audience.segment",
+    "channel.optimize",
+    "analytics.report"
+  ],
+  "provider_selector": [
+    "ekodi-default",
+    "partner-marketing-ai"
+  ],
+  "quota": {
+    "period": "month",
+    "requests": 5000
+  },
+  "rate_limit": {
+    "requests": 60,
+    "window_seconds": 60
+  },
+  "features": [
+    "scheduled-campaigns",
+    "team-workspace"
+  ],
+  "constraints": {
+    "allowed_regions": ["KR"],
+    "training_use_allowed": false,
+    "payload_persistence_allowed": false,
+    "sensitive_data_allowed": false
+  },
+  "valid_from": null,
+  "valid_until": null
+}
