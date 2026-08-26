@@ -85,13 +85,14 @@ test('secondary hydration never has a forced requestIdleCallback deadline', asyn
   assert.match(loader, /timeRemaining\(\) < 6/);
 });
 
-test('admin menu does not auto-open heavy workspaces on a normal login', async () => {
+test('normal login opens Site Management without auto-opening AI or internal workspaces', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialHash = explicitHashSection\(\)/);
   assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.match(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
+  assert.match(menu, /requestedSection = 'campus';[\s\S]*EKODIAdminDemand\?\.activate\('campus'\)/);
+  assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
   assert.match(registry, /id: 'storage'.*ko: '저장소'.*en: 'Storage'/);
