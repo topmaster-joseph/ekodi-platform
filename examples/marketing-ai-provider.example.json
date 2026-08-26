@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "provider_id": "partner-marketing-ai",
+  "display_name": "Partner Marketing AI",
+  "contract_version": "1.0",
+  "status": "testing",
+  "adapter": {
+    "type": "http",
+    "version": "1.0",
+    "endpoint_ref": "provider-registry://partner-marketing-ai/base-url"
+  },
+  "capabilities": [
+    "content.generate",
+    "campaign.plan",
+    "analytics.report"
+  ],
+  "regions": ["KR"],
+  "pricing_model": {
+    "type": "external-contract",
+    "currency": "KRW"
+  },
+  "healthcheck": {
+    "supported": true,
+    "timeout_ms": 3000
+  },
+  "data_policy": {
+    "retention": "none",
+    "training_use": false,
+    "persists_payload": false,
+    "sensitive_data_allowed": false,
+    "processing_regions": ["KR"],
+    "deletion_supported": false,
+    "export_supported": false,
+    "policy_url_ref": "provider-registry://partner-marketing-ai/data-policy"
+  }
+}
