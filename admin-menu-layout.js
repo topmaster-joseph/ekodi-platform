@@ -9,16 +9,16 @@
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
   const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
+    'campus', 'aiops', 'health', 'architecture', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
     'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
   ]);
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
   const HASH_SECTIONS = new Map([
-    ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#health', 'health'], ['#security', 'security'], ['#devices', 'devices'], ['#campus', 'campus'],
+    ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#health', 'health'], ['#architecture', 'architecture'], ['#security', 'security'], ['#devices', 'devices'], ['#campus', 'campus'],
     ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
   ]);
   const CANONICAL_HASH = new Map([
-    ['sites', '#sites'], ['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus'],
+    ['sites', '#sites'], ['aiops', '#ai-ops'], ['health', '#health'], ['architecture', '#architecture'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus'],
   ]);
 
   let requestedSection = '';
@@ -109,6 +109,7 @@
     syncTitle(section);
     const hash = CANONICAL_HASH.get(section);
     if (hash && location.hash !== hash) history.replaceState(null, '', hash);
+    if (section === 'architecture' && !window.EKODISystemMap) import('./system-health-admin.js').catch(console.error);
     sidebar.classList.remove('open');
     return true;
   }
