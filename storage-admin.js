@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://drive.ekodi.kr/api/control/storage/google';
+  const API='/api/control/storage/google';
   const TOKEN_KEY='ekodi-auth-token';
   const LOCALE_KEY='ekodi-admin-locale';
   let state=null;
@@ -12,13 +12,13 @@
   async function request(path,options={}){
     const headers=new Headers(options.headers||{});headers.set('authorization',`Bearer ${token()}`);
     if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
-    const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers});
+    const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'same-origin',...options,headers});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.error||t(`저장소 API 오류 (${response.status})`,`Storage API error (${response.status})`));
     return data;
   }
   function button(text,handler,className='secondary'){const node=el('button',text,className);node.type='button';node.addEventListener('click',handler);return node;}
-  function showError(error){const section=document.querySelector('#storageAdminPanel');if(!section)return;let box=document.querySelector('#storageMessage');if(!box){box=el('div','','storage-banner');box.id='storageMessage';section.prepend(box);}box.className='storage-banner';const raw=String(error?.message||error||'');const network=error instanceof TypeError||/failed to fetch|networkerror|load failed/i.test(raw);box.textContent=network?t('저장소 보안 연결을 확인할 수 없습니다. 인증 상태를 확인한 뒤 새로고침해 주세요.','Unable to reach the secured storage service. Check authentication and refresh.'):raw||t('처리 중 오류가 발생했습니다.','An error occurred.');}
+  function showError(error){const section=document.querySelector('#storageAdminPanel');if(!section)return;let box=document.querySelector('#storageMessage');if(!box){box=el('div','','storage-banner');box.id='storageMessage';section.prepend(box);}box.className='storage-banner';const raw=String(error?.message||error||'');const network=error instanceof TypeError||/failed to fetch|networkerror|load failed/i.test(raw);box.textContent=network?t('저장소 연결을 확인할 수 없습니다. 잠시 후 새로고침해 주세요.','Unable to reach the storage service. Please refresh shortly.'):raw||t('처리 중 오류가 발생했습니다.','An error occurred.');}
 
   async function startOAuth(role){try{const result=await request('/oauth/start',{method:'POST',body:JSON.stringify({role})});location.assign(result.authorizeUrl);}catch(error){showError(error);}}
   async function loadDrives(connection,wrap){
