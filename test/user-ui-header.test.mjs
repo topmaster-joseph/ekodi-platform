@@ -5,8 +5,9 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('user UI header is a shared user-surface-only module',async()=>{
-  const [header,worker,principles]=await Promise.all([
+  const [header,legacyMobileHeader,worker,principles]=await Promise.all([
     read('shell/user-ui-header.js'),
+    read('shell/mobile-fixed-header.js'),
     read('ekodi-shell-worker.js'),
     read('docs/user-ui-module-principles.md')
   ]);
@@ -24,8 +25,9 @@ test('user UI header is a shared user-surface-only module',async()=>{
   assert.doesNotMatch(header,/body\s*\{[^}]*text-align\s*:\s*center/is);
 
   assert.match(worker,/userHeaderUrl\.pathname='\/user-ui-header\.js'/);
+  assert.match(worker,/headerUrl\.pathname='\/mobile-fixed-header\.js'/);
   assert.match(worker,/x-ekodi-user-ui-header/);
-  assert.doesNotMatch(worker,/headerUrl\.pathname='\/mobile-fixed-header\.js'/);
+  assert.match(legacyMobileHeader,/if\(window\.__EKODI_USER_UI_HEADER_BOOTED\)return/);
 
   assert.match(principles,/중앙 정렬 원칙은 \*\*헤더 영역에만\*\* 적용한다/);
   assert.match(principles,/관리자 화면\(`admin`\)/);
