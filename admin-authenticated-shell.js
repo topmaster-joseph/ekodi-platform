@@ -22,14 +22,23 @@
     const root = document.documentElement;
     root.dataset.ekodiShellSurface = 'admin';
     root.dataset.ekodiAdminUi = 'official';
-    const tokens = {'--ekodi-ui-bg':'#071522','--ekodi-ui-surface':'#0B1D2E','--ekodi-ui-surface-raised':'#10263A','--ekodi-ui-border':'#24425E','--ekodi-ui-text':'#F4F7FB','--ekodi-ui-muted':'#9FB1C3','--ekodi-ui-accent':'#8EC8FF','--ekodi-ui-radius':'16px'};
+    const tokens = {
+      '--ekodi-ui-bg': '#071522', '--ekodi-ui-surface': '#0B1D2E', '--ekodi-ui-surface-raised':'#10263A',
+      '--ekodi-ui-border': '#24425E', '--ekodi-ui-text': '#F4F7FB', '--ekodi-ui-muted':'#9FB1C3',
+      '--ekodi-ui-accent': '#8EC8FF', '--ekodi-ui-radius':'16px'
+    };
     for (const [name, value] of Object.entries(tokens)) if (!root.style.getPropertyValue(name)) root.style.setProperty(name, value);
   }
 
   function keepLoginInteractive() {
     if (!loginScreen || authenticated()) return;
-    setStyles(loginScreen,{position:'relative','z-index':'1000','pointer-events':'auto'});
-    setStyles(loginLink,{position:'relative','z-index':'1','pointer-events':'auto'});
+    setStyles(loginScreen,{position:'relative','pointer-events':'auto'});
+    loginScreen.style.zIndex = '1000';
+    loginScreen.style.pointerEvents = 'auto';
+    if (loginLink) {
+      setStyles(loginLink,{position:'relative','z-index':'1'});
+      loginLink.style.pointerEvents = 'auto';
+    }
   }
 
   function loadStyle(href) {
