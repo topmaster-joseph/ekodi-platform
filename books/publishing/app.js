@@ -7,6 +7,10 @@ const form=document.querySelector('#consultationForm');
 const formStatus=document.querySelector('#formStatus');
 
 document.querySelector('#year').textContent=new Date().getFullYear();
+if(nav&&!nav.querySelector('a[href="/publishing/workspace/"]')){
+  const workspace=document.createElement('a');workspace.href='/publishing/workspace/';workspace.textContent='Workspace';
+  const studio=nav.querySelector('a[href="/publishing/studio/"]');studio?.insertAdjacentElement('afterend',workspace);
+}
 menuButton?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});
 nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}));
 
@@ -36,7 +40,7 @@ function renderPackages(services){
   const packages=services.filter(item=>item.category==='package');
   packageGrid.textContent='';
   if(!packages.length){packageGrid.innerHTML='<p class="notice">현재 공개 중인 패키지가 없습니다.</p>';return;}
-  packages.forEach((service,index)=>{
+  packages.forEach(service=>{
     const article=document.createElement('article');
     article.className=`price-card${service.code==='publish-pro'?' featured':''}`;
     const kicker=document.createElement('span');kicker.className='price-kicker';kicker.textContent=service.pricingModel==='quote'?'CUSTOM':'ONE-TIME PACKAGE';

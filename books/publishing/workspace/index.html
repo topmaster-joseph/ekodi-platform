@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>내 출판 작업공간 | 에코디출판</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages.css">
+  <style>
+    .workspace{padding:48px 0 80px}.workspace-head{display:grid;grid-template-columns:1.5fr .8fr;gap:28px;align-items:end}.workspace-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}.work-card{border:1px solid #d8d1c3;background:#fff;padding:22px;min-height:180px}.work-card b{display:block;font-size:.76rem;letter-spacing:.08em;margin-bottom:10px}.status{display:inline-block;border:1px solid #b8aa91;padding:4px 8px;font-size:.75rem;margin-top:12px}.book-panel{margin-top:36px;border-top:3px solid #222;border-bottom:1px solid #aaa;padding:24px 0}.book-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.actions a{border:1px solid #222;padding:10px 14px;text-decoration:none}.muted{color:#6e675d}.route{font-family:ui-monospace,monospace;font-size:.8rem}.notice{padding:16px;border-left:4px solid #8d7758;background:#f2ede3}
+    @media(max-width:800px){.workspace-head,.workspace-grid,.book-meta{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="site-header"><div class="shell masthead"><a class="brand" href="/publishing/"><span class="brand-mark">EP</span><span class="brand-copy"><b>에코디출판</b><small>Author Workspace</small></span></a><nav class="nav"><a href="/publishing/">출판홈</a><a href="/publishing/studio/">Studio</a><a href="/">에코디서점</a><a href="https://my.ekodi.kr/">내 에코디</a></nav></div></header>
+  <main class="workspace"><div class="shell">
+    <div class="workspace-head"><div><p class="kicker">AUTHOR · PUBLISHER WORKSPACE</p><h1>내 출판 작업공간</h1><p class="lead">원고부터 EPUB, 메타데이터, 유통, 서점 노출까지 한 권의 도서 레코드에서 이어집니다.</p></div><div class="notice">현재 1호 도서 <b>『에코디언을 찾아서』</b>를 기준으로 출판 파이프라인을 운영합니다.</div></div>
+    <section class="book-panel" id="book"><p class="kicker">BOOK-EKODI-000001</p><h2>에코디언을 찾아서</h2><p class="muted">성경 속 숨겨진 하나님 백성의 진짜 모습 · 정찬균 · 정가 9,900원</p><div class="book-meta"><div>출판 마스터 <b>v1.7</b></div><div>유통 상태 <b>진행 중</b></div><div>EPUB <b>검증 완료 단계</b></div><div>서점 노출 <b>유통 확정 후 판매 링크 활성화</b></div></div></section>
+    <div class="workspace-grid">
+      <article class="work-card"><b>01 MANUSCRIPT</b><h3>원고·편집</h3><p>원고, 교정, 장·절 구조와 최종 승인본을 관리합니다.</p><span class="status">완료</span></article>
+      <article class="work-card"><b>02 PRODUCTION</b><h3>EPUB·표지</h3><p>플랫폼별 EPUB, 표지, 판본 번호와 적합성검사를 관리합니다.</p><span class="status">v1.7</span></article>
+      <article class="work-card"><b>03 METADATA</b><h3>서지·가격</h3><p>제목, 저자, 소개, 키워드, 식별자와 판매가를 한 번만 관리합니다.</p><span class="status">9,900원</span></article>
+      <article class="work-card"><b>04 DISTRIBUTION</b><h3>유통</h3><p>Google Play Books, 유페이퍼, Amazon 등 채널별 등록 상태를 추적합니다.</p><span class="status">진행 중</span></article>
+      <article class="work-card"><b>05 STOREFRONT</b><h3>에코디서점</h3><p>승인된 도서정보와 구매 링크가 서점 상세페이지로 자동 이어집니다.</p><span class="status">연결됨</span></article>
+      <article class="work-card"><b>06 ARCHIVE</b><h3>버전·기록</h3><p>원고, EPUB, 표지, 판매처 상태와 변경 이력을 도서 ID 기준으로 보존합니다.</p><span class="status">BOOK-EKODI-000001</span></article>
+    </div>
+    <div class="actions"><a href="/ekodian/">서점 상세 보기</a><a href="/publishing/upaper/">유페이퍼 등록 도우미</a><a href="https://play.google.com/books/publish/">Google Play Books</a><a href="https://admin.ekodi.kr/books#BOOK-EKODI-000001">관리자 도서관리</a></div>
+    <p class="route">구조: 에코디출판 → EKODI Book Core → 유통 Adapter → 에코디서점</p>
+  </div></main>
+</body>
+</html>
