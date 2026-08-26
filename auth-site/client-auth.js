@@ -6,12 +6,13 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
-  my:{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
+  'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
   community:{name:'EKODI Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
   mall:{name:'EKODI Mall',returnTo:'https://mall.ekodi.kr/',open:true,kind:'mall'},
+  pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
   mission:{name:'EKODI Mission',returnTo:'https://mission.ekodi.kr/',open:true,kind:'mission'},
@@ -43,9 +44,10 @@ async function manifestRealm(id){
     if(!response.ok)return null;
     const manifest=await response.json();
     const service=manifest?.services?.find(item=>item.id===id);
-    if(!service||service.sso!==true||service.authMode!=='client')return null;
-    const origin=new URL(service.url).origin;
-    return {name:service.name||service.shortName||id,returnTo:service.url,origins:[origin],open:true,kind:id};
+    if(!service?.url)return null;
+    const serviceUrl=new URL(service.url);
+    if(serviceUrl.protocol!=='https:')return null;
+    return {name:service.name||service.shortName||id,returnTo:serviceUrl.href,origins:[serviceUrl.origin],open:true,kind:id};
   }catch{return null}
 }
 const config=realms[site]||await manifestRealm(site)||realms.portal;
@@ -180,8 +182,8 @@ async function renderGoogle(){
   $('serviceBadge').textContent='로그인';notice('Google 계정으로 계속해 주세요.');
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
-    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:r=>void handleCredential(r,challenge)});
-    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
+    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleCredential(r,challenge)});
+    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
     notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
