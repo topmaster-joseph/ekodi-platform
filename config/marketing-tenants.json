@@ -21,6 +21,16 @@
     "externalCustomerActivation": false,
     "externalWorkspacesRole": "comparison_pool_only",
     "primaryOutcome": "qualified_pipeline_progression",
+    "campaign": {
+      "key": "ekodibiz-self-marketing-30d-v1",
+      "name": "EKODIBIZ 30-day self-marketing validation",
+      "objective": "Generate qualified inquiries and move verified prospects through inquiry, consultation, proposal, contract, onboarding and renewal.",
+      "audienceSegment": "inquiry",
+      "channel": "owned+organic",
+      "offer": "Free problem diagnosis followed by paid execution only when the customer asks EKODI to do the work.",
+      "executionMode": "human_gate",
+      "ledger": "existing_marketing_campaigns_and_events"
+    },
     "kpis": [
       "inquiries",
       "consultations",
