@@ -6,7 +6,7 @@ const app=document.querySelector('#app');
 const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
 const postAuthStyles = ['compact-control-center.css'];
-const criticalPostAuthScripts=['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js'];
+const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js'];
 let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
@@ -59,7 +59,7 @@ window.addEventListener('hashchange',()=>{if(location.hash!=='#mall-free-ops')de
 }
 function announceReady(){document.documentElement.dataset.ekodiAdminReady='true';try{performance.mark('ekodi-admin-ready')}catch{}window.dispatchEvent(new CustomEvent('ekodi-admin-ready'))}
 async function startAuthenticatedShell(){
-if(started||!authenticated())return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';
+if (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';
 if(location.pathname.startsWith('/legacy')){loadStyle('control-center-ops.css');loadStyle('control-center-finance.css');await loadScript('control-center.js');announceReady();return}
 for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady()
 }
