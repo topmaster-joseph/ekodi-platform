@@ -88,10 +88,12 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
   assert.match(perf, /backdrop-filter:none!important/);
 });
 
-test('AI readable styling stays out of first-path compact CSS', async () => {
+test('small readability base is first-path while AI-specific command styling stays lazy', async () => {
   const readable = await read('scripts/admin-readable-command-postbuild.mjs');
-  assert.match(readable, /ai-ops-admin\.css/);
-  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
+  assert.match(readable, /admin-readability-base\.css/);
+  assert.match(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
+  assert.match(readable, /appendFile\(`\$\{output\}ai-ops-admin\.css`/);
+  assert.match(readable, /admin-readable-command\.css/);
 });
 
 test('versioned admin assets receive immutable cache headers while unversioned requests revalidate', async () => {
