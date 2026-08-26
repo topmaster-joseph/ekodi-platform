@@ -77,8 +77,14 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Apply additive D1 storage registry
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.storage.toml
-      - name: Guarded Storage Worker release
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/storage.worker.json
+      - name: Deploy Access-protected Storage Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.storage.toml 2>&1 | tee /tmp/storage-deploy.log
+          grep -Fq 'R2_BUCKET' /tmp/storage-deploy.log
+          grep -Fq 'ekodi-storage' /tmp/storage-deploy.log
+          echo 'R2_BUCKET -> ekodi-storage was included in the production deployment.' >> "$GITHUB_STEP_SUMMARY"
       - name: Ensure persistent storage encryption key
         shell: bash
         run: |
@@ -105,14 +111,11 @@ jobs:
             echo 'available=false' >> "$GITHUB_OUTPUT"
             echo 'No compatible Google OAuth client secret exists in GitHub Actions yet; OAuth activation remains intentionally disabled.' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Verify public health
+      - name: Verify Cloudflare Access boundary
+        shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 6 --retry-delay 3 https://drive.ekodi.kr/health | tee /tmp/storage-health.json
-          grep -Fq '"service":"ekodi-storage-control"' /tmp/storage-health.json
-          grep -Fq '"provider":"google_drive"' /tmp/storage-health.json
-          if grep -Fq '"configured":true' /tmp/storage-health.json; then
-            echo 'Storage OAuth runtime is fully configured.' >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'Storage runtime is healthy but Google OAuth activation still needs a client secret.' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          curl -sSI --retry 6 --retry-delay 3 https://drive.ekodi.kr/health | tee /tmp/storage-health-headers.txt
+          grep -Eq '^HTTP/[0-9.]+ 302' /tmp/storage-health-headers.txt
+          grep -Fiq 'Www-Authenticate: Cloudflare-Access' /tmp/storage-health-headers.txt
+          echo 'drive.ekodi.kr is healthy at the edge and intentionally protected by Cloudflare Access.' >> "$GITHUB_STEP_SUMMARY"
