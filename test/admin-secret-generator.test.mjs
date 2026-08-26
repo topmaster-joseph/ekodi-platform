@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const generator = fs.readFileSync(new URL('../admin-secret-generator.js', import.meta.url), 'utf8');
 const loader = fs.readFileSync(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
 const menu = fs.readFileSync(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const menuRegistry = fs.readFileSync(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 const build = fs.readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 
 
@@ -56,6 +57,6 @@ test('Security menu remains lazy-loaded and build publishes only requested asset
   assert.match(loader, /scripts: \['admin-secret-generator\.js'\]/);
   assert.match(loader, /hashes: \['#security'\]/);
   assert.match(menu, /'#security', 'security'/);
-  assert.match(menu, /'health', 'security', 'marketing-ai'/);
+  assert.match(menuRegistry, /\{ id: 'health'[\s\S]*\{ id: 'security'[\s\S]*\{ id: 'marketing-ai'/);
   assert.match(build, /'admin-secret-generator\.css','admin-secret-generator\.js'/);
 });

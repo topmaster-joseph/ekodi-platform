@@ -121,11 +121,6 @@
     return true;
   }
 
-  function installSitesEntry() {
-    // Site presentation controls live under the canonical Site Management menu.
-    // Do not create a second top-level Sites item.
-  }
-
   async function openSites() {
     requestedSection = 'sites';
     if (!sitesLoading) {
@@ -137,7 +132,7 @@
         })
         .catch(error => {
           sitesLoading = null;
-          console.error('EKODI homepage admin failed to load.', error);
+          console.error('Homepage admin load failed.', error);
           throw error;
         });
     }
@@ -226,7 +221,6 @@
   });
 
   installCompactNavigationStyle();
-  installSitesEntry();
   mountAdminSidebar(document);
   enforceInternalNavigationPolicy();
   const initialHash = explicitHashSection();
@@ -251,6 +245,6 @@
   });
 
   import('./admin-menu-runtime.js').catch(error => {
-    console.error('EKODI shared admin menu runtime failed to load.', error);
+    console.error('Admin menu runtime load failed.', error);
   });
 })();

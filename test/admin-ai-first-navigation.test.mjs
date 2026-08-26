@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
 test('internal operations stay available to the control plane but disappear from primary navigation', () => {
   for (const section of ['overview', 'services', 'deployments', 'policies']) {
@@ -42,15 +43,15 @@ test('Campus shortcuts cannot reopen hidden operational panels', () => {
 });
 
 test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
-  assert.match(layout, /VISIBLE_NAV_ORDER/);
+  assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
   const expected = [
-    'campus', 'aiops', 'marketing-ai', 'work', 'clients', 'admins', 'community',
-    'books', 'finance', 'communication', 'social', 'workspace', 'devices',
-    'organization', 'affiliates',
+    'overview', 'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'finance',
+    'communication', 'workspace', 'devices', 'organization', 'clients', 'admins', 'community',
+    'books', 'social', 'affiliates',
   ];
   let cursor = -1;
   for (const section of expected) {
-    const next = layout.indexOf(`'${section}'`, cursor + 1);
+    const next = registry.indexOf(`id: '${section}'`, cursor + 1);
     assert.ok(next > cursor, `${section} must remain in canonical menu order`);
     cursor = next;
   }

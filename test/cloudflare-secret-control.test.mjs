@@ -54,6 +54,19 @@ test('only configured top administrators may use secret manager', () => {
 });
 
 
+test('Secret Manager preflight is handled before authenticated route execution', () => {
+  assert.match(entry, /function handleCloudflareSecretPreflight/);
+  assert.match(entry, /request\.method !== 'OPTIONS'/);
+  assert.match(entry, /path\.startsWith\('\/api\/control\/secrets'\)/);
+  assert.match(entry, /const secretPreflight = handleCloudflareSecretPreflight\(request, env\)/);
+  assert.match(entry, /if \(secretPreflight\) return secretPreflight/);
+  assert.match(entry, /'access-control-allow-origin':origin/);
+  assert.match(entry, /'access-control-allow-methods':'GET, POST, OPTIONS'/);
+  assert.match(entry, /'access-control-allow-headers':'authorization, content-type, x-ekodi-confirm-impact'/);
+  assert.match(entry, /code:'ORIGIN_FORBIDDEN'/);
+});
+
+
 test('secret manager is routed through secured control plane and audits metadata without secret text', () => {
   assert.match(entry, /handleCloudflareSecretControl/);
   assert.match(entry, /path\.startsWith\('\/api\/control\/secrets'\)/);
