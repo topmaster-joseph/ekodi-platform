@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ekodi.kr/marketing-ai/provider-manifest-v1.schema.json",
+  "title": "EKODI Marketing AI Provider Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "provider_id",
+    "display_name",
+    "contract_version",
+    "status",
+    "adapter",
+    "capabilities",
+    "data_policy"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "provider_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+    },
+    "display_name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "contract_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "status": {
+      "enum": ["draft", "testing", "certified", "suspended", "retired"]
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "version"],
+      "properties": {
+        "type": { "enum": ["http", "internal"] },
+        "version": { "type": "string", "minLength": 1 },
+        "endpoint_ref": {
+          "type": "string",
+          "description": "Configuration reference only. Do not place secrets or raw credentials here."
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "content.generate",
+          "campaign.plan",
+          "audience.segment",
+          "channel.optimize",
+          "analytics.report",
+          "publish.execute"
+        ]
+      }
+    },
+    "regions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 2, "maxLength": 32 }
+    },
+    "pricing_model": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": ["free", "flat", "usage", "hybrid", "external-contract"]
+        },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+      }
+    },
+    "healthcheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "supported": { "type": "boolean" },
+        "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 60000 }
+      }
+    },
+    "data_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retention", "training_use", "persists_payload"],
+      "properties": {
+        "retention": {
+          "enum": ["none", "transient", "provider-defined"]
+        },
+        "training_use": { "type": "boolean" },
+        "persists_payload": { "type": "boolean" },
+        "sensitive_data_allowed": { "type": "boolean", "default": false },
+        "processing_regions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 2, "maxLength": 32 }
+        },
+        "deletion_supported": { "type": "boolean" },
+        "export_supported": { "type": "boolean" },
+        "policy_url_ref": {
+          "type": "string",
+          "description": "Reference to reviewed provider policy metadata; not an authorization token."
+        }
+      }
+    }
+  }
+}
