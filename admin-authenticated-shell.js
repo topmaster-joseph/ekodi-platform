@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  if (window.__EKODI_ADMIN_UI_SHELL_BOOTED) return;
+
   const TOKEN_KEY = 'ekodi-auth-token';
   const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
   const app = document.querySelector('#app');
@@ -83,6 +85,27 @@
     });
   }
 
+  function removeSidebarHeader(sidebar) {
+    const selectors = [
+      '[data-ekodi-admin-sidebar-header]',
+      '[data-ekodi-admin-brand]',
+      '.side-brand',
+      '.sidebar-brand',
+      '.admin-sidebar-brand',
+    ];
+    let removed = 0;
+    for (const selector of selectors) {
+      for (const node of [...sidebar.querySelectorAll(selector)]) {
+        if (node.dataset.ekodiAdminKeep === 'true') continue;
+        node.remove();
+        removed += 1;
+      }
+    }
+    if (removed > 0 || sidebar.dataset.ekodiAdminBrandRemoved === 'true') {
+      sidebar.dataset.ekodiAdminBrandRemoved = 'true';
+    }
+  }
+
   function installSharedAdminLayout() {
     const sidebar = document.querySelector('.sidebar');
     const nav = sidebar?.querySelector('nav');
@@ -95,6 +118,7 @@
     const pageTitle = document.querySelector('#pageTitle');
     if (!app || !sidebar || !nav || !main || !content || !sideBottom) return;
 
+    removeSidebarHeader(sidebar);
     document.body.classList.add('ekodi-admin-shell-v2');
     app.dataset.ekodiAdminShell = 'shared-v2';
     sidebar.dataset.ekodiAdminRegion = 'navigation';
@@ -114,6 +138,7 @@
     app.style.setProperty('overflow', 'hidden');
     sidebar.style.setProperty('height', '100dvh', 'important');
     sidebar.style.setProperty('overflow', 'hidden', 'important');
+    sidebar.style.setProperty('padding-top', 'max(8px, env(safe-area-inset-top, 0px))', 'important');
     sideBottom.style.setProperty('position', 'static', 'important');
     sideBottom.style.setProperty('flex', '0 0 auto', 'important');
 
