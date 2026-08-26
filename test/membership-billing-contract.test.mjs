@@ -19,7 +19,7 @@ test('one Google identity is separated from tenant role and commercial plan', ()
   assert.match(billing, /customer_access_grants/);
   assert.match(billing, /grant\.enabled/);
   assert.match(migration, /UNIQUE\(subject_type, subject_key, site\)/);
-  assert.match(clientAuth, /역할과 권한은 로그인 후 자동으로 적용/);
+  assert.match(clientAuth, /Google 본인확인을 한 번 마치면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용/);
   assert.doesNotMatch(clientAuth, /점주 Google 로그인/);
 });
 
