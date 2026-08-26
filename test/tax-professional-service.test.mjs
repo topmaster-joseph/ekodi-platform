@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('multi-supplier migration is additive and preserves legacy tax profile data', async () => {
-  const sql = await read('migrations/0036_finance_multi_tax_suppliers.sql');
+  const sql = await read('migrations/0040_finance_multi_tax_suppliers.sql');
   assert.match(sql, /CREATE TABLE IF NOT EXISTS finance_tax_supplier_profiles/);
   assert.match(sql, /INSERT OR IGNORE INTO finance_tax_supplier_profiles/);
   assert.match(sql, /FROM finance_tax_profiles/);
