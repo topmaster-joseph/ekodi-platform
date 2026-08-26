@@ -50,13 +50,19 @@ const campusSource = await text(`${dist}campus-actions.js`);
 const campusPrelude = `(() => {\n  'use strict';\n  const nav = document.querySelector('.sidebar nav');\n  const content = document.querySelector('.content');\n  if (!nav || !content || document.querySelector('#campusPanel')) return;\n\n  const button = document.createElement('button');\n  button.type = 'button';\n  button.className = 'nav campus-nav';\n  button.dataset.section = 'campus';\n  button.append(document.createTextNode('⌂ '));\n  const label = document.createElement('span');\n  label.textContent = 'Campus';\n  button.append(label);\n  nav.prepend(button);\n\n  const section = document.createElement('section');\n  section.id = 'campusPanel';\n  section.className = 'section campus-panel hidden-panel';\n  section.dataset.panel = 'campus';\n  section.innerHTML = '<div class="campus-toolbar"><div><p class="kicker">EKODI SITES</p><h2>EKODI Digital Campus</h2><p>필요할 때만 전체 사이트 지도를 불러옵니다.</p></div><div class="campus-toolbar-actions"><a class="primary" href="https://ekodi.kr" target="_blank" rel="noopener">Live Site ↗</a></div></div><div class="finance-table-wrap campus-table-wrap"></div>';\n  content.prepend(section);\n\n  button.addEventListener('click', () => {\n    document.querySelectorAll('[data-panel]').forEach(panel => {\n      const targets = String(panel.dataset.panel || '').split(/\\s+/);\n      panel.classList.toggle('hidden-panel', !targets.includes('campus'));\n    });\n    document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));\n    button.classList.add('active');\n    const title = document.querySelector('#pageTitle');\n    if (title) title.textContent = 'Campus';\n    document.querySelector('.sidebar')?.classList.remove('open');\n    if (location.hash !== '#campus') history.replaceState(null, '', '#campus');\n  });\n\n  window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail:{ section:'campus' } }));\n})();\n`;
 await writeFile(`${dist}campus-actions.js`, `${campusPrelude}${campusSource}`);
 
-// Keep generated HTML metadata aligned with the three-file first-login contract.
+// Keep generated HTML metadata aligned with the three-file first-login contract and the
+// shared Admin Shell: navigation begins immediately, while account identity sits above logout.
 let html = await text(`${dist}control-center.html`);
 html = html.replaceAll('20260819-true-lazy-1', '20260819-thin-shell-2');
 html = html.replaceAll(
   'compact-control-center.js control-center-features.js campus-actions.js admin-menu-layout.js admin-demand-loader.js',
   'compact-control-center.js admin-menu-layout.js admin-demand-loader.js',
 );
+html = html.replace(/\s*<a class="brand side-brand"[\s\S]*?<\/a>\s*<small class="side-caption">[\s\S]*?<\/small>/, '');
+html = html.replace(/\s*<span id="scopeBadge">ALL<\/span>/, '');
+if (html.includes('class="brand side-brand"') || html.includes('class="side-caption"') || html.includes('id="scopeBadge"')) {
+  throw new Error('Legacy Admin sidebar header or scope badge survived postbuild.');
+}
 await writeFile(`${dist}control-center.html`, html);
 
 const finalCompactJs = await text(`${dist}compact-control-center.js`);

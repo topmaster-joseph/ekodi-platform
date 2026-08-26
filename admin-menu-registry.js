@@ -3,6 +3,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'campus', icon: '▦', labels: { ko: '사이트 관리', en: 'Site Management' } },
   { id: 'aiops', icon: 'AI', labels: { ko: '운영 AI', en: 'AI Operations' } },
   { id: 'health', icon: '♥', labels: { ko: '서비스 상태', en: 'Service Health' } },
+  { id: 'storage', icon: '▣', labels: { ko: '저장소', en: 'Storage' } },
   { id: 'security', icon: 'S', labels: { ko: '보안', en: 'Security' } },
   { id: 'marketing-ai', icon: 'M', labels: { ko: '마케팅 AI', en: 'Marketing AI' } },
   { id: 'work', icon: 'W', labels: { ko: '업무', en: 'Work' } },
