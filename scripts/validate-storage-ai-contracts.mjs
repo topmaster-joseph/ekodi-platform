@@ -29,7 +29,7 @@ assert(Array.isArray(ai.moduleManifestRequired) && ai.moduleManifestRequired.inc
 
 const storageRuntime = fs.readFileSync(new URL('../storage-gateway.js', import.meta.url), 'utf8');
 const aiRuntime = fs.readFileSync(new URL('../external-ai-module-gateway.js', import.meta.url), 'utf8');
-const edgeRuntime = fs.readFileSync(new URL('../storage-ai-entry-worker.js', import.meta.url), 'utf8');
+const missionControl = fs.readFileSync(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8');
 const wrangler = fs.readFileSync(new URL('../wrangler.api.toml', import.meta.url), 'utf8');
 
 assert(storageRuntime.includes('/api/storage/v1'), 'Storage runtime prefix missing');
@@ -38,7 +38,10 @@ assert(storageRuntime.includes('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY'), 'Service a
 assert(aiRuntime.includes('/api/ai-modules/v1'), 'AI module gateway prefix missing');
 assert(aiRuntime.includes("new URL('/v1/execute'"), 'Vendor execute contract missing');
 assert(aiRuntime.includes('handleStorageGateway'), 'AI module persistence must route through Storage Gateway');
-assert(edgeRuntime.includes('handleStorageGateway') && edgeRuntime.includes('handleExternalAiModuleGateway'), 'API edge must wire both gateways');
-assert(/main\s*=\s*"storage-ai-entry-worker\.js"/.test(wrangler), 'wrangler.api.toml must use storage-ai-entry-worker.js');
+assert(missionControl.includes("import { handleStorageGateway } from './storage-gateway.js'"), 'Canonical Mission Control must import Storage Gateway');
+assert(missionControl.includes("import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js'"), 'Canonical Mission Control must import External AI Module Gateway');
+assert(missionControl.includes("path.startsWith('/api/storage/v1')"), 'Canonical Mission Control must route Storage Gateway');
+assert(missionControl.includes("path.startsWith('/api/ai-modules/v1')"), 'Canonical Mission Control must route External AI Module Gateway');
+assert(/main\s*=\s*"mission-control-entry-worker\.js"/.test(wrangler), 'wrangler.api.toml must preserve canonical Mission Control entry');
 
 console.log('EKODI storage + external AI module contracts: OK');
