@@ -17,7 +17,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'books', icon: 'B', labels: { ko: '출판 · 도서', en: 'Books & Publishing' } },
   { id: 'social', icon: 'S', labels: { ko: '소셜', en: 'Social' } },
   { id: 'affiliates', icon: 'A', labels: { ko: '제휴', en: 'Affiliates' } },
-  { id: 'architecture', icon: '◇', labels: { ko: '아키텍처', en: 'Architecture' } },
+  { id: 'architecture', icon: '◇', labels: { ko: '시스템 구조 개요', en: 'System Structure' } },
   { id: 'services', icon: '◉', labels: { ko: '서비스 · 통계', en: 'Services & Metrics' }, internal: true },
   { id: 'deployments', icon: '↥', labels: { ko: '배포', en: 'Deployments' }, internal: true },
   { id: 'policies', icon: '⚙', labels: { ko: '정책', en: 'Policies' }, internal: true }
