@@ -8,15 +8,17 @@ async function bundledShell(request,env){
   const navUrl=new URL(request.url);navUrl.pathname='/user-global-nav.js';
   const contextUrl=new URL(request.url);contextUrl.pathname='/user-context.js';
   const userHeaderUrl=new URL(request.url);userHeaderUrl.pathname='/user-ui-header.js';
+  const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
   const messageUrl=new URL(request.url);messageUrl.pathname='/message-ui.js';
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,userHeaderResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
     env.ASSETS.fetch(new Request(shellUrl,request)),
     env.ASSETS.fetch(new Request(navUrl,request)),
     env.ASSETS.fetch(new Request(contextUrl,request)),
     env.ASSETS.fetch(new Request(userHeaderUrl,request)),
+    env.ASSETS.fetch(new Request(headerUrl,request)),
     env.ASSETS.fetch(new Request(messageUrl,request)),
     env.ASSETS.fetch(new Request(illustrationUrl,request)),
     env.ASSETS.fetch(new Request(designInheritanceUrl,request)),
@@ -27,6 +29,7 @@ async function bundledShell(request,env){
   const globalNav=navResponse.ok?await navResponse.text():'';
   const userContext=contextResponse.ok?await contextResponse.text():'';
   const userHeader=userHeaderResponse.ok?await userHeaderResponse.text():'';
+  const fixedHeader=headerResponse.ok?await headerResponse.text():'';
   const messageUI=messageResponse.ok?await messageResponse.text():'';
   const illustrationSystem=illustrationResponse.ok?await illustrationResponse.text():'';
   const designInheritance=designInheritanceResponse.ok?await designInheritanceResponse.text():'';
@@ -39,7 +42,7 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-illustration-system',illustrationSystem?'v1':'missing');
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
-  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
 }
 
 export default {
