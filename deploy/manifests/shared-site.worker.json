@@ -1,10 +1,10 @@
 {
-  "version": 12,
+  "version": 13,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
-      {"url":"https://ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디의 모든 길을 한눈에","One ecosystem. Many ways to connect."]},
+      {"url":"https://ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI | 에코디 생태계 · EKODI Ecosystem","Explore the EKODI ecosystem and connect with the services available today."]},
       {"url":"https://ekodi.kr/history","statuses":[200],"redirect":"follow","expect":["EKODI HISTORY","Ecclesia","Koinonia","Diaspora","Jubilee"]},
       {"url":"https://ekodi.kr/admin","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","return_to=https%3A%2F%2Fekodi.kr%2Fadmin"],"headerExpect":["x-ekodi-route: admin-fallback","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
       {"url":"https://admin.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","admin-authenticated-shell.js?v=","compact-control-center.js admin-menu-layout.js admin-demand-loader.js","https://auth.ekodi.kr/?site=admin"],"headerExpect":["x-ekodi-route: admin-control-center","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
