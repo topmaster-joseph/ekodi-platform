@@ -68,12 +68,12 @@ test('Creator Billing belongs to Books and is not loaded by Finance', async () =
   assert.doesNotMatch(author, /#financeTitle/);
   const loader = await read('admin-demand-loader.js');
   const financeStart = loader.indexOf('function bindBaseEnhancements()');
-  const booksStart = loader.indexOf('function bindBooksEnhancements()');
   const requestedStart = loader.indexOf('function requestedFeature()');
-  assert.ok(financeStart >= 0 && booksStart > financeStart && requestedStart > booksStart);
-  const financeBinding = loader.slice(financeStart, booksStart);
-  const booksBinding = loader.slice(booksStart, requestedStart);
-  assert.doesNotMatch(financeBinding, /author-billing/);
+  const installStart = loader.indexOf('function install()');
+  const authStart = loader.indexOf('onAuthState();', installStart);
+  assert.ok(financeStart >= 0 && requestedStart > financeStart && installStart > requestedStart && authStart > installStart);
+  assert.doesNotMatch(loader.slice(financeStart, requestedStart), /author-billing/);
+  const booksBinding = loader.slice(installStart, authStart);
   assert.match(booksBinding, /author-billing-admin\.css/);
   assert.match(booksBinding, /author-billing-admin\.js/);
 });
