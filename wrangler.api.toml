@@ -1,5 +1,5 @@
 # Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations/publishing network + membership billing + Author billing + AI Mission Control
-# 2026-08-26: deploy User AI admin CORS preflight fix before authenticated control requests.
+# 2026-08-26: EKODI Storage Gateway + External AI Module Gateway are integrated inside canonical Mission Control.
 name = "ekodi-auth-api"
 main = "mission-control-entry-worker.js"
 compatibility_date = "2026-08-12"
@@ -20,6 +20,14 @@ ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 OPENAI_MODEL = "gpt-5.6-terra"
+# Storage policy: Google Workspace Shared Drive EKODI is the canonical durable store.
+# Google Drive OAuth credentials stay isolated in the drive.ekodi.kr Storage Worker.
+# API-side server secrets/config required only when the corresponding gateway is activated:
+#   EKODI_STORAGE_GATEWAY_KEY          shared service-to-service key for drive.ekodi.kr
+#   EKODI_AI_MODULE_GATEWAY_KEY        privileged AI module gateway key
+#   EKODI_AI_MODULE_CALLERS            comma-separated registered EKODI internal caller ids
+#   EKODI_AI_MODULE_REGISTRY_JSON      module manifests without actual provider secrets
+# Each external AI module manifest references its own secretBinding, which must exist as an API Worker secret.
 # User AI is intentionally seamless: a user does not need to know or configure an AI provider.
 # Personal API remains preferred when connected; otherwise EKODI sponsors a small bounded allowance.
 USER_AI_FREE_MONTHLY_REQUESTS = "20"

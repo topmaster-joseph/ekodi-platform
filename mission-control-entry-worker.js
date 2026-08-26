@@ -18,6 +18,8 @@ import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
+import { handleStorageGateway } from './storage-gateway.js';
+import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -72,6 +74,16 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = new URL(request.url).pathname;
+
+    if (path.startsWith('/api/storage/v1')) {
+      try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Storage Gateway error', error); return errorResponse('EKODI Storage Gateway 처리 중 오류가 발생했습니다.', 'STORAGE_GATEWAY_ERROR'); }
+    }
+
+    if (path.startsWith('/api/ai-modules/v1')) {
+      try { const response = await handleExternalAiModuleGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('External AI Module Gateway error', error); return errorResponse('EKODI AI Module Gateway 처리 중 오류가 발생했습니다.', 'AI_MODULE_GATEWAY_ERROR'); }
+    }
 
     if ((path === '/operator' || path === '/operator/' || path === '/operator.js') && request.method === 'GET') {
       const response = handleMessengerOperatorPage(request);

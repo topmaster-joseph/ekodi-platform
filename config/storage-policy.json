@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "canonicalStore": "google_workspace_shared_drive",
+  "canonicalDriveName": "EKODI",
+  "canonicalDriveIdSource": "wrangler.storage.toml:STORAGE_PRIMARY_SHARED_DRIVE_ID",
+  "controlPlane": "drive.ekodi.kr",
+  "credentialsSource": "storage_connections:AES-GCM encrypted OAuth refresh token",
+  "routeSource": "storage_routes",
+  "principles": {
+    "durableRecordsGoToDrive": true,
+    "externalModulesMayAccessDriveDirectly": false,
+    "databaseIsOperationalStateOnly": true,
+    "r2IsCacheOrDeliveryOnly": true,
+    "providerSecretsStayServerSide": true,
+    "allWritesAreAuditable": true,
+    "reuseCanonicalDriveConnection": true
+  },
+  "tiers": {
+    "canonical": {
+      "provider": "google_drive",
+      "purpose": ["durable_records", "final_artifacts", "business_documents", "ai_outputs_requiring_retention", "backups"],
+      "systemOfRecord": true
+    },
+    "operational": {
+      "provider": "d1_or_supabase",
+      "purpose": ["identity_state", "workspace_state", "roles", "capabilities", "job_state", "usage_counters", "indexes", "audit_index"],
+      "systemOfRecord": false
+    },
+    "delivery": {
+      "provider": "cloudflare_r2",
+      "purpose": ["cache", "public_delivery", "temporary_generated_assets", "large_object_staging"],
+      "systemOfRecord": false
+    }
+  },
+  "canonicalRoutes": ["core", "church", "biz", "books", "community", "work", "education", "media", "camp", "backup"],
+  "canonicalFolderNames": ["01_CORE", "02_CHURCH", "03_BIZ", "04_BOOKS", "05_COMMUNITY", "06_WORK", "07_EDUCATION", "08_MEDIA", "09_CAMP", "99_BACKUP"],
+  "requiredMetadata": ["spaceId", "serviceId", "recordType", "createdBy", "retentionClass"],
+  "retentionClasses": ["temporary", "operational", "business_record", "permanent"],
+  "writePath": "ekodi_service_or_ai -> api.ekodi.kr -> storage_gateway -> encrypted_primary_drive_connection -> storage_route -> google_workspace_shared_drive",
+  "forbiddenPaths": [
+    "external_ai -> google_drive_direct",
+    "browser -> google_drive_privileged_credentials",
+    "external_ai -> d1_or_supabase_direct",
+    "external_ai -> r2_privileged_credentials",
+    "parallel_google_credential_system -> canonical_drive"
+  ]
+}
