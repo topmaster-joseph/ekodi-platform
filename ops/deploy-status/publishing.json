@@ -1,21 +1,21 @@
 {
   "service": "publishing",
-  "checkedAt": "2026-08-25T13:29:00.964063+00:00",
-  "githubRunId": "32853543142",
-  "githubSha": "e5df34d26a2f74ad29b6e596b816878e072c412a",
+  "checkedAt": "2026-08-26T04:30:28.502066+00:00",
+  "githubRunId": "32930326066",
+  "githubSha": "238b9c29572dafbd59c90f645f5bf15c173474d0",
   "root": {
     "http": "200",
-    "remoteIp": "104.21.27.35",
+    "remoteIp": "104.19.195.29",
     "error": ""
   },
   "studio": {
     "http": "200",
-    "remoteIp": "172.67.168.222",
+    "remoteIp": "104.19.195.29",
     "error": ""
   },
   "admin": {
-    "http": "307",
-    "remoteIp": "104.21.27.35",
+    "http": "302",
+    "remoteIp": "172.67.168.222",
     "error": ""
   }
 }
