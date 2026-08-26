@@ -88,10 +88,11 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
   assert.match(perf, /backdrop-filter:none!important/);
 });
 
-test('small readability base is first-path while AI-specific command styling stays lazy', async () => {
+test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
   const readable = await read('scripts/admin-readable-command-postbuild.mjs');
   assert.match(readable, /admin-readability-base\.css/);
-  assert.match(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
+  assert.match(readable, /appendFile\(`\$\{output\}control-center\.css`/);
+  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
   assert.match(readable, /appendFile\(`\$\{output\}ai-ops-admin\.css`/);
   assert.match(readable, /admin-readable-command\.css/);
 });
