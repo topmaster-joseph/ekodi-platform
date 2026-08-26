@@ -13,11 +13,11 @@ const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
 const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
 const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
 const HASH_SECTIONS = new Map([
-  ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#health', 'health'], ['#security', 'security'], ['#architecture', 'architecture'], ['#devices', 'devices'], ['#campus', 'campus'],
+  ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#ai-module-spec', 'ai-module-spec'], ['#health', 'health'], ['#security', 'security'], ['#architecture', 'architecture'], ['#devices', 'devices'], ['#campus', 'campus'],
   ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
 ]);
 const CANONICAL_HASH = new Map([
-  ['overview', '#operations'], ['sites', '#sites'], ['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['architecture', '#architecture'], ['devices', '#devices'], ['campus', '#campus'],
+  ['overview', '#operations'], ['sites', '#sites'], ['aiops', '#ai-ops'], ['ai-module-spec', '#ai-module-spec'], ['health', '#health'], ['security', '#security'], ['architecture', '#architecture'], ['devices', '#devices'], ['campus', '#campus'],
 ]);
 let requestedSection = '';
 let sitesLoading = null;
