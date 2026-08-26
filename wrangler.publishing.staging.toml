@@ -1,0 +1,14 @@
+name = "ekodi-publishing-staging"
+main = "publishing-worker.js"
+compatibility_date = "2026-08-26"
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "./publishing"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
