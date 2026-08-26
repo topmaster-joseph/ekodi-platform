@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_run:
     workflows:
+      - Deploy EKODI Shared Site Core
+      - Deploy EKODI Storage Control
+      - Deploy Admin AI Ops
+      - Deploy Admin AI Control Plane
       - Deploy Admin True Lazy Gate
       - Deploy My EKODI
       - Deploy Marketing AI Pages
