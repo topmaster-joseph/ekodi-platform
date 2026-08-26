@@ -87,12 +87,13 @@ test('admin menu does not auto-open heavy workspaces on a normal login', async (
   assert.match(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
+  assert.match(registry, /id: 'storage'.*ko: '저장소'.*en: 'Storage'/);
   assert.match(menu, /\['#health', 'health'\]/);
   assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('postbuild emits a purpose-built minimal compact runtime and standalone Campus/Device assets', async () => {
+test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');
   assert.match(pkg.scripts.build, /admin-thin-postbuild\.mjs/);
@@ -103,6 +104,9 @@ test('postbuild emits a purpose-built minimal compact runtime and standalone Cam
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
   assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
+  assert.match(postbuild, /brand side-brand/);
+  assert.match(postbuild, /scopeBadge/);
+  assert.match(postbuild, /Legacy Admin sidebar header or scope badge survived postbuild/);
   const generated = postbuild.match(/const minimalCompactJs = `([\s\S]*?)`;\nnew Function\(minimalCompactJs\)/)?.[1] || '';
   assert.ok(generated, 'minimal compact runtime template must be extractable');
   assert.doesNotMatch(generated, /setTimeout\(/);
