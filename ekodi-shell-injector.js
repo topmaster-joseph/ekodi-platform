@@ -4,7 +4,9 @@ const SHELL_ORIGIN='https://shell.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
+const USER_SURFACES=new Set(['public','workspace']);
 const MOBILE_FIXED_HEADER_STYLE=`<style data-ekodi-mobile-fixed-header>@media(max-width:768px){:where(.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header],body>header){position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important;z-index:2147482000!important}:where(body:has(.site-header),body:has(.app-header),body:has(.main-header),body:has([data-ekodi-fixed-header]))::before{content:"";display:block;height:calc(82px + env(safe-area-inset-top,0px));pointer-events:none}}</style>`;
+const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
 
 function extendDirective(csp,name,value){
   const parts=String(csp||'').split(';').map(v=>v.trim()).filter(Boolean);
@@ -25,6 +27,11 @@ function shellCsp(csp){
 
 function cleanSurface(value){const v=String(value||'').trim().toLowerCase();return /^[a-z-]{1,24}$/.test(v)?v:'';}
 function defaultSurface(serviceId){return cleanSurface(serviceForId(serviceId)?.defaultSurface)||'public';}
+function surfaceBootStyle(surface){
+  if(surface==='admin')return ADMIN_BOOT_STYLE;
+  if(USER_SURFACES.has(surface))return MOBILE_FIXED_HEADER_STYLE;
+  return '';
+}
 
 class HeadInjector{
   constructor(serviceId,surface){this.serviceId=serviceId;this.surface=surface;}
@@ -32,7 +39,8 @@ class HeadInjector{
     const service=String(this.serviceId||'').replace(/[^a-z0-9-]/g,'');
     const surface=cleanSurface(this.surface)||defaultSurface(service);
     const sharedStyle=INTERNAL_SURFACES.has(surface)?`<link rel="stylesheet" href="${SHELL_WORKSPACE_STYLE}" data-ekodi-workspace-style>`:'';
-    element.prepend(`${MOBILE_FIXED_HEADER_STYLE}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}"></script>`,{html:true});
+    const bootStyle=surfaceBootStyle(surface);
+    element.prepend(`${bootStyle}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}"></script>`,{html:true});
   }
 }
 
