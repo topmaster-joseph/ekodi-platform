@@ -41,6 +41,12 @@ test('storage control supports shared drives and app-scoped writes', () => {
   assert.match(control, /\/drives\?pageSize=100/);
 });
 
+test('R2 binding is source-controlled so redeployments cannot drop it', () => {
+  assert.match(config, /\[\[r2_buckets\]\]/);
+  assert.match(config, /binding = "R2_BUCKET"/);
+  assert.match(config, /bucket_name = "ekodi-storage"/);
+});
+
 test('canonical EKODI archive folders are source-controlled', () => {
   for (const folder of ['01_CORE','02_CHURCH','03_BIZ','04_BOOKS','05_COMMUNITY','06_WORK','07_EDUCATION','08_MEDIA','09_CAMP','99_BACKUP']) {
     assert.match(migration, new RegExp(folder));
