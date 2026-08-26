@@ -34,10 +34,43 @@ function userAiResponse(response) {
   return applyApiSecurityHeaders(response);
 }
 
+function allowedControlOrigin(request, env = {}) {
+  const origin = String(request.headers.get('origin') || '').trim();
+  if (!origin) return '';
+  const allowed = new Set(String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean));
+  return allowed.has(origin) ? origin : '';
+}
+
+function handleCloudflareSecretPreflight(request, env = {}) {
+  if (request.method !== 'OPTIONS') return null;
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith('/api/control/secrets')) return null;
+  const origin = allowedControlOrigin(request, env);
+  if (!origin) {
+    return applyApiSecurityHeaders(new Response(JSON.stringify({ error:'허용되지 않은 Origin입니다.', code:'ORIGIN_FORBIDDEN' }), {
+      status:403,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','vary':'Origin'},
+    }));
+  }
+  const headers = new Headers({
+    'access-control-allow-origin':origin,
+    'access-control-allow-methods':'GET, POST, OPTIONS',
+    'access-control-allow-headers':'authorization, content-type, x-ekodi-confirm-impact',
+    'access-control-max-age':'86400',
+    'cache-control':'no-store',
+    'vary':'Origin',
+  });
+  return applyApiSecurityHeaders(new Response(null, { status:204, headers }));
+}
+
 export default {
   async fetch(request, env, ctx) {
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
+
+    const secretPreflight = handleCloudflareSecretPreflight(request, env);
+    if (secretPreflight) return secretPreflight;
+
     const path = new URL(request.url).pathname;
 
     if ((path === '/operator' || path === '/operator/' || path === '/operator.js') && request.method === 'GET') {
