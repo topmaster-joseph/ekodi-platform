@@ -5,24 +5,32 @@ on:
     paths:
       - 'config/storage-policy.json'
       - 'config/external-ai-module-contract.json'
+      - 'canonical-drive-writer.js'
       - 'storage-gateway.js'
+      - 'storage-worker.js'
       - 'external-ai-module-gateway.js'
       - 'mission-control-entry-worker.js'
+      - 'migrations/0039_storage_ai_gateway.sql'
       - 'scripts/validate-storage-ai-contracts.mjs'
       - 'docs/EKODI-STORAGE-LAYER.md'
       - 'docs/EKODI-EXTERNAL-AI-MODULE-SPEC.md'
       - 'wrangler.api.toml'
+      - 'wrangler.storage.toml'
       - '.github/workflows/storage-ai-contracts.yml'
   push:
     branches: [main]
     paths:
       - 'config/storage-policy.json'
       - 'config/external-ai-module-contract.json'
+      - 'canonical-drive-writer.js'
       - 'storage-gateway.js'
+      - 'storage-worker.js'
       - 'external-ai-module-gateway.js'
       - 'mission-control-entry-worker.js'
+      - 'migrations/0039_storage_ai_gateway.sql'
       - 'scripts/validate-storage-ai-contracts.mjs'
       - 'wrangler.api.toml'
+      - 'wrangler.storage.toml'
 
 jobs:
   validate:
@@ -34,7 +42,9 @@ jobs:
           node-version: '24'
       - name: Syntax check
         run: |
+          node --check canonical-drive-writer.js
           node --check storage-gateway.js
+          node --check storage-worker.js
           node --check external-ai-module-gateway.js
           node --check mission-control-entry-worker.js
           node --check scripts/validate-storage-ai-contracts.mjs
