@@ -7,16 +7,16 @@ async function bundledShell(request,env){
   const shellUrl=new URL(request.url);shellUrl.pathname='/shell.js';
   const navUrl=new URL(request.url);navUrl.pathname='/user-global-nav.js';
   const contextUrl=new URL(request.url);contextUrl.pathname='/user-context.js';
-  const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
+  const userHeaderUrl=new URL(request.url);userHeaderUrl.pathname='/user-ui-header.js';
   const messageUrl=new URL(request.url);messageUrl.pathname='/message-ui.js';
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
     env.ASSETS.fetch(new Request(shellUrl,request)),
     env.ASSETS.fetch(new Request(navUrl,request)),
     env.ASSETS.fetch(new Request(contextUrl,request)),
-    env.ASSETS.fetch(new Request(headerUrl,request)),
+    env.ASSETS.fetch(new Request(userHeaderUrl,request)),
     env.ASSETS.fetch(new Request(messageUrl,request)),
     env.ASSETS.fetch(new Request(illustrationUrl,request)),
     env.ASSETS.fetch(new Request(designInheritanceUrl,request)),
@@ -26,7 +26,7 @@ async function bundledShell(request,env){
   const shell=await shellResponse.text();
   const globalNav=navResponse.ok?await navResponse.text():'';
   const userContext=contextResponse.ok?await contextResponse.text():'';
-  const fixedHeader=headerResponse.ok?await headerResponse.text():'';
+  const userHeader=userHeaderResponse.ok?await userHeaderResponse.text():'';
   const messageUI=messageResponse.ok?await messageResponse.text():'';
   const illustrationSystem=illustrationResponse.ok?await illustrationResponse.text():'';
   const designInheritance=designInheritanceResponse.ok?await designInheritanceResponse.text():'';
@@ -34,18 +34,19 @@ async function bundledShell(request,env){
   const headers=new Headers(shellResponse.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
+  headers.set('x-ekodi-user-ui-header',userHeader?'v1':'missing');
   headers.set('x-ekodi-message-ui',messageUI?'v1':'missing');
   headers.set('x-ekodi-illustration-system',illustrationSystem?'v1':'missing');
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
-  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
 }
 
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:1,linkCompatVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:1,linkCompatVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/service'){
       const id=url.searchParams.get('id');const host=url.searchParams.get('host');const service=id?serviceForId(id):host?serviceForHost(host):null;
