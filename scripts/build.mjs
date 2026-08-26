@@ -21,11 +21,12 @@ if (userAiTierPanelJs.includes('개인 API → EKODI → 개인 Web → Core')) 
 await writeFile(`${output}ai-ops-admin.js`, `${aiOpsBaseJs}\n${userAiTierPanelJs}\n`);
 
 // Admin AI operating intelligence stays behind the existing AI Ops/Security lazy boundary.
-// Control Plane supplies provider/specialist context. Governor adds context expansion,
-// free-first model selection, cost/risk gates, post-action verification and structured reports.
-const [adminAiControlPlaneJs, adminAiGovernorJs] = await Promise.all([
+// Provider Control normalizes Cloudflare, GitHub and Supabase into one account/scope/runtime/environment/secret context.
+// Governor adds context expansion, free-first model selection, cost/risk gates, post-action verification and structured reports.
+const [adminAiControlPlaneJs, adminAiGovernorJs, adminProviderControlJs] = await Promise.all([
   readFile(`${root}admin-ai-control-plane.js`, 'utf8'),
   readFile(`${root}admin-ai-governor.js`, 'utf8'),
+  readFile(`${root}admin-provider-control.js`, 'utf8'),
 ]);
 const [aiOpsWithTierJs, secretGeneratorBaseJs] = await Promise.all([
   readFile(`${output}ai-ops-admin.js`, 'utf8'),
@@ -33,9 +34,10 @@ const [aiOpsWithTierJs, secretGeneratorBaseJs] = await Promise.all([
 ]);
 if (!adminAiControlPlaneJs.includes('EKODIAdminAIControlPlane')) throw new Error('Admin AI control plane marker missing');
 if (!adminAiGovernorJs.includes('EKODIAdminAIGovernor')) throw new Error('Admin AI governor marker missing');
+if (!adminProviderControlJs.includes('EKODIProviderControl')) throw new Error('Unified provider control marker missing');
 await Promise.all([
-  writeFile(`${output}ai-ops-admin.js`, `${aiOpsWithTierJs}\n${adminAiGovernorJs}\n${adminAiControlPlaneJs}\n`),
-  writeFile(`${output}admin-secret-generator.js`, `${secretGeneratorBaseJs}\n${adminAiGovernorJs}\n${adminAiControlPlaneJs}\n`),
+  writeFile(`${output}ai-ops-admin.js`, `${aiOpsWithTierJs}\n${adminAiGovernorJs}\n${adminProviderControlJs}\n${adminAiControlPlaneJs}\n`),
+  writeFile(`${output}admin-secret-generator.js`, `${secretGeneratorBaseJs}\n${adminAiGovernorJs}\n${adminProviderControlJs}\n${adminAiControlPlaneJs}\n`),
 ]);
 
 const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promise.all([
@@ -108,4 +110,4 @@ const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
 await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
 await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
