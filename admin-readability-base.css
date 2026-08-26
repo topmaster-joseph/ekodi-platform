@@ -1,0 +1,41 @@
+/* EKODI Admin readability base: admin shell and every admin subservice only */
+body.compact-control-center{--ekodi-admin-text:#182438;--ekodi-admin-subtext:#46596f;--ekodi-admin-muted:#5f7084;--ekodi-admin-border:#d7e1eb;--ekodi-admin-surface:#fff;--ekodi-admin-soft:#f4f7fb;color-scheme:light;background:var(--ekodi-admin-soft)!important;color:var(--ekodi-admin-text)!important;font-size:16px!important;line-height:1.6!important;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+body.compact-control-center .app,body.compact-control-center .app>main,body.compact-control-center .content{background:var(--ekodi-admin-soft)!important;color:var(--ekodi-admin-text)!important}
+body.compact-control-center .sidebar,body.compact-control-center .topbar{background:#fff!important;color:var(--ekodi-admin-text)!important;border-color:var(--ekodi-admin-border)!important}
+body.compact-control-center .topbar h1{font-size:23px!important;line-height:1.25!important;font-weight:850!important;color:var(--ekodi-admin-text)!important;letter-spacing:-.025em!important}
+body.compact-control-center .topbar .kicker,body.compact-control-center .kicker{font-size:11px!important;line-height:1.35!important;font-weight:800!important;color:#356da7!important;letter-spacing:.1em!important}
+body.compact-control-center .nav{min-height:44px!important;padding:10px 12px!important;color:#405269!important}
+body.compact-control-center .nav span{font-size:14px!important;line-height:1.35!important;font-weight:650!important}
+body.compact-control-center .nav:hover,body.compact-control-center .nav.active{background:#edf5ff!important;color:#0b5cab!important}
+body.compact-control-center .content .hero,body.compact-control-center .content .section,body.compact-control-center .content .architecture,body.compact-control-center .content .metrics article,body.compact-control-center .content .module{background:#fff!important;color:var(--ekodi-admin-text)!important;border-color:var(--ekodi-admin-border)!important}
+body.compact-control-center .content h2{font-size:24px!important;line-height:1.3!important;font-weight:850!important;letter-spacing:-.025em!important;color:var(--ekodi-admin-text)!important}
+body.compact-control-center .content h3{font-size:18px!important;line-height:1.4!important;font-weight:800!important;color:var(--ekodi-admin-text)!important}
+body.compact-control-center .hero p:not(.kicker),body.compact-control-center .section-head>p,body.compact-control-center .operations-copy,body.compact-control-center .module p{font-size:14px!important;line-height:1.6!important;color:var(--ekodi-admin-subtext)!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+body.compact-control-center .metrics small,body.compact-control-center .service-control-head small,body.compact-control-center .service-stats small{font-size:12px!important;line-height:1.45!important;color:var(--ekodi-admin-muted)!important}
+body.compact-control-center .metrics strong{font-size:24px!important;line-height:1.25!important}
+body.compact-control-center .module strong,body.compact-control-center .service-control-head strong{font-size:15px!important;line-height:1.4!important;color:var(--ekodi-admin-text)!important}
+body.compact-control-center .health-badge,body.compact-control-center .policy-version{font-size:12px!important;line-height:1.35!important;font-weight:750!important}
+body.compact-control-center .content [data-panel] table{font-size:14px!important;line-height:1.5!important}
+body.compact-control-center .content [data-panel] th{font-size:13px!important;line-height:1.4!important;font-weight:800!important;color:#26384e!important;background:#eef3f8!important;padding:12px!important}
+body.compact-control-center .content [data-panel] td{font-size:14px!important;line-height:1.55!important;color:#25374c!important;padding:13px 12px!important;border-color:var(--ekodi-admin-border)!important}
+body.compact-control-center .content [data-panel] label{font-size:14px!important;line-height:1.45!important;color:#30445a!important;font-weight:650!important}
+body.compact-control-center .content [data-panel] input:not([type="checkbox"]):not([type="radio"]),body.compact-control-center .content [data-panel] select,body.compact-control-center .content [data-panel] textarea{min-height:42px!important;font-size:15px!important;line-height:1.45!important;color:#182438!important;background:#fff!important;border:1px solid #9fb0c2!important}
+body.compact-control-center .content [data-panel] input::placeholder,body.compact-control-center .content [data-panel] textarea::placeholder{color:#68798c!important;opacity:1!important}
+body.compact-control-center .content [data-panel] button,body.compact-control-center .content .primary,body.compact-control-center .content .secondary,body.compact-control-center .content .ghost{font-size:14px!important;line-height:1.3!important;font-weight:750!important}
+body.compact-control-center :is(button,a,input,select,textarea):focus-visible{outline:3px solid #7bb7f0!important;outline-offset:2px!important}
+body.compact-control-center #userAiMembershipPanel{color:#182438!important}
+body.compact-control-center #userAiMembershipPanel .uam-head h2{font-size:30px!important;line-height:1.25!important;color:#182438!important}
+body.compact-control-center #userAiMembershipPanel .uam-head p{font-size:15px!important;line-height:1.65!important;color:#46596f!important;font-weight:550!important;max-width:900px!important}
+body.compact-control-center #userAiMembershipPanel .uam-kicker{font-size:12px!important;color:#356da7!important}
+body.compact-control-center #userAiMembershipPanel th{font-size:13px!important;line-height:1.4!important;padding:13px 12px!important;color:#26384e!important;background:#eaf0f6!important}
+body.compact-control-center #userAiMembershipPanel td{font-size:14px!important;line-height:1.55!important;padding:14px 12px!important;color:#25374c!important}
+body.compact-control-center #userAiMembershipPanel .uam-plan{font-size:15px!important;font-weight:850!important;color:#102f4f!important}
+body.compact-control-center #userAiMembershipPanel .uam-policy{font-size:14px!important;line-height:1.5!important;color:#174d78!important;white-space:normal!important}
+body.compact-control-center #userAiMembershipPanel .uam-badge{font-size:13px!important;line-height:1.35!important;padding:6px 9px!important;color:#24384d!important;background:#f8fafc!important}
+body.compact-control-center #userAiMembershipPanel input{width:86px!important;min-height:42px!important;font-size:15px!important;padding:9px 10px!important}
+body.compact-control-center #userAiMembershipPanel .uam-save{min-height:42px!important;font-size:14px!important;padding:9px 11px!important}
+body.compact-control-center #userAiMembershipPanel .uam-note{font-size:13px!important;line-height:1.7!important;color:#526579!important;margin-top:14px!important}
+body.compact-control-center #userAiMembershipPanel .uam-error{font-size:14px!important;line-height:1.55!important}
+/* Preserve miniature site previews as previews; readability rules target the admin controls around them. */
+body.compact-control-center .campus-preview-page,body.compact-control-center .campus-preview-page *{text-rendering:auto}
+@media(max-width:760px){body.compact-control-center{font-size:16px!important}body.compact-control-center .topbar h1{font-size:21px!important}body.compact-control-center .nav{min-height:48px!important}body.compact-control-center .nav span{font-size:15px!important}body.compact-control-center .content h2{font-size:22px!important}body.compact-control-center .content h3{font-size:18px!important}body.compact-control-center .content [data-panel] th{font-size:13px!important}body.compact-control-center .content [data-panel] td{font-size:14px!important}body.compact-control-center .content [data-panel] input:not([type="checkbox"]):not([type="radio"]),body.compact-control-center .content [data-panel] select,body.compact-control-center .content [data-panel] textarea{font-size:16px!important;min-height:46px!important}body.compact-control-center #userAiMembershipPanel .uam-head h2{font-size:26px!important}body.compact-control-center #userAiMembershipPanel .uam-head p{font-size:15px!important}body.compact-control-center #userAiMembershipPanel .uam-note{font-size:13px!important}}
