@@ -28,13 +28,16 @@ test('My EKODI has one visible workspace selector path and no dead hidden contro
   assert.doesNotMatch(app,/function recommendationUi\(/);
 });
 
-test('My EKODI reuses central identity and consumes one-time auth handoff',async()=>{
+test('My EKODI reuses central identity and inherits registry-driven one-login handoff',async()=>{
   const [app,auth,router]=await Promise.all([read('my/app.js'),read('auth-site/client-auth.js'),read('auth-site/auth-router.js')]);
   assert.match(app,/ekodi_token/);
   assert.match(app,/verifyOtp/);
   assert.match(auth,/'my':\{name:'My EKODI'/);
   assert.match(auth,/returnTo:'https:\/\/my\.ekodi\.kr\/'/);
-  assert.match(router,/site==='my'/);
+  assert.match(auth,/\/session\/handoff/);
+  assert.match(router,/isRegistryUserService/);
+  assert.match(router,/site==='portal'\|\|isRegistryUserService/);
+  assert.match(router,/loadClientAuth/);
 });
 
 test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
