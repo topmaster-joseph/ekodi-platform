@@ -2,7 +2,6 @@ const url=new URL(location.href);
 const params=url.searchParams;
 const legacySiteAliases=Object.freeze({'mall-seller':'mall'});
 const targetableWorkspaceSites=new Set(['cgma','marketing','biz','trade','mall','pay','books','church','lab','mission','community','edu','media','social','energy','messenger','invest']);
-const universalIdentitySites=new Set(['portal','my','work','community','church','biz','trade','mall','books','lab','mission','edu','media','social','energy','messenger','invest','support','publishing','money','mail','live','cloud','cafe']);
 const privateClientSites=new Set(['cgma-client','jadam-client','pizzamaru-client','yogurt-client']);
 
 let changed=false;
@@ -51,13 +50,13 @@ if(site==='admin')await import('./admin-auth.js?v=20260823-mobile-handoff-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
 else if(privateClientSites.has(site))await loadClientAuth();
-else if(universalIdentitySites.has(site)&&!targetedWorkspace)await loadClientAuth();
+else if(site==='marketing'&&params.get('review')!=='1'&&!targetedWorkspace)await loadMarketingAuth();
 else{
-  const manifestRealm=await manifestService(site);
-  if(manifestRealm?.authMode==='client'&&!targetedWorkspace)await loadClientAuth();
+  const registryService=await manifestService(site);
+  const isRegistryUserService=Boolean(registryService?.id&&registryService?.url);
+  if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService))await loadClientAuth();
   else{
-    if(site==='marketing'&&params.get('review')!=='1')await loadMarketingAuth();
-    else await import('./auth.js?v=20260824-return-origin-1');
+    await import('./auth.js?v=20260824-return-origin-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');
