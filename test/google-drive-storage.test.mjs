@@ -7,6 +7,7 @@ const worker = await readFile(new URL('../storage-worker.js', import.meta.url), 
 const config = await readFile(new URL('../wrangler.storage.toml', import.meta.url), 'utf8');
 const siteConfig = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
 const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
+const accessScript = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../migrations/0038_google_drive_storage.sql', import.meta.url), 'utf8');
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
@@ -59,6 +60,17 @@ test('Admin Worker proxies Storage through a Cloudflare service binding', () => 
   assert.match(siteWorker, /env\.STORAGE\?\.fetch/);
   assert.match(siteWorker, /env\.STORAGE\.fetch\(request\)/);
   assert.match(siteWorker, /X-EKODI-Storage-Proxy', 'service-binding-v1'/);
+});
+
+test('Storage Access is exact-host fail-closed with a narrow OAuth callback bypass', () => {
+  assert.match(accessScript, /const targetDomain = 'drive\.ekodi\.kr'/);
+  assert.match(accessScript, /const callbackDomain = 'drive\.ekodi\.kr\/api\/control\/storage\/google\/callback'/);
+  assert.match(accessScript, /type: 'self_hosted'/);
+  assert.match(accessScript, /cloudflare_account_member/);
+  assert.match(accessScript, /decision: 'bypass'/);
+  assert.match(accessScript, /include: \[\{ everyone: \{\} \}\]/);
+  assert.match(accessScript, /broad All Workers fallback is forbidden/);
+  assert.doesNotMatch(accessScript, /find\(item => String\(item\.name \|\| ''\)\.toLowerCase\(\) === 'all workers'\)/);
 });
 
 test('storage worker handles CORS preflight before app auth and mirrors credentials on actual responses', () => {
