@@ -9,6 +9,8 @@ on:
       - 'storage-admin.js'
       - 'storage-admin.css'
       - 'wrangler.storage.toml'
+      - 'wrangler.site.toml'
+      - 'site-worker.js'
       - 'deploy/manifests/storage.worker.json'
       - 'migrations/0038_google_drive_storage.sql'
       - 'scripts/ensure-storage-access.mjs'
@@ -24,6 +26,8 @@ on:
       - 'storage-admin.js'
       - 'storage-admin.css'
       - 'wrangler.storage.toml'
+      - 'wrangler.site.toml'
+      - 'site-worker.js'
       - 'deploy/manifests/storage.worker.json'
       - 'migrations/0038_google_drive_storage.sql'
       - 'scripts/ensure-storage-access.mjs'
@@ -54,6 +58,7 @@ jobs:
           node --check r2-storage-control.js
           node --check storage-worker.js
           node --check storage-admin.js
+          node --check site-worker.js
           node --check scripts/ensure-storage-access.mjs
           node --test test/google-drive-storage.test.mjs test/r2-storage.test.mjs
           node scripts/validate-additive-migrations.mjs
@@ -61,6 +66,8 @@ jobs:
           grep -Fq 'STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"' wrangler.storage.toml
           grep -Fq 'binding = "R2_BUCKET"' wrangler.storage.toml
           grep -Fq 'bucket_name = "ekodi-storage"' wrangler.storage.toml
+          grep -Fq 'binding = "STORAGE"' wrangler.site.toml
+          grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
           ! grep -Eq 'GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+' wrangler.storage.toml
           ! grep -Eq 'STORAGE_CREDENTIAL_KEY\s*=\s*".+' wrangler.storage.toml
 
@@ -83,7 +90,7 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Ensure Cloudflare account-member Access
+      - name: Ensure exact Storage Access applications
         run: node scripts/ensure-storage-access.mjs
       - name: Apply additive D1 storage registry
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.storage.toml
@@ -121,11 +128,14 @@ jobs:
             echo 'available=false' >> "$GITHUB_OUTPUT"
             echo 'No compatible Google OAuth client secret exists in GitHub Actions yet; OAuth activation remains intentionally disabled.' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Verify Cloudflare Access boundary
+      - name: Verify Cloudflare Access boundary and OAuth callback exception
         shell: bash
         run: |
           set -euo pipefail
           curl -sSI --retry 6 --retry-delay 3 https://drive.ekodi.kr/health | tee /tmp/storage-health-headers.txt
           grep -Eq '^HTTP/[0-9.]+ 302' /tmp/storage-health-headers.txt
           grep -Fiq 'Www-Authenticate: Cloudflare-Access' /tmp/storage-health-headers.txt
-          echo 'drive.ekodi.kr is healthy at the edge and intentionally protected by Cloudflare Access.' >> "$GITHUB_STEP_SUMMARY"
+          callback_status=$(curl -sS --retry 6 --retry-delay 3 -o /tmp/storage-callback.html -w '%{http_code}' 'https://drive.ekodi.kr/api/control/storage/google/callback')
+          test "$callback_status" = "400"
+          grep -Fq 'Google Drive 연결 확인 필요' /tmp/storage-callback.html
+          echo 'drive.ekodi.kr is Access-protected; only the signed Google OAuth callback path is narrowly bypassed.' >> "$GITHUB_STEP_SUMMARY"

@@ -5,6 +5,9 @@ import { readFile } from 'node:fs/promises';
 const control = await readFile(new URL('../google-drive-storage-control.js', import.meta.url), 'utf8');
 const worker = await readFile(new URL('../storage-worker.js', import.meta.url), 'utf8');
 const config = await readFile(new URL('../wrangler.storage.toml', import.meta.url), 'utf8');
+const siteConfig = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
+const accessScript = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../migrations/0038_google_drive_storage.sql', import.meta.url), 'utf8');
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
@@ -41,10 +44,34 @@ test('storage control supports shared drives and app-scoped writes', () => {
   assert.match(control, /\/drives\?pageSize=100/);
 });
 
-test('admin browser storage calls preserve Access credentials and localized failure UX', () => {
-  assert.match(admin, /credentials:'include'/);
-  assert.match(admin, /저장소 보안 연결을 확인할 수 없습니다/);
+test('admin browser uses same-origin Storage API and localized failure UX', () => {
+  assert.match(admin, /const API='\/api\/control\/storage\/google'/);
+  assert.match(admin, /credentials:'same-origin'/);
+  assert.doesNotMatch(admin, /drive\.ekodi\.kr\/api\/control\/storage\/google/);
+  assert.match(admin, /저장소 연결을 확인할 수 없습니다/);
   assert.match(admin, /t\('저장소','Storage'\)/);
+});
+
+test('Admin Worker proxies Storage through a Cloudflare service binding', () => {
+  assert.match(siteConfig, /\[\[services\]\]/);
+  assert.match(siteConfig, /binding = "STORAGE"/);
+  assert.match(siteConfig, /service = "ekodi-storage-control"/);
+  assert.match(siteWorker, /ADMIN_STORAGE_PREFIX = '\/api\/control\/storage\/'/);
+  assert.match(siteWorker, /env\.STORAGE\?\.fetch/);
+  assert.match(siteWorker, /env\.STORAGE\.fetch\(request\)/);
+  assert.match(siteWorker, /X-EKODI-Storage-Proxy', 'service-binding-v1'/);
+});
+
+test('Storage Access is exact-target fail-closed with a narrow OAuth callback bypass', () => {
+  assert.match(accessScript, /const targetDomain = 'drive\.ekodi\.kr'/);
+  assert.match(accessScript, /const callbackDomain = 'drive\.ekodi\.kr\/api\/control\/storage\/google\/callback'/);
+  assert.match(accessScript, /destinations: \[\{ type: 'public', uri: target \}\]/);
+  assert.match(accessScript, /appTargetsExact/);
+  assert.match(accessScript, /cloudflare_account_member/);
+  assert.match(accessScript, /decision: 'bypass'/);
+  assert.match(accessScript, /include: \[\{ everyone: \{\} \}\]/);
+  assert.match(accessScript, /broad or wildcard fallback is forbidden/);
+  assert.doesNotMatch(accessScript, /toLowerCase\(\) === 'all workers'/);
 });
 
 test('storage worker handles CORS preflight before app auth and mirrors credentials on actual responses', () => {

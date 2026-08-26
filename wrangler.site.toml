@@ -100,6 +100,10 @@ custom_domain = true
 pattern = "auth.ekodi.kr"
 custom_domain = true
 
+[[services]]
+binding = "STORAGE"
+service = "ekodi-storage-control"
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
