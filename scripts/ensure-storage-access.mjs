@@ -1,6 +1,7 @@
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 const token = String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
 const targetHost = 'drive.ekodi.kr';
+const appName = 'EKODI Storage';
 const policyName = 'EKODI Cloudflare account members';
 
 if (!accountId || !token) {
@@ -43,17 +44,40 @@ function coversHost(domain, host) {
   return false;
 }
 
+function appCoversHost(app, host) {
+  if (coversHost(app?.domain, host)) return true;
+  if (Array.isArray(app?.self_hosted_domains) && app.self_hosted_domains.some(domain => coversHost(domain, host))) return true;
+  if (Array.isArray(app?.destinations)) {
+    return app.destinations.some(destination => destination?.type === 'public' && coversHost(destination?.uri, host));
+  }
+  return false;
+}
+
 function isAccountMemberRule(rule) {
   return rule?.cloudflare_account_member?.account_id === accountId;
 }
 
 const apps = await api(`/accounts/${accountId}/access/apps?per_page=100`);
 const candidates = Array.isArray(apps) ? apps : [];
-const app = candidates.find(item => coversHost(item.domain, targetHost))
-  || candidates.find(item => String(item.name || '').toLowerCase() === 'all workers');
+let app = candidates.find(item => appCoversHost(item, targetHost));
 
 if (!app?.id) {
-  throw new Error(`No Cloudflare Access application protects ${targetHost}.`);
+  app = await api(`/accounts/${accountId}/access/apps`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: appName,
+      type: 'self_hosted',
+      session_duration: '24h',
+      app_launcher_visible: false,
+      destinations: [{ type: 'public', uri: targetHost }],
+    }),
+  });
+  if (!app?.id || !appCoversHost(app, targetHost)) {
+    throw new Error(`Cloudflare Access application was created without a verified ${targetHost} destination.`);
+  }
+  console.log(`Created dedicated Access app: ${app.name || app.id} (${targetHost})`);
+} else {
+  console.log(`Verified Access target: ${app.name || app.id} protects ${targetHost}`);
 }
 
 const policiesResult = await api(`/accounts/${accountId}/access/apps/${app.id}/policies?per_page=100`);
@@ -100,6 +124,6 @@ const created = await api(`/accounts/${accountId}/access/apps/${app.id}/policies
   body: JSON.stringify(body),
 });
 
-console.log(`Access app: ${app.name || app.id} (${app.domain || targetHost})`);
+console.log(`Access app: ${app.name || app.id} (${targetHost})`);
 console.log(`Created allow policy: ${created?.name || policyName}`);
 console.log('Only members of this Cloudflare account are included; public Everyone access was not enabled.');
