@@ -55,7 +55,7 @@ test('Security menu remains lazy-loaded and build publishes only requested asset
   assert.match(loader, /styles: \['admin-secret-generator\.css'\]/);
   assert.match(loader, /scripts: \['admin-secret-generator\.js'\]/);
   assert.match(loader, /hashes: \['#security'\]/);
-  assert.match(menu, /'#security', 'security'/);
+  assert.match(menu, /\['#security'\s*,\s*'security'\]/);
   assert.match(menu, /'health', 'security', 'marketing-ai'/);
   assert.match(build, /'admin-secret-generator\.css','admin-secret-generator\.js'/);
 });
