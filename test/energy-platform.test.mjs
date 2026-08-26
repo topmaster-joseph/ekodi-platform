@@ -58,10 +58,21 @@ test('control policy requires observation before bounded automation',()=>{
   assert.match(worker,/policy_allows_but_control_adapter_disabled/);
 });
 
-test('Jadam Mokpo pilot is a real bill-baseline first model',()=>{
-  const pilot=readFileSync(new URL('../energy/jadam-pilot.js',import.meta.url),'utf8');
-  for(const term of ['자담치킨 목포대점','jadam-mokpo-01','고지서','AMI','분전반 CT','초과비용 후보']) assert.match(pilot,new RegExp(term,'i'));
+test('Pizzamaru Mokpo is pilot 01 with bill-first and selective-sensor strategy',()=>{
+  const pilot=readFileSync(new URL('../energy/pizzamaru-pilot.js',import.meta.url),'utf8');
+  for(const term of ['피자마루 목포대점','pizzamaru-mokpo-01','고지서','AMI','CT 센서','초과비용 후보']) assert.match(pilot,new RegExp(term,'i'));
+  assert.match(pilot,/무센서 우선/);
+  assert.match(pilot,/필요할 때만/);
   assert.match(worker,/buildBillInsight/);
-  assert.match(worker,/api\/pilot\/jadam-mokpo-01/);
-  assert.match(worker,/url\.pathname==='\/jadam'/);
+  assert.match(worker,/api\/pilot\/pizzamaru-mokpo-01/);
+  assert.match(worker,/api\/energy\/v1\/pilots\/pizzamaru-mokpo-01/);
+  assert.match(worker,/url\.pathname==='\/pizzamaru'/);
+});
+
+test('Energy v1 connector contract keeps data sources modular and non-live by default',()=>{
+  for(const connector of ['bill-manual','google-drive-bill','gmail-bill','korea-ami','ct-sensor']) assert.match(worker,new RegExp(connector));
+  assert.match(worker,/adapter_contract_ready/);
+  assert.match(worker,/connection_required/);
+  assert.match(worker,/optional_phase2/);
+  assert.match(worker,/controlEnabled:false/);
 });
