@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
 test('Operations is the canonical first admin menu and Site Management follows it', () => {
   const overview = registry.indexOf("{ id: 'overview'");
@@ -40,4 +41,12 @@ test('Operations uses its own public route instead of being redirected to AI Ops
   assert.match(layout, /\['overview', '#operations'\]/);
   assert.match(layout, /requestedSection = 'overview'/);
   assert.match(layout, /activatePanel\('overview'\)/);
+});
+
+test('Shared menu ES modules are published and cache-busted with the admin release', () => {
+  assert.match(postbuild, /sharedAdminMenuModules = \['admin-menu-registry\.js', 'admin-sidebar\.js', 'admin-menu-runtime\.js'\]/);
+  assert.match(postbuild, /copyFile\(`\$\{root\}\$\{asset\}`, `\$\{dist\}\$\{asset\}`\)/);
+  assert.match(postbuild, /\.\.\.sharedAdminMenuModules/);
+  assert.match(postbuild, /moduleImportVersions = new Map/);
+  assert.match(postbuild, /`\.\/\$\{imported\}\?v=\$\{assetVersion\}`/);
 });

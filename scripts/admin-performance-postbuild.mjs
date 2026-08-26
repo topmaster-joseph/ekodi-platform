@@ -16,6 +16,11 @@ function mustReplace(search, replacement, label) {
 // asset and fetched only when an administrator explicitly adds ?perf=1.
 await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostics.js`);
 
+// The left navigation is a shared ES-module surface. Publish its registry, renderer and
+// locale/access runtime together so every admin page can import the same menu contract.
+const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js'];
+await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
+
 // Login/return parses only the base visual CSS and the small central-auth handoff.
 html = html
   .replace(/\s*<link rel="stylesheet" href="control-center-ops\.css">/g, '')
@@ -74,6 +79,7 @@ await writeFile(cssPath, css);
 // asset can then be cached immutably without ever mixing two releases in one browser session.
 const versionInputs = [
   'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
+  ...sharedAdminMenuModules,
   'compact-control-center.js','compact-control-center.css','control-center.css','finance-monitor.js',
   'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css',
   'ai-ops-admin.js','ai-ops-admin.css','mission-control-admin.js','mission-control-admin.css',
@@ -90,6 +96,20 @@ for (const asset of ['admin-central-handoff.js','admin-authenticated-shell.js','
   const source = await readFile(assetPath, 'utf8');
   if (!source.includes('__EKODI_ADMIN_ASSET_VERSION__')) throw new Error(`${asset} asset-version placeholder missing`);
   await writeFile(assetPath, source.replaceAll('__EKODI_ADMIN_ASSET_VERSION__', assetVersion));
+}
+
+// ES-module imports are versioned too. This prevents a browser from combining a new layout
+// with a five-minute-old menu registry after a deployment.
+const moduleImportVersions = new Map([
+  ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']],
+  ['admin-sidebar.js', ['admin-menu-registry.js']],
+  ['admin-menu-runtime.js', ['admin-menu-registry.js']],
+]);
+for (const [asset, imports] of moduleImportVersions) {
+  const assetPath = `${dist}${asset}`;
+  let source = await readFile(assetPath, 'utf8');
+  for (const imported of imports) source = source.replaceAll(`./${imported}`, `./${imported}?v=${assetVersion}`);
+  await writeFile(assetPath, source);
 }
 
 html = html
@@ -136,4 +156,4 @@ if (finalFinance.includes('setInterval(')) throw new Error('Finance monitor stil
 if ((await readFile(`${dist}compact-control-center.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS leaked into startup compact CSS');
 if (!(await readFile(`${dist}ai-ops-admin.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS missing from on-demand AI Ops');
 
-console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, legacy runtime/polling deferred.`);
+console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, legacy runtime/polling deferred.`);
