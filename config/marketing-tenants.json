@@ -21,6 +21,13 @@
     "externalCustomerActivation": false,
     "externalWorkspacesRole": "comparison_pool_only",
     "primaryOutcome": "qualified_pipeline_progression",
+    "futureComparison": {
+      "challengerSource": "external_developer_module",
+      "preferredDesign": "same_customer_crossover_or_matched_cohort",
+      "fallbackDesign": "cross_customer_with_context_normalization",
+      "requireSameKpis": true,
+      "requireModuleVersion": true
+    },
     "campaign": {
       "key": "ekodibiz-self-marketing-30d-v1",
       "name": "EKODIBIZ 30-day self-marketing validation",
