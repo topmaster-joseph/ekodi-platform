@@ -28,14 +28,7 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
-    'ai-module-spec': {
-      label: 'External AI Spec', icon: 'API',
-      styles: ['ai-module-spec-admin.css'],
-      scripts: ['ai-module-spec-admin.js'],
-      real: '[data-section="ai-module-spec"]',
-      hashes: ['#ai-module-spec'],
-      insert: 'after-aiops',
-    },
+    'ai-module-spec':{label:'AI Spec',icon:'API',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
