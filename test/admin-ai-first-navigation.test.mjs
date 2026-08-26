@@ -3,67 +3,62 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const compact = await readFile(new URL('../compact-control-center.css', import.meta.url), 'utf8');
 
-test('internal operations stay available to the control plane but disappear from primary navigation', () => {
-  for (const section of ['overview', 'services', 'deployments', 'policies']) {
-    assert.match(layout, new RegExp(`['\"]${section}['\"]`));
-  }
+test('Operations and Site Management lead the human-facing menu while technical panels stay internal', () => {
+  assert.match(layout, /INTERNAL_ONLY_SECTIONS=new Set\(\['services', 'deployments', 'policies'\]\)/);
   assert.match(layout, /INTERNAL_ONLY_HREFS/);
   assert.match(layout, /\/legacy#domains/);
   assert.match(layout, /\/legacy#activity/);
-  assert.match(layout, /item\.hidden = true/);
-  assert.match(layout, /data\.aiInternal|dataset\.aiInternal/);
+  assert.match(layout, /\.hidden=true/);
+  assert.match(layout, /dataset\.aiInternal/);
+  assert.match(layout, /\['overview', 'campus', 'aiops', 'health', 'security'/);
 });
 
-test('retired Operations and Services explicitly route to demand-loaded AI Ops without auto-opening it on normal login', () => {
+test('Operations is the normal-login default while only internal technical routes fall back to AI Ops', () => {
   assert.match(layout, /function routeInternalToAiOps/);
   assert.match(layout, /openDemand\('aiops'\)/);
-  assert.match(layout, /#ai-ops/);
-  assert.match(layout, /\['#operations', 'overview'\]/);
-  assert.match(layout, /\['#services', 'services'\]/);
-  assert.match(layout, /let requestedSection = ''/);
-  assert.match(layout, /const initialHash = explicitHashSection\(\)/);
-  assert.match(layout, /else if \(initialHash\) requestedSection = initialHash/);
+  assert.match(layout, /\['#operations'\s*,\s*'overview'\]/);
+  assert.match(layout, /\['#services'\s*,\s*'services'\]/);
+  assert.match(layout, /let locale=.*requestedSection = ''/);
+  assert.match(layout, /const initialHash\s*=\s*explicitHashSection\(\)/);
+  assert.match(layout, /requestedSection='overview'/);
+  assert.match(layout, /activatePanel\('overview'\)/);
   assert.doesNotMatch(layout, /preferAiOpsOnReady/);
   assert.doesNotMatch(layout, /setInterval\(/);
 });
 
 test('Devices participates in the central panel router even though its menu is installed dynamically', () => {
   assert.match(layout, /deviceControlNav/);
-  assert.match(layout, /return 'devices'/);
+  assert.match(layout, /return\s*'devices'/);
   assert.match(layout, /\.nav\[data-device-control-nav\]/);
 });
 
-test('Campus shortcuts cannot reopen hidden operational panels', () => {
+test('Campus shortcuts cannot reopen internal technical panels', () => {
   assert.match(layout, /\[data-campus-section\]/);
-  assert.match(layout, /isInternalSection\(control\.dataset\.campusSection\)/);
+  assert.match(layout, /isInternalSection\([^)]*\.dataset\.campusSection\)/);
   assert.match(layout, /routeInternalToAiOps\(\)/);
   assert.match(layout, /openDemand\('aiops'\)/);
 });
 
 test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
-  assert.match(layout, /VISIBLE_NAV_ORDER/);
-  const expected = [
-    'campus', 'aiops', 'marketing-ai', 'work', 'clients', 'admins', 'community',
-    'books', 'finance', 'communication', 'social', 'workspace', 'devices',
-    'organization', 'affiliates',
-  ];
-  let cursor = -1;
-  for (const section of expected) {
-    const next = layout.indexOf(`'${section}'`, cursor + 1);
-    assert.ok(next > cursor, `${section} must remain in canonical menu order`);
-    cursor = next;
-  }
-  assert.match(layout, /VISIBLE_NAV_RANK/);
+  const match = layout.match(/VISIBLE_NAV_ORDER=Object\.freeze\(\[([^\]]+)\]\)/);
+  assert.ok(match, 'canonical menu order must be declared once');
+  const actual = [...match[1].matchAll(/'([^']+)'/g)].map(item => item[1]);
+  assert.deepEqual(actual, [
+    'overview', 'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work',
+    'finance', 'communication', 'workspace', 'devices', 'organization', 'clients',
+    'admins', 'community', 'books', 'social', 'affiliates', 'architecture',
+  ]);
+  assert.match(layout, /RANK=new Map\(VISIBLE_NAV_ORDER/);
   assert.match(layout, /applyStableNavigationOrder/);
-  assert.match(layout, /item\.style\.order/);
-  assert.match(layout, /data\.menuOrder|dataset\.menuOrder/);
+  assert.match(layout, /style\.order/);
+  assert.match(layout, /dataset\.menuOrder/);
 });
 
-test('Admin sidebar menu uses minimal vertical spacing without shrinking label readability', () => {
-  assert.match(layout, /ekodi-admin-menu-density/);
-  assert.match(layout, /gap:0!important/);
-  assert.match(layout, /min-height:30px!important/);
-  assert.match(layout, /padding:4px 9px!important/);
-  assert.match(layout, /font-size:12px!important/);
+test('Admin sidebar density comes from the shared compact stylesheet instead of per-menu inline patches', () => {
+  assert.match(compact, /body\.compact-control-center \.sidebar nav\{display:grid;gap:3px/);
+  assert.match(compact, /body\.compact-control-center \.nav\{gap:10px;padding:9px 11px;border-radius:10px;min-height:38px\}/);
+  assert.match(compact, /body\.compact-control-center \.nav span\{font-size:12px\}/);
+  assert.doesNotMatch(layout, /ekodi-admin-menu-density/);
 });
