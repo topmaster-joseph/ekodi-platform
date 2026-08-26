@@ -1,7 +1,7 @@
 # Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations/publishing network + membership billing + Author billing + AI Mission Control
-# 2026-08-26: EKODI Storage Gateway + External AI Module Gateway added ahead of mission control.
+# 2026-08-26: EKODI Storage Gateway + External AI Module Gateway are integrated inside canonical Mission Control.
 name = "ekodi-auth-api"
-main = "storage-ai-entry-worker.js"
+main = "mission-control-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
