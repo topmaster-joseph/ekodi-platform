@@ -4,6 +4,19 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
+test('all authenticated Admin surfaces inherit the EKODI readability base', async () => {
+  const css = await read('admin-readability-base.css');
+  assert.match(css, /body\.compact-control-center\{/);
+  assert.match(css, /font-size:16px!important/);
+  assert.match(css, /\.content \[data-panel\] th\{font-size:13px!important/);
+  assert.match(css, /\.content \[data-panel\] td\{font-size:14px!important/);
+  assert.match(css, /\.content \[data-panel\] input[^}]*font-size:15px!important/);
+  assert.match(css, /#userAiMembershipPanel \.uam-head h2\{font-size:30px!important/);
+  assert.match(css, /#userAiMembershipPanel \.uam-head p\{font-size:15px!important/);
+  assert.match(css, /#userAiMembershipPanel \.uam-note\{font-size:13px!important/);
+  assert.match(css, /:focus-visible/);
+});
+
 test('AI Ops is a flat readable command workspace', async () => {
   const css = await read('admin-readable-command.css');
   assert.match(css, /governance-command-bar\{display:none!important\}/);
@@ -42,7 +55,7 @@ test('AI Ops no longer auto-hydrates Governance cockpit or Deployments', async (
   assert.match(loader, /scripts: \['release-control-admin\.js'\]/);
 });
 
-test('readable orchestration layer remains lazy and the final performance guard runs last', async () => {
+test('base readability is first-path while AI orchestration stays lazy and performance guard runs last', async () => {
   const [pkg, postbuild] = await Promise.all([
     read('package.json'),
     read('scripts/admin-readable-command-postbuild.mjs'),
@@ -52,8 +65,9 @@ test('readable orchestration layer remains lazy and the final performance guard 
   const readableIndex = build.indexOf('admin-readable-command-postbuild.mjs');
   const performanceIndex = build.indexOf('admin-performance-postbuild.mjs');
   assert.ok(readableIndex >= 0 && performanceIndex > readableIndex);
+  assert.match(postbuild, /admin-readability-base\.css/);
+  assert.match(postbuild, /compact-control-center\.css/);
   assert.match(postbuild, /ai-ops-admin\.css/);
   assert.match(postbuild, /admin-lazy-features\.js/);
-  assert.doesNotMatch(postbuild, /compact-control-center\.css/);
   assert.doesNotMatch(postbuild, /control-center\.html/);
 });
