@@ -79,3 +79,5 @@
   window.EKODIAdminPerf = Object.freeze({ snapshot, report, disconnect:() => observers.forEach(observer => observer.disconnect()) });
   window.addEventListener('ekodi-admin-ready', () => queueMicrotask(report), { once:true });
 })();
+
+// Release marker: shared admin sidebar production rollout, 2026-08-26.
