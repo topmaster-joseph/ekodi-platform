@@ -1,6 +1,7 @@
 import { canonicalDriveStatus, writeCanonicalDriveFile } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
+const STORAGE_CONTROL_ORIGIN = 'https://drive.ekodi.kr';
 const MAX_INLINE_BYTES = 8 * 1024 * 1024;
 const RETENTION_CLASSES = new Set(['temporary', 'operational', 'business_record', 'permanent']);
 const encoder = new TextEncoder();
@@ -29,6 +30,21 @@ function authorized(request, env) {
   const expected = String(env.EKODI_STORAGE_GATEWAY_KEY || '').trim();
   const supplied = String(request.headers.get('x-ekodi-storage-key') || '').trim();
   return expected && constantTimeEqual(expected, supplied);
+}
+
+function localCanonicalRuntime(env) {
+  return Boolean(env.DB && env.STORAGE_CREDENTIAL_KEY && env.GOOGLE_DRIVE_CLIENT_SECRET);
+}
+
+async function proxyToStorageControl(request, env) {
+  const source = new URL(request.url);
+  const target = new URL(source.pathname + source.search, STORAGE_CONTROL_ORIGIN);
+  const headers = new Headers(request.headers);
+  headers.delete('host');
+  const init = { method: request.method, headers, redirect: 'manual' };
+  if (!['GET', 'HEAD'].includes(request.method)) init.body = await request.clone().arrayBuffer();
+  const response = await fetch(target, init);
+  return new Response(response.body, { status: response.status, headers: response.headers });
 }
 
 function validateRecord(body) {
@@ -82,10 +98,29 @@ function errorStatus(message) {
   return 502;
 }
 
+async function storeViaControlPlane(env, record, requestId) {
+  const key = String(env.EKODI_STORAGE_GATEWAY_KEY || '').trim();
+  if (!key) throw new Error('STORAGE_GATEWAY_KEY_MISSING');
+  const response = await fetch(`${STORAGE_CONTROL_ORIGIN}${STORAGE_PREFIX}/records`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-ekodi-storage-key': key,
+      'x-request-id': requestId,
+    },
+    body: JSON.stringify(record),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.code || `STORAGE_CONTROL_HTTP_${response.status}`);
+  return payload;
+}
+
 export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
   validateRecord(record);
-  const bytes = decodeBody(record);
   const requestId = String(options.requestId || crypto.randomUUID());
+  if (!localCanonicalRuntime(env)) return storeViaControlPlane(env, record, requestId);
+
+  const bytes = decodeBody(record);
   let result = null;
   try {
     result = await writeCanonicalDriveFile(env, {
@@ -118,11 +153,14 @@ export async function handleStorageGateway(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(STORAGE_PREFIX)) return null;
 
+  if (!localCanonicalRuntime(env)) return proxyToStorageControl(request, env);
+
   if (request.method === 'GET' && url.pathname === `${STORAGE_PREFIX}/health`) {
     const status = await canonicalDriveStatus(env);
     return json({
       ok: true,
       version: '1.0.0',
+      service: 'ekodi-storage-control',
       canonicalStore: 'google_workspace_shared_drive',
       driveName: 'EKODI',
       canonicalDriveReady: status.ready,
