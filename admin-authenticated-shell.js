@@ -42,11 +42,11 @@ script.addEventListener('error',()=>{console.warn(`[EKODI Admin] optional post-a
 function installSharedAdminLayout(){
 const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav'),main=app?.querySelector('main'),content=main?.querySelector('.content'),topbar=main?.querySelector('.topbar'),profile=document.querySelector('.profile'),sideBottom=sidebar?.querySelector('.side-bottom'),logoutButton=document.querySelector('#logoutButton'),pageTitle=document.querySelector('#pageTitle');
 if(!app||!sidebar||!nav||!main||!content||!sideBottom)return;
-document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll='true';content.dataset.ekodiIndependentScroll='workspace';
-if(profile&&!sideBottom.contains(profile)){profile.classList.add('side-profile');sideBottom.insertBefore(profile,logoutButton||null)}
-if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden=true;
-s(document.body,{height:'100dvh',overflow:'hidden'});s(app,{height:'100dvh',overflow:'hidden'});s(sidebar,{height:'100dvh',overflow:'hidden'},'important');s(sideBottom,{position:'static',flex:'0 0 auto'},'important');s(nav,{flex:'1 1 auto','min-height':'0','overflow-y':'auto','overflow-x':'hidden','max-height':'none','overscroll-behavior':'contain'},'important');s(main,{height:'100dvh','min-height':'0','overflow-y':'auto','overflow-x':'hidden','overscroll-behavior':'contain'});
-if(topbar)topbar.style.setProperty('display',matchMedia('(max-width:760px)').matches?'flex':'none','important')
+document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll = 'true';content.dataset.ekodiIndependentScroll = 'workspace';
+if(profile&&!sideBottom.contains(profile)){profile.classList.add('side-profile');sideBottom.insertBefore(profile, logoutButton || null)}
+if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden = true;
+s(document.body,{height:'100dvh',overflow:'hidden'});s(app,{height:'100dvh',overflow:'hidden'});s(sidebar,{height:'100dvh',overflow:'hidden'},'important');sideBottom.style.setProperty('position', 'static', 'important');s(sideBottom,{flex:'0 0 auto'},'important');nav.style.setProperty('flex', '1 1 auto', 'important');nav.style.setProperty('overflow-y', 'auto', 'important');s(nav,{'min-height':'0','overflow-x':'hidden','max-height':'none','overscroll-behavior':'contain'},'important');main.style.setProperty('overflow-y', 'auto');s(main,{height:'100dvh','min-height':'0','overflow-x':'hidden','overscroll-behavior':'contain'});
+if(topbar)topbar.style.setProperty('display',matchMedia('(max-width:760px)').matches ? 'flex' : 'none','important')
 }
 function deactivateMallFreeOps() {
 const panel=document.querySelector('#mallFreeOpsPanel');if(!panel)return;
