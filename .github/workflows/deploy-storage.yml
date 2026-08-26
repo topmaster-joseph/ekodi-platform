@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'google-drive-storage-control.js'
+      - 'r2-storage-control.js'
       - 'storage-worker.js'
       - 'storage-admin.js'
       - 'storage-admin.css'
@@ -11,11 +12,13 @@ on:
       - 'deploy/manifests/storage.worker.json'
       - 'migrations/0038_google_drive_storage.sql'
       - 'test/google-drive-storage.test.mjs'
+      - 'test/r2-storage.test.mjs'
       - '.github/workflows/deploy-storage.yml'
   push:
     branches: [main]
     paths:
       - 'google-drive-storage-control.js'
+      - 'r2-storage-control.js'
       - 'storage-worker.js'
       - 'storage-admin.js'
       - 'storage-admin.css'
@@ -23,6 +26,7 @@ on:
       - 'deploy/manifests/storage.worker.json'
       - 'migrations/0038_google_drive_storage.sql'
       - 'test/google-drive-storage.test.mjs'
+      - 'test/r2-storage.test.mjs'
       - '.github/workflows/deploy-storage.yml'
 
 permissions:
@@ -41,13 +45,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Drive storage boundary
+      - name: Validate storage boundaries
         run: |
           set -euo pipefail
           node --check google-drive-storage-control.js
+          node --check r2-storage-control.js
           node --check storage-worker.js
           node --check storage-admin.js
-          node --test test/google-drive-storage.test.mjs
+          node --test test/google-drive-storage.test.mjs test/r2-storage.test.mjs
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'drive.ekodi.kr' wrangler.storage.toml
           grep -Fq 'STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"' wrangler.storage.toml
