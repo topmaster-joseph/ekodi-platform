@@ -182,8 +182,8 @@ window.addEventListener('ekodi-admin-ready', () => {
   else if (explicit === 'sites') openSites();
   else if (explicit) requestedSection = explicit;
   else {
-    requestedSection = 'overview';
-    activatePanel('overview');
+    requestedSection = 'campus';
+    window.EKODIAdminDemand?.activate('campus');
   }
 });
 window.addEventListener('hashchange', () => {
@@ -201,10 +201,7 @@ const initialHash = explicitHashSection();
 if (initialHash && isInternalSection(initialHash)) routeInternalToAiOps();
 else if (initialHash === 'sites') openSites();
 else if (initialHash) requestedSection = initialHash;
-else {
-  requestedSection = 'overview';
-  activatePanel('overview');
-}
+else requestedSection = 'campus';
 window.EKODIAdminPanels = Object.freeze({
   activate: section => {
     if (isInternalSection(section)) return routeInternalToAiOps();
