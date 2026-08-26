@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "canonicalProductName": "에코디 마케팅AI",
+  "canonicalProductNameEn": "EKODI Marketing AI",
+  "deprecatedProductNames": [
+    "에코디비즈 마케팅AI",
+    "에코디비즈 마케팅 AI",
+    "EKODIBIZ Marketing AI"
+  ],
+  "ownership": "ekodi-shared-capability",
+  "consumerRule": "Consumers, including EKODIBIZ, access Marketing AI only through the EKODI Marketing AI Gateway contract.",
+  "tenantScopes": [
+    "individual",
+    "institution",
+    "organization"
+  ],
+  "capabilities": [
+    "content.generate",
+    "campaign.plan",
+    "audience.segment",
+    "channel.optimize",
+    "analytics.report",
+    "publish.execute"
+  ],
+  "providerLifecycle": [
+    "draft",
+    "testing",
+    "certified",
+    "suspended",
+    "retired"
+  ],
+  "contracts": {
+    "provider": "docs/MARKETING-AI-PROVIDER-CONTRACT-v1.md",
+    "providerManifestSchema": "config/marketing-ai-provider-manifest.schema.json",
+    "entitlementSchema": "config/marketing-ai-entitlement.schema.json"
+  },
+  "routingPrinciples": [
+    "authorize-before-routing",
+    "entitlement-before-provider-selection",
+    "certified-providers-only-by-default",
+    "provider-specific-details-behind-adapters",
+    "failover-never-expands-entitlement",
+    "minimum-necessary-provider-payload",
+    "tenant-isolation",
+    "auditable-provider-selection",
+    "safe-degradation"
+  ],
+  "consumerInvariants": [
+    "No consumer requires a provider-specific SDK or credential.",
+    "A provider can be added or suspended without changing EKODIBIZ application code.",
+    "Membership plan changes can change access without consumer deployment.",
+    "Provider failure cannot break the non-AI EKODI core."
+  ]
+}
