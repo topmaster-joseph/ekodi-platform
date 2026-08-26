@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "protocol": "https-json",
+  "executionPath": "/v1/execute",
+  "healthPath": "/v1/health",
+  "timeoutMsDefault": 12000,
+  "timeoutMsMax": 30000,
+  "requestEnvelope": {
+    "required": ["contractVersion", "requestId", "moduleId", "capability", "context", "input"],
+    "contextRequired": ["spaceId", "serviceId", "actorId", "role", "capabilities"]
+  },
+  "responseEnvelope": {
+    "required": ["contractVersion", "requestId", "ok"],
+    "successRequired": ["output"],
+    "failureRequired": ["error"]
+  },
+  "security": {
+    "providerMayReceiveGoogleCredentials": false,
+    "providerMayAccessSharedDriveDirectly": false,
+    "providerMayAccessEkodiDatabaseDirectly": false,
+    "providerSecretsStayServerSide": true,
+    "tenantContextRequired": true,
+    "capabilityCheckRequired": true
+  },
+  "persistence": {
+    "providerReturnsOutputToEkodi": true,
+    "durableOutputRoute": "EKODI Storage Gateway",
+    "canonicalStore": "google_workspace_shared_drive"
+  },
+  "moduleManifestRequired": ["id", "name", "version", "endpoint", "capabilities", "secretBinding"],
+  "moduleIdPattern": "^[a-z0-9][a-z0-9._-]{2,63}$"
+}
