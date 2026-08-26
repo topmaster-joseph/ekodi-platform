@@ -41,6 +41,22 @@ test('storage control supports shared drives and app-scoped writes', () => {
   assert.match(control, /\/drives\?pageSize=100/);
 });
 
+test('admin browser storage calls preserve Access credentials and localized failure UX', () => {
+  assert.match(admin, /credentials:'include'/);
+  assert.match(admin, /저장소 보안 연결을 확인할 수 없습니다/);
+  assert.match(admin, /t\('저장소','Storage'\)/);
+});
+
+test('storage worker handles CORS preflight before app auth and mirrors credentials on actual responses', () => {
+  const optionsIndex = worker.indexOf("if(request.method==='OPTIONS')");
+  const guardIndex = worker.indexOf('enforceEdgeSecurity(request,env)');
+  assert.ok(optionsIndex >= 0 && guardIndex > optionsIndex, 'OPTIONS must be handled before app auth');
+  assert.match(worker, /access-control-allow-credentials','true/);
+  assert.match(worker, /access-control-allow-origin',origin/);
+  assert.match(worker, /function withCors\(/);
+  assert.match(config, /ALLOWED_ORIGINS = "https:\/\/admin\.ekodi\.kr,https:\/\/ekodi\.kr,https:\/\/my\.ekodi\.kr"/);
+});
+
 test('R2 binding is source-controlled so redeployments cannot drop it', () => {
   assert.match(config, /\[\[r2_buckets\]\]/);
   assert.match(config, /binding = "R2_BUCKET"/);
