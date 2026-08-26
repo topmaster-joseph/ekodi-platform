@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const cfg = JSON.parse(await readFile(new URL('../config/marketing-tenants.json', import.meta.url), 'utf8'));
-const migration = await readFile(new URL('../migrations/0039_marketing_experiment_registry.sql', import.meta.url), 'utf8');
+const ledger = await readFile(new URL('../marketing-ledger-control.js', import.meta.url), 'utf8');
 
 test('only EKODIBIZ is the active Marketing AI validation subject', () => {
   assert.equal(cfg.pilot.mode, 'single_internal_validation');
@@ -24,12 +24,13 @@ test('pilot uses a stable module benchmark contract for later external modules',
   }
 });
 
-test('experiment migration seeds no fake performance and creates only an EKODIBIZ draft campaign', () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS marketing_experiments/);
-  assert.match(migration, /ekodibiz-native-20260826/);
-  assert.match(migration, /ekodi-marketing-benchmark-v1/);
-  assert.match(migration, /'tenant','ekodibiz'/);
-  assert.match(migration, /'draft','system:ekodibiz-pilot'/);
-  assert.match(migration, /verified_only/);
-  assert.doesNotMatch(migration, /INSERT[^;]+INTO marketing_events/is);
+test('pilot reuses the existing Marketing campaign and event ledger without synthetic outcomes', () => {
+  assert.equal(cfg.pilot.campaign.ledger, 'existing_marketing_campaigns_and_events');
+  assert.equal(cfg.pilot.campaign.executionMode, 'human_gate');
+  assert.equal(cfg.pilot.campaign.audienceSegment, 'inquiry');
+  assert.match(ledger, /const SERVICE_EVENTS = new Set\(\['inquiry','consultation','proposal','contract','onboarding','active','renewal'/);
+  assert.match(ledger, /POST[^]*\/api\/marketing\/ledger\/events/);
+  assert.match(ledger, /POST[^]*\/api\/marketing\/ledger\/campaigns/);
+  assert.match(ledger, /humanGate:'awaiting_human'/);
+  assert.match(ledger, /externalExecution:false/);
 });
