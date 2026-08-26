@@ -8,6 +8,7 @@ on:
       - 'ekodi-shell-worker.js'
       - 'ekodi-shell-injector.js'
       - 'ekodi-message-ui.js'
+      - 'admin-authenticated-shell.js'
       - 'shell/**'
       - 'config/ecosystem-services.json'
       - 'config/illustration-system.json'
@@ -15,6 +16,7 @@ on:
       - 'config/seasonal-design-governance.json'
       - 'docs/ekodi-shell-contract.md'
       - 'docs/user-ui-module-principles.md'
+      - 'docs/admin-ui-module-principles.md'
       - 'scripts/verify-ekodi-shell-live.mjs'
       - 'scripts/validate-ekodi-shell-adoption.mjs'
       - 'scripts/validate-internal-ui-rollout.mjs'
@@ -23,6 +25,7 @@ on:
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
       - 'test/user-ui-header.test.mjs'
+      - 'test/admin-ui-shell.test.mjs'
       - '.github/workflows/deploy-ekodi-shell.yml'
       - 'release/ekodi-shell-*.marker'
   push:
@@ -48,14 +51,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Shell contracts, user header, Message UI, illustrations and ecosystem links
+      - name: Validate Shell contracts, user/admin UI, Message UI, illustrations and ecosystem links
         run: |
           set -euo pipefail
           node --check ekodi-shell-worker.js
           node --check ekodi-shell-injector.js
           node --check ekodi-message-ui.js
+          node --check admin-authenticated-shell.js
           node --check shell/shell.js
           node --check shell/user-ui-header.js
+          node --check shell/admin-ui-shell.js
           node --check shell/mobile-fixed-header.js
           node --check shell/illustration-system.js
           node --check shell/ecosystem-link-compat.js
@@ -63,10 +68,13 @@ jobs:
           test -f config/illustration-system.json
           test -f shell/workspace.css
           test -f docs/user-ui-module-principles.md
+          test -f docs/admin-ui-module-principles.md
           grep -Fq 'data-ekodi-shell-surface="workspace"' shell/workspace.css
           grep -Fq 'data-ekodi-document-surface' shell/workspace.css
           grep -Fq "userHeaderUrl.pathname='/user-ui-header.js'" ekodi-shell-worker.js
+          grep -Fq "adminShellUrl.pathname='/admin-ui-shell.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-admin-ui-shell" ekodi-shell-worker.js
           grep -Fq "messageUrl.pathname='/message-ui.js'" ekodi-shell-worker.js
           grep -Fq "illustrationUrl.pathname='/illustration-system.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-message-ui" ekodi-shell-worker.js
@@ -76,12 +84,15 @@ jobs:
           grep -Fq 'window.EKODIMessage' ekodi-message-ui.js
           grep -Fq 'window.EKODIIllustration' shell/illustration-system.js
           grep -Fq 'window.EKODIUserUIHeader' shell/user-ui-header.js
+          grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js
+          grep -Fq '.side-brand' shell/admin-ui-shell.js
+          grep -Fq 'node.remove()' shell/admin-ui-shell.js
           grep -Fq 'cuteNotChildish' config/illustration-system.json
           grep -Fq 'aiAsCompanionNotRobotMascot' config/illustration-system.json
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
-          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs
+          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/admin-ui-shell.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
           node scripts/validate-internal-ui-rollout.mjs
