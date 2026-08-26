@@ -14,6 +14,7 @@ const [healthJs, healthCss, mapJs, mapCss] = await Promise.all([
 if (!mapJs.includes('EKODISystemMap')) throw new Error('System Map runtime marker missing');
 if (!mapJs.includes("fetch('/platform-boundaries.json'")) throw new Error('System Map must read platform-boundaries.json');
 if (!mapJs.includes("fetch('/monitor-status.json'")) throw new Error('System Map must read monitor-status.json');
+if (!mapJs.includes("fetch('/ecosystem-services.json'")) throw new Error('System Map must read ecosystem-services.json');
 if (mapJs.includes('setInterval(')) throw new Error('System Map must stay event-driven');
 
 const storageAwareMapJs = mapJs.replace(
@@ -26,8 +27,9 @@ await Promise.all([
   writeFile(`${output}system-health-admin.js`, `${healthJs}\n${storageAwareMapJs}\n`),
   writeFile(`${output}system-health-admin.css`, `${healthCss}\n${mapCss}\n`),
   cp(`${root}platform-boundaries.json`, `${output}platform-boundaries.json`),
+  cp(`${root}config/ecosystem-services.json`, `${output}ecosystem-services.json`),
   cp(`${root}storage-admin.js`, `${output}storage-admin.js`),
   cp(`${root}storage-admin.css`, `${output}storage-admin.css`),
 ]);
 
-console.log('Admin System Map + Drive-first Storage assets prepared with canonical boundary data.');
+console.log('Admin System Structure Overview + Drive-first Storage assets prepared with canonical boundary and service registry data.');
