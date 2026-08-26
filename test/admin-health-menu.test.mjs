@@ -6,8 +6,11 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Health remains a visible standalone route before Security and later operational features', async () => {
   const menu = await read('admin-menu-layout.js');
+  const registry = await read('admin-menu-registry.js');
   const loader = await read('admin-demand-loader.js');
-  assert.match(menu, /'campus', 'aiops', 'health', 'security'/);
+  assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
+  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
+  assert.ok(registry.indexOf("id: 'health'") < registry.indexOf("id: 'security'"));
   assert.match(menu, /\['#health', 'health'\]/);
   assert.match(menu, /\['health', '#health'\]/);
   assert.match(loader, /health:\s*\{/);
@@ -55,7 +58,6 @@ test('Health is the read-only EKODI Core operations dashboard', async () => {
   assert.doesNotMatch(health, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
 });
 
-// Keep diagram contracts tied to existing read-only Health data and the lazy runtime.
 test('Health diagrams stay lightweight and are driven by existing read-only data', async () => {
   const [health, css] = await Promise.all([
     read('system-health-admin.js'),
