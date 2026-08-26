@@ -2,38 +2,55 @@
 
 ## Purpose
 
-An external vendor may build a specialist AI independently and connect it to EKODI as a replaceable module. EKODI owns identity, tenant context, authorization, storage, audit and user experience. The external vendor owns only the specialist inference/service engine behind the agreed contract.
+An external vendor may build a specialist AI independently and connect it to EKODI as a replaceable module. EKODI owns identity, Space/tenant context, authorization, storage, audit and user experience. The external vendor owns only the specialist inference/service engine behind this contract.
 
 ## Boundary
 
 ```text
-EKODI user/service
-      |
-      v
-EKODI identity + Space + Role + Capability
-      |
-      v
+EKODI user
+   |
+   v
+EKODI service authenticates user + Space + Role + Capability
+   |
+   v
+registered EKODI internal caller
+   |
+   v
 api.ekodi.kr/api/ai-modules/v1/execute
-      |
-      v
+   |
+   v
 EKODI AI Module Gateway
-      |
-      +----> vendor A /v1/execute
-      +----> vendor B /v1/execute
-      +----> future provider
-      |
-      v
+   |
+   +----> vendor A /v1/execute
+   +----> vendor B /v1/execute
+   +----> future provider
+   |
+   v
 optional EKODI Storage Gateway
-      |
-      v
+   |
+   v
+drive.ekodi.kr
+   |
+   v
 Google Workspace Shared Drive EKODI
 ```
 
-The vendor is never an EKODI identity provider, database administrator or Drive administrator.
+The vendor is never an EKODI identity provider, database administrator, Drive administrator or storage credential holder.
+
+## EKODI caller trust
+
+`/execute` is not a browser endpoint. A request is accepted only when both are present:
+
+- valid `x-ekodi-ai-gateway-key` server secret;
+- `x-ekodi-caller-id` registered in `EKODI_AI_MODULE_CALLERS`.
+
+The registered internal caller is responsible for authenticating the end user or agent and resolving the active Space, Role and Capability before invoking the gateway. The gateway adds `attestedBy: ekodi:<caller-id>` before sending context to the external module.
+
+A browser or vendor cannot self-register as an internal caller.
 
 ## Vendor manifest
 
-EKODI registers each vendor server-side with a manifest shaped like:
+EKODI registers each vendor server-side:
 
 ```json
 {
@@ -48,20 +65,16 @@ EKODI registers each vendor server-side with a manifest shaped like:
 }
 ```
 
-`secretBinding` names a Cloudflare Worker secret. The actual secret is never committed to GitHub or returned by the API.
+`secretBinding` names a Cloudflare Worker secret. The actual secret is never stored in the manifest, committed to GitHub or returned by the API.
 
 ## Vendor endpoints
 
-Every module implements:
+Every module implements HTTPS endpoints:
 
 - `GET /v1/health`
 - `POST /v1/execute`
 
-HTTPS is mandatory.
-
-## Execution request
-
-EKODI sends:
+## Execution request sent to vendor
 
 ```json
 {
@@ -74,7 +87,8 @@ EKODI sends:
     "serviceId": "marketing",
     "actorId": "ekodi-user-or-agent-id",
     "role": "owner",
-    "capabilities": ["marketing.campaign"]
+    "capabilities": ["marketing.campaign"],
+    "attestedBy": "ekodi:marketing-service"
   },
   "input": {
     "storeId": "mokpo-univ",
@@ -83,7 +97,7 @@ EKODI sends:
 }
 ```
 
-The context contains only the minimum EKODI information needed for the task. Google tokens, database credentials, R2 credentials and unrelated tenant data are prohibited.
+Only the minimum task context is sent. Google tokens, Drive credentials, D1/Supabase credentials, R2 credentials and unrelated tenant data are prohibited.
 
 ## Execution response
 
@@ -94,15 +108,9 @@ Success:
   "contractVersion": "1.0.0",
   "requestId": "same-uuid",
   "ok": true,
-  "output": {
-    "campaign": "..."
-  },
-  "usage": {
-    "units": 1
-  },
-  "meta": {
-    "model": "vendor-model-name"
-  }
+  "output": { "campaign": "..." },
+  "usage": { "units": 1 },
+  "meta": { "model": "vendor-model-name" }
 }
 ```
 
@@ -120,38 +128,45 @@ Failure:
 }
 ```
 
-The gateway rejects responses with the wrong contract version, request ID or envelope shape.
+The gateway rejects the wrong contract version, wrong request ID, invalid JSON envelope, disabled modules, unsupported capabilities and provider errors.
 
 ## EKODI gateway API
 
 Base path: `/api/ai-modules/v1`
 
-- `GET /health` — contract and registered-module summary without secrets.
-- `GET /modules` — authenticated module registry view without endpoints or secrets.
-- `POST /execute` — authenticated server-to-server execution.
-
-The gateway requires `x-ekodi-ai-gateway-key`. Normal browser clients should call an EKODI service backend, not this privileged integration endpoint directly.
+- `GET /health` — public non-secret readiness counts only.
+- `GET /modules` — privileged registry view without endpoints or secrets.
+- `POST /execute` — privileged registered-EKODI-caller execution.
 
 ## Capability enforcement
 
-Both conditions must be true before execution:
+Before execution:
 
-1. the registered module manifest declares the requested capability;
-2. the active EKODI context grants the actor that capability or `ai:*`.
+1. the EKODI service authenticates the actor and resolves the active context;
+2. the service calling the gateway must be a registered internal caller;
+3. the context must contain the requested capability or `ai:*`;
+4. the selected module manifest must also declare that capability.
 
-This prevents a vendor module from expanding its own authority.
+The vendor cannot add capabilities to itself and cannot use one tenant context to request another tenant's data.
 
 ## Persistence
 
-A caller may ask EKODI to persist a successful output:
+A registered EKODI caller may request persistence:
 
 ```json
 {
   "moduleId": "vendor.marketing-ai",
   "capability": "marketing.campaign",
-  "context": { "spaceId": "jadam", "serviceId": "marketing", "actorId": "123", "role": "owner", "capabilities": ["marketing.campaign"] },
+  "context": {
+    "spaceId": "jadam",
+    "serviceId": "marketing",
+    "actorId": "123",
+    "role": "owner",
+    "capabilities": ["marketing.campaign"]
+  },
   "input": { "goal": "repeat visits" },
   "persist": {
+    "storageRoute": "biz",
     "recordType": "marketing_campaign",
     "retentionClass": "business_record",
     "title": "campaign-2026-08.json"
@@ -159,26 +174,25 @@ A caller may ask EKODI to persist a successful output:
 }
 ```
 
-The external vendor still does not receive Drive access. The result comes back to EKODI and the Storage Gateway writes the durable copy to the EKODI Shared Drive.
+The vendor never writes the file. The result returns to EKODI, the API calls the EKODI Storage Gateway, `drive.ekodi.kr` uses the existing encrypted primary OAuth connection and `storage_routes`, and the durable copy is written to Shared Drive `EKODI`.
 
 ## Replacement rule
 
-User-facing EKODI services must depend on a capability, not a vendor identity. A service asks for `marketing.campaign`; the configured module may change from vendor A to vendor B without redesigning the service or moving the canonical data.
+User-facing services depend on capabilities, not vendor identity. A service requests `marketing.campaign`; the configured vendor can change without redesigning the EKODI service or moving canonical EKODI data.
 
 ## Failure rule
 
-External AI is an enhancement layer. A provider outage must not disable the EKODI core service. Product code must retain its deterministic or `free_assist` fallback according to EKODI AI resilience policy.
+External AI is an enhancement layer. Provider failure must not disable the EKODI core service. Product code retains deterministic or `free_assist` fallback according to the EKODI AI resilience policy.
 
 ## Vendor acceptance checklist
 
-A vendor module is accepted only when:
+A module is accepted only when:
 
-- it implements the v1 health and execute contract;
-- it uses HTTPS;
-- it does not require direct EKODI Drive/DB/R2 credentials;
-- it accepts tenant context but cannot change its own capabilities;
-- it echoes `contractVersion` and `requestId` correctly;
-- it returns structured error envelopes;
+- it implements the v1 health and execute contract over HTTPS;
+- it never requests direct EKODI Drive/DB/R2 credentials;
+- it accepts only capability-scoped EKODI context;
+- it echoes `contractVersion` and `requestId` exactly;
+- it returns structured errors;
 - it passes timeout and unavailable-provider tests;
-- any durable result is persisted by EKODI, not by the vendor;
-- it can be removed without data migration from the vendor into EKODI.
+- durable results are persisted by EKODI, never the vendor;
+- it can be removed or replaced without data migration from the vendor into EKODI.
