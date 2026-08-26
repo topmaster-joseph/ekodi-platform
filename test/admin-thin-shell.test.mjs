@@ -32,6 +32,13 @@ test('authenticated ADMIN UI declares the official stable Core surface and token
   assert.match(shell, /applyOfficialAdminSurface\(\);/);
 });
 
+test('shared shell keeps account identity readable above logout', async () => {
+  const shell = await read('admin-authenticated-shell.js');
+  assert.match(shell, /profile\.classList\.add\('side-profile'\)/);
+  assert.match(shell, /s\(profile,\{display:'flex','min-width':'0',width:'100%'\},'important'\)/);
+  assert.match(shell, /s\(profile\.firstElementChild,\{display:'flex','min-width':'0',width:'100%','flex-direction':'column'\},'important'\)/);
+});
+
 test('Campus, Health and Device Control are explicit versioned demand-loaded features', async () => {
   const loader = await read('admin-demand-loader.js');
   assert.match(loader, /__EKODI_ADMIN_ASSET_VERSION__/);
