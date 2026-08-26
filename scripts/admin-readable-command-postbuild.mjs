@@ -3,13 +3,21 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
-const [css, js] = await Promise.all([
+const [baseCss, css, js] = await Promise.all([
+  readFile(`${root}admin-readability-base.css`, 'utf8'),
   readFile(`${root}admin-readable-command.css`, 'utf8'),
   readFile(`${root}admin-readable-command.js`, 'utf8'),
 ]);
 
 new Function(js);
 
+const baseCssMarkers = [
+  'EKODI Admin readability base',
+  'body.compact-control-center{',
+  '.content [data-panel] th',
+  '#userAiMembershipPanel .uam-head h2',
+  ':focus-visible',
+];
 const cssMarkers = [
   'governance-command-bar{display:none!important}',
   '#aiOpsPanel .ai-ops-side',
@@ -27,6 +35,9 @@ const jsMarkers = [
   "headerTitle.textContent = '무엇을 할까요?'",
   "send.textContent = '실행'",
 ];
+for (const marker of baseCssMarkers) {
+  if (!baseCss.includes(marker)) throw new Error(`Admin readability base contract missing: ${marker}`);
+}
 for (const marker of cssMarkers) {
   if (!css.includes(marker)) throw new Error(`Admin flat CSS contract missing: ${marker}`);
 }
@@ -34,11 +45,12 @@ for (const marker of jsMarkers) {
   if (!js.includes(marker)) throw new Error(`Admin orchestration JS contract missing: ${marker}`);
 }
 
-// Keep the flat readable command styling inside AI Ops. It must not inflate the always-loaded
-// compact shell; the JS patch remains in the authenticated lazy feature bundle.
+// Keep a small, always-loaded readability contract in the authenticated Admin shell so every
+// Admin subservice inherits legible typography. AI Ops layout/orchestration remains lazy.
 await Promise.all([
+  appendFile(`${output}compact-control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
   appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
 ]);
 
-console.log('Applied EKODI flat readable Admin and Chief AI orchestration layer inside on-demand AI Ops assets.');
+console.log('Applied EKODI admin-wide readability base; kept AI Ops layout and Chief AI orchestration on demand.');
