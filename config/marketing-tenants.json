@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "domainPattern": "{tenant}.ai.ekodi.kr",
   "namespace": {
     "domain": "ai.ekodi.kr",
@@ -9,6 +9,30 @@
   "hub": {
     "domain": "marketing.ekodi.kr",
     "project": "marketing-ai"
+  },
+  "pilot": {
+    "mode": "single_internal_validation",
+    "activeWorkspaceType": "tenant",
+    "activeWorkspaceKey": "ekodibiz",
+    "baselineModuleKey": "ekodi-native-marketing-ai-v1",
+    "comparisonFramework": "ekodi-marketing-benchmark-v1",
+    "startedAt": "2026-08-26T00:00:00+09:00",
+    "plannedDays": 30,
+    "externalCustomerActivation": false,
+    "externalWorkspacesRole": "comparison_pool_only",
+    "primaryOutcome": "qualified_pipeline_progression",
+    "kpis": [
+      "inquiries",
+      "consultations",
+      "proposals",
+      "contracts",
+      "activations",
+      "renewals",
+      "attributed_value_krw",
+      "marketing_actions_completed",
+      "human_minutes_saved"
+    ],
+    "rule": "Do not count synthetic or unverified activity as pilot performance."
   },
   "policy": {
     "organizationWorkspace": {
@@ -54,6 +78,7 @@
       "privateSiteDomain": "jadam.ekodi.kr",
       "accessRealm": "jadam-client",
       "accessPolicy": "pre_registered_customer_only",
+      "pilotRole": "comparison_pool_only",
       "legacyDomains": [
         "jadam.ekodi.kr",
         "marketing.jadam.ekodi.kr"
@@ -68,6 +93,7 @@
       "domain": "pizzamaru.ai.ekodi.kr",
       "landingPath": "/",
       "domainEntitlement": "grandfathered",
+      "pilotRole": "comparison_pool_only",
       "legacyDomains": [
         "pizzamaru.ekodi.kr",
         "marketing.pizzamaru.ekodi.kr"
@@ -82,6 +108,7 @@
       "domain": "yogurt.ai.ekodi.kr",
       "landingPath": "/",
       "domainEntitlement": "grandfathered",
+      "pilotRole": "comparison_pool_only",
       "legacyDomains": [
         "yogurt.ekodi.kr",
         "marketing.yogurt.ekodi.kr"
@@ -98,6 +125,7 @@
       "domainEntitlement": "organization",
       "visibility": "private",
       "privateSiteDomain": "cgma.ekodi.kr",
+      "pilotRole": "comparison_pool_only",
       "legacyDomains": [
         "marketing.cheonggye.ekodi.kr"
       ],
@@ -115,6 +143,7 @@
       "entryUrl": "https://marketing.ekodi.kr/",
       "templateKey": "service_b2b",
       "role": "first_party_customer",
+      "pilotRole": "active_baseline",
       "dedicatedEkodiDomain": false
     }
   ]
