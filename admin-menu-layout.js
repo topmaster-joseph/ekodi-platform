@@ -9,7 +9,7 @@
   const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
   const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus', 'aiops', 'health', 'architecture', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
+    'campus', 'aiops', 'health', 'security', 'architecture', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
     'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
   ]);
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
