@@ -6,6 +6,7 @@
   const TOKEN_KEY = 'ekodi-auth-token';
   const EMAIL_KEY = 'ekodi-admin-email';
   const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
+  const CENTRAL_ADMIN_AUTH_URL = 'https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
   const app = document.querySelector('#app');
   const loginScreen = document.querySelector('#loginScreen');
   const apiState = document.querySelector('#apiState');
@@ -50,7 +51,7 @@
       const link=document.createElement('a');
       link.id='centralAdminLogin';
       link.className='primary-login';
-      link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+      link.href=CENTRAL_ADMIN_AUTH_URL;
       link.textContent='Google 통합인증으로 계속';
       const form=document.querySelector('#loginForm');
       if (form) form.hidden=true;
@@ -147,6 +148,7 @@
   mark('ekodi-admin-entry-start');
   acceptCentralHandoff();
   ensureCentralLoginFallback();
+  if (loginLink?.tagName === 'A') loginLink.href = CENTRAL_ADMIN_AUTH_URL;
   if (loginForm) loginForm.hidden = true;
   if (legacyLink) legacyLink.hidden = true;
   if (loginLink) loginLink.style.pointerEvents = 'auto';

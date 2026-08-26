@@ -49,6 +49,8 @@ test('legacy admin auth start remains a fixed-origin allow-listed fallback', asy
 test('central handoff keeps a direct auth link fallback and does not inject duplicates', async () => {
   const source = await read('admin-central-handoff.js');
   assert.match(source, /!document\.querySelector\('#centralAdminLogin'\)/);
-  assert.match(source, /link\.href='https:\/\/auth\.ekodi\.kr\/\?site=admin&return_to=https%3A%2F%2Fadmin\.ekodi\.kr%2F'/);
+  assert.match(source, /CENTRAL_ADMIN_AUTH_URL = 'https:\/\/auth\.ekodi\.kr\/\?site=admin&direct=1&return_to=https%3A%2F%2Fadmin\.ekodi\.kr%2F'/);
+  assert.match(source, /link\.href=CENTRAL_ADMIN_AUTH_URL/);
+  assert.match(source, /loginLink\.href = CENTRAL_ADMIN_AUTH_URL/);
   assert.match(source, /form\.hidden=true/);
 });
