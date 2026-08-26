@@ -19,6 +19,10 @@ test('only EKODIBIZ is the active Marketing AI validation subject', () => {
 test('pilot uses a stable module benchmark contract for later external modules', () => {
   assert.equal(cfg.pilot.baselineModuleKey, 'ekodi-native-marketing-ai-v1');
   assert.equal(cfg.pilot.comparisonFramework, 'ekodi-marketing-benchmark-v1');
+  assert.equal(cfg.pilot.futureComparison.challengerSource, 'external_developer_module');
+  assert.equal(cfg.pilot.futureComparison.preferredDesign, 'same_customer_crossover_or_matched_cohort');
+  assert.equal(cfg.pilot.futureComparison.requireSameKpis, true);
+  assert.equal(cfg.pilot.futureComparison.requireModuleVersion, true);
   for (const metric of ['inquiries','consultations','proposals','contracts','attributed_value_krw','marketing_actions_completed','human_minutes_saved']) {
     assert.ok(cfg.pilot.kpis.includes(metric));
   }
