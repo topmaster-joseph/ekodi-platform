@@ -46,3 +46,21 @@ test('Core AI status is explicitly provider-independent', () => {
   assert.equal(status.providerDisabled, true);
   assert.equal(status.mode, 'free_assist');
 });
+
+test('Core AI Gateway rejects incomplete execution contracts before provider invocation', async () => {
+  let invoked = false;
+  const gateway = buildCoreAiGateway({}, [{
+    id: 'provider-a',
+    invoke: async () => { invoked = true; return 'unexpected'; },
+  }]);
+
+  await assert.rejects(
+    gateway.run({ fallback: () => 'fallback' }),
+    /requires taskName/,
+  );
+  await assert.rejects(
+    gateway.run({ taskName: 'assist' }),
+    /requires a non-AI fallback/,
+  );
+  assert.equal(invoked, false);
+});
