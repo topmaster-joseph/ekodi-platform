@@ -22,6 +22,7 @@ on:
       - 'wrangler.shell.toml'
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
+      - 'test/user-ui-header.test.mjs'
       - '.github/workflows/deploy-ekodi-shell.yml'
       - 'release/ekodi-shell-*.marker'
   push:
@@ -80,7 +81,7 @@ jobs:
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
-          node --test test/ekodi-shell.test.mjs
+          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
           node scripts/validate-internal-ui-rollout.mjs
