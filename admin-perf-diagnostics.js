@@ -80,4 +80,4 @@
   window.addEventListener('ekodi-admin-ready', () => queueMicrotask(report), { once:true });
 })();
 
-// Release marker: shared admin sidebar production rollout, 2026-08-26.
+// Release marker: shared admin sidebar production rollout, final gate 2026-08-26.
