@@ -1,0 +1,88 @@
+name: Repair Marketing Access
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-marketing-access.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Add scoped Marketing AI bypass and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          test -n "$CF_API_TOKEN"
+          test -n "$CF_ACCOUNT_ID"
+
+          list_apps() { curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/access/apps"; }
+          existing_id=$(list_apps | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=(j.result||[]).find(x=>x.name==='Marketing AI public bypass');process.stdout.write(a?.id||'')})")
+          created_id=''
+          if [ -z "$existing_id" ]; then
+            cat > /tmp/marketing-access.json <<'JSON'
+          {
+            "name": "Marketing AI public bypass",
+            "type": "self_hosted",
+            "session_duration": "24h",
+            "destinations": [
+              { "type": "public", "uri": "marketing.ekodi.kr/*" }
+            ],
+            "policies": [
+              {
+                "name": "Marketing AI public",
+                "decision": "bypass",
+                "include": [ { "everyone": {} } ]
+              }
+            ]
+          }
+          JSON
+            code=$(curl -sS -o /tmp/create.json -w '%{http_code}' -X POST "${auth[@]}" \
+              --data @/tmp/marketing-access.json "$api/accounts/$CF_ACCOUNT_ID/access/apps")
+            if [ "$code" != '200' ] && [ "$code" != '201' ]; then
+              cat /tmp/create.json
+              echo "Scoped Access bypass creation failed HTTP $code"
+              exit 1
+            fi
+            created_id=$(node -e "const j=require('/tmp/create.json');process.stdout.write(j.result?.id||'')")
+            test -n "$created_id"
+            echo "Created scoped Marketing AI Access app."
+          else
+            echo "Scoped Marketing AI Access app already exists."
+          fi
+
+          rollback() {
+            if [ -n "$created_id" ]; then
+              echo 'Verification failed; removing newly-created scoped Access app.'
+              curl -sS -X DELETE "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/access/apps/$created_id" >/tmp/rollback.json || true
+            fi
+          }
+          trap rollback ERR
+
+          ok=0
+          for attempt in $(seq 1 18); do
+            meta=$(curl -L -sS -o /tmp/marketing.html -w '%{http_code}\t%{url_effective}' --connect-timeout 5 --max-time 15 'https://marketing.ekodi.kr/?access_repair=1' || true)
+            code="${meta%%$'\t'*}"
+            effective="${meta#*$'\t'}"
+            echo "attempt=$attempt http=$code effective=$effective"
+            if [ "$code" = '200' ] \
+              && [[ "$effective" == https://marketing.ekodi.kr/* ]] \
+              && grep -Fq 'data-public-landing-cleanup' /tmp/marketing.html; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          [ "$ok" -eq 1 ]
+          trap - ERR
+          echo 'Marketing AI is publicly reachable while account-wide Worker Access remains intact.'
