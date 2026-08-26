@@ -378,4 +378,4 @@ jobs:
           grep -Fq 'EKODI AI' /tmp/app.js
           grep -Fq '담당자 연결 대기' /tmp/app.js
           grep -Fq 'https://workspace-api.ekodi.kr' /tmp/app.js
-          grep -Fiq 'x-ekodi-shell: v1' /tmp/headers
+          grep -Fiq 'x-ekodi-shell: v2' /tmp/headers
