@@ -179,9 +179,20 @@ function deployVersions(specs, message) {
   command(['versions', 'deploy', ...specs, '-y', '--config', worker.config, '--message', message]);
 }
 
+function responseDiagnostic(response, body) {
+  const route = response?.headers?.get?.('x-ekodi-route') || 'none';
+  const mitigated = response?.headers?.get?.('cf-mitigated') || 'none';
+  const contentType = response?.headers?.get?.('content-type') || 'none';
+  const preview = String(body || '').slice(0, 160).replace(/\s+/g, ' ').trim();
+  return `route=${route} mitigated=${mitigated} content-type=${contentType} body=${JSON.stringify(preview)}`;
+}
+
 async function fetchCheck(request, overrideVersion = '') {
   const statuses = Array.isArray(request.statuses) && request.statuses.length ? request.statuses : [200];
-  const headers = { 'user-agent': 'EKODI-Worker-Release-Gate/1.0' };
+  const headers = {
+    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+    'accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+  };
   if (overrideVersion) {
     headers['Cloudflare-Workers-Version-Overrides'] = `${worker.name}="${overrideVersion}"`;
   }
@@ -194,17 +205,18 @@ async function fetchCheck(request, overrideVersion = '') {
         signal: AbortSignal.timeout(12000),
       });
       const body = await response.text();
-      last = `${response.status} ${response.statusText}`;
-      if (!statuses.includes(response.status)) throw new Error(`unexpected HTTP ${response.status}`);
+      const diagnostic = responseDiagnostic(response, body);
+      last = `${response.status} ${response.statusText}; ${diagnostic}`;
+      if (!statuses.includes(response.status)) throw new Error(`unexpected HTTP ${response.status}; ${diagnostic}`);
       for (const marker of request.expect || []) {
-        if (!body.includes(marker)) throw new Error(`missing body marker: ${marker}`);
+        if (!body.includes(marker)) throw new Error(`missing body marker: ${marker}; ${diagnostic}`);
       }
       for (const marker of request.forbid || []) {
-        if (body.includes(marker)) throw new Error(`forbidden body marker: ${marker}`);
+        if (body.includes(marker)) throw new Error(`forbidden body marker: ${marker}; ${diagnostic}`);
       }
       for (const marker of request.headerExpect || []) {
         const normalized = [...response.headers.entries()].map(([key, value]) => `${key}: ${value}`).join('\n').toLowerCase();
-        if (!normalized.includes(String(marker).toLowerCase())) throw new Error(`missing header marker: ${marker}`);
+        if (!normalized.includes(String(marker).toLowerCase())) throw new Error(`missing header marker: ${marker}; ${diagnostic}`);
       }
       console.log(`✅ ${overrideVersion ? 'candidate' : 'production'} verified: ${request.url}`);
       return;
