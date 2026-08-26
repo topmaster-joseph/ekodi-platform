@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+// Release marker: keep the canonical admin production gate attached to this structure contract.
 const mapJs = await readFile(new URL('../system-map-admin.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-system-map-postbuild.mjs', import.meta.url), 'utf8');
 const menuLayout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
