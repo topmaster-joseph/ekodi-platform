@@ -11,6 +11,7 @@ on:
       - 'wrangler.storage.toml'
       - 'deploy/manifests/storage.worker.json'
       - 'migrations/0038_google_drive_storage.sql'
+      - 'scripts/ensure-storage-access.mjs'
       - 'test/google-drive-storage.test.mjs'
       - 'test/r2-storage.test.mjs'
       - '.github/workflows/deploy-storage.yml'
@@ -25,6 +26,7 @@ on:
       - 'wrangler.storage.toml'
       - 'deploy/manifests/storage.worker.json'
       - 'migrations/0038_google_drive_storage.sql'
+      - 'scripts/ensure-storage-access.mjs'
       - 'test/google-drive-storage.test.mjs'
       - 'test/r2-storage.test.mjs'
       - '.github/workflows/deploy-storage.yml'
@@ -52,6 +54,7 @@ jobs:
           node --check r2-storage-control.js
           node --check storage-worker.js
           node --check storage-admin.js
+          node --check scripts/ensure-storage-access.mjs
           node --test test/google-drive-storage.test.mjs test/r2-storage.test.mjs
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'drive.ekodi.kr' wrangler.storage.toml
@@ -80,6 +83,8 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Ensure Cloudflare account-member Access
+        run: node scripts/ensure-storage-access.mjs
       - name: Apply additive D1 storage registry
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.storage.toml
       - name: Deploy Access-protected Storage Worker
