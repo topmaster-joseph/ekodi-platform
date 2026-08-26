@@ -37,36 +37,15 @@ for (const section of ['communication', 'workspace', 'organization']) {
   html = html.replace(`<section class="section" data-panel="${section}"`, `<section class="section hidden-panel" data-panel="${section}"`);
 }
 
-// Finance polling exists only while Finance is visible and the tab is active.
+// Finance must never retain perpetual polling. Older sources are upgraded once; newer sources pass through.
 const financePath = `${dist}finance-monitor.js`;
 let finance = await readFile(financePath, 'utf8');
 const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
-if (!financeTail.test(finance)) throw new Error('finance polling tail marker missing');
-finance = finance.replace(financeTail, `let financeRefreshTimer = 0;
-function cancelFinanceRefresh() {
-  if (financeRefreshTimer) clearTimeout(financeRefreshTimer);
-  financeRefreshTimer = 0;
+if (financeTail.test(finance)) {
+  finance = finance.replace(financeTail, `financeRefresh.addEventListener('click', () => loadFinance(true));\nfinanceSectionButton.addEventListener('click', () => {\n  document.querySelector('#pageTitle').textContent = '결제 · 회계';\n  loadFinance(false);\n});\nif ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {\n  queueMicrotask(() => loadFinance(false));\n}`);
+  await writeFile(financePath, finance);
 }
-function scheduleFinanceRefresh() {
-  cancelFinanceRefresh();
-  const visible = financeSectionButton?.classList.contains('active') && document.visibilityState !== 'hidden' && financeToken();
-  if (!visible) return;
-  financeRefreshTimer = window.setTimeout(async () => {
-    await loadFinance(false);
-    scheduleFinanceRefresh();
-  }, 120000);
-}
-financeRefresh.addEventListener('click', () => loadFinance(true));
-financeSectionButton.addEventListener('click', () => {
-  document.querySelector('#pageTitle').textContent = '결제 · 회계';
-  loadFinance(false).finally(scheduleFinanceRefresh);
-});
-document.addEventListener('visibilitychange', scheduleFinanceRefresh);
-window.addEventListener('hashchange', scheduleFinanceRefresh);
-if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
-  queueMicrotask(() => loadFinance(false).finally(scheduleFinanceRefresh));
-}`);
-await writeFile(financePath, finance);
+if (finance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 
 // Mobile browsers pay heavily for backdrop blur and off-screen panel painting.
 const cssPath = `${dist}control-center.css`;
