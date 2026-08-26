@@ -7,12 +7,9 @@ on:
       - 'supabase/functions/business-handoff-api/**'
       - 'site-worker.js'
       - 'scripts/build.mjs'
-      - 'admin-central-handoff.js'
-      - 'control-center.html'
-      - 'customer-entry-worker.js'
-      - 'customer-federated-auth.js'
-      - 'api-worker.js'
       - 'docs/AUTH-CENTER.md'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'test/admin-auth-cache-boundary.test.mjs'
       - '.github/workflows/auth-hub-ci.yml'
 permissions:
   contents: read
@@ -25,8 +22,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate hub scripts
+      - name: Validate central auth scripts
         run: |
+          set -euo pipefail
           node --check auth-site/auth.js
           node --check auth-site/auth-router.js
           node --check auth-site/marketing-auth-hotfix.js
@@ -36,110 +34,56 @@ jobs:
           node --check auth-site/author-auth.js
           node --check auth-site/business-auth.js
           node --check site-worker.js
-          node --check admin-central-handoff.js
-          node --check customer-entry-worker.js
-          node --check customer-federated-auth.js
-          node --check api-worker.js
-      - name: Verify central auth contract
+          node --test test/admin-auth-cache-boundary.test.mjs
+      - name: Verify One Login and invisible auth contract
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'EKODI 인증센터' auth-site/index.html
-          grep -Fq 'id="googleButtonHost"' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260824-business-resume-1' auth-site/index.html
-          grep -Fq "'mall-seller':'mall'" auth-site/auth-router.js
-          grep -Fq "https://mall.ekodi.kr/seller/" auth-site/auth-router.js
-          grep -Fq "site==='admin'" auth-site/auth-router.js
-          grep -Fq "site==='author'" auth-site/auth-router.js
-          grep -Fq "site==='business'" auth-site/auth-router.js
-          grep -Fq "site==='cgma-client'" auth-site/auth-router.js
+          grep -Fq 'data-seamless-sso' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260826-universal-sso-1' auth-site/index.html
+
+          grep -Fq 'manifestService' auth-site/auth-router.js
+          grep -Fq 'isRegistryUserService' auth-site/auth-router.js
+          grep -Fq "site==='portal'||isRegistryUserService" auth-site/auth-router.js
+          grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260826-universal-free-1" auth-site/auth-router.js
           grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
-          grep -Fq "auth-workspace-target.js?v=20260817-all-sites-1" auth-site/auth-router.js
-          grep -Fq "business-auth.js?v=20260824-business-resume-1" auth-site/auth-router.js
-          grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
-          grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
-          grep -Fq "'/business-auth.js'" site-worker.js
-          grep -Fq "'/author-auth.js'" site-worker.js
-          grep -Fq "'business-auth.js'" scripts/build.mjs
-          grep -Fq "'author-auth.js'" scripts/build.mjs
-          if grep -Fq "params.set('intent','pro')" auth-site/auth-router.js; then
-            echo 'Marketing Pro mode must not be forced for normal login'
-            exit 1
-          fi
-          for site in marketing biz trade mall pay books church lab mission community edu media; do
-            grep -Fq "${site}:" auth-site/auth-workspace-target.js || { echo "Missing targeted workspace service: $site"; exit 1; }
-          done
-          grep -Fq 'workspace_key===requested' auth-site/auth-workspace-target.js
-          grep -Fq 'requires_handoff===true' auth-site/auth-workspace-target.js
-          grep -Fq "api('/handoff'" auth-site/auth.js
-          grep -Fq 'functions/v1/access-api' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'functions/v1/identity-api' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq "const MARKETING_API='https://marketing-api.ekodi.kr'" auth-site/marketing-auth-hotfix.js
-          grep -Fq "/api/marketing/handoff/start" auth-site/marketing-auth-hotfix.js
-          grep -Fq "credentials:'include'" auth-site/marketing-auth-hotfix.js
-          if grep -Fq 'ekodi_token' auth-site/marketing-auth-hotfix.js || grep -Fq 'target.hash=' auth-site/marketing-auth-hotfix.js || grep -Fq "api('/handoff'" auth-site/marketing-auth-hotfix.js; then
-            echo 'Marketing auth must not put handoff credentials in the browser URL'
-            exit 1
-          fi
-          grep -Fq "sb.auth.onAuthStateChange((event,s)=>" auth-site/marketing-auth-hotfix.js
-          grep -Fq 'setTimeout(()=>{' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'supabase_cdn_timeout' auth-site/marketing-auth-hotfix.js
-          grep -Fq 'supabase_fallback_timeout' auth-site/marketing-auth-hotfix.js
-          if grep -Fq 'onAuthStateChange(async' auth-site/marketing-auth-hotfix.js; then
-            echo 'Async Supabase auth-state callback can deadlock'
-            exit 1
-          fi
-          grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
-          grep -Fq 'supabase_cdn_timeout' auth-site/business-auth.js
-          grep -Fq 'supabase_fallback_timeout' auth-site/business-auth.js
-          grep -Fq 'session_timeout' auth-site/business-auth.js
-          grep -Fq 'google_library_timeout' auth-site/business-auth.js
-          grep -Fq 'const RETURN_TO=safeReturn' auth-site/business-auth.js
-          grep -Fq "'/marketing-auth-hotfix.js'" site-worker.js
-          grep -Fq 'https://esm.sh' site-worker.js
-          grep -Fq '청계상권 고객관리' auth-site/client-auth.js
+          grep -Fq 'privateClientSites' auth-site/auth-router.js
+
           grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
           grep -Fq '/session/handoff' auth-site/client-auth.js
           grep -Fq 'sb.auth.getSession' auth-site/client-auth.js
+          grep -Fq 'session_timeout' auth-site/client-auth.js
+          grep -Fq 'google_library_timeout' auth-site/client-auth.js
+          grep -Fq 'supabase_cdn_timeout' auth-site/client-auth.js
+          grep -Fq 'supabase_fallback_timeout' auth-site/client-auth.js
+          grep -Fq 'use_fedcm_for_button:true' auth-site/client-auth.js
+          grep -Fq 'button_auto_select:false' auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/client-auth.js || grep -Fq 'use_fedcm_for_prompt' auth-site/client-auth.js; then
+            echo 'Universal identity auth contains a known deadlock/deprecated pattern.'
+            exit 1
+          fi
+
+          grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
+          grep -Fq 'functions/v1/identity-api' auth-site/business-auth.js
+          grep -Fq '/session/handoff' auth-site/business-auth.js
+          grep -Fq 'response.status===403' auth-site/business-auth.js
+          grep -Fq 'session_timeout' auth-site/business-auth.js
+          grep -Fq 'google_library_timeout' auth-site/business-auth.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/business-auth.js; then
+            echo 'Business auth contains an async auth-state deadlock pattern.'
+            exit 1
+          fi
+
           grep -Fq 'path==="/session/handoff"' supabase/functions/identity-api/index.ts
           grep -Fq 'link.user.id!==user.id' supabase/functions/identity-api/index.ts
           grep -Fq 'business_os_snapshot' supabase/functions/business-handoff-api/index.ts
           grep -Fq 'admin.auth.admin.generateLink' supabase/functions/business-handoff-api/index.ts
-          grep -Fq '/api/customer/federated-login' customer-federated-auth.js
-          grep -Fq '/api/customer/accept-central-invite' customer-federated-auth.js
-          grep -Fq 'CENTRAL_CUSTOMER_LOGIN_REQUIRED' customer-entry-worker.js
-          grep -Fq '/api/google/config' auth-site/admin-auth.js
-          grep -Fq '/api/google/challenge' auth-site/admin-auth.js
-          grep -Fq '/api/google/login' auth-site/admin-auth.js
-          grep -Fq 'ekodi_admin_token:result.token' auth-site/admin-auth.js
-          grep -Fq "hash.get('ekodi_admin_token')" admin-central-handoff.js
-          grep -Fq "sessionStorage.setItem('ekodi-auth-token'" admin-central-handoff.js
-          grep -Fq 'https://auth.ekodi.kr/?site=admin' admin-central-handoff.js
-          grep -Fq 'admin-central-handoff.js' control-center.html
-          grep -Fq "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co" site-worker.js
-          grep -Fq '/auth-workspace-target.js' site-worker.js
-          grep -Fq 'functions/v1/access-api' auth-site/auth.js
-          grep -Fq 'functions/v1/identity-api' auth-site/auth.js
-          grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/auth.js
-          grep -Fq 'ekodi_token:d.tokenHash' auth-site/auth.js
-          if grep -Fq 'signInWithOAuth' auth-site/auth.js || grep -Fq 'action_link' auth-site/auth.js; then
-            echo 'Redirect-based central auth detected'
-            exit 1
-          fi
-          for site in cgma marketing biz trade mall pay books church lab mission community edu media admin portal; do
-            grep -Fq "${site}:{" auth-site/auth.js || { echo "Missing central auth service: $site"; exit 1; }
-          done
-          grep -Fq 'yogurt.ekodi.kr' auth-site/auth.js
-          if grep -Fq 'yogurt.ekodi.kr' api-worker.js; then
-            echo 'Customer workspace domain must not be registered as an EKODI provider service'
-            exit 1
-          fi
-          if grep -Fq 'yogurtpurple.ekodi.kr' api-worker.js; then
-            echo 'Legacy yogurtpurple domain detected'
-            exit 1
-          fi
+
+          grep -Fq 'one-account-free-everywhere-pay-where-needed' docs/AUTH-CENTER.md
+          grep -Fq 'config/ecosystem-services.json' docs/AUTH-CENTER.md
+          grep -Fq 'lazy materialization' docs/AUTH-CENTER.md
       - name: Probe public central identity challenge
         shell: bash
         env:

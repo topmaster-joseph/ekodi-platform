@@ -11,19 +11,26 @@ test('critical admin and specialist auth assets cannot remain stale in the brows
     assert.match(worker, new RegExp(`AUTH_CRITICAL_ASSETS[\\s\\S]*?${asset.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`));
   }
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
-  assert.match(authIndex, /auth-router\.js\?v=20260824-business-resume-1/);
+  assert.match(authIndex, /auth-router\.js\?v=20260826-universal-sso-1/);
 });
 
 test('guarded production release verifies current auth entry and mobile-safe admin auth assets', () => {
   const requests = manifest.worker.requests;
   const root = requests.find(item => item.url === 'https://auth.ekodi.kr/');
   const router = requests.find(item => item.url === 'https://auth.ekodi.kr/auth-router.js');
+  const client = requests.find(item => item.url === 'https://auth.ekodi.kr/client-auth.js');
   const admin = requests.find(item => item.url === 'https://auth.ekodi.kr/admin-auth.js');
   assert.ok(root);
   assert.ok(router);
+  assert.ok(client);
   assert.ok(admin);
-  assert.ok(root.expect.includes('/auth-router.js?v=20260824-business-resume-1'));
+  assert.ok(root.expect.includes('/auth-router.js?v=20260826-universal-sso-1'));
   assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
+  assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
+  assert.ok(router.expect.includes('client-auth.js?v=20260826-universal-free-1'));
+  assert.ok(router.expect.includes('isRegistryUserService'));
+  assert.ok(client.expect.includes('/session/handoff'));
+  assert.ok(client.expect.includes('session_timeout'));
   assert.ok(admin.expect.includes('use_fedcm_for_button:supportsFedCmButton()'));
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
   assert.ok(admin.expect.includes('Chrome에서 관리자 로그인 열기'));

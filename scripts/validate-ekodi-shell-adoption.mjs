@@ -68,6 +68,16 @@ if(/<script\b/i.test(rootIndex))fail('ekodi.kr root must preserve its zero-JavaS
 if(!adminStyle.includes('.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}'))fail('admin mobile content must be offset below the fixed topbar');
 if(!adminStyle.includes('.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important'))fail('admin mobile topbar must remain fixed across control-center pages');
 
+// Central auth now follows the canonical user-service registry. New user services inherit
+// One Login automatically instead of requiring a new auth-router branch for authMode=client.
+if(!authRouter.includes('manifestService'))fail('Auth Router lost manifest-backed service discovery');
+if(!authRouter.includes('isRegistryUserService'))fail('Auth Router lost registry-driven universal identity routing');
+if(!authRouter.includes("site==='portal'||isRegistryUserService"))fail('Auth Router no longer sends registry user services through universal identity handoff');
+if(!clientAuth.includes('async function manifestRealm'))fail('Client Auth lost manifest-backed realm discovery');
+if(!clientAuth.includes('service?.url'))fail('Client Auth lost manifest service URL validation');
+if(!clientAuth.includes("serviceUrl.protocol!=='https:'"))fail('Client Auth must reject non-HTTPS manifest service URLs');
+if(!clientAuth.includes('/session/handoff'))fail('Client Auth lost central session handoff');
+
 const byId=new Map();
 const byHost=new Map();
 const ecosystemById=new Map((ecosystem.services||[]).map(service=>[service.id,service]));
@@ -101,8 +111,8 @@ for(const service of manifest.services||[]){
     if(!ecosystemById.has(service.id))fail(`${service.id} must be registered in the ecosystem registry on creation`);
     if(!planned&&service.sso!==true)fail(`${service.id} must use EKODI SSO before activation`);
     if(!planned&&service.authMode==='client'){
-      if(!authRouter.includes("manifestRealm?.authMode==='client'"))fail('Auth Router lost manifest-backed client realm support');
-      if(!clientAuth.includes("service.authMode!=='client'"))fail('Client Auth lost manifest-backed client realm validation');
+      if(!authRouter.includes('isRegistryUserService'))fail('Auth Router lost registry-driven client realm support');
+      if(!clientAuth.includes('manifestRealm'))fail('Client Auth lost manifest-backed client realm support');
     }
     if(!planned&&service.shellIntegration==='shared-proxy'){
       if(!siteConfig.includes(`pattern = "${url.hostname}"`))fail(`${service.id} shared platform host is missing from wrangler.site.toml`);
@@ -125,4 +135,4 @@ for(const service of ecosystem.services||[]){
 for(const service of manifest.services||[])if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`);
 for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Public service selector','Public experience rotation','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; shared runtime fixes mobile headers, root stays zero-JS, and internal surfaces remain stable.`);
+console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; shared runtime fixes mobile headers, root stays zero-JS, internal surfaces remain stable, and registry services inherit One Login.`);

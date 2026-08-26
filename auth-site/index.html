@@ -4,11 +4,36 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <meta name="description" content="EKODI 서비스 공통 Google 계정 통합 인증센터" />
-  <title>EKODI 인증센터</title>
+  <meta name="description" content="EKODI 서비스 공통 Google 계정 통합 인증" />
+  <title>EKODI 로그인</title>
+  <script>
+    (()=>{
+      const p=new URLSearchParams(location.search);
+      const interactive=p.get('manage')==='1'||p.get('review')==='1';
+      document.documentElement.dataset.identityManage=p.get('manage')==='1'?'1':'0';
+      document.documentElement.dataset.seamlessSso=interactive?'0':'1';
+    })();
+  </script>
   <link rel="stylesheet" href="/auth.css?v=20260815-membership-1" />
   <link rel="stylesheet" href="/auth-workspaces.css?v=20260817-workspace-label-1" />
-  <style>html:not([data-identity-manage="1"]) #identityPanel{display:none!important}</style>
+  <style>
+    html:not([data-identity-manage="1"]) #identityPanel{display:none!important}
+    html[data-seamless-sso="1"] body{min-height:100vh;background:#f7f8f4}
+    html[data-seamless-sso="1"] .topbar,
+    html[data-seamless-sso="1"] .intro,
+    html[data-seamless-sso="1"] .principles,
+    html[data-seamless-sso="1"] footer,
+    html[data-seamless-sso="1"] #reviewConsole{display:none!important}
+    html[data-seamless-sso="1"] .shell{min-height:100vh;display:grid;place-items:center;padding:24px!important;max-width:none!important}
+    html[data-seamless-sso="1"] .auth-card{width:min(100%,420px);margin:0!important;box-shadow:0 16px 48px rgba(30,45,35,.08)}
+    html[data-seamless-sso="1"] .auth-card .service-line{justify-content:center;text-align:center}
+    html[data-seamless-sso="1"] .auth-card .service-line small{display:none}
+    html[data-seamless-sso="1"] .auth-card .micro{display:none!important}
+    html[data-seamless-sso="1"] .auth-card .identity{display:none!important}
+    html[data-seamless-sso="1"] #googleButtonHost{display:flex;justify-content:center}
+    html[data-seamless-sso="1"] #authStatus,
+    html[data-seamless-sso="1"] #accessStatus{text-align:center}
+  </style>
 </head>
 <body>
   <header class="topbar"><a href="https://ekodi.kr" class="brand">EKODI</a><span>통합 인증센터</span></header>
@@ -24,15 +49,15 @@
 
       <div id="signedOut">
         <div id="googleButtonHost" class="google-button-host" aria-label="Google 계정 인증"></div>
-        <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>Google 인증 다시 시도</span></button>
+        <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>다시 시도</span></button>
         <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
         <p class="micro" id="signedOutCopy">EKODI에서 처음 본인을 확인할 때만 Google 로그인이 필요합니다. 이후에는 통합 로그인 상태를 재사용합니다.</p>
-        <div id="authStatus" class="notice">EKODI 통합 로그인 상태를 확인하고 있습니다.</div>
+        <div id="authStatus" class="notice">로그인 상태를 확인하고 있습니다.</div>
       </div>
 
       <div id="signedIn" class="hide">
         <div class="identity"><div><small>현재 로그인</small><strong id="accountEmail">계정 확인 중</strong></div><div class="identity-actions"><button id="logout" class="quiet" type="button">다른 계정</button><button id="cancelSignedIn" class="quiet" type="button">취소</button></div></div>
-        <div id="accessStatus" class="notice">서비스 접근권한을 확인하고 있습니다.</div>
+        <div id="accessStatus" class="notice">서비스 연결을 확인하고 있습니다.</div>
 
         <section id="workspacePanel" class="subpanel hide" aria-label="내 공간 선택">
           <div class="subpanel-head"><div><small>MY SPACES</small><strong>내 공간</strong></div><span id="workspaceCount"></span></div>
@@ -87,6 +112,6 @@
     </section>
   </main>
   <footer>EKODI Platform · 로그인은 한 번, 실제 이용은 Workspace와 권한을 기준으로 합니다.</footer>
-  <script type="module" src="/auth-router.js?v=20260824-business-resume-1"></script>
+  <script type="module" src="/auth-router.js?v=20260826-universal-sso-1"></script>
 </body>
 </html>
