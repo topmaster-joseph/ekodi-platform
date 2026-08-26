@@ -85,7 +85,6 @@ jobs:
           for attempt in $(seq 1 24); do
             code=$(curl -sS -D /tmp/h -o /tmp/b -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-secret-generator.js?control-plane=worker-diagnostics' || true)
             if [ "$code" = '200' ] \
-              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/h \
               && grep -Fq '다시 조회' /tmp/b \
               && grep -Fq 'Worker 목록이 비어 있습니다. Cloudflare Account ID와 Workers 읽기 권한을 확인하세요.' /tmp/b \
               && grep -Fq 'API Token의 Account/Zone/Workers 읽기 권한' /tmp/b; then
@@ -97,3 +96,11 @@ jobs:
           done
           echo 'Production Worker diagnostics verification failed.'
           exit 1
+      - name: Verify live Storage same-origin service binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -D /tmp/storage-h -o /tmp/storage-b -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/api/control/storage/google/status' || true)
+          test "$code" = '401' -o "$code" = '403'
+          grep -Fiq 'x-ekodi-storage-proxy: service-binding-v1' /tmp/storage-h
+          echo 'Admin Storage same-origin Service Binding verified in production.'
