@@ -46,11 +46,9 @@ test('Tax host uses same-origin API and explicit central-auth return target', as
   assert.match(router, /const TAX_HOST='tax\.ekodi\.kr'/);
   assert.match(router, /url\.pathname\.startsWith\('\/api\/finance\/tax-'\)/);
   assert.match(router, /financeEntryWorker\.fetch\(request,env,ctx\)/);
-
   const auth = await read('auth-site/admin-auth.js');
   assert.match(auth, /u\.origin==='https:\/\/tax\.ekodi\.kr'/);
   assert.match(auth, /u\.pathname==='\/'\|\|u\.pathname==='\/index\.html'/);
-
   const wrangler = await read('wrangler.site.toml');
   assert.match(wrangler, /pattern = "tax\.ekodi\.kr"\s+custom_domain = true/);
 });
@@ -68,7 +66,6 @@ test('Creator Billing belongs to Books and is not loaded by Finance', async () =
   assert.match(author, /#booksAdminSection/);
   assert.match(author, /\[data-books-pane="finance"\]/);
   assert.doesNotMatch(author, /#financeTitle/);
-
   const loader = await read('admin-demand-loader.js');
   const financeStart = loader.indexOf('function bindBaseEnhancements()');
   const booksStart = loader.indexOf('function bindBooksEnhancements()');
@@ -81,15 +78,24 @@ test('Creator Billing belongs to Books and is not loaded by Finance', async () =
   assert.match(booksBinding, /author-billing-admin\.js/);
 });
 
-test('shared deployment manifest verifies Tax and auth handoff', async () => {
+test('Admin registry exposes Tax as an external professional service', async () => {
+  const registry = await read('admin-menu-registry.js');
+  const runtime = await read('admin-menu-runtime.js');
+  assert.match(registry, /id: 'tax'/);
+  assert.match(registry, /https:\/\/tax\.ekodi\.kr\//);
+  assert.match(registry, /세금 · 증빙/);
+  assert.match(runtime, /ensureExternalMenuItems/);
+});
+
+test('shared deployment manifest verifies Tax portal', async () => {
   const manifest = await read('deploy/manifests/shared-site.worker.json');
   assert.match(manifest, /https:\/\/tax\.ekodi\.kr\//);
   assert.match(manifest, /EKODI Tax/);
-  assert.match(manifest, /u\.origin==='https:\/\/tax\.ekodi\.kr'/);
+  assert.match(await read('auth-site/admin-auth.js'), /u\.origin==='https:\/\/tax\.ekodi\.kr'/);
 });
 
 test('changed JavaScript sources pass syntax checks', async () => {
-  for (const file of ['tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','auth-site/admin-auth.js']) {
+  for (const file of ['tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','admin-menu-registry.js','admin-menu-runtime.js','auth-site/admin-auth.js']) {
     execFileSync(process.execPath, ['--check', file], { cwd:new URL('..', import.meta.url), stdio:'pipe' });
   }
 });
