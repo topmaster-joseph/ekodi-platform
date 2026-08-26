@@ -328,20 +328,6 @@
     }, true);
   }
 
-  function bindBooksEnhancements() {
-    if (!nav || nav.dataset.creatorBillingDemandBound === 'true') return;
-    nav.dataset.creatorBillingDemandBound = 'true';
-    nav.addEventListener('click', event => {
-      const books = event.target.closest('[data-section="books"], [data-lazy-section="books"]');
-      if (!books || nav.dataset.creatorBillingAssetsRequested === 'true') return;
-      nav.dataset.creatorBillingAssetsRequested = 'true';
-      loadStyle('author-billing-admin.css').then(() => loadScript('author-billing-admin.js')).catch(error => {
-        nav.dataset.creatorBillingAssetsRequested = 'false';
-        console.warn('[EKODI Admin] Creator Billing lazy load failed', error);
-      });
-    }, true);
-  }
-
   function requestedFeature() {
     const hash = location.hash.toLowerCase();
     const path = location.pathname.toLowerCase();
@@ -352,7 +338,7 @@
     if (!authenticated() || !nav) return;
     Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
     bindBaseEnhancements();
-    bindBooksEnhancements();
+    if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);}
     window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
     if (requested) {
