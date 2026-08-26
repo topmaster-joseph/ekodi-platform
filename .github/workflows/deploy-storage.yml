@@ -51,6 +51,8 @@ jobs:
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'drive.ekodi.kr' wrangler.storage.toml
           grep -Fq 'STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"' wrangler.storage.toml
+          grep -Fq 'binding = "R2_BUCKET"' wrangler.storage.toml
+          grep -Fq 'bucket_name = "ekodi-storage"' wrangler.storage.toml
           ! grep -Eq 'GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+' wrangler.storage.toml
           ! grep -Eq 'STORAGE_CREDENTIAL_KEY\s*=\s*".+' wrangler.storage.toml
 
