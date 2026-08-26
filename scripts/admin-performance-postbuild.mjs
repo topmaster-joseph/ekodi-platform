@@ -75,6 +75,13 @@ const perfCss = `\n/* admin performance guards */\n.section,.architecture{conten
 if (!css.includes('admin performance guards')) css += perfCss;
 await writeFile(cssPath, css);
 
+// Mobile Admin is its own flow: the compact header belongs to the document and scrolls away.
+const compactCssPath = `${dist}compact-control-center.css`;
+let compactCss = await readFile(compactCssPath, 'utf8');
+const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.compact-control-center .app>main{padding-top:0!important}body.compact-control-center .topbar{position:static!important;inset:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important}body.compact-control-center .topbar .kicker{display:none!important}body.compact-control-center .topbar h1{font-size:16px!important;margin:0!important}body.compact-control-center .content{padding:12px 12px 32px!important}}\n`;
+if (!compactCss.includes('admin mobile flow')) compactCss += mobileCss;
+await writeFile(compactCssPath, compactCss);
+
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
 const versionInputs = [
