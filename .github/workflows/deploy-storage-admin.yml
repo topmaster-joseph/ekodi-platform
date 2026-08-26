@@ -6,7 +6,11 @@ on:
       - 'storage-admin.js'
       - 'storage-admin.css'
       - 'admin-demand-loader.js'
+      - 'site-worker.js'
+      - 'wrangler.site.toml'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'scripts/admin-system-map-postbuild.mjs'
+      - 'test/google-drive-storage.test.mjs'
       - '.github/workflows/deploy-storage-admin.yml'
   push:
     branches: [main]
@@ -28,18 +32,24 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify Storage remains demand-loaded
+      - name: Verify Storage remains demand-loaded and same-origin
         run: |
           set -euo pipefail
           node --check storage-admin.js
+          node --check site-worker.js
           node --check admin-demand-loader.js
+          node --test test/google-drive-storage.test.mjs
           npm run build
           test -f dist/storage-admin.js
           test -f dist/storage-admin.css
+          grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js
+          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' dist/storage-admin.js
           grep -Fq 'storage:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['storage-admin.js']" dist/admin-demand-loader.js
           grep -Fq "hashes: ['#storage']" dist/admin-demand-loader.js
           ! grep -Fq '<script src="storage-admin.js"' dist/control-center.html
+          grep -Fq 'binding = "STORAGE"' wrangler.site.toml
+          grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
           demand_bytes=$(wc -c < dist/admin-demand-loader.js)
           echo "Storage demand-loader budget: ${demand_bytes}B"
           test "$demand_bytes" -le 14000
@@ -62,10 +72,15 @@ jobs:
           set -euo pipefail
           npm run build
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify Storage assets in production
+      - name: Verify Storage assets and same-origin proxy in production
         run: |
           set -euo pipefail
           curl -fsS --retry 6 --retry-delay 3 https://admin.ekodi.kr/storage-admin.js -o /tmp/storage.js
           curl -fsS --retry 6 --retry-delay 3 https://admin.ekodi.kr/storage-admin.css -o /tmp/storage.css
-          grep -Fq 'drive.ekodi.kr/api/control/storage/google' /tmp/storage.js
+          grep -Fq "const API='/api/control/storage/google'" /tmp/storage.js
+          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' /tmp/storage.js
           grep -Fq '.storage-admin' /tmp/storage.css
+          curl -sS -D /tmp/storage.headers -o /tmp/storage.body https://admin.ekodi.kr/api/control/storage/google/status || true
+          grep -Fiq 'x-ekodi-storage-proxy: service-binding-v1' /tmp/storage.headers
+          status=$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code}' /tmp/storage.headers)
+          test "$status" = "401" -o "$status" = "403"
