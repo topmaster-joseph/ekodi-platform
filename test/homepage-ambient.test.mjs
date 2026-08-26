@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const css = await readFile(new URL('../homepage-ambient.css', import.meta.url), 'utf8');
 const js = await readFile(new URL('../homepage-ambient.js', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+const deploySiteCore = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
 test('homepage uses a translucent ambient background with one stable Seoul-date scene per day', () => {
   assert.match(css, /body::before/);
@@ -18,6 +19,9 @@ test('homepage uses a translucent ambient background with one stable Seoul-date 
   assert.match(js, /--ambient-a/);
   assert.doesNotMatch(js, /crypto\.getRandomValues\(/);
   assert.doesNotMatch(js, /Math\.random\(/);
+  assert.match(deploySiteCore, /grep -Fq 'function seoulDateKey'/);
+  assert.match(deploySiteCore, /grep -Fq 'function dailySeed'/);
+  assert.match(deploySiteCore, /! grep -Fq 'getRandomValues'/);
 });
 
 test('ambient layer stays visible above the opaque body background and below content', () => {
