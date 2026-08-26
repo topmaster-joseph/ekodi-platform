@@ -13,6 +13,8 @@ on:
       - 'customer-federated-auth.js'
       - 'api-worker.js'
       - 'docs/AUTH-CENTER.md'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'test/admin-auth-cache-boundary.test.mjs'
       - '.github/workflows/auth-hub-ci.yml'
 permissions:
   contents: read
@@ -40,6 +42,7 @@ jobs:
           node --check customer-entry-worker.js
           node --check customer-federated-auth.js
           node --check api-worker.js
+          node --test test/admin-auth-cache-boundary.test.mjs
       - name: Verify central auth contract
         shell: bash
         run: |
@@ -55,16 +58,15 @@ jobs:
           grep -Fq "site==='business'" auth-site/auth-router.js
           grep -Fq 'privateClientSites' auth-site/auth-router.js
           grep -Fq "'cgma-client'" auth-site/auth-router.js
-          grep -Fq 'universalIdentitySites' auth-site/auth-router.js
-          grep -Fq "'church'" auth-site/auth-router.js
-          grep -Fq "'work'" auth-site/auth-router.js
-          grep -Fq "'books'" auth-site/auth-router.js
+          grep -Fq 'manifestService' auth-site/auth-router.js
+          grep -Fq 'isRegistryUserService' auth-site/auth-router.js
+          grep -Fq "site==='portal'||isRegistryUserService" auth-site/auth-router.js
           grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
           grep -Fq "auth-workspace-target.js?v=20260817-all-sites-1" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "client-auth.js?v=20260826-universal-free-1" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
-          grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
+          grep -Fq "return await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
           grep -Fq "'/business-auth.js'" site-worker.js
           grep -Fq "'/author-auth.js'" site-worker.js
           grep -Fq "'business-auth.js'" scripts/build.mjs
@@ -113,6 +115,7 @@ jobs:
           grep -Fq "'/marketing-auth-hotfix.js'" site-worker.js
           grep -Fq 'https://esm.sh' site-worker.js
           grep -Fq '청계상권 고객관리' auth-site/client-auth.js
+          grep -Fq 'EKODI Pay' auth-site/client-auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
           grep -Fq '/session/handoff' auth-site/client-auth.js
           grep -Fq 'sb.auth.getSession' auth-site/client-auth.js
@@ -120,9 +123,15 @@ jobs:
           grep -Fq 'google_library_timeout' auth-site/client-auth.js
           grep -Fq 'supabase_cdn_timeout' auth-site/client-auth.js
           grep -Fq 'supabase_fallback_timeout' auth-site/client-auth.js
+          grep -Fq 'use_fedcm_for_button:true' auth-site/client-auth.js
+          grep -Fq 'button_auto_select:false' auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
           if grep -Fq 'onAuthStateChange(async' auth-site/client-auth.js; then
             echo 'Universal client auth must not use async auth-state callback'
+            exit 1
+          fi
+          if grep -Fq 'use_fedcm_for_prompt' auth-site/client-auth.js; then
+            echo 'Deprecated Google FedCM prompt flag detected in universal client auth'
             exit 1
           fi
           grep -Fq 'path==="/session/handoff"' supabase/functions/identity-api/index.ts
