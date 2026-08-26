@@ -238,3 +238,23 @@ export const EXTERNAL_AI_MODULE_GATEWAY_CONTRACT = Object.freeze({
   providerDirectDatabaseAccess: false,
   durableOutputStore: 'google_workspace_shared_drive',
 });
+
+export async function executeRegisteredExternalAiModule({ env = {}, moduleId, capability, context = {}, input = null, caller = 'marketing-ai-runtime' } = {}) {
+  const modules = registry(env);
+  const module = modules.find(item => item.id === String(moduleId || '').trim().toLowerCase());
+  if (!module) throw new Error('AI_MODULE_NOT_REGISTERED');
+  const body = {
+    moduleId: module.id,
+    capability: String(capability || '').trim(),
+    context: {
+      spaceId: String(context.spaceId || ''),
+      serviceId: String(context.serviceId || 'marketing-ai'),
+      actorId: String(context.actorId || ''),
+      role: String(context.role || 'member'),
+      capabilities: Array.isArray(context.capabilities) ? context.capabilities : [String(capability || '').trim()],
+    },
+    input,
+  };
+  validateExecution(body);
+  return invokeModule(module, body, env, caller);
+}
