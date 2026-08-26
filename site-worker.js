@@ -16,6 +16,7 @@ const ADMIN_HOSTS = new Set([
   'admin.lab.ekodi.kr',
   'admin.trade.ekodi.kr',
 ]);
+const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
 const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
@@ -106,6 +107,8 @@ const ADMIN_ASSETS = new Set([
   '/author-billing-admin.js',
   '/system-health-admin.css',
   '/system-health-admin.js',
+  '/storage-admin.css',
+  '/storage-admin.js',
 ]);
 
 const PUBLIC_CSP = [
@@ -248,6 +251,19 @@ function rewriteAdminApexLogin(response) {
     .transform(response);
 }
 
+async function proxyAdminStorage(request, env) {
+  if (!env.STORAGE?.fetch) {
+    return withHostSecurity(new Response(JSON.stringify({error:'Storage service binding unavailable',code:'STORAGE_BINDING_UNAVAILABLE'}), {
+      status:503,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+    }), ADMIN_CSP, 'no-store', 'admin-storage-proxy');
+  }
+  const upstream = await env.STORAGE.fetch(request);
+  const response = new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Storage-Proxy', 'service-binding-v1');
+  return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-storage-proxy');
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -283,6 +299,7 @@ export default {
     }
 
     if (ADMIN_HOSTS.has(host)) {
+      if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
           const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
