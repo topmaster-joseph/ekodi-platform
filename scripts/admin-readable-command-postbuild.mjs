@@ -45,12 +45,12 @@ for (const marker of jsMarkers) {
   if (!js.includes(marker)) throw new Error(`Admin orchestration JS contract missing: ${marker}`);
 }
 
-// Keep a small, always-loaded readability contract in the authenticated Admin shell so every
-// Admin subservice inherits legible typography. AI Ops layout/orchestration remains lazy.
+// The readability base belongs to the authenticated Admin shell and its subservices only.
+// Keep compact runtime CSS inside its hard budget; AI Ops layout/orchestration stays lazy.
 await Promise.all([
-  appendFile(`${output}compact-control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
+  appendFile(`${output}control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
   appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
 ]);
 
-console.log('Applied EKODI admin-wide readability base; kept AI Ops layout and Chief AI orchestration on demand.');
+console.log('Applied EKODI admin-only readability base to the Admin shell and all Admin subservices; kept AI Ops layout and Chief AI orchestration on demand.');
