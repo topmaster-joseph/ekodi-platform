@@ -29,7 +29,7 @@ test('postbuild keeps system map in lazy admin bundle and publishes canonical re
 test('system structure overview is a visible routed admin menu', () => {
   assert.match(menuRegistry, /id: 'architecture'[\s\S]*?ko: '시스템 구조 개요'/);
   assert.doesNotMatch(menuRegistry, /id: 'architecture'[^\n]*internal: true/);
-  assert.match(menuLayout, /'health', 'architecture', 'security'/);
+  assert.match(menuLayout, /'health', 'security', 'architecture'/);
   assert.match(menuLayout, /\['#architecture', 'architecture'\]/);
   assert.match(menuLayout, /section === 'architecture'[\s\S]*?system-health-admin\.js/);
 });
