@@ -86,6 +86,10 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
   assert.match(perf, /Finance monitor still contains perpetual polling/);
   assert.match(perf, /content-visibility:auto/);
   assert.match(perf, /backdrop-filter:none!important/);
+  assert.match(perf, /admin mobile flow/);
+  assert.match(perf, /position:static!important/);
+  assert.match(perf, /\.app>main\{padding-top:0!important\}/);
+  assert.match(perf, /\.topbar \.kicker\{display:none!important\}/);
 });
 
 test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
