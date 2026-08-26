@@ -8,10 +8,11 @@ const campus = await readFile(new URL('../campus-actions.js', import.meta.url), 
 const homepage = await readFile(new URL('../homepage-admin.js', import.meta.url), 'utf8');
 
 test('Campus and Sites are one canonical Site Management entry', () => {
-  assert.match(registry, /ko: '사이트 관리'/);
-  assert.match(registry, /en: 'Site Management'/);
-  assert.doesNotMatch(layout, /'marketing-ai', 'sites', 'work'/);
-  assert.match(layout, /Do not create a second top-level Sites item/);
+  assert.match(registry, /id: 'campus'[\s\S]*ko: '사이트 관리'[\s\S]*en: 'Site Management'/);
+  assert.doesNotMatch(registry, /id: 'sites'/);
+  assert.match(layout, /\['#sites', 'sites'\]/);
+  assert.match(layout, /if \(section === 'sites'\) return openSites\(\)/);
+  assert.match(layout, /navItemFor\('campus'\)\?\.classList\.add\('active'\)/);
 });
 
 test('Site Management renders one shared list for operations and homepage presentation', () => {
