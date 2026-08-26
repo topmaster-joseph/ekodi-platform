@@ -12,6 +12,9 @@ const files={
   userServices:'my/user-services.js',
   workspaceSync:'my/workspace-selector-sync.js',
   workspaceCss:'my/workspace-selector-shell.css',
+  deviceCareHtml:'my/device-care/index.html',
+  deviceCareJs:'my/device-care.js',
+  deviceCareCss:'my/device-care.css',
   worker:'my-worker.js',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
@@ -39,6 +42,7 @@ must('html','/user-ui.css');
 must('html','/user-ai-ui.js');
 must('html','/membership-summary.js');
 must('html','/membership-summary.css');
+must('html','href="/device-care/">내 PC</a>');
 must('app','creator_portfolio_items');
 must('app','current_site_access');
 must('app','current_site_workspaces');
@@ -73,6 +77,18 @@ must('userServices','"id": "support"');
 must('workspaceSync','window.EKODIShell');
 must('workspaceSync','ekodiWorkspaceOrder');
 must('workspaceCss','--ekodi-shell-accent');
+must('deviceCareHtml','FREE MEMBER');
+must('deviceCareHtml','무료회원');
+must('deviceCareHtml','개인 파일 접근 안 함');
+must('deviceCareHtml','Windows 설정 자동변경 안 함');
+must('deviceCareHtml','Device Agent');
+must('deviceCareJs','CACHE_ALLOWLIST');
+must('deviceCareJs','registration.update()');
+must('deviceCareJs','window.confirm');
+must('deviceCareJs','ekodi_device_care_history_v1');
+mustNot('deviceCareJs','localStorage.clear(');
+mustNot('deviceCareJs','/api/control/devices');
+must('deviceCareCss','.device-care-section');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
@@ -96,4 +112,4 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: USER UI, truthful universal membership lifecycle states, Support AI registry coverage, EKODI User AI onboarding, Shell-synced Workspace context, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
+console.log('My EKODI validation passed: USER UI, truthful universal membership lifecycle states, Support AI registry coverage, free member Device Care, EKODI User AI onboarding, Shell-synced Workspace context, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
