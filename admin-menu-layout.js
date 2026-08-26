@@ -1,24 +1,26 @@
-(() => {
+(async () => {
   'use strict';
+
+  const [{ adminMenuOrder }, { mountAdminSidebar }] = await Promise.all([
+    import('./admin-menu-registry.js'),
+    import('./admin-sidebar.js'),
+  ]);
 
   const sidebar = document.querySelector('.sidebar');
   const nav = sidebar?.querySelector('nav');
   const content = document.querySelector('.content');
   if (!sidebar || !nav || !content) return;
 
-  const INTERNAL_ONLY_SECTIONS = new Set(['overview', 'services', 'deployments', 'policies']);
+  const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
   const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
-  const VISIBLE_NAV_ORDER = Object.freeze([
-    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'clients', 'admins', 'community', 'books',
-    'finance', 'communication', 'social', 'workspace', 'devices', 'organization', 'affiliates',
-  ]);
+  const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
   const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
   const HASH_SECTIONS = new Map([
     ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#health', 'health'], ['#security', 'security'], ['#devices', 'devices'], ['#campus', 'campus'],
     ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
   ]);
   const CANONICAL_HASH = new Map([
-    ['sites', '#sites'], ['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus'],
+    ['overview', '#operations'], ['sites', '#sites'], ['aiops', '#ai-ops'], ['health', '#health'], ['security', '#security'], ['devices', '#devices'], ['campus', '#campus'],
   ]);
 
   let requestedSection = '';
@@ -33,6 +35,7 @@
   }
 
   function sectionOf(item) {
+    if (window.EKODIAdminSidebar?.sectionOf) return window.EKODIAdminSidebar.sectionOf(item);
     if (item?.dataset?.deviceControlNav === 'true') return 'devices';
     const raw = String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
     return raw === 'marketing' ? 'marketing-ai' : raw;
@@ -60,6 +63,10 @@
   }
 
   function applyStableNavigationOrder() {
+    if (window.EKODIAdminSidebar?.sync) {
+      window.EKODIAdminSidebar.sync(document);
+      return;
+    }
     let unknownRank = 500;
     for (const item of allNavItems()) {
       if (isInternalNav(item)) {
@@ -94,6 +101,7 @@
     const item = navItemFor(section);
     const label = item?.querySelector('span')?.textContent?.trim() || item?.textContent?.trim();
     if (title && label && title.textContent !== label) title.textContent = label;
+    window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed', { detail: { section } }));
   }
 
   function activatePanel(section) {
@@ -202,6 +210,10 @@
     if (explicit && isInternalSection(explicit)) routeInternalToAiOps();
     else if (explicit === 'sites') openSites();
     else if (explicit) requestedSection = explicit;
+    else {
+      requestedSection = 'overview';
+      activatePanel('overview');
+    }
   });
 
   window.addEventListener('hashchange', () => {
@@ -215,11 +227,16 @@
 
   installCompactNavigationStyle();
   installSitesEntry();
+  mountAdminSidebar(document);
   enforceInternalNavigationPolicy();
   const initialHash = explicitHashSection();
   if (initialHash && isInternalSection(initialHash)) routeInternalToAiOps();
   else if (initialHash === 'sites') openSites();
   else if (initialHash) requestedSection = initialHash;
+  else {
+    requestedSection = 'overview';
+    activatePanel('overview');
+  }
 
   window.EKODIAdminPanels = Object.freeze({
     activate: section => {
@@ -232,8 +249,8 @@
     internalSections: Object.freeze([...INTERNAL_ONLY_SECTIONS]),
     visibleMenuOrder: VISIBLE_NAV_ORDER,
   });
-})();
 
-import('./admin-menu-runtime.js').catch(error => {
-  console.error('EKODI shared admin menu runtime failed to load.', error);
-});
+  import('./admin-menu-runtime.js').catch(error => {
+    console.error('EKODI shared admin menu runtime failed to load.', error);
+  });
+})();
