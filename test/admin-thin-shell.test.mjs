@@ -80,10 +80,13 @@ test('secondary hydration never has a forced requestIdleCallback deadline', asyn
 
 test('admin menu does not auto-open heavy workspaces on a normal login', async () => {
   const menu = await read('admin-menu-layout.js');
+  const registry = await read('admin-menu-registry.js');
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialHash = explicitHashSection\(\)/);
   assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.match(menu, /'campus', 'aiops', 'health'/);
+  assert.match(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
+  assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
+  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
   assert.match(menu, /\['#health', 'health'\]/);
   assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
   assert.doesNotMatch(menu, /setInterval\(/);
