@@ -46,16 +46,23 @@ jobs:
           set -euo pipefail
           grep -Fq 'EKODI 인증센터' auth-site/index.html
           grep -Fq 'id="googleButtonHost"' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260824-business-resume-1' auth-site/index.html
+          grep -Fq 'data-seamless-sso' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260826-universal-sso-1' auth-site/index.html
           grep -Fq "'mall-seller':'mall'" auth-site/auth-router.js
           grep -Fq "https://mall.ekodi.kr/seller/" auth-site/auth-router.js
           grep -Fq "site==='admin'" auth-site/auth-router.js
           grep -Fq "site==='author'" auth-site/auth-router.js
           grep -Fq "site==='business'" auth-site/auth-router.js
-          grep -Fq "site==='cgma-client'" auth-site/auth-router.js
+          grep -Fq 'privateClientSites' auth-site/auth-router.js
+          grep -Fq "'cgma-client'" auth-site/auth-router.js
+          grep -Fq 'universalIdentitySites' auth-site/auth-router.js
+          grep -Fq "'church'" auth-site/auth-router.js
+          grep -Fq "'work'" auth-site/auth-router.js
+          grep -Fq "'books'" auth-site/auth-router.js
           grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
           grep -Fq "auth-workspace-target.js?v=20260817-all-sites-1" auth-site/auth-router.js
-          grep -Fq "business-auth.js?v=20260824-business-resume-1" auth-site/auth-router.js
+          grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260826-universal-free-1" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
           grep -Fq "await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
           grep -Fq "'/business-auth.js'" site-worker.js
@@ -91,18 +98,33 @@ jobs:
             exit 1
           fi
           grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
+          grep -Fq 'functions/v1/identity-api' auth-site/business-auth.js
+          grep -Fq '/session/handoff' auth-site/business-auth.js
+          grep -Fq 'response.status===403' auth-site/business-auth.js
           grep -Fq 'supabase_cdn_timeout' auth-site/business-auth.js
           grep -Fq 'supabase_fallback_timeout' auth-site/business-auth.js
           grep -Fq 'session_timeout' auth-site/business-auth.js
           grep -Fq 'google_library_timeout' auth-site/business-auth.js
           grep -Fq 'const RETURN_TO=safeReturn' auth-site/business-auth.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/business-auth.js; then
+            echo 'Business auth must not use async auth-state callback'
+            exit 1
+          fi
           grep -Fq "'/marketing-auth-hotfix.js'" site-worker.js
           grep -Fq 'https://esm.sh' site-worker.js
           grep -Fq '청계상권 고객관리' auth-site/client-auth.js
           grep -Fq 'functions/v1/identity-api' auth-site/client-auth.js
           grep -Fq '/session/handoff' auth-site/client-auth.js
           grep -Fq 'sb.auth.getSession' auth-site/client-auth.js
+          grep -Fq 'session_timeout' auth-site/client-auth.js
+          grep -Fq 'google_library_timeout' auth-site/client-auth.js
+          grep -Fq 'supabase_cdn_timeout' auth-site/client-auth.js
+          grep -Fq 'supabase_fallback_timeout' auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
+          if grep -Fq 'onAuthStateChange(async' auth-site/client-auth.js; then
+            echo 'Universal client auth must not use async auth-state callback'
+            exit 1
+          fi
           grep -Fq 'path==="/session/handoff"' supabase/functions/identity-api/index.ts
           grep -Fq 'link.user.id!==user.id' supabase/functions/identity-api/index.ts
           grep -Fq 'business_os_snapshot' supabase/functions/business-handoff-api/index.ts
