@@ -1,11 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 
 const PROVIDER_SCHEMA = 'config/marketing-ai-provider-manifest.schema.json';
 const ENTITLEMENT_SCHEMA = 'config/marketing-ai-entitlement.schema.json';
+
+const TEXT_EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.html', '.css', '.json', '.toml', '.yml', '.yaml']);
+const SKIP_DIRS = new Set(['.git', 'node_modules', 'docs', 'test', 'tests']);
+const DEPRECATED_BRANDING = [
+  '에코디비즈 마케팅AI',
+  '에코디비즈 마케팅 AI',
+  'EKODIBIZ Marketing AI'
+];
+
+async function collectTextFiles(directory, output = []) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
+    const fullPath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await collectTextFiles(fullPath, output);
+    } else if (TEXT_EXTENSIONS.has(extname(entry.name))) {
+      output.push(fullPath);
+    }
+  }
+  return output;
+}
 
 test('Marketing AI remains an independent EKODI platform capability', async () => {
   const boundaries = await readJson('platform-boundaries.json');
@@ -42,4 +66,24 @@ test('entitlement schema supports individuals, institutions and organizations', 
   assert.ok(properties.capabilities.items.enum.includes('campaign.plan'));
   assert.ok(properties.capabilities.items.enum.includes('publish.execute'));
   assert.equal(properties.enabled.type, 'boolean');
+});
+
+test('user-facing source does not regress to deprecated EKODIBIZ Marketing AI branding', async () => {
+  const files = await collectTextFiles(ROOT);
+  const violations = [];
+
+  for (const file of files) {
+    const content = await readFile(file, 'utf8');
+    for (const phrase of DEPRECATED_BRANDING) {
+      if (content.includes(phrase)) {
+        violations.push(`${file.slice(ROOT.length)}: ${phrase}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    violations,
+    [],
+    `Use the canonical parent brand "에코디 마케팅AI" instead:\n${violations.join('\n')}`
+  );
 });
