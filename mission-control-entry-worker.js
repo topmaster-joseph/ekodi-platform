@@ -20,6 +20,7 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { handleMarketingAiRuntime } from './marketing-ai-runtime.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -83,6 +84,11 @@ export default {
     if (path.startsWith('/api/ai-modules/v1')) {
       try { const response = await handleExternalAiModuleGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('External AI Module Gateway error', error); return errorResponse('EKODI AI Module Gateway 처리 중 오류가 발생했습니다.', 'AI_MODULE_GATEWAY_ERROR'); }
+    }
+
+    if (path.startsWith('/api/marketing/ai/v1')) {
+      try { const response = await handleMarketingAiRuntime(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Marketing AI runtime error', error); return errorResponse('에코디 마케팅AI 처리 중 오류가 발생했습니다.', 'MARKETING_AI_RUNTIME_ERROR'); }
     }
 
     if ((path === '/operator' || path === '/operator/' || path === '/operator.js') && request.method === 'GET') {
