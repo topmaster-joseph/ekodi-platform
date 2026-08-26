@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "canonicalStore": "google_workspace_shared_drive",
+  "canonicalDriveName": "EKODI",
+  "principles": {
+    "durableRecordsGoToDrive": true,
+    "externalModulesMayAccessDriveDirectly": false,
+    "databaseIsOperationalStateOnly": true,
+    "r2IsCacheOrDeliveryOnly": true,
+    "providerSecretsStayServerSide": true,
+    "allWritesAreAuditable": true
+  },
+  "tiers": {
+    "canonical": {
+      "provider": "google_drive",
+      "purpose": ["durable_records", "final_artifacts", "business_documents", "ai_outputs_requiring_retention", "backups"],
+      "systemOfRecord": true
+    },
+    "operational": {
+      "provider": "d1_or_supabase",
+      "purpose": ["identity_state", "workspace_state", "roles", "capabilities", "job_state", "usage_counters", "indexes", "audit_index"],
+      "systemOfRecord": false
+    },
+    "delivery": {
+      "provider": "cloudflare_r2",
+      "purpose": ["cache", "public_delivery", "temporary_generated_assets", "large_object_staging"],
+      "systemOfRecord": false
+    }
+  },
+  "knownFolders": {
+    "core": { "name": "01_CORE", "folderId": "1q-6OpN9zN2mD6EBaX-KJ5MoBEYdIZcwo" },
+    "backup": { "name": "99_BACKUP", "folderId": "19sHUDWjPL-a66prnpCJN4H24hUqEJpiL" }
+  },
+  "requiredMetadata": ["spaceId", "serviceId", "recordType", "createdBy", "retentionClass"],
+  "retentionClasses": ["temporary", "operational", "business_record", "permanent"],
+  "writePath": "client_or_ai -> api.ekodi.kr -> storage gateway -> google workspace shared drive",
+  "forbiddenPaths": [
+    "external_ai -> google_drive_direct",
+    "browser -> google_drive_privileged_credentials",
+    "external_ai -> d1_or_supabase_direct",
+    "external_ai -> r2_privileged_credentials"
+  ]
+}
