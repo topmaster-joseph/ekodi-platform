@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+// Keep the mobile Site Management login-home contract inside the production Admin gate.
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
