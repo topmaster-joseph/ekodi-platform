@@ -29,20 +29,17 @@
       <article class="today-card"><small>오늘의 말씀대화</small><h3 id="todayTitle">오늘의 질문을 불러오는 중입니다</h3><p id="todayQuestion"></p><p class="scripture" id="todayScripture"></p><button id="startToday" class="primary" type="button">이 질문으로 이야기하기</button></article>
       <div class="principles"><strong>이 공간의 약속</strong><p>당신의 고백은 기본적으로 비공개입니다. AI는 목회자나 공동체를 대신하지 않으며, 공유는 당신이 직접 선택할 때만 이루어집니다.</p></div>
     </section>
-
     <section id="view-conversation" class="view">
       <div class="section-head"><div><small>말씀대화 AI</small><h2 id="conversationTitle">삶에서 말씀으로</h2></div><span id="modeBadge" class="badge">무료 안내</span></div>
       <div id="chat" class="chat" aria-live="polite"></div>
       <form id="chatForm" class="composer"><label for="message">지금 마음을 이야기해 주세요</label><textarea id="message" name="message" rows="3" maxlength="4000" placeholder="예: 앞으로가 불안해요"></textarea><div class="composer-row"><span id="conversationScripture" class="scripture"></span><button class="primary" type="submit">대화하기</button></div></form>
       <p id="aiNotice" class="notice"></p>
     </section>
-
     <section id="view-journey" class="view">
       <div class="section-head"><div><small>나의 Journey</small><h2>말씀을 삶의 흔적으로 남깁니다.</h2></div><button id="newJourney" class="ghost" type="button">새 Journey</button></div>
       <div id="journeyGate" class="empty"></div><div id="journeyList" class="records"></div>
       <form id="journeyForm" class="panel hidden"><input type="hidden" name="id"><label>제목<input name="title" maxlength="120" required></label><label>주제<input name="topic" maxlength="60" required></label><label>연결 본문<input name="scripture_ref" maxlength="120"></label><label>묵상<textarea name="reflection" rows="4" maxlength="4000"></textarea></label><label>기도<textarea name="prayer" rows="3" maxlength="3000"></textarea></label><label>이번 주 작은 실천<input name="practice" maxlength="300"></label><label>돌아볼 날짜<input name="followup_date" type="date"></label><div class="actions"><button class="primary" type="submit">Journey 저장</button><button id="cancelJourney" class="ghost" type="button">취소</button></div></form>
     </section>
-
     <section id="view-together" class="view">
       <div class="section-head"><div><small>함께</small><h2>혼자 품은 말씀을, 원할 때 공동체와 나눕니다.</h2></div></div>
       <div id="groupGate" class="empty"></div>
@@ -56,6 +53,7 @@
   </main>
   <footer><a href="https://church.ekodi.kr/">에코디교회</a><span>·</span><a href="/admin">관리자</a><span>·</span><a href="https://ekodi.kr/">EKODI</a></footer>
   <script src="/config.js"></script>
+  <script src="/prelude.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
