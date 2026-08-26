@@ -22,18 +22,18 @@ test('all administrator hostnames inherit the same control-center shell', () => 
   assert.ok(build.includes('admin-authenticated-shell.js'));
 });
 
-test('shared shell removes the desktop top header and moves account above logout', () => {
+test('shared shell removes the desktop title strip and moves account above logout', () => {
   assert.ok(shell.includes("document.body.classList.add('ekodi-admin-shell-v2')"));
   assert.ok(shell.includes("sideBottom.insertBefore(profile, logoutButton || null)"));
-  assert.ok(shell.includes('.topbar{display:none!important}'));
-  assert.ok(shell.includes('.topbar>div,'));
-  assert.ok(shell.includes('.topbar .menu{display:grid!important'));
+  assert.ok(shell.includes('pageTitle.parentElement.hidden = true'));
+  assert.ok(shell.includes("matchMedia('(max-width:760px)').matches ? 'flex' : 'none'"));
 });
 
 test('sidebar menu and workspace have independent vertical scrolling', () => {
   assert.ok(shell.includes("nav.style.setProperty('overflow-y', 'auto', 'important')"));
   assert.ok(shell.includes("nav.style.setProperty('flex', '1 1 auto', 'important')"));
-  assert.ok(shell.includes('.app>main{grid-column:2;min-width:0;height:100dvh;min-height:0;overflow-y:auto;overflow-x:hidden'));
-  assert.ok(shell.includes('.side-bottom{position:static!important'));
+  assert.ok(shell.includes("main.style.setProperty('overflow-y', 'auto')"));
+  assert.ok(shell.includes("sideBottom.style.setProperty('position', 'static', 'important')"));
   assert.ok(shell.includes("nav.dataset.ekodiIndependentScroll = 'true'"));
+  assert.ok(shell.includes("content.dataset.ekodiIndependentScroll = 'workspace'"));
 });
