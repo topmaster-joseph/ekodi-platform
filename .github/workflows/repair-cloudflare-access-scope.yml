@@ -1,0 +1,74 @@
+name: Repair Cloudflare Worker Access Scope
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repair-cloudflare-access-scope.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ACCESS_APP_ID: 808e0dd2-4a48-469c-b787-794f7b5d4b96
+    steps:
+      - name: Narrow account-wide Worker Access to previews only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          node <<'NODE'
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const appId = process.env.ACCESS_APP_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const url = `https://api.cloudflare.com/client/v4/accounts/${account}/access/apps/${appId}`;
+          const headers = { authorization:`Bearer ${token}`, 'content-type':'application/json' };
+          const read = await fetch(url, { headers });
+          const before = await read.json().catch(() => ({}));
+          if (!read.ok || before.success !== true) throw new Error(`Access app read failed (${read.status})`);
+          const app = before.result || {};
+          if (app.name !== 'All Workers') throw new Error(`Unexpected Access app: ${app.name || 'unknown'}`);
+          const types = (app.destinations || []).map(item => item?.type).filter(Boolean);
+          console.log(`Access app=${app.name}; destinations=${types.join(',') || 'none'}`);
+          if (types.includes('all_preview_workers') && !types.includes('all_workers')) {
+            console.log('Access scope already protects previews only.');
+            process.exit(0);
+          }
+          if (!types.includes('all_workers')) throw new Error(`Refusing unexpected Access scope: ${types.join(',') || 'none'}`);
+          const payload = { name: app.name, type: app.type || 'self_hosted', destinations:[{ type:'all_preview_workers' }] };
+          if (app.session_duration) payload.session_duration = app.session_duration;
+          const update = await fetch(url, { method:'PUT', headers, body:JSON.stringify(payload) });
+          const after = await update.json().catch(() => ({}));
+          if (!update.ok || after.success !== true) {
+            const code = after?.errors?.[0]?.code || 'unknown';
+            throw new Error(`Access app update failed (${update.status}, code=${code})`);
+          }
+          const updatedTypes = (after.result?.destinations || []).map(item => item?.type).filter(Boolean);
+          if (!updatedTypes.includes('all_preview_workers') || updatedTypes.includes('all_workers')) {
+            throw new Error(`Access scope verification failed: ${updatedTypes.join(',') || 'none'}`);
+          }
+          console.log('✅ Account-wide Worker Access now protects preview deployments only.');
+          NODE
+
+      - name: Verify public EKODI production entry is no longer intercepted by Access
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 https://ekodi.kr/ || true)
+            if [[ "$code" == '200' ]] && ! grep -Fq 'Cloudflare Access' /tmp/body && grep -Fq 'EKODI' /tmp/body; then
+              echo '✅ EKODI production entry is public and Worker-backed.'
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'EKODI production entry is still intercepted by Access.'
+          exit 1
