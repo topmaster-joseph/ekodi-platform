@@ -1,5 +1,6 @@
 (()=>{
 'use strict';
+if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 if(window.__EKODI_MOBILE_FIXED_HEADER_BOOTED)return;
 window.__EKODI_MOBILE_FIXED_HEADER_BOOTED=true;
 
