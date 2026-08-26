@@ -1,14 +1,14 @@
 (() => {
   'use strict';
 
-  const TOKEN_KEY = 'ekodi-auth-token';
-  const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
-  const app = document.querySelector('#app');
-  const nav = document.querySelector('.sidebar nav');
-  const loadedScripts = new Map();
-  const loadedStyles = new Map();
-  const pending = new Map();
-  const secondaryScheduled = new Set();
+  const TOKEN_KEY='ekodi-auth-token';
+  const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
+  const app=document.querySelector('#app');
+  const nav=document.querySelector('.sidebar nav');
+  const loadedScripts=new Map();
+  const loadedStyles=new Map();
+  const pending=new Map();
+  const secondaryScheduled=new Set();
 
   const FEATURES = {
     campus: {
@@ -28,6 +28,7 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
