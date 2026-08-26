@@ -2,3 +2,4 @@
 2026-08-25 jadam-private-tailored-ai-workspace
 2026-08-25 jadam-domain-role-separation
 2026-08-25 jadam-private-csp-assets
+2026-08-26 ai-gateway-dependent-subservice-revalidation
