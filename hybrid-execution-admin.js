@@ -4,7 +4,7 @@
   const API_BASE = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   let timer = null;
-  let lastDashboard = { nodes:[], jobs:[], events:[] };
+  let lastDashboard = { nodes:[], jobs:[], events:[], monitoring:null };
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
@@ -34,7 +34,7 @@
   }
 
   function timeLabel(value) {
-    if (!value) return '—';
+    if (!value) return '미확인';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('ko-KR');
   }
@@ -44,6 +44,14 @@
       pending:'대기', assigned:'배정', leased:'실행 중', completed:'완료',
       failed:'실패', cancelled:'취소',
     })[status] || status;
+  }
+
+  function monitorStatusLabel(status) {
+    return ({ healthy:'정상', degraded:'주의', critical:'긴급', unknown:'확인 전', unavailable:'확인 불가' })[status] || status || '확인 전';
+  }
+
+  function severityLabel(severity) {
+    return ({ critical:'긴급', warning:'주의' })[severity] || severity;
   }
 
   function eventLabel(type) {
@@ -89,6 +97,17 @@
       .hybrid-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
       .hybrid-head h3{margin:3px 0 5px}.hybrid-head p{margin:0;max-width:780px}
       .hybrid-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .hybrid-watchdog{margin:14px 0;padding:13px;border:1px solid var(--line,#e0e4eb);border-radius:14px;background:rgba(127,127,127,.04)}
+      .hybrid-watchdog[data-status="healthy"]{border-color:rgba(24,130,76,.35)}
+      .hybrid-watchdog[data-status="degraded"]{border-color:rgba(191,126,0,.45)}
+      .hybrid-watchdog[data-status="critical"]{border-color:rgba(180,35,35,.5)}
+      .hybrid-watchdog-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+      .hybrid-watchdog-head div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .hybrid-incidents{display:grid;gap:7px;margin-top:9px}
+      .hybrid-incident{padding:9px 10px;border:1px solid var(--line,#e0e4eb);border-radius:10px}
+      .hybrid-incident[data-severity="critical"]{border-color:rgba(180,35,35,.4)}
+      .hybrid-incident small{display:block;opacity:.72;margin-top:3px}
+      .hybrid-monitor-note{margin-top:8px;font-size:.8rem;opacity:.7}
       .hybrid-metrics{display:grid;grid-template-columns:repeat(5,minmax(100px,1fr));gap:10px;margin:14px 0}
       .hybrid-metrics article{padding:12px;border:1px solid var(--line,#e0e4eb);border-radius:14px}
       .hybrid-metrics small,.hybrid-node small,.hybrid-job small,.hybrid-event small{display:block;opacity:.72}.hybrid-metrics strong{font-size:1.45rem}
@@ -126,12 +145,17 @@
         <div class="hybrid-actions"><span id="hybridGeneratedAt">확인 전</span><button type="button" class="secondary" id="refreshHybrid">↻ 새로고침</button>
         <button type="button" class="primary" id="enqueueHybridDiagnostic">전체 진단 자동배정</button></div>
       </div>
+      <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
+        <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
+        <div class="hybrid-incidents" id="hybridIncidentList"><div class="hybrid-empty">감시 상태를 불러오는 중입니다.</div></div>
+        <div class="hybrid-monitor-note">노드 heartbeat 5분, 작업 대기 15분, 최근 30분 실패·재배정, 운영 API health와 관리자 Hybrid 자산을 자동 점검합니다.</div>
+      </section>
       <div class="hybrid-metrics">
-        <article><small>온라인 노드</small><strong id="hybridOnlineNodes">—</strong></article>
-        <article><small>자동실행 가능</small><strong id="hybridAutoNodes">—</strong></article>
-        <article><small>대기 작업</small><strong id="hybridPendingJobs">—</strong></article>
-        <article><small>실행 중</small><strong id="hybridActiveJobs">—</strong></article>
-        <article><small>실패 기록</small><strong id="hybridFailedJobs">—</strong></article>
+        <article><small>온라인 노드</small><strong id="hybridOnlineNodes">0</strong></article>
+        <article><small>자동실행 가능</small><strong id="hybridAutoNodes">0</strong></article>
+        <article><small>대기 작업</small><strong id="hybridPendingJobs">0</strong></article>
+        <article><small>실행 중</small><strong id="hybridActiveJobs">0</strong></article>
+        <article><small>실패 기록</small><strong id="hybridFailedJobs">0</strong></article>
       </div>
       <div class="hybrid-grid">
         <section class="hybrid-box"><div class="hybrid-box-head"><strong>실행 노드</strong><small>OFF → 관리자 승인 후 ON</small></div><div class="hybrid-list" id="hybridNodeList"></div></section>
@@ -181,11 +205,46 @@
     </article>`;
   }
 
+  function incidentMarkup(incident) {
+    const detail = incident.detail || {};
+    const detailBits = [];
+    if (Number.isFinite(Number(detail.count))) detailBits.push(`건수 ${Number(detail.count)}`);
+    if (Number.isFinite(Number(detail.configured))) detailBits.push(`설정 노드 ${Number(detail.configured)}`);
+    if (Array.isArray(detail.nodes) && detail.nodes.length) detailBits.push(`노드 ${detail.nodes.slice(0, 4).map(node => node.label || node.deviceId).join(', ')}`);
+    if (Array.isArray(detail.stale) && detail.stale.length) detailBits.push(`이탈 ${detail.stale.slice(0, 4).map(node => node.label || node.deviceId).join(', ')}`);
+    if (detail.oldest) detailBits.push(`최초 대기 ${timeLabel(detail.oldest)}`);
+    return `<article class="hybrid-incident" data-severity="${escapeHtml(incident.severity)}">
+      <div class="hybrid-row"><div><strong>${escapeHtml(incident.title)}</strong>
+      <small>${severityLabel(incident.severity)} · 최초 ${timeLabel(incident.firstSeenAt)} · 최근 ${timeLabel(incident.lastSeenAt)}${detailBits.length ? ` · ${escapeHtml(detailBits.join(' · '))}` : ''}</small></div>
+      <span class="hybrid-pill">${escapeHtml(incident.category || incident.key)}</span></div>
+    </article>`;
+  }
+
+  function renderMonitoring() {
+    const panel = document.querySelector('#hybridExecutionPanel');
+    if (!panel) return;
+    const monitoring = lastDashboard.monitoring;
+    const watchdog = panel.querySelector('#hybridWatchdog');
+    const status = monitoring?.status || 'unavailable';
+    watchdog.dataset.status = status;
+    panel.querySelector('#hybridMonitorStatus').textContent = monitorStatusLabel(status);
+    panel.querySelector('#hybridMonitorTime').textContent = monitoring?.lastRunAt ? `최근 점검 ${timeLabel(monitoring.lastRunAt)}` : '점검 기록 없음';
+    const list = panel.querySelector('#hybridIncidentList');
+    const open = (monitoring?.incidents || []).filter(item => item.status === 'open');
+    if (status === 'unavailable') {
+      list.innerHTML = '<div class="hybrid-empty">감시 API 상태를 확인할 수 없습니다. 실행망 자체 기능은 계속 동작합니다.</div>';
+      return;
+    }
+    list.innerHTML = open.length
+      ? open.map(incidentMarkup).join('')
+      : '<div class="hybrid-empty">현재 감지된 운영 이상이 없습니다.</div>';
+  }
+
   function eventMarkup(event) {
     const detail = eventDetail(event.detail);
     return `<article class="hybrid-event" data-type="${escapeHtml(event.type)}">
       <div class="hybrid-row"><div><strong>${escapeHtml(eventLabel(event.type))}</strong>
-      <small>${timeLabel(event.createdAt)} · 작업 ${escapeHtml(event.jobId || '—')}${event.deviceId ? ` · 기기 ${escapeHtml(event.deviceId)}` : ''}</small>
+      <small>${timeLabel(event.createdAt)} · 작업 ${escapeHtml(event.jobId || '없음')}${event.deviceId ? ` · 기기 ${escapeHtml(event.deviceId)}` : ''}</small>
       ${detail ? `<small>${escapeHtml(detail)}</small>` : ''}</div><span class="hybrid-pill">${escapeHtml(event.type)}</span></div>
     </article>`;
   }
@@ -206,7 +265,7 @@
       <details data-job-events><summary>실행 상세 · 이벤트</summary><div class="hybrid-job-detail">
         <small>작업 ID: ${escapeHtml(job.id)}</small>
         <small>최근 갱신: ${timeLabel(job.updatedAt)}${job.completedAt ? ` · 종료 ${timeLabel(job.completedAt)}` : ''}</small>
-        <small>현재 기기: ${escapeHtml(job.assignedDeviceId || '—')} · 이전 기기: ${escapeHtml(job.lastDeviceId || '—')}</small>
+        <small>현재 기기: ${escapeHtml(job.assignedDeviceId || '없음')} · 이전 기기: ${escapeHtml(job.lastDeviceId || '없음')}</small>
         ${job.leaseExpiresAt ? `<small>리스 만료: ${timeLabel(job.leaseExpiresAt)}</small>` : ''}${history}
       </div></details>
     </article>`;
@@ -246,8 +305,11 @@
     const panel = document.querySelector('#hybridExecutionPanel');
     if (!panel || !sessionStorage.getItem(TOKEN_KEY)) return;
     try {
-      const data = await request('/api/control/hybrid-execution/dashboard');
-      lastDashboard = { nodes:data.nodes || [], jobs:data.jobs || [], events:data.events || [] };
+      const [data, monitoring] = await Promise.all([
+        request('/api/control/hybrid-execution/dashboard'),
+        request('/api/control/hybrid-execution/monitor').catch(error => ({ status:'unavailable', error:error.message, incidents:[] })),
+      ]);
+      lastDashboard = { nodes:data.nodes || [], jobs:data.jobs || [], events:data.events || [], monitoring };
       const summary = data.summary || {};
       panel.querySelector('#hybridOnlineNodes').textContent = String(summary.onlineNodes ?? 0);
       panel.querySelector('#hybridAutoNodes').textContent = String(summary.autoNodes ?? 0);
@@ -258,6 +320,7 @@
       const nodes = panel.querySelector('#hybridNodeList');
       nodes.innerHTML = lastDashboard.nodes.length ? lastDashboard.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
+      renderMonitoring();
       renderJobs();
       renderEvents();
     } catch (error) {
