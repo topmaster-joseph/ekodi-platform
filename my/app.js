@@ -16,13 +16,17 @@ const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
 let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='',profile=null,linkedIdentities=[],profileError='';
 
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'})[c]);
 const mode=v=>MODES[v]?v:'writer';
 const plan=v=>({free:'Free',basic:'Basic',pro:'Pro',enterprise:'Business',standard:'Standard'})[String(v||'free').toLowerCase()]||String(v||'Free');
 const paid=v=>['standard','basic','pro','enterprise'].includes(String(v||'').toLowerCase());
 const storedWorkspace=()=>{try{return localStorage.getItem('ekodi_my_active_workspace')||''}catch{return''}};
 const rememberWorkspace=value=>{try{if(value)localStorage.setItem('ekodi_my_active_workspace',value);else localStorage.removeItem('ekodi_my_active_workspace')}catch{}};
 const serviceDefinition=id=>SERVICES.find(([sid])=>sid===id)||null;
+function privateWorkspaceRoute(workspace,id){
+ if(!workspace?.workspace_key||!TARGETABLE_WORKSPACE_SITES.has(id))return'';
+ return `/w/${encodeURIComponent(workspace.workspace_key)}/${encodeURIComponent(id)}`;
+}
 function requestedReturnTarget(){
  const raw=new URLSearchParams(location.search).get('return_to');
  if(!raw)return null;
@@ -107,7 +111,7 @@ function enterWorkspace(key){
  const selected=setActiveWorkspace(key);
  if(!selected)return;
  const destination=workspaceDestination(selected);
- if(destination)location.assign(serviceRoute(destination.id,destination.url));
+ if(destination)location.assign(privateWorkspaceRoute(selected,destination.id)||serviceRoute(destination.id,destination.url));
 }
 function identityUi(){
  const email=session?.user?.email||'',meta=session?.user?.user_metadata||{},current=activeWorkspace();
@@ -150,8 +154,9 @@ function platformUi(){
  if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 내 플랫폼 상태를 볼 수 있습니다.</strong><p>한 번 로그인하면 각 서비스의 접근권한과 플랜을 확인합니다.</p></div>';return}
  const current=activeWorkspace();
  host.innerHTML=SERVICES.map(([id,name,url])=>{
-  const a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),open=OPEN_SSO_SITES.has(id),available=on||open,best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free',route=serviceRoute(id,url);
+  const a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),open=OPEN_SSO_SITES.has(id),available=on||open,best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free';
   const inCurrent=Boolean(current?.services?.includes(id))||open;
+  const route=(available&&inCurrent?privateWorkspaceRoute(current,id):'')||serviceRoute(id,url);
   const description=open?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.':on?(inCurrent?'현재 Workspace와 연결된 서비스입니다.':'통합 로그인으로 연결된 서비스입니다.'):'필요할 때 자유롭게 시작할 수 있습니다.';
   return `<article class="platform-card"><div class="platform-head"><h3>${esc(name)}</h3><span class="plan plan-${esc(String(p).toLowerCase())}">${esc(on?plan(p):open?'Workspace':'Available')}</span></div><p>${esc(description)}</p><div class="meta"><span>${available?'연결 가능':'미연결'}</span><span>${rows.length} Workspace</span>${inCurrent?'<span>현재 공간</span>':''}</div><a class="card-link" href="${esc(route)}">${available?'열기':'둘러보기'} →</a></article>`;
  }).join('');
