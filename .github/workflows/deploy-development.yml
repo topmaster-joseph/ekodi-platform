@@ -21,6 +21,18 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
     steps:
+      - name: Enforce development boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/development" || {
+            echo "::error::Development deployment is allowed only from the development branch."
+            exit 1
+          }
+          test "$CLOUDFLARE_ACCOUNT_ID" = "46aad4738793fbaca88574832a2ccc0f" || {
+            echo "::error::Cloudflare account boundary mismatch."
+            exit 1
+          }
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
