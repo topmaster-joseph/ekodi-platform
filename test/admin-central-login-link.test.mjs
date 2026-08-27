@@ -74,20 +74,10 @@ test('central handoff preserves requested admin destinations and normalizes lega
 test('admin menu router recognizes every current subpage and typo alias', async () => {
   const source = await read('admin-menu-layout.js');
   for (const pair of [
-    "['#storage', 'storage']",
-    "['#storige', 'storage']",
-    "['#api-cost', 'api-cost']",
-    "['#work', 'work']",
-    "['#marketing-ai', 'marketing-ai']",
-    "['#finance', 'finance']",
-    "['#organization', 'organization']",
-    "['#workspace', 'workspace']",
-    "['#clients', 'clients']",
-    "['#admins', 'admins']",
-    "['#community', 'community']",
-    "['#books', 'books']",
-    "['#social', 'social']",
-    "['#affiliates', 'affiliates']",
+    '#storage:storage', '#storige:storage', '#api-cost:api-cost', '#work:work',
+    '#marketing-ai:marketing-ai', '#finance:finance', '#organization:organization',
+    '#workspace:workspace', '#clients:clients', '#admins:admins', '#community:community',
+    '#books:books', '#social:social', '#affiliates:affiliates',
   ]) assert.ok(source.includes(pair), `missing route mapping: ${pair}`);
   assert.ok(source.includes("HASH_SECTIONS.get(location.hash.toLowerCase())"));
   assert.ok(source.includes("else if (!activatePanel(requestedSection)) openDemand(requestedSection)"));
