@@ -32,6 +32,14 @@ function requestedReturnTarget(){
   return service?{id:service[0],url:target.href}:null;
  }catch{return null}
 }
+function discardUnsafeReturnTarget(){
+ const params=new URLSearchParams(location.search);
+ if(!params.has('return_to')||requestedReturnTarget())return;
+ params.delete('return_to');
+ const query=params.toString();
+ history.replaceState({},document.title,`${location.pathname}${query?`?${query}`:''}${location.hash}`);
+}
+discardUnsafeReturnTarget();
 
 async function handoff(){
  if(!sb||!location.hash.startsWith('#'))return;

@@ -114,7 +114,19 @@ test('My EKODI security middleware runs before static assets in staging and prod
   assert.match(prod,/run_worker_first = true/);
   assert.match(staging,/run_worker_first = true/);
   assert.match(worker,/'x-ekodi-service':'my-ekodi'/);
+  assert.match(worker,/x-robots-tag','noindex, nofollow, noarchive/);
+  assert.match(worker,/contentType\.includes\('text\/html'\)/);
   assert.match(manifest,/x-ekodi-service: my-ekodi/);
+});
+
+test('My EKODI rejects recursive or foreign return targets and private pages opt out of indexing',async()=>{
+  const [home,journey,device,app]=await Promise.all([
+    read('my/index.html'),read('my/journey/index.html'),read('my/device-care/index.html'),read('my/app.js')
+  ]);
+  for(const html of [home,journey,device])assert.match(html,/noindex,nofollow,noarchive/);
+  assert.match(app,/function discardUnsafeReturnTarget\(\)/);
+  assert.match(app,/if\(!params\.has\('return_to'\)\|\|requestedReturnTarget\(\)\)return/);
+  assert.match(app,/params\.delete\('return_to'\)/);
 });
 
 test('Creator portfolio stays person-scoped and private by default',async()=>{
