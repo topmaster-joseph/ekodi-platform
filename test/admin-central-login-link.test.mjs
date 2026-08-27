@@ -54,3 +54,18 @@ test('central handoff keeps a direct auth link fallback and does not inject dupl
   assert.match(source, /loginLink\.href = CENTRAL_ADMIN_AUTH_URL/);
   assert.match(source, /form\.hidden=true/);
 });
+
+test('central handoff preserves requested admin destinations and normalizes legacy aliases', async () => {
+  const source = await read('admin-central-handoff.js');
+  assert.ok(source.includes("storige:'storage'"));
+  assert.ok(source.includes("legacy:'ai-ops'"));
+  assert.ok(source.includes("domains:'ai-ops'"));
+  assert.ok(source.includes("activity:'ai-ops'"));
+  assert.ok(source.includes("const q=normalizeRoute(new URLSearchParams(location.search).get('route'))"));
+  assert.ok(source.includes("const h=normalizeRoute(location.hash)"));
+  assert.ok(source.includes("const target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`"));
+  assert.ok(source.includes("return`https://auth.ekodi.kr/?site=admin&direct=1&return_to=${encodeURIComponent(target)}`"));
+  assert.ok(source.includes("route=normalizeRoute(query.get('route')||hash.get('ekodi_admin_route')"));
+  assert.ok(source.includes("history.replaceState({},document.title,cleanRouteUrl(route))"));
+  assert.ok(source.includes("window.addEventListener('hashchange',()=>{normalizeEntryRoute();syncLoginLink()})"));
+});
