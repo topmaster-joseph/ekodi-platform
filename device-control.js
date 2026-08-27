@@ -6,6 +6,7 @@ const ENROLLMENT_TTL_MS = 10 * 60 * 1000;
 const DEVICE_ONLINE_MS = 90 * 1000;
 const DEVICE_STALE_MS = 10 * 60 * 1000;
 const COMMAND_CLAIM_TIMEOUT_MS = 60 * 60 * 1000;
+const JOB_ASSIGNMENT_TIMEOUT_MS = 65 * 60 * 1000;
 
 const COMMAND_POLICIES = Object.freeze({
   'power.always_on': { risk: 'maintain' },
@@ -34,6 +35,18 @@ const DIAGNOSTIC_SECTIONS = Object.freeze({
   'printers.diagnose': 'printers',
   'startup.scan': 'startup',
   'updates.scan': 'updates',
+});
+
+const COMMAND_CAPABILITIES = Object.freeze({
+  'diagnostics.collect': 'diagnostics',
+  'network.diagnose': 'networkDiagnostics',
+  'printers.diagnose': 'printerDiagnostics',
+  'startup.scan': 'startupManagement',
+  'maintenance.temp_cleanup': 'storageMaintenance',
+  'updates.scan': 'windowsUpdate',
+  'updates.install': 'windowsUpdate',
+  'profile.workstation.apply': 'workstationProfile',
+  'profile.workstation.restore': 'workstationProfile',
 });
 
 function corsHeaders(request, env) {
@@ -103,9 +116,36 @@ async function ensureSchema(db) {
       result_json TEXT NOT NULL DEFAULT '{}',
       FOREIGN KEY (device_id) REFERENCES device_registry(id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_execution_profiles (
+      device_id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      device_group TEXT NOT NULL DEFAULT 'general',
+      max_concurrency INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER,
+      FOREIGN KEY (device_id) REFERENCES device_registry(id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_jobs (
+      id TEXT PRIMARY KEY,
+      command_type TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      tenant_id TEXT NOT NULL DEFAULT '',
+      target_group TEXT NOT NULL DEFAULT 'general',
+      priority INTEGER NOT NULL DEFAULT 50,
+      status TEXT NOT NULL DEFAULT 'queued',
+      requested_at TEXT NOT NULL,
+      requested_by INTEGER,
+      assigned_device_id TEXT,
+      assigned_command_id TEXT,
+      assigned_at TEXT,
+      completed_at TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT NOT NULL DEFAULT ''
+    )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_enrollments_expiry ON device_enrollments(expires_at, used_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_registry_last_seen ON device_registry(last_seen_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_commands_queue ON device_commands(device_id, status, issued_at)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_device_jobs_queue ON device_jobs(status, priority DESC, requested_at)'),
   ]);
 }
 
@@ -310,11 +350,13 @@ async function authenticateDevice(request, env) {
 }
 
 async function listDevices(env) {
-  const [devices, commandRows] = await Promise.all([
+  const [devices, commandRows, profiles] = await Promise.all([
     env.DB.prepare('SELECT * FROM device_registry ORDER BY enrolled_at DESC').all(),
     env.DB.prepare(`SELECT id, device_id, command_type, status, issued_at, claimed_at, completed_at, result_json
       FROM device_commands ORDER BY issued_at DESC LIMIT 120`).all(),
+    env.DB.prepare('SELECT * FROM device_execution_profiles').all(),
   ]);
+  const profileByDevice = new Map((profiles.results || []).map(row => [row.device_id, row]));
   const commandsByDevice = new Map();
   for (const command of commandRows.results || []) {
     if (!commandsByDevice.has(command.device_id)) commandsByDevice.set(command.device_id, []);
@@ -329,10 +371,70 @@ async function listDevices(env) {
       result: summarizeCommandResult(parseJson(command.result_json)),
     });
   }
-  return (devices.results || []).map(row => ({
-    ...serializeDevice(row),
-    recentCommands: commandsByDevice.get(row.id) || [],
+  return (devices.results || []).map(row => {
+    const profile = profileByDevice.get(row.id);
+    return {
+      ...serializeDevice(row),
+      execution: {
+        enabled: profile?.enabled === 1,
+        group: profile?.device_group || 'general',
+        maxConcurrency: profile?.max_concurrency || 1,
+      },
+      recentCommands: commandsByDevice.get(row.id) || [],
+    };
+  });
+}
+
+async function listJobs(env) {
+  const rows = await env.DB.prepare(`SELECT id, command_type, tenant_id, target_group, priority, status,
+    requested_at, assigned_device_id, assigned_at, completed_at, attempts, last_error
+    FROM device_jobs ORDER BY requested_at DESC LIMIT 100`).all();
+  return (rows.results || []).map(row => ({
+    id: row.id, type: row.command_type, tenantId: row.tenant_id, targetGroup: row.target_group,
+    priority: row.priority, status: row.status, requestedAt: row.requested_at,
+    assignedDeviceId: row.assigned_device_id, assignedAt: row.assigned_at,
+    completedAt: row.completed_at, attempts: row.attempts, lastError: row.last_error,
   }));
+}
+
+async function reconcileJobs(env) {
+  const timeout = new Date(Date.now() - JOB_ASSIGNMENT_TIMEOUT_MS).toISOString();
+  await env.DB.prepare(`UPDATE device_jobs SET status = 'queued', assigned_device_id = NULL,
+    assigned_command_id = NULL, assigned_at = NULL, last_error = '기기 응답 시간 초과로 재배정'
+    WHERE status = 'assigned' AND assigned_at < ? AND attempts < 3`).bind(timeout).run();
+  await env.DB.prepare(`UPDATE device_jobs SET status = 'failed', completed_at = ?, last_error = '최대 재시도 횟수 초과'
+    WHERE status = 'assigned' AND assigned_at < ? AND attempts >= 3`).bind(new Date().toISOString(), timeout).run();
+
+  const jobs = await env.DB.prepare(`SELECT * FROM device_jobs WHERE status = 'queued'
+    ORDER BY priority DESC, requested_at ASC LIMIT 20`).all();
+  for (const job of jobs.results || []) {
+    const requiredCapability = COMMAND_CAPABILITIES[job.command_type] || '';
+    const candidates = await env.DB.prepare(`SELECT r.*, p.device_group, p.max_concurrency,
+      (SELECT COUNT(*) FROM device_commands c WHERE c.device_id = r.id AND c.status IN ('queued','claimed')) AS active_count
+      FROM device_registry r JOIN device_execution_profiles p ON p.device_id = r.id
+      WHERE r.revoked_at IS NULL AND p.enabled = 1 AND p.device_group = ? AND r.last_seen_at >= ?
+      ORDER BY active_count ASC, r.last_seen_at DESC`)
+      .bind(job.target_group, new Date(Date.now() - DEVICE_ONLINE_MS).toISOString()).all();
+    const device = (candidates.results || []).find(row => {
+      const capabilities = parseJson(row.capabilities_json);
+      const system = parseJson(row.settings_json)?.health?.system || {};
+      return Number(row.active_count || 0) < Number(row.max_concurrency || 1)
+        && system.autoExecutionEligible === true
+        && system.isPortable === false
+        && (!requiredCapability || capabilities[requiredCapability] === true);
+    });
+    if (!device) continue;
+    const now = new Date().toISOString();
+    const commandId = `cmd_${crypto.randomUUID()}`;
+    const claim = await env.DB.prepare(`UPDATE device_jobs SET status = 'assigned', assigned_device_id = ?,
+      assigned_command_id = ?, assigned_at = ?, attempts = attempts + 1
+      WHERE id = ? AND status = 'queued'`).bind(device.id, commandId, now, job.id).run();
+    if (!claim.meta?.changes) continue;
+    await env.DB.prepare(`INSERT INTO device_commands
+      (id, device_id, command_type, payload_json, status, issued_at, issued_by)
+      VALUES (?, ?, ?, ?, 'queued', ?, ?)`)
+      .bind(commandId, device.id, job.command_type, job.payload_json, now, job.requested_by).run();
+  }
 }
 
 async function handleAdmin(request, env) {
@@ -341,7 +443,63 @@ async function handleAdmin(request, env) {
   const path = new URL(request.url).pathname;
 
   if (request.method === 'GET' && path === ADMIN_PREFIX) {
-    return json({ devices: await listDevices(env), generatedAt: new Date().toISOString() }, 200, request, env);
+    await reconcileJobs(env);
+    return json({ devices: await listDevices(env), jobs: await listJobs(env), generatedAt: new Date().toISOString() }, 200, request, env);
+  }
+
+  if (request.method === 'POST' && path === `${ADMIN_PREFIX}/jobs`) {
+    const body = await readJson(request) || {};
+    const commandType = safeText(body.type, 80);
+    const policy = COMMAND_POLICIES[commandType];
+    if (!policy) return json({ error: '자동 배정할 수 없는 작업입니다.', code: 'DEVICE_JOB_NOT_ALLOWED' }, 400, request, env);
+    if (policy.confirm && body.confirmed !== true) return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_JOB_CONFIRM_REQUIRED' }, 409, request, env);
+    let payload = {};
+    try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
+    catch { return json({ error: '작업 인자가 유효하지 않습니다.', code: 'DEVICE_JOB_PAYLOAD_INVALID' }, 400, request, env); }
+    const targetGroup = safeText(body.targetGroup || 'general', 60).toLowerCase();
+    const tenantId = safeText(body.tenantId, 80).toLowerCase();
+    if (!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(targetGroup)) return json({ error: '기기 그룹이 유효하지 않습니다.' }, 400, request, env);
+    const priority = Math.max(1, Math.min(100, Number(body.priority) || 50));
+    const actorId = await adminId(env, auth.session);
+    const jobId = `job_${crypto.randomUUID()}`;
+    const requestedAt = new Date().toISOString();
+    await env.DB.prepare(`INSERT INTO device_jobs
+      (id, command_type, payload_json, tenant_id, target_group, priority, status, requested_at, requested_by)
+      VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`)
+      .bind(jobId, commandType, JSON.stringify(payload), tenantId, targetGroup, priority, requestedAt, actorId).run();
+    await audit(env, auth.session, 'device.job.create', jobId, `${commandType} → ${targetGroup} [${policy.risk}]`);
+    await reconcileJobs(env);
+    return json({ job: { id: jobId, type: commandType, targetGroup, priority, status: 'queued', requestedAt } }, 202, request, env);
+  }
+
+  const policyMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/execution-policy$/);
+  if (request.method === 'POST' && policyMatch) {
+    const deviceId = decodeURIComponent(policyMatch[1]);
+    const body = await readJson(request) || {};
+    if (body.confirmed !== true) return json({ error: '실행 정책 변경은 관리자 확인이 필요합니다.' }, 409, request, env);
+    const device = await env.DB.prepare('SELECT id, label FROM device_registry WHERE id = ? AND revoked_at IS NULL').bind(deviceId).first();
+    if (!device) return json({ error: '기기를 찾을 수 없습니다.' }, 404, request, env);
+    const enabled = body.enabled === true ? 1 : 0;
+    if (enabled) {
+      const eligibility = await env.DB.prepare('SELECT settings_json FROM device_registry WHERE id = ?').bind(deviceId).first();
+      const system = parseJson(eligibility?.settings_json)?.health?.system || {};
+      if (system.autoExecutionEligible !== true || system.isPortable !== false) {
+        return json({ error: '노트북·휴대형 기기 또는 유형을 확인하지 못한 기기는 자동 작업 노드로 사용할 수 없습니다.', code: 'PORTABLE_DEVICE_NOT_ELIGIBLE' }, 409, request, env);
+      }
+    }
+    const group = safeText(body.group || 'general', 60).toLowerCase();
+    if (!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(group)) return json({ error: '기기 그룹이 유효하지 않습니다.' }, 400, request, env);
+    const maxConcurrency = Math.max(1, Math.min(4, Number(body.maxConcurrency) || 1));
+    const now = new Date().toISOString();
+    const actorId = await adminId(env, auth.session);
+    await env.DB.prepare(`INSERT INTO device_execution_profiles
+      (device_id, enabled, device_group, max_concurrency, updated_at, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(device_id) DO UPDATE SET enabled=excluded.enabled, device_group=excluded.device_group,
+      max_concurrency=excluded.max_concurrency, updated_at=excluded.updated_at, updated_by=excluded.updated_by`)
+      .bind(deviceId, enabled, group, maxConcurrency, now, actorId).run();
+    await audit(env, auth.session, 'device.execution.policy', deviceId, `${device.label}: ${enabled ? 'enabled' : 'disabled'} / ${group} / ${maxConcurrency}`);
+    return json({ ok: true, deviceId, execution: { enabled: Boolean(enabled), group, maxConcurrency } }, 200, request, env);
   }
 
   if (request.method === 'POST' && path === `${ADMIN_PREFIX}/enrollment`) {
@@ -472,6 +630,7 @@ async function heartbeat(request, env, device) {
 }
 
 async function nextCommand(request, env, device) {
+  await reconcileJobs(env);
   const staleClaim = new Date(Date.now() - COMMAND_CLAIM_TIMEOUT_MS).toISOString();
   await env.DB.prepare(`UPDATE device_commands SET status = 'queued', claimed_at = NULL
     WHERE device_id = ? AND status = 'claimed' AND claimed_at < ?`).bind(device.id, staleClaim).run();
@@ -533,6 +692,20 @@ async function commandResult(request, env, device, commandId) {
       SET diagnostics_json = ?, diagnostics_at = ?, settings_json = ?, profile_name = ?
       WHERE id = ? AND revoked_at IS NULL`)
       .bind(diagnosticsJson, completedAt, settingsJson, profileName, device.id).run();
+  }
+  const job = await env.DB.prepare('SELECT id, attempts FROM device_jobs WHERE assigned_command_id = ?').bind(commandId).first();
+  if (job) {
+    if (success) {
+      await env.DB.prepare(`UPDATE device_jobs SET status = 'succeeded', completed_at = ?, last_error = '' WHERE id = ?`)
+        .bind(completedAt, job.id).run();
+    } else if (Number(job.attempts || 0) < 3) {
+      await env.DB.prepare(`UPDATE device_jobs SET status = 'queued', assigned_device_id = NULL,
+        assigned_command_id = NULL, assigned_at = NULL, last_error = ? WHERE id = ?`)
+        .bind(safeText(result.message || '기기 작업 실패로 재배정', 300), job.id).run();
+    } else {
+      await env.DB.prepare(`UPDATE device_jobs SET status = 'failed', completed_at = ?, last_error = ? WHERE id = ?`)
+        .bind(completedAt, safeText(result.message || '기기 작업 실패', 300), job.id).run();
+    }
   }
   return json({ ok: true, commandId, status, completedAt }, 200, request, env);
 }

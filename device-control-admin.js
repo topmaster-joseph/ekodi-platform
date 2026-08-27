@@ -83,7 +83,7 @@
   }
 
   function commandStatus(status) {
-    return ({ queued: '대기', claimed: '처리 중', succeeded: '완료', failed: '실패', cancelled: '취소' })[status] || status;
+    return ({ queued: '대기', assigned: '배정됨', claimed: '처리 중', succeeded: '완료', failed: '실패', cancelled: '취소' })[status] || status;
   }
 
   function capability(device, name) {
@@ -265,6 +265,28 @@
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
     const healthNode = health.firstElementChild;
 
+    const execution = document.createElement('div'); execution.className = 'device-execution-policy';
+    const executionText = document.createElement('div');
+    executionText.innerHTML = `<strong>자동 작업 ${device.execution?.enabled ? '허용됨' : '중지됨'}</strong><small>그룹 ${escapeHtml(device.execution?.group || 'general')} · 동시 ${Number(device.execution?.maxConcurrency || 1)}개</small>`;
+    const executionToggle = document.createElement('button'); executionToggle.type = 'button';
+    executionToggle.className = device.execution?.enabled ? 'secondary' : 'primary';
+    executionToggle.textContent = device.execution?.enabled ? '자동 작업 OFF' : '자동 작업 ON';
+    const autoEligible = device.settings?.health?.system?.autoExecutionEligible === true && device.settings?.health?.system?.isPortable === false;
+    executionToggle.disabled = device.status === 'revoked' || (!device.execution?.enabled && !autoEligible);
+    if (!autoEligible) executionToggle.title = '노트북·휴대형 기기는 자동 작업 노드에서 제외됩니다.';
+    executionToggle.addEventListener('click', async () => {
+      const enabled = !device.execution?.enabled;
+      if (!confirm(`${device.label || device.hostname}의 자동 작업을 ${enabled ? '허용' : '중지'}할까요?`)) return;
+      executionToggle.disabled = true;
+      try {
+        await request(`/api/control/devices/${encodeURIComponent(device.id)}/execution-policy`, {
+          method: 'POST', body: JSON.stringify({ enabled, group: device.execution?.group || 'general', maxConcurrency: device.execution?.maxConcurrency || 1, confirmed: true }),
+        });
+        await loadDevices();
+      } catch (error) { alert(error.message); executionToggle.disabled = false; }
+    });
+    execution.append(executionText, executionToggle);
+
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid';
     mainActions.append(
       makeActionButton(device, 'diagnostics.collect', '🩺 전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
@@ -301,8 +323,38 @@
     });
     foot.append(note, revoke);
 
-    card.append(head, meta, healthNode, recommendationPanel(device), diagnosticSummary(device), mainActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history, foot);
+    card.append(head, meta, execution, healthNode, recommendationPanel(device), diagnosticSummary(device), mainActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history, foot);
     return card;
+  }
+
+  function renderJobs(jobs = []) {
+    const list = document.querySelector('#deviceJobList');
+    const queued = document.querySelector('#deviceMetricQueued');
+    if (queued) queued.textContent = String(jobs.filter(job => ['queued', 'assigned'].includes(job.status)).length);
+    if (!list) return;
+    list.textContent = '';
+    if (!jobs.length) { list.innerHTML = '<p class="device-command-empty">아직 자동 배정 작업이 없습니다.</p>'; return; }
+    jobs.slice(0, 12).forEach(job => {
+      const row = document.createElement('div'); row.className = 'device-job-row'; row.dataset.status = job.status;
+      row.innerHTML = `<div><strong>${escapeHtml(commandLabel(job.type))}</strong><small>${escapeHtml(job.targetGroup)} 그룹 · 우선순위 ${Number(job.priority)} · 시도 ${Number(job.attempts)}</small></div><span>${escapeHtml(commandStatus(job.status))}</span><time>${escapeHtml(timeLabel(job.completedAt || job.assignedAt || job.requestedAt))}</time>`;
+      list.append(row);
+    });
+  }
+
+  async function createAutoJob(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const type = form.elements.type.value;
+    const targetGroup = form.elements.targetGroup.value.trim() || 'general';
+    const priority = Number(form.elements.priority.value) || 50;
+    const confirmed = Boolean(CONFIRM_MESSAGES[type]) ? confirm(CONFIRM_MESSAGES[type]) : true;
+    if (!confirmed) return;
+    const submit = form.querySelector('button[type="submit"]'); submit.disabled = true;
+    try {
+      await request('/api/control/devices/jobs', { method: 'POST', body: JSON.stringify({ type, targetGroup, priority, confirmed }) });
+      await loadDevices();
+    } catch (error) { alert(error.message); }
+    finally { submit.disabled = false; }
   }
 
   function renderDevices(devices) {
@@ -327,6 +379,7 @@
     try {
       const data = await request('/api/control/devices');
       renderDevices(data.devices || []);
+      renderJobs(data.jobs || []);
       const stamp = document.querySelector('#deviceGeneratedAt');
       if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
     } catch (error) {
@@ -372,9 +425,20 @@
       <div class="device-metrics">
         <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong></article>
         <article><small>온라인</small><strong id="deviceMetricOnline">—</strong></article>
+        <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong></article>
         <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong></article>
         <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>100점 기준</span></article>
       </div>
+      <section class="device-job-console">
+        <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>온라인·허용 상태·기기 능력·현재 부하를 확인해 가능한 PC에 배정합니다.</p></div>
+        <form id="deviceJobForm">
+          <label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label>
+          <label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label>
+          <label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label>
+          <button type="submit" class="primary">작업 등록</button>
+        </form>
+        <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
+      </section>
       <div class="device-enrollment-box">
         <div><p class="kicker">ONE-CLICK PAIRING</p><h3>Windows PC 연결</h3><p>연결 프로그램이 설치된 PC는 버튼 클릭 후 Windows 승인만 하면 자동 등록됩니다.</p></div>
         <button type="button" class="primary" id="createDeviceEnrollment">Windows PC 등록</button>
@@ -391,6 +455,7 @@
 
     button.addEventListener('click', showDevices);
     panel.querySelector('#refreshDevices').addEventListener('click', loadDevices);
+    panel.querySelector('#deviceJobForm').addEventListener('submit', createAutoJob);
     panel.querySelector('#createDeviceEnrollment').addEventListener('click', createEnrollment);
     panel.querySelector('#continueDeviceEnrollment').addEventListener('click', () => launchProtocol(currentEnrollmentUrl));
     panel.querySelector('#copyDeviceInstallCommand').addEventListener('click', async event => {
