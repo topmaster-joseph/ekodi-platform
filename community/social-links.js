@@ -12,6 +12,19 @@
       targets = [grid];
     }
   }
+
+  function installConnectEntry() {
+    const head = document.querySelector('#people .section-head');
+    if (!head || head.querySelector('[data-ekodi-connect-entry]')) return;
+    const link = document.createElement('a');
+    link.href = '/connect/';
+    link.className = 'secondary';
+    link.dataset.ekodiConnectEntry = 'true';
+    link.textContent = 'EKODI Connect →';
+    link.setAttribute('aria-label', '신뢰 기반 EKODI Connect 열기');
+    head.append(link);
+  }
+  installConnectEntry();
   if (!targets.length) return;
 
   function link(channel, variant) {

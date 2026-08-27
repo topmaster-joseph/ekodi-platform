@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f5ef">
+  <meta name="description" content="EKODI Community 안에서 신뢰와 상호동의로 사람을 발견하는 EKODI Connect">
+  <title>EKODI Connect · Community</title>
+  <link rel="stylesheet" href="/connect/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="back" href="/" aria-label="Community로 돌아가기">← Community</a>
+    <a class="brand" href="/connect/" aria-label="EKODI Connect 홈"><strong>EKODI</strong><span>CONNECT</span></a>
+    <button class="ghost" id="loginBtn">Google로 시작</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">TRUSTED CONNECTION · 사람을 점수로 고르지 않습니다</p>
+      <h1>누구를 찾습니까?</h1>
+      <p class="lead">조건표보다 삶의 방향을 보고, 한쪽의 선택보다 서로의 동의를 기다립니다.</p>
+      <div class="intent-grid" id="intentGrid" aria-label="연결 목적">
+        <button data-intent="friend"><span>☕</span><b>친구</b><small>함께 이야기할 사람</small></button>
+        <button data-intent="colleague"><span>🧭</span><b>동료</b><small>같은 길을 걷는 사람</small></button>
+        <button data-intent="mentor"><span>🌱</span><b>멘토</b><small>배우고 나눌 사람</small></button>
+        <button data-intent="collaborator"><span>🤝</span><b>협력자</b><small>함께 일을 만들 사람</small></button>
+        <button data-intent="marriage" class="marriage"><span>💍</span><b>배우자</b><small>결혼을 생각하며 만날 사람</small></button>
+      </div>
+      <p class="privacy-note">프로필 공개는 기본 꺼짐입니다. 연락처는 상호 관심 뒤에도 자동 공개하지 않습니다.</p>
+    </section>
+
+    <section class="member-gate" id="signedOutPanel">
+      <h2>로그인 후 시작할 수 있습니다</h2>
+      <p>EKODI 중앙 Google 인증을 사용하며, Connect는 별도 비밀번호를 만들지 않습니다.</p>
+      <button class="primary" data-login>Google로 시작</button>
+    </section>
+
+    <div id="signedInArea" hidden>
+      <section class="status-strip">
+        <div><small>현재 목적</small><strong id="currentIntentLabel">선택 전</strong></div>
+        <div><small>발견 상태</small><strong id="discoverableLabel">꺼짐</strong></div>
+        <button class="secondary" id="settingsBtn">내 연결 설정</button>
+      </section>
+
+      <section class="section" id="recommendationsSection">
+        <div class="section-head">
+          <div><p class="eyebrow">DISCOVER</p><h2 id="recommendationTitle">연결 목적을 먼저 선택해 주세요</h2></div>
+          <button class="text-button" id="refreshBtn" hidden>새로 보기</button>
+        </div>
+        <div class="notice" id="recommendationNotice">위에서 원하는 연결을 선택하면, 서로 공개를 허용한 사람만 보여드립니다.</div>
+        <div class="people-grid" id="peopleGrid"></div>
+      </section>
+
+      <section class="section soft" id="matchesSection">
+        <div class="section-head"><div><p class="eyebrow">MUTUAL</p><h2>서로 마음이 닿은 연결</h2></div></div>
+        <p class="section-copy">한쪽의 관심만으로 개인정보가 열리지 않습니다. 두 사람이 모두 관심을 표시하면 이곳에 나타납니다.</p>
+        <div class="match-list" id="matchList"></div>
+        <div class="empty" id="matchEmpty">아직 상호 연결이 없습니다.</div>
+      </section>
+
+      <section class="principles">
+        <article><b>01 · 선택권</b><p>언제든 발견을 끄고 목적을 바꿀 수 있습니다.</p></article>
+        <article><b>02 · 최소 공개</b><p>추천에 필요한 내용만 보여주고 연락처는 숨깁니다.</p></article>
+        <article><b>03 · 상호동의</b><p>AI가 관계를 결정하지 않습니다. 서로의 선택이 연결을 만듭니다.</p></article>
+        <article><b>04 · 안전</b><p>숨김·차단·신고를 즉시 사용할 수 있습니다.</p></article>
+      </section>
+    </div>
+  </main>
+
+  <div class="modal" id="settingsModal" aria-hidden="true">
+    <div class="backdrop" data-close></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <button class="close" data-close aria-label="닫기">×</button>
+      <p class="eyebrow">MY CONNECT PROFILE</p>
+      <h2 id="settingsTitle">어떤 연결을 허용할까요?</h2>
+      <p class="muted">Connect 설정은 Community의 공개 프로필과 분리하여 저장합니다.</p>
+      <form id="settingsForm">
+        <fieldset><legend>원하는 연결</legend><div class="choices" id="intentChoices"></div></fieldset>
+        <fieldset><legend>관계에서 중요하게 보는 것</legend><div class="choices" id="valueChoices"></div></fieldset>
+        <fieldset><legend>지금 삶에서 중요한 방향</legend><div class="choices" id="priorityChoices"></div></fieldset>
+        <label>대화 방식
+          <select name="conversation_style">
+            <option value="">선택 안 함</option><option>천천히 깊게</option><option>편안하고 자연스럽게</option><option>솔직하고 직접적으로</option><option>활동하며 알아가기</option>
+          </select>
+        </label>
+        <div class="marriage-box" id="marriageBox" hidden>
+          <strong>💍 결혼 Match</strong>
+          <p>결혼을 전제로 한 만남을 원할 때만 켜 주세요. 종교·건강·재산 등 민감한 특성을 AI가 추정하거나 점수화하지 않습니다.</p>
+          <label class="toggle"><input type="checkbox" name="age_19_confirmed"><span>만 19세 이상임을 확인합니다</span></label>
+          <label class="toggle"><input type="checkbox" name="marriage_enabled"><span>결혼 목적 추천에 참여합니다</span></label>
+        </div>
+        <label class="toggle"><input type="checkbox" name="discoverable"><span>같은 목적을 선택한 EKODI 회원에게 내 연결 프로필을 추천할 수 있도록 허용</span></label>
+        <label class="consent"><input type="checkbox" name="consent"><span>추천은 참고 정보이며 최종 선택은 사람에게 있다는 점과, 언제든 공개를 철회할 수 있음을 확인합니다.</span></label>
+        <div class="form-actions"><button type="button" class="ghost" data-close>취소</button><button type="submit" class="primary">저장</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal" id="reportModal" aria-hidden="true">
+    <div class="backdrop" data-close></div>
+    <section class="modal-card small" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+      <button class="close" data-close aria-label="닫기">×</button>
+      <h2 id="reportTitle">안전 신고</h2>
+      <form id="reportForm">
+        <input type="hidden" name="target_user_id">
+        <label>사유<select name="category"><option value="spam">스팸·홍보</option><option value="harassment">불쾌한 접근·괴롭힘</option><option value="false_profile">허위 프로필 의심</option><option value="unsafe">안전 우려</option><option value="other">기타</option></select></label>
+        <label>내용<textarea name="detail" rows="4" maxlength="1200" placeholder="운영자가 확인할 수 있도록 필요한 내용만 적어 주세요."></textarea></label>
+        <label class="toggle"><input type="checkbox" name="block" checked><span>신고와 함께 이 사람을 차단</span></label>
+        <div class="form-actions"><button type="button" class="ghost" data-close>취소</button><button type="submit" class="danger">신고</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script type="module" src="/connect/app.js"></script>
+</body>
+</html>
