@@ -14,7 +14,7 @@ if (!fs.existsSync(adminPath) || !fs.existsSync(financePath)) {
   throw new Error('Build Books assets before applying the performance patch');
 }
 
-let admin = fs.readFileSync(adminPath, 'utf8');
+let admin = fs.readFileSync(adminPath, 'utf8').replace(/\r\n/g, '\n');
 const adminAlreadySafe =
   admin.includes('let loading = false;') &&
   admin.includes('if (loading) return;') &&
@@ -60,7 +60,7 @@ if (!adminAlreadySafe) {
   );
 }
 
-let finance = fs.readFileSync(financePath, 'utf8');
+let finance = fs.readFileSync(financePath, 'utf8').replace(/\r\n/g, '\n');
 finance = requireReplace(
   finance,
   "      strip.id = 'booksFinanceOverview';\n      strip.className = 'books-finance-overview';\n      strip.innerHTML =",

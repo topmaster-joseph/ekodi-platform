@@ -66,9 +66,9 @@ test('standalone Health creates its own menu and fetches only on activation', as
   const health = await read('system-health-admin.js');
   assert.match(health, /const SECTION = 'health'/);
   assert.match(health, /button\.dataset\.section = SECTION/);
-  assert.match(health, /navLabel\.textContent = 'Health'/);
+  assert.match(health, /navLabel\.textContent = '시스템 건강'/);
   assert.match(health, /section\.dataset\.panel = SECTION/);
-  assert.match(health, /pageTitle\.textContent = 'System Health'/);
+  assert.match(health, /pageTitle\.textContent = '시스템 건강'/);
   assert.match(health, /if \(location\.hash !== '#health'\)/);
   assert.match(health, /button\.addEventListener\('click', activate\)/);
   assert.match(health, /load\(false\)/);

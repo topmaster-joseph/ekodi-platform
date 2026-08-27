@@ -1,6 +1,9 @@
 import authWorker from './auth-worker.js';
 
 const SYSTEM_HEALTH_PATH = '/api/control/system-health';
+const SYSTEM_HEALTH_CODE_PATH = '/api/control/system-health/code';
+const SYSTEM_HEALTH_CODE_SCHEMA = 1;
+const CODE_HEALTH_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/system-health-data/system-health-code-report.json';
 
 function json(data, status = 200, sourceHeaders = new Headers()) {
   const headers = new Headers({
@@ -38,13 +41,35 @@ function numberOrNull(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function sanitizeCodeHealth(report) {
+  if (!report || Number(report.schemaVersion) !== SYSTEM_HEALTH_CODE_SCHEMA) throw new Error('지원하지 않는 Code Health 스키마입니다.');
+  const dimensions = Object.fromEntries(Object.entries(report.dimensions || {}).map(([key, item]) => [key, { weight:Number(item?.weight || 0), score:Number(item?.score || 0), status:String(item?.status || 'unknown'), detail:String(item?.detail || '') }]));
+  const technicalDebt = Array.isArray(report.technicalDebt) ? report.technicalDebt.slice(0, 24).map(item => ({ id:String(item?.id || ''), severity:String(item?.severity || 'info'), category:String(item?.category || ''), title:String(item?.title || ''), detail:String(item?.detail || ''), recommendation:String(item?.recommendation || ''), evidence:Array.isArray(item?.evidence) ? item.evidence.slice(0, 8).map(String) : [] })) : [];
+  return { schemaVersion:SYSTEM_HEALTH_CODE_SCHEMA, generatedAt:report.generatedAt || null, repository:String(report.repository || ''), branch:String(report.branch || ''), head:String(report.head || ''), overallScore:numberOrNull(report.overallScore), status:String(report.status || 'unknown'), thresholds:report.thresholds || {}, dimensions, metrics:report.metrics || {}, technicalDebt, cadence:report.cadence || {}, maintenancePolicy:Array.isArray(report.maintenancePolicy) ? report.maintenancePolicy.map(String) : [], privacy:{ publicSummaryOnly:true, secretsIncluded:false, rawLogsIncluded:false } };
+}
+
+async function fetchCodeHealthSnapshot() {
+  const response = await fetch(CODE_HEALTH_URL, { headers:{ accept:'application/json' }, cache:'no-store' });
+  if (!response.ok) throw new Error('Code Health snapshot HTTP ' + response.status);
+  return sanitizeCodeHealth(await response.json());
+}
+
 export async function handleSystemHealthControl(request, env) {
   const url = new URL(request.url);
-  if (url.pathname !== SYSTEM_HEALTH_PATH || request.method !== 'GET') return null;
-  if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
+  if (![SYSTEM_HEALTH_PATH, SYSTEM_HEALTH_CODE_PATH].includes(url.pathname) || request.method !== 'GET') return null;
 
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
+
+  if (url.pathname === SYSTEM_HEALTH_CODE_PATH) {
+    try { return json(await fetchCodeHealthSnapshot(), 200, auth.response.headers); }
+    catch (error) {
+      console.error('System Health code snapshot error', error);
+      return json({ error:'Code & Architecture Health 스냅샷을 읽지 못했습니다.', code:'SYSTEM_HEALTH_CODE_UNAVAILABLE' }, 503, auth.response.headers);
+    }
+  }
+
+  if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, auth.response.headers);
   const days = url.searchParams.get('days') === '30' ? 30 : 7;
 
   try {
