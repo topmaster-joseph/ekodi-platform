@@ -6,6 +6,8 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/ekodi-message-ui.js',
+  '/mall.css',
+  '/mall.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
 
@@ -275,6 +277,10 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+      }
+      if (url.pathname === '/mall' || url.pathname === '/mall/' || url.pathname === '/mall.html') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/mall'));
+        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
       }
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));

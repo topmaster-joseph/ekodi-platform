@@ -2,6 +2,9 @@ import authWorker from './auth-worker.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
+const PUBLIC_STOREFRONT_SLUG = 'ekodi-mall';
+const DEFAULT_AFFILIATE_URL = 'https://link.coupang.com/a/cwWXWm';
+const DEFAULT_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
 
 function json(data, status = 200, sourceHeaders = new Headers()) {
   const headers = new Headers({
@@ -33,6 +36,17 @@ function httpsUrl(value, { optional = false } = {}) {
     const parsed = new URL(text);
     return parsed.protocol === 'https:' ? parsed.toString() : null;
   } catch { return null; }
+}
+
+function publicHeaders(request) {
+  const headers = new Headers();
+  const origin = request.headers.get('origin') || '';
+  const allowed = new Set(['https://ekodi.kr', 'https://www.ekodi.kr', 'https://shop.ekodi.kr']);
+  if (allowed.has(origin)) {
+    headers.set('access-control-allow-origin', origin);
+    headers.set('vary', 'Origin');
+  }
+  return headers;
 }
 
 async function sessionCheck(request, env) {
@@ -67,6 +81,11 @@ async function ensureSchema(db) {
   const now = new Date().toISOString();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_providers (provider_key, display_name, provider_kind, connection_mode, enabled, created_at, updated_at) VALUES ('coupang_partners', 'Coupang Partners', 'affiliate', 'manual', 1, ?, ?)`).bind(now, now).run();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_accounts (id, provider_key, owner_type, owner_key, display_name, account_label, status, connection_mode, default_channel, disclosure_text, enabled, created_at, updated_at) VALUES (?, 'coupang_partners', 'internal', 'ekodibiz', '에코디비즈 쿠팡파트너스', 'EKODIBIZ', 'manual_ready', 'manual', '', '', 1, ?, ?)`).bind(DEFAULT_ACCOUNT_ID, now, now).run();
+  await db.prepare(`UPDATE affiliate_accounts SET disclosure_text = ?, updated_at = ? WHERE id = ? AND TRIM(disclosure_text) = ''`).bind(DEFAULT_DISCLOSURE, now, DEFAULT_ACCOUNT_ID).run();
+  const seedLink = await db.prepare('SELECT id FROM affiliate_links WHERE account_id = ? AND affiliate_url = ? LIMIT 1').bind(DEFAULT_ACCOUNT_ID, DEFAULT_AFFILIATE_URL).first();
+  if (!seedLink) {
+    await db.prepare(`INSERT INTO affiliate_links (account_id, tenant_slug, product_name, destination_url, affiliate_url, channel, campaign_name, status, created_by, created_at, updated_at) VALUES (?, ?, '에코디 추천상품 검색', '', ?, 'EKODI Mall', '추천', 'active', NULL, ?, ?)`).bind(DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG, DEFAULT_AFFILIATE_URL, now, now).run();
+  }
 }
 
 function accountView(row) {
@@ -74,6 +93,23 @@ function accountView(row) {
 }
 function linkView(row) {
   return { id: row.id, accountId: row.account_id, tenantSlug: row.tenant_slug || '', productName: row.product_name, destinationUrl: row.destination_url || '', affiliateUrl: row.affiliate_url, channel: row.channel || '', campaignName: row.campaign_name || '', status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
+}
+
+async function publicProducts(request, env, url) {
+  const storefront = cleanText(url.searchParams.get('storefront') || PUBLIC_STOREFRONT_SLUG, 80);
+  if (storefront !== PUBLIC_STOREFRONT_SLUG) return json({ error: '지원하지 않는 공개 쇼핑몰입니다.' }, 404, publicHeaders(request));
+  const requested = Math.trunc(Number(url.searchParams.get('limit')) || 100);
+  const limit = Math.max(1, Math.min(100, requested));
+  let disclosureText = DEFAULT_DISCLOSURE;
+  let products = [];
+  try {
+    const account = await env.DB.prepare('SELECT disclosure_text FROM affiliate_accounts WHERE id = ? AND enabled = 1').bind(DEFAULT_ACCOUNT_ID).first();
+    const rows = await env.DB.prepare(`SELECT id, product_name, affiliate_url, channel, campaign_name, created_at FROM affiliate_links WHERE account_id = ? AND tenant_slug = ? AND status = 'active' ORDER BY id DESC LIMIT ?`).bind(DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG, limit).all();
+    disclosureText = cleanText(account?.disclosure_text, 1000) || DEFAULT_DISCLOSURE;
+    products = rows.results.map(row => ({ id: row.id, productName: row.product_name, affiliateUrl: row.affiliate_url, category: row.campaign_name || '추천', campaignName: row.campaign_name || '', channel: row.channel || 'EKODI Mall', createdAt: row.created_at }));
+  } catch {}
+  if (!products.length) products = [{ id: 'ekodi-coupang-search', productName: '에코디 추천상품 검색', affiliateUrl: DEFAULT_AFFILIATE_URL, category: '추천', campaignName: '추천', channel: 'EKODI Mall', createdAt: null }];
+  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: 'coupang_partners', disclosureText, instructionText: '아래 추천링크 클릭 후 검색하세요.', products }, 200, publicHeaders(request));
 }
 
 async function overview(env) {
@@ -183,6 +219,9 @@ export async function handleAffiliateRequest(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return null;
   if (!env.DB) return json({ error: '제휴마케팅 데이터베이스 연결이 설정되지 않았습니다.' }, 503);
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/public/products`) {
+    return publicProducts(request, env, url);
+  }
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
   await ensureSchema(env.DB);
