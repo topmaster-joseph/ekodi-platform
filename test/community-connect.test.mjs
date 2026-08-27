@@ -18,7 +18,7 @@ test('Connect is consent-first and marriage is explicit adult opt-in', () => {
   assert.match(adultMigration, /community_connect_marriage_requires_adult/);
 });
 
-test('Connect never reveals contact details in v1 match payloads', () => {
+test('Connect never reveals contact details in recommendation, pending, or match payloads', () => {
   assert.match(page, /연락처는 상호 관심 뒤에도 자동 공개하지 않습니다/);
   assert.match(api, /contact_revealed\s*:\s*false/);
   const start = api.search(/path\s*===\s*"\/recommendations"/);
@@ -34,6 +34,19 @@ test('Connect provides block and report safety controls', () => {
   assert.match(app, /openReport/);
   assert.match(migration, /community_connect_blocks/);
   assert.match(migration, /community_connect_reports/);
+  assert.match(api, /await closePair\(userId, targetUserId\)/);
+});
+
+test('Connect consent can be withdrawn before or after a mutual match', () => {
+  assert.match(page, /보낸 관심/);
+  assert.match(page, /언제든 철회/);
+  assert.match(app, /loadOutgoing/);
+  assert.match(app, /withdrawInterest/);
+  assert.match(api, /path\s*===\s*"\/outgoing"/);
+  assert.match(api, /path\s*===\s*"\/withdraw"/);
+  assert.match(api, /action:\s*"withdrawn"/);
+  assert.match(api, /connect\.interest\.withdrawn/);
+  assert.match(migration, /'withdrawn'/);
 });
 
 test('relationship tables are server-only in v1', () => {
