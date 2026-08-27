@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "ekodi-my",
     "config": "wrangler.my.toml",
@@ -9,14 +9,21 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["My EKODI", "MY PLATFORMS", "CREATOR PORTFOLIO", "church-marketing-ai.js?v=20260827-church-marketing-1"],
-        "headerExpect": ["x-ekodi-service: my-ekodi", "x-content-type-options: nosniff"]
+        "headerExpect": ["x-ekodi-service: my-ekodi", "x-content-type-options: nosniff", "cache-control: no-store", "x-robots-tag: noindex, nofollow, noarchive"]
       },
       {
         "url": "https://my.ekodi.kr/health",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["ekodi-my", "my-ekodi", "creatorPortfolio", "person-scoped", "private-first"],
+        "expect": ["ekodi-my", "my-ekodi", "creatorPortfolio", "person-scoped", "private-first", "privateWorkspaceRouting"],
         "headerExpect": ["x-ekodi-service: my-ekodi", "cache-control: no-store"]
+      },
+      {
+        "url": "https://my.ekodi.kr/w/person:deployment-probe/social",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["My EKODI", "/private-workspace-router.js"],
+        "headerExpect": ["x-ekodi-service: my-ekodi", "cache-control: no-store", "x-robots-tag: noindex, nofollow, noarchive", "x-ekodi-private-workspace: v1", "x-ekodi-workspace-service: social"]
       }
     ]
   }
