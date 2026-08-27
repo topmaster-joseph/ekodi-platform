@@ -10,48 +10,421 @@ const ORIGINS = new Set(["https://community.ekodi.kr", "http://localhost:8788", 
 const INTENTS = new Set(["friend", "colleague", "mentor", "collaborator", "marriage"]);
 const REPORT_CATEGORIES = new Set(["spam", "harassment", "false_profile", "unsafe", "other"]);
 const CONSENT_VERSION = "2026-08-26-v1";
+
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 const uniq = (v: unknown, max = 12) => [...new Set((Array.isArray(v) ? v : []).map((x) => clip(x, 60)).filter(Boolean))].slice(0, max);
 const validIntent = (v: unknown) => INTENTS.has(String(v || "")) ? String(v) : "";
-const cors = (req: Request) => { const origin=req.headers.get("Origin")||""; return {"Access-Control-Allow-Origin":ORIGINS.has(origin)?origin:"https://community.ekodi.kr","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Max-Age":"86400",Vary:"Origin"}; };
-const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}});
-async function authenticate(req:Request){const authorization=req.headers.get("Authorization");if(!authorization)return null;const db=createClient(SUPABASE_URL,ANON_KEY,{global:{headers:{Authorization:authorization}},auth:{persistSession:false}});const {data,error}=await db.auth.getUser();return error||!data.user?null:data.user;}
-function overlap(a:string[]=[],b:string[]=[]){const bs=new Set((b||[]).map(x=>String(x).toLowerCase()));return (a||[]).filter(x=>bs.has(String(x).toLowerCase()));}
-function scoreCandidate(meProfile:any,meConnect:any,profile:any,connect:any){const sharedInterests=overlap(meProfile?.interests,profile?.interests),sharedValues=overlap(meConnect?.relationship_values,connect?.relationship_values),sharedPriorities=overlap(meConnect?.life_priorities,connect?.life_priorities),sharedLanguages=overlap(meProfile?.languages,profile?.languages),sameRegion=Boolean(meProfile?.region&&profile?.region&&meProfile.region===profile.region);const score=sharedInterests.length*4+sharedValues.length*5+sharedPriorities.length*4+sharedLanguages.length+(sameRegion?2:0);const reasons:string[]=[];if(sharedValues.length)reasons.push(`가치관 ${sharedValues.slice(0,3).join(" · ")}`);if(sharedPriorities.length)reasons.push(`삶의 방향 ${sharedPriorities.slice(0,3).join(" · ")}`);if(sharedInterests.length)reasons.push(`공통 관심 ${sharedInterests.slice(0,3).join(" · ")}`);if(sameRegion)reasons.push("같은 지역");if(!reasons.length&&sharedLanguages.length)reasons.push(`공통 언어 ${sharedLanguages.slice(0,2).join(" · ")}`);return{score,sharedInterests,sharedValues,sharedPriorities,reasons};}
-async function blockedPair(me:string,other:string){const {data}=await admin.from("community_connect_blocks").select("blocker_user_id,blocked_user_id").or(`and(blocker_user_id.eq.${me},blocked_user_id.eq.${other}),and(blocker_user_id.eq.${other},blocked_user_id.eq.${me})`).limit(1);return Boolean(data?.length);}
-async function eligibleTarget(targetUserId:string,intent:string){const [{data:connect},{data:profile}]=await Promise.all([admin.from("community_connect_profiles").select("user_id,intents,discoverable,marriage_enabled,age_19_confirmed").eq("user_id",targetUserId).maybeSingle(),admin.from("community_profiles").select("user_id,discoverable,visibility").eq("user_id",targetUserId).maybeSingle()]);if(!connect||!profile||!connect.discoverable||!profile.discoverable||profile.visibility==="private")return false;if(!(connect.intents||[]).includes(intent))return false;if(intent==="marriage"&&(!connect.marriage_enabled||!connect.age_19_confirmed))return false;return true;}
-async function writeActivity(actor:string,type:string,body:Record<string,unknown>={}){await admin.from("community_activity").insert({actor_user_id:actor,circle_id:null,activity_type:type,body});}
+const pairFilter = (me: string, other: string) => `and(user_a_id.eq.${me},user_b_id.eq.${other}),and(user_a_id.eq.${other},user_b_id.eq.${me})`;
 
-Deno.serve(async(req)=>{
-  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:cors(req)});
-  const user=await authenticate(req);if(!user)return json(req,{error:"unauthorized"},401);
-  const userId=user.id,url=new URL(req.url),path=url.pathname.replace(/^\/connect-api/,"")||"/";
-  try{
-    if(req.method==="GET"&&path==="/health")return json(req,{ok:true,service:"ekodi-connect",mode:"core-deterministic",consentVersion:CONSENT_VERSION});
-    if(req.method==="GET"&&path==="/settings"){const [{data:connect},{data:profile}]=await Promise.all([admin.from("community_connect_profiles").select("*").eq("user_id",userId).maybeSingle(),admin.from("community_profiles").select("display_name,bio,region,languages,interests,discoverable,visibility").eq("user_id",userId).maybeSingle()]);return json(req,{connect:connect||null,communityProfile:profile||null,consentVersion:CONSENT_VERSION});}
-    if(req.method==="POST"&&path==="/settings"){
-      const body=await req.json().catch(()=>({}));const intents=uniq(body.intents,5).filter(v=>INTENTS.has(v));const age19Confirmed=body.age_19_confirmed===true;const marriageEnabled=body.marriage_enabled===true&&intents.includes("marriage");const discoverable=body.discoverable===true;
-      if(marriageEnabled&&!age19Confirmed)return json(req,{error:"adult_confirmation_required"},400);
-      if((discoverable||marriageEnabled)&&body.consent!==true)return json(req,{error:"consent_required"},400);
-      const row={user_id:userId,intents,relationship_values:uniq(body.relationship_values,12),life_priorities:uniq(body.life_priorities,12),conversation_style:clip(body.conversation_style,120),discoverable,age_19_confirmed:age19Confirmed,marriage_enabled:marriageEnabled,consent_version:CONSENT_VERSION,consented_at:discoverable?new Date().toISOString():null,updated_at:new Date().toISOString()};
-      const {data,error}=await admin.from("community_connect_profiles").upsert(row,{onConflict:"user_id"}).select("*").single();if(error)throw error;await writeActivity(userId,"connect.settings.updated",{discoverable,intents,marriage_enabled:marriageEnabled});return json(req,{connect:data});
+const cors = (req: Request) => {
+  const origin = req.headers.get("Origin") || "";
+  return {
+    "Access-Control-Allow-Origin": ORIGINS.has(origin) ? origin : "https://community.ekodi.kr",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+};
+
+const json = (req: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: {
+    ...cors(req),
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+  },
+});
+
+async function authenticate(req: Request) {
+  const authorization = req.headers.get("Authorization");
+  if (!authorization) return null;
+  const db = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false },
+  });
+  const { data, error } = await db.auth.getUser();
+  return error || !data.user ? null : data.user;
+}
+
+function overlap(a: string[] = [], b: string[] = []) {
+  const bs = new Set((b || []).map((x) => String(x).toLowerCase()));
+  return (a || []).filter((x) => bs.has(String(x).toLowerCase()));
+}
+
+function scoreCandidate(meProfile: any, meConnect: any, profile: any, connect: any) {
+  const sharedInterests = overlap(meProfile?.interests, profile?.interests);
+  const sharedValues = overlap(meConnect?.relationship_values, connect?.relationship_values);
+  const sharedPriorities = overlap(meConnect?.life_priorities, connect?.life_priorities);
+  const sharedLanguages = overlap(meProfile?.languages, profile?.languages);
+  const sameRegion = Boolean(meProfile?.region && profile?.region && meProfile.region === profile.region);
+  const score = sharedInterests.length * 4 + sharedValues.length * 5 + sharedPriorities.length * 4 + sharedLanguages.length + (sameRegion ? 2 : 0);
+  const reasons: string[] = [];
+  if (sharedValues.length) reasons.push(`가치관 ${sharedValues.slice(0, 3).join(" · ")}`);
+  if (sharedPriorities.length) reasons.push(`삶의 방향 ${sharedPriorities.slice(0, 3).join(" · ")}`);
+  if (sharedInterests.length) reasons.push(`공통 관심 ${sharedInterests.slice(0, 3).join(" · ")}`);
+  if (sameRegion) reasons.push("같은 지역");
+  if (!reasons.length && sharedLanguages.length) reasons.push(`공통 언어 ${sharedLanguages.slice(0, 2).join(" · ")}`);
+  return { score, sharedInterests, sharedValues, sharedPriorities, reasons };
+}
+
+async function blockedPair(me: string, other: string) {
+  const { data, error } = await admin
+    .from("community_connect_blocks")
+    .select("blocker_user_id,blocked_user_id")
+    .or(`and(blocker_user_id.eq.${me},blocked_user_id.eq.${other}),and(blocker_user_id.eq.${other},blocked_user_id.eq.${me})`)
+    .limit(1);
+  if (error) throw error;
+  return Boolean(data?.length);
+}
+
+async function blockedIdsFor(userId: string) {
+  const { data, error } = await admin
+    .from("community_connect_blocks")
+    .select("blocker_user_id,blocked_user_id")
+    .or(`blocker_user_id.eq.${userId},blocked_user_id.eq.${userId}`);
+  if (error) throw error;
+  const ids = new Set<string>();
+  for (const b of data || []) ids.add(b.blocker_user_id === userId ? b.blocked_user_id : b.blocker_user_id);
+  return ids;
+}
+
+async function eligibleTarget(targetUserId: string, intent: string) {
+  const [{ data: connect }, { data: profile }] = await Promise.all([
+    admin.from("community_connect_profiles").select("user_id,intents,discoverable,marriage_enabled,age_19_confirmed").eq("user_id", targetUserId).maybeSingle(),
+    admin.from("community_profiles").select("user_id,discoverable,visibility").eq("user_id", targetUserId).maybeSingle(),
+  ]);
+  if (!connect || !profile || !connect.discoverable || !profile.discoverable || profile.visibility === "private") return false;
+  if (!(connect.intents || []).includes(intent)) return false;
+  if (intent === "marriage" && (!connect.marriage_enabled || !connect.age_19_confirmed)) return false;
+  return true;
+}
+
+async function writeActivity(actor: string, type: string, body: Record<string, unknown> = {}) {
+  await admin.from("community_activity").insert({ actor_user_id: actor, circle_id: null, activity_type: type, body });
+}
+
+async function closePair(userId: string, targetUserId: string, intent?: string) {
+  let query = admin
+    .from("community_connect_matches")
+    .update({ status: "closed", closed_at: new Date().toISOString() })
+    .or(pairFilter(userId, targetUserId))
+    .eq("status", "active");
+  if (intent) query = query.eq("intent", intent);
+  const { data, error } = await query.select("id,intent");
+  if (error) throw error;
+  return data || [];
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(req) });
+  const user = await authenticate(req);
+  if (!user) return json(req, { error: "unauthorized" }, 401);
+  const userId = user.id;
+  const url = new URL(req.url);
+  const path = url.pathname.replace(/^\/connect-api/, "") || "/";
+
+  try {
+    if (req.method === "GET" && path === "/health") {
+      return json(req, { ok: true, service: "ekodi-connect", mode: "core-deterministic", consentVersion: CONSENT_VERSION });
     }
-    if(req.method==="GET"&&path==="/recommendations"){
-      const intent=validIntent(url.searchParams.get("intent"));if(!intent)return json(req,{error:"invalid_intent"},400);
-      const [{data:meProfile},{data:meConnect}]=await Promise.all([admin.from("community_profiles").select("*").eq("user_id",userId).maybeSingle(),admin.from("community_connect_profiles").select("*").eq("user_id",userId).maybeSingle()]);
-      if(!meProfile||!meConnect)return json(req,{people:[],reason:"profile_required"});if(!meConnect.discoverable||!(meConnect.intents||[]).includes(intent))return json(req,{people:[],reason:"intent_not_enabled"});if(intent==="marriage"&&!meConnect.marriage_enabled)return json(req,{people:[],reason:"marriage_not_enabled"});if(intent==="marriage"&&!meConnect.age_19_confirmed)return json(req,{people:[],reason:"adult_confirmation_required"});
-      let query=admin.from("community_connect_profiles").select("user_id,intents,relationship_values,life_priorities,conversation_style,discoverable,marriage_enabled,age_19_confirmed,updated_at").neq("user_id",userId).eq("discoverable",true).contains("intents",[intent]).limit(120);if(intent==="marriage")query=query.eq("marriage_enabled",true).eq("age_19_confirmed",true);const {data:connectCandidates,error:connectError}=await query;if(connectError)throw connectError;const candidateIds=(connectCandidates||[]).map(p=>p.user_id);if(!candidateIds.length)return json(req,{people:[]});
-      const [{data:blocks},{data:actions},{data:profiles}]=await Promise.all([admin.from("community_connect_blocks").select("blocker_user_id,blocked_user_id").or(`blocker_user_id.eq.${userId},blocked_user_id.eq.${userId}`),admin.from("community_connect_actions").select("target_user_id,action").eq("actor_user_id",userId).eq("intent",intent),admin.from("community_profiles").select("user_id,display_name,bio,region,languages,interests,visibility,discoverable").in("user_id",candidateIds).eq("discoverable",true).neq("visibility","private")]);
-      const excluded=new Set<string>();for(const b of blocks||[])excluded.add(b.blocker_user_id===userId?b.blocked_user_id:b.blocker_user_id);for(const a of actions||[])if(a.action!=="withdrawn")excluded.add(a.target_user_id);const profileMap=new Map((profiles||[]).map(p=>[p.user_id,p]));const ranked=(connectCandidates||[]).flatMap(connect=>{if(excluded.has(connect.user_id))return[];const profile=profileMap.get(connect.user_id);if(!profile)return[];const m=scoreCandidate(meProfile,meConnect,profile,connect);return[{user_id:profile.user_id,display_name:profile.display_name||"EKODI 회원",bio:profile.bio||"",region:profile.region||"",shared_interests:m.sharedInterests,shared_values:m.sharedValues,shared_priorities:m.sharedPriorities,reasons:m.reasons,score:m.score,trust:{ekodi_login:true,community_profile:true}}];}).sort((a,b)=>b.score-a.score).slice(0,24);return json(req,{people:ranked,intent,scoring:"deterministic-consent-first"});
+
+    if (req.method === "GET" && path === "/settings") {
+      const [{ data: connect }, { data: profile }] = await Promise.all([
+        admin.from("community_connect_profiles").select("*").eq("user_id", userId).maybeSingle(),
+        admin.from("community_profiles").select("display_name,bio,region,languages,interests,discoverable,visibility").eq("user_id", userId).maybeSingle(),
+      ]);
+      return json(req, { connect: connect || null, communityProfile: profile || null, consentVersion: CONSENT_VERSION });
     }
-    if(req.method==="POST"&&path==="/interest"){
-      const body=await req.json().catch(()=>({})),intent=validIntent(body.intent),targetUserId=clip(body.target_user_id,64);if(!intent||!/^[0-9a-f-]{36}$/i.test(targetUserId)||targetUserId===userId)return json(req,{error:"invalid_target"},400);const {data:me}=await admin.from("community_connect_profiles").select("intents,discoverable,marriage_enabled,age_19_confirmed").eq("user_id",userId).maybeSingle();if(!me?.discoverable||!(me.intents||[]).includes(intent)||(intent==="marriage"&&(!me.marriage_enabled||!me.age_19_confirmed)))return json(req,{error:"intent_not_enabled"},409);if(await blockedPair(userId,targetUserId))return json(req,{error:"not_available"},404);if(!(await eligibleTarget(targetUserId,intent)))return json(req,{error:"not_available"},404);
-      const {error}=await admin.from("community_connect_actions").upsert({actor_user_id:userId,target_user_id:targetUserId,intent,action:"interested",updated_at:new Date().toISOString()},{onConflict:"actor_user_id,target_user_id,intent"});if(error)throw error;const {data:reciprocal}=await admin.from("community_connect_actions").select("id").eq("actor_user_id",targetUserId).eq("target_user_id",userId).eq("intent",intent).eq("action","interested").maybeSingle();let match=null;if(reciprocal){const [userA,userB]=[userId,targetUserId].sort();const {data:saved,error:matchError}=await admin.from("community_connect_matches").upsert({user_a_id:userA,user_b_id:userB,intent,status:"active",closed_at:null},{onConflict:"user_a_id,user_b_id,intent"}).select("id,intent,status,created_at").single();if(matchError)throw matchError;match=saved;await writeActivity(userId,"connect.match.created",{intent});}else await writeActivity(userId,"connect.interest.sent",{intent});return json(req,{mutual:Boolean(reciprocal),match},reciprocal?201:202);
+
+    if (req.method === "POST" && path === "/settings") {
+      const body = await req.json().catch(() => ({}));
+      const intents = uniq(body.intents, 5).filter((v) => INTENTS.has(v));
+      const age19Confirmed = body.age_19_confirmed === true;
+      const marriageEnabled = body.marriage_enabled === true && intents.includes("marriage");
+      const discoverable = body.discoverable === true;
+      if (marriageEnabled && !age19Confirmed) return json(req, { error: "adult_confirmation_required" }, 400);
+      if ((discoverable || marriageEnabled) && body.consent !== true) return json(req, { error: "consent_required" }, 400);
+      const row = {
+        user_id: userId,
+        intents,
+        relationship_values: uniq(body.relationship_values, 12),
+        life_priorities: uniq(body.life_priorities, 12),
+        conversation_style: clip(body.conversation_style, 120),
+        discoverable,
+        age_19_confirmed: age19Confirmed,
+        marriage_enabled: marriageEnabled,
+        consent_version: CONSENT_VERSION,
+        consented_at: discoverable ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await admin.from("community_connect_profiles").upsert(row, { onConflict: "user_id" }).select("*").single();
+      if (error) throw error;
+      await writeActivity(userId, "connect.settings.updated", { discoverable, intents, marriage_enabled: marriageEnabled });
+      return json(req, { connect: data });
     }
-    if(req.method==="POST"&&path==="/pass"){const body=await req.json().catch(()=>({})),intent=validIntent(body.intent),targetUserId=clip(body.target_user_id,64);if(!intent||!/^[0-9a-f-]{36}$/i.test(targetUserId)||targetUserId===userId)return json(req,{error:"invalid_target"},400);const {error}=await admin.from("community_connect_actions").upsert({actor_user_id:userId,target_user_id:targetUserId,intent,action:"pass",updated_at:new Date().toISOString()},{onConflict:"actor_user_id,target_user_id,intent"});if(error)throw error;return json(req,{ok:true});}
-    if(req.method==="GET"&&path==="/matches"){const {data:matches,error}=await admin.from("community_connect_matches").select("id,user_a_id,user_b_id,intent,status,created_at").or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`).eq("status","active").order("created_at",{ascending:false}).limit(50);if(error)throw error;const otherIds=[...new Set((matches||[]).map(m=>m.user_a_id===userId?m.user_b_id:m.user_a_id))];const {data:profiles}=otherIds.length?await admin.from("community_profiles").select("user_id,display_name,bio,region,interests").in("user_id",otherIds):{data:[] as any[]};const map=new Map((profiles||[]).map(p=>[p.user_id,p]));return json(req,{matches:(matches||[]).map(m=>{const otherId=m.user_a_id===userId?m.user_b_id:m.user_a_id,p=map.get(otherId)||{};return{id:m.id,intent:m.intent,status:m.status,created_at:m.created_at,person:{user_id:otherId,display_name:p.display_name||"EKODI 회원",bio:p.bio||"",region:p.region||"",interests:p.interests||[]},contact_revealed:false};})});}
-    if(req.method==="POST"&&path==="/block"){const body=await req.json().catch(()=>({})),targetUserId=clip(body.target_user_id,64);if(!/^[0-9a-f-]{36}$/i.test(targetUserId)||targetUserId===userId)return json(req,{error:"invalid_target"},400);const {error}=await admin.from("community_connect_blocks").upsert({blocker_user_id:userId,blocked_user_id:targetUserId,reason:clip(body.reason,300)},{onConflict:"blocker_user_id,blocked_user_id"});if(error)throw error;await admin.from("community_connect_matches").update({status:"closed",closed_at:new Date().toISOString()}).or(`and(user_a_id.eq.${userId},user_b_id.eq.${targetUserId}),and(user_a_id.eq.${targetUserId},user_b_id.eq.${userId})`).eq("status","active");await writeActivity(userId,"connect.block.created",{});return json(req,{ok:true});}
-    if(req.method==="POST"&&path==="/report"){const body=await req.json().catch(()=>({})),targetUserId=clip(body.target_user_id,64),category=clip(body.category,40);if(!/^[0-9a-f-]{36}$/i.test(targetUserId)||targetUserId===userId||!REPORT_CATEGORIES.has(category))return json(req,{error:"invalid_report"},400);const {data:report,error}=await admin.from("community_connect_reports").insert({reporter_user_id:userId,target_user_id:targetUserId,category,detail:clip(body.detail,1200)}).select("id,status,created_at").single();if(error)throw error;if(body.block!==false)await admin.from("community_connect_blocks").upsert({blocker_user_id:userId,blocked_user_id:targetUserId,reason:`report:${category}`},{onConflict:"blocker_user_id,blocked_user_id"});await writeActivity(userId,"connect.report.created",{category});return json(req,{report,blocked:body.block!==false},201);}
-    return json(req,{error:"not_found"},404);
-  }catch(error){console.error("connect-api",error);return json(req,{error:"connect_api_failed"},500);}
+
+    if (req.method === "GET" && path === "/recommendations") {
+      const intent = validIntent(url.searchParams.get("intent"));
+      if (!intent) return json(req, { error: "invalid_intent" }, 400);
+      const [{ data: meProfile }, { data: meConnect }] = await Promise.all([
+        admin.from("community_profiles").select("*").eq("user_id", userId).maybeSingle(),
+        admin.from("community_connect_profiles").select("*").eq("user_id", userId).maybeSingle(),
+      ]);
+      if (!meProfile || !meConnect) return json(req, { people: [], reason: "profile_required" });
+      if (!meConnect.discoverable || !(meConnect.intents || []).includes(intent)) return json(req, { people: [], reason: "intent_not_enabled" });
+      if (intent === "marriage" && !meConnect.marriage_enabled) return json(req, { people: [], reason: "marriage_not_enabled" });
+      if (intent === "marriage" && !meConnect.age_19_confirmed) return json(req, { people: [], reason: "adult_confirmation_required" });
+
+      let query = admin
+        .from("community_connect_profiles")
+        .select("user_id,intents,relationship_values,life_priorities,conversation_style,discoverable,marriage_enabled,age_19_confirmed,updated_at")
+        .neq("user_id", userId)
+        .eq("discoverable", true)
+        .contains("intents", [intent])
+        .limit(120);
+      if (intent === "marriage") query = query.eq("marriage_enabled", true).eq("age_19_confirmed", true);
+      const { data: connectCandidates, error: connectError } = await query;
+      if (connectError) throw connectError;
+      const candidateIds = (connectCandidates || []).map((p) => p.user_id);
+      if (!candidateIds.length) return json(req, { people: [] });
+
+      const [{ data: blocks }, { data: actions }, { data: profiles }] = await Promise.all([
+        admin.from("community_connect_blocks").select("blocker_user_id,blocked_user_id").or(`blocker_user_id.eq.${userId},blocked_user_id.eq.${userId}`),
+        admin.from("community_connect_actions").select("target_user_id,action").eq("actor_user_id", userId).eq("intent", intent),
+        admin.from("community_profiles").select("user_id,display_name,bio,region,languages,interests,visibility,discoverable").in("user_id", candidateIds).eq("discoverable", true).neq("visibility", "private"),
+      ]);
+      const excluded = new Set<string>();
+      for (const b of blocks || []) excluded.add(b.blocker_user_id === userId ? b.blocked_user_id : b.blocker_user_id);
+      for (const a of actions || []) if (a.action !== "withdrawn") excluded.add(a.target_user_id);
+      const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const ranked = (connectCandidates || []).flatMap((connect) => {
+        if (excluded.has(connect.user_id)) return [];
+        const profile = profileMap.get(connect.user_id);
+        if (!profile) return [];
+        const m = scoreCandidate(meProfile, meConnect, profile, connect);
+        return [{
+          user_id: profile.user_id,
+          display_name: profile.display_name || "EKODI 회원",
+          bio: profile.bio || "",
+          region: profile.region || "",
+          shared_interests: m.sharedInterests,
+          shared_values: m.sharedValues,
+          shared_priorities: m.sharedPriorities,
+          reasons: m.reasons,
+          score: m.score,
+          trust: { ekodi_login: true, community_profile: true },
+        }];
+      }).sort((a, b) => b.score - a.score).slice(0, 24);
+      return json(req, { people: ranked, intent, scoring: "deterministic-consent-first" });
+    }
+
+    if (req.method === "POST" && path === "/interest") {
+      const body = await req.json().catch(() => ({}));
+      const intent = validIntent(body.intent);
+      const targetUserId = clip(body.target_user_id, 64);
+      if (!intent || !/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === userId) return json(req, { error: "invalid_target" }, 400);
+      const { data: me } = await admin.from("community_connect_profiles").select("intents,discoverable,marriage_enabled,age_19_confirmed").eq("user_id", userId).maybeSingle();
+      if (!me?.discoverable || !(me.intents || []).includes(intent) || (intent === "marriage" && (!me.marriage_enabled || !me.age_19_confirmed))) return json(req, { error: "intent_not_enabled" }, 409);
+      if (await blockedPair(userId, targetUserId)) return json(req, { error: "not_available" }, 404);
+      if (!(await eligibleTarget(targetUserId, intent))) return json(req, { error: "not_available" }, 404);
+
+      const { error } = await admin.from("community_connect_actions").upsert({
+        actor_user_id: userId,
+        target_user_id: targetUserId,
+        intent,
+        action: "interested",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "actor_user_id,target_user_id,intent" });
+      if (error) throw error;
+
+      const { data: reciprocal } = await admin
+        .from("community_connect_actions")
+        .select("id")
+        .eq("actor_user_id", targetUserId)
+        .eq("target_user_id", userId)
+        .eq("intent", intent)
+        .eq("action", "interested")
+        .maybeSingle();
+
+      let match = null;
+      if (reciprocal) {
+        const [userA, userB] = [userId, targetUserId].sort();
+        const { data: saved, error: matchError } = await admin.from("community_connect_matches").upsert({
+          user_a_id: userA,
+          user_b_id: userB,
+          intent,
+          status: "active",
+          closed_at: null,
+        }, { onConflict: "user_a_id,user_b_id,intent" }).select("id,intent,status,created_at").single();
+        if (matchError) throw matchError;
+        match = saved;
+        await writeActivity(userId, "connect.match.created", { intent });
+      } else {
+        await writeActivity(userId, "connect.interest.sent", { intent });
+      }
+      return json(req, { mutual: Boolean(reciprocal), match }, reciprocal ? 201 : 202);
+    }
+
+    if (req.method === "POST" && path === "/pass") {
+      const body = await req.json().catch(() => ({}));
+      const intent = validIntent(body.intent);
+      const targetUserId = clip(body.target_user_id, 64);
+      if (!intent || !/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === userId) return json(req, { error: "invalid_target" }, 400);
+      const { error } = await admin.from("community_connect_actions").upsert({
+        actor_user_id: userId,
+        target_user_id: targetUserId,
+        intent,
+        action: "pass",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "actor_user_id,target_user_id,intent" });
+      if (error) throw error;
+      return json(req, { ok: true });
+    }
+
+    if (req.method === "GET" && path === "/outgoing") {
+      const { data: actions, error } = await admin
+        .from("community_connect_actions")
+        .select("target_user_id,intent,updated_at")
+        .eq("actor_user_id", userId)
+        .eq("action", "interested")
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const targetIds = [...new Set((actions || []).map((a) => a.target_user_id))];
+      if (!targetIds.length) return json(req, { outgoing: [] });
+
+      const blockedIds = await blockedIdsFor(userId);
+      const [{ data: matches }, { data: reciprocal }, { data: profiles }] = await Promise.all([
+        admin.from("community_connect_matches").select("user_a_id,user_b_id,intent,status").or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`).eq("status", "active"),
+        admin.from("community_connect_actions").select("actor_user_id,intent,action").in("actor_user_id", targetIds).eq("target_user_id", userId).in("action", ["pass", "withdrawn"]),
+        admin.from("community_profiles").select("user_id,display_name,bio,region").in("user_id", targetIds),
+      ]);
+      const matched = new Set((matches || []).map((m) => `${m.user_a_id === userId ? m.user_b_id : m.user_a_id}:${m.intent}`));
+      const endedByTarget = new Set((reciprocal || []).map((a) => `${a.actor_user_id}:${a.intent}`));
+      const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+      const outgoing = (actions || []).flatMap((a) => {
+        const key = `${a.target_user_id}:${a.intent}`;
+        if (matched.has(key) || endedByTarget.has(key) || blockedIds.has(a.target_user_id)) return [];
+        const p = profileMap.get(a.target_user_id) || {};
+        return [{
+          intent: a.intent,
+          updated_at: a.updated_at,
+          person: {
+            user_id: a.target_user_id,
+            display_name: p.display_name || "EKODI 회원",
+            bio: p.bio || "",
+            region: p.region || "",
+          },
+          contact_revealed: false,
+        }];
+      });
+      return json(req, { outgoing });
+    }
+
+    if (req.method === "GET" && path === "/matches") {
+      const { data: matches, error } = await admin
+        .from("community_connect_matches")
+        .select("id,user_a_id,user_b_id,intent,status,created_at")
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const blockedIds = await blockedIdsFor(userId);
+      const visibleMatches = (matches || []).filter((m) => !blockedIds.has(m.user_a_id === userId ? m.user_b_id : m.user_a_id));
+      const otherIds = [...new Set(visibleMatches.map((m) => m.user_a_id === userId ? m.user_b_id : m.user_a_id))];
+      const { data: profiles } = otherIds.length
+        ? await admin.from("community_profiles").select("user_id,display_name,bio,region,interests").in("user_id", otherIds)
+        : { data: [] as any[] };
+      const map = new Map((profiles || []).map((p) => [p.user_id, p]));
+      return json(req, {
+        matches: visibleMatches.map((m) => {
+          const otherId = m.user_a_id === userId ? m.user_b_id : m.user_a_id;
+          const p = map.get(otherId) || {};
+          return {
+            id: m.id,
+            intent: m.intent,
+            status: m.status,
+            created_at: m.created_at,
+            person: {
+              user_id: otherId,
+              display_name: p.display_name || "EKODI 회원",
+              bio: p.bio || "",
+              region: p.region || "",
+              interests: p.interests || [],
+            },
+            contact_revealed: false,
+          };
+        }),
+      });
+    }
+
+    if (req.method === "POST" && path === "/withdraw") {
+      const body = await req.json().catch(() => ({}));
+      const intent = validIntent(body.intent);
+      const targetUserId = clip(body.target_user_id, 64);
+      if (!intent || !/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === userId) return json(req, { error: "invalid_target" }, 400);
+      const { error } = await admin.from("community_connect_actions").upsert({
+        actor_user_id: userId,
+        target_user_id: targetUserId,
+        intent,
+        action: "withdrawn",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "actor_user_id,target_user_id,intent" });
+      if (error) throw error;
+      const closed = await closePair(userId, targetUserId, intent);
+      await writeActivity(userId, "connect.interest.withdrawn", { intent, closed_match: closed.length > 0 });
+      return json(req, { ok: true, closed_match: closed.length > 0 });
+    }
+
+    if (req.method === "POST" && path === "/block") {
+      const body = await req.json().catch(() => ({}));
+      const targetUserId = clip(body.target_user_id, 64);
+      if (!/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === userId) return json(req, { error: "invalid_target" }, 400);
+      const { error } = await admin.from("community_connect_blocks").upsert({
+        blocker_user_id: userId,
+        blocked_user_id: targetUserId,
+        reason: clip(body.reason, 300),
+      }, { onConflict: "blocker_user_id,blocked_user_id" });
+      if (error) throw error;
+      await admin.from("community_connect_actions").update({ action: "withdrawn", updated_at: new Date().toISOString() }).eq("actor_user_id", userId).eq("target_user_id", targetUserId);
+      await closePair(userId, targetUserId);
+      await writeActivity(userId, "connect.block.created", {});
+      return json(req, { ok: true });
+    }
+
+    if (req.method === "POST" && path === "/report") {
+      const body = await req.json().catch(() => ({}));
+      const targetUserId = clip(body.target_user_id, 64);
+      const category = clip(body.category, 40);
+      if (!/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === userId || !REPORT_CATEGORIES.has(category)) return json(req, { error: "invalid_report" }, 400);
+      const { data: report, error } = await admin.from("community_connect_reports").insert({
+        reporter_user_id: userId,
+        target_user_id: targetUserId,
+        category,
+        detail: clip(body.detail, 1200),
+      }).select("id,status,created_at").single();
+      if (error) throw error;
+      const shouldBlock = body.block !== false;
+      if (shouldBlock) {
+        const { error: blockError } = await admin.from("community_connect_blocks").upsert({
+          blocker_user_id: userId,
+          blocked_user_id: targetUserId,
+          reason: `report:${category}`,
+        }, { onConflict: "blocker_user_id,blocked_user_id" });
+        if (blockError) throw blockError;
+        await admin.from("community_connect_actions").update({ action: "withdrawn", updated_at: new Date().toISOString() }).eq("actor_user_id", userId).eq("target_user_id", targetUserId);
+        await closePair(userId, targetUserId);
+      }
+      await writeActivity(userId, "connect.report.created", { category });
+      return json(req, { report, blocked: shouldBlock }, 201);
+    }
+
+    return json(req, { error: "not_found" }, 404);
+  } catch (error) {
+    console.error("connect-api", error);
+    return json(req, { error: "connect_api_failed" }, 500);
+  }
 });
