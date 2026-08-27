@@ -7,8 +7,8 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 test('admin central handoff normalizes the historical storige alias to storage', async () => {
   const source = await read('admin-central-handoff.js');
   assert.match(source, /storige:'storage'/);
-  assert.match(source, /target\.searchParams\.set\('route', r\)/);
-  assert.match(source, /auth\.searchParams\.set\('return_to', target\.href\)/);
+  assert.match(source, /https:\/\/admin\.ekodi\.kr\/\?route=\$\{encodeURIComponent\(r\)\}/);
+  assert.match(source, /return_to=\$\{encodeURIComponent\(target\)\}/);
   assert.match(source, /new URLSearchParams\(location\.search\)\.get\('route'\)/);
   assert.match(source, /history\.replaceState\(\{\},document\.title,cleanRouteUrl\(route\)\)/);
 });
