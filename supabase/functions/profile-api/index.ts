@@ -6,6 +6,7 @@ const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ALLOWED_ORIGINS=new Set([
   "https://my.ekodi.kr",
   "https://ekodi-my-staging.topmaster-joseph.workers.dev",
+  "https://support.ekodi.kr",
 ]);
 const admin=createClient(SUPABASE_URL,SERVICE_ROLE,{auth:{persistSession:false}});
 
