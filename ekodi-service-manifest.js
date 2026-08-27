@@ -10,6 +10,7 @@ const COMMON_USER_ACCESS_POLICY = Object.freeze({
 
 const SERVICES = [
   {id:'my',name:'My EKODI',shortName:'My',url:'https://my.ekodi.kr/',group:'personal',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['identity','spaces','activity','account'],sso:true,targetable:false,order:10,shellIntegration:'worker-injected'},
+  {id:'management',name:'에코디 경영플랫폼',shortName:'경영AI',url:'https://management.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','community','project'],capabilities:['management','orchestration','module-selection','menu','orders','reviews'],sso:true,targetable:true,openSso:true,order:15,state:'preparing',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'marketing',name:'EKODI Marketing AI',shortName:'Marketing',url:'https://marketing.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['marketing','content','publishing','analytics'],sso:true,targetable:true,order:20,shellIntegration:'static-script'},
   {id:'community',name:'에코디커뮤니티',shortName:'Community',url:'https://community.ekodi.kr/',group:'community',defaultSurface:'public',workspaceKinds:['person','community','church','organization','project'],capabilities:['community','groups','messages','events','prayer'],sso:true,targetable:true,order:30,shellIntegration:'worker-injected'},
   {id:'church',name:'에코디교회',shortName:'Church',url:'https://church.ekodi.kr/',group:'ministry',defaultSurface:'public',workspaceKinds:['church','organization','person'],capabilities:['church','worship','groups','pastoral','events'],sso:true,targetable:true,order:40,shellIntegration:'shared-proxy'},
@@ -46,7 +47,7 @@ const SERVICES = [
 });
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 12,
+  version: 13,
   updatedAt: '2026-08-27',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',

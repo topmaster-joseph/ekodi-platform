@@ -1,0 +1,19 @@
+name = "ekodi-management-staging"
+main = "management-worker.js"
+compatibility_date = "2026-08-27"
+workers_dev = true
+preview_urls = true
+
+[vars]
+MANAGEMENT_MODE = "isolated-staging"
+INTEGRATIONS_ENABLED = "false"
+AUTH_URL = "https://auth.ekodi.kr/?site=management&return_to=https%3A%2F%2Fekodi-management-staging.topmaster-joseph.workers.dev%2F"
+
+[assets]
+directory = "./management"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
