@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-27T09:16:54.038Z",
+  "startedAt": "2026-08-27T09:16:38.765Z",
+  "repository": "topmaster-joseph/ekodi-platform",
+  "branch": "main",
+  "head": "3161bec2dc6457f7332e5c5fd5f08cf5d4bffb48",
+  "overallScore": 86.5,
+  "status": "watch",
+  "thresholds": {
+    "healthy": 90,
+    "watch": 80,
+    "maintenance": 70,
+    "restrictedBelow": 70
+  },
+  "dimensions": {
+    "tests": {
+      "weight": 25,
+      "score": 25,
+      "status": "ok",
+      "detail": "175개 테스트 파일 · 전체 테스트 통과"
+    },
+    "duplication": {
+      "weight": 15,
+      "score": 1.5,
+      "status": "error",
+      "detail": "교차 파일 중복 블록 30개 후보"
+    },
+    "complexity": {
+      "weight": 15,
+      "score": 15,
+      "status": "ok",
+      "detail": "대형 파일 0개 · 매우 큰 파일 0개 · TODO/FIXME 5건"
+    },
+    "security": {
+      "weight": 15,
+      "score": 15,
+      "status": "ok",
+      "detail": "보안 기준 검증 통과"
+    },
+    "architecture": {
+      "weight": 15,
+      "score": 15,
+      "status": "ok",
+      "detail": "플랫폼 경계 검증 통과"
+    },
+    "deployment": {
+      "weight": 10,
+      "score": 10,
+      "status": "ok",
+      "detail": "109개 Workflow · 배포 가드 검증 통과"
+    },
+    "documentation": {
+      "weight": 5,
+      "score": 5,
+      "status": "ok",
+      "detail": "핵심 문서 5/5 확인"
+    }
+  },
+  "metrics": {
+    "runtimeFiles": 337,
+    "runtimeLines": 56707,
+    "testFiles": 175,
+    "workflows": 109,
+    "largeFiles": 0,
+    "veryLargeFiles": 0,
+    "todoMarkers": 5,
+    "duplicateGroups": 30
+  },
+  "technicalDebt": [
+    {
+      "id": "duplicate-0",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books-control.js:9",
+        "books-distribution-control.js:9",
+        "books-finance-control.js:10"
+      ]
+    },
+    {
+      "id": "duplicate-1",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books-control.js:11",
+        "books-distribution-control.js:11",
+        "books-finance-control.js:12"
+      ]
+    },
+    {
+      "id": "duplicate-2",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books-control.js:15",
+        "books-distribution-control.js:15",
+        "books-finance-control.js:16"
+      ]
+    },
+    {
+      "id": "duplicate-3",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books-control.js:17",
+        "books-distribution-control.js:17",
+        "books-finance-control.js:18"
+      ]
+    },
+    {
+      "id": "duplicate-4",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "customer-google-prereg.js:44",
+        "customer-member-directory.js:26",
+        "marketing-admin-control.js:11"
+      ]
+    },
+    {
+      "id": "duplicate-5",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "affiliate-control.js:39",
+        "device-control.js:129"
+      ]
+    },
+    {
+      "id": "duplicate-6",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "ai-agent-control.js:24",
+        "homepage-presentation-control.js:28"
+      ]
+    },
+    {
+      "id": "duplicate-7",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "author-billing-control.js:15",
+        "customer-federated-auth.js:47"
+      ]
+    }
+  ],
+  "checks": {
+    "tests": {
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.768863ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.235315ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (0.770234ms)\n✔ Conversation release is additive, isolated, ordered and guarded (0.836153ms)\nℹ tests 854\nℹ suites 0\nℹ pass 854\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 14569.411797"
+    },
+    "security": {
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "summary": "> ekodi-platform@4.3.0 validate:security\n> node scripts/validate-security-baseline.mjs\n\nSecurity baseline valid: fail-closed edge throttling, browser headers, Google allowlist, session revocation and password shutdown enforced."
+    },
+    "architecture": {
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "summary": "> ekodi-platform@4.3.0 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 24 platform/service boundaries"
+    },
+    "deployment": {
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "summary": "> ekodi-platform@4.3.0 validate:deployments\n> node scripts/validate-deployment-guardrails.mjs\n\n✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying."
+    }
+  },
+  "cadence": {
+    "change": "PR/main 변경 시 CI·계약 테스트",
+    "daily": "운영 상태·Source Integrity 경량 점검",
+    "weekly": "코드 건강·중복·복잡도·기술부채 심층 점검",
+    "monthly": "아키텍처·배포·보안 기준 재검토"
+  },
+  "maintenancePolicy": [
+    "관찰",
+    "원인 분석",
+    "수정안 생성",
+    "테스트·영향 검증",
+    "관리자 승인",
+    "가역적 적용",
+    "운영 재검증"
+  ],
+  "privacy": {
+    "publicSummaryOnly": true,
+    "secretsIncluded": false,
+    "rawLogsIncluded": false
+  }
+}
