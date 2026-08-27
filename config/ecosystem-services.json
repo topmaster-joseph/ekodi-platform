@@ -1,8 +1,9 @@
 {
-  "version": 3,
+  "version": 4,
   "policy": "EKODI root shows only production-verified Live public platforms. Beta, Preparing and Planned services remain in the registry but stay hidden from the public root until they are promoted to Live and explicitly enabled for the homepage.",
   "services": [
     {"id":"church","name":"에코디교회","nameEn":"EKODI Church","descriptionKo":"예배와 말씀, 공동체의 자리","descriptionEn":"Worship, Scripture, and community","url":"https://church.ekodi.kr","label":"church.ekodi.kr","icon":"church","category":"community-ministry","order":10,"homepage":true,"productionVerified":true,"status":"live"},
+    {"id":"bible","name":"에코디 말씀대화","nameEn":"EKODI Bible Conversation","descriptionKo":"삶의 질문에서 말씀으로, 묵상에서 실천과 공동체 나눔으로 이어지는 대화 공간","descriptionEn":"Scripture conversation connecting life questions, reflection, practice, and community sharing","url":"https://bible.ekodi.kr","label":"bible.ekodi.kr","icon":"church","category":"community-ministry","order":15,"homepage":false,"productionVerified":true,"status":"live"},
     {"id":"community","name":"에코디커뮤니티","nameEn":"EKODI Community","descriptionKo":"사람과 모임, 참여를 연결","descriptionEn":"People, groups, and participation","url":"https://community.ekodi.kr","label":"community.ekodi.kr","icon":"community","category":"community-ministry","order":20,"homepage":true,"productionVerified":true,"status":"live"},
     {"id":"social","name":"에코디 소셜","nameEn":"EKODI Social","descriptionKo":"에코디의 소셜 흐름을 한곳에","descriptionEn":"EKODI social channels in one stream","url":"https://social.ekodi.kr","label":"social.ekodi.kr","icon":"community","category":"community-ministry","order":30,"homepage":true,"productionVerified":true,"status":"live"},
     {"id":"cafe","name":"에코디 카페","nameEn":"EKODI Cafe","descriptionKo":"아직 문을 열지 않은 미래의 카페를 함께 상상","descriptionEn":"Imagining a future cafe for coffee, people, and community","url":"https://cafe.ekodi.kr","label":"cafe.ekodi.kr","icon":"community","category":"community-ministry","order":35,"homepage":false,"productionVerified":false,"status":"preparing"},
