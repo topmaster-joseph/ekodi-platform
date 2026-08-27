@@ -130,8 +130,8 @@ jobs:
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
-          grep -Fq "navLabel.textContent = 'Health'" dist/system-health-admin.js
-          grep -Fq "pageTitle.textContent = 'System Health'" dist/system-health-admin.js
+          grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
+          grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
           ! grep -Fq 'setInterval(' dist/system-health-admin.js
 
           compact_bytes=$(wc -c < dist/compact-control-center.js)
@@ -201,8 +201,8 @@ jobs:
               && grep -Fq 'admin-readable-command.css' /tmp/admin-stage-ai.css \
               && grep -Fq "actionType:'ui.change_request'" /tmp/admin-stage-lazy.js \
               && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/admin-stage-lazy.js \
-              && grep -Fq "navLabel.textContent = 'Health'" /tmp/admin-stage-health.js \
-              && grep -Fq "pageTitle.textContent = 'System Health'" /tmp/admin-stage-health.js \
+              && grep -Fq "navLabel.textContent = '시스템 건강'" /tmp/admin-stage-health.js \
+              && grep -Fq "pageTitle.textContent = '시스템 건강'" /tmp/admin-stage-health.js \
               && grep -Fq '.system-health-overall' /tmp/admin-stage-health.css; then
               echo "Admin PR staging verified: version=$version, standalone Health, fingerprinted thin shell, demand-only features, latest flat AI Ops, zero production traffic."
               exit 0
