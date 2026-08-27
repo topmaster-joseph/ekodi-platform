@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T09:20:42.762Z",
-  "startedAt": "2026-08-27T09:20:31.270Z",
+  "generatedAt": "2026-08-27T09:25:29.418Z",
+  "startedAt": "2026-08-27T09:25:17.471Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "1cc12c7fc222914c6283394522fd0ef3b94c93ad",
+  "head": "2d3d9887d10d5f9c92399019d75ac8a83385f453",
   "overallScore": 66.5,
   "status": "restricted",
   "thresholds": {
@@ -58,9 +58,9 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 337,
-    "runtimeLines": 56945,
-    "testFiles": 175,
+    "runtimeFiles": 338,
+    "runtimeLines": 56994,
+    "testFiles": 176,
     "workflows": 109,
     "largeFiles": 0,
     "veryLargeFiles": 0,
@@ -184,7 +184,7 @@
       "ok": false,
       "status": 1,
       "timedOut": false,
-      "summary": ")panel.hidden=false}else deactivateMallFreeOps()},true);\\nwindow.addEventListener(\\'hashchange\\',()=>{if(location.hash!==\\'#mall-free-ops\\')deactivateMallFreeOps()});if(location.hash!==\\'#mall-free-ops\\')deactivateMallFreeOps()\\n}\\nfunction announceReady(){document.documentElement.dataset.ekodiAdminReady=\\'true\\';try{performance.mark(\\'ekodi-admin-ready\\')}catch{}window.dispatchEvent(new CustomEvent(\\'ekodi-admin-ready\\'))}\\nasync function startAuthenticatedShell(){\\nif (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady=\\'loading\\';\\nif(location.pathname.startsWith(\\'/legacy\\')){loadStyle(\\'control-center-ops.css\\');loadStyle(\\'control-center-finance.css\\');await loadScript(\\'control-center.js\\');announceReady();return}\\nfor(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady()\\n}\\nfunction onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&[\\'#campus\\',\\'#operations\\',\\'#policies\\',\\'#ai-ops\\',\\'#devices\\',\\'#work\\',\\'#marketing-ai\\',\\'#deployments\\'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}\\nkeepLoginInteractive();onStateChange();\\nwindow.addEventListener(\\'ekodi-authenticated\\', onStateChange);\\nwindow.addEventListener(\\'ekodi-nav-changed\\',installSharedAdminLayout);window.addEventListener(\\'ekodi-feature-installed\\',installSharedAdminLayout);matchMedia(\\'(max-width:760px)\\').addEventListener?.(\\'change\\',installSharedAdminLayout)\\n})();\\n',\n    expected: /const postAuthStyles = \\['compact-control-center\\.css'\\]/,\n    operator: 'match',\n    diff: 'simple'\n  }"
+      "summary": "allFreeOps()\\n}\\nfunction announceReady(){document.documentElement.dataset.ekodiAdminReady=\\'true\\';try{performance.mark(\\'ekodi-admin-ready\\')}catch{}window.dispatchEvent(new CustomEvent(\\'ekodi-admin-ready\\'))}\\nfunction loadAdminAccessDeferred(){\\nqueueMicrotask(()=>{if(!authenticated())return;loadStyle(\\'google-admin-auth.css\\');loadScript(\\'google-admin-auth.js\\')})\\n}\\nasync function startAuthenticatedShell(){\\nif (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady=\\'loading\\';\\nif(location.pathname.startsWith(\\'/legacy\\')){loadStyle(\\'control-center-ops.css\\');loadStyle(\\'control-center-finance.css\\');await loadScript(\\'control-center.js\\');announceReady();return}\\nfor(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady();loadAdminAccessDeferred()\\n}\\nfunction onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&[\\'#campus\\',\\'#operations\\',\\'#policies\\',\\'#ai-ops\\',\\'#devices\\',\\'#work\\',\\'#marketing-ai\\',\\'#deployments\\'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}\\nkeepLoginInteractive();onStateChange();\\nwindow.addEventListener(\\'ekodi-authenticated\\', onStateChange);\\nwindow.addEventListener(\\'ekodi-nav-changed\\',installSharedAdminLayout);window.addEventListener(\\'ekodi-feature-installed\\',installSharedAdminLayout);matchMedia(\\'(max-width:760px)\\').addEventListener?.(\\'change\\',installSharedAdminLayout)\\n})();\\n',\n    expected: /const postAuthStyles = \\['compact-control-center\\.css','google-admin-auth\\.css'\\]/,\n    operator: 'match',\n    diff: 'simple'\n  }"
     },
     "security": {
       "ok": true,
