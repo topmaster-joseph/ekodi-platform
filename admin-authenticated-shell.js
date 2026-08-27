@@ -44,6 +44,7 @@ const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav
 if(!app||!sidebar||!nav||!main||!content||!sideBottom)return;
 document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll = 'true';content.dataset.ekodiIndependentScroll = 'workspace';
 if(profile&&!sideBottom.contains(profile)){profile.classList.add('side-profile');sideBottom.insertBefore(profile, logoutButton || null)}
+if(profile){s(profile,{display:'flex','grid-template-columns':'none','align-items':'center',gap:'8px','min-width':'0',width:'100%'},'important');const identity=profile.querySelector('div'),email=profile.querySelector('small');s(identity,{'min-width':'0'},'important');s(email,{display:'block','max-width':'145px',overflow:'hidden','text-overflow':'ellipsis','white-space':'nowrap','word-break':'normal'},'important')}
 if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden = true;
 s(document.body,{height:'100dvh',overflow:'hidden'});s(app,{height:'100dvh',overflow:'hidden'});s(sidebar,{height:'100dvh',overflow:'hidden'},'important');sideBottom.style.setProperty('position', 'static', 'important');s(sideBottom,{flex:'0 0 auto'},'important');nav.style.setProperty('flex', '1 1 auto', 'important');nav.style.setProperty('overflow-y', 'auto', 'important');s(nav,{'min-height':'0','overflow-x':'hidden','max-height':'none','overscroll-behavior':'contain'},'important');main.style.setProperty('overflow-y', 'auto');s(main,{height:'100dvh','min-height':'0','overflow-x':'hidden','overscroll-behavior':'contain'});
 if(topbar)topbar.style.setProperty('display',matchMedia('(max-width:760px)').matches ? 'flex' : 'none','important')
@@ -63,7 +64,7 @@ if (started || !authenticated()) return;started=true;applyOfficialAdminSurface()
 if(location.pathname.startsWith('/legacy')){loadStyle('control-center-ops.css');loadStyle('control-center-finance.css');await loadScript('control-center.js');announceReady();return}
 for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady()
 }
-function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&['#campus','#operations','#policies','#ai-ops','#devices','#work','#marketing-ai','#deployments'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
+function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&['#campus','#operations','#policies','#ai-ops','#devices','#work','#marketing-ai','#deployments','#storage'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
 keepLoginInteractive();onStateChange();
 window.addEventListener('ekodi-authenticated', onStateChange);
 window.addEventListener('ekodi-nav-changed',installSharedAdminLayout);window.addEventListener('ekodi-feature-installed',installSharedAdminLayout);matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
