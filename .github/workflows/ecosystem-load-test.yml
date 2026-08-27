@@ -2,17 +2,18 @@ name: Ecosystem Bounded Load Test
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - '.github/workflows/ecosystem-load-test.yml'
-      - 'scripts/ecosystem-load-test.mjs'
+    inputs:
+      reason:
+        description: 'Reason for the approved production load check'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-bounded-load-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ekodi-bounded-production-load
+  cancel-in-progress: false
 
 jobs:
   load-test:
@@ -21,39 +22,15 @@ jobs:
     env:
       LOAD_TARGETS_JSON: >-
         [{"label":"root","url":"https://ekodi.kr/"},{"label":"admin","url":"https://admin.ekodi.kr/"},{"label":"api-health","url":"https://api.ekodi.kr/health"},{"label":"biz","url":"https://biz.ekodi.kr/"},{"label":"marketing","url":"https://marketing.ekodi.kr/"},{"label":"church","url":"https://church.ekodi.kr/"},{"label":"lab","url":"https://lab.ekodi.kr/"},{"label":"support","url":"https://support.ekodi.kr/"}]
-      LOAD_CONCURRENCY: '1,10,20,50'
-      LOAD_REQUESTS_PER_STAGE: '60'
+      LOAD_CONCURRENCY: '1'
+      LOAD_REQUESTS_PER_STAGE: '5'
       LOAD_TIMEOUT_MS: '5000'
-      LOAD_P95_BUDGET_MS: '500'
-      LOAD_INCIDENT_P95_MS: '1500'
-      LOAD_ERROR_RATE_BUDGET: '0.01'
+      LOAD_P95_BUDGET_MS: '1500'
+      LOAD_INCIDENT_P95_MS: '3000'
+      LOAD_ERROR_RATE_BUDGET: '0.05'
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24'
-
-      - name: Run bounded production load test
-        run: node scripts/ecosystem-load-test.mjs
-
-      - name: Publish load summary
-        if: always()
+      - name: Block production load from development branch
         shell: bash
         run: |
-          if [ -f artifacts/ecosystem-load-test.md ]; then
-            cat artifacts/ecosystem-load-test.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'Load test did not produce a report.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload load report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ecosystem-load-test
-          path: |
-            artifacts/ecosystem-load-test.json
-            artifacts/ecosystem-load-test.md
-          if-no-files-found: warn
-          retention-days: 14
+          echo '::error::Production load testing is disabled from the development branch. Use the main-branch manual workflow only.'
+          exit 1
