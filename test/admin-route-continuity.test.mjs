@@ -23,17 +23,16 @@ test('Storage is a canonical menu hash and remains demand-loaded after authentic
   assert.match(demand, /scripts: \['storage-admin\.js'\]/);
 });
 
-test('legacy admin entry converges into current AI operations instead of old dark tools', async () => {
+test('legacy admin entry converges into current AI operations before old runtime can start', async () => {
   const handoff = await read('admin-central-handoff.js');
-  const shell = await read('admin-authenticated-shell.js');
   assert.match(handoff, /location\.pathname\.startsWith\('\/legacy'\)\?'ai-ops'/);
   assert.match(handoff, /if\(u\.pathname\.startsWith\('\/legacy'\)\)u\.pathname='\/'/);
-  assert.match(shell, /if\(adminTools\)adminTools\.href='#ai-ops'/);
+  assert.match(handoff, /u\.hash=r\?`#\$\{r\}`:''/);
 });
 
 test('sidebar account profile stays horizontal and truncates long email safely', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /display:flex!important;grid-template-columns:none!important/);
+  assert.match(shell, /display:flex!important;min-width:0!important;width:100%!important/);
   assert.match(shell, /white-space:nowrap!important/);
   assert.match(shell, /text-overflow:ellipsis!important/);
   assert.match(shell, /max-width:145px!important/);
