@@ -13,18 +13,20 @@ function mustReplace(source, search, replacement, label) {
   return source.replace(search, replacement);
 }
 
-// Device Control is published only as a standalone demand asset. EKODI Assist keeps only
-// a tiny launcher in the first path; its full panel rides on already secured AI Ops assets.
+// Device Control and Hybrid Execution are published only as one standalone demand asset.
+// EKODI Assist keeps only a tiny launcher in the first path; its full panel rides on already secured AI Ops assets.
 let compactCss = await text(`${dist}compact-control-center.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
+const hybridExecutionJs = (await text(`${root}hybrid-execution-admin.js`)).trim();
 const assistJs = (await text(`${root}admin-assist-dock.js`)).trim();
 const assistCss = (await text(`${root}admin-assist-dock.css`)).trim();
 const assistBootstrapJs = (await text(`${root}admin-assist-bootstrap.js`)).trim();
 const assistBootstrapCss = (await text(`${root}admin-assist-bootstrap.css`)).trim();
+new Function(hybridExecutionJs);
 new Function(assistJs);
 new Function(assistBootstrapJs);
-await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n`);
+await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n${hybridExecutionJs}\n`);
 await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
 compactCss = mustReplace(compactCss, deviceCss, '', 'device CSS bundled in compact shell');
 compactCss = `${compactCss}\n${assistBootstrapCss}\n`;
@@ -99,8 +101,11 @@ if (!finalCampus.includes("section.id = 'campusPanel'") || !finalCampus.includes
 if (!finalDeviceJs.includes('WINDOWS_AGENT_URL') || !finalDeviceJs.includes('installPanel()')) {
   throw new Error('Standalone Device Control JavaScript was not materialized');
 }
+if (!finalDeviceJs.includes('EKODI HYBRID EXECUTION') || !finalDeviceJs.includes('/api/control/hybrid-execution/dashboard')) {
+  throw new Error('Hybrid Execution was not attached to the on-demand Device Control asset');
+}
 if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes('.ekodi-device-card')) {
   throw new Error('Standalone Device Control CSS was not materialized');
 }
 
-console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Assist launcher-only first path; compact full Assist lazy; Campus, Policies and Device constructors removed from first interaction.`);
+console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Assist launcher-only first path; Device Control + Hybrid Execution lazy; Campus and Policies constructors removed from first interaction.`);
