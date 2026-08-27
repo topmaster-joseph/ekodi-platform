@@ -1,0 +1,163 @@
+name: EKODI Distributed Runtime Release
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &runtime_paths
+      - 'hybrid-execution.js'
+      - 'hybrid-execution-admin.js'
+      - 'migrations/0040_hybrid_execution.sql'
+      - 'test/hybrid-execution-contract.test.mjs'
+      - '.github/workflows/distributed-runtime-release.yml'
+  push:
+    branches: [main]
+    paths: *runtime_paths
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ekodi-distributed-runtime-release
+  cancel-in-progress: false
+
+env:
+  CONTROL_WORKFLOW: deploy-control-api.yml
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate distributed runtime contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check hybrid-execution.js
+          node --check hybrid-execution-admin.js
+          node --check mission-control-entry-worker.js
+          node --test test/hybrid-execution-contract.test.mjs test/device-control-contract.test.mjs
+          npm run build
+          test -f dist/device-control-admin.js
+          grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
+          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
+          ! grep -Eq 'child_process|execSync|spawnSync|Invoke-Expression' hybrid-execution.js
+
+  windows-agent:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Parse Agent and enforce execution boundary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          $tokens = $null
+          $errors = $null
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+          $content = Get-Content $path -Raw
+          $commands = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] }, $true) | ForEach-Object { $_.GetCommandName() } | Where-Object { $_ })
+          foreach ($forbidden in @('Invoke-Expression','iex')) {
+            if ($commands -contains $forbidden) { throw "Forbidden executable command found: $forbidden" }
+          }
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false')) {
+            if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
+          }
+          if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') {
+            throw 'Forbidden remote-control behavior found.'
+          }
+          Write-Host 'EKODI distributed Windows Agent boundary OK.'
+
+  control-release:
+    if: github.event_name != 'pull_request'
+    needs: [contract, windows-agent]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ github.sha }}
+    steps:
+      - name: Dispatch guarded Control API staging and production release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run "$CONTROL_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref main
+          run_id=''
+          for attempt in $(seq 1 36); do
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$CONTROL_WORKFLOW" --branch main --event workflow_dispatch --limit 20 --json databaseId,headSha,createdAt --jq ".[] | select(.headSha == \"$TARGET_SHA\") | .databaseId" | head -1 || true)
+            if [ -n "$run_id" ]; then break; fi
+            sleep 5
+          done
+          test -n "$run_id"
+          echo "Control API release run: $run_id"
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+
+  admin-release:
+    if: github.event_name != 'pull_request'
+    needs: [contract, windows-agent]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ekodi-shared-site-worker-production
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify release credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Build authenticated Admin runtime bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          test -n "$version"
+          echo "ADMIN_ASSET_VERSION=$version" >> "$GITHUB_ENV"
+          test -f dist/device-control-admin.js
+          grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
+          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
+      - name: Guarded candidate release and promotion
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+      - name: Verify production Admin distributed runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$ADMIN_ASSET_VERSION"
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            live_version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-body 2>/dev/null | head -1 | sed 's/.*?v=//' || true)
+            if [ "$root_code" != '200' ] || [ -z "$live_version" ] || [ "$live_version" != "$expected" ]; then
+              sleep 4
+              continue
+            fi
+            device_code=$(curl -sS -D /tmp/device-headers -o /tmp/device-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/device-control-admin.js?v=$live_version" || true)
+            if [ "$device_code" = '200' ] \
+              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/device-headers \
+              && grep -Fq 'EKODI HYBRID EXECUTION' /tmp/device-body \
+              && grep -Fq '/api/control/hybrid-execution/dashboard' /tmp/device-body \
+              && grep -Fq '새 기기의 자동 실행은 기본 OFF' /tmp/device-body; then
+              echo "Production Admin runtime verified: $live_version"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'Production Admin distributed runtime verification failed.' >&2
+          exit 1
