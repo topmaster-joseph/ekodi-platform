@@ -28,7 +28,7 @@ modeButtons.forEach(b => b.addEventListener('click', () => { forcedMode = b.data
 
 function normalizedBook(book){
   const priceText = book?.editions?.googleKoreanBilingual?.price || '';
-  const price = String(priceText).replace(/[^0-9]/g,'') || '8900';
+  const price = String(priceText).replace(/[^0-9]/g,'') || '9900';
   return {
     title: book.title || '', subtitle: book.subtitle || '', author: book.author || '',
     publisher: '에코디서점', description: book.abstract || '', price,
