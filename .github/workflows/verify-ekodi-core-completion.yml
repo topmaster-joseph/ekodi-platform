@@ -19,7 +19,6 @@ on:
       - 'scripts/validate-ekodi-core-completion.mjs'
       - 'scripts/verify-ekodi-core-production.mjs'
       - 'scripts/guarded-worker-release.mjs'
-      - 'scripts/ecosystem-load-test.mjs'
       - '.github/workflows/verify-ekodi-core-completion.yml'
       - '.github/workflows/backup-ekodi-core.yml'
       - '.github/workflows/deploy-control-api.yml'
@@ -35,7 +34,7 @@ permissions:
 
 concurrency:
   group: ekodi-core-completion-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   contract:
@@ -72,9 +71,10 @@ jobs:
             test/core-recovery-contract.test.mjs
 
   production-readonly:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: contract
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -82,22 +82,11 @@ jobs:
           node-version: '24'
       - name: Verify live EKODI Core production contract
         run: npm run verify:core-production
-      - name: Run bounded GET-only ecosystem load verification
-        env:
-          LOAD_CONCURRENCY: '1,5,10,20'
-          LOAD_REQUESTS_PER_STAGE: '40'
-          LOAD_P95_BUDGET_MS: '1500'
-          LOAD_INCIDENT_P95_MS: '2500'
-          LOAD_ERROR_RATE_BUDGET: '0.01'
-        run: node scripts/ecosystem-load-test.mjs
       - name: Upload final completion evidence
         uses: actions/upload-artifact@v4
         with:
           name: ekodi-core-completion-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            artifacts/ekodi-core-production-verification.json
-            artifacts/ecosystem-load-test.json
-            artifacts/ecosystem-load-test.md
+          path: artifacts/ekodi-core-production-verification.json
           if-no-files-found: error
           retention-days: 30
       - name: Completion summary
@@ -105,10 +94,10 @@ jobs:
           echo '### EKODI Core v1.0 completion verification' >> "$GITHUB_STEP_SUMMARY"
           echo '- Seven-stage completion contract: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Central permission/workflow/evidence contracts: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Production Core API: passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Production Core API read-only smoke verification: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Protected routes fail closed without auth: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Security headers: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- AI provider-independent survival: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Independent backup/restore contract: passed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Automatic rollback contract: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Bounded production load verification: passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Production load testing is isolated to the dedicated manual capped workflow.' >> "$GITHUB_STEP_SUMMARY"
