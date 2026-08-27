@@ -6,10 +6,11 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /const postAuthStyles = \['compact-control-center\.css'\]/);
+  assert.match(shell, /const postAuthStyles = \['compact-control-center\.css','google-admin-auth\.css'\]/);
   assert.match(shell, /'compact-control-center\.js'/);
   assert.match(shell, /'admin-menu-layout\.js'/);
   assert.match(shell, /'admin-demand-loader\.js'/);
+  assert.match(shell, /'google-admin-auth\.js'/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.match(shell, /assetUrl\(src\)/);
   assert.doesNotMatch(shell, /'campus-actions\.js'/);
