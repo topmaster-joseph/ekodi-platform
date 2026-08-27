@@ -97,7 +97,9 @@ jobs:
           grep -Fq '"id":"jadam"' /tmp/business_workspaces.body
 
           probe auth_business 'https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' 200
-          grep -Fq 'EKODI 인증센터' /tmp/auth_business.body
+          grep -Fq '통합 인증센터' /tmp/auth_business.body
+          grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth_business.headers
+          grep -Fiq 'cache-control: no-store' /tmp/auth_business.headers
           probe auth_router 'https://auth.ekodi.kr/auth-router.js?v=20260826-free-fallback-1' 200
           grep -Fq "site==='business'" /tmp/auth_router.body
           probe business_auth_asset 'https://auth.ekodi.kr/business-auth.js?v=20260826-free-fallback-1' 200
