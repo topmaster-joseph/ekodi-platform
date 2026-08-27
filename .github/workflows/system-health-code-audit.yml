@@ -1,0 +1,94 @@
+name: EKODI Code Health Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monday 09:10 KST: weekly deep code-health snapshot.
+    - cron: '10 0 * * 1'
+    # First day of each month 09:20 KST: architecture baseline refresh.
+    - cron: '20 0 1 * *'
+  pull_request:
+    paths:
+      - 'scripts/system-health-code-audit.mjs'
+      - 'system-health-control.js'
+      - 'system-health-admin.js'
+      - 'system-health-admin.css'
+      - 'admin-menu-registry.js'
+      - 'mission-control-entry-worker.js'
+      - 'test/system-health-code-contract.test.mjs'
+      - '.github/workflows/system-health-code-audit.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ekodi-code-health-${{ github.event_name == 'pull_request' && github.ref || 'scheduled' }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate System Health code contract
+        run: |
+          node --check scripts/system-health-code-audit.mjs
+          node --check system-health-control.js
+          node --check system-health-admin.js
+          node --test test/system-health-code-contract.test.mjs
+
+      - name: Build code-health snapshot
+        if: github.event_name != 'pull_request'
+        run: node scripts/system-health-code-audit.mjs
+
+      - name: Publish audit artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-code-health-${{ github.run_id }}
+          path: system-health-code-report.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish latest snapshot to health-data branch
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATA_BRANCH: system-health-data
+        run: |
+          set -euo pipefail
+          api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/contents/system-health-code-report.json"
+          sha="$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$api?ref=$DATA_BRANCH" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha", ""))' 2>/dev/null || true)"
+          content="$(base64 -w0 system-health-code-report.json)"
+          payload="$(python3 - "$DATA_BRANCH" "$content" "$sha" <<'PY'
+          import json, sys
+          branch, content, sha = sys.argv[1:]
+          body = {
+              'message': 'chore: refresh EKODI system health snapshot [skip ci]',
+              'content': content,
+              'branch': branch,
+          }
+          if sha:
+              body['sha'] = sha
+          print(json.dumps(body))
+          PY
+          )"
+          curl -fsSL -X PUT \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$api" \
+            -d "$payload" >/dev/null
+          echo "Published latest code-health snapshot to $DATA_BRANCH."

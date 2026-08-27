@@ -5,66 +5,25 @@ const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
 const app=document.querySelector('#app');
 const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
-const postAuthStyles = ['compact-control-center.css'];
-const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js'];
+const postAuthStyles = ['compact-control-center.css','google-admin-auth.css'];
+const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js'];
 let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
 function assetUrl(path){return`${path}${path.includes('?')?'&':'?'}v=${encodeURIComponent(ASSET_VERSION)}`}
 function s(node,styles,priority=''){if(node)for(const[name,value]of Object.entries(styles))node.style.setProperty(name,value,priority)}
-function applyOfficialAdminSurface() {
-const root=document.documentElement;
-root.dataset.ekodiShellSurface = 'admin';
-root.dataset.ekodiAdminUi = 'official';
-const tokens={
-'--ekodi-ui-bg': '#071522','--ekodi-ui-surface': '#0B1D2E','--ekodi-ui-surface-raised':'#10263A',
-'--ekodi-ui-border': '#24425E','--ekodi-ui-text': '#F4F7FB','--ekodi-ui-muted':'#9FB1C3',
-'--ekodi-ui-accent': '#8EC8FF','--ekodi-ui-radius':'16px'};
-for(const[name,value]of Object.entries(tokens))if(!root.style.getPropertyValue(name))root.style.setProperty(name,value)
-}
-function keepLoginInteractive(){
-if(!loginScreen||authenticated())return;
-loginScreen.style.position='relative';
-loginScreen.style.zIndex = '1000';
-loginScreen.style.pointerEvents = 'auto';
-if(loginLink){loginLink.style.position='relative';loginLink.style.zIndex='1';loginLink.style.pointerEvents = 'auto'}
-}
-function loadStyle(href){
-if(document.querySelector(`link[data-ekodi-postauth-style="${href}"]`))return;
-const link=document.createElement('link');link.rel='stylesheet';link.href=assetUrl(href);link.dataset.ekodiPostauthStyle=href;document.head.appendChild(link)
-}
-function loadScript(src){return new Promise(resolve=>{
-if(document.querySelector(`script[data-ekodi-postauth-script="${src}"]`))return resolve();
-const script=document.createElement('script');script.src=assetUrl(src);script.dataset.ekodiPostauthScript=src;
-script.addEventListener('load',resolve,{once:true});
-script.addEventListener('error',()=>{console.warn(`[EKODI Admin] optional post-auth asset failed: ${src}`);resolve()},{once:true});document.body.appendChild(script)
-})}
-function installSharedAdminLayout(){
-const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav'),main=app?.querySelector('main'),content=main?.querySelector('.content'),topbar=main?.querySelector('.topbar'),profile=document.querySelector('.profile'),sideBottom=sidebar?.querySelector('.side-bottom'),logoutButton=document.querySelector('#logoutButton'),pageTitle=document.querySelector('#pageTitle');
-if(!app||!sidebar||!nav||!main||!content||!sideBottom)return;
-document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll = 'true';content.dataset.ekodiIndependentScroll = 'workspace';
-if(profile){profile.classList.add('side-profile');if(!sideBottom.contains(profile))sideBottom.insertBefore(profile, logoutButton || null);s(profile,{display:'flex','min-width':'0',width:'100%'},'important');s(profile.firstElementChild,{display:'flex','min-width':'0',width:'100%','flex-direction':'column'},'important')}
-if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden = true;
-s(document.body,{height:'100dvh',overflow:'hidden'});s(app,{height:'100dvh',overflow:'hidden'});s(sidebar,{height:'100dvh',overflow:'hidden'},'important');sideBottom.style.setProperty('position', 'static', 'important');s(sideBottom,{flex:'0 0 auto'},'important');nav.style.setProperty('flex', '1 1 auto', 'important');nav.style.setProperty('overflow-y', 'auto', 'important');s(nav,{'min-height':'0','overflow-x':'hidden','max-height':'none','overscroll-behavior':'contain'},'important');main.style.setProperty('overflow-y', 'auto');s(main,{height:'100dvh','min-height':'0','overflow-x':'hidden','overscroll-behavior':'contain'});
-if(topbar)topbar.style.setProperty('display',matchMedia('(max-width:760px)').matches ? 'flex' : 'none','important')
-}
-function deactivateMallFreeOps() {
-const panel=document.querySelector('#mallFreeOpsPanel');if(!panel)return;
-const button=document.querySelector('.sidebar [data-admin-link="mall-free-ops"]'),frame=panel.querySelector('[data-mall-free-ops-frame]');panel.hidden=true;panel.classList.add('hidden-panel');button?.classList.remove('active');if(frame?.getAttribute('src'))frame.removeAttribute('src')
-}
-function installMallFreeOpsIsolation() {
-const nav=document.querySelector('.sidebar nav');if(!nav||nav.dataset.mallFreeOpsIsolationBound)return;nav.dataset.mallFreeOpsIsolationBound='true';
-nav.addEventListener('click',event=>{const item=event.target?.closest?.('.nav');if(!item)return;if(item.dataset.adminLink==='mall-free-ops'||item.dataset.section==='mall-free-ops'){const panel=document.querySelector('#mallFreeOpsPanel');if(panel?.hidden)panel.hidden=false}else deactivateMallFreeOps()},true);
-window.addEventListener('hashchange',()=>{if(location.hash!=='#mall-free-ops')deactivateMallFreeOps()});if(location.hash!=='#mall-free-ops')deactivateMallFreeOps()
-}
+function canonicalizeLegacyEntry(){if(!location.pathname.startsWith('/legacy'))return false;const hash=['#storage','#health','#devices','#work','#marketing-ai','#ai-ops','#campus','#operations','#security','#architecture'].includes(location.hash)?location.hash:'#ai-ops';history.replaceState({},document.title,`/${location.search}${hash}`);return true}
+function applyOfficialAdminSurface(){const root=document.documentElement;root.dataset.ekodiShellSurface = 'admin';root.dataset.ekodiAdminUi = 'official';const tokens={'--ekodi-ui-bg': '#071522','--ekodi-ui-surface': '#0B1D2E','--ekodi-ui-surface-raised': '#10263A','--ekodi-ui-border': '#24425E','--ekodi-ui-text': '#F4F7FB','--ekodi-ui-muted': '#9FB1C3','--ekodi-ui-accent': '#8EC8FF','--ekodi-ui-radius': '16px'};for(const[name,value]of Object.entries(tokens))if(!root.style.getPropertyValue(name))root.style.setProperty(name,value)}
+function keepLoginInteractive(){if(!loginScreen||authenticated())return;loginScreen.style.position='relative';loginScreen.style.zIndex='1000';loginScreen.style.pointerEvents='auto';if(loginLink){loginLink.style.position='relative';loginLink.style.zIndex='1';loginLink.style.pointerEvents='auto'}}
+function loadStyle(href){if(document.querySelector(`link[data-ekodi-postauth-style="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=assetUrl(href);link.dataset.ekodiPostauthStyle=href;document.head.appendChild(link)}
+function loadScript(src){return new Promise(resolve=>{if(document.querySelector(`script[data-ekodi-postauth-script="${src}"]`))return resolve();const script=document.createElement('script');script.src=assetUrl(src);script.dataset.ekodiPostauthScript=src;script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>{console.warn(`[EKODI Admin] optional post-auth asset failed: ${src}`);resolve()},{once:true});document.body.appendChild(script)})}
+function installSharedAdminLayout(){const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav'),main=app?.querySelector('main'),content=main?.querySelector('.content'),topbar=main?.querySelector('.topbar'),profile=document.querySelector('.profile'),sideBottom=sidebar?.querySelector('.side-bottom'),logoutButton=document.querySelector('#logoutButton'),pageTitle=document.querySelector('#pageTitle');if(!app||!sidebar||!nav||!main||!content||!sideBottom)return;document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll = 'true';content.dataset.ekodiIndependentScroll = 'workspace';if(profile){profile.classList.add('side-profile');if(!sideBottom.contains(profile))sideBottom.insertBefore(profile, logoutButton || null);s(profile,{display:'flex','min-width':'0',width:'100%'},'important');s(profile.firstElementChild,{display:'flex','min-width':'0',width:'100%','flex-direction':'column'},'important');s(profile,{'grid-template-columns':'none','align-items':'center',gap:'8px'},'important');const email=profile.querySelector('small');s(email,{display:'block','max-width':'145px',overflow:'hidden','text-overflow':'ellipsis','white-space':'nowrap','word-break':'normal'},'important')}if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden = true;s(document.body,{height:'100dvh',overflow:'hidden'});s(app,{height:'100dvh',overflow:'hidden'});s(sidebar,{height:'100dvh',overflow:'hidden'},'important');sideBottom.style.setProperty('position', 'static', 'important');s(sideBottom,{flex:'0 0 auto'},'important');nav.style.setProperty('flex', '1 1 auto', 'important');nav.style.setProperty('overflow-y', 'auto', 'important');s(nav,{'min-height':'0','overflow-x':'hidden','max-height':'none','overscroll-behavior':'contain'},'important');main.style.setProperty('overflow-y', 'auto');s(main,{height:'100dvh','min-height':'0','overflow-x':'hidden','overscroll-behavior':'contain'});if(topbar)topbar.style.setProperty('display',matchMedia('(max-width:760px)').matches ? 'flex' : 'none','important')}
+function deactivateMallFreeOps(){const panel=document.querySelector('#mallFreeOpsPanel');if(!panel)return;const button=document.querySelector('.sidebar [data-admin-link="mall-free-ops"]'),frame=panel.querySelector('[data-mall-free-ops-frame]');panel.hidden=true;panel.classList.add('hidden-panel');button?.classList.remove('active');if(frame?.getAttribute('src'))frame.removeAttribute('src')}
+function installMallFreeOpsIsolation(){const nav=document.querySelector('.sidebar nav');if(!nav||nav.dataset.mallFreeOpsIsolationBound)return;nav.dataset.mallFreeOpsIsolationBound='true';nav.addEventListener('click',event=>{const item=event.target?.closest?.('.nav');if(!item)return;if(item.dataset.adminLink==='mall-free-ops'||item.dataset.section==='mall-free-ops'){const panel=document.querySelector('#mallFreeOpsPanel');if(panel?.hidden)panel.hidden=false}else deactivateMallFreeOps()},true);window.addEventListener('hashchange',()=>{if(location.hash!=='#mall-free-ops')deactivateMallFreeOps()});if(location.hash!=='#mall-free-ops')deactivateMallFreeOps()}
+function repairLegacyLinks(){const hero=document.querySelector('.hero[data-panel~="overview"] .hero-actions a.secondary');if(hero){hero.href='#ai-ops';hero.removeAttribute('target');hero.removeAttribute('rel')}document.querySelectorAll('a[href="/legacy"],a[href="/legacy/"],a[href="/legacy#domains"],a[href="/legacy#activity"]').forEach(link=>{link.href='#ai-ops';link.dataset.adminLegacyMigrated='true'})}
 function announceReady(){document.documentElement.dataset.ekodiAdminReady='true';try{performance.mark('ekodi-admin-ready')}catch{}window.dispatchEvent(new CustomEvent('ekodi-admin-ready'))}
-async function startAuthenticatedShell(){
-if (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';
-if(location.pathname.startsWith('/legacy')){loadStyle('control-center-ops.css');loadStyle('control-center-finance.css');await loadScript('control-center.js');announceReady();return}
-for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady()
-}
-function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&['#campus','#operations','#policies','#ai-ops','#devices','#work','#marketing-ai','#deployments'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
-keepLoginInteractive();onStateChange();
-window.addEventListener('ekodi-authenticated', onStateChange);
-window.addEventListener('ekodi-nav-changed',installSharedAdminLayout);window.addEventListener('ekodi-feature-installed',installSharedAdminLayout);matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
+async function startAuthenticatedShell(){if (started || !authenticated()) return;started=true;canonicalizeLegacyEntry();applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();repairLegacyLinks();announceReady()}
+function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&['#campus','#operations','#policies','#ai-ops','#devices','#work','#marketing-ai','#deployments','#storage','#health','#security','#architecture'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
+canonicalizeLegacyEntry();keepLoginInteractive();onStateChange();
+window.addEventListener('ekodi-authenticated',onStateChange);window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout();repairLegacyLinks()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout();repairLegacyLinks()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
 })();

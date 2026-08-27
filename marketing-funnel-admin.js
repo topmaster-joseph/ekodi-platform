@@ -96,7 +96,8 @@
               <input name="productName" placeholder="상품/콘텐츠 이름" required>
               <input name="affiliateUrl" type="url" placeholder="https://..." required>
               <input name="channel" placeholder="채널">
-              <input name="campaignName" placeholder="캠페인">
+              <input name="campaignName" placeholder="카테고리/캠페인">
+              <label class="integration-toggle"><input name="publishToEkodiMall" type="checkbox" checked> 에코디몰(ekodi.kr/mall)에 공개</label>
               <button class="primary" type="submit">등록</button>
             </form>
           </div>
@@ -229,6 +230,7 @@
             affiliateUrl: form.elements.affiliateUrl.value,
             channel: form.elements.channel.value,
             campaignName: form.elements.campaignName.value,
+            tenantSlug: form.elements.publishToEkodiMall?.checked ? 'ekodi-mall' : '',
           }),
         });
         form.reset();

@@ -22,7 +22,7 @@ test('System Health collection runs outside the public request path', async () =
   const workflow = await readFile('.github/workflows/system-health-analytics.yml', 'utf8');
   const entry = await readFile('mission-control-entry-worker.js', 'utf8');
   assert.match(workflow, /cron: '20 0 \* \* \*'/);
-  assert.match(entry, /path === '\/api\/control\/system-health'/);
+  assert.match(entry, /path\.startsWith\('\/api\/control\/system-health'\)/);
   assert.doesNotMatch(entry, /collect-system-health/);
 });
 

@@ -31,28 +31,29 @@ test('post-auth loader starts only when the authenticated app is visible and use
   const criticalLoad = shell.indexOf('await Promise.all(criticalPostAuthScripts.map(loadScript))');
   assert.ok(guard >= 0, 'authenticated shell guard must exist');
   assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
-  assert.match(shell, /window\.addEventListener\('ekodi-authenticated', onStateChange\)/);
+  assert.match(shell, /window\.addEventListener\('ekodi-authenticated',onStateChange\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.doesNotMatch(shell, /new MutationObserver/);
-  assert.equal(shell.includes('history.replaceState'), false, 'post-auth loader must never create a navigation hash before authentication');
+  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
+  assert.match(shell, /history\.replaceState/);
 });
 
 test('minimal login shell keeps the central auth link interactive while app is hidden', () => {
-  assert.match(shell, /loginLink\.style\.pointerEvents = 'auto'/);
-  assert.match(shell, /loginScreen\.style\.pointerEvents = 'auto'/);
-  assert.match(shell, /loginScreen\.style\.zIndex = '1000'/);
+  assert.match(shell, /loginLink\.style\.pointerEvents='auto'/);
+  assert.match(shell, /loginScreen\.style\.pointerEvents='auto'/);
+  assert.match(shell, /loginScreen\.style\.zIndex='1000'/);
   assert.equal(scriptTag('compact-control-center.js'), '<script src="compact-control-center.js"');
 });
 
-test('authenticated normal route contains only the three thin shell modules and legacy runtime is route isolated', () => {
-  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js']) {
+test('authenticated route stays on the current thin shell and never starts the retired legacy runtime', () => {
+  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js']) {
     assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
   }
   for (const noncritical of ['control-center-features.js','campus-actions.js','device-control-admin.js','ai-ops-admin.js','admin-lazy-features.js','release-control-admin.js','work-admin.js','marketing-ai-admin.js']) {
     assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
   }
-  assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
-  assert.match(shell, /await loadScript\('control-center\.js'\)/);
+  assert.match(shell, /canonicalizeLegacyEntry\(\)/);
+  assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
   assert.doesNotMatch(shell, /deferredPostAuthScripts|scheduleDeferredFeatures/);
 });

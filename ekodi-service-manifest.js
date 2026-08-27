@@ -1,4 +1,12 @@
 import { operatingModelForService, ownedCustomerSiteFor } from './ekodi-site-policy.js';
+const COMMON_USER_ACCESS_POLICY = Object.freeze({
+  scope:'user-pages',
+  guestMode:'guide-only',
+  minimumTier:'free',
+  identityProvider:'google',
+  authHub:'https://auth.ekodi.kr/',
+  enforcedBy:'shared-shell',
+});
 
 const SERVICES = [
   {id:'my',name:'My EKODI',shortName:'My',url:'https://my.ekodi.kr/',group:'personal',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['identity','spaces','activity','account'],sso:true,targetable:false,order:10,shellIntegration:'worker-injected'},
@@ -17,7 +25,8 @@ const SERVICES = [
   {id:'messenger',name:'EKODI Messenger',shortName:'Messenger',url:'https://messenger.ekodi.kr/',group:'communication',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['messaging','ai-assist','handoff','notifications','commands'],sso:true,targetable:true,openSso:true,order:115,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1},
   {id:'energy',name:'EKODI Energy AI',shortName:'Energy',url:'https://energy.ekodi.kr/',group:'life',defaultSurface:'workspace',workspaceKinds:['person','business','organization'],capabilities:['energy','solar','electricity'],sso:true,targetable:true,openSso:true,order:120,shellIntegration:'worker-injected'},
   {id:'cafe',name:'에코디 카페',shortName:'Cafe',url:'https://cafe.ekodi.kr/',group:'community',defaultSurface:'public',workspaceKinds:['person','community','church','organization','project'],capabilities:['place','community','culture','local','imagination'],sso:true,targetable:true,order:125,state:'preparing',shellIntegration:'static-script',onboardingVersion:1},
-  {id:'mall',name:'에코디몰',shortName:'Mall',url:'https://mall.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['commerce','products','orders'],sso:true,targetable:true,order:130,shellIntegration:'shared-proxy'},
+  {id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/mall',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['commerce','affiliate-curation','products'],sso:true,targetable:true,order:130,shellIntegration:'shared-proxy'},
+  {id:'shop',name:'에코디 쇼핑플랫폼',shortName:'Shop',url:'https://shop.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','church','community'],capabilities:['commerce-platform','store-creation','multi-tenant'],sso:true,targetable:true,order:135,state:'planned',shellIntegration:'planned',onboardingVersion:1},
   {id:'trade',name:'EKODI Global Trading',shortName:'Trade',url:'https://trade.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['business','organization'],capabilities:['trade','buyers','suppliers'],sso:true,targetable:true,order:140,shellIntegration:'worker-injected'},
   {id:'invest',name:'EKODI Investment',shortName:'Investment',url:'https://invest.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','project'],capabilities:['investment','research','due-diligence','ir','opportunities'],sso:true,targetable:true,order:145,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1,transactionMode:'analysis-and-connection-only'},
   {id:'money',name:'EKODI Money',shortName:'Money',url:'https://money.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['financial-cleanup','accounts','autopay','financial-relationships','decision-support','official-handoff'],sso:true,targetable:true,openSso:true,order:147,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'human-confirmed-official-handoff'},
@@ -31,17 +40,20 @@ const SERVICES = [
   {id:'cloud',name:'EKODI Cloud',shortName:'Cloud',url:'https://cloud.ekodi.kr/',group:'communication',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['files','collaboration','cloud'],sso:true,targetable:true,order:210,state:'planned',shellIntegration:'planned'}
 ].map(service=>{
   const ownedSite=ownedCustomerSiteFor(service.id);
-  return Object.freeze({...service,operatingModel:operatingModelForService(service.id),tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
+  const operatingModel=operatingModelForService(service.id);
+  const userAccessPolicy=operatingModel==='customer-site'?null:COMMON_USER_ACCESS_POLICY;
+  return Object.freeze({...service,operatingModel,userAccessPolicy,tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
   version: 12,
-  updatedAt: '2026-08-26',
+  updatedAt: '2026-08-27',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 2,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
+  userAccessPolicy: 'guest-guide-member-content',
   services: Object.freeze(SERVICES)
 });
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));

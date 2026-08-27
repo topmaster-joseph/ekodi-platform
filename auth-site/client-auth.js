@@ -47,17 +47,28 @@ async function manifestRealm(id){
     if(!service?.url)return null;
     const serviceUrl=new URL(service.url);
     if(serviceUrl.protocol!=='https:')return null;
-    return {name:service.name||service.shortName||id,returnTo:serviceUrl.href,origins:[serviceUrl.origin],open:true,kind:id};
+    return {name:service.name||service.shortName||id,returnTo:serviceUrl.href,origins:[serviceUrl.origin],open:true,kind:id,operatingModel:service.operatingModel||'',userAccessPolicy:service.userAccessPolicy||null};
   }catch{return null}
 }
-const config=realms[site]||await manifestRealm(site)||realms.portal;
+function implicitEkodiRealm(id){
+  const value=String(id||'').trim().toLowerCase();
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value)||value==='portal')return null;
+  const origin=`https://${value}.ekodi.kr`;
+  return {name:value.replace(/-/g,' ').toUpperCase(),returnTo:`${origin}/`,origins:[origin],open:true,kind:value};
+}
+const manifestConfig=await manifestRealm(site);
+const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.portal;
+const config={...baseConfig,operatingModel:manifestConfig?.operatingModel||baseConfig.operatingModel||'',userAccessPolicy:manifestConfig?.userAccessPolicy||baseConfig.userAccessPolicy||null};
+const commonServiceEntry=config.operatingModel==='shared-service';
 function safeReturn(raw){
   const fallback=new URL(config.returnTo);
   if(!raw)return fallback.href;
   try{
     const target=new URL(raw);
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
-    if(target.protocol!=='https:'||target.username||target.password||!allowedOrigins.has(target.origin))return fallback.href;
+    const hostname=target.hostname.toLowerCase();
+    const internalEkodi=hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr');
+    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi))return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
@@ -90,7 +101,7 @@ let handlingCredential=false;
 
 $('serviceName').textContent=config.name;
 $('serviceBadge').textContent='EKODI';
-$('signedOutCopy').textContent='EKODI에서 Google 본인확인을 한 번 마치면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용합니다.';
+$('signedOutCopy').textContent=commonServiceEntry?`${config.name}의 실제 기능은 Google 로그인한 무료회원 이상에게 제공됩니다. 로그인 후 일반회원은 My EKODI에서 내 공간과 서비스를 이어서 이용합니다.`:'EKODI에서 Google 본인확인을 한 번 마치면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용합니다.';
 show('signedOut',true);show('signedIn',false);show('reviewConsole',false);show('membershipPanel',false);show('identityPanel',false);show('workspacePanel',false);show('requestActions',false);show('freeActions',false);show('approvedActions',false);
 
 async function session(){
@@ -127,9 +138,14 @@ function loadGoogleLibrary(){
     script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(script);
   }),7000,'google_library_timeout');
 }
+function myEntryTarget(){
+  const target=new URL('https://my.ekodi.kr/');
+  if(site&&site!=='portal'&&site!=='my')target.searchParams.set('from',site);
+  return target;
+}
 function routeTarget(proof){
   if(!proof?.tokenHash)throw new Error('identity_handoff_missing');
-  const target=new URL(RETURN_TO);
+  const target=commonServiceEntry&&proof.platformAdmin!==true?myEntryTarget():new URL(RETURN_TO);
   target.hash=new URLSearchParams({ekodi_token:proof.tokenHash,ekodi_type:proof.type||'email'}).toString();
   location.assign(target.href);
 }

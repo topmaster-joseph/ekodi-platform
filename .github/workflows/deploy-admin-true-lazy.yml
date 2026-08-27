@@ -29,6 +29,8 @@ on:
       - 'release-control-admin.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
+      - 'api-cost-admin.js'
+      - 'api-cost-admin.css'
       - 'system-map-admin.js'
       - 'system-map-admin.css'
       - 'platform-boundaries.json'
@@ -85,6 +87,7 @@ jobs:
           node --check ai-ops-admin.js
           node --check release-control-admin.js
           node --check system-health-admin.js
+          node --check api-cost-admin.js
           node --check system-map-admin.js
           node --check scripts/admin-thin-postbuild.mjs
           node --check scripts/admin-system-map-postbuild.mjs
@@ -93,7 +96,7 @@ jobs:
           node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-system-map.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/hybrid-execution-contract.test.mjs test/hybrid-execution-admin-records.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css platform-boundaries.json; do
+          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css api-cost-admin.js api-cost-admin.css platform-boundaries.json; do
             test -f "dist/$asset"
           done
 
@@ -132,8 +135,8 @@ jobs:
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
-          grep -Fq "navLabel.textContent = 'Health'" dist/system-health-admin.js
-          grep -Fq "pageTitle.textContent = 'System Health'" dist/system-health-admin.js
+          grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
+          grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
           grep -Fq 'EKODISystemMap' dist/system-health-admin.js
           grep -Fq "fetch('/platform-boundaries.json'" dist/system-health-admin.js
           grep -Fq '"principle"' dist/platform-boundaries.json
@@ -248,8 +251,8 @@ jobs:
               && grep -Fq "actionType:'ui.change_request'" /tmp/lazy-body \
               && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/lazy-body \
               && grep -Fq 'admin-readable-command.css' /tmp/ai-css-body \
-              && grep -Fq "navLabel.textContent = 'Health'" /tmp/health-js-body \
-              && grep -Fq "pageTitle.textContent = 'System Health'" /tmp/health-js-body \
+              && grep -Fq "navLabel.textContent = '시스템 건강'" /tmp/health-js-body \
+              && grep -Fq "pageTitle.textContent = '시스템 건강'" /tmp/health-js-body \
               && grep -Fq 'EKODISystemMap' /tmp/health-js-body \
               && grep -Fq '.system-health-overall' /tmp/health-css-body \
               && grep -Fq '.ekodi-architecture-map' /tmp/health-css-body \

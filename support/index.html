@@ -6,10 +6,17 @@
   <meta name="description" content="에코디 기회AI는 지원금, 보조금, 장학금, 공모, 복지, 민간지원, 후원을 하나의 프로필로 연결합니다.">
   <title>에코디 기회AI | EKODI Opportunity</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/account.css">
   <script src="/config.js"></script>
 </head>
 <body>
 <main class="wrap">
+  <aside id="ekodiAccount" class="ekodi-account" data-state="loading" aria-live="polite">
+    <strong id="ekodiAccountText">계정 확인 중</strong>
+    <small id="ekodiAccountDetail">EKODI 중앙 로그인 상태를 확인합니다.</small>
+    <button id="ekodiAccountAction" type="button" hidden></button>
+  </aside>
+
   <header class="hero">
     <p class="eyebrow">EKODI SUPPORT · OPPORTUNITY FIRST</p>
     <div id="activeServicePill" class="service-pill">에코디 기회AI</div>
@@ -33,16 +40,16 @@
     <div class="section-head">
       <p class="eyebrow">SPECIALIST NETWORK</p>
       <h2 id="servicesTitle">전문서비스는 나누고, 기회는 연결합니다</h2>
-      <p>각 서비스는 서로 다른 자격조건과 판단규칙을 사용합니다. 계정·프로필·진행이력은 공통 기반을 사용합니다.</p>
+      <p>각 서비스는 서로 다른 자격조건과 판단규칙을 사용합니다. EKODI 로그인 신원은 공통으로 이어지고, 지원조건은 필요한 최소정보만 서비스별로 관리합니다.</p>
     </div>
     <div id="serviceGrid" class="service-grid"></div>
   </section>
 
   <section class="two align-start">
     <article class="panel profile-panel">
-      <p class="eyebrow">ONE PROFILE</p>
+      <p class="eyebrow">MINIMUM SUPPORT PROFILE</p>
       <h2>한 번 입력하고 함께 사용</h2>
-      <p>전문서비스마다 같은 정보를 다시 쓰지 않도록 공통 프로필을 사용합니다.</p>
+      <p>전문서비스마다 같은 지원조건을 다시 쓰지 않도록 공통 최소정보를 이 브라우저에서 공유합니다. 중앙 계정에는 자동 저장하지 않습니다.</p>
       <label>나의 유형
         <select id="profileType">
           <option>개인</option><option>학생</option><option>청년</option><option>사업자</option><option>기관·단체</option><option>교회</option><option>후원자</option>
@@ -122,9 +129,10 @@
     <p class="eyebrow">HUMAN GATE</p>
     <h2>중요 행동은 사람이 최종 결정합니다</h2>
     <p>AI는 찾아주고, 비교하고, 준비하고, 놓치지 않도록 돕습니다. 제출·서명·협약·결제·사업비 변경·정산은 최종 승인 후 진행합니다.</p>
-    <div class="chips"><span>공식자료 우선</span><span>출처 추적</span><span>전문규칙 분리</span><span>공통 프로필</span><span>최종 승인</span></div>
+    <div class="chips"><span>공식자료 우선</span><span>출처 추적</span><span>전문규칙 분리</span><span>최소 프로필</span><span>최종 승인</span></div>
   </section>
 </main>
+<script type="module" src="/account.js"></script>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

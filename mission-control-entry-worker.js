@@ -10,11 +10,13 @@ import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleDeviceControl } from './device-control.js';
 import { claimHybridFallback, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
+import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybrid-execution-monitor.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
@@ -148,9 +150,14 @@ export default {
       catch (error) { console.error('Cloudflare secret control error', error); return errorResponse('Cloudflare Secret 처리 중 오류가 발생했습니다.', 'CLOUDFLARE_SECRET_CONTROL_ERROR'); }
     }
 
-    if (path === '/api/control/system-health') {
+    if (path.startsWith('/api/control/system-health')) {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/api-cost') {
+      try { const response = await handleApiCostControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('API cost control error', error); return errorResponse('API 비용 관리 처리 중 오류가 발생했습니다.', 'API_COST_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/user-ai')) {
@@ -161,6 +168,11 @@ export default {
     if (path.startsWith('/api/control/messenger')) {
       try { const response = await handleMessengerOperatorControl(request, env, ctx); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Messenger Operator Control error', error); return errorResponse('EKODI Messenger 관리자 처리 중 오류가 발생했습니다.', 'MESSENGER_OPERATOR_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/hybrid-execution/monitor') {
+      try { const response = await handleHybridExecutionMonitor(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Hybrid Execution monitor error', error); return errorResponse('하이브리드 실행망 감시 처리 중 오류가 발생했습니다.', 'HYBRID_EXECUTION_MONITOR_ERROR'); }
     }
 
     if (path.startsWith('/api/control/hybrid-execution')) {
@@ -206,9 +218,10 @@ export default {
   async scheduled(controller, env, ctx) {
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
-    if (ctx?.waitUntil) { ctx.waitUntil(authorBilling); ctx.waitUntil(messengerOutbox); }
+    const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
+    if (ctx?.waitUntil) { ctx.waitUntil(authorBilling); ctx.waitUntil(messengerOutbox); ctx.waitUntil(hybridWatchdog); }
     if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox]);
+    return Promise.all([authorBilling, messengerOutbox, hybridWatchdog]);
   },
 };
 

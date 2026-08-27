@@ -31,8 +31,8 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /verify_asset 'ai-ops-admin\.css'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.js'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.css'/);
-  assert.match(workflow, /navLabel\.textContent = 'Health'/);
-  assert.match(workflow, /pageTitle\.textContent = 'System Health'/);
+  assert.match(workflow, /navLabel\.textContent = '시스템 건강'/);
+  assert.match(workflow, /pageTitle\.textContent = '시스템 건강'/);
   assert.match(workflow, /#aiOpsPanel \.ai-chief-chat\{order:1!important;position:static!important/);
   assert.match(workflow, /verify_compact_without_readable_css/);
   assert.match(workflow, /! grep -Fq 'admin-readable-command\.css' \/tmp\/compact-css/);

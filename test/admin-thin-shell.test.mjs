@@ -7,10 +7,11 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /const postAuthStyles = \['compact-control-center\.css'\]/);
+  assert.match(shell, /const postAuthStyles = \['compact-control-center\.css','google-admin-auth\.css'\]/);
   assert.match(shell, /'compact-control-center\.js'/);
   assert.match(shell, /'admin-menu-layout\.js'/);
   assert.match(shell, /'admin-demand-loader\.js'/);
+  assert.match(shell, /'google-admin-auth\.js'/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.match(shell, /assetUrl\(src\)/);
   assert.doesNotMatch(shell, /'campus-actions\.js'/);
@@ -66,9 +67,9 @@ test('standalone Health creates its own menu and fetches only on activation', as
   const health = await read('system-health-admin.js');
   assert.match(health, /const SECTION = 'health'/);
   assert.match(health, /button\.dataset\.section = SECTION/);
-  assert.match(health, /navLabel\.textContent = 'Health'/);
+  assert.match(health, /navLabel\.textContent = '시스템 건강'/);
   assert.match(health, /section\.dataset\.panel = SECTION/);
-  assert.match(health, /pageTitle\.textContent = 'System Health'/);
+  assert.match(health, /pageTitle\.textContent = '시스템 건강'/);
   assert.match(health, /if \(location\.hash !== '#health'\)/);
   assert.match(health, /button\.addEventListener\('click', activate\)/);
   assert.match(health, /load\(false\)/);

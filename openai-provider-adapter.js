@@ -1,3 +1,5 @@
+﻿import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
+
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-terra';
 const MAX_MESSAGE_CHARS = 4_000;
@@ -56,16 +58,16 @@ function buildAdminInput(context = {}) {
   const page = normalizePageContext(context.page || context.context || {});
   const history = normalizeHistory(context.history);
   const lines = [
-    `현재 관리자 화면: ${page.title || page.section || 'Admin'}`,
+    `?꾩옱 愿由ъ옄 ?붾㈃: ${page.title || page.section || 'Admin'}`,
     `section: ${page.section || '-'}`,
     `pathname: ${page.pathname || '-'}`,
     `hash: ${page.hash || '-'}`,
   ];
   if (history.length) {
-    lines.push('', '최근 대화:');
-    for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '관리자'}: ${item.text}`);
+    lines.push('', '理쒓렐 ???');
+    for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '愿由ъ옄'}: ${item.text}`);
   }
-  lines.push('', `현재 요청: ${message || '요청 내용 없음'}`);
+  lines.push('', `?꾩옱 ?붿껌: ${message || '?붿껌 ?댁슜 ?놁쓬'}`);
   return lines.join('\n');
 }
 
@@ -80,6 +82,15 @@ function extractOutputText(data) {
   return parts.join('\n').trim();
 }
 
+async function budgetGuard(env) {
+  if (!env.DB?.prepare) {
+    if (String(env.ENVIRONMENT || '').toLowerCase() === 'production') throw new Error('AI_USAGE_METER_UNAVAILABLE');
+    return;
+  }
+  const allowance = await getSponsoredAiAllowance(env);
+  if (!allowance.allowed) throw new Error('EKODI_AI_BUDGET_LIMIT');
+}
+
 export function createOpenAiProvider(env = {}, options = {}) {
   const apiKey = String(env.OPENAI_API_KEY || '').trim();
   const model = String(env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL).trim() || DEFAULT_OPENAI_MODEL;
@@ -92,6 +103,7 @@ export function createOpenAiProvider(env = {}, options = {}) {
     available,
     async invoke({ taskName, context = {} } = {}) {
       if (!available) throw new Error('OPENAI_PROVIDER_NOT_CONFIGURED');
+      await budgetGuard(env);
       const response = await fetchImpl(OPENAI_RESPONSES_URL, {
         method: 'POST',
         headers: {
@@ -116,10 +128,18 @@ export function createOpenAiProvider(env = {}, options = {}) {
       if (!response.ok) throw new Error(`OPENAI_HTTP_${response.status}`);
       const output = extractOutputText(data);
       if (!output) throw new Error('OPENAI_EMPTY_RESPONSE');
+      const usage = normalizeOpenAiUsage(data?.usage || {});
+      if (env.DB?.prepare) {
+        await recordProviderUsage(env, {
+          provider: 'openai', model: String(data?.model || model), surface: 'admin',
+          funding: 'ekodi-sponsored', requestId: String(data?.id || ''), usage,
+        }).catch(error => console.error('Admin OpenAI usage meter write failed', String(error?.message || error)));
+      }
       return Object.freeze({
         text: output,
         model: String(data?.model || model),
         responseId: String(data?.id || ''),
+        usage,
       });
     },
   });

@@ -42,5 +42,17 @@
     "security",
     "shell",
     "workspace-api"
-  ]
+  ],
+  "guestAccess": {
+    "scope": "common_service_user_pages",
+    "mode": "guide_only",
+    "minimumTierForContent": "free",
+    "identityProvider": "google",
+    "publicExceptions": [
+      "auth_handoff",
+      "legal_notice",
+      "health_check",
+      "required_webhook"
+    ]
+  }
 }

@@ -46,7 +46,7 @@ jobs:
             social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://social.ekodi.kr/health' || true)
             if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
               && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' \
-              && verify_html 'https://auth.ekodi.kr/' 'EKODI 인증센터' \
+              && verify_html 'https://auth.ekodi.kr/' 'EKODI 로그인' \
               && verify_html 'https://marketing.ekodi.kr/' '마케팅AI' \
               && verify_html 'https://books.ekodi.kr/' 'EKODI' \
               && printf '%s' "$api" | grep -q '"ok":true' \

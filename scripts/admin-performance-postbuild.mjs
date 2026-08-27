@@ -21,6 +21,11 @@ await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostic
 const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js'];
 await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
 
+// Keep the first-path demand router below its hard byte budget.
+const demandLoaderPath = `${dist}admin-demand-loader.js`;
+const demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
+
 // Login/return parses only the base visual CSS and the small central-auth handoff.
 html = html
   .replace(/\s*<link rel="stylesheet" href="control-center-ops\.css">/g, '')
@@ -37,13 +42,36 @@ for (const section of ['communication', 'workspace', 'organization']) {
   html = html.replace(`<section class="section" data-panel="${section}"`, `<section class="section hidden-panel" data-panel="${section}"`);
 }
 
-// Finance must never retain perpetual polling. Older sources are upgraded once; newer sources pass through.
+// Finance polling exists only while Finance is visible and the tab is active.
 const financePath = `${dist}finance-monitor.js`;
 let finance = await readFile(financePath, 'utf8');
 const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
 if (financeTail.test(finance)) {
-  finance = finance.replace(financeTail, `financeRefresh.addEventListener('click', () => loadFinance(true));\nfinanceSectionButton.addEventListener('click', () => {\n  document.querySelector('#pageTitle').textContent = '결제 · 회계';\n  loadFinance(false);\n});\nif ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {\n  queueMicrotask(() => loadFinance(false));\n}`);
-  await writeFile(financePath, finance);
+finance = finance.replace(financeTail, `let financeRefreshTimer = 0;
+function cancelFinanceRefresh() {
+  if (financeRefreshTimer) clearTimeout(financeRefreshTimer);
+  financeRefreshTimer = 0;
+}
+function scheduleFinanceRefresh() {
+  cancelFinanceRefresh();
+  const visible = financeSectionButton?.classList.contains('active') && document.visibilityState !== 'hidden' && financeToken();
+  if (!visible) return;
+  financeRefreshTimer = window.setTimeout(async () => {
+    await loadFinance(false);
+    scheduleFinanceRefresh();
+  }, 120000);
+}
+financeRefresh.addEventListener('click', () => loadFinance(true));
+financeSectionButton.addEventListener('click', () => {
+  document.querySelector('#pageTitle').textContent = '결제 · 회계';
+  loadFinance(false).finally(scheduleFinanceRefresh);
+});
+document.addEventListener('visibilitychange', scheduleFinanceRefresh);
+window.addEventListener('hashchange', scheduleFinanceRefresh);
+if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
+  queueMicrotask(() => loadFinance(false).finally(scheduleFinanceRefresh));
+}`);
+await writeFile(financePath, finance);
 }
 if (finance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 
@@ -61,13 +89,10 @@ const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.compa
 if (!compactCss.includes('admin mobile flow')) compactCss += mobileCss;
 await writeFile(compactCssPath, compactCss);
 
-// Compact indentation in first-path navigation assets without changing JavaScript semantics.
-for (const asset of ['admin-demand-loader.js', 'admin-menu-layout.js']) {
-  const assetPath = `${dist}${asset}`;
-  let source = await readFile(assetPath, 'utf8');
-  source = source.replace(/^[ \t]+/gm, '').replace(/\n{2,}/g, '\n');
-  await writeFile(assetPath, source);
-}
+// Compact the generated compact runtime without changing JavaScript semantics.
+const compactJsPath = `${dist}compact-control-center.js`;
+const compactJsSource = (await readFile(compactJsPath, 'utf8')).replace(/^[ \t]+/gm, '');
+await writeFile(compactJsPath, compactJsSource);
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
@@ -78,7 +103,7 @@ const versionInputs = [
   'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css',
   'ai-ops-admin.js','ai-ops-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
-  'system-health-admin.js','system-health-admin.css','work-admin.js','work-admin.css',
+  'system-health-admin.js','system-health-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css',
   'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
@@ -115,6 +140,9 @@ html = html
 await writeFile(path, html);
 
 // Final budgets run after every postbuild layer so later CSS/JS cannot sneak past the guard.
+const menuBudgetPath = `${dist}admin-menu-layout.js`;
+const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/^[ \t]+/gm, '');
+await writeFile(menuBudgetPath, compactMenuForBudget);
 const files = {
   handoff: await readFile(`${dist}admin-central-handoff.js`, 'utf8'),
   shell: await readFile(`${dist}admin-authenticated-shell.js`, 'utf8'),

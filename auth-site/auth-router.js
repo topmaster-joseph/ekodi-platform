@@ -28,6 +28,16 @@ document.documentElement.dataset.seamlessSso=manageMode||reviewMode?'0':'1';
 const site=params.get('site')||'portal';
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));
 
+function hasTrustedEkodiReturn(){
+  const raw=params.get('return_to')||params.get('returnTo');
+  if(!raw)return false;
+  try{
+    const target=new URL(raw);
+    const hostname=target.hostname.toLowerCase();
+    return target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
+  }catch{return false}
+}
+
 let manifestPromise;
 async function manifestService(id){
   if(!id)return null;
@@ -42,7 +52,7 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20260826-universal-free-1')}
+  try{return await import('./client-auth.js?v=20260827-common-service-routing-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
@@ -54,7 +64,8 @@ else if(site==='marketing'&&params.get('review')!=='1'&&!targetedWorkspace)await
 else{
   const registryService=await manifestService(site);
   const isRegistryUserService=Boolean(registryService?.id&&registryService?.url);
-  if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService))await loadClientAuth();
+  const trustedEkodiReturn=hasTrustedEkodiReturn();
+  if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService||trustedEkodiReturn))await loadClientAuth();
   else{
     await import('./auth.js?v=20260824-return-origin-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
