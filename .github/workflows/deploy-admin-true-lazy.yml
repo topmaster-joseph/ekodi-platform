@@ -125,7 +125,7 @@ jobs:
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq '湲곌린 愿由?쨌 ?ㅽ뻾 湲곕줉' dist/device-control-admin.js
+          grep -Fq 'hybridExecutionPanel' dist/device-control-admin.js
           grep -Fq 'hybridEventList' dist/device-control-admin.js
           grep -Fq 'isInputPending' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
