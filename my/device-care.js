@@ -8,12 +8,82 @@ const sb = enabled
 
 const $ = selector => document.querySelector(selector);
 const HISTORY_KEY = 'ekodi_device_care_history_v1';
+const TYPE_KEY = 'ekodi_device_care_type_v1';
 const CACHE_ALLOWLIST = /^(ekodi|my-ekodi|ekodi-my)([-_:].*)?$/i;
+const DEVICE_TYPES = Object.freeze({
+  pc: Object.freeze({
+    label: 'PC', icon: '⊞', scope: '현재 PC의 브라우저와 EKODI 웹 환경을 진단합니다.',
+    next: '더 깊은 Windows 진단·복구가 필요하면 검증된 EKODI Device Agent를 사용자 승인으로 연결할 수 있습니다.',
+  }),
+  pos: Object.freeze({
+    label: 'POS', icon: '▤', scope: '현재 POS에서 열린 브라우저 상태만 확인합니다. 결제 단말·카드리더·금전함은 읽지 않습니다.',
+    next: 'Windows POS는 관리자가 제한관리 유형으로 Agent를 연결할 수 있습니다. 결제업무 보호를 위해 관찰성 명령만 기본 허용됩니다.',
+  }),
+  kiosk: Object.freeze({
+    label: '키오스크', icon: '▣', scope: '현재 키오스크 브라우저의 연결·저장공간·EKODI 캐시만 확인합니다.',
+    next: 'Windows 키오스크는 제한관리로 연결할 수 있으며 고객 이용을 방해하는 유지보수·전원 작업은 기본 차단됩니다.',
+  }),
+  tablet: Object.freeze({
+    label: '태블릿', icon: '▯', scope: '현재 태블릿 브라우저 범위만 확인합니다. 앱·OS 설정이나 다른 앱 데이터에는 접근하지 않습니다.',
+    next: '태블릿은 휴대형 기기로 취급되어 EKODI 자동 작업 노드에서 제외됩니다. 지원되는 Agent가 있을 때도 관찰 진단부터 시작합니다.',
+  }),
+  sensor: Object.freeze({
+    label: '센서', icon: '⌁', scope: '이 화면을 연 브라우저만 진단합니다. 실제 에너지·환경 센서의 측정값이나 설정을 추정하지 않습니다.',
+    next: '센서는 관리자 통합 기기관리에서 관찰 인벤토리로 먼저 등록합니다. 전용 어댑터가 검증된 뒤에만 실제 측정값 연결을 추가합니다.',
+  }),
+  robot: Object.freeze({
+    label: '서비스로봇', icon: '◇', scope: '이 화면을 연 브라우저만 진단합니다. 로봇의 위치·모터·배터리·센서 상태를 브라우저 정보로 추정하지 않습니다.',
+    next: '서비스로봇은 관찰 인벤토리부터 등록합니다. 이동·구동 등 물리 행동은 전용 안전 어댑터와 별도 승인이 마련되기 전에는 실행하지 않습니다.',
+  }),
+  other: Object.freeze({
+    label: '기타', icon: '○', scope: '현재 브라우저에서 확인 가능한 최소 정보만 진단합니다.',
+    next: '기기 종류와 안전 경계를 확인한 뒤 적합한 Agent나 관찰 어댑터를 선택하는 것이 다음 단계입니다.',
+  }),
+});
 let session = null;
 let lastReport = null;
+let deviceType = readDeviceType();
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
+
+function readDeviceType() {
+  try {
+    const value = localStorage.getItem(TYPE_KEY) || 'pc';
+    return DEVICE_TYPES[value] ? value : 'pc';
+  } catch {
+    return 'pc';
+  }
+}
+
+function rememberDeviceType(value) {
+  deviceType = DEVICE_TYPES[value] ? value : 'pc';
+  try { localStorage.setItem(TYPE_KEY, deviceType); } catch {}
+  renderDeviceTypeUi();
+  if (lastReport) {
+    lastReport.deviceType = deviceType;
+    renderReport(lastReport);
+  }
+}
+
+function currentType() {
+  return DEVICE_TYPES[deviceType] || DEVICE_TYPES.pc;
+}
+
+function renderDeviceTypeUi() {
+  const grid = $('#deviceCareTypeGrid');
+  const note = $('#deviceCareTypeNote');
+  const next = $('#deviceCareNextStep');
+  if (grid) {
+    grid.innerHTML = Object.entries(DEVICE_TYPES).map(([id, item]) => `
+      <button type="button" class="device-care-type${id === deviceType ? ' active' : ''}" data-device-care-type="${esc(id)}" aria-pressed="${id === deviceType ? 'true' : 'false'}">
+        <span aria-hidden="true">${esc(item.icon)}</span><strong>${esc(item.label)}</strong>
+      </button>`).join('');
+    grid.querySelectorAll('[data-device-care-type]').forEach(button => button.addEventListener('click', () => rememberDeviceType(button.dataset.deviceCareType)));
+  }
+  if (note) note.innerHTML = `<strong>${esc(currentType().label)} 진단 범위</strong><span>${esc(currentType().scope)}</span>`;
+  if (next) next.innerHTML = `<span class="device-care-next-icon" aria-hidden="true">${esc(currentType().icon)}</span><div><strong>${esc(currentType().label)}의 다음 연결</strong><p>${esc(currentType().next)}</p></div>`;
 }
 
 function formatBytes(value) {
@@ -138,6 +208,9 @@ function scoreReport(report) {
   if (Number(navigator.hardwareConcurrency) > 0 && Number(navigator.hardwareConcurrency) <= 2) {
     recommendations.push({ level: 'info', title: '가벼운 화면 사용 권장', detail: '현재 기기는 동시에 처리할 수 있는 작업 수가 적게 보고됩니다. 여러 무거운 탭을 함께 열지 않는 편이 좋습니다.' });
   }
+  if (!['pc', 'pos', 'kiosk', 'tablet'].includes(report.deviceType)) {
+    recommendations.push({ level: 'info', title: `${currentType().label} 하드웨어는 추정하지 않습니다`, detail: '이 점수는 현재 브라우저와 EKODI 웹 연결 상태에 대한 점수이며 실제 물리 기기의 건강점수가 아닙니다.' });
+  }
   if (!recommendations.length) {
     recommendations.push({ level: 'good', title: '현재 브라우저 상태가 좋습니다', detail: '즉시 정리해야 할 EKODI 웹 환경 문제를 찾지 못했습니다.' });
   }
@@ -152,8 +225,9 @@ function scoreReport(report) {
 async function collectReport() {
   const [storage, webApp, latencyMs] = await Promise.all([storageInfo(), webAppState(), measureLatency()]);
   const report = {
-    version: 1,
+    version: 2,
     checkedAt: new Date().toISOString(),
+    deviceType,
     browser: browserLabel(),
     platform: platformLabel(),
     cpuThreads: Number(navigator.hardwareConcurrency) || null,
@@ -182,7 +256,7 @@ function readHistory() {
 function saveHistory(report) {
   try {
     const history = [
-      { checkedAt: report.checkedAt, score: report.health.score, label: report.health.label },
+      { checkedAt: report.checkedAt, score: report.health.score, label: report.health.label, deviceType: report.deviceType },
       ...readHistory(),
     ].slice(0, 8);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
@@ -194,7 +268,7 @@ function renderHistory() {
   if (!host) return;
   const history = readHistory();
   host.innerHTML = history.length
-    ? history.map(item => `<span><strong>${esc(item.score)}</strong><small>${esc(new Date(item.checkedAt).toLocaleString('ko-KR'))}</small></span>`).join('')
+    ? history.map(item => `<span><strong>${esc(item.score)}</strong><small>${esc(DEVICE_TYPES[item.deviceType]?.label || 'PC')} · ${esc(new Date(item.checkedAt).toLocaleString('ko-KR'))}</small></span>`).join('')
     : '<p>아직 이 브라우저에서 실행한 진단 기록이 없습니다.</p>';
 }
 
@@ -215,17 +289,15 @@ function renderReport(report) {
   score.closest('.device-care-score')?.setAttribute('data-health', report.health.label);
   updated.textContent = `마지막 진단 ${new Date(report.checkedAt).toLocaleString('ko-KR')}`;
 
-  const storageValue = report.storage.percent == null
-    ? '확인 불가'
-    : `${report.storage.percent}%`;
+  const storageValue = report.storage.percent == null ? '확인 불가' : `${report.storage.percent}%`;
   const storageNote = report.storage.usage == null ? '' : `${formatBytes(report.storage.usage)} 사용`;
   metrics.innerHTML = [
+    metric('선택 기기', DEVICE_TYPES[report.deviceType]?.label || '기타', '점수는 현재 브라우저 범위'),
     metric('브라우저', report.browser, report.platform),
     metric('My EKODI 응답', report.latencyMs == null ? '확인 불가' : `${report.latencyMs}ms`, report.network.effectiveType || (report.network.online ? '온라인' : '오프라인')),
     metric('브라우저 저장공간', storageValue, storageNote),
     metric('처리 스레드', report.cpuThreads == null ? '확인 불가' : `${report.cpuThreads}개`, report.memoryGb == null ? '' : `메모리 힌트 ${report.memoryGb}GB`),
-    metric('EKODI 캐시', report.webApp.ekodiCacheCount == null ? '확인 불가' : `${report.webApp.ekodiCacheCount}개`, '이 사이트 출처의 허용된 캐시만 대상'),
-    metric('화면', report.viewport, `배율 ${report.pixelRatio}`),
+    metric('EKODI 캐시', report.webApp.ekodiCacheCount == null ? '확인 불가' : `${report.webApp.ekodiCacheCount}개`, '현재 EKODI 출처만 대상'),
   ].join('');
 
   recommendations.innerHTML = report.health.recommendations.map(item => `
@@ -246,13 +318,13 @@ function setBusy(busy, message = '') {
 
 async function diagnose() {
   if (!session) return;
-  setBusy(true, '이 브라우저의 EKODI 웹 환경을 확인하고 있습니다…');
+  setBusy(true, `${currentType().label}에서 열린 이 브라우저의 EKODI 웹 환경을 확인하고 있습니다…`);
   try {
     lastReport = await collectReport();
     saveHistory(lastReport);
     renderReport(lastReport);
     renderHistory();
-    setBusy(false, '진단 완료. 결과는 이 브라우저에만 저장되며 다른 사이트의 데이터는 읽지 않습니다.');
+    setBusy(false, `진단 완료. ${currentType().label} 전체가 아니라 현재 브라우저 범위의 결과이며 이 브라우저에만 저장됩니다.`);
   } catch (error) {
     console.warn('[EKODI Device Care] diagnosis failed', error);
     setBusy(false, '진단을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -261,9 +333,9 @@ async function diagnose() {
 
 async function safeOptimize() {
   if (!session) return;
-  const confirmed = window.confirm('EKODI 전용 캐시 갱신과 서비스워커 업데이트만 실행합니다. 다른 사이트의 데이터, 개인 파일, Windows 설정은 변경하지 않습니다. 진행할까요?');
+  const confirmed = window.confirm(`현재 ${currentType().label}의 EKODI 웹 환경에서 EKODI 전용 캐시 갱신과 서비스워커 업데이트만 실행합니다. 다른 사이트 데이터, 개인 파일, OS·POS·센서·로봇 설정은 변경하지 않습니다. 진행할까요?`);
   if (!confirmed) return;
-  setBusy(true, '안전하게 갱신하고 있습니다…');
+  setBusy(true, 'EKODI 웹 환경만 안전하게 갱신하고 있습니다…');
   let removed = 0;
   let updated = 0;
   try {
@@ -288,10 +360,10 @@ async function safeOptimize() {
     saveHistory(lastReport);
     renderReport(lastReport);
     renderHistory();
-    setBusy(false, `안전 최적화 완료. EKODI 캐시 ${removed}개 정리, 서비스워커 ${updated}개 갱신.`);
+    setBusy(false, `안전 최적화 완료. EKODI 캐시 ${removed}개 정리, 서비스워커 ${updated}개 갱신. ${currentType().label} 자체 설정은 변경하지 않았습니다.`);
   } catch (error) {
     console.warn('[EKODI Device Care] safe optimization failed', error);
-    setBusy(false, '안전 최적화를 완료하지 못했습니다. 브라우저 설정은 임의로 변경하지 않았습니다.');
+    setBusy(false, '안전 최적화를 완료하지 못했습니다. 기기 설정은 임의로 변경하지 않았습니다.');
   }
 }
 
@@ -308,11 +380,12 @@ function authUi() {
   const signedIn = Boolean(session);
   if (gate) gate.hidden = signedIn;
   if (panel) panel.hidden = !signedIn;
-  if (status && signedIn && !lastReport) status.textContent = '진단 시작을 누르면 이 컴퓨터의 브라우저 범위만 확인합니다.';
+  if (status && signedIn && !lastReport) status.textContent = `진단 시작을 누르면 ${currentType().label}의 현재 브라우저 범위만 확인합니다.`;
   setBusy(false);
 }
 
 async function init() {
+  renderDeviceTypeUi();
   renderHistory();
   $('#deviceCareDiagnose')?.addEventListener('click', diagnose);
   $('#deviceCareOptimize')?.addEventListener('click', safeOptimize);
