@@ -1,16 +1,13 @@
 (() => {
 'use strict';
 const TOKEN_KEY='ekodi-auth-token';
-const ROUTE_KEY='ekodi-admin-target-route';
 const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
 const app=document.querySelector('#app');
 const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
 const postAuthStyles = ['compact-control-center.css'];
 const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js'];
-const routeDemand={campus:'campus','ai-ops':'aiops','ai-module-spec':'ai-module-spec','ai-membership':'aimembers',health:'health',storage:'storage',security:'security',devices:'devices',work:'work','marketing-ai':'marketing',deployments:'deployments'};
-const routeSection={operations:'overview','ai-ops':'aiops','ai-module-spec':'ai-module-spec','ai-membership':'ai-membership','marketing-ai':'marketing-ai'};
-let started=false,routeAttempts=0;
+let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
 function assetUrl(path){return`${path}${path.includes('?')?'&':'?'}v=${encodeURIComponent(ASSET_VERSION)}`}
@@ -48,16 +45,10 @@ if(!app||!sidebar||!nav||!main||!content||!sideBottom)return;
 document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll = 'true';content.dataset.ekodiIndependentScroll = 'workspace';
 if(adminTools)adminTools.href='#ai-ops';
 if(profile&&!sideBottom.contains(profile)){profile.classList.add('side-profile');sideBottom.insertBefore(profile, logoutButton || null)}
-if(profile){s(profile,{display:'flex','grid-template-columns':'none','align-items':'center',gap:'8px','min-width':'0',width:'100%'},'important');const identity=profile.querySelector('div'),email=profile.querySelector('small');s(identity,{'min-width':'0'},'important');s(email,{display:'block','max-width':'145px',overflow:'hidden','text-overflow':'ellipsis','white-space':'nowrap','word-break':'normal'},'important')}
+if(profile){profile.style.cssText+=';display:flex!important;grid-template-columns:none!important;align-items:center!important;gap:8px!important;min-width:0!important;width:100%!important';const email=profile.querySelector('small');if(email)email.style.cssText+=';display:block!important;max-width:145px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;word-break:normal!important'}
 if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden = true;
 s(document.body,{height:'100dvh',overflow:'hidden'});s(app,{height:'100dvh',overflow:'hidden'});s(sidebar,{height:'100dvh',overflow:'hidden'},'important');sideBottom.style.setProperty('position', 'static', 'important');s(sideBottom,{flex:'0 0 auto'},'important');nav.style.setProperty('flex', '1 1 auto', 'important');nav.style.setProperty('overflow-y', 'auto', 'important');s(nav,{'min-height':'0','overflow-x':'hidden','max-height':'none','overscroll-behavior':'contain'},'important');main.style.setProperty('overflow-y', 'auto');s(main,{height:'100dvh','min-height':'0','overflow-x':'hidden','overscroll-behavior':'contain'});
 if(topbar)topbar.style.setProperty('display',matchMedia('(max-width:760px)').matches ? 'flex' : 'none','important')
-}
-function restoreRoute(){
-let route='';try{route=sessionStorage.getItem(ROUTE_KEY)||''}catch{}if(!route||!authenticated())return;
-const demand=routeDemand[route];if(demand&&window.EKODIAdminDemand?.activate){window.EKODIAdminDemand.activate(demand);try{sessionStorage.removeItem(ROUTE_KEY)}catch{}return}
-const section=routeSection[route]||route;if(window.EKODIAdminPanels?.activate){window.EKODIAdminPanels.activate(section);try{sessionStorage.removeItem(ROUTE_KEY)}catch{}return}
-const target=document.querySelector(`.sidebar [data-section="${section}"],.sidebar [data-lazy-section="${section}"]`);if(target){target.click();try{sessionStorage.removeItem(ROUTE_KEY)}catch{}return}if(routeAttempts++<8)setTimeout(restoreRoute,180)
 }
 function deactivateMallFreeOps() {
 const panel=document.querySelector('#mallFreeOpsPanel');if(!panel)return;
@@ -72,10 +63,10 @@ function announceReady(){document.documentElement.dataset.ekodiAdminReady='true'
 async function startAuthenticatedShell(){
 if (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';
 if(location.pathname.startsWith('/legacy')){loadStyle('control-center-ops.css');loadStyle('control-center-finance.css');await loadScript('control-center.js');announceReady();return}
-for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady();restoreRoute()
+for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady()
 }
 function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&['#campus','#operations','#policies','#ai-ops','#devices','#work','#marketing-ai','#deployments','#storage'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
 keepLoginInteractive();onStateChange();
-window.addEventListener('ekodi-authenticated', onStateChange);window.addEventListener('ekodi-admin-route-pending',restoreRoute);
-window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout();restoreRoute()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout();restoreRoute()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
+window.addEventListener('ekodi-authenticated', onStateChange);
+window.addEventListener('ekodi-nav-changed',installSharedAdminLayout);window.addEventListener('ekodi-feature-installed',installSharedAdminLayout);matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
 })();
