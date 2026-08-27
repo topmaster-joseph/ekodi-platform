@@ -1,12 +1,12 @@
 (async () => {
 'use strict';
-const [{ adminMenuOrder }, { mountAdminSidebar }] = await Promise.all([
+const [{adminMenuOrder},{mountAdminSidebar}]=await Promise.all([
   import('./admin-menu-registry.js'),
   import('./admin-sidebar.js'),
 ]);
-const sidebar = document.querySelector('.sidebar');
-const nav = sidebar?.querySelector('nav');
-const content = document.querySelector('.content');
+const sidebar=document.querySelector('.sidebar');
+const nav=sidebar?.querySelector('nav');
+const content=document.querySelector('.content');
 if (!sidebar || !nav || !content) return;
 const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
 const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
