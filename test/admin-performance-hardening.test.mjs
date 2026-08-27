@@ -33,17 +33,19 @@ test('detailed diagnostics are standalone and only observe when explicitly loade
   assert.doesNotMatch(diagnostics, /setInterval\(/);
 });
 
-test('authenticated startup is observer-free and isolates legacy console runtime', async () => {
+test('authenticated startup is observer-free and legacy URLs converge into the current shell', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /window\.addEventListener\('ekodi-authenticated', onStateChange\)/);
+  assert.match(shell, /window\.addEventListener\('ekodi-authenticated',\s*onStateChange\)/);
   assert.doesNotMatch(shell, /new MutationObserver/);
+  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
   assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
-  assert.match(shell, /loadStyle\('control-center-ops\.css'\)/);
-  assert.match(shell, /loadStyle\('control-center-finance\.css'\)/);
-  assert.match(shell, /await loadScript\('control-center\.js'\)/);
+  assert.match(shell, /history\.replaceState/);
+  assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
+  assert.doesNotMatch(shell, /loadStyle\('control-center-finance\.css'\)/);
+  assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
-  const critical = shell.match(/const criticalPostAuthScripts = \[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js', 'google-admin-auth.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   for (const asset of ['control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
 });
 
