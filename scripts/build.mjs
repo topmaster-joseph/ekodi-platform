@@ -54,12 +54,13 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] =
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
 await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
 
-const [compactCss, compactJs, deviceControlCss, deviceControlJs] = await Promise.all([
+const [compactCss, compactJs, deviceControlCss, deviceControlJs, hybridExecutionAdminJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'), readFile(`${output}compact-control-center.js`, 'utf8'),
   readFile(`${root}device-control-admin.css`, 'utf8'), readFile(`${root}device-control-admin.js`, 'utf8'),
+  readFile(`${root}hybrid-execution-admin.js`, 'utf8'),
 ]);
 await writeFile(`${output}compact-control-center.css`, `${compactCss}\n${deviceControlCss}\n`);
-await writeFile(`${output}compact-control-center.js`, `${compactJs}\n${deviceControlJs}\n`);
+await writeFile(`${output}compact-control-center.js`, `${compactJs}\n${deviceControlJs}\n${hybridExecutionAdminJs}\n`);
 
 const lazyJs = await readFile(`${output}admin-lazy-features.js`, 'utf8');
 const lazyOnDemandJs = lazyJs
