@@ -20,7 +20,7 @@ const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
 const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
-const AUTH_CRITICAL_ASSETS = new Set(['/auth-router.js','/admin-auth.js','/author-auth.js','/business-auth.js']);
+const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
