@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.0.1'
+$AgentVersion = '2.1.0'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -120,6 +120,11 @@ function Get-SystemSnapshot {
     $usedPct = if ($totalKb -gt 0) { [math]::Round((($totalKb - $freeKb) / $totalKb) * 100, 1) } else { $null }
     $uptime = (Get-Date) - $os.LastBootUpTime
     $battery = @(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1)
+    $computer = Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue
+    $enclosure = @(Get-CimInstance Win32_SystemEnclosure -ErrorAction SilentlyContinue | Select-Object -First 1)
+    $portableChassisTypes = @(8, 9, 10, 14, 30, 31, 32)
+    $chassisTypes = @($(if ($enclosure.Count) { $enclosure[0].ChassisTypes } else { @() }) | ForEach-Object { [int]$_ })
+    $isPortable = ([int]$computer.PCSystemType -eq 2) -or ($battery.Count -gt 0) -or (@($chassisTypes | Where-Object { $portableChassisTypes -contains $_ }).Count -gt 0)
     return @{
       cpuLoadPct = $cpu
       memoryUsedPct = $usedPct
@@ -127,6 +132,9 @@ function Get-SystemSnapshot {
       uptimeHours = [math]::Round($uptime.TotalHours, 1)
       batteryPct = $(if ($battery.Count) { [int]$battery[0].EstimatedChargeRemaining } else { $null })
       batteryStatus = $(if ($battery.Count) { [string]$battery[0].BatteryStatus } else { 'not-present' })
+      deviceClass = $(if ($isPortable) { 'portable' } else { 'desktop' })
+      isPortable = [bool]$isPortable
+      autoExecutionEligible = (-not $isPortable)
     }
   } catch {
     return @{ error = 'system_snapshot_unavailable' }
