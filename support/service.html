@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="에코디 지원기회의 전문서비스별 맞춤 기회 탐색과 신청 준비 작업공간">
+  <meta name="ekodi-ui-type" content="USER">
+  <title>에코디 지원기회 | 전문서비스</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/service.css">
+  <script src="/config.js"></script>
+</head>
+<body data-ekodi-ui="USER">
+<header class="site-header">
+  <a class="site-brand" href="/" aria-label="에코디 지원기회 홈">
+    <span class="site-mark">E</span>
+    <span><strong>에코디 지원기회</strong><small>EKODI Opportunity</small></span>
+  </a>
+  <nav aria-label="지원기회 이동">
+    <a href="/">전체 기회</a>
+    <a href="#matches">맞는 기회</a>
+    <a href="#workspace">신청 준비</a>
+    <a href="https://my.ekodi.kr/">My EKODI</a>
+  </nav>
+</header>
+
+<main class="wrap specialist-wrap">
+  <section class="specialist-hero" aria-labelledby="serviceTitle">
+    <p class="eyebrow">SPECIALIST WORKSPACE · SHARED OPPORTUNITY CORE</p>
+    <div class="specialist-title-row">
+      <div>
+        <div id="serviceLabel" class="service-pill">지원기회AI</div>
+        <h1 id="serviceTitle">내 조건에 맞는 기회를 찾습니다.</h1>
+        <p id="serviceDescription" class="hero-copy">공식 공고와 사용자의 최소 조건을 연결해 먼저 검토할 기회를 정리합니다.</p>
+      </div>
+      <aside class="trust-card">
+        <small>현재 원칙</small>
+        <strong>공식자료 우선</strong>
+        <p id="sourceNote">출처와 자격조건을 확인한 기회만 검토합니다.</p>
+        <span id="sourceState" class="status-badge">원천 확인 중</span>
+      </aside>
+    </div>
+    <div id="exampleChips" class="chips example-chips" aria-label="질문 예시"></div>
+  </section>
+
+  <section class="specialist-grid" aria-label="맞춤 조건과 결과">
+    <article class="panel conditions-panel">
+      <div class="section-head compact-head">
+        <div><p class="eyebrow">MINIMUM PROFILE</p><h2>필요한 조건만 확인</h2></div>
+        <span id="completeness" class="completion">0%</span>
+      </div>
+      <p class="privacy-note">주민번호·계좌·증빙파일을 먼저 요구하지 않습니다. 공고를 좁히는 데 필요한 최소 조건만 이 브라우저에 저장합니다.</p>
+      <form id="profileForm">
+        <div class="form-grid common-fields">
+          <label>나의 유형
+            <select id="profileType" name="profileType">
+              <option>개인</option><option>학생</option><option>청년</option><option>사업자</option><option>기관·단체</option><option>교회</option><option>후원자</option>
+            </select>
+          </label>
+          <label>지역
+            <input id="region" name="region" placeholder="예: 전남, 목포, 전국" autocomplete="address-level1">
+          </label>
+        </div>
+        <label>지금 필요한 것
+          <textarea id="need" name="need" rows="3" placeholder="상황을 짧게 적어주세요."></textarea>
+        </label>
+        <label>관심 키워드
+          <input id="interests" name="interests" placeholder="예: 청년, AI, 장학금, 에너지">
+        </label>
+        <div id="specialistFields" class="form-grid specialist-fields"></div>
+        <div class="form-actions">
+          <button class="primary-action" type="submit">내 기회 다시 찾기</button>
+          <button id="resetProfile" class="secondary-action" type="button">이 서비스 조건 지우기</button>
+        </div>
+      </form>
+      <div id="profileStatus" class="result compact" aria-live="polite"></div>
+    </article>
+
+    <article id="matches" class="panel matches-panel">
+      <div class="section-head compact-head">
+        <div><p class="eyebrow">MATCH · EXPLAIN</p><h2>우선 검토할 기회</h2></div>
+        <button id="refreshMatches" class="secondary-action" type="button">갱신</button>
+      </div>
+      <div class="match-summary" aria-label="기회 요약">
+        <div><strong id="matchCount">-</strong><span>검토 기회</span></div>
+        <div><strong id="soonCount">-</strong><span>7일 내 마감</span></div>
+        <div><strong id="verifiedCount">-</strong><span>공식 출처</span></div>
+      </div>
+      <div id="matchResult" class="result opportunity-list" aria-live="polite"><p>조건을 바탕으로 공식 공고를 확인합니다.</p></div>
+    </article>
+  </section>
+
+  <section id="workspace" class="panel specialist-workspace">
+    <div class="section-head">
+      <div><p class="eyebrow">APPLICATION WORKSPACE</p><h2>찾은 뒤의 다음 단계까지</h2></div>
+      <p>발굴 → 자격검토 → 신청 준비 → 평가 → 선정 → 협약 → 수행 → 결과보고 → 정산을 같은 기록 흐름으로 관리합니다.</p>
+    </div>
+    <div class="workspace-grid">
+      <label>기회·사업명<input id="projectName" value="새 지원기회"></label>
+      <label>현재 단계<select id="stageSelect"></select></label>
+      <div class="next-action-card"><small>다음 행동</small><div id="nextActions"></div></div>
+      <button id="saveWorkspace" class="primary-action" type="button">현재 진행 저장</button>
+    </div>
+    <p class="micro">제출·서명·협약·결제·예산변경·정산은 자동 실행하지 않습니다. 사용자의 명시적 최종 확인이 필요합니다.</p>
+  </section>
+
+  <section class="two align-start">
+    <article class="panel">
+      <p class="eyebrow">OFFICIAL SOURCES</p>
+      <h2>공식 원천 연결상태</h2>
+      <p>전문 원천이 아직 연결되지 않은 서비스는 임의 공고를 만들어 채우지 않습니다.</p>
+      <div id="sourceStatus" class="result"></div>
+    </article>
+    <article class="panel">
+      <p class="eyebrow">OTHER OPPORTUNITIES</p>
+      <h2>연결된 다른 기회</h2>
+      <p>현재 필요와 맞닿은 다른 전문서비스가 있을 때만 이동할 수 있도록 열어둡니다.</p>
+      <div id="relatedServices" class="related-services"></div>
+    </article>
+  </section>
+
+  <section class="panel human-gate">
+    <p class="eyebrow">HUMAN GATE</p>
+    <h2>AI는 준비하고, 결정은 사람이 합니다</h2>
+    <p>적합도 점수는 선정을 보장하는 확률이 아닙니다. 공식 공고의 자격·제외조건·마감·원본 양식이 언제나 우선합니다.</p>
+    <div class="chips"><span>공식출처</span><span>최소정보</span><span>근거 설명</span><span>사람 검수</span><span>자동 제출 금지</span></div>
+  </section>
+</main>
+
+<footer class="specialist-footer"><a href="/">에코디 지원기회</a><span>Opportunity Core · specialist rules</span><a href="/admin">Admin ↗</a></footer>
+<script type="module" src="/service.js"></script>
+</body>
+</html>
