@@ -44,7 +44,8 @@ for (const service of normalized) {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(service.id)) throw new Error(`Invalid user service id: ${service.id}`);
   if (RESERVED_INTERNAL.has(service.id)) throw new Error(`Internal component cannot inherit user membership: ${service.id}`);
   if (!service.name) throw new Error(`Missing service name: ${service.id}`);
-  if (!service.domain.endsWith('.ekodi.kr')) throw new Error(`Invalid EKODI user service domain: ${service.domain}`);
+  const apexPathService = service.domain === 'ekodi.kr' && /^https:\/\/ekodi\.kr\/[^/?#]/.test(service.url);
+  if (!service.domain.endsWith('.ekodi.kr') && !apexPathService) throw new Error(`Invalid EKODI user service domain: ${service.domain}`);
   if (!Number.isInteger(service.homepageOrder) || service.homepageOrder < 0 || service.homepageOrder > 9999) {
     throw new Error(`Invalid homepage order: ${service.id}`);
   }
