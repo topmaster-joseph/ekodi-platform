@@ -136,8 +136,6 @@ jobs:
         run: |
           code=$(curl -sS -o /tmp/user-ai-status.json -w '%{http_code}' --max-time 15 'https://api.ekodi.kr/api/user-ai/status?site=bible' || true)
           test "$code" = '401' || test "$code" = '200'
-      - name: Reconcile production hostname
-        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.bible.toml
       - name: Bootstrap or guarded release
         shell: bash
         run: |
@@ -150,6 +148,8 @@ jobs:
             cat /tmp/bible-deployments.log
             exit 1
           fi
+      - name: Reconcile production hostname
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.bible.toml
       - name: Verify real production hostname and subservices
         shell: bash
         run: |
