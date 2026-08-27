@@ -49,26 +49,37 @@ function statusForScore(score) {
   return 'restricted';
 }
 
+function collapseDuplicateGroups(groups, maxGap = 20) {
+  const collapsed = [];
+  for (const group of groups) {
+    const files = [...group.files].sort();
+    const key = files.join('\0');
+    const hit = collapsed.find(item => item.key === key && group.occurrences.every(occ => item.occurrences.some(existing => existing.path === occ.path && Math.abs(existing.line - occ.line) <= maxGap)));
+    if (!hit) { collapsed.push({ key, files, occurrences:group.occurrences.map(item => ({ ...item })), windows:1 }); continue; }
+    hit.windows += 1;
+    for (const occ of group.occurrences) {
+      const existing = hit.occurrences.find(item => item.path === occ.path && Math.abs(item.line - occ.line) <= maxGap);
+      if (existing) existing.line = Math.min(existing.line, occ.line); else hit.occurrences.push({ ...occ });
+    }
+  }
+  return collapsed.map(({ files, occurrences, windows }) => ({ files, occurrences, windows }));
+}
+
 function duplicateBlocks(files, windowSize = 10) {
   const index = new Map();
   for (const file of files) {
     const lines = file.content.split(/\r?\n/).map((text, rawIndex) => ({ text:normalizeLine(text), line:rawIndex + 1 })).filter(item => item.text.length >= 12);
     for (let i = 0; i <= lines.length - windowSize; i += 2) {
-      const block = lines.slice(i, i + windowSize);
-      const normalized = block.map(item => item.text).join('\n');
+      const block = lines.slice(i, i + windowSize), normalized = block.map(item => item.text).join('\n');
       if (normalized.length < 320) continue;
-      const hash = createHash('sha1').update(normalized).digest('hex');
-      const occurrences = index.get(hash) || [];
+      const hash = createHash('sha1').update(normalized).digest('hex'), occurrences = index.get(hash) || [];
       if (occurrences.length < 6) occurrences.push({ path:file.path, line:block[0].line });
       index.set(hash, occurrences);
     }
   }
-  return [...index.entries()]
-    .map(([hash, occurrences]) => ({ hash, occurrences, files:[...new Set(occurrences.map(item => item.path))] }))
-    .filter(item => item.files.length >= 2)
-    .sort((a, b) => b.files.length - a.files.length || b.occurrences.length - a.occurrences.length)
-    .slice(0, 30)
-    .map(item => ({ files:item.files.slice(0, 5), occurrences:item.occurrences.slice(0, 6) }));
+  const raw = [...index.entries()].map(([hash, occurrences]) => ({ hash, occurrences, files:[...new Set(occurrences.map(item => item.path))] })).filter(item => item.files.length >= 2).sort((a,b) => b.files.length-a.files.length || b.occurrences.length-a.occurrences.length);
+  const groups = collapseDuplicateGroups(raw, windowSize * 2).slice(0, 30);
+  return { groups, rawCount:raw.length };
 }
 
 async function loadRuntimeFiles(tracked) {
@@ -105,7 +116,8 @@ async function main() {
       if (/\b(?:TODO|FIXME|HACK|TEMP(?:ORARY)?)\b/i.test(line)) todoMatches.push({ path:file.path, line:index + 1 });
     });
   }
-  const duplicates = duplicateBlocks(runtimeFiles);
+  const duplicateScan = duplicateBlocks(runtimeFiles);
+  const duplicates = duplicateScan.groups;
 
   const checks = {
     tests:command('npm', ['test']),
@@ -117,7 +129,7 @@ async function main() {
   const docPresent = KEY_DOCS.filter(path => existsSync(path));
   const dimensions = {
     tests:{ weight:WEIGHTS.tests, score:checks.tests.ok ? WEIGHTS.tests : 5, status:checks.tests.ok ? 'ok' : 'error', detail:checks.tests.ok ? `${testFiles.length}개 테스트 파일 · 전체 테스트 통과` : '전체 테스트 실패 또는 시간 초과' },
-    duplication:{ weight:WEIGHTS.duplication, score:round1(clamp(WEIGHTS.duplication - Math.min(WEIGHTS.duplication, duplicates.length * 0.45), 0, WEIGHTS.duplication)), status:duplicates.length <= 4 ? 'ok' : duplicates.length <= 12 ? 'warn' : 'error', detail:`교차 파일 중복 블록 ${duplicates.length}개 후보` },
+    duplication:{ weight:WEIGHTS.duplication, score:round1(clamp(WEIGHTS.duplication - Math.min(WEIGHTS.duplication, duplicates.length * 0.45), 0, WEIGHTS.duplication)), status:duplicates.length <= 4 ? 'ok' : duplicates.length <= 12 ? 'warn' : 'error', detail:`교차 파일 중복 군집 ${duplicates.length}개 · 겹침 창 ${duplicateScan.rawCount}개 정규화` },
     complexity:{ weight:WEIGHTS.complexity, score:round1(clamp(WEIGHTS.complexity - largeFiles.length * 0.45 - veryLargeFiles.length * 0.9 - Math.max(0, todoMatches.length - 20) * 0.05, 0, WEIGHTS.complexity)), status:veryLargeFiles.length ? 'warn' : largeFiles.length > 8 ? 'warn' : 'ok', detail:`대형 파일 ${largeFiles.length}개 · 매우 큰 파일 ${veryLargeFiles.length}개 · TODO/FIXME ${todoMatches.length}건` },
     security:{ weight:WEIGHTS.security, score:checks.security.ok ? WEIGHTS.security : 0, status:checks.security.ok ? 'ok' : 'error', detail:checks.security.ok ? '보안 기준 검증 통과' : '보안 기준 검증 실패' },
     architecture:{ weight:WEIGHTS.architecture, score:checks.architecture.ok ? WEIGHTS.architecture : 0, status:checks.architecture.ok ? 'ok' : 'error', detail:checks.architecture.ok ? '플랫폼 경계 검증 통과' : '플랫폼 경계 검증 실패' },
@@ -149,7 +161,7 @@ async function main() {
     status:statusForScore(overallScore),
     thresholds:{ healthy:90, watch:80, maintenance:70, restrictedBelow:70 },
     dimensions,
-    metrics:{ runtimeFiles:runtimeFiles.length, runtimeLines:totalRuntimeLines, testFiles:testFiles.length, workflows:workflowFiles.length, largeFiles:largeFiles.length, veryLargeFiles:veryLargeFiles.length, todoMarkers:todoMatches.length, duplicateGroups:duplicates.length },
+    metrics:{ runtimeFiles:runtimeFiles.length, runtimeLines:totalRuntimeLines, testFiles:testFiles.length, workflows:workflowFiles.length, largeFiles:largeFiles.length, veryLargeFiles:veryLargeFiles.length, todoMarkers:todoMatches.length, duplicateGroups:duplicates.length, duplicateWindows:duplicateScan.rawCount },
     technicalDebt:technicalDebt.slice(0, 24),
     checks:Object.fromEntries(Object.entries(checks).map(([name, value]) => [name, { ok:value.ok, status:value.status, timedOut:value.timedOut, summary:value.summary }])),
     cadence:{ change:'PR/main 변경 시 CI·계약 테스트', daily:'운영 상태·Source Integrity 경량 점검', weekly:'코드 건강·중복·복잡도·기술부채 심층 점검', monthly:'아키텍처·배포·보안 기준 재검토' },

@@ -38,4 +38,7 @@ test('Code health score keeps the agreed seven dimensions and 100-point total', 
   assert.match(audit, /healthy:90/);
   assert.match(audit, /watch:80/);
   assert.match(audit, /maintenance:70/);
+  assert.match(audit, /function collapseDuplicateGroups/);
+  assert.match(audit, /collapseDuplicateGroups\(raw, windowSize \* 2\)/);
+  assert.match(audit, /duplicateWindows:duplicateScan\.rawCount/);
 });
