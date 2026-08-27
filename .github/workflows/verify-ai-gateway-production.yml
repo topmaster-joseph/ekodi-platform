@@ -16,10 +16,11 @@ concurrency:
 
 jobs:
   verify:
-    # PR validation of an upstream workflow is not a production deployment.
-    # Ignore those runs here so a feature-branch failure cannot create a false
-    # red AI Gateway production checkpoint. Manual runs remain available.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event != 'pull_request'
+    # Verify production only after a successful upstream deployment. PR checks,
+    # failed deploys and superseded/cancelled deploys do not change production
+    # and must not create a false red AI Gateway production checkpoint.
+    # Manual runs remain available for an explicit production re-check.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event != 'pull_request' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
