@@ -3,6 +3,10 @@
   const API='/api/control/storage/google';
   const TOKEN_KEY='ekodi-auth-token';
   const LOCALE_KEY='ekodi-admin-locale';
+  const GOOGLE_ACCOUNT_BY_ROLE=Object.freeze({
+    primary:'joseph@ekodi.kr',
+    secondary:'topmaster.joseph@gmail.com'
+  });
   let state=null;
 
   function el(tag,text='',className=''){const node=document.createElement(tag);if(className)node.className=className;if(text)node.textContent=text;return node;}
@@ -20,7 +24,15 @@
   function button(text,handler,className='secondary'){const node=el('button',text,className);node.type='button';node.addEventListener('click',handler);return node;}
   function showError(error){const section=document.querySelector('#storageAdminPanel');if(!section)return;let box=document.querySelector('#storageMessage');if(!box){box=el('div','','storage-banner');box.id='storageMessage';section.prepend(box);}box.className='storage-banner';const raw=String(error?.message||error||'');const network=error instanceof TypeError||/failed to fetch|networkerror|load failed/i.test(raw);box.textContent=network?t('저장소 연결을 확인할 수 없습니다. 잠시 후 새로고침해 주세요.','Unable to reach the storage service. Please refresh shortly.'):raw||t('처리 중 오류가 발생했습니다.','An error occurred.');}
 
-  async function startOAuth(role){try{const result=await request('/oauth/start',{method:'POST',body:JSON.stringify({role})});location.assign(result.authorizeUrl);}catch(error){showError(error);}}
+  function accountHintedAuthorizeUrl(authorizeUrl,role){
+    const target=new URL(authorizeUrl,location.href);
+    const account=GOOGLE_ACCOUNT_BY_ROLE[role];
+    if(account)target.searchParams.set('login_hint',account);
+    const prompts=(target.searchParams.get('prompt')||'').split(/\s+/).filter(Boolean).filter(value=>value!=='select_account');
+    if(prompts.length)target.searchParams.set('prompt',prompts.join(' '));else target.searchParams.delete('prompt');
+    return target.toString();
+  }
+  async function startOAuth(role){try{const result=await request('/oauth/start',{method:'POST',body:JSON.stringify({role})});location.assign(accountHintedAuthorizeUrl(result.authorizeUrl,role));}catch(error){showError(error);}}
   async function loadDrives(connection,wrap){
     wrap.textContent=t('드라이브 목록을 읽는 중…','Loading Drive list…');
     try{
