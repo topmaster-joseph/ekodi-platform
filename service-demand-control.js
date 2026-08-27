@@ -34,12 +34,22 @@ function allowedOrigin(request, env = {}) {
   const allowed = new Set(String(env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean));
   return allowed.has(origin) ? origin : null;
 }
-function corsHeaders(request, env = {}) {
+function publicCorsHeaders(request, env = {}) {
   const origin = allowedOrigin(request, env);
   return origin ? {
     'access-control-allow-origin':origin,
     'access-control-allow-methods':'POST, OPTIONS',
     'access-control-allow-headers':'content-type',
+    'access-control-max-age':'86400',
+    'vary':'Origin',
+  } : {};
+}
+function adminCorsHeaders(request, env = {}) {
+  const origin = allowedOrigin(request, env);
+  return origin ? {
+    'access-control-allow-origin':origin,
+    'access-control-allow-methods':'GET, PUT, OPTIONS',
+    'access-control-allow-headers':'authorization, content-type',
     'access-control-max-age':'86400',
     'vary':'Origin',
   } : {};
@@ -133,13 +143,14 @@ async function audit(env, session, action, detail) {
 }
 
 async function recordDemand(request, env) {
-  if (!env.DB) return json({error:'수요 저장소를 사용할 수 없습니다.',code:'DEMAND_DB_UNAVAILABLE'},503,corsHeaders(request,env));
+  const cors = publicCorsHeaders(request, env);
+  if (!env.DB) return json({error:'수요 저장소를 사용할 수 없습니다.',code:'DEMAND_DB_UNAVAILABLE'},503,cors);
   const origin = allowedOrigin(request, env);
   if (origin === null) return json({error:'허용되지 않은 Origin입니다.',code:'ORIGIN_FORBIDDEN'},403);
   let body = null;
   try { body = await request.json(); } catch {}
   const text = cleanText(body?.requestText ?? body?.requestedCapability, 500);
-  if (text.length < 2) return json({error:'원하는 일을 조금 더 구체적으로 입력해 주세요.',code:'DEMAND_TEXT_REQUIRED'},400,corsHeaders(request,env));
+  if (text.length < 2) return json({error:'원하는 일을 조금 더 구체적으로 입력해 주세요.',code:'DEMAND_TEXT_REQUIRED'},400,cors);
   const intent = inferIntent(text, body?.intent);
   const key = normalizeKey(text, intent);
   const segmentRaw = cleanText(body?.userSegment, 24).toLowerCase();
@@ -160,10 +171,10 @@ async function recordDemand(request, env) {
       last_requested_at=excluded.last_requested_at`)
     .bind(key,intent,text,segment,relatedService,urgencyFrom(text),now,now).run();
   const row = await env.DB.prepare('SELECT * FROM service_demands WHERE normalized_key=?').bind(key).first();
-  return json({ok:true,recorded:true,demand:{key,intent,status:row?.status || 'new'},message:'요청하신 필요를 기록했습니다. 현재 가능한 가까운 방법을 함께 찾고, 서비스가 준비되면 다시 발견할 수 있도록 연결합니다.'},202,corsHeaders(request,env));
+  return json({ok:true,recorded:true,demand:{key,intent,status:row?.status || 'new'},message:'요청하신 필요를 기록했습니다. 현재 가능한 가까운 방법을 함께 찾고, 서비스가 준비되면 다시 발견할 수 있도록 연결합니다.'},202,cors);
 }
 
-async function listDemands(request, env, sessionResponse) {
+async function listDemands(request, env) {
   const url = new URL(request.url);
   const status = cleanText(url.searchParams.get('status'),24).toLowerCase();
   const limit = Math.max(1,Math.min(200,Math.trunc(Number(url.searchParams.get('limit')) || 100)));
@@ -178,18 +189,18 @@ async function listDemands(request, env, sessionResponse) {
     const data={topics:Number(item.topics||0),requests:Number(item.requests||0)};
     summary.byStatus[item.status]=data; summary.topics+=data.topics; summary.requests+=data.requests;
   }
-  return json({schemaVersion:1,generatedAt:new Date().toISOString(),summary,demands:(rows.results||[]).map(rowOut)},200,Object.fromEntries(['access-control-allow-origin','vary'].map(name=>[name,sessionResponse.headers.get(name)]).filter(([,v])=>v)));
+  return json({schemaVersion:1,generatedAt:new Date().toISOString(),summary,demands:(rows.results||[]).map(rowOut)},200,adminCorsHeaders(request,env));
 }
 
-async function updateDemand(request, env, session, sessionResponse, id) {
+async function updateDemand(request, env, session, id) {
   let body=null; try{body=await request.json();}catch{}
-  if (!body || typeof body !== 'object') return json({error:'수요 검토 형식을 확인해 주세요.'},400);
+  if (!body || typeof body !== 'object') return json({error:'수요 검토 형식을 확인해 주세요.'},400,adminCorsHeaders(request,env));
   const current=await env.DB.prepare('SELECT * FROM service_demands WHERE id=?').bind(id).first();
-  if (!current) return json({error:'해당 서비스 수요를 찾을 수 없습니다.'},404);
+  if (!current) return json({error:'해당 서비스 수요를 찾을 수 없습니다.'},404,adminCorsHeaders(request,env));
   const status=cleanText(body.status ?? current.status,24).toLowerCase();
   const implementation=cleanText(body.implementationType ?? current.implementation_type,24).toLowerCase();
-  if(!VALID_STATUS.has(status))return json({error:'수요 상태 값이 올바르지 않습니다.'},400);
-  if(!VALID_IMPLEMENTATION.has(implementation))return json({error:'구현 방식은 existing, new, external 중 하나여야 합니다.'},400);
+  if(!VALID_STATUS.has(status))return json({error:'수요 상태 값이 올바르지 않습니다.'},400,adminCorsHeaders(request,env));
+  if(!VALID_IMPLEMENTATION.has(implementation))return json({error:'구현 방식은 existing, new, external 중 하나여야 합니다.'},400,adminCorsHeaders(request,env));
   const score=(value,fallback)=>Math.max(0,Math.min(100,Math.round(Number.isFinite(Number(value))?Number(value):Number(fallback||0))));
   const urgency=score(body.urgencyScore,current.urgency_score);
   const business=score(body.businessValueScore,current.business_value_score);
@@ -201,7 +212,7 @@ async function updateDemand(request, env, session, sessionResponse, id) {
     .bind(status,implementation,urgency,business,mission,note,now,reviewer,id).run();
   await audit(env,session,'service-demand.update',JSON.stringify({id,status,implementation,urgency,business,mission}));
   const updated=await env.DB.prepare('SELECT * FROM service_demands WHERE id=?').bind(id).first();
-  return json({ok:true,demand:rowOut(updated)},200,Object.fromEntries(['access-control-allow-origin','vary'].map(name=>[name,sessionResponse.headers.get(name)]).filter(([,v])=>v)));
+  return json({ok:true,demand:rowOut(updated)},200,adminCorsHeaders(request,env));
 }
 
 export async function handleServiceDemandRequest(request, env) {
@@ -209,18 +220,28 @@ export async function handleServiceDemandRequest(request, env) {
   if (path===PUBLIC_PATH && request.method==='OPTIONS') {
     const origin=allowedOrigin(request,env);
     if(origin===null)return json({error:'허용되지 않은 Origin입니다.'},403);
-    return new Response(null,{status:204,headers:corsHeaders(request,env)});
+    return new Response(null,{status:204,headers:publicCorsHeaders(request,env)});
   }
   if (path===PUBLIC_PATH && request.method==='POST') return recordDemand(request,env);
   if (!path.startsWith(ADMIN_PREFIX)) return null;
-  if (!env.DB) return json({error:'수요 저장소를 사용할 수 없습니다.'},503);
+  if (request.method==='OPTIONS') {
+    const origin=allowedOrigin(request,env);
+    if(origin===null)return json({error:'허용되지 않은 Origin입니다.'},403);
+    return new Response(null,{status:204,headers:adminCorsHeaders(request,env)});
+  }
+  if (allowedOrigin(request,env)===null) return json({error:'허용되지 않은 Origin입니다.',code:'ORIGIN_FORBIDDEN'},403);
+  if (!env.DB) return json({error:'수요 저장소를 사용할 수 없습니다.'},503,adminCorsHeaders(request,env));
   const auth=await adminSession(request,env);
-  if(!auth.session)return auth.response;
+  if(!auth.session){
+    const headers=new Headers(auth.response.headers);
+    for(const [key,value] of Object.entries(adminCorsHeaders(request,env)))headers.set(key,value);
+    return new Response(auth.response.body,{status:auth.response.status,statusText:auth.response.statusText,headers});
+  }
   await ensureSchema(env.DB);
-  if(path===ADMIN_PREFIX && request.method==='GET')return listDemands(request,env,auth.response);
+  if(path===ADMIN_PREFIX && request.method==='GET')return listDemands(request,env);
   const match=path.match(/^\/api\/control\/service-demands\/(\d+)$/);
-  if(match && request.method==='PUT')return updateDemand(request,env,auth.session,auth.response,Number(match[1]));
-  return json({error:'Service Demand endpoint not found'},404);
+  if(match && request.method==='PUT')return updateDemand(request,env,auth.session,Number(match[1]));
+  return json({error:'Service Demand endpoint not found'},404,adminCorsHeaders(request,env));
 }
 
 export const serviceDemandInternals=Object.freeze({inferIntent,normalizeKey,urgencyFrom});
