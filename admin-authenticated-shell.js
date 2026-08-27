@@ -43,9 +43,10 @@ script.addEventListener('load',resolve,{once:true});
 script.addEventListener('error',()=>{console.warn(`[EKODI Admin] optional post-auth asset failed: ${src}`);resolve()},{once:true});document.body.appendChild(script)
 })}
 function installSharedAdminLayout(){
-const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav'),main=app?.querySelector('main'),content=main?.querySelector('.content'),topbar=main?.querySelector('.topbar'),profile=document.querySelector('.profile'),sideBottom=sidebar?.querySelector('.side-bottom'),logoutButton=document.querySelector('#logoutButton'),pageTitle=document.querySelector('#pageTitle');
+const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav'),main=app?.querySelector('main'),content=main?.querySelector('.content'),topbar=main?.querySelector('.topbar'),profile=document.querySelector('.profile'),sideBottom=sidebar?.querySelector('.side-bottom'),logoutButton=document.querySelector('#logoutButton'),pageTitle=document.querySelector('#pageTitle'),adminTools=document.querySelector('.hero[data-panel~="overview"] .hero-actions .secondary');
 if(!app||!sidebar||!nav||!main||!content||!sideBottom)return;
 document.body.classList.add('ekodi-admin-shell-v2');app.dataset.ekodiAdminShell='shared-v2';sidebar.dataset.ekodiAdminRegion='navigation';main.dataset.ekodiAdminRegion='workspace';nav.dataset.ekodiIndependentScroll = 'true';content.dataset.ekodiIndependentScroll = 'workspace';
+if(adminTools)adminTools.href='#ai-ops';
 if(profile&&!sideBottom.contains(profile)){profile.classList.add('side-profile');sideBottom.insertBefore(profile, logoutButton || null)}
 if(profile){s(profile,{display:'flex','grid-template-columns':'none','align-items':'center',gap:'8px','min-width':'0',width:'100%'},'important');const identity=profile.querySelector('div'),email=profile.querySelector('small');s(identity,{'min-width':'0'},'important');s(email,{display:'block','max-width':'145px',overflow:'hidden','text-overflow':'ellipsis','white-space':'nowrap','word-break':'normal'},'important')}
 if(pageTitle?.parentElement&&topbar?.contains(pageTitle.parentElement))pageTitle.parentElement.hidden = true;
@@ -75,6 +76,6 @@ for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostA
 }
 function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&['#campus','#operations','#policies','#ai-ops','#devices','#work','#marketing-ai','#deployments','#storage'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
 keepLoginInteractive();onStateChange();
-window.addEventListener('ekodi-authenticated', onStateChange);
+window.addEventListener('ekodi-authenticated', onStateChange);window.addEventListener('ekodi-admin-route-pending',restoreRoute);
 window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout();restoreRoute()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout();restoreRoute()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
 })();
