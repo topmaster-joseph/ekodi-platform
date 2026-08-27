@@ -5,7 +5,7 @@ const API='https://api.ekodi.kr';
 const TOKEN_KEY='ekodi-auth-token';
 const EMAIL_KEY='ekodi-admin-email';
 const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
-const CENTRAL_ADMIN_AUTH_URL='https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+const CENTRAL_ADMIN_AUTH_URL = 'https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
 const ROUTES=new Set('operations campus ai-ops ai-module-spec ai-membership health storage security devices work marketing-ai deployments finance organization workspace architecture policies clients admins community books social affiliates'.split(' '));
 const ALIASES={storige:'storage',overview:'operations',aiops:'ai-ops',release:'deployments',legacy:'ai-ops',domains:'ai-ops',activity:'ai-ops'};
 const app=document.querySelector('#app'),loginScreen=document.querySelector('#loginScreen'),apiState=document.querySelector('#apiState'),profileEmail=document.querySelector('#profileEmail'),profileName=document.querySelector('#profileName'),scopeBadge=document.querySelector('#scopeBadge'),sidebar=document.querySelector('.sidebar'),loginForm=document.querySelector('#loginForm'),legacyLink=document.querySelector('.login-screen .legacy-link'),logoutButton=document.querySelector('#logoutButton'),menuButton=document.querySelector('#menuButton');
@@ -18,7 +18,7 @@ function routeFromLocation(){const q=normalizeRoute(new URLSearchParams(location
 function cleanRouteUrl(v){const r=normalizeRoute(v),u=new URL(location.href);if(u.pathname.startsWith('/legacy'))u.pathname='/';u.searchParams.delete('route');u.hash=r?`#${r}`:'';return`${u.pathname}${u.search}${u.hash}`}
 function centralAdminAuthUrl(v){const r=normalizeRoute(v);if(!r)return CENTRAL_ADMIN_AUTH_URL;const target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`;return`https://auth.ekodi.kr/?site=admin&direct=1&return_to=${encodeURIComponent(target)}`}
 function normalizeEntryRoute(){const r=routeFromLocation();if(r&&(location.pathname.startsWith('/legacy')||location.hash!==`#${r}`||new URLSearchParams(location.search).has('route')))history.replaceState({},document.title,cleanRouteUrl(r));return r}
-function syncLoginLink(){if(loginLink?.tagName==='A')loginLink.href=centralAdminAuthUrl(routeFromLocation())}
+function syncLoginLink(){if(loginLink?.tagName!=='A')return;const route=routeFromLocation();loginLink.href = route ? centralAdminAuthUrl(route) : CENTRAL_ADMIN_AUTH_URL}
 function authHeaders(){const v=token();return v?{authorization:`Bearer ${v}`}:{}}
 function hostScope(){const h=location.hostname.toLowerCase();if(h.startsWith('admin.biz.'))return'BIZ';if(h.startsWith('admin.church.'))return'CHURCH';if(h.startsWith('admin.lab.'))return'LAB';if(h.startsWith('admin.trade.'))return'TRADE';return'ALL'}
 function applyScope(){const value=hostScope();if(scopeBadge)scopeBadge.textContent=value;document.body.dataset.scope=value.toLowerCase()}
