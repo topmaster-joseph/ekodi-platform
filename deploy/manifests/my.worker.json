@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "ekodi-my",
     "config": "wrangler.my.toml",
@@ -15,8 +15,14 @@
         "url": "https://my.ekodi.kr/health",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["ekodi-my", "my-ekodi", "creatorPortfolio", "person-scoped", "private-first"],
+        "expect": ["ekodi-my", "my-ekodi", "creatorPortfolio", "person-scoped", "private-first", "privateWorkspaceRoutes"],
         "headerExpect": ["x-ekodi-service: my-ekodi", "cache-control: no-store"]
+      },
+      {
+        "url": "https://my.ekodi.kr/w/personal:release/social",
+        "statuses": [302],
+        "redirect": "manual",
+        "headerExpect": ["location: https://auth.ekodi.kr/?site=social&return_to=https%3A%2F%2Fsocial.ekodi.kr%2F&workspace=personal%3Arelease", "cache-control: no-store", "x-robots-tag: noindex, nofollow, noarchive", "x-ekodi-private-workspace: handoff-v1"]
       }
     ]
   }
