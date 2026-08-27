@@ -17,6 +17,7 @@ on:
       - Deploy Marketing AI Pages
       - Deploy AI Gateway
       - Deploy EKODI Publishing
+      - Deploy EKODI Support Opportunity
       - EKODI Cafe · Validate and Deploy
     types: [completed]
 
@@ -41,7 +42,7 @@ jobs:
           node --check scripts/monitor-lib.mjs
           node --check scripts/monitor.mjs
           node --test test/monitor.test.mjs
-      - name: Check EKODI services, shared infrastructure and Marketing AI tenants
+      - name: Check EKODI services, Support deep probes, shared infrastructure and Marketing AI tenants
         run: npm run monitor
       - name: Publish latest status without deployment cascade
         run: |
