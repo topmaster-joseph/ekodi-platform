@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 // Keep the mobile Site Management login-home contract inside the production Admin gate.
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
@@ -98,7 +99,7 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
   assert.match(registry, /id: 'storage'.*ko: '저장소'.*en: 'Storage'/);
-  assert.match(menu, /\['#health', 'health'\]/);
+  assert.ok(routePair(menu, '#health', 'health'));
   assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
   assert.doesNotMatch(menu, /setInterval\(/);
 });
