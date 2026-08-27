@@ -42,10 +42,10 @@ jobs:
           node --check mission-control-entry-worker.js
           node --test test/hybrid-execution-contract.test.mjs test/device-control-contract.test.mjs
           npm run build
-          test -f dist/compact-control-center.js
-          grep -Fq '하이브리드 실행망' dist/compact-control-center.js
-          grep -Fq '/api/control/hybrid-execution/dashboard' dist/compact-control-center.js
-          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/compact-control-center.js
+          test -f dist/device-control-admin.js
+          grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
+          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
           ! grep -Eq 'child_process|execSync|spawnSync|Invoke-Expression' hybrid-execution.js
 
   windows-agent:
@@ -130,9 +130,10 @@ jobs:
           version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "ADMIN_ASSET_VERSION=$version" >> "$GITHUB_ENV"
-          grep -Fq '하이브리드 실행망' dist/compact-control-center.js
-          grep -Fq '/api/control/hybrid-execution/dashboard' dist/compact-control-center.js
-          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/compact-control-center.js
+          test -f dist/device-control-admin.js
+          grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
+          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
       - name: Guarded candidate release and promotion
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
       - name: Verify production Admin distributed runtime
@@ -147,12 +148,12 @@ jobs:
               sleep 4
               continue
             fi
-            compact_code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.js?v=$live_version" || true)
-            if [ "$compact_code" = '200' ] \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers \
-              && grep -Fq '하이브리드 실행망' /tmp/compact-body \
-              && grep -Fq '/api/control/hybrid-execution/dashboard' /tmp/compact-body \
-              && grep -Fq '새 기기의 자동 실행은 기본 OFF' /tmp/compact-body; then
+            device_code=$(curl -sS -D /tmp/device-headers -o /tmp/device-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/device-control-admin.js?v=$live_version" || true)
+            if [ "$device_code" = '200' ] \
+              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/device-headers \
+              && grep -Fq 'EKODI HYBRID EXECUTION' /tmp/device-body \
+              && grep -Fq '/api/control/hybrid-execution/dashboard' /tmp/device-body \
+              && grep -Fq '새 기기의 자동 실행은 기본 OFF' /tmp/device-body; then
               echo "Production Admin runtime verified: $live_version"
               exit 0
             fi
