@@ -26,8 +26,8 @@ test('generated admin HTML ends with content-fingerprinted first-path assets', (
 });
 
 test('post-auth loader starts only when the authenticated app is visible and uses auth events instead of a persistent observer', () => {
-  assert.match(shell, /return Boolean\(token\(\)&&app&&!app\.hidden\)/);
-  const guard = shell.indexOf('if(started||!authenticated())return');
+  assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
+  const guard = shell.indexOf('if (started || !authenticated()) return');
   const criticalLoad = shell.indexOf('await Promise.all(criticalPostAuthScripts.map(loadScript))');
   assert.ok(guard >= 0, 'authenticated shell guard must exist');
   assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
