@@ -12,20 +12,9 @@ const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
 const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
 const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
 const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
-const HASH_SECTIONS = new Map([
-  ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#aiops', 'aiops'], ['#ai-module-spec', 'ai-module-spec'], ['#ai-membership', 'ai-membership'],
-  ['#health', 'health'], ['#api-cost', 'api-cost'], ['#storage', 'storage'], ['#storige', 'storage'], ['#security', 'security'],
-  ['#architecture', 'architecture'], ['#devices', 'devices'], ['#campus', 'campus'], ['#work', 'work'], ['#marketing-ai', 'marketing-ai'],
-  ['#finance', 'finance'], ['#organization', 'organization'], ['#workspace', 'workspace'], ['#clients', 'clients'], ['#admins', 'admins'],
-  ['#community', 'community'], ['#books', 'books'], ['#social', 'social'], ['#affiliates', 'affiliates'],
-  ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'], ['#release', 'deployments'],
-]);
-const CANONICAL_HASH = new Map([
-  ['overview', '#operations'], ['sites', '#sites'], ['aiops', '#ai-ops'], ['ai-module-spec', '#ai-module-spec'], ['ai-membership', '#ai-membership'],
-  ['health', '#health'], ['api-cost', '#api-cost'], ['storage', '#storage'], ['security', '#security'], ['architecture', '#architecture'], ['devices', '#devices'], ['campus', '#campus'],
-  ['work', '#work'], ['marketing-ai', '#marketing-ai'], ['finance', '#finance'], ['organization', '#organization'], ['workspace', '#workspace'],
-  ['clients', '#clients'], ['admins', '#admins'], ['community', '#community'], ['books', '#books'], ['social', '#social'], ['affiliates', '#affiliates'],
-]);
+const pairMap = value => new Map(value.split(' ').map(pair => { const i = pair.indexOf(':'); return [pair.slice(0, i), pair.slice(i + 1)]; }));
+const HASH_SECTIONS = pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #operations:overview #services:services #deployments:deployments #release:deployments');
+const CANONICAL_HASH = pairMap('overview:#operations sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
 let requestedSection = '';
 let sitesLoading = null;
 function installCompactNavigationStyle() {
