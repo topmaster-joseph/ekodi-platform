@@ -10,6 +10,7 @@ import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleDeviceControl } from './device-control.js';
 import { claimHybridFallback, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
+import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybrid-execution-monitor.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
@@ -163,6 +164,11 @@ export default {
       catch (error) { console.error('Messenger Operator Control error', error); return errorResponse('EKODI Messenger 관리자 처리 중 오류가 발생했습니다.', 'MESSENGER_OPERATOR_CONTROL_ERROR'); }
     }
 
+    if (path === '/api/control/hybrid-execution/monitor') {
+      try { const response = await handleHybridExecutionMonitor(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Hybrid Execution monitor error', error); return errorResponse('하이브리드 실행망 감시 처리 중 오류가 발생했습니다.', 'HYBRID_EXECUTION_MONITOR_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/hybrid-execution')) {
       try { const response = await handleHybridExecution(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Hybrid Execution error', error); return errorResponse('하이브리드 실행망 처리 중 오류가 발생했습니다.', 'HYBRID_EXECUTION_ERROR'); }
@@ -206,9 +212,10 @@ export default {
   async scheduled(controller, env, ctx) {
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
-    if (ctx?.waitUntil) { ctx.waitUntil(authorBilling); ctx.waitUntil(messengerOutbox); }
+    const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
+    if (ctx?.waitUntil) { ctx.waitUntil(authorBilling); ctx.waitUntil(messengerOutbox); ctx.waitUntil(hybridWatchdog); }
     if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox]);
+    return Promise.all([authorBilling, messengerOutbox, hybridWatchdog]);
   },
 };
 
