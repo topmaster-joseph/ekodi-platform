@@ -1,0 +1,68 @@
+name: Cloudflare Boundary Audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'wrangler*.toml'
+      - 'wrangler*.jsonc'
+  push:
+    branches: [main, development]
+    paths:
+      - '.github/workflows/**'
+      - 'wrangler*.toml'
+      - 'wrangler*.jsonc'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Enforce Cloudflare development and production boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re, sys
+
+          root = Path('.github/workflows')
+          errors = []
+          dev_account = '46aad4738793fbaca88574832a2ccc0f'
+          dev = (root / 'deploy-development.yml').read_text(encoding='utf-8')
+          required = [
+              'branches: [development]',
+              'environment: development',
+              'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN',
+              dev_account,
+              'refs/heads/development',
+          ]
+          for marker in required:
+              if marker not in dev:
+                  errors.append(f'deploy-development.yml missing boundary marker: {marker}')
+          if 'secrets.CLOUDFLARE_API_TOKEN' in dev:
+              errors.append('development deployment references the production Cloudflare token')
+
+          for path in sorted(root.glob('*.yml')):
+              text = path.read_text(encoding='utf-8')
+              uses_prod = ('secrets.CLOUDFLARE_API_TOKEN' in text or
+                           'secrets.CLOUDFLARE_ACCOUNT_ID' in text)
+              staging_trigger = bool(re.search(r"branches:\s*(?:\n\s*-\s*['\"]?staging/|\[[^\]]*staging/)", text))
+              cloudflare_write = ('wrangler@' in text and ' deploy ' in text) or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
+              if staging_trigger and uses_prod and cloudflare_write:
+                  errors.append(f'{path.name}: staging branch can write with production Cloudflare credentials')
+
+          prod_mutator = (root / 'admin-http2-stability.yml').read_text(encoding='utf-8')
+          if 'refs/heads/main' not in prod_mutator or 'workflow_dispatch:' not in prod_mutator:
+              errors.append('admin-http2-stability.yml is not main-only/manual-only')
+
+          if errors:
+              print('\n'.join(f'ERROR: {e}' for e in errors))
+              sys.exit(1)
+          print('Cloudflare boundary audit passed.')
+          PY
