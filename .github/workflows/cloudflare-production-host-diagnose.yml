@@ -1,0 +1,53 @@
+name: Cloudflare Production Host Diagnose
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-production-host-diagnose.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Enforce read-only main diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Resolve EKODI zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          domains=$(curl -fsS "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "ekodi.kr" or .hostname == "admin.ekodi.kr") | .zone_id' | head -n1)
+          test -n "$zone_id" && test "$zone_id" != null
+          echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+      - name: Query top hosts paths and user agents
+        shell: bash
+        run: |
+          set -euo pipefail
+          start="$(date -u +%Y-%m-%dT00:00:00Z)"
+          end="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          query='query Traffic($zoneTag: string, $start: Time, $end: Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { hosts:httpRequestsAdaptiveGroups(limit:50, orderBy:[count_DESC], filter:{datetime_geq:$start,datetime_leq:$end,requestSource:"eyeball"}) { count avg { sampleInterval } dimensions { clientRequestHTTPHost } } paths:httpRequestsAdaptiveGroups(limit:100, orderBy:[count_DESC], filter:{datetime_geq:$start,datetime_leq:$end,requestSource:"eyeball"}) { count avg { sampleInterval } dimensions { clientRequestHTTPHost clientRequestPath } } agents:httpRequestsAdaptiveGroups(limit:50, orderBy:[count_DESC], filter:{datetime_geq:$start,datetime_leq:$end,requestSource:"eyeball"}) { count avg { sampleInterval } dimensions { userAgent } } } } }'
+          jq -n --arg q "$query" --arg zone "$ZONE_ID" --arg start "$start" --arg end "$end" '{query:$q,variables:{zoneTag:$zone,start:$start,end:$end}}' >/tmp/query.json
+          curl -fsS 'https://api.cloudflare.com/client/v4/graphql' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' --data @/tmp/query.json >/tmp/traffic.json
+          jq -e '.errors == null' /tmp/traffic.json >/dev/null
+          echo "Window: $start .. $end"
+          echo '=== TOP HOSTS ==='
+          jq -r '.data.viewer.zones[0].hosts[] | "\(.count) | sample=\(.avg.sampleInterval) | \(.dimensions.clientRequestHTTPHost)"' /tmp/traffic.json
+          echo '=== TOP HOST/PATHS ==='
+          jq -r '.data.viewer.zones[0].paths[] | "\(.count) | sample=\(.avg.sampleInterval) | \(.dimensions.clientRequestHTTPHost)\(.dimensions.clientRequestPath)"' /tmp/traffic.json
+          echo '=== TOP USER AGENTS ==='
+          jq -r '.data.viewer.zones[0].agents[] | "\(.count) | sample=\(.avg.sampleInterval) | \(.dimensions.userAgent)"' /tmp/traffic.json
