@@ -18,14 +18,14 @@
   <link rel="stylesheet" href="/auth-workspaces.css?v=20260817-workspace-label-1" />
   <style>
     html:not([data-identity-manage="1"]) #identityPanel{display:none!important}
-    html[data-seamless-sso="1"] body{min-height:100vh;background:#f7f8f4}
+    html[data-seamless-sso="1"] body{min-height:100vh;min-height:100dvh;background:#f7f8f4}
     html[data-seamless-sso="1"] .topbar,
     html[data-seamless-sso="1"] .intro,
     html[data-seamless-sso="1"] .principles,
     html[data-seamless-sso="1"] footer,
     html[data-seamless-sso="1"] #reviewConsole{display:none!important}
-    html[data-seamless-sso="1"] .shell{min-height:100vh;display:grid;place-items:center;padding:24px!important;max-width:none!important}
-    html[data-seamless-sso="1"] .auth-card{width:min(100%,420px);margin:0!important;box-shadow:0 16px 48px rgba(30,45,35,.08)}
+    html[data-seamless-sso="1"] .shell{width:100%!important;min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);gap:0;place-items:center;margin:0!important;padding:20px!important;max-width:none!important}
+    html[data-seamless-sso="1"] .auth-card{width:min(100%,440px);margin:0!important;justify-self:center;align-self:center;box-shadow:0 16px 48px rgba(30,45,35,.08)}
     html[data-seamless-sso="1"] .auth-card .service-line{justify-content:center;text-align:center}
     html[data-seamless-sso="1"] .auth-card .service-line small{display:none}
     html[data-seamless-sso="1"] .auth-card .micro{display:none!important}
