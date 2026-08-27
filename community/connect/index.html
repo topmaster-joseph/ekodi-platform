@@ -52,15 +52,22 @@
         <div class="people-grid" id="peopleGrid"></div>
       </section>
 
+      <section class="section" id="outgoingSection">
+        <div class="section-head"><div><p class="eyebrow">PENDING</p><h2>보낸 관심</h2></div></div>
+        <p class="section-copy">상대가 아직 관심을 보내지 않은 연결입니다. 마음이 바뀌면 언제든 철회할 수 있고, 철회 사실로 연락처가 공개되지는 않습니다.</p>
+        <div class="match-list" id="outgoingList"></div>
+        <div class="empty" id="outgoingEmpty">현재 기다리는 관심이 없습니다.</div>
+      </section>
+
       <section class="section soft" id="matchesSection">
         <div class="section-head"><div><p class="eyebrow">MUTUAL</p><h2>서로 마음이 닿은 연결</h2></div></div>
-        <p class="section-copy">한쪽의 관심만으로 개인정보가 열리지 않습니다. 두 사람이 모두 관심을 표시하면 이곳에 나타납니다.</p>
+        <p class="section-copy">한쪽의 관심만으로 개인정보가 열리지 않습니다. 두 사람이 모두 관심을 표시하면 이곳에 나타나며, 어느 쪽이든 연결을 종료할 수 있습니다.</p>
         <div class="match-list" id="matchList"></div>
         <div class="empty" id="matchEmpty">아직 상호 연결이 없습니다.</div>
       </section>
 
       <section class="principles">
-        <article><b>01 · 선택권</b><p>언제든 발견을 끄고 목적을 바꿀 수 있습니다.</p></article>
+        <article><b>01 · 선택권</b><p>언제든 발견을 끄고, 보낸 관심과 연결 동의를 철회할 수 있습니다.</p></article>
         <article><b>02 · 최소 공개</b><p>추천에 필요한 내용만 보여주고 연락처는 숨깁니다.</p></article>
         <article><b>03 · 상호동의</b><p>AI가 관계를 결정하지 않습니다. 서로의 선택이 연결을 만듭니다.</p></article>
         <article><b>04 · 안전</b><p>숨김·차단·신고를 즉시 사용할 수 있습니다.</p></article>
@@ -91,7 +98,7 @@
           <label class="toggle"><input type="checkbox" name="marriage_enabled"><span>결혼 목적 추천에 참여합니다</span></label>
         </div>
         <label class="toggle"><input type="checkbox" name="discoverable"><span>같은 목적을 선택한 EKODI 회원에게 내 연결 프로필을 추천할 수 있도록 허용</span></label>
-        <label class="consent"><input type="checkbox" name="consent"><span>추천은 참고 정보이며 최종 선택은 사람에게 있다는 점과, 언제든 공개를 철회할 수 있음을 확인합니다.</span></label>
+        <label class="consent"><input type="checkbox" name="consent"><span>추천은 참고 정보이며 최종 선택은 사람에게 있다는 점과, 언제든 공개·관심·연결 동의를 철회할 수 있음을 확인합니다.</span></label>
         <div class="form-actions"><button type="button" class="ghost" data-close>취소</button><button type="submit" class="primary">저장</button></div>
       </form>
     </section>
