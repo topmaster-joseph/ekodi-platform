@@ -97,14 +97,16 @@ jobs:
               && grep -Fq 'EKODI Community' /tmp/community-stage.html \
               && grep -Fq 'EKODI Connect' /tmp/community-stage-connect.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community-stage.html \
-              && grep -Fiq 'x-ekodi-shell: v1' /tmp/community-stage.headers \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/community-stage.headers \
               && grep -Fq '"ekodiShell":true' /tmp/community-stage-health.json \
               && grep -Fq '"contextModel":"person-space-role"' /tmp/community-stage-health.json; then
-              echo 'Community staging verified with shared EKODI Shell and Connect.'
+              echo 'Community staging verified with shared EKODI Shell v2 and Connect.'
               exit 0
             fi
             sleep 4
           done
+          echo "staging codes root=${root_code:-?} health=${health_code:-?} connect=${connect_code:-?}"
+          grep -i '^x-ekodi-shell:' /tmp/community-stage.headers || true
           exit 1
 
   production:
@@ -151,14 +153,18 @@ jobs:
               && grep -Fq 'EKODI Community' /tmp/community.html \
               && grep -Fq 'EKODI Connect' /tmp/community-connect.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community.html \
-              && grep -Fiq 'x-ekodi-shell: v1' /tmp/community.headers \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/community.headers \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/community-health.json; then
-              echo 'EKODI Community production verified with shared Shell and Connect.'
+              echo 'EKODI Community production verified with shared Shell v2 and Connect.'
               break
             fi
-            if [[ "$attempt" == '18' ]]; then exit 1; fi
+            if [[ "$attempt" == '18' ]]; then
+              echo "production codes root=${root_code:-?} social=${social_code:-?} connect=${connect_code:-?} health=${health_code:-?}"
+              grep -i '^x-ekodi-shell:' /tmp/community.headers || true
+              exit 1
+            fi
             sleep 5
           done
       - name: Verify Community central auth realm semantically
