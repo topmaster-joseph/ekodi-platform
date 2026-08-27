@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 3,
   "policy": "EKODI root shows only production-verified Live public platforms. Beta, Preparing and Planned services remain in the registry but stay hidden from the public root until they are promoted to Live and explicitly enabled for the homepage.",
   "services": [
     {"id":"church","name":"에코디교회","nameEn":"EKODI Church","descriptionKo":"예배와 말씀, 공동체의 자리","descriptionEn":"Worship, Scripture, and community","url":"https://church.ekodi.kr","label":"church.ekodi.kr","icon":"church","category":"community-ministry","order":10,"homepage":true,"productionVerified":true,"status":"live"},
