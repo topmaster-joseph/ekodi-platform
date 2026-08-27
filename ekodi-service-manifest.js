@@ -1,4 +1,12 @@
 import { operatingModelForService, ownedCustomerSiteFor } from './ekodi-site-policy.js';
+const COMMON_USER_ACCESS_POLICY = Object.freeze({
+  scope:'user-pages',
+  guestMode:'guide-only',
+  minimumTier:'free',
+  identityProvider:'google',
+  authHub:'https://auth.ekodi.kr/',
+  enforcedBy:'shared-shell',
+});
 
 const SERVICES = [
   {id:'my',name:'My EKODI',shortName:'My',url:'https://my.ekodi.kr/',group:'personal',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['identity','spaces','activity','account'],sso:true,targetable:false,order:10,shellIntegration:'worker-injected'},
@@ -32,17 +40,20 @@ const SERVICES = [
   {id:'cloud',name:'EKODI Cloud',shortName:'Cloud',url:'https://cloud.ekodi.kr/',group:'communication',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['files','collaboration','cloud'],sso:true,targetable:true,order:210,state:'planned',shellIntegration:'planned'}
 ].map(service=>{
   const ownedSite=ownedCustomerSiteFor(service.id);
-  return Object.freeze({...service,operatingModel:operatingModelForService(service.id),tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
+  const operatingModel=operatingModelForService(service.id);
+  const userAccessPolicy=operatingModel==='customer-site'?null:COMMON_USER_ACCESS_POLICY;
+  return Object.freeze({...service,operatingModel,userAccessPolicy,tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
   version: 12,
-  updatedAt: '2026-08-26',
+  updatedAt: '2026-08-27',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 2,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
+  userAccessPolicy: 'guest-guide-member-content',
   services: Object.freeze(SERVICES)
 });
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));

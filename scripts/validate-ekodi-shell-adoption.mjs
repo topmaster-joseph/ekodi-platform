@@ -46,6 +46,7 @@ if(!Array.isArray(theme.publicExperience?.variants)||theme.publicExperience.vari
 for(const motif of ['orbit','flow','grid','paper','signal','stage'])if(!Array.isArray(theme.publicExperience?.motifs?.[motif])||!theme.publicExperience.motifs[motif].length)fail(`public experience motif missing: ${motif}`);
 
 for(const required of ['setSurface','ekodi:shell-theme','ekodi:public-experience','EKODI 서비스 전환','public-rail','Asia/Seoul'])if(!shellSource.includes(required))fail(`Shell browser source lost public experience marker: ${required}`);
+for(const required of ['memberGateApplies','localMemberSession','guide-only','Google로 무료 시작','ekodiMemberAccess'])if(!shellSource.includes(required))fail(`Shell browser source lost common-service member gate marker: ${required}`);
 for(const forbidden of ['fetchPublicThemeFromAI','OPENAI_API_KEY','ANTHROPIC_API_KEY'])if(shellSource.includes(forbidden))fail(`Shell public rotation must remain provider-independent: ${forbidden}`);
 for(const required of ['SHELL_WORKSPACE_STYLE','INTERNAL_SURFACES','defaultSurface(serviceId)','data-ekodi-workspace-style'])if(!injectorSource.includes(required))fail(`Worker injection lost internal UI contract: ${required}`);
 if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker injection must advertise Shell v2');
@@ -97,6 +98,9 @@ for(const service of manifest.services||[]){
   if(typeof service.sso!=='boolean')fail(`${service.id} must declare sso`);
   if(typeof service.targetable!=='boolean')fail(`${service.id} must declare targetable`);
   if(!allowedIntegrations.has(service.shellIntegration))fail(`${service.id} must declare a recognized shellIntegration`);
+  const commonUserPage=service.operatingModel!=='customer-site';
+  if(commonUserPage){const p=service.userAccessPolicy;if(p?.scope!=='user-pages'||p?.guestMode!=='guide-only'||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!=='shared-shell')fail(`${service.id} must require Google FREE membership for common user-page content`);}
+  else if(service.userAccessPolicy!==null)fail(`${service.id} customer site must keep its own user access policy`);
   const serviceTheme=theme.services?.[service.id];
   if(!serviceTheme?.accent)fail(`${service.id} needs a Shell v2 identity accent`);
   if(!serviceTheme?.public?.motif||!theme.publicExperience?.motifs?.[serviceTheme.public.motif])fail(`${service.id} needs a recognized public visual motif`);
