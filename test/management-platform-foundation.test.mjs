@@ -12,6 +12,7 @@ import {
 } from '../management-platform.js';
 
 const policy=JSON.parse(readFileSync(new URL('../config/management-platform.json',import.meta.url),'utf8'));
+const worker=readFileSync(new URL('../management-worker.js',import.meta.url),'utf8');
 
 test('management platform preserves EKODI guest and Google-free-entry policy',()=>{
   assert.equal(MANAGEMENT_ACCESS_POLICY.guestMode,'guide-only');
@@ -26,6 +27,7 @@ test('customer types map onto the existing canonical EKODI workspace kinds',()=>
   const franchiseType=MANAGEMENT_WORKSPACE_TYPES.find(item=>item.id==='franchise');
   const institutionType=MANAGEMENT_WORKSPACE_TYPES.find(item=>item.id==='institution');
   assert.equal(franchiseType?.canonicalKind,'organization');
+  assert.equal(franchiseType?.label,'프랜차이즈');
   assert.equal(institutionType?.canonicalKind,'organization');
   const franchise=workspaceContext({id:'brand-a',type:'franchise',role:'owner',capabilities:['menu','sales','menu']});
   const store=workspaceContext({id:'store-1',type:'business',parentId:franchise.id,role:'manager'});
@@ -34,6 +36,12 @@ test('customer types map onto the existing canonical EKODI workspace kinds',()=>
   assert.equal(store.kind,'business');
   assert.equal(store.parentId,'brand-a');
   assert.deepEqual(franchise.capabilities,['menu','sales']);
+});
+
+test('public catalog exposes user-facing types separately from canonical kinds',()=>{
+  assert.match(worker,/MANAGEMENT_WORKSPACE_TYPES/);
+  assert.match(worker,/workspaceTypes:publicWorkspaceTypes\(\)/);
+  assert.match(worker,/workspaceKinds:MANAGEMENT_WORKSPACE_KINDS/);
 });
 
 test('tier and module choice remain independent',()=>{
