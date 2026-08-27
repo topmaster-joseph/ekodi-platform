@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
+const canonicalPair = (source, section, hash) => source.includes(`['${section}', '${hash}']`) || source.includes(`${section}:${hash}`);
 
 test('Health remains a visible standalone route before Security and later operational features', async () => {
   const menu = await read('admin-menu-layout.js');
@@ -11,8 +13,8 @@ test('Health remains a visible standalone route before Security and later operat
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
   assert.ok(registry.indexOf("id: 'health'") < registry.indexOf("id: 'security'"));
-  assert.match(menu, /\['#health', 'health'\]/);
-  assert.match(menu, /\['health', '#health'\]/);
+  assert.ok(routePair(menu, '#health', 'health'));
+  assert.ok(canonicalPair(menu, 'health', '#health'));
   assert.match(loader, /health:\s*\{/);
   assert.match(loader, /health:\s*\{[\s\S]*?insert: 'after-aiops'/);
   assert.match(loader, /security:\s*\{[\s\S]*?insert: 'after-health'/);
