@@ -23,7 +23,7 @@ export default{async fetch(request,env){
   if(url.pathname==='/api/change-analysis'&&request.method==='POST'){const p=await body(request);if(!p)return json({error:'invalid_json'},400);return json(analyzeGuidanceChange(p.previous,p.current))}
   if(url.pathname==='/api/opportunity-score'&&request.method==='POST'){const p=await body(request);if(!p)return json({error:'invalid_json'},400);return json({score:scoreOpportunity(p.profile,p.notice)})}
   if(url.pathname==='/api/form-fill'&&request.method==='POST'){const p=await body(request);if(!p||!Array.isArray(p.schema))return json({error:'invalid_form_schema'},400);return json({fields:fillOfficialForm(p.schema,p.profile,p.project)})}
-  if(url.pathname==='/api/next-actions'&&request.method==='POST'){const p=await body(request);return json({actions:buildNextActions(p||{})})
+  if(url.pathname==='/api/next-actions'&&request.method==='POST'){const p=await body(request);return json({actions:buildNextActions(p||{})})}
   if(url.pathname==='/api/action-gate'&&request.method==='POST'){const p=await body(request);const action=p?.action||'';return json({action,humanGateRequired:requiresHumanGate(action),allowedAutonomously:!requiresHumanGate(action)})}
   if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/',307);
   if(request.method==='GET'&&SPECIALIST_PATHS.has(url.pathname.replace(/\/$/,'')))return serveOpportunityApp(request,env,'/service.html');
