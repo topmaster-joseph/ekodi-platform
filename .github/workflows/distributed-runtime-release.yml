@@ -6,8 +6,12 @@ on:
     paths: &runtime_paths
       - 'hybrid-execution.js'
       - 'hybrid-execution-admin.js'
+      - 'hybrid-execution-monitor.js'
+      - 'mission-control-entry-worker.js'
       - 'migrations/0040_hybrid_execution.sql'
+      - 'migrations/0041_hybrid_execution_monitor.sql'
       - 'test/hybrid-execution-contract.test.mjs'
+      - 'test/hybrid-execution-monitor-contract.test.mjs'
       - '.github/workflows/distributed-runtime-release.yml'
   push:
     branches: [main]
@@ -39,14 +43,18 @@ jobs:
           set -euo pipefail
           node --check hybrid-execution.js
           node --check hybrid-execution-admin.js
+          node --check hybrid-execution-monitor.js
           node --check mission-control-entry-worker.js
-          node --test test/hybrid-execution-contract.test.mjs test/device-control-contract.test.mjs
+          node --test test/hybrid-execution-contract.test.mjs test/hybrid-execution-monitor-contract.test.mjs test/device-control-contract.test.mjs
           npm run build
           test -f dist/device-control-admin.js
           grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
           grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/monitor' dist/device-control-admin.js
+          grep -Fq '운영 자동감시' dist/device-control-admin.js
           grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
           ! grep -Eq 'child_process|execSync|spawnSync|Invoke-Expression' hybrid-execution.js
+          ! grep -Eq 'child_process|execSync|spawnSync|Invoke-Expression' hybrid-execution-monitor.js
 
   windows-agent:
     runs-on: windows-latest
@@ -87,17 +95,25 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TARGET_SHA: ${{ github.sha }}
     steps:
-      - name: Dispatch guarded Control API staging and production release
+      - name: Reuse or dispatch guarded Control API release
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow run "$CONTROL_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref main
-          run_id=''
-          for attempt in $(seq 1 36); do
-            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$CONTROL_WORKFLOW" --branch main --event workflow_dispatch --limit 20 --json databaseId,headSha,createdAt --jq ".[] | select(.headSha == \"$TARGET_SHA\") | .databaseId" | head -1 || true)
-            if [ -n "$run_id" ]; then break; fi
-            sleep 5
-          done
+          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$CONTROL_WORKFLOW" --branch main --limit 30 \
+            --json databaseId,headSha,event,createdAt \
+            --jq ".[] | select(.headSha == \"$TARGET_SHA\" and (.event == \"push\" or .event == \"workflow_dispatch\")) | .databaseId" | head -1 || true)
+
+          if [ -z "$run_id" ]; then
+            gh workflow run "$CONTROL_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref main
+            for attempt in $(seq 1 36); do
+              run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$CONTROL_WORKFLOW" --branch main --event workflow_dispatch --limit 20 \
+                --json databaseId,headSha,createdAt \
+                --jq ".[] | select(.headSha == \"$TARGET_SHA\") | .databaseId" | head -1 || true)
+              if [ -n "$run_id" ]; then break; fi
+              sleep 5
+            done
+          fi
+
           test -n "$run_id"
           echo "Control API release run: $run_id"
           gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
@@ -133,6 +149,8 @@ jobs:
           test -f dist/device-control-admin.js
           grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
           grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/monitor' dist/device-control-admin.js
+          grep -Fq '운영 자동감시' dist/device-control-admin.js
           grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
       - name: Guarded candidate release and promotion
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
@@ -153,6 +171,8 @@ jobs:
               && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/device-headers \
               && grep -Fq 'EKODI HYBRID EXECUTION' /tmp/device-body \
               && grep -Fq '/api/control/hybrid-execution/dashboard' /tmp/device-body \
+              && grep -Fq '/api/control/hybrid-execution/monitor' /tmp/device-body \
+              && grep -Fq '운영 자동감시' /tmp/device-body \
               && grep -Fq '새 기기의 자동 실행은 기본 OFF' /tmp/device-body; then
               echo "Production Admin runtime verified: $live_version"
               exit 0
