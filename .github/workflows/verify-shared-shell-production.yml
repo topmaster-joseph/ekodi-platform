@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: matrix
-        name: Build active-service audit matrix from canonical manifest
+        name: Build production-verified service audit matrix
         shell: bash
         run: |
           set -euo pipefail
@@ -95,7 +95,7 @@ jobs:
                 [[ "$header_shell" == 'true' || "$body_shell" == 'true' ]] && contract_ok=true
                 ;;
               *)
-                echo "Unsupported active Shell integration for $SERVICE_ID: $INTEGRATION" >&2
+                echo "Unsupported production Shell integration for $SERVICE_ID: $INTEGRATION" >&2
                 exit 1
                 ;;
             esac
@@ -113,4 +113,4 @@ jobs:
     needs: [inventory, shell, services]
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'All active services from the canonical EKODI manifest were verified using their declared Shell integration contract, weekly public identity rotation, and My/Shell contract.'
+      - run: echo 'All production-verified services from the canonical EKODI registry were verified using their declared Shell integration contract, weekly public identity rotation, and My/Shell contract.'
