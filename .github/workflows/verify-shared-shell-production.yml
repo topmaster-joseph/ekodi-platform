@@ -81,17 +81,36 @@ jobs:
           for attempt in $(seq 1 30); do
             code=$(curl -L -sS -D /tmp/service.headers -o /tmp/service.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$URL" || true)
             echo "$SERVICE_ID $URL -> $code integration=$INTEGRATION attempt=$attempt"
-            if [[ "$code" == '200' ]] && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/service.html; then
-              echo "$SERVICE_ID shared Shell verified."
+            body_shell=false
+            header_shell=false
+            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/service.html && body_shell=true || true
+            grep -Eiq '^x-ekodi-shell:[[:space:]]*v2[[:space:]]*$' /tmp/service.headers && header_shell=true || true
+
+            contract_ok=false
+            case "$INTEGRATION" in
+              static-script|external-build)
+                [[ "$body_shell" == 'true' ]] && contract_ok=true
+                ;;
+              worker-injected|shared-proxy)
+                [[ "$header_shell" == 'true' || "$body_shell" == 'true' ]] && contract_ok=true
+                ;;
+              *)
+                echo "Unsupported active Shell integration for $SERVICE_ID: $INTEGRATION" >&2
+                exit 1
+                ;;
+            esac
+
+            if [[ "$code" == '200' && "$contract_ok" == 'true' ]]; then
+              echo "$SERVICE_ID Shell verified by $INTEGRATION contract."
               exit 0
             fi
             sleep 5
           done
-          echo "Shared Shell production audit failed for $SERVICE_ID at $URL" >&2
+          echo "Shared Shell production audit failed for $SERVICE_ID at $URL integration=$INTEGRATION" >&2
           exit 1
 
   summary:
     needs: [inventory, shell, services]
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'All active services from the canonical EKODI manifest were verified with the shared top service selector, weekly public identity rotation, and My/Shell contract.'
+      - run: echo 'All active services from the canonical EKODI manifest were verified using their declared Shell integration contract, weekly public identity rotation, and My/Shell contract.'
