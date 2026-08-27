@@ -49,5 +49,16 @@
       "피자마루 목포대점",
       "요거트퍼플 목포대점"
     ]
+  },
+  "commonServiceUserAccessRule": {
+    "appliesTo": [
+      "platform-core",
+      "shared-service"
+    ],
+    "surface": "user-pages",
+    "guestExperience": "service-guide-only",
+    "memberMinimumTier": "free",
+    "loginProvider": "google",
+    "excludeCustomerSites": true
   }
 }

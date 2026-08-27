@@ -13,6 +13,8 @@ EKODI uses one ecosystem account and many independently operated services.
 5. Upgrading one service never silently upgrades another service.
 6. My EKODI shows the user's service portfolio and effective plan, then hands work to the owning specialist service.
 7. Admin, Auth, API, Core, Security and other infrastructure are not user services and never inherit consumer membership.
+8. On common-service user pages, guests see only a service guide. Actual content and functions require a Google-authenticated FREE member or higher.
+9. Customer-owned/operated sites keep their own access policy, and administrator/internal surfaces are outside this user-page rule.
 
 ## Automatic inheritance
 

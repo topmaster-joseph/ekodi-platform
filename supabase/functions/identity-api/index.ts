@@ -111,6 +111,12 @@ async function syncPerson(userId:string){
   if(error)throw error;
 }
 
+async function platformAdminForUser(userId:string){
+  const {data,error}=await admin.from("profiles").select("platform_admin").eq("user_id",userId).maybeSingle();
+  if(error){console.error("platform admin lookup",error.message);return false;}
+  return data?.platform_admin===true;
+}
+
 async function exchange(req:Request){
   const body=await req.json().catch(()=>({}));
   const nonce=String(body?.nonce||"").trim();
@@ -135,7 +141,8 @@ async function exchange(req:Request){
   await syncPerson(link.user.id);
   const {error:legacyError}=await admin.rpc("apply_preregistered_access",{p_user_id:link.user.id});
   if(legacyError)console.error("apply_preregistered_access",legacyError.message);
-  return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",user:{email,name:String(profile.name||"").slice(0,120)}},200);
+  const platformAdmin=await platformAdminForUser(link.user.id);
+  return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",platformAdmin,user:{email,name:String(profile.name||"").slice(0,120)}},200);
 }
 
 async function sessionHandoff(req:Request,user:any){
@@ -146,7 +153,8 @@ async function sessionHandoff(req:Request,user:any){
     console.error("session handoff user mismatch",{source:user.id,target:link.user.id});
     return json(req,{error:"session_identity_mismatch"},409);
   }
-  return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",user:{id:user.id,email}},200);
+  const platformAdmin=await platformAdminForUser(user.id);
+  return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",platformAdmin,user:{id:user.id,email}},200);
 }
 
 async function listIdentities(req:Request,userId:string){
