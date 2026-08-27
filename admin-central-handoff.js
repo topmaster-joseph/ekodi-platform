@@ -5,6 +5,7 @@
   const API = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const EMAIL_KEY = 'ekodi-admin-email';
+  const ROUTE_KEY = 'ekodi-admin-target-route';
   const ASSET_VERSION = '__EKODI_ADMIN_ASSET_VERSION__';
   const CENTRAL_ADMIN_AUTH_URL = 'https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
   const app = document.querySelector('#app');
@@ -26,11 +27,97 @@
     remove(key) { try { sessionStorage.removeItem(key); } catch {} },
   };
 
+  const ROUTE_ALIASES = new Map([
+    ['storige', 'storage'],
+    ['overview', 'operations'],
+    ['aiops', 'ai-ops'],
+    ['release', 'deployments'],
+    ['legacy', 'ai-ops'],
+    ['domains', 'ai-ops'],
+    ['activity', 'ai-ops'],
+  ]);
+  const ROUTES = new Map([
+    ['operations', { section:'overview' }],
+    ['campus', { section:'campus', demand:'campus' }],
+    ['ai-ops', { section:'aiops', demand:'aiops' }],
+    ['ai-module-spec', { section:'ai-module-spec', demand:'ai-module-spec' }],
+    ['ai-membership', { section:'ai-membership', demand:'aimembers' }],
+    ['health', { section:'health', demand:'health' }],
+    ['storage', { section:'storage', demand:'storage' }],
+    ['security', { section:'security', demand:'security' }],
+    ['devices', { section:'devices', demand:'devices' }],
+    ['work', { section:'work', demand:'work' }],
+    ['marketing-ai', { section:'marketing-ai', demand:'marketing' }],
+    ['deployments', { section:'deployments', demand:'deployments' }],
+    ['finance', { section:'finance' }],
+    ['organization', { section:'organization' }],
+    ['workspace', { section:'workspace' }],
+    ['architecture', { section:'architecture' }],
+    ['policies', { section:'policies' }],
+    ['clients', { section:'clients' }],
+    ['admins', { section:'admins' }],
+    ['community', { section:'community' }],
+    ['books', { section:'books' }],
+    ['social', { section:'social' }],
+    ['affiliates', { section:'affiliates' }],
+  ]);
+
   function mark(name) { try { performance.mark(name); } catch {} }
   function token() { return safeSession.get(TOKEN_KEY); }
   function authHeaders() {
     const value = token();
     return value ? { authorization: `Bearer ${value}` } : {};
+  }
+  function normalizeRoute(value) {
+    const raw = String(value || '').replace(/^#/, '').trim().toLowerCase();
+    if (!raw || raw.includes('=') || raw.includes('&')) return '';
+    const route = ROUTE_ALIASES.get(raw) || raw;
+    return ROUTES.has(route) ? route : '';
+  }
+  function routeFromLocation() {
+    const params = new URLSearchParams(location.search);
+    const queryRoute = normalizeRoute(params.get('route'));
+    if (queryRoute) return queryRoute;
+    const hashRoute = normalizeRoute(location.hash);
+    if (hashRoute) return hashRoute;
+    if (location.pathname.startsWith('/legacy')) return 'ai-ops';
+    return '';
+  }
+  function rememberRoute(route) {
+    const normalized = normalizeRoute(route);
+    if (normalized) safeSession.set(ROUTE_KEY, normalized);
+    return normalized;
+  }
+  function cleanRouteUrl(route) {
+    const normalized = normalizeRoute(route);
+    const url = new URL(location.href);
+    url.searchParams.delete('route');
+    url.hash = normalized ? `#${normalized}` : '';
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+  function centralAdminAuthUrl(route = '') {
+    const normalized = normalizeRoute(route);
+    if (!normalized) return CENTRAL_ADMIN_AUTH_URL;
+    const target = new URL('https://admin.ekodi.kr/');
+    target.searchParams.set('route', normalized);
+    const auth = new URL('https://auth.ekodi.kr/');
+    auth.searchParams.set('site', 'admin');
+    auth.searchParams.set('direct', '1');
+    auth.searchParams.set('return_to', target.href);
+    return auth.href;
+  }
+  function normalizeEntryRoute() {
+    const route = routeFromLocation();
+    if (!route) return '';
+    rememberRoute(route);
+    const shouldRewrite = location.pathname.startsWith('/legacy') || location.hash !== `#${route}` || new URLSearchParams(location.search).has('route');
+    if (shouldRewrite) history.replaceState({}, document.title, cleanRouteUrl(route));
+    return route;
+  }
+  function syncCentralLoginLink() {
+    const route = routeFromLocation() || safeSession.get(ROUTE_KEY);
+    if (route) rememberRoute(route);
+    if (loginLink?.tagName === 'A') loginLink.href = centralAdminAuthUrl(route);
   }
   function hostScope() {
     const host = location.hostname.toLowerCase();
@@ -88,16 +175,87 @@
     safeSession.remove(TOKEN_KEY);
     safeSession.remove(EMAIL_KEY);
     ensureCentralLoginFallback();
+    syncCentralLoginLink();
   }
   function acceptCentralHandoff() {
     const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
     const value = hash.get('ekodi_admin_token');
     if (!value) return false;
+    const query = new URLSearchParams(location.search);
+    const route = normalizeRoute(query.get('route')) || normalizeRoute(hash.get('ekodi_admin_route'));
+    if (route) rememberRoute(route);
     try { sessionStorage.setItem('ekodi-auth-token', value); }
     catch { safeSession.set(TOKEN_KEY, value); }
-    history.replaceState({}, document.title, location.pathname + location.search);
+    history.replaceState({}, document.title, cleanRouteUrl(route));
     mark('ekodi-admin-token-handoff');
     return true;
+  }
+  function repairAdminChrome() {
+    const heroActions = document.querySelectorAll('.hero[data-panel~="overview"] .hero-actions a');
+    if (heroActions[1]) {
+      heroActions[1].setAttribute('href', '#ai-ops');
+      heroActions[1].removeAttribute('target');
+      heroActions[1].removeAttribute('rel');
+      heroActions[1].dataset.adminRouteMigrated = 'ai-ops';
+    }
+    document.querySelectorAll('a[href="/legacy"],a[href="/legacy/"],a[href="/legacy#domains"],a[href="/legacy#activity"]').forEach(link => {
+      link.setAttribute('href', '#ai-ops');
+      link.dataset.adminRouteMigrated = 'ai-ops';
+    });
+    const profile = document.querySelector('.profile.side-profile');
+    if (profile) {
+      profile.style.setProperty('display', 'flex', 'important');
+      profile.style.setProperty('grid-template-columns', 'none', 'important');
+      profile.style.setProperty('align-items', 'center', 'important');
+      profile.style.setProperty('gap', '8px', 'important');
+      profile.style.setProperty('min-width', '0', 'important');
+      profile.style.setProperty('width', '100%', 'important');
+      const identity = profile.querySelector('div');
+      if (identity) identity.style.setProperty('min-width', '0', 'important');
+      if (profileEmail) {
+        profileEmail.style.setProperty('display', 'block', 'important');
+        profileEmail.style.setProperty('max-width', '145px', 'important');
+        profileEmail.style.setProperty('overflow', 'hidden', 'important');
+        profileEmail.style.setProperty('text-overflow', 'ellipsis', 'important');
+        profileEmail.style.setProperty('white-space', 'nowrap', 'important');
+        profileEmail.style.setProperty('word-break', 'normal', 'important');
+      }
+    }
+  }
+  let restoreTimer = 0;
+  let restoreAttempts = 0;
+  function restorePendingAdminRoute() {
+    repairAdminChrome();
+    const route = normalizeRoute(safeSession.get(ROUTE_KEY));
+    if (!route || !token()) return;
+    const config = ROUTES.get(route);
+    if (!config) return safeSession.remove(ROUTE_KEY);
+    if (location.hash !== `#${route}`) history.replaceState({}, document.title, cleanRouteUrl(route));
+
+    let handled = false;
+    if (config.demand && window.EKODIAdminDemand?.activate) {
+      window.EKODIAdminDemand.activate(config.demand);
+      handled = true;
+    } else if (window.EKODIAdminPanels?.activate) {
+      window.EKODIAdminPanels.activate(config.section);
+      handled = true;
+    } else {
+      const target = document.querySelector(`.sidebar [data-section="${config.section}"],.sidebar [data-lazy-section="${config.section}"]`);
+      if (target) {
+        target.click();
+        handled = true;
+      }
+    }
+
+    if (handled) {
+      safeSession.remove(ROUTE_KEY);
+      restoreAttempts = 0;
+      return;
+    }
+    if (restoreAttempts++ < 10) {
+      clearTimeout(restoreTimer);
+      restoreTimer = window.setTimeout(restorePendingAdminRoute, 180);
+    }
   }
   function loadPerfDiagnostics() {
     if (!new URLSearchParams(location.search).has('perf')) return;
@@ -146,9 +304,11 @@
   }
 
   mark('ekodi-admin-entry-start');
-  acceptCentralHandoff();
+  const acceptedHandoff = acceptCentralHandoff();
+  if (!acceptedHandoff) normalizeEntryRoute();
   ensureCentralLoginFallback();
   if (loginLink?.tagName === 'A') loginLink.href = CENTRAL_ADMIN_AUTH_URL;
+  syncCentralLoginLink();
   if (loginForm) loginForm.hidden = true;
   if (legacyLink) legacyLink.hidden = true;
   if (loginLink) loginLink.style.pointerEvents = 'auto';
@@ -160,8 +320,19 @@
     showLogin('로그아웃 완료');
     if (value) fetch(`${API}/api/logout`, { method: 'POST', headers: { authorization: `Bearer ${value}` }, keepalive: true }).catch(() => {});
   });
+  window.addEventListener('hashchange', () => {
+    const route = normalizeEntryRoute();
+    syncCentralLoginLink();
+    if (route && token()) restorePendingAdminRoute();
+  });
+  window.addEventListener('ekodi-admin-ready', restorePendingAdminRoute);
+  window.addEventListener('ekodi-nav-changed', repairAdminChrome);
+  window.addEventListener('ekodi-feature-installed', () => {
+    repairAdminChrome();
+    if (safeSession.get(ROUTE_KEY)) restorePendingAdminRoute();
+  });
 
-  window.EKODIAdminCore = Object.freeze({ token, authHeaders, request, showApp, showLogin });
+  window.EKODIAdminCore = Object.freeze({ token, authHeaders, request, showApp, showLogin, route: () => normalizeRoute(safeSession.get(ROUTE_KEY) || routeFromLocation()) });
   loadPerfDiagnostics();
   validateSession();
 })();
