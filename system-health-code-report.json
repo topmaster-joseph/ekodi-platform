@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T10:41:30.972Z",
-  "startedAt": "2026-08-27T10:41:10.306Z",
+  "generatedAt": "2026-08-27T10:51:51.886Z",
+  "startedAt": "2026-08-27T10:51:32.299Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "a8f39cf645e9c401f9ad22b2b3a03d26f16c344b",
-  "overallScore": 86.5,
-  "status": "watch",
+  "head": "b4f68426b0fcc3fc655d0da738c2a66f9f5191e0",
+  "overallScore": 91,
+  "status": "healthy",
   "thresholds": {
     "healthy": 90,
     "watch": 80,
@@ -22,9 +22,9 @@
     },
     "duplication": {
       "weight": 15,
-      "score": 1.5,
+      "score": 6,
       "status": "error",
-      "detail": "교차 파일 중복 블록 30개 후보"
+      "detail": "교차 파일 중복 군집 20개 · 겹침 창 42개 정규화"
     },
     "complexity": {
       "weight": 15,
@@ -59,13 +59,14 @@
   },
   "metrics": {
     "runtimeFiles": 338,
-    "runtimeLines": 56991,
+    "runtimeLines": 57372,
     "testFiles": 176,
     "workflows": 109,
     "largeFiles": 0,
     "veryLargeFiles": 0,
     "todoMarkers": 5,
-    "duplicateGroups": 30
+    "duplicateGroups": 20,
+    "duplicateWindows": 42
   },
   "technicalDebt": [
     {
@@ -89,52 +90,13 @@
       "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "books-control.js:11",
-        "books-distribution-control.js:11",
-        "books-finance-control.js:12"
-      ]
-    },
-    {
-      "id": "duplicate-2",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
-        "books-control.js:15",
-        "books-distribution-control.js:15",
-        "books-finance-control.js:16"
-      ]
-    },
-    {
-      "id": "duplicate-3",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
-        "books-control.js:17",
-        "books-distribution-control.js:17",
-        "books-finance-control.js:18"
-      ]
-    },
-    {
-      "id": "duplicate-4",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
         "customer-google-prereg.js:44",
         "customer-member-directory.js:26",
         "marketing-admin-control.js:11"
       ]
     },
     {
-      "id": "duplicate-5",
+      "id": "duplicate-2",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -146,7 +108,7 @@
       ]
     },
     {
-      "id": "duplicate-6",
+      "id": "duplicate-3",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -158,7 +120,7 @@
       ]
     },
     {
-      "id": "duplicate-7",
+      "id": "duplicate-4",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -168,6 +130,42 @@
         "author-billing-control.js:15",
         "customer-federated-auth.js:47"
       ]
+    },
+    {
+      "id": "duplicate-5",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books-control.js:42",
+        "books-finance-control.js:34"
+      ]
+    },
+    {
+      "id": "duplicate-6",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books/publishing/studio/app.js:1",
+        "publishing/studio/app.js:1"
+      ]
+    },
+    {
+      "id": "duplicate-7",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "customer-auth.js:94",
+        "customer-google-prereg.js:63"
+      ]
     }
   ],
   "checks": {
@@ -175,7 +173,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.651508ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.056114ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (0.718407ms)\n✔ Conversation release is additive, isolated, ordered and guarded (0.630736ms)\nℹ tests 861\nℹ suites 0\nℹ pass 861\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 19734.660578"
+      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.85374ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.524775ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (0.974831ms)\n✔ Conversation release is additive, isolated, ordered and guarded (0.847124ms)\nℹ tests 862\nℹ suites 0\nℹ pass 862\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 18867.666281"
     },
     "security": {
       "ok": true,
