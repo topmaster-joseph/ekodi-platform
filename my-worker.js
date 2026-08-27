@@ -27,6 +27,30 @@ function withHeaders(env,response){
 function runtimeConfig(env){const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);return{dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=my'}}
 function personalBrandUrl(){const target='https://marketing.ekodi.kr/?mode=personal-brand&source=my';return `https://auth.ekodi.kr/?site=marketing&return_to=${encodeURIComponent(target)}`}
 function visibleServices(){return EKODI_SERVICE_MANIFEST.services.filter(service=>service.id!=='my'&&service.state!=='planned').sort((a,b)=>(a.order||999)-(b.order||999));}
+function privateWorkspaceHandoff(env,url){
+  const match=/^\/w\/([^/]+)\/([a-z0-9-]+)\/?$/.exec(url.pathname);
+  if(!match)return json(env,{error:'private_workspace_route_not_found'},404);
+  let workspaceKey='';
+  try{workspaceKey=decodeURIComponent(match[1])}catch{return json(env,{error:'invalid_workspace_key'},400)}
+  if(!/^[A-Za-z0-9:_-]{1,160}$/.test(workspaceKey))return json(env,{error:'invalid_workspace_key'},400);
+  const serviceId=match[2];
+  const service=visibleServices().find(item=>item.id===serviceId&&item.targetable===true);
+  if(!service?.url)return json(env,{error:'workspace_service_not_targetable'},404);
+  let serviceUrl;
+  try{serviceUrl=new URL(service.url)}catch{return json(env,{error:'invalid_service_route'},500)}
+  if(serviceUrl.protocol!=='https:')return json(env,{error:'invalid_service_route'},500);
+  const target=new URL('https://auth.ekodi.kr/');
+  target.searchParams.set('site',service.id);
+  target.searchParams.set('return_to',serviceUrl.href);
+  target.searchParams.set('workspace',workspaceKey);
+  const redirect=Response.redirect(target.href,302);
+  const headers=new Headers(redirect.headers);
+  for(const [key,value] of Object.entries(securityHeaders(env)))headers.set(key,value);
+  headers.set('cache-control','no-store');
+  headers.set('x-robots-tag','noindex, nofollow, noarchive');
+  headers.set('x-ekodi-private-workspace','handoff-v1');
+  return new Response(redirect.body,{status:redirect.status,statusText:redirect.statusText,headers});
+}
 function myServicePreamble(){
   const services=visibleServices();
   const serviceRows=services.map(service=>[service.id,service.name,service.url]);
@@ -56,6 +80,7 @@ async function manifestDrivenApp(request,env){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    if(url.pathname==='/w'||url.pathname==='/w/'||url.pathname.startsWith('/w/'))return privateWorkspaceHandoff(env,url);
     if(url.pathname==='/config.js'){
       const cfg=runtimeConfig(env);
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
@@ -64,7 +89,7 @@ export default{
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,lifeChannels:true,proactiveUserAi:true,humanGatedOutbound:true,serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRoutes:true,lifeChannels:true,proactiveUserAi:true,humanGatedOutbound:true,serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/creator'||url.pathname==='/creator/')return Response.redirect('https://author.ekodi.kr/',307);
     if(url.pathname==='/personal-brand'||url.pathname==='/personal-brand/')return Response.redirect(personalBrandUrl(),307);
