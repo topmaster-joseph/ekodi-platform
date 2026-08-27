@@ -1,4 +1,5 @@
 const FIELD_TYPES=new Set(['text','select']);
+const PROMOTED_MATCH_KEYS=new Set(['industry','businessType','employeeBand']);
 const select=(key,label,options,hint='')=>({key,label,type:'select',options,hint});
 const text=(key,label,placeholder,hint='')=>({key,label,type:'text',placeholder,hint});
 
@@ -100,13 +101,16 @@ export function validateSpecialistWorkspace(workspace){
 export function buildSpecialistProfile(common={},specific={},serviceId='grant'){
   const workspace=getSpecialistWorkspace(serviceId);
   const attributes={};
+  const promoted={};
   for(const field of workspace.fields){
     const value=String(specific[field.key]??'').trim();
-    if(value)attributes[field.key]=value;
+    if(!value)continue;
+    attributes[field.key]=value;
+    if(PROMOTED_MATCH_KEYS.has(field.key))promoted[field.key]=value;
   }
   const attributeKeywords=Object.values(attributes).filter(Boolean);
   const keywords=[common.need,...(common.interests||[]),common.region,...attributeKeywords].filter(Boolean);
-  return {...common,serviceId:workspace.id,attributes,keywords:[...new Set(keywords)]};
+  return {...common,...promoted,serviceId:workspace.id,attributes,keywords:[...new Set(keywords)]};
 }
 
 export function profileCompleteness(common={},specific={},serviceId='grant'){
