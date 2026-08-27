@@ -1,5 +1,5 @@
 import {injectEkodiShell} from './ekodi-shell-injector.js';
-import {MANAGEMENT_ACCESS_POLICY,MANAGEMENT_MODULES,MANAGEMENT_WORKSPACE_KINDS} from './management-platform.js';
+import {MANAGEMENT_ACCESS_POLICY,MANAGEMENT_MODULES,MANAGEMENT_WORKSPACE_KINDS,MANAGEMENT_WORKSPACE_TYPES} from './management-platform.js';
 
 function securityHeaders(){return{
   'x-content-type-options':'nosniff',
@@ -35,11 +35,12 @@ async function exchangeAuth(request,env){
   return json({accessToken:data.access_token,refreshToken:data.refresh_token,expiresIn:Number(data.expires_in||3600),expiresAt:Number(data.expires_at||0),user:{id:data.user?.id||'',email:data.user?.email||''},tier:'free'});
 }
 function publicCatalog(){return MANAGEMENT_MODULES.map(module=>({id:module.id,name:module.name,phase:module.phase,state:module.state,role:module.role,url:module.url||null,reuseExisting:Boolean(module.reuseExisting)}))}
+function publicWorkspaceTypes(){return MANAGEMENT_WORKSPACE_TYPES.map(type=>({id:type.id,canonicalKind:type.canonicalKind,label:type.label,hierarchy:Boolean(type.hierarchy),profile:type.profile||null}))}
 
 export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_MANAGEMENT_CONFIG=${JSON.stringify(cfg(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
-  if(request.method==='GET'&&url.pathname==='/api/catalog')return json({platform:'management',guestMode:MANAGEMENT_ACCESS_POLICY.guestMode,minimumTier:MANAGEMENT_ACCESS_POLICY.minimumTier,workspaceKinds:MANAGEMENT_WORKSPACE_KINDS,modules:publicCatalog()});
+  if(request.method==='GET'&&url.pathname==='/api/catalog')return json({platform:'management',guestMode:MANAGEMENT_ACCESS_POLICY.guestMode,minimumTier:MANAGEMENT_ACCESS_POLICY.minimumTier,workspaceKinds:MANAGEMENT_WORKSPACE_KINDS,workspaceTypes:publicWorkspaceTypes(),modules:publicCatalog()});
   if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);
   const asset=await env.ASSETS.fetch(request);
   return injectEkodiShell(asset,'management');
