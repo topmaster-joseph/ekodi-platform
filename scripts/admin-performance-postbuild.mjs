@@ -21,6 +21,11 @@ await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostic
 const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js'];
 await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
 
+// Keep the first-path demand router below its hard byte budget.
+const demandLoaderPath = `${dist}admin-demand-loader.js`;
+const demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
+
 // Login/return parses only the base visual CSS and the small central-auth handoff.
 html = html
   .replace(/\s*<link rel="stylesheet" href="control-center-ops\.css">/g, '')
@@ -91,7 +96,7 @@ const versionInputs = [
   'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css',
   'ai-ops-admin.js','ai-ops-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
-  'system-health-admin.js','system-health-admin.css','work-admin.js','work-admin.css',
+  'system-health-admin.js','system-health-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css',
   'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
