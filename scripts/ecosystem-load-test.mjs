@@ -18,7 +18,8 @@ const concurrencies = String(process.env.LOAD_CONCURRENCY || '1,5,10,20')
   .split(',')
   .map((value) => Number(value.trim()))
   .filter((value) => Number.isInteger(value) && value > 0 && value <= 50);
-const requestsPerStage = Math.max(10, Math.min(200, Number(process.env.LOAD_REQUESTS_PER_STAGE || 40)));
+const requestsPerStage = Math.max(1, Math.min(200, Number(process.env.LOAD_REQUESTS_PER_STAGE || 40)));
+const warmupRequests = Math.max(0, Math.min(3, Number(process.env.LOAD_WARMUP_REQUESTS || 1)));
 const timeoutMs = Math.max(1000, Math.min(15000, Number(process.env.LOAD_TIMEOUT_MS || 5000)));
 const p95BudgetMs = Math.max(250, Number(process.env.LOAD_P95_BUDGET_MS || 1500));
 const incidentP95Ms = Math.max(p95BudgetMs, Number(process.env.LOAD_INCIDENT_P95_MS || 2500));
@@ -29,6 +30,30 @@ if (!Array.isArray(targets) || targets.length === 0 || targets.length > 20) {
   throw new Error('LOAD_TARGETS_JSON must contain between 1 and 20 targets.');
 }
 if (concurrencies.length === 0) throw new Error('At least one valid concurrency level is required.');
+
+function isProductionTarget(target) {
+  const host = new URL(target.url).hostname.toLowerCase();
+  return host === 'ekodi.kr' || host.endsWith('.ekodi.kr');
+}
+
+const productionTargets = targets.filter(isProductionTarget);
+const hasProductionTargets = productionTargets.length > 0;
+const productionApproved = process.env.EKODI_ALLOW_PRODUCTION_LOAD === 'MANUAL_APPROVED';
+
+if (hasProductionTargets) {
+  if (!productionApproved) {
+    throw new Error('Production load test blocked. Use the dedicated manual workflow with EKODI_ALLOW_PRODUCTION_LOAD=MANUAL_APPROVED.');
+  }
+  if (process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch') {
+    throw new Error('Production load test blocked: GitHub Actions production traffic is manual workflow_dispatch only.');
+  }
+  if (process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF !== 'refs/heads/main') {
+    throw new Error('Production load test blocked: GitHub Actions production traffic is main-only.');
+  }
+  if (concurrencies.some((value) => value !== 1) || requestsPerStage > 5 || warmupRequests > 1) {
+    throw new Error('Production load test exceeds safety cap: concurrency=1, requests/stage<=5, warmup<=1.');
+  }
+}
 
 function percentile(values, p) {
   if (!values.length) return null;
@@ -54,7 +79,6 @@ async function probeOnce(target) {
       },
       signal: AbortSignal.timeout(timeoutMs),
     });
-    // Consume the response so connection reuse and body delivery are represented in latency.
     await response.arrayBuffer();
     const elapsed = performance.now() - started;
     return {
@@ -133,11 +157,16 @@ const report = {
   policy: {
     concurrencies,
     requestsPerStage,
+    warmupRequests,
     timeoutMs,
     p95BudgetMs,
     incidentP95Ms,
     errorRateBudget,
-    note: 'Bounded GET-only production test. No auth, writes, payment, mutation, or customer-data endpoints are exercised.',
+    productionTargets: productionTargets.map((target) => target.url),
+    productionApproved,
+    note: hasProductionTargets
+      ? 'Manual GET-only production test under a hard request/concurrency cap. No auth, writes, payment, mutation, or customer-data endpoints are exercised.'
+      : 'Bounded GET-only non-production test.',
   },
   targets: [],
   summary: null,
@@ -145,8 +174,9 @@ const report = {
 
 for (const target of targets) {
   console.log(`\n## ${target.label} ${target.url}`);
-  // A tiny warm-up prevents a single cold connection from dominating the first stage.
-  await Promise.all(Array.from({ length: 3 }, () => probeOnce(target)));
+  if (warmupRequests > 0) {
+    await Promise.all(Array.from({ length: warmupRequests }, () => probeOnce(target)));
+  }
   const stages = [];
   for (const concurrency of concurrencies) {
     const stage = await runStage(target, concurrency);
@@ -163,6 +193,7 @@ const highestConcurrency = Math.max(...concurrencies);
 const peakStages = allStages.filter((stage) => stage.concurrency === highestConcurrency);
 report.summary = {
   totalRequests: allStages.reduce((sum, stage) => sum + stage.requests, 0),
+  warmupRequests: warmupRequests * targets.length,
   peakConcurrency: highestConcurrency,
   peakP95Ms: round(Math.max(...peakStages.map((stage) => stage.p95Ms || 0))),
   peakErrorRate: round(Math.max(...peakStages.map((stage) => stage.errorRate || 0)), 4),
@@ -184,7 +215,7 @@ const markdown = [
   '',
   `Generated: ${report.generatedAt}`,
   '',
-  `Policy: GET-only, max concurrency ${highestConcurrency}, ${requestsPerStage} requests/stage, p95 target ${p95BudgetMs}ms, incident ${incidentP95Ms}ms, error budget ${(errorRateBudget * 100).toFixed(2)}%.`,
+  `Policy: GET-only, max concurrency ${highestConcurrency}, ${requestsPerStage} requests/stage, ${warmupRequests} warmup/target, p95 target ${p95BudgetMs}ms, incident ${incidentP95Ms}ms, error budget ${(errorRateBudget * 100).toFixed(2)}%.`,
   '',
   '| Target | Concurrency | RPS | p50 | p95 | p99 | Errors | HTTP |',
   '|---|---:|---:|---:|---:|---:|---:|---|',
@@ -200,6 +231,4 @@ const markdown = [
 await writeFile('artifacts/ecosystem-load-test.md', markdown);
 console.log(`\n${markdown}`);
 
-// Fail only for a clear production incident. Normal target misses remain visible without turning
-// geographic runner variance into a false outage signal.
 if (report.summary.incidents.length > 0) process.exitCode = 2;
