@@ -332,7 +332,10 @@
   }
 
   function login() {
-    location.href = 'https://auth.ekodi.kr/?site=mall-seller';
+    const auth = new URL('https://auth.ekodi.kr/');
+    auth.searchParams.set('site', 'mall-seller');
+    auth.searchParams.set('return_to', location.href.split('#')[0]);
+    location.assign(auth.href);
   }
 
   async function exchangeCentralToken() {
