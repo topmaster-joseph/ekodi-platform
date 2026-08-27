@@ -45,10 +45,23 @@ test('My workspace selection enters a linked workspace instead of only changing 
   assert.match(app,/function workspaceDestination\(workspace\)/);
   assert.match(app,/requires_handoff/);
   assert.match(app,/function enterWorkspace\(key\)/);
-  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/location\.assign\(privateWorkspaceRoute\(selected,destination\.id\)\|\|serviceRoute\(destination\.id,destination\.url\)\)/);
   assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
   assert.match(app,/return_to/);
   assert.match(app,/new URL\(url\)\.origin===target\.origin/);
+});
+
+test('My workspace handoff uses private /w/{space}/{service} routes and only targetable services',async()=>{
+  const [app,worker]=await Promise.all([read('my/app.js'),read('my-worker.js')]);
+  assert.match(app,/function privateWorkspaceRoute\(workspace,id\)/);
+  assert.match(app,/\/w\/\$\{encodeURIComponent\(workspace\.workspace_key\)\}\/\$\{encodeURIComponent\(id\)\}/);
+  assert.match(app,/available&&inCurrent\?privateWorkspaceRoute\(current,id\)/);
+  assert.match(worker,/function privateWorkspaceHandoff\(env,url\)/);
+  assert.match(worker,/item\.id===serviceId&&item\.targetable===true/);
+  assert.match(worker,/target\.searchParams\.set\('workspace',workspaceKey\)/);
+  assert.match(worker,/x-ekodi-private-workspace','handoff-v1'/);
+  assert.match(worker,/x-robots-tag','noindex, nofollow, noarchive'/);
+  assert.match(worker,/privateWorkspaceRoutes:true/);
 });
 
 test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
