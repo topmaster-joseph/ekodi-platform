@@ -1,0 +1,111 @@
+name: Release Church Marketing AI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-church-marketing-ai.yml'
+      - 'my/index.html'
+      - 'my/church-marketing-ai.js'
+      - 'deploy/manifests/marketing-ai.pages.json'
+      - 'deploy/manifests/my.worker.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-church-marketing-ai
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout EKODI release controller
+        uses: actions/checkout@v7
+        with:
+          path: controller
+
+      - name: Checkout Marketing AI source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/jadam-maru
+          ref: main
+          path: source
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate My EKODI church entry
+        working-directory: controller
+        run: |
+          set -euo pipefail
+          node --check my/church-marketing-ai.js
+          grep -Fq '/church-marketing-ai.js?v=20260827-church-marketing-1' my/index.html
+          grep -Fq 'MARKETING_URL' my/church-marketing-ai.js
+          grep -Fq "url.searchParams.set('workspace', workspaceKey)" my/church-marketing-ai.js
+          grep -Fq 'https://marketing.ekodi.kr/church/' my/church-marketing-ai.js
+
+      - name: Build and validate church Marketing AI workspace
+        working-directory: source
+        run: |
+          set -euo pipefail
+          npm run build
+          test -f dist/marketing-ai/church/index.html
+          test -f dist/marketing-ai/church/app.js
+          grep -Fq 'data-ekodi-church-marketing-ai' dist/marketing-ai/church/index.html
+          grep -Fq '홍보세트 만들기' dist/marketing-ai/church/index.html
+          grep -Fq '쇼츠·릴스 영상 기획' dist/marketing-ai/church/index.html
+          grep -Fq '승인 대기' dist/marketing-ai/church/index.html
+          grep -Fq '외부 자동게시 OFF' dist/marketing-ai/church/index.html
+          grep -Fq 'Provider: Basic fallback' dist/marketing-ai/church/index.html
+          grep -Fq 'ekodi-church-marketing-drafts-v1' dist/marketing-ai/church/app.js
+          ! grep -Fq '061-453-8295' dist/marketing-ai/church/index.html
+          ! grep -Fq '자담치킨 목포대점' dist/marketing-ai/church/index.html
+
+      - name: Guarded release My EKODI
+        run: |
+          set -euo pipefail
+          node controller/scripts/guarded-worker-release.mjs \
+            --root controller \
+            --manifest controller/deploy/manifests/my.worker.json
+
+      - name: Guarded release Marketing AI Pages
+        run: |
+          set -euo pipefail
+          node controller/scripts/guarded-pages-release.mjs \
+            --root source \
+            --manifest controller/deploy/manifests/marketing-ai.pages.json
+
+      - name: Verify production church workspace and regressions
+        run: |
+          set -euo pipefail
+          verify() {
+            url="$1"; marker="$2"; file="$3"
+            code=$(curl -sS -L -o "$file" -w '%{http_code}' --connect-timeout 5 --max-time 20 "$url" || true)
+            echo "$url -> $code"
+            [ "$code" = '200' ]
+            grep -Fq "$marker" "$file"
+          }
+          for attempt in $(seq 1 24); do
+            if verify 'https://marketing.ekodi.kr/church/' 'data-ekodi-church-marketing-ai' /tmp/church.html \
+              && verify 'https://marketing.ekodi.kr/church/app.js' 'ekodi-church-marketing-drafts-v1' /tmp/church-app.js \
+              && verify 'https://my.ekodi.kr/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
+              && verify 'https://marketing.ekodi.kr/' 'id="freeTrialForm"' /tmp/marketing.html \
+              && verify 'https://jadam.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/jadam.html \
+              && verify 'https://pizzamaru.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/pizza.html \
+              && verify 'https://yogurt.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/yogurt.html; then
+              grep -Fq '외부 자동게시 OFF' /tmp/church.html
+              ! grep -Fq '061-453-8295' /tmp/church.html
+              echo 'Church Marketing AI, My EKODI entry and existing Marketing AI surfaces verified in production.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
