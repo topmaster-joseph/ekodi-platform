@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - name: Verify live Work admin login is a native same-origin form and redirects to central auth
+      - name: Verify live Work admin entry and central-auth redirect
         shell: bash
         run: |
           set -euo pipefail
@@ -49,9 +49,8 @@ jobs:
             redirect_code=$(curl -sS --max-redirs 0 -D /tmp/login-headers -o /tmp/login-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/auth/start?return_to=%2Fwork' || true)
             location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); sub(/^location:[[:space:]]*/,""); print; exit}' /tmp/login-headers || true)
             if [[ "$page_code" == "200" ]] \
-              && grep -Fq 'id="centralAdminLoginForm"' /tmp/admin-work.html \
-              && grep -Fq 'action="/auth/start"' /tmp/admin-work.html \
-              && grep -Fq 'name="return_to" value="/work"' /tmp/admin-work.html \
+              && grep -Fq 'id="centralAdminLogin"' /tmp/admin-work.html \
+              && grep -Fq 'admin-central-handoff.js' /tmp/admin-work.html \
               && [[ "$redirect_code" == "302" ]] \
               && [[ "$location" == https://auth.ekodi.kr/* ]] \
               && [[ "$location" == *'site=admin'* ]] \
