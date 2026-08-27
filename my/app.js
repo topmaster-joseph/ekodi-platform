@@ -210,7 +210,7 @@ async function saveProfile(event){
   console.error('profile save',error);status.className='profile-status error';status.textContent='저장하지 못했습니다. 기존 정보는 변경되지 않았습니다.';
  }finally{button.textContent=old;button.disabled=false;input.disabled=false}
 }
-async function authAction(){if(!enabled)return;if(!session){location.assign(authUrl);return}await sb.auth.signOut();session=null;await loadAll();authUi()}
+async function authAction(){if(!enabled)return;if(!session){const target=new URL(authUrl);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href);return}await sb.auth.signOut();session=null;await loadAll();authUi()}
 
 $('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#profileForm').addEventListener('submit',saveProfile);
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
