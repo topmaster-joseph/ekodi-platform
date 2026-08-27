@@ -1,4 +1,4 @@
-import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
+﻿import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-terra';
@@ -58,16 +58,16 @@ function buildAdminInput(context = {}) {
   const page = normalizePageContext(context.page || context.context || {});
   const history = normalizeHistory(context.history);
   const lines = [
-    `현재 관리자 화면: ${page.title || page.section || 'Admin'}`,
+    `?꾩옱 愿由ъ옄 ?붾㈃: ${page.title || page.section || 'Admin'}`,
     `section: ${page.section || '-'}`,
     `pathname: ${page.pathname || '-'}`,
     `hash: ${page.hash || '-'}`,
   ];
   if (history.length) {
-    lines.push('', '최근 대화:');
-    for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '관리자'}: ${item.text}`);
+    lines.push('', '理쒓렐 ???');
+    for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '愿由ъ옄'}: ${item.text}`);
   }
-  lines.push('', `현재 요청: ${message || '요청 내용 없음'}`);
+  lines.push('', `?꾩옱 ?붿껌: ${message || '?붿껌 ?댁슜 ?놁쓬'}`);
   return lines.join('\n');
 }
 
@@ -152,7 +152,6 @@ export function getOpenAiProviderStatus(env = {}) {
     configured: Boolean(String(env.OPENAI_API_KEY || '').trim()),
     available: provider.available,
     model: provider.model,
-    metered: Boolean(env.DB?.prepare),
   });
 }
 
