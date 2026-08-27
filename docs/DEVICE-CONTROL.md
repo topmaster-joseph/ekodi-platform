@@ -8,6 +8,8 @@ The control path is:
 
 `admin.ekodi.kr → api.ekodi.kr → Device Control queue → enrolled Windows Agent → verify/result → audit`
 
+The hybrid execution extension keeps the cloud as the control plane and treats enrolled PCs as replaceable execution nodes. An administrator must explicitly enable automatic work on each device. Jobs remain in the cloud queue until an online, enabled device in the requested group has the required capability and spare capacity.
+
 The first release supports Windows only. Android Enterprise and Apple MDM are deliberately deferred because mobile operating systems require managed-device policy channels rather than browser-level system setting changes.
 
 ## Security boundaries
@@ -21,6 +23,10 @@ The first release supports Windows only. Android Enterprise and Apple MDM are de
 - Device commands are written to the existing immutable administrator audit trail.
 - Auto-logon passwords are never accepted by Device Control, never placed in command payloads, and never stored in EKODI. The Agent only opens Microsoft's Sysinternals Autologon UI on the local PC.
 - The Agent does not contain `Invoke-Expression` and reports `arbitraryShell = false`.
+- Automatic assignment never expands the command allowlist. It can dispatch only the same bounded commands available to a manually selected device.
+- Newly enrolled devices default to automatic execution **off**.
+- Laptops, tablets, and other portable chassis are never eligible for automatic work. The Agent reports battery, PC system type, and chassis evidence; the cloud independently requires a confirmed desktop classification before enabling or assigning work.
+- Timed-out jobs are reassigned at most three times; queue and result state remain in the cloud database.
 
 ## Windows commands
 
@@ -49,11 +55,13 @@ After initial enrollment, normal power and lock operations are initiated from th
 
 ## Data model
 
-Migration: `migrations/0021_device_control.sql`
+Migrations: `migrations/0021_device_control.sql`, `migrations/0022_device_hybrid_execution.sql`
 
 - `device_enrollments`: short-lived one-time pairing grants
 - `device_registry`: device identity, token hash, capabilities, heartbeat, reported settings
 - `device_commands`: queued/claimed/completed command ledger
+- `device_execution_profiles`: per-device automatic-work switch, group, and concurrency ceiling
+- `device_jobs`: central priority queue, assignment, retry, and completion ledger
 
 ## Release gates
 
@@ -74,7 +82,8 @@ Do not release directly to production. Before merge/deployment:
 
 - Android Enterprise Device Policy / MDM adapter
 - Apple MDM adapter
-- device groups and policy scheduling
+- tenant-to-device-group authorization policy and time-window scheduling
+- cloud-native executor adapters for tasks that do not require a local PC
 - agent signed installer/MSIX and automatic agent updates
 - local health diagnostics beyond power/lock controls
 - remote uninstall with a separate explicit human gate
