@@ -357,7 +357,33 @@
           listState.textContent = error.message || '관리자 계정 변경에 실패했습니다.';
         } finally { save.disabled = false; }
       });
-      actions.append(roleSelect, statusSelect, save);
+      const remove = element('button', '관리자 권한 제거', 'ghost google-admin-remove');
+      remove.type = 'button';
+      const currentEmail = (sessionStorage.getItem('ekodi-admin-email') || '').toLowerCase();
+      if ((account.email || '').toLowerCase() === currentEmail) {
+        remove.disabled = true;
+        remove.title = '현재 로그인한 최고관리자 자신의 권한은 제거할 수 없습니다.';
+      }
+      remove.addEventListener('click', async () => {
+        const activeSuperAdmins = accountsCache.filter(item => item.role === 'super_admin' && item.status === 'active').length;
+        if (account.role === 'super_admin' && account.status === 'active' && activeSuperAdmins <= 1) {
+          listState.textContent = '마지막 활성 최고관리자는 제거할 수 없습니다.';
+          return;
+        }
+        if (!confirm(`${account.email}의 EKODI 플랫폼 관리자 권한을 제거하시겠습니까?\nGoogle 계정과 고객사이트 로컬 역할은 삭제되지 않습니다.`)) return;
+        remove.disabled = true;
+        listState.textContent = '관리자 권한을 제거하는 중입니다…';
+        try {
+          await api(`/api/admin-access/google-accounts/${account.id}`, { method: 'DELETE' });
+          selectedIds.delete(String(account.id));
+          listState.textContent = '관리자 권한을 제거했습니다.';
+          await loadAccounts();
+        } catch (error) {
+          listState.textContent = error.message || '관리자 권한 제거에 실패했습니다.';
+          remove.disabled = false;
+        }
+      });
+      actions.append(roleSelect, statusSelect, save, remove);
 
       const meta = element('div', '', 'google-admin-meta');
       meta.append(element('small', account.last_login_at
