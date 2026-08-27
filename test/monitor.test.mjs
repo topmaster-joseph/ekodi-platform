@@ -29,7 +29,7 @@ test('checkSite uses an injected fetch implementation', async () => {
   assert.equal(result.responseTime, 140);
 });
 
-test('monitor covers official services, shared infrastructure, Marketing AI tenants, private/public sites and legacy aliases', () => {
+test('monitor covers official services, shared infrastructure, Support deep probes, Marketing AI tenants, private/public sites and legacy aliases', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
   assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
@@ -37,6 +37,15 @@ test('monitor covers official services, shared infrastructure, Marketing AI tena
   assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
   assert.equal(byId.get('publishing')?.[2], 'publishing.ekodi.kr');
   assert.equal(byId.get('books')?.[2], 'books.ekodi.kr');
+  assert.equal(byId.get('support')?.[3], 'https://support.ekodi.kr/');
+  assert.equal(byId.get('support-health')?.[3], 'https://support.ekodi.kr/health');
+  assert.equal(byId.get('support-config')?.[3], 'https://support.ekodi.kr/config.js');
+  assert.equal(byId.get('support-opportunities')?.[3], 'https://support.ekodi.kr/api/opportunities?limit=5');
+  for (const id of ['support-grants','support-subsidies','support-scholarships','support-contests','support-welfare','support-private','support-sponsorship']) {
+    assert.equal(byId.get(id)?.[2], 'support.ekodi.kr');
+  }
+  assert.equal(byId.get('support-grants')?.[3], 'https://support.ekodi.kr/grants');
+  assert.equal(byId.get('support-sponsorship')?.[3], 'https://support.ekodi.kr/sponsorship');
   assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'jadam.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
@@ -47,7 +56,7 @@ test('monitor covers official services, shared infrastructure, Marketing AI tena
   assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
   assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');
   assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-jadam-')));
-  assert.ok(SITE_DEFINITIONS.length >= 46);
+  assert.ok(SITE_DEFINITIONS.length >= 56);
 });
 
 test('shouldPublish ignores timing jitter but publishes state changes and refreshes stale data', () => {

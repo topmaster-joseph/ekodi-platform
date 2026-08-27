@@ -29,6 +29,19 @@ const BUSINESS_CHAIN_SITES = [
   ['business-trade', 'EKODI Business Trade', 'trade.biz.ekodi.kr', 'https://trade.biz.ekodi.kr/']
 ];
 
+const SUPPORT_CHAIN_SITES = [
+  ['support-health', 'Support Opportunity Health', 'support.ekodi.kr', 'https://support.ekodi.kr/health'],
+  ['support-config', 'Support Opportunity Runtime Config', 'support.ekodi.kr', 'https://support.ekodi.kr/config.js'],
+  ['support-opportunities', 'Support Official Opportunity Feed', 'support.ekodi.kr', 'https://support.ekodi.kr/api/opportunities?limit=5'],
+  ['support-grants', 'Support Grants AI', 'support.ekodi.kr', 'https://support.ekodi.kr/grants'],
+  ['support-subsidies', 'Support Subsidies AI', 'support.ekodi.kr', 'https://support.ekodi.kr/subsidies'],
+  ['support-scholarships', 'Support Scholarships AI', 'support.ekodi.kr', 'https://support.ekodi.kr/scholarships'],
+  ['support-contests', 'Support Contests AI', 'support.ekodi.kr', 'https://support.ekodi.kr/contests'],
+  ['support-welfare', 'Support Welfare AI', 'support.ekodi.kr', 'https://support.ekodi.kr/welfare'],
+  ['support-private', 'Support Private Support AI', 'support.ekodi.kr', 'https://support.ekodi.kr/private-support'],
+  ['support-sponsorship', 'Support Sponsorship AI', 'support.ekodi.kr', 'https://support.ekodi.kr/sponsorship']
+];
+
 const SERVICE_SITES = EKODI_SERVICE_MANIFEST.services
   .filter(service => service.state !== 'planned')
   .map(service => [
@@ -97,6 +110,7 @@ function uniqueSites(sites) {
 export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
   ...INFRA_SITES,
   ...BUSINESS_CHAIN_SITES,
+  ...SUPPORT_CHAIN_SITES,
   ...SERVICE_SITES,
   ...MARKETING_TENANT_SITES,
   ...MARKETING_PUBLIC_SITES,
