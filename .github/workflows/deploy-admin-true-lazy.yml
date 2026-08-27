@@ -19,6 +19,7 @@ on:
       - 'admin-menu-layout.js'
       - 'finance-monitor.js'
       - 'device-control-admin.js'
+      - 'hybrid-execution-admin.js'
       - 'device-control-admin.css'
       - 'campus-actions.js'
       - 'campus-actions.css'
@@ -46,6 +47,8 @@ on:
       - 'test/admin-preauth-shell.test.mjs'
       - 'test/admin-performance-hardening.test.mjs'
       - 'test/admin-readable-command.test.mjs'
+      - 'test/hybrid-execution-contract.test.mjs'
+      - 'test/hybrid-execution-admin-records.test.mjs'
   push:
     branches: [main]
     paths: *admin_perf_paths
@@ -78,6 +81,7 @@ jobs:
           node --check admin-menu-layout.js
           node --check admin-lazy-features.js
           node --check admin-readable-command.js
+          node --check hybrid-execution-admin.js
           node --check ai-ops-admin.js
           node --check release-control-admin.js
           node --check system-health-admin.js
@@ -86,7 +90,7 @@ jobs:
           node --check scripts/admin-system-map-postbuild.mjs
           node --check scripts/admin-readable-command-postbuild.mjs
           node --check scripts/admin-performance-postbuild.mjs
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-system-map.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs
+          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-system-map.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/hybrid-execution-contract.test.mjs test/hybrid-execution-admin-records.test.mjs
           npm run build
 
           for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css platform-boundaries.json; do
@@ -121,6 +125,8 @@ jobs:
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq 'hybridExecutionPanel' dist/device-control-admin.js
+          grep -Fq 'hybridEventList' dist/device-control-admin.js
           grep -Fq 'isInputPending' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
