@@ -21,6 +21,7 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { handleServiceDemandRequest } from './service-demand-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -75,6 +76,11 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = new URL(request.url).pathname;
+
+    if (path === '/api/service-demands' || path.startsWith('/api/control/service-demands')) {
+      try { const response = await handleServiceDemandRequest(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Service Demand Radar error', error); return errorResponse('서비스 수요 레이더 처리 중 오류가 발생했습니다.', 'SERVICE_DEMAND_RADAR_ERROR'); }
+    }
 
     if (path.startsWith('/api/storage/v1')) {
       try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
