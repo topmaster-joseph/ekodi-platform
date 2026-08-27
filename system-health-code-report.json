@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T09:25:29.418Z",
-  "startedAt": "2026-08-27T09:25:17.471Z",
+  "generatedAt": "2026-08-27T10:41:30.972Z",
+  "startedAt": "2026-08-27T10:41:10.306Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "2d3d9887d10d5f9c92399019d75ac8a83385f453",
-  "overallScore": 66.5,
-  "status": "restricted",
+  "head": "a8f39cf645e9c401f9ad22b2b3a03d26f16c344b",
+  "overallScore": 86.5,
+  "status": "watch",
   "thresholds": {
     "healthy": 90,
     "watch": 80,
@@ -16,9 +16,9 @@
   "dimensions": {
     "tests": {
       "weight": 25,
-      "score": 5,
-      "status": "error",
-      "detail": "전체 테스트 실패 또는 시간 초과"
+      "score": 25,
+      "status": "ok",
+      "detail": "176개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
@@ -59,7 +59,7 @@
   },
   "metrics": {
     "runtimeFiles": 338,
-    "runtimeLines": 56994,
+    "runtimeLines": 56991,
     "testFiles": 176,
     "workflows": 109,
     "largeFiles": 0,
@@ -68,15 +68,6 @@
     "duplicateGroups": 30
   },
   "technicalDebt": [
-    {
-      "id": "tests-failing",
-      "severity": "critical",
-      "category": "tests",
-      "title": "전체 테스트 점검 필요",
-      "detail": "정기 코드 건강검사에서 전체 테스트가 통과하지 않았습니다.",
-      "recommendation": "신규 기능 반영보다 실패 테스트의 원인을 먼저 분리하고 회귀 범위를 확인하세요.",
-      "evidence": []
-    },
     {
       "id": "duplicate-0",
       "severity": "medium",
@@ -181,10 +172,10 @@
   ],
   "checks": {
     "tests": {
-      "ok": false,
-      "status": 1,
+      "ok": true,
+      "status": 0,
       "timedOut": false,
-      "summary": "allFreeOps()\\n}\\nfunction announceReady(){document.documentElement.dataset.ekodiAdminReady=\\'true\\';try{performance.mark(\\'ekodi-admin-ready\\')}catch{}window.dispatchEvent(new CustomEvent(\\'ekodi-admin-ready\\'))}\\nfunction loadAdminAccessDeferred(){\\nqueueMicrotask(()=>{if(!authenticated())return;loadStyle(\\'google-admin-auth.css\\');loadScript(\\'google-admin-auth.js\\')})\\n}\\nasync function startAuthenticatedShell(){\\nif (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady=\\'loading\\';\\nif(location.pathname.startsWith(\\'/legacy\\')){loadStyle(\\'control-center-ops.css\\');loadStyle(\\'control-center-finance.css\\');await loadScript(\\'control-center.js\\');announceReady();return}\\nfor(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady();loadAdminAccessDeferred()\\n}\\nfunction onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&[\\'#campus\\',\\'#operations\\',\\'#policies\\',\\'#ai-ops\\',\\'#devices\\',\\'#work\\',\\'#marketing-ai\\',\\'#deployments\\'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}\\nkeepLoginInteractive();onStateChange();\\nwindow.addEventListener(\\'ekodi-authenticated\\', onStateChange);\\nwindow.addEventListener(\\'ekodi-nav-changed\\',installSharedAdminLayout);window.addEventListener(\\'ekodi-feature-installed\\',installSharedAdminLayout);matchMedia(\\'(max-width:760px)\\').addEventListener?.(\\'change\\',installSharedAdminLayout)\\n})();\\n',\n    expected: /const postAuthStyles = \\['compact-control-center\\.css','google-admin-auth\\.css'\\]/,\n    operator: 'match',\n    diff: 'simple'\n  }"
+      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.651508ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.056114ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (0.718407ms)\n✔ Conversation release is additive, isolated, ordered and guarded (0.630736ms)\nℹ tests 861\nℹ suites 0\nℹ pass 861\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 19734.660578"
     },
     "security": {
       "ok": true,
