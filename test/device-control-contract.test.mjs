@@ -29,8 +29,8 @@ test('device credentials are stored as hashes and enrollment is one-time', () =>
   assert.match(api, /code_hash TEXT NOT NULL UNIQUE/);
   assert.match(api, /used_at IS NULL AND expires_at > \?/);
   assert.match(api, /sha256\(token\)/);
-  const registryInsert = api.match(/INSERT INTO device_registry[\s\S]*?\.run\(\);/)?.[0] || '';
-  assert.ok(registryInsert, 'device registry insert must exist');
+  const registryInsert = api.match(/INSERT INTO device_registry[\s\S]*?tokenHash[\s\S]*?enrollment\.created_by/)?.[0] || '';
+  assert.ok(registryInsert, 'device registry insert must exist and bind the hashed token');
   assert.match(registryInsert, /tokenHash/);
   assert.doesNotMatch(registryInsert, /deviceToken/);
 });
@@ -139,10 +139,11 @@ test('Windows agent preserves reversible state before privileged changes', () =>
   assert.match(agent, /profile\.workstation\.restore/);
 });
 
-test('Device AI health remains deterministic and action-bounded', () => {
+test('Device health remains deterministic, typed and action-bounded', () => {
   assert.match(api, /function deviceHealth/);
   assert.match(api, /recommendations\.slice\(0, 6\)/);
-  assert.match(admin, /AI 운영 제안/);
+  assert.match(api, /commandAllowedForDeviceType/);
+  assert.match(admin, /운영 제안/);
   assert.doesNotMatch(api, /eval\(|new Function/);
 });
 
@@ -161,13 +162,25 @@ test('hybrid execution uses an opt-in bounded queue with capacity-aware assignme
   assert.doesNotMatch(api, /shell\.exec|powershell\.exec|command\.script/);
 });
 
-test('portable computers are excluded from automatic execution nodes', () => {
+test('portable computers and non-PC types are excluded from automatic execution nodes', () => {
   assert.match(agent, /Win32_Battery/);
   assert.match(agent, /Win32_ComputerSystem/);
   assert.match(agent, /Win32_SystemEnclosure/);
   assert.match(agent, /autoExecutionEligible = \(-not \$isPortable\)/);
   assert.match(api, /system\.autoExecutionEligible === true/);
   assert.match(api, /system\.isPortable === false/);
+  assert.match(api, /normalizeDeviceType\(row\.device_type \|\| 'pc'\) === 'pc'/);
   assert.match(api, /PORTABLE_DEVICE_NOT_ELIGIBLE/);
+  assert.match(api, /DEVICE_TYPE_NOT_AUTO_EXECUTABLE/);
   assert.match(admin, /노트북·휴대형 기기는 자동 작업 노드에서 제외/);
+});
+
+test('unified fleet types reduce authority by default', () => {
+  for (const type of ['pc','pos','kiosk','tablet','sensor','robot','other']) assert.match(api, new RegExp(`${type}: Object\\.freeze`));
+  assert.match(api, /DEVICE_TYPE_COMMAND_BLOCKED/);
+  assert.match(api, /policyCancelled: true/);
+  assert.match(api, /sensor:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
+  assert.match(api, /robot:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
+  assert.match(admin, /통합 기기관리/);
+  assert.match(admin, /관찰 인벤토리 등록/);
 });
