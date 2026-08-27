@@ -44,10 +44,10 @@
   button.type = 'button';
   button.className = 'nav system-health-nav';
   button.dataset.section = SECTION;
-  button.title = 'EKODI Core와 시스템 운영 상태';
+  button.title = 'EKODI Core · 코드 · 구조 · 운영 시스템 건강';
   button.append(document.createTextNode('◉ '));
   const navLabel = document.createElement('span');
-  navLabel.textContent = 'Health';
+  navLabel.textContent = '시스템 건강';
   button.append(navLabel);
 
   const aiOps = nav.querySelector('[data-section="aiops"], [data-demand-feature="aiops"]');
@@ -126,6 +126,19 @@
           <div><dt>최근 운영 확인</dt><dd data-core-live-check>—</dd></div>
         </dl>
       </div>
+    </div>
+
+    <div class="system-health-divider"><span>CODE & ARCHITECTURE HEALTH</span></div>
+    <div class="code-health-overall" data-code-health-overall data-state="pending">
+      <div class="code-health-score"><small>건강점수</small><strong data-code-health-score>—</strong><span>/ 100</span></div>
+      <div class="code-health-summary"><small>코드 · 구조 · 배포 · 보안 · 문서</small><strong data-code-health-label>확인 전</strong><span data-code-health-detail>정기 건강검사 스냅샷을 불러옵니다.</span></div>
+      <time data-code-health-time>—</time>
+    </div>
+    <div class="code-health-grid" data-code-health-dimensions><p class="operations-loading">7개 건강지표를 확인하는 중입니다.</p></div>
+    <div class="code-health-debt-card">
+      <div class="core-health-card-head"><div><small>TECHNICAL DEBT</small><strong>우선 정비 항목</strong></div><span data-code-health-debt-count>—</span></div>
+      <div class="code-health-debt" data-code-health-debt><p class="operations-loading">기술부채 분류를 확인하는 중입니다.</p></div>
+      <p class="code-health-policy">자동 수정하지 않습니다. 관찰 → 원인분석 → 수정안 → 테스트·영향검증 → 관리자 승인 → 가역적 적용 → 운영 재검증 순서를 지킵니다.</p>
     </div>
 
     <div class="system-health-divider"><span>TRAFFIC HEALTH</span></div>
@@ -457,6 +470,46 @@
     return counts;
   }
 
+  function renderCodeHealth(result) {
+    const root = get('[data-code-health-overall]');
+    const scoreNode = get('[data-code-health-score]');
+    const label = get('[data-code-health-label]');
+    const detail = get('[data-code-health-detail]');
+    const checked = get('[data-code-health-time]');
+    const dimensions = get('[data-code-health-dimensions]');
+    const debtList = get('[data-code-health-debt]');
+    const debtCount = get('[data-code-health-debt-count]');
+    dimensions.textContent = ''; debtList.textContent = '';
+    if (!result?.ok) {
+      root.dataset.state = 'error'; scoreNode.textContent = '—'; label.textContent = '스냅샷 확인 필요';
+      detail.textContent = result?.error?.message || 'Code Health 스냅샷을 불러오지 못했습니다.';
+      checked.textContent = '최근 점검 조회 실패';
+      const d = document.createElement('p'); d.className = 'operations-error'; d.textContent = '코드 건강 데이터는 운영 트래픽과 독립되어 있습니다.'; dimensions.append(d);
+      const q = document.createElement('p'); q.className = 'operations-error'; q.textContent = '정기 건강검사 Workflow 상태를 확인해 주세요.'; debtList.append(q);
+      debtCount.textContent = '조회 실패'; return;
+    }
+    const data = result.data || {}; const score = Number(data.overallScore);
+    const state = data.status === 'healthy' ? 'ok' : ['watch','maintenance'].includes(data.status) ? 'warn' : 'error';
+    root.dataset.state = state; scoreNode.textContent = Number.isFinite(score) ? String(Math.round(score * 10) / 10) : '—';
+    label.textContent = state === 'ok' ? '건강' : state === 'warn' ? '정비 권장' : '우선 점검';
+    detail.textContent = (data.branch || 'system-health-data') + ' · ' + (data.head ? data.head.slice(0, 8) : 'commit 확인 전') + ' · 기술부채 ' + (data.technicalDebt || []).length + '건';
+    checked.textContent = data.generatedAt ? '점검 ' + time(data.generatedAt) : '점검시각 없음';
+    const names = { tests:'테스트', duplication:'중복', complexity:'복잡도', security:'보안', architecture:'아키텍처', deployment:'배포', documentation:'문서' };
+    for (const [key, item] of Object.entries(data.dimensions || {})) {
+      const card = document.createElement('article'); card.dataset.state = item.status === 'ok' ? 'ok' : item.status === 'error' ? 'error' : 'warn';
+      const head = document.createElement('div'); const name = document.createElement('small'); name.textContent = names[key] || key;
+      const points = document.createElement('b'); points.textContent = String(item.score ?? 0) + ' / ' + String(item.weight ?? 0);
+      const copy = document.createElement('span'); copy.textContent = item.detail || ''; head.append(name, points); card.append(head, copy); dimensions.append(card);
+    }
+    const debts = Array.isArray(data.technicalDebt) ? data.technicalDebt : []; debtCount.textContent = debts.length + '건';
+    if (!debts.length) { const empty = document.createElement('p'); empty.className = 'operations-loading'; empty.textContent = '현재 우선 정비 기술부채가 없습니다.'; debtList.append(empty); }
+    for (const debt of debts.slice(0, 12)) {
+      const row = document.createElement('article'); row.dataset.severity = debt.severity || 'info';
+      const badge = document.createElement('b'); badge.textContent = String(debt.severity || 'info').toUpperCase();
+      const body = document.createElement('div'); const title = document.createElement('strong'); title.textContent = debt.title || '점검 항목';
+      const copy = document.createElement('span'); copy.textContent = debt.recommendation || debt.detail || ''; body.append(title, copy); row.append(badge, body); debtList.append(row);
+    }
+  }
   function renderCore(results) {
     const { core, ai, recovery, overview } = results;
     const coreData = core.data || {};
@@ -537,8 +590,9 @@
     get('[data-core-overall-label]').textContent = '확인 중';
     get('[data-core-status]').textContent = 'Core 운영 계약과 복구 상태를 확인하는 중입니다.';
 
-    const [health, core, ai, recovery, overview] = await Promise.all([
+    const [health, codeHealth, core, ai, recovery, overview] = await Promise.all([
       attempt('System Health', () => fetchJson(`/api/control/system-health?days=${days}`, true)),
+      attempt('Code Health', () => fetchJson('/api/control/system-health/code', true)),
       attempt('Core', () => fetchJson('/api/core/v1/status')),
       attempt('AI Gateway', () => fetchJson('/api/core/v1/ai/status')),
       attempt('Backup', () => fetchJson('/api/core/v1/recovery/status', true)),
@@ -546,6 +600,7 @@
     ]);
 
     renderCore({ core, ai, recovery, overview });
+    renderCodeHealth(codeHealth);
     if (health.ok) {
       loaded = true;
       render(health.data);
@@ -568,7 +623,7 @@
     });
     document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', item === button));
     const pageTitle = document.querySelector('#pageTitle');
-    if (pageTitle) pageTitle.textContent = 'System Health';
+    if (pageTitle) pageTitle.textContent = '시스템 건강';
     document.querySelector('.sidebar')?.classList.remove('open');
     if (location.hash !== '#health') history.replaceState(null, '', '#health');
     load(false);

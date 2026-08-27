@@ -150,7 +150,7 @@ export default {
       catch (error) { console.error('Cloudflare secret control error', error); return errorResponse('Cloudflare Secret 처리 중 오류가 발생했습니다.', 'CLOUDFLARE_SECRET_CONTROL_ERROR'); }
     }
 
-    if (path === '/api/control/system-health') {
+    if (path.startsWith('/api/control/system-health')) {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
     }

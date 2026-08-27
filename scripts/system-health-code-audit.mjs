@@ -22,6 +22,7 @@ function command(commandName, args, timeout = 360_000) {
     ok:result.status === 0,
     status:result.status,
     timedOut:Boolean(result.error?.code === 'ETIMEDOUT'),
+    output,
     summary:output ? output.split('\n').slice(-12).join('\n').slice(-1800) : ''
   };
 }
@@ -29,7 +30,7 @@ function command(commandName, args, timeout = 360_000) {
 function git(args) {
   const result = command('git', args, 60_000);
   if (!result.ok) throw new Error(result.summary || `git ${args.join(' ')} failed`);
-  return result.summary;
+  return result.output;
 }
 
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
@@ -91,7 +92,7 @@ function makeDebt(id, severity, category, title, detail, recommendation, evidenc
 
 async function main() {
   const startedAt = new Date().toISOString();
-  const tracked = command('git', ['ls-files']).summary.split(/\r?\n/).filter(Boolean);
+  const tracked = command('git', ['ls-files']).output.split(/\r?\n/).filter(Boolean);
   const runtimeFiles = await loadRuntimeFiles(tracked);
   const testFiles = tracked.filter(path => path.startsWith('test/') && /\.test\.(?:c?js|mjs)$/i.test(path));
   const workflowFiles = tracked.filter(path => path.startsWith('.github/workflows/') && /\.ya?ml$/i.test(path));
@@ -135,8 +136,8 @@ async function main() {
   if (todoMatches.length > 20) technicalDebt.push(makeDebt('todo-volume', 'low', 'complexity', '임시 작업 표식 누적', `TODO/FIXME/HACK/TEMP 표식이 ${todoMatches.length}건입니다.`, '오래된 항목부터 제거 조건과 책임 영역을 정리하세요.', todoMatches.slice(0, 8).map(item => `${item.path}:${item.line}`)));
   technicalDebt.sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
 
-  const head = command('git', ['rev-parse', 'HEAD']).summary || null;
-  const branch = process.env.GITHUB_REF_NAME || command('git', ['branch', '--show-current']).summary || null;
+  const head = command('git', ['rev-parse', 'HEAD']).output || null;
+  const branch = process.env.GITHUB_REF_NAME || command('git', ['branch', '--show-current']).output || null;
   const report = {
     schemaVersion:1,
     generatedAt:new Date().toISOString(),
