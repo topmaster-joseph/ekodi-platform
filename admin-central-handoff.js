@@ -18,7 +18,7 @@ function routeFromLocation(){const q=normalizeRoute(new URLSearchParams(location
 function cleanRouteUrl(v){const r=normalizeRoute(v),u=new URL(location.href);if(u.pathname.startsWith('/legacy'))u.pathname='/';u.searchParams.delete('route');u.hash=r?`#${r}`:'';return`${u.pathname}${u.search}${u.hash}`}
 function centralAdminAuthUrl(v){const r=normalizeRoute(v);if(!r)return CENTRAL_ADMIN_AUTH_URL;const target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`;return`https://auth.ekodi.kr/?site=admin&direct=1&return_to=${encodeURIComponent(target)}`}
 function normalizeEntryRoute(){const r=routeFromLocation();if(r&&(location.pathname.startsWith('/legacy')||location.hash!==`#${r}`||new URLSearchParams(location.search).has('route')))history.replaceState({},document.title,cleanRouteUrl(r));return r}
-function syncLoginLink(){if(loginLink?.tagName!=='A')return;const route=routeFromLocation();loginLink.href = route ? centralAdminAuthUrl(route) : CENTRAL_ADMIN_AUTH_URL}
+function syncLoginLink(){if(loginLink?.tagName!=='A')return;const route=routeFromLocation();loginLink.href = CENTRAL_ADMIN_AUTH_URL;if(route)loginLink.href=centralAdminAuthUrl(route)}
 function authHeaders(){const v=token();return v?{authorization:`Bearer ${v}`}:{}}
 function hostScope(){const h=location.hostname.toLowerCase();if(h.startsWith('admin.biz.'))return'BIZ';if(h.startsWith('admin.church.'))return'CHURCH';if(h.startsWith('admin.lab.'))return'LAB';if(h.startsWith('admin.trade.'))return'TRADE';return'ALL'}
 function applyScope(){const value=hostScope();if(scopeBadge)scopeBadge.textContent=value;document.body.dataset.scope=value.toLowerCase()}
