@@ -117,6 +117,52 @@ for (const asset of ['admin-central-handoff.js','admin-authenticated-shell.js','
   await writeFile(assetPath, source.replaceAll('__EKODI_ADMIN_ASSET_VERSION__', assetVersion));
 }
 
+// Compact generated first-path JS without changing source contracts.
+const handoffPath = `${dist}admin-central-handoff.js`;
+let compactHandoff = await readFile(handoffPath, 'utf8');
+compactHandoff = compactHandoff.replace(/^\/\/ Minimal admin entry runtime:[^\r\n]*(?:\r?\n)/, '');
+for (const [from,to] of [
+  ['CENTRAL_ADMIN_AUTH_URL','AUTH_URL'],
+  ['ensureCentralLoginFallback','ensureLogin'],
+  ['normalizeEntryRoute','normalizeEntry'],
+  ['syncLoginLink','syncLogin'],
+  ['routeFromLocation','routeNow'],
+  ['cleanRouteUrl','cleanUrl'],
+  ['centralAdminAuthUrl','authUrl'],
+  ['updateSessionState','updateState'],
+  ['loadPerfDiagnostics','loadPerf'],
+  ['validateSession','validate'],
+]) compactHandoff = compactHandoff.replaceAll(from, to);
+await writeFile(handoffPath, compactHandoff);
+
+const shellPath = `${dist}admin-authenticated-shell.js`;
+let compactShell = await readFile(shellPath, 'utf8');
+const shellScriptsMarker = "const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js'];";
+const shellRoutes = "const LEGACY_ROUTES=new Set('storage api-cost health devices work marketing-ai ai-ops campus operations security architecture finance organization workspace clients admins community books social affiliates ai-membership ai-module-spec'.split(' ')),PENDING_ROUTES=new Set([...LEGACY_ROUTES,'policies','deployments']);";
+const legacyRoutePattern = /\['#storage'[^\r\n]+?'#ai-module-spec'\]\.includes\(location\.hash\)/;
+const pendingRoutePattern = /\['#campus'[^\r\n]+?'#affiliates'\]\.includes\(location\.hash\)/;
+if (!compactShell.includes(shellScriptsMarker) || !legacyRoutePattern.test(compactShell) || !pendingRoutePattern.test(compactShell)) {
+  throw new Error('Admin shell compaction markers missing');
+}
+compactShell = compactShell
+  .replace(shellScriptsMarker, `${shellScriptsMarker}\n${shellRoutes}`)
+  .replace(legacyRoutePattern, 'LEGACY_ROUTES.has(location.hash.slice(1))')
+  .replace(pendingRoutePattern, 'PENDING_ROUTES.has(location.hash.slice(1))');
+for (const [from,to] of [
+  ['postAuthStyles','styles'],
+  ['criticalPostAuthScripts','scripts'],
+  ['canonicalizeLegacyEntry','legacyEntry'],
+  ['applyOfficialAdminSurface','applySurface'],
+  ['keepLoginInteractive','keepLogin'],
+  ['installSharedAdminLayout','installLayout'],
+  ['deactivateMallFreeOps','closeMall'],
+  ['installMallFreeOpsIsolation','installMall'],
+  ['repairLegacyLinks','repairLinks'],
+  ['startAuthenticatedShell','startShell'],
+  ['onStateChange','onState'],
+]) compactShell = compactShell.replaceAll(from, to);
+await writeFile(shellPath, compactShell);
+
 // ES-module imports are versioned too. This prevents a browser from combining a new layout
 // with a five-minute-old menu registry after a deployment.
 const moduleImportVersions = new Map([
