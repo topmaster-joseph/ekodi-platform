@@ -4,6 +4,7 @@ import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
+import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
@@ -36,6 +37,12 @@ export default {
       if(request.method==='GET'&&url.pathname==='/ai-gateway.js')return aiGatewayScript();
       const proxied=await proxyAiGatewayApi(request);
       if(proxied)return proxied;
+    }
+
+    if(host===MAIL_HOST){
+      const apiResponse=await handleMailApi(request,env);
+      if(apiResponse)return apiResponse;
+      if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 
     if(host===MESSENGER_HOST&&request.method==='GET'){
