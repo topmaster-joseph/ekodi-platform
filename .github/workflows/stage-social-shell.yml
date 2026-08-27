@@ -56,9 +56,9 @@ jobs:
             if [[ "$root_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'EKODI Social' /tmp/social-stage.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/social-stage.html \
-              && grep -Fiq 'x-ekodi-shell: v1' /tmp/social-stage.headers \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/social-stage.headers \
               && grep -Fq '"service":"ekodi-social"' /tmp/social-stage-health.json; then
-              echo 'Social isolated staging and shared Shell verified.'
+              echo 'Social isolated staging and shared Shell v2 verified.'
               exit 0
             fi
             sleep 4

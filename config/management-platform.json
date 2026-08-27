@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-27",
+  "platform": {
+    "id": "management",
+    "name": "에코디 경영플랫폼",
+    "userFacingName": "에코디 경영AI",
+    "canonicalUrl": "https://management.ekodi.kr/",
+    "compatibilityService": "business",
+    "identityModel": "person-space-role-capability",
+    "authHub": "https://auth.ekodi.kr/",
+    "shellRequired": true,
+    "guestMode": "guide-only",
+    "minimumTier": "free",
+    "providerIndependenceRequired": true
+  },
+  "workspaceTypes": [
+    {"id":"person","canonicalKind":"person","label":"개인","hierarchy":false},
+    {"id":"business","canonicalKind":"business","label":"사업자·매장","hierarchy":true},
+    {"id":"institution","canonicalKind":"organization","label":"기관","hierarchy":true},
+    {"id":"community","canonicalKind":"community","label":"단체","hierarchy":true},
+    {"id":"project","canonicalKind":"project","label":"프로젝트","hierarchy":true},
+    {"id":"franchise","canonicalKind":"organization","label":"프랜차이즈","hierarchy":true,"profile":"hq-store-tree"}
+  ],
+  "tiers": [
+    {"id":"free","label":"무료","moduleSelection":true,"quotaProfile":"free"},
+    {"id":"basic","label":"Basic","moduleSelection":true,"quotaProfile":"basic"},
+    {"id":"pro","label":"Pro","moduleSelection":true,"quotaProfile":"pro"},
+    {"id":"business","label":"Business","moduleSelection":true,"quotaProfile":"business"}
+  ],
+  "commercialModel": {
+    "principle": "tier-and-modules-are-independent",
+    "formula": "base-tier + selected-modules + usage",
+    "freeEntry": true,
+    "moduleSelectionAtEveryTier": true
+  },
+  "modules": [
+    {"id":"chief","name":"경영비서AI","role":"orchestrator","phase":1,"state":"foundation","capabilities":["brief","recommend","orchestrate","approval-gate"]},
+    {"id":"marketing","name":"마케팅AI","role":"specialist","phase":1,"state":"existing","url":"https://marketing.ekodi.kr/","reuseExisting":true,"capabilities":["content","campaigns","channels","analytics"]},
+    {"id":"menu","name":"메뉴AI","role":"specialist","phase":1,"state":"foundation","capabilities":["canonical-menu","channel-mapping","pricing","options","availability"]},
+    {"id":"order","name":"주문AI","role":"specialist","phase":1,"state":"foundation","capabilities":["qr-order","pickup","channel-orders","order-status","pos-kds-handoff"]},
+    {"id":"review","name":"리뷰AI","role":"specialist","phase":1,"state":"foundation","capabilities":["review-inbox","classification","reply-draft","issue-trends","insight-handoff"]},
+    {"id":"customer","name":"고객AI","role":"specialist","phase":1,"state":"planned","capabilities":["crm","segments","repeat","reactivation"]},
+    {"id":"sales","name":"매출AI","role":"specialist","phase":1,"state":"planned","capabilities":["sales-analysis","channel-analysis","menu-performance","forecast"]},
+    {"id":"inventory","name":"재고AI","role":"specialist","phase":2,"state":"planned","capabilities":["stock","depletion","reorder","availability-handoff"]},
+    {"id":"delivery","name":"배달AI","role":"specialist","phase":2,"state":"planned","capabilities":["dispatch","delivery-status","delivery-cost","delivery-partners"]},
+    {"id":"settlement","name":"정산AI","role":"specialist","phase":2,"state":"planned","capabilities":["settlement","fees","margin","reconciliation"]},
+    {"id":"staff","name":"직원AI","role":"specialist","phase":2,"state":"planned","capabilities":["schedule","attendance","tasks","training"]},
+    {"id":"booking","name":"예약AI","role":"specialist","phase":2,"state":"planned","capabilities":["booking","reminders","changes","no-show"]}
+  ],
+  "canonicalData": {
+    "principle": "one-canonical-entity-per-business-concept",
+    "entities": ["space","membership","business","store","product","menu","channel-menu-mapping","customer","order","payment","delivery","inventory","review"],
+    "durableRecordPolicy": "EKODI Storage Gateway / Google Workspace Shared Drive where retention is required",
+    "operationalStatePolicy": "D1 or Supabase only as operational state/index",
+    "crossModuleRule": "modules exchange capability-scoped ids and contracts; no private cross-module database reads"
+  },
+  "externalChannels": {
+    "policy": "official-contract-only",
+    "defaultState": "adapter-disabled",
+    "humanApprovalRequiredFor": ["publish","change-price","send-message","refund","external-order-mutation","delivery-dispatch"],
+    "note": "배달앱·리뷰·POS·배달대행 연동은 공식 API·계약·사용자 권한이 확인된 어댑터만 활성화한다."
+  }
+}
