@@ -51,7 +51,7 @@ jobs:
           grep -Fq 'site=business&amp;return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' business/index.html
           grep -Fq "const AUTH_FALLBACK='https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F'" business/app.js
           grep -Fq 'AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"' wrangler.business.toml
-          grep -Fq "business-auth.js?v=20260824-business-resume-1" auth-site/auth-router.js
+          grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "'/business-auth.js'" site-worker.js
           grep -Fq "'business-auth.js'" scripts/build.mjs
           grep -Fq 'functions/v1/business-handoff-api' auth-site/business-auth.js
@@ -98,9 +98,9 @@ jobs:
 
           probe auth_business 'https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' 200
           grep -Fq 'EKODI 인증센터' /tmp/auth_business.body
-          probe auth_router 'https://auth.ekodi.kr/auth-router.js?v=20260824-business-resume-1' 200
+          probe auth_router 'https://auth.ekodi.kr/auth-router.js?v=20260826-free-fallback-1' 200
           grep -Fq "site==='business'" /tmp/auth_router.body
-          probe business_auth_asset 'https://auth.ekodi.kr/business-auth.js?v=20260824-business-resume-1' 200
+          probe business_auth_asset 'https://auth.ekodi.kr/business-auth.js?v=20260826-free-fallback-1' 200
           grep -Fq 'functions/v1/business-handoff-api' /tmp/business_auth_asset.body
           grep -Fiq 'x-ekodi-route: central-auth-asset' /tmp/business_auth_asset.headers
           grep -Fiq 'cache-control: no-store' /tmp/business_auth_asset.headers
