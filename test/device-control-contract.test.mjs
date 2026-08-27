@@ -106,7 +106,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade in place instead of creating duplicate enrollment', () => {
-  assert.match(agent, /\$AgentVersion = '2\.0\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.1\.0'/);
   assert.match(agent, /Stop-ExistingAgentProcesses/);
   assert.match(agent, /Stop-ScheduledTask/);
   assert.match(agent, /Get-CimInstance Win32_Process/);
@@ -144,4 +144,30 @@ test('Device AI health remains deterministic and action-bounded', () => {
   assert.match(api, /recommendations\.slice\(0, 6\)/);
   assert.match(admin, /AI 운영 제안/);
   assert.doesNotMatch(api, /eval\(|new Function/);
+});
+
+test('hybrid execution uses an opt-in bounded queue with capacity-aware assignment', () => {
+  assert.match(api, /CREATE TABLE IF NOT EXISTS device_execution_profiles/);
+  assert.match(api, /enabled INTEGER NOT NULL DEFAULT 0/);
+  assert.match(api, /CREATE TABLE IF NOT EXISTS device_jobs/);
+  assert.match(api, /ORDER BY priority DESC, requested_at ASC/);
+  assert.match(api, /active_count ASC, r\.last_seen_at DESC/);
+  assert.match(api, /attempts < 3/);
+  assert.match(api, /기기 작업 실패로 재배정/);
+  assert.match(api, /DEVICE_JOB_NOT_ALLOWED/);
+  assert.match(api, /DEVICE_JOB_CONFIRM_REQUIRED/);
+  assert.match(admin, /자동 작업 ON/);
+  assert.match(admin, /자동 작업 배정/);
+  assert.doesNotMatch(api, /shell\.exec|powershell\.exec|command\.script/);
+});
+
+test('portable computers are excluded from automatic execution nodes', () => {
+  assert.match(agent, /Win32_Battery/);
+  assert.match(agent, /Win32_ComputerSystem/);
+  assert.match(agent, /Win32_SystemEnclosure/);
+  assert.match(agent, /autoExecutionEligible = \(-not \$isPortable\)/);
+  assert.match(api, /system\.autoExecutionEligible === true/);
+  assert.match(api, /system\.isPortable === false/);
+  assert.match(api, /PORTABLE_DEVICE_NOT_ELIGIBLE/);
+  assert.match(admin, /노트북·휴대형 기기는 자동 작업 노드에서 제외/);
 });
