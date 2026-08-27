@@ -40,6 +40,10 @@
       };
     } else if (host.startsWith('mail.')) {
       const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
+      const mailAuth = new URL('https://auth.ekodi.kr/');
+      const mailReturn = new URL(location.href); mailReturn.hash='';
+      mailAuth.searchParams.set('site','mail');
+      mailAuth.searchParams.set('return_to',mailReturn.href);
       model = {
         eyebrow:'MAIL LOBBY', title:'EKODI Mail', context:`${host} · ${org}`,
         description:'EKODI 기본 메일과 필요에 따라 연결한 다른 Google 계정을 한곳에서 열고 전환합니다.',
@@ -48,7 +52,7 @@
           card('✉','기본 메일 열기','@ekodi.kr Google Workspace Gmail','https://mail.google.com/a/ekodi.kr','primary'),
           card('⇄','다른 계정 선택','로그인된 Google 메일 계정 전환','https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fmail.google.com%2F'),
           card('＋','다른 계정 추가','Gmail 또는 다른 Workspace 계정 연결','https://accounts.google.com/AddSession?continue=https%3A%2F%2Fmail.google.com%2F'),
-          card('◎','내 EKODI 계정','통합 인증 · 계정 확인','https://auth.ekodi.kr')
+          card('◎','내 EKODI 계정','통합 인증 · 계정 확인',mailAuth.href)
         ],
         domains:[
           {name:'ekodi.kr',detail:'EKODI 공식 Google Workspace 기본 메일 도메인',status:'기본',statusClass:'live'},
