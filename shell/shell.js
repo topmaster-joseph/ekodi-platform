@@ -67,6 +67,9 @@ let root=null;
 let panel=null;
 let surface=requestedSurface;
 let cycleTimer=null;
+let memberGateTimer=null;
+let memberGateRoot=null;
+let memberGateOwnedInert=false;
 let state={workspaceKey:'',workspaceName:'',role:'',personName:'',tenantId:'',storeId:''};
 
 function normalizeSurface(value){const v=String(value||'workspace').trim().toLowerCase();return /^[a-z-]{1,24}$/.test(v)?v:'workspace';}
@@ -194,9 +197,32 @@ function mergeContext(next={}){
   window.dispatchEvent(new CustomEvent('ekodi:shell-context',{detail:{...state,serviceId:service?.id||''}}));
   return {...state};
 }
-function setSurface(next){surface=normalizeSurface(next);applyHostTokens();render();return resolvedTheme();}
+function setSurface(next){surface=normalizeSurface(next);applyHostTokens();render();reconcileMemberGate();return resolvedTheme();}
 function currentReturn(){const u=new URL(location.href);u.hash='';return u.href;}
 function myUrl(){const u=new URL(MY);u.searchParams.set('return_to',currentReturn());return u.href;}
+
+function memberPolicy(){return service?.userAccessPolicy||null;}
+function memberGateApplies(){const p=memberPolicy();return Boolean(p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&(surface==='public'||surface==='workspace'));}
+function handoffPending(){try{return new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'').has('ekodi_token');}catch{return false;}}
+function localMemberSession(){
+  try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let parsed;try{parsed=JSON.parse(localStorage.getItem(key)||'null');}catch{continue;}const s=parsed?.currentSession||parsed?.session||parsed;const token=String(s?.access_token||'');const user=s?.user;const exp=Number(s?.expires_at||0);if(token&&user?.id&&(!exp||exp*1000>Date.now()-60000))return true;}}catch{}return false;
+}
+function memberLoginUrl(){const u=new URL(AUTH);u.searchParams.set('site',service?.id||explicitService||'portal');u.searchParams.set('return_to',currentReturn());return u.href;}
+function clearMemberGate(){if(memberGateRoot){memberGateRoot.remove();memberGateRoot=null;}if(memberGateOwnedInert&&document.body){document.body.inert=false;memberGateOwnedInert=false;}}
+function renderMemberGate(mode='guest'){
+  if(memberGateRoot?.dataset?.mode===mode)return;clearMemberGate();if(document.body&&!document.body.inert){document.body.inert=true;memberGateOwnedInert=true;}
+  const host=document.createElement('div');host.dataset.ekodiMemberGate='v1';host.dataset.mode=mode;host.style.cssText='position:fixed;inset:0;z-index:2147482850;display:grid;place-items:center;padding:24px;background:#071522;font-family:Inter,"Noto Sans KR",system-ui,sans-serif;color:#f4f7fb';
+  const shadow=host.attachShadow({mode:'open'});const wrap=document.createElement('section');wrap.setAttribute('role','dialog');wrap.setAttribute('aria-modal','true');wrap.setAttribute('aria-label',String(service?.name||'EKODI')+' 회원 안내');
+  wrap.innerHTML='<style>*{box-sizing:border-box}.card{width:min(620px,100%);border:1px solid #24425e;border-radius:24px;padding:30px;background:#0b1d2e;box-shadow:0 28px 80px rgba(0,0,0,.42)}.eyebrow{font-size:12px;font-weight:850;letter-spacing:.14em;color:#8ec8ff}.card h1{margin:10px 0 12px;font-size:clamp(30px,7vw,48px);line-height:1.05}.card p{margin:0;color:#b6c5d3;line-height:1.75}.note{margin-top:18px;padding:14px 16px;border-radius:14px;background:#10263a;color:#dce8f2;font-size:14px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 18px;border-radius:12px;text-decoration:none;font-weight:850}.primary{background:#f4f7fb;color:#071522}.secondary{border:1px solid #31506e;color:#dce8f2}.small{margin-top:18px;color:#8296aa;font-size:12px}@media(max-width:560px){.card{padding:24px 20px}.actions{display:grid}.actions a{width:100%}}</style><div class="card"><div class="eyebrow">EKODI COMMON SERVICE</div><h1></h1><p></p><div class="note"></div><div class="actions"></div><div class="small">공개는 안내까지, 이용은 무료회원부터.</div></div>';
+
+  wrap.querySelector('h1').textContent=service?.name||'EKODI';wrap.querySelector('p').textContent='이 공통서비스의 실제 기능과 콘텐츠는 Google 로그인한 EKODI 무료회원 이상에게 제공합니다.';
+  wrap.querySelector('.note').textContent=mode==='handoff'?'Google 인증을 서비스에 연결하고 있습니다.':'로그인 전에는 서비스 소개와 이용 안내만 제공됩니다.';
+  const actions=wrap.querySelector('.actions');if(mode==='handoff'){const span=document.createElement('span');span.textContent='인증 연결 중…';span.className='primary';span.style.cssText='display:inline-flex;align-items:center;min-height:46px;padding:0 18px;border-radius:12px;font-weight:850';actions.append(span);}else{const login=document.createElement('a');login.href=memberLoginUrl();login.className='primary';login.textContent='Google로 무료 시작';const info=document.createElement('a');info.href='https://ekodi.kr/#services';info.className='secondary';info.textContent='서비스 안내';actions.append(login,info);}
+  shadow.append(wrap);document.documentElement.append(host);memberGateRoot=host;
+}
+function reconcileMemberGate(){if(!memberGateApplies()){clearMemberGate();document.documentElement.dataset.ekodiMemberAccess='not-applicable';return;}if(localMemberSession()){clearMemberGate();document.documentElement.dataset.ekodiMemberAccess='member';return;}const mode=handoffPending()?'handoff':'guest';document.documentElement.dataset.ekodiMemberAccess=mode;renderMemberGate(mode);}
+function startMemberGate(){reconcileMemberGate();if(memberGateTimer)clearInterval(memberGateTimer);memberGateTimer=setInterval(reconcileMemberGate,2000);window.addEventListener('storage',reconcileMemberGate);window.addEventListener('focus',reconcileMemberGate);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reconcileMemberGate();});window.addEventListener('ekodi:auth-state',reconcileMemberGate);}
+
 function serviceUrl(target){
   if(!target?.url)return MY;
   if(target.id==='my')return myUrl();
@@ -279,6 +305,7 @@ async function boot(){
   const host=location.hostname.toLowerCase();
   service=manifest.services.find(item=>item.id===explicitService)||manifest.services.find(item=>{try{return new URL(item.url).hostname===host;}catch{return false;}})||null;
   if(!service)return;
+  startMemberGate();
   const stored=readStored(service.id);state={...state,...stored};
   if(handedWorkspace)state.workspaceKey=safeWorkspace(handedWorkspace);
   if(handedTenant)state.tenantId=handedTenant.slice(0,120);
