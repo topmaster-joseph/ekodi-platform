@@ -6,7 +6,7 @@ const app=document.querySelector('#app');
 const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
 const postAuthStyles=['compact-control-center.css','google-admin-auth.css'];
-const criticalPostAuthScripts=['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js'];
+const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js'];
 let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token()&&app&&!app.hidden)}
