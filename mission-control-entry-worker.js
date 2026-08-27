@@ -9,6 +9,7 @@ import { handleMessengerOperatorControl } from './messenger-operator-control.js'
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleDeviceControl } from './device-control.js';
+import { claimHybridFallback, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
@@ -162,8 +163,34 @@ export default {
       catch (error) { console.error('Messenger Operator Control error', error); return errorResponse('EKODI Messenger 관리자 처리 중 오류가 발생했습니다.', 'MESSENGER_OPERATOR_CONTROL_ERROR'); }
     }
 
+    if (path.startsWith('/api/control/hybrid-execution')) {
+      try { const response = await handleHybridExecution(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Hybrid Execution error', error); return errorResponse('하이브리드 실행망 처리 중 오류가 발생했습니다.', 'HYBRID_EXECUTION_ERROR'); }
+    }
+
+    const hybridResultMatch = path.match(/^\/api\/device-agent\/commands\/(hyb_[^/]+)\/result$/);
+    if (request.method === 'POST' && hybridResultMatch) {
+      try {
+        const response = await handleHybridAgentResult(request, env, decodeURIComponent(hybridResultMatch[1]));
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Hybrid Execution result error', error);
+        return errorResponse('하이브리드 실행 결과 처리 중 오류가 발생했습니다.', 'HYBRID_EXECUTION_RESULT_ERROR');
+      }
+    }
+
     if (path.startsWith('/api/control/devices') || path.startsWith('/api/device-agent')) {
-      try { const response = await handleDeviceControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      try {
+        const response = await handleDeviceControl(request, env);
+        if (response && request.method === 'GET' && path === '/api/device-agent/commands/next' && response.ok) {
+          const body = await response.clone().json().catch(() => null);
+          if (!body?.command) {
+            const hybrid = await claimHybridFallback(request, env);
+            if (hybrid) return applyApiSecurityHeaders(hybrid);
+          }
+        }
+        if (response) return applyApiSecurityHeaders(response);
+      }
       catch (error) { console.error('Device Control error', error); return errorResponse('Device Control 처리 중 오류가 발생했습니다.', 'DEVICE_CONTROL_ERROR'); }
     }
 
