@@ -18,13 +18,16 @@ test('sidebar uses short Admin and Domains labels', () => {
   assert.ok(features.includes("setShortLabel('domains', 'Domains')"));
 });
 
-test('Admin screen uses top preregistration toolbar and two-column account cards', () => {
+test('Admin screen uses top preregistration toolbar, two-column account cards, and guarded permission removal', () => {
   assert.ok(adminJs.includes('google-admin-toolbar'));
   assert.ok(adminJs.includes('google-admin-filters'));
   assert.ok(adminJs.includes('google-admin-bulk'));
   assert.ok(adminCss.includes('.google-admin-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
   assert.ok(adminJs.includes('최소 1명의 활성 최고관리자는 반드시 유지해야 합니다.'));
-  assert.equal(adminJs.includes("method: 'DELETE'"), false);
+  assert.ok(adminJs.includes("method: 'DELETE'"));
+  assert.ok(adminJs.includes('현재 로그인한 최고관리자 자신의 권한은 제거할 수 없습니다.'));
+  assert.ok(adminJs.includes('마지막 활성 최고관리자는 제거할 수 없습니다.'));
+  assert.ok(adminJs.includes('Google 계정과 고객사이트 로컬 역할은 삭제되지 않습니다.'));
 });
 
 test('Domains is a read-first service control hub, not a browser DNS editor', () => {
