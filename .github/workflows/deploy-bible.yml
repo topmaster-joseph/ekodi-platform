@@ -1,0 +1,197 @@
+name: Deploy EKODI Bible Conversation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'bible/**'
+      - 'bible-worker.js'
+      - 'supabase/bible-conversation.sql'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'wrangler.bible.toml'
+      - 'wrangler.bible.staging.toml'
+      - 'deploy/manifests/bible.worker.json'
+      - '.github/workflows/deploy-bible.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bible/**'
+      - 'bible-worker.js'
+      - 'supabase/bible-conversation.sql'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'wrangler.bible.toml'
+      - 'wrangler.bible.staging.toml'
+      - 'deploy/manifests/bible.worker.json'
+      - '.github/workflows/deploy-bible.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-bible-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Validate Bible Conversation contracts
+        run: |
+          set -euo pipefail
+          node --check bible-worker.js
+          node --check bible/app.js
+          node --check ekodi-service-manifest.js
+          node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/bible.worker.json','utf8'))"
+          grep -Fq '에코디 말씀대화' bible/index.html
+          grep -Fq '정답보다 질문에서 시작합니다.' bible/index.html
+          grep -Fq '돌아보기' bible/index.html
+          grep -Fq '공동체 피드' bible/index.html
+          grep -Fq 'bible_shared_feed' supabase/bible-conversation.sql
+          grep -Fq "id:'bible'" ekodi-service-manifest.js
+          grep -Fq "authMode:'client'" ekodi-service-manifest.js
+          grep -Fq '"bible-conversation"' platform-boundaries.json
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-bible-conversation-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Deploy isolated staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.bible.staging.toml
+      - name: Verify isolated staging and all subservices
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/bible-stage-h -o /tmp/bible-stage.html -w '%{http_code}' --max-time 15 "$STAGING_URL/" || true)
+            today=$(curl -L -sS -o /tmp/bible-stage-today.html -w '%{http_code}' --max-time 15 "$STAGING_URL/today" || true)
+            conversation=$(curl -L -sS -o /tmp/bible-stage-conversation.html -w '%{http_code}' --max-time 15 "$STAGING_URL/conversation" || true)
+            journey=$(curl -L -sS -o /tmp/bible-stage-journey.html -w '%{http_code}' --max-time 15 "$STAGING_URL/journey" || true)
+            together=$(curl -L -sS -o /tmp/bible-stage-together.html -w '%{http_code}' --max-time 15 "$STAGING_URL/together" || true)
+            health=$(curl -sS -o /tmp/bible-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)
+            config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$STAGING_URL/config.js" || true)
+            assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$STAGING_URL/api/assist" || true)
+            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '200' ]] \
+              && grep -Fq '에코디 말씀대화' /tmp/bible-stage.html \
+              && grep -Fq '돌아보기' /tmp/bible-stage-journey.html \
+              && grep -Fq '공동체 피드' /tmp/bible-stage-together.html \
+              && grep -Fq '"service":"ekodi-bible-conversation"' /tmp/bible-stage-health.json \
+              && grep -Fq '"centralUserAi":true' /tmp/bible-stage-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/bible-stage-health.json \
+              && grep -Fq '"dataEnabled":false' /tmp/bible-stage-config.js \
+              && grep -Fq '"mode":"free_assist"' /tmp/bible-stage-assist.json \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-stage-h; then
+              echo 'EKODI Bible isolated staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Wait for Shell and central auth contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            shell_code=$(curl -sS -o /tmp/bible-manifest.json -w '%{http_code}' --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            auth_code=$(curl -sS -o /tmp/bible-auth.js -w '%{http_code}' --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] && grep -Fq '"id":"bible"' /tmp/bible-manifest.json && grep -Fq '"authMode":"client"' /tmp/bible-manifest.json && grep -Fq 'manifestRealm' /tmp/bible-auth.js; then break; fi
+            if [[ "$attempt" == '24' ]]; then echo 'Bible Shell/Auth contract not live'; exit 1; fi
+            sleep 5
+          done
+      - name: Verify central User AI service is reachable
+        run: |
+          code=$(curl -sS -o /tmp/user-ai-status.json -w '%{http_code}' --max-time 15 'https://api.ekodi.kr/api/user-ai/status?site=bible' || true)
+          test "$code" = '401' || test "$code" = '200'
+      - name: Reconcile production hostname
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.bible.toml
+      - name: Bootstrap or guarded release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.bible.toml --json > /tmp/bible-deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/bible.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/bible-deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.bible.toml
+          else
+            cat /tmp/bible-deployments.log
+            exit 1
+          fi
+      - name: Verify real production hostname and subservices
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/bible-h -o /tmp/bible.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/' || true)
+            today=$(curl -L -sS -o /tmp/bible-today.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/today' || true)
+            conversation=$(curl -L -sS -o /tmp/bible-conversation.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/conversation' || true)
+            journey=$(curl -L -sS -o /tmp/bible-journey.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/journey' || true)
+            together=$(curl -L -sS -o /tmp/bible-together.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/together' || true)
+            health=$(curl -sS -o /tmp/bible-health.json -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/health' || true)
+            config=$(curl -sS -o /tmp/bible-config.js -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/config.js' || true)
+            assist=$(curl -sS -o /tmp/bible-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' 'https://bible.ekodi.kr/api/assist' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/bible-admin-h -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/admin' || true)
+            case "$admin" in 301|302|303|307|308) admin_redirect=true;; *) admin_redirect=false;; esac
+            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '200' && "$admin_redirect" == 'true' ]] \
+              && grep -Fq '에코디 말씀대화' /tmp/bible.html \
+              && grep -Fq '오늘의 말씀대화' /tmp/bible-today.html \
+              && grep -Fq '말씀대화 AI' /tmp/bible-conversation.html \
+              && grep -Fq '돌아보기' /tmp/bible-journey.html \
+              && grep -Fq '공동체 피드' /tmp/bible-together.html \
+              && grep -Fq '"dataMode":"production"' /tmp/bible-health.json \
+              && grep -Fq '"centralUserAi":true' /tmp/bible-health.json \
+              && grep -Fq '"dataEnabled":true' /tmp/bible-config.js \
+              && grep -Fq '"mode":"free_assist"' /tmp/bible-assist.json \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-h \
+              && grep -Eiq '^location: https://admin\.ekodi\.kr/#ai-services' /tmp/bible-admin-h; then
+              echo 'EKODI Bible production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Publish production status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in success) state=success;; cancelled) state=error;; *) state=failure;; esac
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(jq -n --arg state "$state" --arg context 'ekodi/bible-production' --arg description "EKODI Bible production deployment: $JOB_STATUS" --arg target_url "$target_url" '{state:$state,context:$context,description:$description,target_url:$target_url}')
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload"

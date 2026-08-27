@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "worker": {
+    "name": "ekodi-bible-conversation",
+    "config": "wrangler.bible.toml",
+    "requests": [
+      {"url":"https://bible.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디 말씀대화","정답보다 질문에서 시작합니다","나의 Journey"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://bible.ekodi.kr/today","statuses":[200],"redirect":"follow","expect":["오늘의 말씀대화","이 질문으로 이야기하기"]},
+      {"url":"https://bible.ekodi.kr/conversation","statuses":[200],"redirect":"follow","expect":["말씀대화 AI","삶에서 말씀으로"]},
+      {"url":"https://bible.ekodi.kr/journey","statuses":[200],"redirect":"follow","expect":["나의 Journey","작은 실천","돌아보기"]},
+      {"url":"https://bible.ekodi.kr/together","statuses":[200],"redirect":"follow","expect":["함께","초대코드","공동체 피드","명시적으로 공유"]},
+      {"url":"https://bible.ekodi.kr/health","statuses":[200],"expect":["ekodi-bible-conversation","\"privacyDefault\":\"private\"","\"explicitSharing\":true","\"providerIndependent\":true","\"centralUserAi\":true","\"ekodiShell\":true"]}
+    ]
+  }
+}
