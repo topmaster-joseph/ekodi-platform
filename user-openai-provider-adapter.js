@@ -1,3 +1,5 @@
+import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
+
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-5.6-terra';
 const MAX_MESSAGE_CHARS = 4_000;
@@ -17,6 +19,15 @@ function extractOutputText(data) {
   return parts.join('\n').trim();
 }
 
+async function budgetGuard(env) {
+  if (!env.DB?.prepare) {
+    if (String(env.ENVIRONMENT || '').toLowerCase() === 'production') throw new Error('AI_USAGE_METER_UNAVAILABLE');
+    return;
+  }
+  const allowance = await getSponsoredAiAllowance(env);
+  if (!allowance.allowed) throw new Error('EKODI_AI_BUDGET_LIMIT');
+}
+
 export function createSponsoredUserOpenAiProvider(env = {}, options = {}) {
   const apiKey = String(env.OPENAI_API_KEY || '').trim();
   const model = String(env.USER_AI_OPENAI_MODEL || env.OPENAI_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
@@ -31,6 +42,7 @@ export function createSponsoredUserOpenAiProvider(env = {}, options = {}) {
       if (!available) throw new Error('OPENAI_SPONSORED_PROVIDER_NOT_CONFIGURED');
       const input = text(message);
       if (!input) throw new Error('OPENAI_SPONSORED_EMPTY_INPUT');
+      await budgetGuard(env);
       const response = await fetchImpl(OPENAI_RESPONSES_URL, {
         method: 'POST',
         headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
@@ -55,7 +67,19 @@ export function createSponsoredUserOpenAiProvider(env = {}, options = {}) {
       if (!response.ok) throw new Error(`OPENAI_HTTP_${response.status}`);
       const output = extractOutputText(data);
       if (!output) throw new Error('OPENAI_EMPTY_RESPONSE');
-      return Object.freeze({ text: output, model: String(data?.model || model), responseId: String(data?.id || '') });
+      const usage = normalizeOpenAiUsage(data?.usage || {});
+      if (env.DB?.prepare) {
+        await recordProviderUsage(env, {
+          provider: 'openai-ekodi-sponsored', model: String(data?.model || model), surface: 'user',
+          funding: 'ekodi-sponsored', requestId: String(data?.id || ''), usage,
+        }).catch(error => console.error('Sponsored OpenAI usage meter write failed', String(error?.message || error)));
+      }
+      return Object.freeze({
+        text: output,
+        model: String(data?.model || model),
+        responseId: String(data?.id || ''),
+        usage,
+      });
     },
   });
 }

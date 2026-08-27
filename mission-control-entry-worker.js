@@ -16,6 +16,7 @@ import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
@@ -152,6 +153,11 @@ export default {
     if (path === '/api/control/system-health') {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/api-cost') {
+      try { const response = await handleApiCostControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('API cost control error', error); return errorResponse('API 비용 관리 처리 중 오류가 발생했습니다.', 'API_COST_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/user-ai')) {

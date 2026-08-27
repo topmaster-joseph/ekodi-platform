@@ -45,6 +45,11 @@
       hashes: ['#health'],
       insert: 'after-aiops',
     },
+    'api-cost': {
+      label: 'API Cost', icon: '₩',
+      styles: ['api-cost-admin.css'], scripts: ['api-cost-admin.js'],
+      real: '[data-section="api-cost"]', hashes: ['#api-cost'], insert: 'after-health',
+    },
     storage: {
       label: 'Storage', icon: '▣',
       styles: ['storage-admin.css'],
