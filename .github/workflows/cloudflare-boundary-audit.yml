@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
+      - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
   push:
     branches: [main, development]
     paths:
       - '.github/workflows/**'
+      - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
   workflow_dispatch:
@@ -23,7 +25,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Enforce Cloudflare development and production boundaries
+      - name: Enforce Cloudflare development production and load boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -56,13 +58,42 @@ jobs:
               cloudflare_write = ('wrangler@' in text and ' deploy ' in text) or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
               if staging_trigger and uses_prod and cloudflare_write:
                   errors.append(f'{path.name}: staging branch can write with production Cloudflare credentials')
+              if 'node scripts/ecosystem-load-test.mjs' in text and path.name != 'ecosystem-load-test.yml':
+                  errors.append(f'{path.name}: production load script may only be invoked by ecosystem-load-test.yml')
 
           prod_mutator = (root / 'admin-http2-stability.yml').read_text(encoding='utf-8')
           if 'refs/heads/main' not in prod_mutator or 'workflow_dispatch:' not in prod_mutator:
               errors.append('admin-http2-stability.yml is not main-only/manual-only')
 
+          load_workflow = (root / 'ecosystem-load-test.yml').read_text(encoding='utf-8')
+          load_required = [
+              'workflow_dispatch:',
+              'EKODI_ALLOW_PRODUCTION_LOAD: MANUAL_APPROVED',
+              "LOAD_CONCURRENCY: '1'",
+              "LOAD_REQUESTS_PER_STAGE: '5'",
+              "LOAD_WARMUP_REQUESTS: '1'",
+              "refs/heads/main",
+          ]
+          for marker in load_required:
+              if marker not in load_workflow:
+                  errors.append(f'ecosystem-load-test.yml missing production safety marker: {marker}')
+          if re.search(r'^\s{2}(pull_request|push):', load_workflow, flags=re.MULTILINE):
+              errors.append('ecosystem-load-test.yml must never auto-run on pull_request or push')
+
+          load_script = Path('scripts/ecosystem-load-test.mjs').read_text(encoding='utf-8')
+          script_required = [
+              "EKODI_ALLOW_PRODUCTION_LOAD === 'MANUAL_APPROVED'",
+              "GITHUB_EVENT_NAME !== 'workflow_dispatch'",
+              "GITHUB_REF !== 'refs/heads/main'",
+              'requestsPerStage > 5',
+              'warmupRequests > 1',
+          ]
+          for marker in script_required:
+              if marker not in load_script:
+                  errors.append(f'ecosystem-load-test.mjs missing fail-closed marker: {marker}')
+
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Cloudflare boundary audit passed.')
+          print('Cloudflare boundary audit passed, including production load-test isolation.')
           PY
