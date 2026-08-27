@@ -51,11 +51,13 @@ test('legacy agent bridge only falls back to hybrid work when the existing queue
   assert.match(mission, /handleHybridAgentResult/);
 });
 
-test('admin control exposes node policy and queue state without enabling nodes automatically', () => {
+test('admin control exposes node policy, execution records and audit state without enabling nodes automatically', () => {
   assert.match(admin, /새 기기의 자동 실행은 기본 OFF/);
   assert.match(admin, /data-auto/);
   assert.match(admin, /maxConcurrency/);
-  assert.match(admin, /작업 큐 · 배정 기록/);
+  assert.match(admin, /기기 관리 · 실행 기록/);
+  assert.match(admin, /감사 이벤트/);
+  assert.match(admin, /hybridStatusFilter/);
   assert.match(admin, /전체 진단 자동배정/);
 });
 

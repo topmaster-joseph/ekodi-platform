@@ -4,6 +4,7 @@
   const API_BASE = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   let timer = null;
+  let lastDashboard = { nodes:[], jobs:[], events:[] };
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
@@ -45,6 +46,13 @@
     })[status] || status;
   }
 
+  function eventLabel(type) {
+    return ({
+      created:'작업 생성', assigned:'기기 배정', leased:'실행 시작', completed:'실행 완료',
+      requeued:'재배정 대기', failed:'실행 실패', cancelled:'관리자 취소',
+    })[type] || type;
+  }
+
   function taskLabel(type) {
     return ({
       'diagnostics.collect':'전체 진단',
@@ -59,6 +67,19 @@
     })[type] || type;
   }
 
+  function eventDetail(detail = {}) {
+    const labels = {
+      taskType:'작업', priority:'우선순위', deviceGroup:'그룹', maxAttempts:'최대시도', risk:'위험도',
+      currentLoad:'부하', leaseExpiresAt:'리스만료', attempt:'시도', reason:'사유', terminal:'최종실패',
+    };
+    const values = Object.entries(detail || {}).filter(([, value]) => value !== '' && value !== null && value !== undefined);
+    if (!values.length) return '';
+    return values.slice(0, 8).map(([key, value]) => {
+      const rendered = key === 'taskType' ? taskLabel(value) : key === 'leaseExpiresAt' ? timeLabel(value) : String(value);
+      return `${labels[key] || key}: ${rendered}`;
+    }).join(' · ');
+  }
+
   function ensureStyle() {
     if (document.querySelector('#ekodiHybridExecutionStyle')) return;
     const style = document.createElement('style');
@@ -66,22 +87,33 @@
     style.textContent = `
       .hybrid-execution{margin:18px 0;padding:18px;border:1px solid var(--line,#d9dee7);border-radius:18px;background:var(--card,#fff)}
       .hybrid-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
-      .hybrid-head h3{margin:3px 0 5px}.hybrid-head p{margin:0;max-width:760px}
+      .hybrid-head h3{margin:3px 0 5px}.hybrid-head p{margin:0;max-width:780px}
       .hybrid-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-      .hybrid-metrics{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:10px;margin:14px 0}
+      .hybrid-metrics{display:grid;grid-template-columns:repeat(5,minmax(100px,1fr));gap:10px;margin:14px 0}
       .hybrid-metrics article{padding:12px;border:1px solid var(--line,#e0e4eb);border-radius:14px}
-      .hybrid-metrics small,.hybrid-node small,.hybrid-job small{display:block;opacity:.7}.hybrid-metrics strong{font-size:1.45rem}
+      .hybrid-metrics small,.hybrid-node small,.hybrid-job small,.hybrid-event small{display:block;opacity:.72}.hybrid-metrics strong{font-size:1.45rem}
       .hybrid-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
       .hybrid-box{border:1px solid var(--line,#e0e4eb);border-radius:14px;padding:13px;min-width:0}
-      .hybrid-box-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
-      .hybrid-list{display:grid;gap:8px;max-height:360px;overflow:auto}
-      .hybrid-node,.hybrid-job{border:1px solid var(--line,#e0e4eb);border-radius:12px;padding:10px}
+      .hybrid-ledger{grid-column:1/-1}
+      .hybrid-box-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+      .hybrid-filter{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+      .hybrid-filter input,.hybrid-filter select{min-height:34px;border:1px solid var(--line,#d9dee7);border-radius:9px;background:var(--card,#fff);padding:5px 8px}
+      .hybrid-filter input{width:min(250px,58vw)}
+      .hybrid-list{display:grid;gap:8px;max-height:390px;overflow:auto}
+      .hybrid-node,.hybrid-job,.hybrid-event{border:1px solid var(--line,#e0e4eb);border-radius:12px;padding:10px}
       .hybrid-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
       .hybrid-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
       .hybrid-controls input{width:72px}.hybrid-controls select{max-width:160px}
       .hybrid-pill{display:inline-flex;padding:3px 8px;border-radius:999px;background:rgba(127,127,127,.12);font-size:.78rem}
       .hybrid-empty{padding:16px;text-align:center;opacity:.72}
-      @media(max-width:760px){.hybrid-grid{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(2,1fr)}}
+      .hybrid-job details{margin-top:8px;border-top:1px dashed var(--line,#e0e4eb);padding-top:7px}
+      .hybrid-job summary{cursor:pointer;font-weight:650}
+      .hybrid-job-detail{display:grid;gap:5px;padding:8px 2px 2px;word-break:break-word}
+      .hybrid-event[data-type="failed"]{border-color:rgba(180,35,35,.35)}
+      .hybrid-event[data-type="completed"]{border-color:rgba(24,130,76,.28)}
+      .hybrid-privacy{margin:12px 0 0;font-size:.84rem;opacity:.76}
+      @media(max-width:900px){.hybrid-metrics{grid-template-columns:repeat(3,1fr)}}
+      @media(max-width:760px){.hybrid-grid{grid-template-columns:1fr}.hybrid-ledger{grid-column:auto}.hybrid-metrics{grid-template-columns:repeat(2,1fr)}}
     `;
     document.head.append(style);
   }
@@ -89,7 +121,7 @@
   function panelHtml() {
     return `
       <div class="hybrid-head">
-        <div><p class="kicker">EKODI HYBRID EXECUTION</p><h3>하이브리드 실행망</h3>
+        <div><p class="kicker">EKODI HYBRID EXECUTION</p><h3>기기 관리 · 실행 기록</h3>
         <p>클라우드가 작업·권한·기록을 보관하고, 승인된 PC 중 온라인 상태·기능·부하·동시작업 한도를 비교해 실행 노드를 자동 선택합니다. 새 기기의 자동 실행은 기본 OFF입니다.</p></div>
         <div class="hybrid-actions"><span id="hybridGeneratedAt">확인 전</span><button type="button" class="secondary" id="refreshHybrid">↻ 새로고침</button>
         <button type="button" class="primary" id="enqueueHybridDiagnostic">전체 진단 자동배정</button></div>
@@ -99,11 +131,14 @@
         <article><small>자동실행 가능</small><strong id="hybridAutoNodes">—</strong></article>
         <article><small>대기 작업</small><strong id="hybridPendingJobs">—</strong></article>
         <article><small>실행 중</small><strong id="hybridActiveJobs">—</strong></article>
+        <article><small>실패 기록</small><strong id="hybridFailedJobs">—</strong></article>
       </div>
       <div class="hybrid-grid">
         <section class="hybrid-box"><div class="hybrid-box-head"><strong>실행 노드</strong><small>OFF → 관리자 승인 후 ON</small></div><div class="hybrid-list" id="hybridNodeList"></div></section>
-        <section class="hybrid-box"><div class="hybrid-box-head"><strong>작업 큐 · 배정 기록</strong><small>실패·지연 시 최대 3회</small></div><div class="hybrid-list" id="hybridJobList"></div></section>
-      </div>`;
+        <section class="hybrid-box"><div class="hybrid-box-head"><strong>실행 기록</strong><div class="hybrid-filter"><select id="hybridStatusFilter" aria-label="실행 상태 필터"><option value="">전체 상태</option><option value="pending">대기</option><option value="assigned">배정</option><option value="leased">실행 중</option><option value="completed">완료</option><option value="failed">실패</option><option value="cancelled">취소</option></select><input id="hybridJobSearch" type="search" placeholder="작업·기기·ID 검색" aria-label="실행 기록 검색"></div></div><div class="hybrid-list" id="hybridJobList"></div></section>
+        <section class="hybrid-box hybrid-ledger"><div class="hybrid-box-head"><strong>감사 이벤트</strong><small>생성 → 배정 → 실행 → 완료/실패 흐름</small></div><div class="hybrid-list" id="hybridEventList"></div></section>
+      </div>
+      <p class="hybrid-privacy">보안 원칙: 실행 기록에는 작업 상태와 기기·프로세스 수준의 진단 메타데이터만 사용하며, 입력한 문자·비밀번호·메시지 내용은 수집하지 않습니다.</p>`;
   }
 
   function install() {
@@ -119,6 +154,8 @@
     if (list) list.insertAdjacentElement('beforebegin', panel); else host.append(panel);
     panel.querySelector('#refreshHybrid')?.addEventListener('click', load);
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
+    panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
+    panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
     load();
     if (!timer) timer = window.setInterval(() => {
       if (!host.classList.contains('hidden-panel')) load();
@@ -144,16 +181,65 @@
     </article>`;
   }
 
-  function jobMarkup(job) {
+  function eventMarkup(event) {
+    const detail = eventDetail(event.detail);
+    return `<article class="hybrid-event" data-type="${escapeHtml(event.type)}">
+      <div class="hybrid-row"><div><strong>${escapeHtml(eventLabel(event.type))}</strong>
+      <small>${timeLabel(event.createdAt)} · 작업 ${escapeHtml(event.jobId || '—')}${event.deviceId ? ` · 기기 ${escapeHtml(event.deviceId)}` : ''}</small>
+      ${detail ? `<small>${escapeHtml(detail)}</small>` : ''}</div><span class="hybrid-pill">${escapeHtml(event.type)}</span></div>
+    </article>`;
+  }
+
+  function jobMarkup(job, events) {
     const assigned = job.assignedDeviceId ? ` → ${escapeHtml(job.assignedDeviceId)}` : '';
     const error = job.lastError ? `<small>오류: ${escapeHtml(job.lastError)}</small>` : '';
     const cancel = ['pending','assigned'].includes(job.status)
       ? `<button type="button" class="ghost" data-cancel-job="${escapeHtml(job.id)}">취소</button>` : '';
-    return `<article class="hybrid-job">
+    const jobEvents = events.filter(event => event.jobId === job.id).slice(0, 12);
+    const history = jobEvents.length
+      ? jobEvents.map(event => `<small>• ${timeLabel(event.createdAt)} · ${escapeHtml(eventLabel(event.type))}${event.deviceId ? ` · ${escapeHtml(event.deviceId)}` : ''}${eventDetail(event.detail) ? ` · ${escapeHtml(eventDetail(event.detail))}` : ''}</small>`).join('')
+      : '<small>세부 이벤트가 아직 없습니다.</small>';
+    return `<article class="hybrid-job" data-job-status="${escapeHtml(job.status)}">
       <div class="hybrid-row"><div><strong>${escapeHtml(taskLabel(job.taskType))}</strong>
       <small>${statusLabel(job.status)} · 우선순위 ${Number(job.priority) || 0}${assigned}</small>
       <small>${timeLabel(job.createdAt)} · 시도 ${Number(job.attemptCount) || 0}/${Number(job.maxAttempts) || 3}</small>${error}</div>${cancel}</div>
+      <details data-job-events><summary>실행 상세 · 이벤트</summary><div class="hybrid-job-detail">
+        <small>작업 ID: ${escapeHtml(job.id)}</small>
+        <small>최근 갱신: ${timeLabel(job.updatedAt)}${job.completedAt ? ` · 종료 ${timeLabel(job.completedAt)}` : ''}</small>
+        <small>현재 기기: ${escapeHtml(job.assignedDeviceId || '—')} · 이전 기기: ${escapeHtml(job.lastDeviceId || '—')}</small>
+        ${job.leaseExpiresAt ? `<small>리스 만료: ${timeLabel(job.leaseExpiresAt)}</small>` : ''}${history}
+      </div></details>
     </article>`;
+  }
+
+  function filteredJobs() {
+    const panel = document.querySelector('#hybridExecutionPanel');
+    const status = panel?.querySelector('#hybridStatusFilter')?.value || '';
+    const query = (panel?.querySelector('#hybridJobSearch')?.value || '').trim().toLowerCase();
+    return (lastDashboard.jobs || []).filter(job => {
+      if (status && job.status !== status) return false;
+      if (!query) return true;
+      const haystack = [job.id, job.taskType, taskLabel(job.taskType), job.status, statusLabel(job.status), job.assignedDeviceId, job.lastDeviceId, job.lastError]
+        .filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  function renderJobs() {
+    const panel = document.querySelector('#hybridExecutionPanel');
+    const jobs = panel?.querySelector('#hybridJobList');
+    if (!jobs) return;
+    const visible = filteredJobs();
+    jobs.innerHTML = visible.length ? visible.map(job => jobMarkup(job, lastDashboard.events || [])).join('') : '<div class="hybrid-empty">조건에 맞는 실행 기록이 없습니다.</div>';
+    jobs.querySelectorAll('[data-cancel-job]').forEach(button => button.addEventListener('click', cancelJob));
+  }
+
+  function renderEvents() {
+    const panel = document.querySelector('#hybridExecutionPanel');
+    const events = panel?.querySelector('#hybridEventList');
+    if (!events) return;
+    const rows = lastDashboard.events || [];
+    events.innerHTML = rows.length ? rows.slice(0, 100).map(eventMarkup).join('') : '<div class="hybrid-empty">아직 감사 이벤트가 없습니다.</div>';
   }
 
   async function load() {
@@ -161,18 +247,19 @@
     if (!panel || !sessionStorage.getItem(TOKEN_KEY)) return;
     try {
       const data = await request('/api/control/hybrid-execution/dashboard');
+      lastDashboard = { nodes:data.nodes || [], jobs:data.jobs || [], events:data.events || [] };
       const summary = data.summary || {};
       panel.querySelector('#hybridOnlineNodes').textContent = String(summary.onlineNodes ?? 0);
       panel.querySelector('#hybridAutoNodes').textContent = String(summary.autoNodes ?? 0);
       panel.querySelector('#hybridPendingJobs').textContent = String(summary.pendingJobs ?? 0);
       panel.querySelector('#hybridActiveJobs').textContent = String(summary.activeJobs ?? 0);
+      panel.querySelector('#hybridFailedJobs').textContent = String(summary.failedJobs ?? 0);
       panel.querySelector('#hybridGeneratedAt').textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
       const nodes = panel.querySelector('#hybridNodeList');
-      const jobs = panel.querySelector('#hybridJobList');
-      nodes.innerHTML = (data.nodes || []).length ? data.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
-      jobs.innerHTML = (data.jobs || []).length ? data.jobs.map(jobMarkup).join('') : '<div class="hybrid-empty">아직 하이브리드 작업이 없습니다.</div>';
+      nodes.innerHTML = lastDashboard.nodes.length ? lastDashboard.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
-      jobs.querySelectorAll('[data-cancel-job]').forEach(button => button.addEventListener('click', cancelJob));
+      renderJobs();
+      renderEvents();
     } catch (error) {
       const nodes = panel.querySelector('#hybridNodeList');
       if (nodes) nodes.innerHTML = `<div class="hybrid-empty">${escapeHtml(error.message)}</div>`;
