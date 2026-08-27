@@ -116,7 +116,7 @@ async function openSites() {
       })
       .catch(error => {
         sitesLoading = null;
-        console.error('Homepage admin load failed.', error);
+        console.error(error);
         throw error;
       });
   }
@@ -214,6 +214,6 @@ window.EKODIAdminPanels = Object.freeze({
   visibleMenuOrder: VISIBLE_NAV_ORDER,
 });
 import('./admin-menu-runtime.js').catch(error => {
-  console.error('Admin menu runtime load failed.', error);
+  console.error(error);
 });
 })();

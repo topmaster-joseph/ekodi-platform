@@ -83,7 +83,7 @@ for (const asset of htmlAssets) {
   const path = `${output}${asset}`;
   let html = await readFile(path, 'utf8');
   if (asset === 'index.html') {
-    const serviceGrid = /<div class="service-grid">[\s\S]*?(\n\s*<\/div>\n\s*<\/div>\n\s*<\/section>)/;
+    const serviceGrid = /<div class="service-grid">[\s\S]*?(\r?\n\s*<\/div>\r?\n\s*<\/div>\r?\n\s*<\/section>)/;
     if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
     html = html.replace(serviceGrid, `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`);
     html = html.replaceAll('EKODI선교회', '에코디커뮤니티').replaceAll('에코디선교회', '에코디커뮤니티').replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr').replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
