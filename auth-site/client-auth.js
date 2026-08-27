@@ -50,14 +50,22 @@ async function manifestRealm(id){
     return {name:service.name||service.shortName||id,returnTo:serviceUrl.href,origins:[serviceUrl.origin],open:true,kind:id};
   }catch{return null}
 }
-const config=realms[site]||await manifestRealm(site)||realms.portal;
+function implicitEkodiRealm(id){
+  const value=String(id||'').trim().toLowerCase();
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value)||value==='portal')return null;
+  const origin=`https://${value}.ekodi.kr`;
+  return {name:value.replace(/-/g,' ').toUpperCase(),returnTo:`${origin}/`,origins:[origin],open:true,kind:value};
+}
+const config=realms[site]||await manifestRealm(site)||implicitEkodiRealm(site)||realms.portal;
 function safeReturn(raw){
   const fallback=new URL(config.returnTo);
   if(!raw)return fallback.href;
   try{
     const target=new URL(raw);
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
-    if(target.protocol!=='https:'||target.username||target.password||!allowedOrigins.has(target.origin))return fallback.href;
+    const hostname=target.hostname.toLowerCase();
+    const internalEkodi=hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr');
+    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi))return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
