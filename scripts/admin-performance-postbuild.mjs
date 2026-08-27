@@ -137,17 +137,6 @@ await writeFile(handoffPath, compactHandoff);
 
 const shellPath = `${dist}admin-authenticated-shell.js`;
 let compactShell = await readFile(shellPath, 'utf8');
-const shellScriptsMarker = "const criticalPostAuthScripts = ['ekodi-message-ui.js','compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js'];";
-const shellRoutes = "const LEGACY_ROUTES=new Set('storage api-cost health devices work marketing-ai ai-ops campus operations security architecture finance organization workspace clients admins community books social affiliates ai-membership ai-module-spec'.split(' ')),PENDING_ROUTES=new Set([...LEGACY_ROUTES,'policies','deployments']);";
-const legacyRoutePattern = /\['#storage'[^\r\n]+?'#ai-module-spec'\]\.includes\(location\.hash\)/;
-const pendingRoutePattern = /\['#campus'[^\r\n]+?'#affiliates'\]\.includes\(location\.hash\)/;
-if (!compactShell.includes(shellScriptsMarker) || !legacyRoutePattern.test(compactShell) || !pendingRoutePattern.test(compactShell)) {
-  throw new Error('Admin shell compaction markers missing');
-}
-compactShell = compactShell
-  .replace(shellScriptsMarker, `${shellScriptsMarker}\n${shellRoutes}`)
-  .replace(legacyRoutePattern, 'LEGACY_ROUTES.has(location.hash.slice(1))')
-  .replace(pendingRoutePattern, 'PENDING_ROUTES.has(location.hash.slice(1))');
 for (const [from,to] of [
   ['postAuthStyles','styles'],
   ['criticalPostAuthScripts','scripts'],
