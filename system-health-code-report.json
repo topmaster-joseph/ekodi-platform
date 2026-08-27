@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T09:16:54.038Z",
-  "startedAt": "2026-08-27T09:16:38.765Z",
+  "generatedAt": "2026-08-27T09:20:42.762Z",
+  "startedAt": "2026-08-27T09:20:31.270Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "3161bec2dc6457f7332e5c5fd5f08cf5d4bffb48",
-  "overallScore": 86.5,
-  "status": "watch",
+  "head": "1cc12c7fc222914c6283394522fd0ef3b94c93ad",
+  "overallScore": 66.5,
+  "status": "restricted",
   "thresholds": {
     "healthy": 90,
     "watch": 80,
@@ -16,9 +16,9 @@
   "dimensions": {
     "tests": {
       "weight": 25,
-      "score": 25,
-      "status": "ok",
-      "detail": "175개 테스트 파일 · 전체 테스트 통과"
+      "score": 5,
+      "status": "error",
+      "detail": "전체 테스트 실패 또는 시간 초과"
     },
     "duplication": {
       "weight": 15,
@@ -59,7 +59,7 @@
   },
   "metrics": {
     "runtimeFiles": 337,
-    "runtimeLines": 56707,
+    "runtimeLines": 56945,
     "testFiles": 175,
     "workflows": 109,
     "largeFiles": 0,
@@ -68,6 +68,15 @@
     "duplicateGroups": 30
   },
   "technicalDebt": [
+    {
+      "id": "tests-failing",
+      "severity": "critical",
+      "category": "tests",
+      "title": "전체 테스트 점검 필요",
+      "detail": "정기 코드 건강검사에서 전체 테스트가 통과하지 않았습니다.",
+      "recommendation": "신규 기능 반영보다 실패 테스트의 원인을 먼저 분리하고 회귀 범위를 확인하세요.",
+      "evidence": []
+    },
     {
       "id": "duplicate-0",
       "severity": "medium",
@@ -142,7 +151,7 @@
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
         "affiliate-control.js:39",
-        "device-control.js:129"
+        "device-control.js:169"
       ]
     },
     {
@@ -172,10 +181,10 @@
   ],
   "checks": {
     "tests": {
-      "ok": true,
-      "status": 0,
+      "ok": false,
+      "status": 1,
       "timedOut": false,
-      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.768863ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.235315ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (0.770234ms)\n✔ Conversation release is additive, isolated, ordered and guarded (0.836153ms)\nℹ tests 854\nℹ suites 0\nℹ pass 854\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 14569.411797"
+      "summary": ")panel.hidden=false}else deactivateMallFreeOps()},true);\\nwindow.addEventListener(\\'hashchange\\',()=>{if(location.hash!==\\'#mall-free-ops\\')deactivateMallFreeOps()});if(location.hash!==\\'#mall-free-ops\\')deactivateMallFreeOps()\\n}\\nfunction announceReady(){document.documentElement.dataset.ekodiAdminReady=\\'true\\';try{performance.mark(\\'ekodi-admin-ready\\')}catch{}window.dispatchEvent(new CustomEvent(\\'ekodi-admin-ready\\'))}\\nasync function startAuthenticatedShell(){\\nif (started || !authenticated()) return;started=true;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady=\\'loading\\';\\nif(location.pathname.startsWith(\\'/legacy\\')){loadStyle(\\'control-center-ops.css\\');loadStyle(\\'control-center-finance.css\\');await loadScript(\\'control-center.js\\');announceReady();return}\\nfor(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady()\\n}\\nfunction onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&[\\'#campus\\',\\'#operations\\',\\'#policies\\',\\'#ai-ops\\',\\'#devices\\',\\'#work\\',\\'#marketing-ai\\',\\'#deployments\\'].includes(location.hash))document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}\\nkeepLoginInteractive();onStateChange();\\nwindow.addEventListener(\\'ekodi-authenticated\\', onStateChange);\\nwindow.addEventListener(\\'ekodi-nav-changed\\',installSharedAdminLayout);window.addEventListener(\\'ekodi-feature-installed\\',installSharedAdminLayout);matchMedia(\\'(max-width:760px)\\').addEventListener?.(\\'change\\',installSharedAdminLayout)\\n})();\\n',\n    expected: /const postAuthStyles = \\['compact-control-center\\.css'\\]/,\n    operator: 'match',\n    diff: 'simple'\n  }"
     },
     "security": {
       "ok": true,
