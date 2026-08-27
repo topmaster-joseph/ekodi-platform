@@ -38,7 +38,7 @@ function validEmail(email) {
 function cors(origin, env) {
   const headers = {
     'access-control-allow-headers': 'content-type, authorization',
-    'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
@@ -347,6 +347,23 @@ async function updateAccount(request, env, id) {
   return json({ ok: true }, 200, request, env);
 }
 
+async function removeAccount(request, env, id) {
+  const gate = await requireSuperAdmin(request, env);
+  if (gate.error) return gate.error;
+  const target = await env.DB.prepare('SELECT * FROM admin_google_accounts WHERE id = ?').bind(id).first();
+  if (!target) return json({ error: '관리자 계정을 찾을 수 없습니다.' }, 404, request, env);
+  if (target.email === gate.admin.email) return json({ error: '현재 로그인한 최고관리자 자신의 권한은 제거할 수 없습니다.' }, 409, request, env);
+  if (target.role === 'super_admin' && target.status === 'active') {
+    const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM admin_google_accounts WHERE role = 'super_admin' AND status = 'active' AND id <> ?").bind(id).first();
+    if (Number(count.count) < 1) return json({ error: '활성 최고관리자는 최소 1명 이상 유지해야 합니다.' }, 409, request, env);
+  }
+  const linkedAdmin = await env.DB.prepare('SELECT id FROM admins WHERE email = ?').bind(target.email).first();
+  if (linkedAdmin) await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+  await env.DB.prepare('DELETE FROM admin_google_accounts WHERE id = ?').bind(id).run();
+  await writeAudit(env.DB, gate.admin.id, 'admin_google.remove', 'admin-access', target.email + ':' + target.role + ':' + target.status);
+  return json({ ok: true, removed: { id: target.id, email: target.email } }, 200, request, env);
+}
+
 export async function handleAdminGoogleAuth(request, env) {
   const origin = request.headers.get('origin');
   if (!isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
@@ -376,5 +393,6 @@ export async function handleAdminGoogleAuth(request, env) {
   if (request.method === 'POST' && path === '/api/admin-access/google-accounts') return addAccount(request, env);
   const match = path.match(/^\/api\/admin-access\/google-accounts\/(\d+)$/);
   if (request.method === 'PUT' && match) return updateAccount(request, env, Number(match[1]));
+  if (request.method === 'DELETE' && match) return removeAccount(request, env, Number(match[1]));
   return json({ error: 'Google 관리자 인증 경로를 찾을 수 없습니다.' }, 404, request, env);
 }
