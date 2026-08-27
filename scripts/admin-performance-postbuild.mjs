@@ -37,36 +37,15 @@ for (const section of ['communication', 'workspace', 'organization']) {
   html = html.replace(`<section class="section" data-panel="${section}"`, `<section class="section hidden-panel" data-panel="${section}"`);
 }
 
-// Finance polling exists only while Finance is visible and the tab is active.
+// Finance must never retain perpetual polling. Older sources are upgraded once; newer sources pass through.
 const financePath = `${dist}finance-monitor.js`;
 let finance = await readFile(financePath, 'utf8');
 const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
-if (!financeTail.test(finance)) throw new Error('finance polling tail marker missing');
-finance = finance.replace(financeTail, `let financeRefreshTimer = 0;
-function cancelFinanceRefresh() {
-  if (financeRefreshTimer) clearTimeout(financeRefreshTimer);
-  financeRefreshTimer = 0;
+if (financeTail.test(finance)) {
+  finance = finance.replace(financeTail, `financeRefresh.addEventListener('click', () => loadFinance(true));\nfinanceSectionButton.addEventListener('click', () => {\n  document.querySelector('#pageTitle').textContent = '결제 · 회계';\n  loadFinance(false);\n});\nif ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {\n  queueMicrotask(() => loadFinance(false));\n}`);
+  await writeFile(financePath, finance);
 }
-function scheduleFinanceRefresh() {
-  cancelFinanceRefresh();
-  const visible = financeSectionButton?.classList.contains('active') && document.visibilityState !== 'hidden' && financeToken();
-  if (!visible) return;
-  financeRefreshTimer = window.setTimeout(async () => {
-    await loadFinance(false);
-    scheduleFinanceRefresh();
-  }, 120000);
-}
-financeRefresh.addEventListener('click', () => loadFinance(true));
-financeSectionButton.addEventListener('click', () => {
-  document.querySelector('#pageTitle').textContent = '결제 · 회계';
-  loadFinance(false).finally(scheduleFinanceRefresh);
-});
-document.addEventListener('visibilitychange', scheduleFinanceRefresh);
-window.addEventListener('hashchange', scheduleFinanceRefresh);
-if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
-  queueMicrotask(() => loadFinance(false).finally(scheduleFinanceRefresh));
-}`);
-await writeFile(financePath, finance);
+if (finance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 
 // Mobile browsers pay heavily for backdrop blur and off-screen panel painting.
 const cssPath = `${dist}control-center.css`;
@@ -81,6 +60,14 @@ let compactCss = await readFile(compactCssPath, 'utf8');
 const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.compact-control-center .app>main{padding-top:0!important}body.compact-control-center .topbar{position:static!important;inset:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important}body.compact-control-center .topbar .kicker{display:none!important}body.compact-control-center .topbar h1{font-size:16px!important;margin:0!important}body.compact-control-center .content{padding:12px 12px 32px!important}}\n`;
 if (!compactCss.includes('admin mobile flow')) compactCss += mobileCss;
 await writeFile(compactCssPath, compactCss);
+
+// Compact indentation in first-path navigation assets without changing JavaScript semantics.
+for (const asset of ['admin-demand-loader.js', 'admin-menu-layout.js']) {
+  const assetPath = `${dist}${asset}`;
+  let source = await readFile(assetPath, 'utf8');
+  source = source.replace(/^[ \t]+/gm, '').replace(/\n{2,}/g, '\n');
+  await writeFile(assetPath, source);
+}
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.

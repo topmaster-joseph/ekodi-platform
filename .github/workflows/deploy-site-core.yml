@@ -12,6 +12,10 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'platform-router-entry-worker.js'
+      - 'tax-portal-worker.js'
+      - 'tax-service-worker.js'
+      - 'finance-entry-worker.js'
       - 'index.html'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
@@ -60,6 +64,10 @@ jobs:
         run: |
           set -euo pipefail
           node --check site-worker.js
+          node --check platform-router-entry-worker.js
+          node --check tax-portal-worker.js
+          node --check tax-service-worker.js
+          node --check finance-entry-worker.js
           node --check script.js
           node --check homepage-ambient.js
           node --check auth-site/auth-workspace-target.js
@@ -88,6 +96,7 @@ jobs:
           grep -Fq 'pattern = "ekodi.kr"' wrangler.site.toml
           grep -Fq 'pattern = "admin.ekodi.kr"' wrangler.site.toml
           grep -Fq 'pattern = "auth.ekodi.kr"' wrangler.site.toml
+          grep -Fq 'pattern = "tax.ekodi.kr"' wrangler.site.toml
 
       - name: Verify Cloudflare credentials
         run: |
@@ -139,7 +148,7 @@ jobs:
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             if echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain attached: $host"
             else
@@ -179,7 +188,7 @@ jobs:
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           echo "$payload" | jq -e '.success == true' >/dev/null
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"
@@ -202,7 +211,7 @@ jobs:
           verify_admin_marketing_boundary() { code=$(curl -sS -D /tmp/admin-marketing-headers -o /tmp/admin-marketing-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fiq 'frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr' /tmp/admin-marketing-headers && ! grep -Eiq 'frame-src[^;]*https://marketing\.ekodi\.kr' /tmp/admin-marketing-headers && grep -Fq 'admin-demand-loader.js' /tmp/admin-marketing-body && ! grep -Fq '<script src="marketing-ai-admin.js"' /tmp/admin-marketing-body; }
           verify_mobile_headers() { home_code=$(curl -L -sS -o /tmp/mobile-home -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true); css_code=$(curl -L -sS -o /tmp/mobile-admin-css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/control-center.css' || true); [[ "$home_code" =~ ^[23] ]] && [[ "$css_code" =~ ^[23] ]] && grep -Fq -- '--ekodi-home-header-height' /tmp/mobile-home && grep -Fq '.site-header{position:fixed;top:0;left:0;right:0;width:100%' /tmp/mobile-home && grep -Fq '.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important' /tmp/mobile-admin-css && grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' /tmp/mobile-admin-css; }
           for attempt in $(seq 1 18); do
-            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_mobile_headers && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_admin_marketing_boundary && verify_admin_demand_loader && verify_marketing_admin_asset && verify_html 'https://auth.ekodi.kr/' '통합 인증센터' && verify_targeted_auth_asset && verify_html 'https://pay.ekodi.kr/' 'EKODI 서비스 허브' && verify_html 'https://trade.ekodi.kr/' 'EKODI Global Trading' && verify_mail; then
+            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_mobile_headers && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_admin_marketing_boundary && verify_admin_demand_loader && verify_marketing_admin_asset && verify_html 'https://auth.ekodi.kr/' '통합 인증센터' && verify_targeted_auth_asset && verify_html 'https://tax.ekodi.kr/' 'EKODI Tax' && verify_html 'https://pay.ekodi.kr/' 'EKODI 서비스 허브' && verify_html 'https://trade.ekodi.kr/' 'EKODI Global Trading' && verify_mail; then
               echo 'Shared site Worker, fixed mobile headers, lazy admin MarketingAI console, external user-page link, generalized workspace auth asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'
               exit 0
             fi

@@ -9,6 +9,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'marketing-ai', icon: 'M', labels: { ko: '마케팅 AI', en: 'Marketing AI' } },
   { id: 'work', icon: 'W', labels: { ko: '업무', en: 'Work' } },
   { id: 'finance', icon: '₩', labels: { ko: '결제 · 회계', en: 'Finance & Accounting' } },
+  { id: 'tax', icon: 'T', labels: { ko: '세금 · 증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/' },
   { id: 'communication', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' } },
   { id: 'workspace', icon: '▣', labels: { ko: '클라우드 · 자료', en: 'Cloud & Files' } },
   { id: 'devices', icon: 'D', labels: { ko: '기기 · 장치', en: 'Devices' } },
