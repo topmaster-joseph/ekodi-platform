@@ -316,6 +316,21 @@ export const USER_SERVICES = Object.freeze([
     "homepageOrder": 130
   },
   {
+    "id": "life",
+    "name": "오늘의 질문",
+    "nameEn": "EKODI Life AI",
+    "label": "life.ekodi.kr",
+    "url": "https://life.ekodi.kr/",
+    "domain": "life.ekodi.kr",
+    "group": "work-life",
+    "status": "preparing",
+    "productionVerified": false,
+    "available": false,
+    "homepageEligible": false,
+    "homepageDefault": false,
+    "homepageOrder": 135
+  },
+  {
     "id": "my",
     "name": "마이 에코디",
     "nameEn": "My EKODI",

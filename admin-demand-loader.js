@@ -29,6 +29,7 @@
       insert: 'after-campus',
     },
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
+    'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
