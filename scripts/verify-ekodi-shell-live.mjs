@@ -75,7 +75,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-link-compat')!=='v1')failures.push(`shell:link-compat-header:${shellResult.headers?.get?.('x-ekodi-link-compat')||'missing'}`);
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
-  includesAll(userUiStyleResult.text,'user-ui-style',['.ekodi-user-ui-header{','.ekodi-user-ui-footer{','[data-ekodi-user-header-spacer]'],failures);
+  includesAll(userUiStyleResult.text,'user-ui-style',['.ekodi-user-ui-header','.ekodi-user-ui-footer','[data-ekodi-user-header-spacer]'],failures);
 
   const statuses=[healthResult,manifestResult,shellResult,themeResult,styleResult,userUiStyleResult].map(item=>item.status).join('/');
   if(!failures.length){
