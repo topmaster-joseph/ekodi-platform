@@ -53,8 +53,6 @@ if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker in
 if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker injection must advertise the resolved surface');
 if(!workspaceStyle.includes('data-ekodi-shell-surface="workspace"'))fail('shared workspace stylesheet must be scoped to internal surfaces');
 
-// Mobile persistent-header contract. The shared runtime is bundled into shell.js so every Shell-enabled
-// user surface receives the same fixed-header behavior even when its service Worker deploy cadence differs.
 for(const required of ["headerUrl.pathname='/mobile-fixed-header.js'",'fixedHeader','bundledShell'])if(!shellWorker.includes(required))fail(`Shell Worker lost bundled mobile header runtime: ${required}`);
 for(const required of ['position:fixed!important','ResizeObserver','data-ekodi-mobile-header-spacer','safe-area-inset-top','.site-header','.topbar'])if(!mobileHeaderSource.includes(required))fail(`mobile header runtime missing: ${required}`);
 for(const required of ['position:fixed!important','left:0!important','right:0!important','safe-area-inset-top']){
@@ -69,8 +67,6 @@ if(/<script\b/i.test(rootIndex))fail('ekodi.kr root must preserve its zero-JavaS
 if(!adminStyle.includes('.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}'))fail('admin mobile content must be offset below the fixed topbar');
 if(!adminStyle.includes('.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important'))fail('admin mobile topbar must remain fixed across control-center pages');
 
-// Central auth now follows the canonical user-service registry. New user services inherit
-// One Login automatically instead of requiring a new auth-router branch for authMode=client.
 if(!authRouter.includes('manifestService'))fail('Auth Router lost manifest-backed service discovery');
 if(!authRouter.includes('isRegistryUserService'))fail('Auth Router lost registry-driven universal identity routing');
 if(!authRouter.includes("site==='portal'||isRegistryUserService"))fail('Auth Router no longer sends registry user services through universal identity handoff');
@@ -102,8 +98,8 @@ for(const service of manifest.services||[]){
   if(commonUserPage){
     const p=service.userAccessPolicy;
     const publicLanding=service.defaultSurface==='public';
-    const expectedGuestMode=publicLanding?'service-landing':'guide-only';
-    const expectedEnforcedBy=publicLanding?'service+shared-shell':'shared-shell';
+    const expectedGuestMode=publicLanding?'landing':'guide-only';
+    const expectedEnforcedBy=publicLanding?'service':'shared-shell';
     if(p?.scope!=='user-pages'||p?.guestMode!==expectedGuestMode||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!==expectedEnforcedBy){
       fail(`${service.id} must expose only its service landing before Google FREE membership and keep workspace content protected`);
     }
