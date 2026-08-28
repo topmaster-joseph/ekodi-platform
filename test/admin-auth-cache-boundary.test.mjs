@@ -17,10 +17,14 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
 test('guarded production release verifies current auth entry and workspace handoff assets', () => {
   const requests = manifest.worker.requests;
   const root = requests.find(item => item.url === 'https://auth.ekodi.kr/');
-  const router = requests.find(item => item.url === 'https://auth.ekodi.kr/auth-router.js');
-  const client = requests.find(item => item.url === 'https://auth.ekodi.kr/client-auth.js');
-  const workspaceTarget = requests.find(item => item.url === 'https://auth.ekodi.kr/auth-workspace-target.js');
-  const admin = requests.find(item => item.url === 'https://auth.ekodi.kr/admin-auth.js');
+  const authAsset = path => requests.find(item => {
+    const url = new URL(item.url);
+    return url.origin === 'https://auth.ekodi.kr' && url.pathname === path;
+  });
+  const router = authAsset('/auth-router.js');
+  const client = authAsset('/client-auth.js');
+  const workspaceTarget = authAsset('/auth-workspace-target.js');
+  const admin = authAsset('/admin-auth.js');
   assert.ok(root);
   assert.ok(router);
   assert.ok(client);
