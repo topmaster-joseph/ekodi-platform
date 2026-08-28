@@ -1,0 +1,1 @@
+The production workflow is triggered only by tracked MarketingAI admin paths. A native merge touching marketing-ai-admin-posting-status.js is used for release verification.
