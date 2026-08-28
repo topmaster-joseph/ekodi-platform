@@ -111,6 +111,7 @@ service = "ekodi-storage-control"
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-# Asset-first quota guard: serve existing static assets without a Worker invocation.
-# Dynamic root shells and APIs remain Worker-first.
-run_worker_first = ["/", "/admin", "/api/*"]
+# Asset-first quota guard stays the default. Dynamic shells/APIs and central-auth
+# security-critical JavaScript run Worker-first so no-store/security headers are
+# enforced identically for candidate versions and production traffic.
+run_worker_first = ["/", "/admin", "/api/*", "/auth.js", "/auth-router.js", "/marketing-auth-hotfix.js", "/auth-workspace-target.js", "/admin-auth.js", "/client-auth.js", "/author-auth.js", "/business-auth.js", "/marketing-onboarding.js", "/membership-ui.js"]
