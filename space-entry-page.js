@@ -1,14 +1,14 @@
 const SPACES = Object.freeze({
-  church:{name:'에코디교회',legacy:'https://church.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/church/'],['마케팅AI','https://marketing.ekodi.kr/church/']]},
-  biz:{name:'에코디비즈',legacy:'https://biz.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/biz/'],['마케팅AI','https://marketing.ekodi.kr/biz/']]},
+  church:{name:'에코디교회',legacy:'https://church.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/church/'],['마케팅AI','https://ekodi.kr/ai/marketing/church/']]},
+  biz:{name:'에코디비즈',legacy:'https://biz.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/biz/'],['마케팅AI','https://ekodi.kr/ai/marketing/biz/']]},
   lab:{name:'에코디연구소',legacy:'https://lab.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/lab/']]},
-  jadam:{name:'자담치킨 목포대점',legacy:'https://jadam.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/jadam/'],['마케팅AI','https://marketing.ekodi.kr/jadam/']]},
-  pizzamaru:{name:'피자마루 목포대점',legacy:'https://pizzamaru.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/pizzamaru/'],['마케팅AI','https://marketing.ekodi.kr/pizzamaru/']]},
-  yogurt:{name:'요거트퍼플 목포대점',legacy:'https://yogurt.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/yogurt/'],['마케팅AI','https://marketing.ekodi.kr/yogurt/']]},
-  cgma:{name:'청계면상인회',legacy:'https://cgma.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/cgma/'],['마케팅AI','https://marketing.ekodi.kr/cgma/']]},
+  jadam:{name:'자담치킨 목포대점',legacy:'https://jadam.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/jadam/'],['마케팅AI','https://ekodi.kr/ai/marketing/jadam/']]},
+  pizzamaru:{name:'피자마루 목포대점',legacy:'https://pizzamaru.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/pizzamaru/'],['마케팅AI','https://ekodi.kr/ai/marketing/pizzamaru/']]},
+  yogurt:{name:'요거트퍼플 목포대점',legacy:'https://yogurt.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/yogurt/'],['마케팅AI','https://ekodi.kr/ai/marketing/yogurt/']]},
+  cgma:{name:'청계면상인회',legacy:'https://cgma.ekodi.kr/',services:[['마이 에코디','https://my.ekodi.kr/cgma/'],['마케팅AI','https://ekodi.kr/ai/marketing/cgma/']]},
 });
 
-const esc=(value)=>String(value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=(value)=>String(value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 
 export function resolvePublicSpace(pathname){
   const match=String(pathname||'').match(/^\/([a-z0-9-]+)\/?$/);
