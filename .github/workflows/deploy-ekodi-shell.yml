@@ -11,6 +11,8 @@ on:
       - 'admin-authenticated-shell.js'
       - 'shell/**'
       - 'config/ecosystem-services.json'
+      - 'config/user-footer.js'
+      - 'config/user-ui-shell.json'
       - 'config/illustration-system.json'
       - 'config/internal-ui-rollout.json'
       - 'config/seasonal-design-governance.json'
@@ -18,6 +20,7 @@ on:
       - 'docs/user-ui-module-principles.md'
       - 'docs/admin-ui-module-principles.md'
       - 'scripts/verify-ekodi-shell-live.mjs'
+      - 'scripts/validate-user-ui-dna.mjs'
       - 'scripts/validate-ekodi-shell-adoption.mjs'
       - 'scripts/validate-internal-ui-rollout.mjs'
       - 'scripts/validate-seasonal-design-governance.mjs'
@@ -58,22 +61,29 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check ekodi-message-ui.js
           node --check admin-authenticated-shell.js
+          node --check config/user-footer.js
           node --check shell/shell.js
           node --check shell/user-ui-header.js
+          node --check shell/user-ui-footer.js
           node --check shell/admin-ui-shell.js
           node --check shell/mobile-fixed-header.js
           node --check shell/illustration-system.js
           node --check shell/ecosystem-link-compat.js
           node --check scripts/verify-ekodi-shell-live.mjs
+          test -f config/user-ui-shell.json
           test -f config/illustration-system.json
+          test -f shell/user-ui-shell.css
           test -f shell/workspace.css
           test -f docs/user-ui-module-principles.md
           test -f docs/admin-ui-module-principles.md
           grep -Fq 'data-ekodi-shell-surface="workspace"' shell/workspace.css
           grep -Fq 'data-ekodi-document-surface' shell/workspace.css
           grep -Fq "userHeaderUrl.pathname='/user-ui-header.js'" ekodi-shell-worker.js
-          grep -Fq "adminShellUrl.pathname='/admin-ui-shell.js'" ekodi-shell-worker.js
+          grep -Fq "userFooterUrl.pathname='/user-ui-footer.js'" ekodi-shell-worker.js
+          grep -Fq "url.pathname==='/user-footer.json'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-user-ui-footer" ekodi-shell-worker.js
+          grep -Fq "adminShellUrl.pathname='/admin-ui-shell.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-admin-ui-shell" ekodi-shell-worker.js
           grep -Fq "messageUrl.pathname='/message-ui.js'" ekodi-shell-worker.js
           grep -Fq "illustrationUrl.pathname='/illustration-system.js'" ekodi-shell-worker.js
@@ -84,15 +94,21 @@ jobs:
           grep -Fq 'window.EKODIMessage' ekodi-message-ui.js
           grep -Fq 'window.EKODIIllustration' shell/illustration-system.js
           grep -Fq 'window.EKODIUserUIHeader' shell/user-ui-header.js
+          grep -Fq 'window.EKODIUserUIFooter' shell/user-ui-footer.js
+          grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js
           grep -Fq '.side-brand' shell/admin-ui-shell.js
           grep -Fq 'node.remove()' shell/admin-ui-shell.js
           grep -Fq 'cuteNotChildish' config/illustration-system.json
           grep -Fq 'aiAsCompanionNotRobotMascot' config/illustration-system.json
+          grep -Fq 'config/user-footer.js' config/user-ui-shell.json
+          grep -Fq -- '--ekodi-user-footer-background' shell/user-ui-shell.css
+          grep -Fq 'grid-template-columns: minmax(0, 1fr) auto' shell/user-ui-shell.css
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
           node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/admin-ui-shell.test.mjs
+          node scripts/validate-user-ui-dna.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs
           node scripts/validate-internal-ui-rollout.mjs
@@ -107,6 +123,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
       EKODI_SHELL_VERIFY_BASE: https://ekodi-shell-staging.ekodi-development.workers.dev
+      EKODI_SHELL_ALLOW_ACCESS_GATE: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
