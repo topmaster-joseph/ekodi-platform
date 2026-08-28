@@ -16,11 +16,16 @@ concurrency:
   group: ekodi-development
   cancel-in-progress: true
 
+env:
+  DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+  DEV_D1_ID: 790a8551-cdb2-4dbf-bfcc-a46d61b62766
+  PROD_D1_ID: e38778f1-b059-4fe7-8816-300f3eec6e19
+
 jobs:
   validate-and-deploy:
     environment: development
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
@@ -33,52 +38,184 @@ jobs:
             echo "::error::Development deployment is allowed only from the development branch."
             exit 1
           }
-          test "$CLOUDFLARE_ACCOUNT_ID" = "46aad4738793fbaca88574832a2ccc0f" || {
+          test "$CLOUDFLARE_ACCOUNT_ID" = "$DEV_ACCOUNT_ID" || {
             echo "::error::Cloudflare account boundary mismatch."
             exit 1
           }
+
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
+
       - name: Install dependencies
         run: npm ci
-      - name: Validate development deployment sources
+
+      - name: Run full quality gate
+        shell: bash
         run: |
-          node --check platform-router-entry-worker.js
-          node --check scripts/monitor-lib.mjs
-          node --check scripts/monitor.mjs
-          node --test test/monitor.test.mjs
-      - name: Build development assets
-        run: npm run build
+          set -euo pipefail
+          npm run check
+          npm test
+          AI_PROVIDER=NONE npm run test:ai-none
+          npm run build
+
+      - name: Validate isolated development resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          configs=(
+            wrangler.api.development.toml
+            wrangler.finance.development.toml
+            wrangler.marketing-domains.development.toml
+            wrangler.marketing-publishing.development.toml
+            wrangler.workspace-platform.development.toml
+            wrangler.storage.development.toml
+          )
+          for config in "${configs[@]}"; do
+            test -f "$config"
+            grep -q "$DEV_D1_ID" "$config"
+            if grep -q "$PROD_D1_ID" "$config"; then
+              echo "::error::$config references the production D1 database."
+              exit 1
+            fi
+            if grep -Eq '^\[\[routes\]\]|custom_domain[[:space:]]*=[[:space:]]*true' "$config"; then
+              echo "::error::$config contains a production-style custom route."
+              exit 1
+            fi
+          done
+          if grep -Rqs '6986fd633f4e33bf804c921697b2d797' wrangler.*.development.toml; then
+            echo "::error::Production Cloudflare account id found in a development config."
+            exit 1
+          fi
+
       - name: Verify development Cloudflare credentials
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" || {
             echo "::error::CLOUDFLARE_DEVELOPMENT_API_TOKEN is not configured in the development environment."
             exit 1
           }
-      - name: Deploy only to EKODI Development
-        run: npx --yes wrangler@4.127.0 deploy --config wrangler.development.jsonc --experimental-provision=false
+          npx --yes wrangler@4.127.0 whoami >/dev/null
+
+      - name: Apply isolated development D1 migrations
+        run: npx --yes wrangler@4.127.0 d1 migrations apply ekodi-auth-development --remote --config wrangler.api.development.toml
+
+      - name: Verify isolated development D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.127.0 d1 execute ekodi-auth-development --remote --config wrangler.api.development.toml --command "SELECT COUNT(*) AS migration_count FROM d1_migrations; SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table';" | tee /tmp/d1-check.txt
+          grep -q 'migration_count' /tmp/d1-check.txt
+          grep -q 'table_count' /tmp/d1-check.txt
+
+      - name: Deploy core development workers
+        shell: bash
+        run: |
+          set -euo pipefail
+          configs=(
+            wrangler.development.jsonc
+            wrangler.api.development.toml
+            wrangler.finance.development.toml
+            wrangler.marketing-domains.development.toml
+            wrangler.marketing-publishing.development.toml
+            wrangler.workspace-platform.development.toml
+            wrangler.storage.development.toml
+          )
+          for config in "${configs[@]}"; do
+            echo "Deploying $config"
+            npx --yes wrangler@4.127.0 deploy --config "$config" --experimental-provision=false
+          done
+
+      - name: Deploy isolated development subservices
+        shell: bash
+        run: |
+          set -euo pipefail
+          configs=(
+            wrangler.api-social-staging.toml
+            wrangler.author.staging.toml
+            wrangler.bible.staging.toml
+            wrangler.books.staging.toml
+            wrangler.business-staging.toml
+            wrangler.community.staging.toml
+            wrangler.education.staging.toml
+            wrangler.energy-staging.toml
+            wrangler.management.staging.toml
+            wrangler.money.staging.toml
+            wrangler.my.staging.toml
+            wrangler.publishing.staging.toml
+            wrangler.service-proxy.staging.toml
+            wrangler.shell.staging.toml
+            wrangler.site-staging.toml
+            wrangler.social-staging.toml
+            wrangler.support.staging.toml
+            wrangler.work-staging.toml
+          )
+          for config in "${configs[@]}"; do
+            echo "Deploying $config"
+            npx --yes wrangler@4.127.0 deploy --config "$config" --experimental-provision=false
+          done
 
   verify-development:
     needs: validate-and-deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      DEV_URL: https://ekodi-platform-development.ekodi-development.workers.dev
+    timeout-minutes: 10
     steps:
-      - name: Verify isolated development endpoint
+      - name: Verify development fleet endpoints
         shell: bash
         run: |
           set -euo pipefail
-          case "$DEV_URL" in
-            *ekodi-development.workers.dev*) ;;
-            *) echo '::error::Verification endpoint escaped the development account boundary.'; exit 1 ;;
-          esac
-          body="$(curl --fail --silent --show-error --location --max-time 20 "$DEV_URL/")"
+          urls=(
+            https://ekodi-platform-development.ekodi-development.workers.dev
+            https://ekodi-auth-api-development.ekodi-development.workers.dev
+            https://ekodi-finance-api-development.ekodi-development.workers.dev
+            https://ekodi-marketing-domain-api-development.ekodi-development.workers.dev
+            https://ekodi-marketing-publishing-development.ekodi-development.workers.dev
+            https://ekodi-workspace-platform-api-development.ekodi-development.workers.dev
+            https://ekodi-storage-control-development.ekodi-development.workers.dev
+            https://ekodi-social-registry-staging.ekodi-development.workers.dev
+            https://ekodi-author-ai-staging.ekodi-development.workers.dev
+            https://ekodi-bible-conversation-staging.ekodi-development.workers.dev
+            https://ekodi-books-staging.ekodi-development.workers.dev
+            https://ekodi-business-staging.ekodi-development.workers.dev
+            https://ekodi-community-staging.ekodi-development.workers.dev
+            https://ekodi-education-staging.ekodi-development.workers.dev
+            https://ekodi-energy-staging.ekodi-development.workers.dev
+            https://ekodi-management-staging.ekodi-development.workers.dev
+            https://ekodi-money-staging.ekodi-development.workers.dev
+            https://ekodi-my-staging.ekodi-development.workers.dev
+            https://ekodi-publishing-staging.ekodi-development.workers.dev
+            https://ekodi-service-proxy-shell-staging.ekodi-development.workers.dev
+            https://ekodi-shell-staging.ekodi-development.workers.dev
+            https://ekodi-shared-site-staging.ekodi-development.workers.dev
+            https://ekodi-social-staging.ekodi-development.workers.dev
+            https://ekodi-support-opportunity-staging.ekodi-development.workers.dev
+            https://ekodi-work-staging.ekodi-development.workers.dev
+          )
+          failures=0
+          for url in "${urls[@]}"; do
+            case "$url" in
+              *ekodi-development.workers.dev*) ;;
+              *) echo "::error::Endpoint escaped development account boundary: $url"; exit 1 ;;
+            esac
+            code="$(curl --silent --show-error --output /tmp/ekodi-body --write-out '%{http_code}' --max-time 20 "$url/")"
+            if [ "$code" != "200" ]; then
+              echo "::error::$url returned HTTP $code"
+              failures=$((failures+1))
+            else
+              echo "OK $code $url"
+            fi
+          done
+          test "$failures" -eq 0
+          echo "Verified ${#urls[@]} development fleet endpoints."
+
+      - name: Verify primary development HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error --max-time 20 https://ekodi-platform-development.ekodi-development.workers.dev/)"
           test -n "$body"
           printf '%s' "$body" | grep -qi '<html'
-          headers="$(curl --fail --silent --show-error --head --max-time 20 "$DEV_URL/")"
-          printf '%s' "$headers" | grep -qi '^HTTP/.* 200'
-          echo "Development endpoint verification passed."
+          echo "Primary development HTML verification passed."
