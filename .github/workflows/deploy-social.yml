@@ -59,6 +59,8 @@ jobs:
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'

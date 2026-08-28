@@ -109,6 +109,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -191,6 +193,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -273,6 +277,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Build and deploy shared site staging
         run: |
           npm run build

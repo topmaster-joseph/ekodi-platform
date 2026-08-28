@@ -172,6 +172,9 @@ jobs:
 
   staging:
     environment: development
+    concurrency:
+      group: ekodi-development-d1-ekodi-auth-staging
+      cancel-in-progress: false
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -180,6 +183,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -253,14 +258,14 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
-            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
-            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/provider-status' || true)
-            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/user-ai/status' || true)
-            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/portfolio' || true)
-            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/catalog?site=invest' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/health' || true)
+            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/health' || true)
+            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/control/devices' || true)
+            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/control/ai/governance' || true)
+            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/control/ai/provider-status' || true)
+            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/user-ai/status' || true)
+            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/membership/portfolio' || true)
+            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/membership/catalog?site=invest' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
               && [ "$devices" = '401' ] \

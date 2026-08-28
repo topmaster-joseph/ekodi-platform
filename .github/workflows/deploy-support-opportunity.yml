@@ -80,6 +80,8 @@ jobs:
       STAGING_URL: https://ekodi-support-opportunity-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
