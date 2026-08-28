@@ -48,10 +48,15 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy isolated Books staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.books.staging.toml
-      - name: Verify Books staging and Shell
+      - name: Verify Books staging boundary and Shell
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/books-access.headers -o /tmp/books-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -Fiq '^www-authenticate: Cloudflare-Access' /tmp/books-access.headers; then
+            echo "Books staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -L -D /tmp/books-stage.headers -o /tmp/books-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             publishing_code=$(curl -sS -L -D /tmp/books-publishing-stage.headers -o /tmp/books-publishing-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/publishing/" || true)
