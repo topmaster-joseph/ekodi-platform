@@ -37,10 +37,23 @@ test('public storefront reads as a normal shopping mall', () => {
   assert.doesNotMatch(html, /에코디 추천상품/);
 });
 
-test('legally required affiliate disclosure remains subtle and separate from product presentation', () => {
+test('official storefront canonical is ekodi.kr/mall', () => {
+  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/mall">/);
+});
+
+test('affiliate and seller disclosures appear before the product catalog, not in the footer', () => {
+  const noticeIndex = html.indexOf('class="commerce-notice"');
+  const catalogIndex = html.indexOf('class="catalog"');
+  const footerIndex = html.indexOf('<footer>');
+  assert.ok(noticeIndex > 0 && noticeIndex < catalogIndex);
+  assert.ok(catalogIndex > 0 && catalogIndex < footerIndex);
   assert.match(html, /쿠팡 파트너스 활동의 일환으로/);
-  assert.match(html, /affiliate-disclosure/);
   assert.match(html, /판매·주문·결제·배송·교환·환불/);
+  const footer = html.slice(footerIndex, html.indexOf('</footer>') + '</footer>'.length);
+  assert.doesNotMatch(footer, /쿠팡 파트너스 활동의 일환으로/);
+  assert.doesNotMatch(footer, /판매·주문·결제·배송·교환·환불/);
+  assert.match(css, /\.commerce-notice/);
+  assert.match(css, /footer\{[^}]*text-align:center/);
 });
 
 test('product cards support real images, prices, shipping badges and safe outbound clicks', () => {
