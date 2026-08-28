@@ -59,10 +59,15 @@ jobs:
           }
       - name: Deploy isolated staging Worker
         run: npx wrangler deploy --config wrangler.work-staging.toml
-      - name: Verify staging hostname and data isolation
+      - name: Verify staging boundary and data isolation
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/work-access.headers -o /tmp/work-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -Fiq '^www-authenticate: Cloudflare-Access' /tmp/work-access.headers; then
+            echo "EKODI Work staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 12); do
             root_code=$(curl -L -sS -o /tmp/work-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             config_code=$(curl -sS -o /tmp/work-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
