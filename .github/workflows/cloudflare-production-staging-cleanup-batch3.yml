@@ -1,0 +1,120 @@
+name: Cloudflare Production Staging Cleanup Batch 3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-production-staging-cleanup-batch3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: development
+    env:
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CANDIDATES: ekodi-my-staging ekodi-platform-staging ekodi-publishing-staging ekodi-service-proxy-shell-staging ekodi-shell-staging ekodi-site-social-admin-staging ekodi-social-registry-staging ekodi-support-opportunity-staging
+    steps:
+      - name: Re-audit and remove verified Production residue batch 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROD_ACCOUNT_ID"
+          test -n "$PROD_TOKEN"
+          test -n "$DEV_TOKEN"
+          test "$PROD_ACCOUNT_ID" != "$DEV_ACCOUNT_ID"
+
+          api='https://api.cloudflare.com/client/v4'
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
+
+          declare -A mapped
+          mapped[ekodi-platform-staging]=ekodi-platform-development
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-workers.json
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers.json
+          jq -e '.success == true' /tmp/prod-workers.json >/dev/null
+          jq -e '.success == true' /tmp/dev-workers.json >/dev/null
+
+          for script in $CANDIDATES; do
+            jq -e --arg s "$script" '.result[] | select(.id == $s)' /tmp/prod-workers.json >/dev/null || { echo "::error::Production candidate missing unexpectedly: $script"; exit 1; }
+            counterpart="${mapped[$script]:-$script}"
+            jq -e --arg s "$counterpart" '.result[] | select(.id == $s)' /tmp/dev-workers.json >/dev/null || { echo "::error::Development counterpart missing for $script: $counterpart"; exit 1; }
+          done
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/domains.json
+          jq -e '.success == true' /tmp/domains.json >/dev/null
+          curl -fsS "${prod_auth[@]}" "$api/zones?account.id=$PROD_ACCOUNT_ID&per_page=50" -o /tmp/zones.json
+          jq -e '.success == true' /tmp/zones.json >/dev/null
+
+          : > /tmp/routes.ndjson
+          jq -r '.result[]? | [.id,.name] | @tsv' /tmp/zones.json > /tmp/zone-ids.txt
+          while IFS=$'\t' read -r zid zname; do
+            [[ -n "$zid" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/zones/$zid/workers/routes" -o /tmp/zone-routes.json
+            jq -e '.success == true' /tmp/zone-routes.json >/dev/null
+            jq -c --arg zone "$zname" '.result[]? | {zone:$zone,pattern:.pattern,script:.script}' /tmp/zone-routes.json >> /tmp/routes.ndjson
+          done < /tmp/zone-ids.txt
+
+          mkdir -p /tmp/all-settings /tmp/candidate-settings
+          while IFS= read -r owner; do
+            [[ -n "$owner" ]] || continue
+            safe_name=$(printf '%s' "$owner" | tr '/:' '__')
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$owner/settings" -o "/tmp/all-settings/$safe_name.json"
+            jq -e '.success == true' "/tmp/all-settings/$safe_name.json" >/dev/null
+          done < <(jq -r '.result[]?.id' /tmp/prod-workers.json)
+
+          for script in $CANDIDATES; do
+            cp "/tmp/all-settings/$script.json" "/tmp/candidate-settings/$script.json"
+            domain_count=$(jq --arg s "$script" '[.result[]? | select((.service // .script // .service_name) == $s)] | length' /tmp/domains.json)
+            route_count=$(jq --arg s "$script" -s '[.[] | select(.script == $s)] | length' /tmp/routes.ndjson 2>/dev/null || echo 0)
+            risky_count=$(jq '[.result.bindings[]? | select((.type != "assets") and (.type != "plain_text"))] | length' "/tmp/candidate-settings/$script.json")
+            inbound_count=$(jq -s --arg s "$script" '[.[]?.result.bindings[]? | select(.type == "service" and ((.service // .service_name) == $s))] | length' /tmp/all-settings/*.json)
+
+            [[ "$domain_count" == '0' ]] || { echo "::error::$script owns a Production custom domain"; exit 1; }
+            [[ "$route_count" == '0' ]] || { echo "::error::$script owns a Production zone route"; exit 1; }
+            [[ "$risky_count" == '0' ]] || { echo "::error::$script has a non-trivial binding"; exit 1; }
+            [[ "$inbound_count" == '0' ]] || { echo "::error::$script is targeted by a Production service binding"; exit 1; }
+
+            counterpart="${mapped[$script]:-$script}"
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/schedules" -o /tmp/prod-schedules.json
+            curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$counterpart/schedules" -o /tmp/dev-schedules.json
+            jq -e '.success == true and (.result.schedules | type == "array") and (.result.schedules | length == 0)' /tmp/prod-schedules.json >/dev/null || { echo "::error::$script still has a Production cron trigger"; exit 1; }
+            jq -e '.success == true and (.result.schedules | type == "array") and (.result.schedules | length == 0)' /tmp/dev-schedules.json >/dev/null || { echo "::error::$counterpart Development schedule state is not the expected empty state"; exit 1; }
+            echo "SAFE $script -> $counterpart: no domain/route/inbound service/persistent binding/cron"
+          done
+
+          for script in $CANDIDATES; do
+            curl -fsS -X DELETE "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script" -o "/tmp/delete-$script.json"
+            jq -e '.success == true' "/tmp/delete-$script.json" >/dev/null
+            echo "DELETED Production residue: $script"
+          done
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-after.json
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-after.json
+          jq -e '.success == true' /tmp/prod-after.json >/dev/null
+          jq -e '.success == true' /tmp/dev-after.json >/dev/null
+
+          for script in $CANDIDATES; do
+            ! jq -e --arg s "$script" '.result[] | select(.id == $s)' /tmp/prod-after.json >/dev/null || { echo "::error::Production residue remains: $script"; exit 1; }
+            counterpart="${mapped[$script]:-$script}"
+            jq -e --arg s "$counterpart" '.result[] | select(.id == $s)' /tmp/dev-after.json >/dev/null || { echo "::error::Development counterpart disappeared: $counterpart"; exit 1; }
+          done
+
+          remaining=$(jq '[.result[] | select((.id | endswith("-staging")) or (.id | contains("-staging-")))] | length' /tmp/prod-after.json)
+          echo "REMAINING_PRODUCTION_STAGING=$remaining"
+          {
+            echo '## Cloudflare Production staging cleanup batch 3'
+            echo
+            echo '- Deleted: 8 verified legacy staging Workers from Production'
+            echo '- Development counterparts: **present**'
+            echo '- Production domains/routes/service bindings/persistent bindings/crons: **clear before deletion**'
+            echo "- Remaining staging-named Production Workers: **$remaining**"
+          } >> "$GITHUB_STEP_SUMMARY"
