@@ -160,59 +160,73 @@ html[data-ekodi-user-ui] {
   scroll-padding-top: calc(var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) + 12px);
 }
 
-/* One compact bilingual legal/operator footer, centered in normal document flow. */
+/* Shared footer structure is fixed; visual mood is inherited from each service.
+ * Services may refine only the --ekodi-user-footer-* tokens, not duplicate the footer.
+ */
 .ekodi-user-ui-footer {
   position: relative;
   z-index: 2;
   width: 100%;
   box-sizing: border-box;
   margin-top: 28px;
-  border-top: 1px solid var(--ekodi-user-chrome-line);
-  background: rgba(250, 250, 247, .94);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  color: var(--ekodi-user-chrome-muted);
-  font: 13px/1.65 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
-  text-align: center;
+  border-top: 1px solid var(--ekodi-user-footer-border, color-mix(in srgb, currentColor 14%, transparent));
+  background: var(--ekodi-user-footer-background, transparent);
+  color: var(--ekodi-user-footer-text, inherit);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: left;
 }
 
 .ekodi-user-ui-footer__inner {
-  width: min(980px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 18px 0 20px;
+  padding: 24px 0;
   display: grid;
-  justify-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 20px 28px;
+}
+
+.ekodi-user-ui-footer__copy {
+  min-width: 0;
+  display: grid;
   gap: 6px;
 }
 
-.ekodi-user-ui-footer__top {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 14px;
-  flex-wrap: wrap;
-}
-
 .ekodi-user-ui-footer__brand {
-  color: var(--ekodi-user-chrome-text);
+  color: inherit;
   font-weight: 800;
   letter-spacing: .12em;
 }
 
-.ekodi-user-ui-footer__links,
-.ekodi-user-ui-footer__business {
+.ekodi-user-ui-footer__business,
+.ekodi-user-ui-footer__address {
   display: flex;
-  justify-content: center;
-  gap: 4px 12px;
+  align-items: baseline;
+  gap: 4px 14px;
   flex-wrap: wrap;
 }
 
+.ekodi-user-ui-footer__address {
+  word-break: keep-all;
+}
+
+.ekodi-user-ui-footer__separator {
+  opacity: .5;
+}
+
 .ekodi-user-ui-footer__links {
-  gap: 6px 14px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 6px 16px;
+  flex-wrap: wrap;
+  white-space: nowrap;
 }
 
 .ekodi-user-ui-footer a {
-  color: var(--ekodi-user-chrome-link);
+  color: var(--ekodi-user-footer-link, currentColor);
   text-decoration: none;
   text-underline-offset: 3px;
 }
@@ -227,17 +241,13 @@ html[data-ekodi-user-ui] {
   outline-offset: 3px;
 }
 
-.ekodi-user-ui-footer__address {
-  word-break: keep-all;
-}
-
-.ekodi-user-ui-footer__copyright {
-  margin-top: 1px;
-  color: #738077;
+.ekodi-user-ui-footer__copyright,
+.ekodi-user-ui-footer__scope {
+  opacity: .72;
 }
 
 .ekodi-user-ui-footer__scope {
-  display: none;
+  font-size: .92em;
 }
 
 [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer) {
@@ -247,6 +257,25 @@ html[data-ekodi-user-ui] {
 @media (max-width: 768px) {
   .ekodi-user-ui-header .ekodi-user-ui-header-center {
     max-width: 54vw !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .ekodi-user-ui-footer__inner {
+    width: min(100% - 24px, 1180px);
+    padding: 20px 0;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .ekodi-user-ui-footer__links {
+    justify-content: flex-start;
+    white-space: normal;
+  }
+
+  .ekodi-user-ui-footer__business,
+  .ekodi-user-ui-footer__address {
+    gap: 3px 10px;
   }
 }
 
@@ -270,24 +299,6 @@ html[data-ekodi-user-ui] {
   .ekodi-user-ui-header-fallback__my {
     font-size: 12px;
   }
-
-  .ekodi-user-ui-footer__inner {
-    width: min(100% - 24px, 980px);
-    padding: 16px 0 18px;
-    gap: 5px;
-  }
-
-  .ekodi-user-ui-footer__top,
-  .ekodi-user-ui-footer__links,
-  .ekodi-user-ui-footer__business {
-    justify-content: center;
-    text-align: center;
-  }
-
-  .ekodi-user-ui-footer__links,
-  .ekodi-user-ui-footer__business {
-    gap: 4px 10px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -303,13 +314,5 @@ html[data-ekodi-user-ui] {
     --ekodi-user-chrome-muted: #adb9b1;
     --ekodi-user-chrome-link: #9ed0b4;
     --ekodi-user-chrome-line: rgba(255, 255, 255, .12);
-  }
-
-  .ekodi-user-ui-footer {
-    background: rgba(16, 21, 18, .94);
-  }
-
-  .ekodi-user-ui-footer__copyright {
-    color: #87958c;
   }
 }
