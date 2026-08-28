@@ -214,9 +214,6 @@ jobs:
           compatibility_date = "2026-08-12"
           workers_dev = true
           preview_urls = false
-          [[routes]]
-          pattern = "api-staging.ekodi.kr"
-          custom_domain = true
           [vars]
           ENVIRONMENT = "staging"
           ADMIN_EMAIL = "topmaster.joseph@gmail.com"
@@ -250,20 +247,30 @@ jobs:
       - name: Apply all migrations to isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify security, AI auth boundary and universal membership
+        id: staging_worker
         shell: bash
         run: |
           set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml 2>&1 | tee /tmp/control-stage-deploy.log
+          STAGING_BASE_URL=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/control-stage-deploy.log | tail -1)
+          test -n "$STAGING_BASE_URL"
+          echo "base_url=$STAGING_BASE_URL" >> "$GITHUB_OUTPUT"
+      - name: Verify security, AI auth boundary and universal membership
+        shell: bash
+        env:
+          STAGING_BASE_URL: ${{ steps.staging_worker.outputs.base_url }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_BASE_URL"
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
-            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
-            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/provider-status' || true)
-            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/user-ai/status' || true)
-            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/portfolio' || true)
-            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/catalog?site=invest' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/health" || true)
+            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/health" || true)
+            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/control/devices" || true)
+            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/control/ai/governance" || true)
+            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/control/ai/provider-status" || true)
+            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/user-ai/status" || true)
+            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/membership/portfolio" || true)
+            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/membership/catalog?site=invest" || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
               && [ "$devices" = '401' ] \
@@ -283,8 +290,9 @@ jobs:
         run: rm -f wrangler.api.staging.runtime.toml
 
   production:
+    environment: production
     needs: [validate, staging]
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 24
     env:
