@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-space",
+    "config": "wrangler.space.toml",
+    "requests": [
+      {
+        "url": "https://space.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["OPERATING SPACE", "로그인하고 내 공간 보기", "workspace ID"],
+        "headerExpect": ["x-ekodi-service: space", "cache-control: no-store", "x-robots-tag: noindex, nofollow, noarchive"]
+      },
+      {
+        "url": "https://space.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["ekodi-space", "operating-space", "workspace-id", "personal", "org", "group", "project"],
+        "headerExpect": ["x-ekodi-service: space", "cache-control: no-store"]
+      },
+      {
+        "url": "https://space.ekodi.kr/org/deployment-probe",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["OPERATING SPACE", "실제 데이터·권한 연결"],
+        "headerExpect": ["x-ekodi-service: space", "x-ekodi-route: space-workspace", "cache-control: no-store"]
+      }
+    ]
+  }
+}
