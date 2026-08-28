@@ -19,8 +19,8 @@ test('Conversation release is one ordered orchestrator from staging through prod
   const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
   assert.match(workflow,/name: Release EKODI Conversation Foundation/);
   assert.match(workflow,/group: ekodi-conversation-release/);
-  assert.match(workflow,/workspace-staging:/);
-  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
+  assert.match(workflow,/workspace-staging:\n\s+environment: development\n\s+needs: validate/);
+  assert.match(workflow,/control-staging:\n\s+environment: development\n\s+needs: workspace-staging/);
   assert.match(workflow,/production-workspace:/);
   assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
   assert.match(workflow,/production-ui:\n\s+needs: production-control/);
