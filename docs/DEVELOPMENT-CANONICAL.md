@@ -1,1 +1,0 @@
-Canonical development documentation: `DEVELOPMENT-README.md`, `DEVELOPMENT-PROMOTION.md`, and `DEVELOPMENT-OPERATIONS-CHECKLIST.md`.
