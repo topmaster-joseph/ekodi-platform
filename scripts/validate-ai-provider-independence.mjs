@@ -1,6 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const guardedProductionInvocation =
+  process.env.GITHUB_ACTIONS === 'true' &&
+  process.env.AI_PROVIDER === 'NONE' &&
+  Boolean(process.env.CLOUDFLARE_API_TOKEN) &&
+  Boolean(process.env.CLOUDFLARE_ACCOUNT_ID);
+
+if (guardedProductionInvocation) {
+  const ref = String(process.env.GITHUB_REF || '');
+  const event = String(process.env.GITHUB_EVENT_NAME || '');
+  const pullRequestEvent = event === 'pull_request' || event === 'pull_request_target';
+  if (ref !== 'refs/heads/main' || pullRequestEvent) {
+    console.error(`❌ Production release context blocked: guarded Cloudflare promotion may run only from refs/heads/main and never from pull requests (event=${event || 'unknown'}, ref=${ref || 'unknown'}).`);
+    process.exit(3);
+  }
+}
+
 const root = process.cwd();
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 let failed = false;
