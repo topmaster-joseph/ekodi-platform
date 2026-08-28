@@ -1,0 +1,194 @@
+name: Cloudflare Production Staging Safe Cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-production-staging-safe-cleanup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+    steps:
+      - name: Revalidate and delete only proven-safe Production staging residues
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROD_ACCOUNT_ID"
+          test -n "$PROD_TOKEN"
+          test -n "$DEV_TOKEN"
+          test "$PROD_ACCOUNT_ID" != "$DEV_ACCOUNT_ID"
+
+          api='https://api.cloudflare.com/client/v4'
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
+          candidates=(
+            ekodi-bible-conversation-staging
+            ekodi-business-staging
+            ekodi-education-staging
+            ekodi-money-staging
+            ekodi-publishing-staging
+            ekodi-shared-site-staging
+            ekodi-shell-staging
+            ekodi-support-opportunity-staging
+          )
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-workers.json
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers.json
+          jq -e '.success == true' /tmp/prod-workers.json >/dev/null
+          jq -e '.success == true' /tmp/dev-workers.json >/dev/null
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/domains.json
+          jq -e '.success == true' /tmp/domains.json >/dev/null
+          curl -fsS "${prod_auth[@]}" "$api/zones?account.id=$PROD_ACCOUNT_ID&per_page=50" -o /tmp/zones.json
+          jq -e '.success == true' /tmp/zones.json >/dev/null
+
+          : > /tmp/routes.ndjson
+          jq -r '.result[]? | [.id,.name] | @tsv' /tmp/zones.json > /tmp/zone-ids.txt
+          while IFS=$'\t' read -r zid zname; do
+            [[ -n "$zid" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/zones/$zid/workers/routes" -o /tmp/zone-routes.json
+            jq -e '.success == true' /tmp/zone-routes.json >/dev/null
+            jq -c --arg zone "$zname" '.result[]? | {zone:$zone, pattern:.pattern, script:.script}' /tmp/zone-routes.json >> /tmp/routes.ndjson
+          done < /tmp/zone-ids.txt
+
+          mkdir -p /tmp/prod-settings /tmp/prod-schedules /tmp/dev-schedules
+          while IFS= read -r script; do
+            [[ -n "$script" ]] || continue
+            safe_name=$(printf '%s' "$script" | tr '/:' '__')
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/settings" -o "/tmp/prod-settings/$safe_name.json"
+            jq -e '.success == true' "/tmp/prod-settings/$safe_name.json" >/dev/null
+          done < <(jq -r '.result[]?.id' /tmp/prod-workers.json)
+
+          for script in "${candidates[@]}"; do
+            if jq -e --arg s "$script" '.result[]? | select(.id == $s)' /tmp/prod-workers.json >/dev/null; then
+              curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/schedules" -o "/tmp/prod-schedules/$script.json"
+            else
+              echo '{"success":false,"result":null}' > "/tmp/prod-schedules/$script.json"
+            fi
+            if jq -e --arg s "$script" '.result[]? | select(.id == $s)' /tmp/dev-workers.json >/dev/null; then
+              curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$script/schedules" -o "/tmp/dev-schedules/$script.json"
+            else
+              echo '{"success":false,"result":null}' > "/tmp/dev-schedules/$script.json"
+            fi
+          done
+
+          python - <<'PY'
+          import glob, json, os
+
+          candidates = [
+            'ekodi-bible-conversation-staging',
+            'ekodi-business-staging',
+            'ekodi-education-staging',
+            'ekodi-money-staging',
+            'ekodi-publishing-staging',
+            'ekodi-shared-site-staging',
+            'ekodi-shell-staging',
+            'ekodi-support-opportunity-staging',
+          ]
+          prod = json.load(open('/tmp/prod-workers.json', encoding='utf-8'))
+          dev = json.load(open('/tmp/dev-workers.json', encoding='utf-8'))
+          domains = json.load(open('/tmp/domains.json', encoding='utf-8')).get('result') or []
+          prod_names = {x.get('id') for x in prod.get('result') or []}
+          dev_names = {x.get('id') for x in dev.get('result') or []}
+          routes = []
+          for line in open('/tmp/routes.ndjson', encoding='utf-8'):
+              line = line.strip()
+              if line:
+                  routes.append(json.loads(line))
+
+          all_settings = []
+          for path in glob.glob('/tmp/prod-settings/*.json'):
+              data = json.load(open(path, encoding='utf-8'))
+              all_settings.append(data.get('result') or {})
+
+          def domain_script(d):
+              return d.get('service') or d.get('script') or d.get('service_name')
+
+          safe = []
+          rows = []
+          for script in candidates:
+              exists_prod = script in prod_names
+              exists_dev = script in dev_names
+              if not exists_prod:
+                  rows.append((script, False, 'already-absent-production'))
+                  continue
+
+              settings_path = f'/tmp/prod-settings/{script}.json'
+              settings = json.load(open(settings_path, encoding='utf-8')).get('result') or {}
+              bindings = settings.get('bindings') or []
+              risky = [b for b in bindings if b.get('type') not in ('assets', 'plain_text')]
+              custom_domains = [d.get('hostname') for d in domains if domain_script(d) == script]
+              worker_routes = [r for r in routes if r.get('script') == script]
+              inbound = []
+              for owner in all_settings:
+                  for b in owner.get('bindings') or []:
+                      target = b.get('service') or b.get('service_name')
+                      if b.get('type') == 'service' and target == script:
+                          inbound.append(b)
+
+              prod_sched = json.load(open(f'/tmp/prod-schedules/{script}.json', encoding='utf-8'))
+              dev_sched = json.load(open(f'/tmp/dev-schedules/{script}.json', encoding='utf-8'))
+              schedules_match = (
+                  prod_sched.get('success') is True and
+                  dev_sched.get('success') is True and
+                  prod_sched.get('result') == dev_sched.get('result')
+              )
+
+              reasons = []
+              if not exists_dev: reasons.append('no-dev-counterpart')
+              if custom_domains: reasons.append('custom-domain')
+              if worker_routes: reasons.append('route')
+              if risky: reasons.append('binding')
+              if inbound: reasons.append('inbound-service')
+              if not schedules_match: reasons.append('cron-mismatch')
+              ok = not reasons
+              rows.append((script, ok, ','.join(reasons) if reasons else 'safe'))
+              if ok:
+                  safe.append(script)
+
+          with open('/tmp/safe.txt', 'w', encoding='utf-8') as f:
+              for script in safe:
+                  f.write(script + '\n')
+
+          print('LIVE_REVALIDATION')
+          for script, ok, reason in rows:
+              print(f'{script}: {"SAFE" if ok else "HOLD"} ({reason})')
+          print('SAFE_COUNT=' + str(len(safe)))
+          PY
+
+          deleted=0
+          while IFS= read -r script; do
+            [[ -n "$script" ]] || continue
+            echo "Deleting proven-safe Production residue: $script"
+            curl -fsS -X DELETE "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script" -o /tmp/delete.json
+            jq -e '.success == true' /tmp/delete.json >/dev/null
+            deleted=$((deleted + 1))
+          done < /tmp/safe.txt
+          echo "DELETED_COUNT=$deleted"
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-after.json
+          jq -e '.success == true' /tmp/prod-after.json >/dev/null
+          while IFS= read -r script; do
+            [[ -n "$script" ]] || continue
+            if jq -e --arg s "$script" '.result[]? | select(.id == $s)' /tmp/prod-after.json >/dev/null; then
+              echo "::error::Cleanup verification failed; $script still exists in Production."
+              exit 1
+            fi
+            jq -e --arg s "$script" '.result[]? | select(.id == $s)' /tmp/dev-workers.json >/dev/null || {
+              echo "::error::Development counterpart disappeared for $script."
+              exit 1
+            }
+            echo "VERIFIED: $script absent from Production and present in Development."
+          done < /tmp/safe.txt
