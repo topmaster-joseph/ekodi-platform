@@ -1,0 +1,97 @@
+name: Cloudflare Boundary Stabilize V2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-boundary-stabilize-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stabilize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Patch Development staging boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          skip={'cloudflare-boundary-stabilize.yml','cloudflare-boundary-stabilize-v2.yml'}
+          changed=[]
+          for path in sorted(Path('.github/workflows').glob('*.yml')):
+              if path.name in skip: continue
+              text=path.read_text(encoding='utf-8'); original=text
+              text=re.sub(r'([A-Za-z0-9_-]+-staging)\.topmaster-joseph\.workers\.dev',r'\1.ekodi-development.workers.dev',text)
+              text=re.sub(r'(?m)^\s*\[\[routes\]\]\s*\n\s*pattern\s*=\s*"[^"]*staging\.ekodi\.kr"\s*\n\s*custom_domain\s*=\s*true\s*\n','',text)
+              text=re.sub(r'(?m)^\s*routes\s*=\s*\[\{\s*pattern\s*=\s*"[^"]*staging\.ekodi\.kr"\s*,\s*custom_domain\s*=\s*true\s*\}\]\s*\n','',text)
+              if path.name=='release-messenger-investment-functional.yml':
+                  text=re.sub(r'(?m)^(  (?:workspace|control|site)-staging:\n)    environment: development\n(    needs: [^\n]+\n)',r'\1\2    environment: development\n',text)
+              if text!=original:
+                  path.write_text(text,encoding='utf-8'); changed.append(path.name); print('PATCHED',path.name)
+          print('PATCHED_FILES',len(changed))
+          if not changed: raise SystemExit('No stabilization changes found')
+          PY
+      - name: Validate boundary and release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          skip={'cloudflare-boundary-stabilize.yml','cloudflare-boundary-stabilize-v2.yml'}
+          failures=[]
+          for path in sorted(Path('.github/workflows').glob('*.yml')):
+              if path.name in skip: continue
+              text=path.read_text(encoding='utf-8')
+              for n,line in enumerate(text.splitlines(),1):
+                  if '-staging.topmaster-joseph.workers.dev' in line: failures.append(f'{path.name}:{n}: old staging namespace')
+                  if re.search(r'pattern\s*=\s*"[^"]*staging\.ekodi\.kr"',line): failures.append(f'{path.name}:{n}: staging custom-domain route')
+              lines=text.splitlines(); starts=[]
+              for i,l in enumerate(lines):
+                  m=re.match(r'^  ([A-Za-z0-9_-]*staging[A-Za-z0-9_-]*):\s*$',l)
+                  if m: starts.append((i,m.group(1)))
+              for idx,(start,name) in enumerate(starts):
+                  end=starts[idx+1][0] if idx+1<len(starts) else len(lines)
+                  block='\n'.join(lines[start:end])
+                  if re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b',block) and 'pages deploy' not in block:
+                      for marker in ('environment: development','CLOUDFLARE_DEVELOPMENT_API_TOKEN','46aad4738793fbaca88574832a2ccc0f'):
+                          if marker not in block: failures.append(f'{path.name}:{name}: missing {marker}')
+          if failures:
+              print('\n'.join(failures)); raise SystemExit(1)
+          print('STATIC_BOUNDARY=PASS')
+          PY
+          node --test test/conversation-foundation-release.test.mjs test/workspace-platform.test.mjs
+      - name: Probe current Business staging
+        shell: bash
+        run: |
+          set +e
+          base='https://ekodi-business-staging.ekodi-development.workers.dev'
+          for spec in 'root:/' 'health:/health' 'config:/config.js' 'workspaces:/api/workspaces'; do
+            key=${spec%%:*}; path=${spec#*:}; code=$(curl -L -sS -o "/tmp/$key" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base$path"); echo "BUSINESS_PROBE $key HTTP=$code"; head -c 600 "/tmp/$key"; echo
+          done
+          code=$(curl -sS -o /tmp/snapshot -w '%{http_code}' -H 'content-type: application/json' -d '{"workspace":"jadam"}' "$base/api/snapshot"); echo "BUSINESS_PROBE snapshot HTTP=$code"; head -c 600 /tmp/snapshot; echo
+          code=$(curl -sS -o /tmp/block -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"transfer_money","workspace":"jadam"}' "$base/api/action-check"); echo "BUSINESS_PROBE block HTTP=$code"; head -c 600 /tmp/block; echo
+          exit 0
+      - name: Commit validated stabilization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add .github/workflows
+          git diff --cached --check
+          git diff --cached --name-status --no-renames
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(cloudflare): stabilize Development staging boundaries'
+          git push origin HEAD:main
