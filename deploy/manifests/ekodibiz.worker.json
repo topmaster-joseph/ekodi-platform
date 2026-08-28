@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodibiz-revenue-os",
+    "config": "wrangler.ekodibiz.toml",
+    "requests": [
+      {"url":"https://biz.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디비즈","무엇을 이루고 싶으세요?","가치를 발견하고, 사업으로 만들고, 수익이 흐르게 합니다."]},
+      {"url":"https://biz.ekodi.kr/api/health","statuses":[200],"expect":["ekodibiz-revenue-os","production-safe-mvp","approval-gated","https://pay.ekodi.kr"]},
+      {"url":"https://biz.ekodi.kr/api/catalog","statuses":[200],"expect":["30일 자동홍보팩","온라인 개업팩","행사 완성팩"]},
+      {"url":"https://biz.ekodi.kr/api/runtime","statuses":[200],"expect":["discover","promote","payment","ad_spend","external_publish"]}
+    ]
+  }
+}
