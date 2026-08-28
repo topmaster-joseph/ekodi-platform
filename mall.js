@@ -3,12 +3,28 @@
 
   const API = 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100';
   const DEFAULT_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
-  const state = { products: [], category: '전체', query: '', status: 'loading' };
+  const SORT_LABELS = {
+    registered: '등록순',
+    popular: '인기순',
+    'price-asc': '가격 낮은순',
+    'price-desc': '가격 높은순',
+  };
+  const state = { products: [], category: '전체', query: '', sort: 'registered', status: 'loading', dialogProductId: '' };
   const grid = document.querySelector('#productGrid');
   const empty = document.querySelector('#emptyState');
   const categories = document.querySelector('#categoryBar');
   const search = document.querySelector('#productSearch');
+  const sort = document.querySelector('#productSort');
   const statusNode = document.querySelector('#catalogStatus');
+  const dialog = document.querySelector('#productDialog');
+  const dialogClose = document.querySelector('#productDialogClose');
+  const dialogImage = document.querySelector('#productDialogImage');
+  const dialogPlaceholder = document.querySelector('#productDialogPlaceholder');
+  const dialogCategory = document.querySelector('#productDialogCategory');
+  const dialogTitle = document.querySelector('#productDialogTitle');
+  const dialogPrice = document.querySelector('#productDialogPrice');
+  const dialogBadges = document.querySelector('#productDialogBadges');
+  const dialogBuy = document.querySelector('#productDialogBuy');
   const imageCache = new Map();
 
   function safeUrl(value) {
@@ -18,10 +34,11 @@
     } catch { return ''; }
   }
 
-  function normalize(product) {
+  function normalize(product, popularityRank = 0) {
     const clickUrl = safeUrl(product?.clickUrl);
     if (!clickUrl) return null;
     const price = Number(product?.priceKrw || 0);
+    const selectedAt = String(product?.selectedAt || '').trim();
     return {
       id: String(product?.id || ''),
       productId: String(product?.productId || ''),
@@ -32,12 +49,19 @@
       category: String(product?.category || '추천').trim().slice(0, 60) || '추천',
       isRocket: Boolean(product?.isRocket),
       isFreeShipping: Boolean(product?.isFreeShipping),
+      selectedAt,
+      popularityRank: Number.isInteger(popularityRank) ? popularityRank : 0,
     };
   }
 
   function formatPrice(value) {
     const amount = Number(value || 0);
     return amount > 0 ? `${new Intl.NumberFormat('ko-KR').format(amount)}원` : '가격 확인';
+  }
+
+  function timestamp(value) {
+    const parsed = Date.parse(String(value || ''));
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   function blobToDataUrl(blob) {
@@ -96,12 +120,48 @@
     return badge;
   }
 
+  function renderDialogBadges(product) {
+    if (!dialogBadges) return;
+    const items = [];
+    if (product.isRocket) items.push(makeBadge('로켓'));
+    if (product.isFreeShipping) items.push(makeBadge('무료배송', true));
+    dialogBadges.replaceChildren(...items);
+  }
+
+  async function openProductDialog(product) {
+    if (!dialog || !product) return;
+    state.dialogProductId = product.id;
+    if (dialogCategory) dialogCategory.textContent = product.category;
+    if (dialogTitle) dialogTitle.textContent = product.productName;
+    if (dialogPrice) dialogPrice.textContent = formatPrice(product.priceKrw);
+    if (dialogBuy) dialogBuy.href = product.clickUrl;
+    renderDialogBadges(product);
+    if (dialogImage) {
+      dialogImage.alt = product.productName;
+      dialogImage.removeAttribute('src');
+    }
+    if (dialogPlaceholder) dialogPlaceholder.hidden = false;
+    if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
+    const dataUrl = await resolveImage(product.imageUrl);
+    if (!dataUrl || state.dialogProductId !== product.id || !dialog.open || !dialogImage) return;
+    dialogImage.src = dataUrl;
+    if (dialogPlaceholder) dialogPlaceholder.hidden = true;
+  }
+
+  function closeProductDialog() {
+    state.dialogProductId = '';
+    if (dialog?.open) dialog.close();
+  }
+
   function makeCard(product) {
     const article = document.createElement('article');
     article.className = 'product-card';
 
-    const media = document.createElement('div');
-    media.className = 'product-media';
+    const media = document.createElement('button');
+    media.type = 'button';
+    media.className = 'product-media product-media-trigger';
+    media.setAttribute('aria-label', `${product.productName} 상품 정보 보기`);
+    media.addEventListener('click', () => openProductDialog(product));
     const image = document.createElement('img');
     image.alt = product.productName;
     image.loading = 'lazy';
@@ -126,25 +186,48 @@
     const price = document.createElement('p');
     price.className = 'product-price';
     price.textContent = formatPrice(product.priceKrw);
-    const link = document.createElement('a');
-    link.className = 'buy-link';
-    link.href = product.clickUrl;
-    link.target = '_blank';
-    link.rel = 'sponsored noopener noreferrer';
-    link.textContent = '상품보기';
-    body.append(category, title, price, link);
+    const detail = document.createElement('button');
+    detail.type = 'button';
+    detail.className = 'detail-button';
+    detail.textContent = '상품정보 보기';
+    detail.addEventListener('click', () => openProductDialog(product));
+    body.append(category, title, price, detail);
     article.append(media, body);
     queueMicrotask(() => queueImage(image));
     return article;
   }
 
+  function sortProducts(products) {
+    const list = [...products];
+    const fallback = (a, b) => a.popularityRank - b.popularityRank;
+    if (state.sort === 'popular') return list.sort(fallback);
+    if (state.sort === 'price-asc') {
+      return list.sort((a, b) => {
+        if (!a.priceKrw && !b.priceKrw) return fallback(a, b);
+        if (!a.priceKrw) return 1;
+        if (!b.priceKrw) return -1;
+        return a.priceKrw - b.priceKrw || fallback(a, b);
+      });
+    }
+    if (state.sort === 'price-desc') {
+      return list.sort((a, b) => {
+        if (!a.priceKrw && !b.priceKrw) return fallback(a, b);
+        if (!a.priceKrw) return 1;
+        if (!b.priceKrw) return -1;
+        return b.priceKrw - a.priceKrw || fallback(a, b);
+      });
+    }
+    return list.sort((a, b) => timestamp(b.selectedAt) - timestamp(a.selectedAt) || Number(b.id || 0) - Number(a.id || 0) || fallback(a, b));
+  }
+
   function filteredProducts() {
     const query = state.query.toLocaleLowerCase('ko-KR');
-    return state.products.filter(product => {
+    const filtered = state.products.filter(product => {
       const categoryMatch = state.category === '전체' || product.category === state.category;
       const text = `${product.productName} ${product.category}`.toLocaleLowerCase('ko-KR');
       return categoryMatch && (!query || text.includes(query));
     });
+    return sortProducts(filtered);
   }
 
   function renderProducts() {
@@ -154,7 +237,7 @@
     if (!state.products.length) {
       statusNode.textContent = state.status === 'loading' ? '상품을 불러오고 있습니다.' : '';
     } else {
-      statusNode.textContent = `${products.length}개 상품`;
+      statusNode.textContent = `${products.length}개 상품 · ${SORT_LABELS[state.sort] || '등록순'}`;
     }
   }
 
@@ -204,6 +287,22 @@
   search?.addEventListener('input', event => {
     state.query = String(event.currentTarget.value || '').trim();
     renderProducts();
+  });
+
+  sort?.addEventListener('change', event => {
+    const value = String(event.currentTarget.value || 'registered');
+    state.sort = Object.hasOwn(SORT_LABELS, value) ? value : 'registered';
+    renderProducts();
+  });
+
+  dialogClose?.addEventListener('click', closeProductDialog);
+  dialog?.addEventListener('click', event => {
+    if (event.target === dialog) closeProductDialog();
+  });
+  dialog?.addEventListener('close', () => {
+    state.dialogProductId = '';
+    if (dialogImage) dialogImage.removeAttribute('src');
+    if (dialogPlaceholder) dialogPlaceholder.hidden = false;
   });
 
   loadProducts();
