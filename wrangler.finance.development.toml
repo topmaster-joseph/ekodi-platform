@@ -1,0 +1,20 @@
+# EKODI Development account only. No production custom domain routes.
+name = "ekodi-finance-api-development"
+main = "finance-entry-worker.js"
+compatibility_date = "2026-08-12"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "development"
+ALLOWED_ORIGINS = "https://ekodi-platform-development.ekodi-development.workers.dev,https://ekodi-shared-site-staging.ekodi-development.workers.dev,https://ekodi-my-staging.ekodi-development.workers.dev"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth-development"
+database_id = "790a8551-cdb2-4dbf-bfcc-a46d61b62766"
+migrations_dir = "migrations"
