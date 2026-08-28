@@ -59,3 +59,25 @@ jobs:
           }
       - name: Deploy only to EKODI Development
         run: npx --yes wrangler@4.127.0 deploy --config wrangler.development.jsonc --experimental-provision=false
+
+  verify-development:
+    needs: validate-and-deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEV_URL: https://ekodi-platform-development.ekodi-development.workers.dev
+    steps:
+      - name: Verify isolated development endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$DEV_URL" in
+            *ekodi-development.workers.dev*) ;;
+            *) echo '::error::Verification endpoint escaped the development account boundary.'; exit 1 ;;
+          esac
+          body="$(curl --fail --silent --show-error --location --max-time 20 "$DEV_URL/")"
+          test -n "$body"
+          printf '%s' "$body" | grep -qi '<html'
+          headers="$(curl --fail --silent --show-error --head --max-time 20 "$DEV_URL/")"
+          printf '%s' "$headers" | grep -qi '^HTTP/.* 200'
+          echo "Development endpoint verification passed."
