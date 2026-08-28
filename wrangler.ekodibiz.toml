@@ -1,0 +1,36 @@
+name = "ekodibiz-revenue-os"
+main = "ekodibiz-worker.js"
+compatibility_date = "2026-08-28"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "biz.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+EKODIBIZ_MODE = "operational-mvp"
+PAYMENT_SERVICE_URL = "https://pay.ekodi.kr"
+HIGH_IMPACT_APPROVAL = "required"
+AI_OPERATIONS_MODE = "rules-first"
+
+[assets]
+directory = "./ekodibiz"
+binding = "ASSETS"
+run_worker_first = true
+
+[[durable_objects.bindings]]
+name = "REVENUE_STORE"
+class_name = "RevenueStore"
+
+[exports.RevenueStore]
+type = "durable-object"
+storage = "sqlite"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[observability.logs]
+enabled = true
+invocation_logs = true
