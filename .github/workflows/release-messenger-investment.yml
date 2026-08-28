@@ -16,8 +16,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
-  SHELL_STAGING_URL: https://ekodi-shell-staging.topmaster-joseph.workers.dev
+  STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
+  SHELL_STAGING_URL: https://ekodi-shell-staging.ekodi-development.workers.dev
 
 jobs:
   validate:

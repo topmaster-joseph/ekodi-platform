@@ -22,7 +22,7 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  STAGING_URL: https://ekodi-work-staging.topmaster-joseph.workers.dev
+  STAGING_URL: https://ekodi-work-staging.ekodi-development.workers.dev
 
 jobs:
   validate:

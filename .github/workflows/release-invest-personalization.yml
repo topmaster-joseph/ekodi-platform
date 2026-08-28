@@ -38,8 +38,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.topmaster-joseph.workers.dev
-  SITE_STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.ekodi-development.workers.dev
+  SITE_STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
 
 jobs:
   validate:

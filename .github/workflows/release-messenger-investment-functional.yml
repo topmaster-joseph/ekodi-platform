@@ -67,9 +67,9 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.topmaster-joseph.workers.dev
-  SITE_STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
-  CONTROL_STAGING_URL: https://ekodi-conversation-control-staging.topmaster-joseph.workers.dev
+  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.ekodi-development.workers.dev
+  SITE_STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
+  CONTROL_STAGING_URL: https://ekodi-conversation-control-staging.ekodi-development.workers.dev
 
 jobs:
   validate:
@@ -100,8 +100,8 @@ jobs:
           ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
 
   workspace-staging:
-    environment: development
     needs: validate
+    environment: development
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
@@ -182,8 +182,8 @@ jobs:
         run: rm -f wrangler.workspace.runtime.toml
 
   control-staging:
-    environment: development
     needs: workspace-staging
+    environment: development
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

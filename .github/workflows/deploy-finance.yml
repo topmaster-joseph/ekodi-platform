@@ -109,11 +109,6 @@ jobs:
           compatibility_date = "2026-08-12"
           workers_dev = true
           preview_urls = false
-
-          [[routes]]
-          pattern = "finance-api-staging.ekodi.kr"
-          custom_domain = true
-
           [vars]
           ENVIRONMENT = "staging"
           ALLOWED_ORIGINS = "https://admin.ekodi.kr"
