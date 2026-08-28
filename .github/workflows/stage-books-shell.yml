@@ -18,15 +18,16 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  STAGING_URL: https://ekodi-books-staging.topmaster-joseph.workers.dev
+  STAGING_URL: https://ekodi-books-staging.ekodi-development.workers.dev
 
 jobs:
   staging:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    environment: development
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -39,16 +40,23 @@ jobs:
           node --check ekodi-shell-injector.js
           npm run validate:books
           grep -Fq "injectEkodiShell(await env.ASSETS.fetch(request), 'books')" books-worker.js
-      - name: Verify Cloudflare credentials
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Deploy isolated Books staging
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.books.staging.toml
-      - name: Verify Books staging and Shell
+      - name: Enforce Development account boundary
         shell: bash
         run: |
           set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Deploy isolated Books staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.books.staging.toml
+      - name: Verify Books staging boundary and Shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_code=$(curl -sS -D /tmp/books-access.headers -o /tmp/books-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/books-access.headers; then
+            echo "Books staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -L -D /tmp/books-stage.headers -o /tmp/books-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             publishing_code=$(curl -sS -L -D /tmp/books-publishing-stage.headers -o /tmp/books-publishing-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/publishing/" || true)
