@@ -1,6 +1,5 @@
 (async () => {
 'use strict';
-// Canonical platform and specialist-AI display names are normalized before the admin release.
 const [{ adminMenuOrder }, { mountAdminSidebar }] = await Promise.all([
   import('./admin-menu-registry.js'),
   import('./admin-sidebar.js'),
