@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "EKODI User UI Shell",
+  "parentPolicy": "config/user-ui-dna.json",
+  "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
+  "scope": ["public", "workspace"],
+  "adminExcluded": true,
+  "principles": {
+    "singleSource": true,
+    "progressiveAdoption": true,
+    "serviceVisualIdentityPreserved": true,
+    "mobileAndDesktopSemanticsMatch": true,
+    "noDuplicatedHeaderOrFooter": true
+  },
+  "header": {
+    "owner": "shared-shell",
+    "strategy": "adopt-existing-first",
+    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path"],
+    "localNavigation": "service-owned",
+    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed"],
+    "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"]
+  },
+  "footer": {
+    "owner": "shared-shell",
+    "strategy": "shell-supplied",
+    "legalLinks": {
+      "privacy": "https://ekodi.kr/privacy",
+      "terms": "https://ekodi.kr/terms",
+      "contact": "mailto:ekodibiz@gmail.com"
+    },
+    "operator": {
+      "name": "에코디비즈",
+      "representative": "정찬균",
+      "businessRegistrationNumber": "213-13-01959",
+      "address": "전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층",
+      "email": "ekodibiz@gmail.com"
+    },
+    "copyright": "© 2026 EKODI · EKODIBIZ. All rights reserved.",
+    "serviceExtension": "append-only",
+    "separatePolicyPrecedence": true
+  }
+}
