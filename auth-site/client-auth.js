@@ -1,6 +1,7 @@
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
+const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const timeout=(promise,ms,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'timeout')),ms))]);
 function fetchTimed(url,options={},ms=10000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),ms);return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
 
@@ -37,6 +38,8 @@ const realms={
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
+const requestedWorkspaceRaw=String(params.get('workspace')||'').trim();
+const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspaceRaw)?requestedWorkspaceRaw:'';
 async function manifestRealm(id){
   if(!id)return null;
   try{
@@ -141,6 +144,8 @@ function loadGoogleLibrary(){
 function myEntryTarget(){
   const target=new URL('https://my.ekodi.kr/');
   if(site&&site!=='portal'&&site!=='my')target.searchParams.set('from',site);
+  if(site&&site!=='portal'&&site!=='my')target.searchParams.set('return_to',RETURN_TO);
+  if(REQUESTED_WORKSPACE)target.searchParams.set('workspace',REQUESTED_WORKSPACE);
   return target;
 }
 function routeTarget(proof){

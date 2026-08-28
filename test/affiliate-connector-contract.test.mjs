@@ -2,48 +2,80 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { handleAffiliateRequest } from '../affiliate-control.js';
+import { getAffiliateAutomationStatus, runAffiliateAutomation } from '../coupang-partners-automation.js';
 
-const apiSource = await readFile(new URL('../affiliate-control.js', import.meta.url), 'utf8');
-const entrySource = await readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8');
-const adminSource = await readFile(new URL('../marketing-funnel-admin.js', import.meta.url), 'utf8');
-const migrationSource = await readFile(new URL('../migrations/0011_affiliate_connector.sql', import.meta.url), 'utf8');
+const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
+const [apiSource, automationSource, entrySource, adminSource, baseMigration, autoMigration] = await Promise.all([
+  read('affiliate-control.js'),
+  read('coupang-partners-automation.js'),
+  read('customer-entry-worker.js'),
+  read('marketing-funnel-admin.js'),
+  read('migrations/0011_affiliate_connector.sql'),
+  read('migrations/0047_ekodi_mall_auto_products.sql'),
+]);
 
-test('affiliate modules compile', () => {
+test('affiliate automation modules compile and connect', () => {
   assert.equal(typeof handleAffiliateRequest, 'function');
+  assert.equal(typeof getAffiliateAutomationStatus, 'function');
+  assert.equal(typeof runAffiliateAutomation, 'function');
   assert.doesNotThrow(() => new Function(adminSource));
-});
-
-test('affiliate schema and account are present', () => {
-  for (const name of ['affiliate_providers', 'affiliate_accounts', 'affiliate_links', 'affiliate_daily_metrics']) assert.match(migrationSource, new RegExp(name));
-  assert.match(migrationSource, /coupang_partners/);
-  assert.match(migrationSource, /coupang-ekodibiz/);
-});
-
-test('affiliate routes are connected', () => {
   assert.match(entrySource, /handleAffiliateRequest/);
-  assert.match(entrySource, /\/api\/affiliate/);
-  assert.match(apiSource, /sessionCheck/);
-  assert.match(adminSource, /\/api\/affiliate\/overview/);
-  assert.match(adminSource, /\/api\/affiliate\/accounts\/\$\{ACCOUNT\}/);
-  assert.match(adminSource, /\/api\/affiliate\/links/);
-  assert.match(adminSource, /\/api\/affiliate\/metrics/);
+  assert.match(apiSource, /path === `\$\{PREFIX\}\/automation\/run`/);
 });
 
-test('Integrations UI exposes Coupang account connection settings', () => {
-  assert.match(adminSource, /Integrations/);
-  assert.match(adminSource, /Coupang Partners/);
-  assert.match(adminSource, /affiliateAccountForm/);
-  assert.match(adminSource, /displayName/);
-  assert.match(adminSource, /defaultChannel/);
-  assert.match(adminSource, /disclosureText/);
-  assert.match(adminSource, /계정 연결 설정 저장/);
-  assert.match(adminSource, /Access Key, Secret Key/);
+test('base and automatic storefront schemas are additive', () => {
+  for (const name of ['affiliate_providers', 'affiliate_accounts', 'affiliate_links', 'affiliate_daily_metrics']) assert.match(baseMigration, new RegExp(name));
+  for (const name of ['affiliate_storefront_products', 'affiliate_storefront_clicks', 'affiliate_recommendation_runs', 'affiliate_automation_locks']) assert.match(autoMigration, new RegExp(name));
+  assert.match(baseMigration, /coupang_partners/);
+  assert.match(baseMigration, /coupang-ekodibiz/);
 });
 
-test('V1 reports manual and automatic capability states', () => {
-  assert.match(apiSource, /manualLinkRegistry: true/);
-  assert.match(apiSource, /manualPerformanceLedger: true/);
-  assert.match(apiSource, /automaticProductSearch: false/);
-  assert.match(apiSource, /automaticDeepLink: false/);
-  assert.match(apiSource, /automaticPerformanceSync: false/);
+test('Coupang credentials stay server-side and HMAC signed API paths are present', () => {
+  assert.match(automationSource, /COUPANG_PARTNERS_ACCESS_KEY/);
+  assert.match(automationSource, /COUPANG_PARTNERS_SECRET_KEY/);
+  assert.match(automationSource, /HmacSHA256/);
+  assert.match(automationSource, /HMAC/);
+  assert.match(automationSource, /\/products\/search/);
+  assert.match(automationSource, /\/deeplink/);
+  assert.doesNotMatch(apiSource, /COUPANG_PARTNERS_SECRET_KEY\s*[:=]\s*['"][^'"]+['"]/);
+});
+
+test('automatic selection works without a required AI provider', () => {
+  assert.match(automationSource, /if \(!provider\.available\) return \{ mode: 'rules'/);
+  assert.match(automationSource, /const mode = ai\?\.mode \|\| 'rules'/);
+  assert.match(automationSource, /balancedRules/);
+  assert.match(automationSource, /selectionSource/);
+});
+
+test('normal Coupang product URLs require partner-link issuance', () => {
+  assert.match(automationSource, /host === 'link\.coupang\.com' \|\| host === 'coupa\.ng'/);
+  assert.doesNotMatch(automationSource, /host\.endsWith\('\.coupang\.com'\).*return true/);
+  assert.match(automationSource, /pending = ready\.filter\(item => !item\.affiliateUrl\)/);
+  assert.match(automationSource, /issuePartnerLinks/);
+});
+
+test('automatic capabilities are exposed while manual operations remain compatibility-only', () => {
+  assert.match(apiSource, /manualLinkRegistry\s*:\s*true/);
+  assert.match(apiSource, /manualPerformanceLedger\s*:\s*true/);
+  assert.match(apiSource, /automaticProductSearch\s*:\s*true/);
+  assert.match(apiSource, /automaticDeepLink\s*:\s*true/);
+  assert.match(apiSource, /automaticClickTracking\s*:\s*true/);
+  assert.match(apiSource, /automaticPerformanceSync\s*:\s*false/);
+});
+
+test('public catalog has no generic affiliate fallback', () => {
+  assert.doesNotMatch(apiSource, /cwWXWm/);
+  assert.doesNotMatch(apiSource, /DEFAULT_AFFILIATE_URL/);
+  assert.doesNotMatch(apiSource, /추천링크 클릭 후 검색하세요/);
+  assert.match(apiSource, /automationStatus/);
+  assert.match(apiSource, /products \}/);
+});
+
+test('public product click and image routes run before administrator authentication', () => {
+  const authIndex = apiSource.indexOf('const auth = await sessionCheck');
+  assert.ok(authIndex > 0);
+  assert.ok(apiSource.indexOf('publicImage(request, env, url)') < authIndex);
+  assert.ok(apiSource.indexOf('publicClick(request, env, url)') < authIndex);
+  assert.match(apiSource, /상품을 찾을 수 없습니다/);
+  assert.match(apiSource, /affiliate_storefront_clicks/);
 });

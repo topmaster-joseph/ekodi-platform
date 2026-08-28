@@ -1,0 +1,141 @@
+name: Deploy EKODI Operating Space
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'space/**'
+      - 'space-worker.js'
+      - 'wrangler.space*.toml'
+      - 'deploy/manifests/space.worker.json'
+      - 'supabase/functions/workspace-api/**'
+      - '.github/workflows/deploy-space.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'space/**'
+      - 'space-worker.js'
+      - 'wrangler.space*.toml'
+      - 'deploy/manifests/space.worker.json'
+      - 'supabase/functions/workspace-api/**'
+      - '.github/workflows/deploy-space.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-space-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate operating-space contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check space-worker.js
+          node --check space/app.js
+          grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
+          grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
+          grep -Fq 'ekodi_id -> workspace_id -> role -> capability' space-worker.js
+          grep -Fq 'workspace_not_found_or_forbidden' supabase/functions/workspace-api/index.ts
+          grep -Fq 'tenant_members+RLS' supabase/functions/workspace-api/index.ts
+          grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
+          grep -Fq '/spaces/resolve' space/app.js
+          grep -Fq '/personal/{slug} | /org/{slug} | /group/{slug} | /project/{slug}' space-worker.js
+          test -f deploy/manifests/space.worker.json
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-space-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Development boundary
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
+      - name: Deploy isolated operating-space staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.space.staging.toml
+      - name: Verify staging or Cloudflare Access boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler@${WRANGLER_VERSION} deployments status --config wrangler.space.staging.toml --json > /tmp/space-stage-deployments.json
+          test -s /tmp/space-stage-deployments.json
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -D /tmp/space-stage.headers -o /tmp/space-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health=$(curl -sS -o /tmp/space-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$code" == '200' && "$health" == '200' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-stage.html && grep -Fq '"dataEnabled":false' /tmp/space-stage-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/space-stage-health.json; then
+              echo 'Operating Space staging verified with production data disabled.'
+              exit 0
+            fi
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' /tmp/space-stage.headers | tail -1)
+            if [[ "$code" == '302' && "$location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]]; then
+              echo 'Operating Space staging is deployed behind Cloudflare Access; source contracts and isolated-data configuration are verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Bootstrap or guarded release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx wrangler@${WRANGLER_VERSION} deployments status --config wrangler.space.toml --json > /tmp/space-prod-deployments.json 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/space.worker.json
+          else
+            if ! grep -Eq 'has no deployments|does not exist|code: 10007' /tmp/space-prod-deployments.json; then cat /tmp/space-prod-deployments.json; exit 1; fi
+            npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.space.toml
+            for attempt in $(seq 1 18); do
+              root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
+              health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
+              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/org/deployment-probe' || true)
+              if [[ "$root" == '200' && "$health" == '200' && "$route" == '200' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-live.html && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
+                echo 'Operating Space production bootstrap verified.'
+                exit 0
+              fi
+              sleep 5
+            done
+            exit 1
+          fi
