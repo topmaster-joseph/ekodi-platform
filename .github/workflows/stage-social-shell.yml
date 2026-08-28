@@ -53,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           access_code=$(curl -sS -D /tmp/social-access.headers -o /tmp/social-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-          if [[ "$access_code" == '302' ]] && grep -Fiq '^www-authenticate: Cloudflare-Access' /tmp/social-access.headers; then
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/social-access.headers; then
             echo "Social staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
             exit 0
           fi
