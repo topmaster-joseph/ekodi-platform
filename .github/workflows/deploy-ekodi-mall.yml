@@ -27,7 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
-      cloudflare: ${{ steps.cloudflare_credentials.outputs.available }}
+      development_cloudflare: ${{ steps.development_cloudflare_credentials.outputs.available }}
+      production_cloudflare: ${{ steps.production_cloudflare_credentials.outputs.available }}
       project: ${{ steps.manifest.outputs.project }}
       public_url: ${{ steps.manifest.outputs.url }}
     defaults:
@@ -91,8 +92,20 @@ jobs:
           print('Mall migrations verified:', ', '.join(sorted(required)))
           PY
 
-      - name: Check Cloudflare credentials
-        id: cloudflare_credentials
+      - name: Check Development Cloudflare credentials
+        id: development_cloudflare_credentials
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+        run: |
+          if [ -n "$CF_API_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Development Cloudflare credential is not configured; staging deployment is skipped."
+          fi
+
+      - name: Check Production Cloudflare credentials
+        id: production_cloudflare_credentials
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -101,20 +114,22 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare credentials are not configured; code validation remains green but staging and production deployment are skipped."
+            echo "Production Cloudflare credentials are not configured; production deployment is skipped."
           fi
 
   staging:
     needs: validate
-    if: needs.validate.outputs.cloudflare == 'true'
+    if: needs.validate.outputs.development_cloudflare == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    environment: development
     defaults:
       run:
         working-directory: sites/ekodi-mall
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: "46aad4738793fbaca88574832a2ccc0f"
+      STAGING_URL: "https://ekodi-mall-api-staging.ekodi-development.workers.dev"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -123,6 +138,17 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24"
+
+      - name: Verify Development boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = "46aad4738793fbaca88574832a2ccc0f"
+          case "$STAGING_URL" in
+            https://*.ekodi-development.workers.dev) ;;
+            *) echo "Invalid Development staging URL" >&2; exit 1 ;;
+          esac
 
       - name: Resolve or create isolated staging D1
         id: staging_d1
@@ -134,7 +160,7 @@ jobs:
           }
           DB_ID=$(list_db)
           if [ -z "$DB_ID" ]; then
-            echo "Creating isolated ekodi-mall-staging D1 database in APAC"
+            echo "Creating isolated ekodi-mall-staging D1 database in Development APAC"
             npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-mall-staging --location apac
             DB_ID=$(list_db)
           fi
@@ -153,10 +179,6 @@ jobs:
           workers_dev = true
           preview_urls = false
 
-          [[routes]]
-          pattern = "mall-api-staging.ekodi.kr"
-          custom_domain = true
-
           [vars]
           ENVIRONMENT = "staging"
           MALL_BASE_URL = "https://mall.ekodi.kr"
@@ -164,6 +186,10 @@ jobs:
           SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
           PAYMENTS_ENABLED = "false"
+          SOURCING_AUTO_ORDER_ENABLED = "false"
+          BUYER_PII_RELEASE_ENABLED = "false"
+          SUPPLIER_FORWARD_ENABLED = "false"
+          DOMEMAE_LOOKUP_ENABLED = "false"
 
           [observability.logs]
           enabled = true
@@ -182,14 +208,18 @@ jobs:
       - name: Deploy staging Mall API
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 
+      - name: Ensure narrow staging Access bypasses
+        shell: bash
+        run: node scripts/ensure-staging-access.mjs
+
       - name: Verify staging API, schemas and safety gates
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            health_code=$(curl -sS -o /tmp/mall-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api-staging.ekodi.kr/health || true)
-            fees_code=$(curl -sS -o /tmp/mall-stage-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api-staging.ekodi.kr/api/public/fees || true)
-            feed_code=$(curl -sS -o /tmp/mall-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api-staging.ekodi.kr/api/public/products?limit=1' || true)
+            health_code=$(curl -sS -o /tmp/mall-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/health" || true)
+            fees_code=$(curl -sS -o /tmp/mall-stage-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/api/public/fees" || true)
+            feed_code=$(curl -sS -o /tmp/mall-stage-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/api/public/products?limit=1" || true)
             if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-stage-health.json \
@@ -203,14 +233,36 @@ jobs:
               && grep -Fq '"ai":9' /tmp/mall-stage-fees.json \
               && grep -Fq '"attributionWindowDays":7' /tmp/mall-stage-fees.json \
               && grep -Fq '"products":[' /tmp/mall-stage-feed.json; then
-              echo "Mall staging passed D1, order, first-touch, 7/8/9, feed and disabled-payment/payout checks."
+              echo "Mall Development staging passed D1, order, first-touch, 7/8/9, feed and disabled-payment/payout checks."
+              break
+            fi
+            if [ "$attempt" = "18" ]; then
+              cat /tmp/mall-stage-health.json || true
+              cat /tmp/mall-stage-fees.json || true
+              cat /tmp/mall-stage-feed.json || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Verify staging private paths remain Access-protected
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            headers=$(mktemp)
+            code=$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "${STAGING_URL}/api/operations/__access_probe__" || true)
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); sub(/\r$/,""); print; exit}' "$headers")
+            rm -f "$headers"
+            safe_location=${location%%\?*}
+            echo "Mall staging protected-path probe attempt=$attempt status=$code redirect=${safe_location:-none}"
+            if [ "$code" = "302" ] && [[ "$safe_location" == *"cloudflareaccess.com"* ]]; then
+              echo "Mall staging non-public paths remain Cloudflare Access-protected."
               exit 0
             fi
             sleep 5
           done
-          cat /tmp/mall-stage-health.json || true
-          cat /tmp/mall-stage-fees.json || true
-          cat /tmp/mall-stage-feed.json || true
+          echo "Non-public Mall staging paths are not protected by Cloudflare Access; refusing promotion." >&2
           exit 1
 
       - name: Cleanup staging config
@@ -219,7 +271,7 @@ jobs:
 
   production:
     needs: [validate, staging]
-    if: github.event_name != 'pull_request' && needs.validate.outputs.cloudflare == 'true'
+    if: github.event_name != 'pull_request' && needs.validate.outputs.production_cloudflare == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 22
     defaults:
