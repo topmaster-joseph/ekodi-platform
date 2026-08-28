@@ -110,11 +110,11 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(siteToml,/main = "platform-router-entry-worker\.js"/);
 });
 
-test('Shell-enabled asset Workers cannot bypass their wrapper with direct static delivery',async()=>{
+test('Shell-enabled asset Workers keep dynamic roots and APIs behind their wrapper',async()=>{
   const configs=await Promise.all([
     'wrangler.business.toml','wrangler.business-staging.toml','wrangler.work.toml','wrangler.work-staging.toml','wrangler.author.toml','wrangler.books.toml','wrangler.books.staging.toml','wrangler.social.toml','wrangler.social-staging.toml','wrangler.energy.toml','wrangler.energy-staging.toml','wrangler.site.toml','wrangler.site-staging.toml'
   ].map(read));
-  for(const config of configs)assert.match(config,/run_worker_first\s*=\s*true/);
+  for(const config of configs)assert.match(config,/run_worker_first\s*=\s*(?:true|\["\/",\s*"\/api\/\*"\])/);
 });
 
 test('guarded production release contracts require Shell v2 on migrated service roots',async()=>{
@@ -144,7 +144,7 @@ test('production audit inventory is generated from the manifest rather than a ha
   assert.match(generator,/EKODI_SERVICE_MANIFEST\.services/);
   assert.match(generator,/state!==['"]planned['"]/);
   assert.match(workflow,/build-shell-audit-matrix\.mjs/);
-  assert.match(workflow,/fromJSON\(needs\.inventory\.outputs\.matrix\)/);
+  assert.match(workflow,/fromJSON\(needs\.source-contract\.outputs\.matrix\)/);
   assert.match(workflow,/shell\/\*\*/);
   assert.match(workflow,/weekly-deterministic/);
 });
