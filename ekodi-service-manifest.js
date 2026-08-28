@@ -15,6 +15,7 @@ const COMMON_PUBLIC_ACCESS_POLICY = Object.freeze({
 
 const SERVICES = [
   {id:'my',name:'My EKODI',shortName:'My',url:'https://my.ekodi.kr/',group:'personal',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['identity','spaces','activity','account'],sso:true,targetable:false,order:10,shellIntegration:'worker-injected'},
+  {id:'space',name:'운영공간',shortName:'Space',url:'https://space.ekodi.kr/',group:'work',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['operating-space','workspace-identity','roles','capabilities','membership'],sso:true,targetable:true,openSso:true,order:12,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'management',name:'경영플랫폼',shortName:'경영AI',url:'https://management.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','community','project'],capabilities:['management','orchestration','module-selection','menu','orders','reviews'],sso:true,targetable:true,openSso:true,order:15,state:'preparing',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'marketing',name:'Marketing AI',shortName:'Marketing',url:'https://marketing.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['marketing','content','publishing','analytics'],sso:true,targetable:true,order:20,shellIntegration:'static-script'},
   {id:'community',name:'커뮤니티',shortName:'Community',url:'https://community.ekodi.kr/',group:'community',defaultSurface:'public',workspaceKinds:['person','community','church','organization','project'],capabilities:['community','groups','messages','events','prayer'],sso:true,targetable:true,order:30,shellIntegration:'worker-injected'},
@@ -63,8 +64,8 @@ const canonicalKey=value=>{
 };
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 15,
-  updatedAt: '2026-08-28',
+  version: 16,
+  updatedAt: '2026-08-29',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 2,
