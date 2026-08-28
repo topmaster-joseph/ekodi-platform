@@ -82,6 +82,10 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
   assert.match(perf, /control-center\\\.js/);
   assert.match(perf, /createHash\('sha256'\)/);
   assert.match(perf, /assetVersion/);
+  assert.match(perf, /moduleImportVersions/);
+  assert.match(perf, /admin-menu-registry\.js/);
+  assert.match(perf, /admin-sidebar\.js/);
+  assert.match(perf, /admin-menu-runtime\.js/);
   assert.match(perf, /first-path JavaScript budget exceeded/);
   assert.match(perf, /first-path CSS budget exceeded/);
   assert.match(perf, /AI command CSS leaked into startup compact CSS/);
@@ -112,6 +116,14 @@ test('versioned admin assets receive immutable cache headers while unversioned r
   assert.match(worker, /admin-perf-diagnostics\.js/);
 });
 
+test('shared admin menu modules use the secured immutable admin asset route', async () => {
+  const [worker, wrangler] = await Promise.all([read('site-worker.js'), read('wrangler.site.toml')]);
+  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']) {
+    assert.match(worker, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+    assert.match(wrangler, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+  }
+});
+
 test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
   const wrangler = await read('wrangler.site.toml');
   for (const asset of [
@@ -121,6 +133,9 @@ test('versioned admin startup graph runs Worker-first so cache policy is not byp
     '/compact-control-center.js',
     '/compact-control-center.css',
     '/admin-menu-layout.js',
+    '/admin-menu-registry.js',
+    '/admin-sidebar.js',
+    '/admin-menu-runtime.js',
     '/admin-demand-loader.js',
     '/admin-perf-diagnostics.js',
     '/admin-lazy-features.js',
