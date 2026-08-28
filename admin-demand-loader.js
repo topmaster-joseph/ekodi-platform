@@ -93,9 +93,11 @@
       insert: 'after-work',
     },
     devices: {
-      label: 'Devices', icon: '⌁',
+      label: '기기 관리', icon: '⌁',
       styles: ['device-control-admin.css'],
       scripts: ['device-control-admin.js'],
+      secondaryStyles: ['device-browser-diagnostics.css'],
+      secondaryScripts: ['device-browser-diagnostics.js'],
       real: '[data-device-control-nav]',
       hashes: ['#devices'],
       insert: 'after-workspace',
