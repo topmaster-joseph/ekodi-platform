@@ -79,6 +79,8 @@ const ADMIN_ASSETS = new Set([
   '/campus-actions.js',
   '/device-control-admin.css',
   '/device-control-admin.js',
+  '/device-browser-diagnostics.css',
+  '/device-browser-diagnostics.js',
   '/ai-ops-admin.css',
   '/ai-ops-admin.js',
   '/life-ai-admin.css',
@@ -299,7 +301,7 @@ export default {
       }
     }
 
-    if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
+    if (TRADD_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
 
     if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
