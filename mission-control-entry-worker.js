@@ -18,6 +18,7 @@ import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-b
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
+import { handleAdminAccessBroker } from './external-provider-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
@@ -143,6 +144,11 @@ export default {
     if (path.startsWith('/api/marketing/ledger/')) {
       try { const response = await handleMarketingLedgerControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Marketing ledger control error', error); return errorResponse('Marketing CRM 원장 처리 중 오류가 발생했습니다.', 'MARKETING_LEDGER_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/providers')) {
+      try { const response = await handleAdminAccessBroker(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Admin Access Broker error', error); return errorResponse('외부서비스 연결 상태 처리 중 오류가 발생했습니다.', 'ADMIN_ACCESS_BROKER_ERROR'); }
     }
 
     if (path.startsWith('/api/control/secrets')) {
