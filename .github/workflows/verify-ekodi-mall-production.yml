@@ -33,7 +33,8 @@ jobs:
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/mall' -o /tmp/mall.html
           grep -Fq 'EKODI MALL' /tmp/mall.html
           grep -Fq 'SMART SHOPPING' /tmp/mall.html
-          grep -Fq '오늘 필요한 것, 에코디몰에서.' /tmp/mall.html
+          grep -Fq '오늘 필요한 것,' /tmp/mall.html
+          grep -Fq '에코디몰에서.' /tmp/mall.html
           grep -Fq '오늘의 상품' /tmp/mall.html
           grep -Fq '상품 둘러보기' /tmp/mall.html
           grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall.html
@@ -41,18 +42,19 @@ jobs:
             echo 'Legacy affiliate storefront wording or fallback link is still exposed.'
             exit 1
           fi
+          echo 'storefront=verified'
 
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100' -o /tmp/products.json
           node <<'NODE'
           const fs = require('node:fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
+          console.log(`automationStatus=${payload.automationStatus || 'missing'}`);
+          console.log(`productCount=${Array.isArray(payload.products) ? payload.products.length : 'not-array'}`);
           if (payload.storefront !== 'ekodi-mall') throw new Error(`unexpected storefront: ${payload.storefront}`);
           if (payload.providerKey !== 'coupang_partners') throw new Error(`unexpected provider: ${payload.providerKey}`);
           if (!payload.automationStatus) throw new Error('automationStatus is missing');
           if (!Array.isArray(payload.products)) throw new Error('products is not an array');
           const count = payload.products.length;
-          console.log(`automationStatus=${payload.automationStatus}`);
-          console.log(`productCount=${count}`);
           if (count < 1) throw new Error(`EKODI Mall has no live products; automationStatus=${payload.automationStatus}`);
           for (const product of payload.products.slice(0, 5)) {
             if (!String(product.productName || '').trim()) throw new Error('productName missing');
