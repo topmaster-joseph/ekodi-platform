@@ -110,10 +110,6 @@ jobs:
           workers_dev = true
           preview_urls = false
 
-          [[routes]]
-          pattern = "finance-api-staging.ekodi.kr"
-          custom_domain = true
-
           [vars]
           ENVIRONMENT = "staging"
           ALLOWED_ORIGINS = "https://admin.ekodi.kr"
@@ -131,16 +127,26 @@ jobs:
       - name: Apply all migrations to isolated staging D1
         run: bash scripts/apply-d1-migrations-with-retry.sh DB wrangler.finance.staging.runtime.toml "$WRANGLER_VERSION"
       - name: Deploy isolated Finance staging Worker without production payment secrets
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.finance.staging.runtime.toml
-      - name: Verify Finance staging health and auth boundary
+        id: staging_worker
         shell: bash
         run: |
           set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.finance.staging.runtime.toml 2>&1 | tee /tmp/finance-stage-deploy.log
+          STAGING_BASE_URL=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/finance-stage-deploy.log | tail -1)
+          test -n "$STAGING_BASE_URL"
+          echo "base_url=$STAGING_BASE_URL" >> "$GITHUB_OUTPUT"
+      - name: Verify Finance staging health and auth boundary
+        shell: bash
+        env:
+          STAGING_BASE_URL: ${{ steps.staging_worker.outputs.base_url }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_BASE_URL"
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/health' || true)
-            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/tax-business-status-health' || true)
-            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/overview' || true)
-            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/structure' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/health" || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/finance/tax-business-status-health" || true)
+            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/finance/overview" || true)
+            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$STAGING_BASE_URL/api/finance/structure" || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
@@ -158,8 +164,9 @@ jobs:
         run: rm -f wrangler.finance.staging.runtime.toml
 
   production:
+    environment: production
     needs: [validate, staging]
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
