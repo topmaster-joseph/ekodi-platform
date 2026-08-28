@@ -171,12 +171,13 @@ jobs:
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -248,6 +249,8 @@ jobs:
           EOF
       - name: Apply all migrations to isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
       - name: Verify security, AI auth boundary and universal membership
