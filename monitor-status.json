@@ -218,7 +218,7 @@
     },
     {
       "id": "management",
-      "name": "에코디 경영플랫폼",
+      "name": "경영플랫폼",
       "domain": "management.ekodi.kr",
       "url": "https://management.ekodi.kr/",
       "status": "offline",
@@ -229,7 +229,7 @@
     },
     {
       "id": "marketing",
-      "name": "EKODI Marketing AI",
+      "name": "Marketing AI",
       "domain": "marketing.ekodi.kr",
       "url": "https://marketing.ekodi.kr/",
       "status": "online",
@@ -240,7 +240,7 @@
     },
     {
       "id": "community",
-      "name": "에코디커뮤니티",
+      "name": "커뮤니티",
       "domain": "community.ekodi.kr",
       "url": "https://community.ekodi.kr/",
       "status": "offline",
@@ -273,7 +273,7 @@
     },
     {
       "id": "business",
-      "name": "EKODI Business OS",
+      "name": "Business OS",
       "domain": "business.ekodi.kr",
       "url": "https://business.ekodi.kr/",
       "status": "offline",
@@ -306,7 +306,7 @@
     },
     {
       "id": "author",
-      "name": "EKODI Creator AI",
+      "name": "Creator AI",
       "domain": "author.ekodi.kr",
       "url": "https://author.ekodi.kr/",
       "status": "offline",
@@ -328,7 +328,7 @@
     },
     {
       "id": "publishing",
-      "name": "에코디출판",
+      "name": "출판",
       "domain": "publishing.ekodi.kr",
       "url": "https://publishing.ekodi.kr/",
       "status": "offline",
@@ -372,7 +372,7 @@
     },
     {
       "id": "energy",
-      "name": "EKODI Energy AI",
+      "name": "Energy AI",
       "domain": "energy.ekodi.kr",
       "url": "https://energy.ekodi.kr/",
       "status": "offline",
@@ -460,7 +460,7 @@
     },
     {
       "id": "support",
-      "name": "EKODI Support Opportunity AI",
+      "name": "Support Opportunity AI",
       "domain": "support.ekodi.kr",
       "url": "https://support.ekodi.kr/",
       "status": "offline",

@@ -1,4 +1,4 @@
-name: Deploy EKODI Energy AI Staging
+name: Deploy Energy AI Staging
 
 on:
   workflow_dispatch:
@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           access_code=$(curl -sS -D /tmp/energy-access.headers -o /tmp/energy-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
           if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/energy-access.headers; then
-            echo "EKODI Energy AI staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            echo "Energy AI staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
             exit 0
           fi
           for attempt in $(seq 1 12); do
@@ -80,14 +80,14 @@ jobs:
             health_code=$(curl -sS -o /tmp/energy-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             block_code=$(curl -sS -o /tmp/energy-stage-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/action-check" || true)
             if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
-              && grep -Fq 'EKODI Energy AI' /tmp/energy-stage.html \
+              && grep -Fq 'Energy AI' /tmp/energy-stage.html \
               && grep -Fq '"telemetryEnabled":false' /tmp/energy-stage-health.json \
               && grep -Fq '"controlEnabled":false' /tmp/energy-stage-health.json \
               && grep -Fq '"reason":"safety_boundary_permanent"' /tmp/energy-stage-block.json; then
-              echo "EKODI Energy AI staging verified and actuation-isolated at $STAGING_URL"
+              echo "Energy AI staging verified and actuation-isolated at $STAGING_URL"
               exit 0
             fi
             sleep 3
           done
-          echo 'EKODI Energy AI staging verification failed or safety isolation was lost.'
+          echo 'Energy AI staging verification failed or safety isolation was lost.'
           exit 1

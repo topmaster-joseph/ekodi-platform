@@ -111,7 +111,7 @@ async function loadLiveSnapshot(workspaceId){
 function renderWorkspace(payload,snapshot=null,error=null){
   const workspace=payload.workspace;state.current=workspace;state.liveSnapshot=snapshot;
   state.metrics=snapshot?{...(snapshot.metrics||{}),marketing:snapshot.marketing||{},operations:snapshot.operations||{},finance:snapshot.finance||{}}:(payload.metrics||{});
-  localStorage.setItem('ekodi-business-workspace',workspace.id);document.title=`${workspace.name} · EKODI Business OS`;
+  localStorage.setItem('ekodi-business-workspace',workspace.id);document.title=`${workspace.name} · Business OS`;
   $('workspaceName').textContent=workspace.name;$('workspaceEnglish').textContent=workspace.englishName;$('workspaceKind').textContent=workspaceLabel(workspace);$('heroCopy').textContent=workspace.description;
   $('dataNotice').textContent=dataNoticeText(workspace,snapshot,error);
   $('publicLink').href=workspace.publicUrl;$('publicLink').textContent=workspace.scope==='store'?'전용 AI':'에코디비즈';$('marketingLink').href=workspace.marketingUrl;

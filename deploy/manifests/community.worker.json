@@ -8,7 +8,7 @@
         "url": "https://community.ekodi.kr/",
         "statuses": [200],
         "redirect": "follow",
-        "expect": ["EKODI Community", "/social-links.js"]
+        "expect": ["Community", "/social-links.js"]
       },
       {
         "url": "https://community.ekodi.kr/social-links.js",

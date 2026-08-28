@@ -20,7 +20,7 @@ function safeReturn(raw){
 }
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
 
-$('serviceName').textContent='EKODI Business OS';
+$('serviceName').textContent='Business OS';
 $('signedOutCopy').textContent='EKODI 통합 로그인은 무료회원 신원을 먼저 확인하고, 사업장 데이터 권한은 별도로 적용합니다.';
 show('membershipPanel',false);show('identityPanel',false);show('requestActions',false);show('freeActions',false);show('approvedActions',false);show('workspacePanel',false);show('signedIn',false);show('signedOut',true);
 notice('authStatus','로그인 상태를 확인하고 있습니다.');

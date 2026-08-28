@@ -32,11 +32,11 @@ test('Creator AI widens the Author compatibility service to eight creator modes'
   for (const mode of ['writer','video','podcast','lecture','research','visual','mission','ai']) {
     assert.ok(app.includes(`${mode}: {`), `missing creator mode ${mode}`);
   }
-  assert.match(html, /EKODI Creator AI/);
+  assert.match(html, /Creator AI/);
   assert.match(worker, /ekodi-creator-ai/);
   assert.match(access, /내 크리에이터 스튜디오/);
   assert.match(access, /my_ekodi_url/);
-  assert.match(ai, /EKODI Creator AI/);
+  assert.match(ai, /Creator AI/);
   assert.match(ai, /creator_mode/);
 });
 

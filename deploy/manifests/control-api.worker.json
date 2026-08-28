@@ -11,7 +11,7 @@
       {"url":"https://api.ekodi.kr/api/google/config","statuses":[200],"expect":["\"enabled\":true","483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"]},
       {"url":"https://api.ekodi.kr/api/books/public/config","statuses":[200],"expect":["\"digital-start\""]},
       {"url":"https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall","statuses":[200],"expect":["\"storefront\":\"ekodi-mall\"","\"providerKey\":\"coupang_partners\"","아래 추천링크 클릭 후 검색하세요."],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
-      {"url":"https://api.ekodi.kr/api/social/registry","statuses":[200],"expect":["에코디커뮤니티","community-youtube"]},
+      {"url":"https://api.ekodi.kr/api/social/registry","statuses":[200],"expect":["커뮤니티","community-youtube"]},
       {"url":"https://api.ekodi.kr/api/control/social/registry","statuses":[401]},
       {"url":"https://api.ekodi.kr/api/control/ai/governance","statuses":[401]},
       {"url":"https://api.ekodi.kr/api/control/ai/actions","statuses":[401]},

@@ -16,7 +16,7 @@ test('Control API contains Community and Social as active services without legac
 
 test('Campus uses Community label instead of the retired mission organization label', async () => {
   const campus = await text('compact-control-center.js');
-  assert.match(campus, /key: 'community', label: '커뮤니티', name: '에코디커뮤니티'/);
+  assert.match(campus, /key: 'community', label: '커뮤니티', name: '커뮤니티'/);
   assert.doesNotMatch(campus, /key: 'community', label: '선교회'/);
 });
 

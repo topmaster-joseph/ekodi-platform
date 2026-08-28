@@ -6,7 +6,7 @@ import { DEFAULT_REGISTRY, normalizeRegistry } from '../social-registry-api.js';
 test('Social registry normalizes the canonical EKODI organizations', () => {
   const registry = normalizeRegistry(DEFAULT_REGISTRY);
   assert.equal(registry.version, 3);
-  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '에코디커뮤니티'));
+  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '커뮤니티'));
   assert.ok(registry.organizations.some(org => org.id === 'church'));
   assert.ok(registry.organizations.every(org => org.website.startsWith('https://')));
   assert.ok(registry.organizations.flatMap(org => org.channels).every(channel => channel.id && channel.url.startsWith('https://')));

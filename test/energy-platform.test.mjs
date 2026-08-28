@@ -8,7 +8,7 @@ const worker=readFileSync(new URL('../energy-worker.js',import.meta.url),'utf8')
 const staging=readFileSync(new URL('../wrangler.energy-staging.toml',import.meta.url),'utf8');
 
 test('Energy AI presents the complete energy management surface',()=>{
-  for(const term of ['EKODI ENERGY AI','Solar','ESS','EV','AI Manager']) assert.match(html,new RegExp(term,'i'));
+  for(const term of ['ENERGY AI','Solar','ESS','EV','AI Manager']) assert.match(html,new RegExp(term,'i'));
   assert.match(html,/샘플 데이터/);
 });
 

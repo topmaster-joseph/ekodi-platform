@@ -41,7 +41,7 @@ jobs:
           node -e "const r=JSON.parse(require('fs').readFileSync('social/channels.json','utf8')); if(!Array.isArray(r.organizations)||!r.organizations.length) process.exit(1); for(const o of r.organizations){if(!o.id||!o.name||!o.website) process.exit(1); for(const c of o.channels||[]){if(c.provider==='youtube'&&!c.channelId) process.exit(1)}}"
           grep -Fq 'EKODI Social' social/index.html
           grep -Fq 'featuredSection' social/index.html
-          grep -Fq '에코디커뮤니티' social/channels.json
+          grep -Fq '커뮤니티' social/channels.json
           grep -Fq 'youtubeRssFallback:true' social-worker.js
           grep -Fq 'pattern = "social.ekodi.kr"' wrangler.social.toml
           grep -Fq 'custom_domain = true' wrangler.social.toml
@@ -84,7 +84,7 @@ jobs:
             if [[ "$root_code" =~ ^[23] ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
               && grep -Fq 'EKODI Social' /tmp/social.html \
               && grep -Fq 'ekodi-social' /tmp/social-health.json \
-              && grep -Fq '에코디커뮤니티' /tmp/social-feed.json; then
+              && grep -Fq '커뮤니티' /tmp/social-feed.json; then
               echo "EKODI Social staging verified: $STAGING_URL"
               exit 0
             fi
@@ -125,7 +125,7 @@ jobs:
             if [[ "$root_code" =~ ^[23] ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
               && grep -Fq 'EKODI Social' /tmp/social.html \
               && grep -Fq 'ekodi-social' /tmp/social-health.json \
-              && grep -Fq '에코디커뮤니티' /tmp/social-feed.json; then
+              && grep -Fq '커뮤니티' /tmp/social-feed.json; then
               echo 'EKODI Social production verified.'
               exit 0
             fi

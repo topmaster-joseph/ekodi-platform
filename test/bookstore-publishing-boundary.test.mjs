@@ -9,9 +9,9 @@ const contract=fs.readFileSync(new URL('../docs/operations/bookstore-publishing-
 
 const byId=new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
 
-test('public bookstore brand is 에코디서점 and publishing is 에코디출판',()=>{
+test('public bookstore brand is 에코디서점 and publishing is 출판',()=>{
   assert.equal(byId.get('books')?.name,'에코디서점');
-  assert.equal(byId.get('publishing')?.name,'에코디출판');
+  assert.equal(byId.get('publishing')?.name,'출판');
   assert.equal(byId.get('books')?.url,'https://books.ekodi.kr/');
   assert.equal(byId.get('publishing')?.url,'https://publishing.ekodi.kr/');
 });

@@ -6,7 +6,7 @@ const DEFAULT_REGISTRY = {
   version: 3,
   organizations: [
     {
-      id: 'community', name: '에코디커뮤니티', shortName: 'Community',
+      id: 'community', name: '커뮤니티', shortName: 'Community',
       description: '공동체, 선교, 지역과 디아스포라의 이야기를 연결합니다.',
       website: 'https://community.ekodi.kr', isActive: true, order: 10, socialPolicy: 'inherit_org',
       channels: [
@@ -25,7 +25,7 @@ const DEFAULT_REGISTRY = {
       ]
     },
     { id:'biz', name:'에코디비즈', shortName:'Biz', description:'비즈니스, 소상공인, 마케팅 AI와 지역경제 콘텐츠를 모읍니다.', website:'https://biz.ekodi.kr', isActive:true, order:30, socialPolicy:'inherit_org', channels:[] },
-    { id:'books', name:'에코디출판', shortName:'Books', description:'출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.', website:'https://books.ekodi.kr', isActive:true, order:40, socialPolicy:'inherit_org', channels:[] }
+    { id:'books', name:'출판', shortName:'Books', description:'출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.', website:'https://books.ekodi.kr', isActive:true, order:40, socialPolicy:'inherit_org', channels:[] }
   ]
 };
 

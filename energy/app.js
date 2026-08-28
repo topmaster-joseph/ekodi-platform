@@ -86,7 +86,7 @@ async function refreshInsight(){const button=$('refreshInsight');button.disabled
 
 function installDistributedEnergyPlatform(){
   if(document.getElementById('connectView'))return;
-  document.title='EKODI Energy AI · 분산에너지 관리 플랫폼';
+  document.title='Energy AI · 분산에너지 관리 플랫폼';
   const intro=document.querySelector('.flow-intro');
   if(intro){
     intro.querySelector('.eyebrow').textContent='AI DISTRIBUTED ENERGY PLATFORM';

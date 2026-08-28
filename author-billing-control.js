@@ -434,7 +434,7 @@ async function billingComplete(request, env) {
       customerKey:checkout.customer_key,
       amount:Number(plan.monthly_fee),
       orderId,
-      orderName:`EKODI Creator AI ${plan.display_name} 월 구독`,
+      orderName:`Creator AI ${plan.display_name} 월 구독`,
       email:identity.email,
     });
   } catch (error) {
@@ -589,7 +589,7 @@ export async function runAuthorBillingSchedule(env) {
         customerKey:row.provider_customer_key,
         amount:Number(row.monthly_fee),
         orderId,
-        orderName:`EKODI Creator AI ${String(row.plan_id).toUpperCase()} 월 구독`,
+        orderName:`Creator AI ${String(row.plan_id).toUpperCase()} 월 구독`,
         email:row.email,
       });
       if (payment?.status !== 'DONE') throw new Error(`payment_status_${payment?.status || 'unknown'}`);

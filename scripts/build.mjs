@@ -86,7 +86,7 @@ for (const asset of htmlAssets) {
     const serviceGrid = /<div class="service-grid">[\s\S]*?(\r?\n\s*<\/div>\r?\n\s*<\/div>\r?\n\s*<\/section>)/;
     if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
     html = html.replace(serviceGrid, `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`);
-    html = html.replaceAll('EKODI선교회', '에코디커뮤니티').replaceAll('에코디선교회', '에코디커뮤니티').replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr').replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
+    html = html.replaceAll('EKODI선교회', '커뮤니티').replaceAll('에코디선교회', '커뮤니티').replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr').replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
     if (html.includes('EKODI선교회') || html.includes('에코디선교회')) throw new Error('Legacy EKODI mission brand remains on homepage');
     if (!html.includes('homepage-ambient.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');
     if (!html.includes('homepage-ambient.js')) html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');

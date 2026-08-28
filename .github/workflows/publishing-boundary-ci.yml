@@ -69,12 +69,12 @@ jobs:
             echo "attempt=$attempt root=$root studio=$studio health=$health"
             if [[ "$root" == '200' && "$studio" == '200' && "$health" == '200' ]] \
               && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
-              && grep -Fq 'EKODI PUBLISHING STUDIO' /tmp/studio.html \
-              && grep -Fq '"publicName":"에코디출판"' /tmp/health.json \
+              && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
+              && grep -Fq '"publicName":"출판"' /tmp/health.json \
               && grep -Fq '"independentPlatform":true' /tmp/health.json \
               && grep -Fq '"privateCrossServiceDataAccess":false' /tmp/health.json \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/root-h; then
-              echo 'Independent EKODI Publishing staging verified.'
+              echo 'Independent Publishing staging verified.'
               exit 0
             fi
             sleep 4

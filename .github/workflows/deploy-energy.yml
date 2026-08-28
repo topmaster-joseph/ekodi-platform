@@ -1,4 +1,4 @@
-name: Deploy EKODI Energy AI
+name: Deploy Energy AI
 
 on:
   workflow_dispatch:
@@ -83,7 +83,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/energy-bootstrap-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/health' || true)
             block_code=$(curl -sS -o /tmp/energy-bootstrap-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/api/action-check' || true)
             if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
-              && grep -Fq 'EKODI Energy AI' /tmp/energy-bootstrap.html \
+              && grep -Fq 'Energy AI' /tmp/energy-bootstrap.html \
               && grep -Fq '"telemetryEnabled":false' /tmp/energy-bootstrap-health.json \
               && grep -Fq '"controlEnabled":false' /tmp/energy-bootstrap-health.json \
               && grep -Fq '"reason":"safety_boundary_permanent"' /tmp/energy-bootstrap-block.json; then
@@ -107,11 +107,11 @@ jobs:
             health_code=$(curl -sS -o /tmp/energy-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/health' || true)
             block_code=$(curl -sS -o /tmp/energy-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/api/action-check' || true)
             if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
-              && grep -Fq 'EKODI Energy AI' /tmp/energy.html \
+              && grep -Fq 'Energy AI' /tmp/energy.html \
               && grep -Fq '"telemetryEnabled":false' /tmp/energy-health.json \
               && grep -Fq '"controlEnabled":false' /tmp/energy-health.json \
               && grep -Fq '"reason":"safety_boundary_permanent"' /tmp/energy-block.json; then
-              echo 'EKODI Energy AI production verified with physical control disabled.'
+              echo 'Energy AI production verified with physical control disabled.'
               exit 0
             fi
             sleep 5

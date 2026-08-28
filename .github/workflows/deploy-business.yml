@@ -1,4 +1,4 @@
-name: Deploy EKODI Business OS
+name: Deploy Business OS
 
 on:
   workflow_dispatch:

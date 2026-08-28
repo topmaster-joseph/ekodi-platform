@@ -54,7 +54,7 @@ jobs:
           node --check customer-entry-worker.js
           node --check site-worker.js
           node --check control-center-features.js
-          node -e "const r=JSON.parse(require('fs').readFileSync('social/channels.json','utf8')); if(r.version!==3||!r.organizations.some(o=>o.id==='community'&&o.name==='에코디커뮤니티')) process.exit(1)"
+          node -e "const r=JSON.parse(require('fs').readFileSync('social/channels.json','utf8')); if(r.version!==3||!r.organizations.some(o=>o.id==='community'&&o.name==='커뮤니티')) process.exit(1)"
           grep -Fq "placeholder('social', '◉', 'Social')" control-center-features.js
           grep -Fq '/api/control/social/registry' social-admin.js
           grep -Fq '/api/social/registry' customer-entry-worker.js
@@ -95,7 +95,7 @@ jobs:
           for attempt in $(seq 1 10); do
             code=$(curl -sS -o /tmp/registry.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$SOCIAL_API_STAGING_URL/api/social/registry" || true)
             if [ "$code" = '200' ] \
-              && grep -Fq '에코디커뮤니티' /tmp/registry.json \
+              && grep -Fq '커뮤니티' /tmp/registry.json \
               && grep -Fq 'community-youtube' /tmp/registry.json; then
               exit 0
             fi
@@ -122,8 +122,8 @@ jobs:
             feed=$(curl -sS -o /tmp/social-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 20 "$SOCIAL_STAGING_URL/api/feed?org=community" || true)
             if [ "$root" = '200' ] && [ "$registry" = '200' ] && [ "$feed" = '200' ] \
               && grep -Fq 'EKODI Social' /tmp/social.html \
-              && grep -Fq '에코디커뮤니티' /tmp/social-registry.json \
-              && grep -Fq '에코디커뮤니티' /tmp/social-feed.json; then
+              && grep -Fq '커뮤니티' /tmp/social-registry.json \
+              && grep -Fq '커뮤니티' /tmp/social-feed.json; then
               exit 0
             fi
             sleep 3

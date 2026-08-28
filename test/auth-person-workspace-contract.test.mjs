@@ -121,7 +121,7 @@ test('Marketing workspace labels are separated and current routed assets are for
 
 test('central auth directly honors a requested verified Social or Energy workspace',()=>{
   assert.match(authJs,/social:\{name:'EKODI Social'/);
-  assert.match(authJs,/energy:\{name:'EKODI Energy AI'/);
+  assert.match(authJs,/energy:\{name:'Energy AI'/);
   assert.match(authJs,/PERSON_SCOPED_SITES=new Set\(\['social','energy'\]\)/);
   assert.match(authJs,/SERVICE_API=PERSON_SCOPED_SITES\.has\(site\)\?PERSON_WORKSPACE:ACCESS/);
   assert.match(authJs,/requestedWorkspace=String\(params\.get\('workspace'\)/);

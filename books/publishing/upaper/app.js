@@ -87,7 +87,7 @@ async function load(){
     bookSelect.addEventListener('change',()=>{ currentBook=catalog[Number(bookSelect.value)] || catalog[0]; render(); });
     render();
   }catch{
-    summary.innerHTML='<p>도서 데이터를 불러오지 못했습니다. 에코디출판 스튜디오에서 도서 정보를 먼저 확인해 주세요.</p>';
+    summary.innerHTML='<p>도서 데이터를 불러오지 못했습니다. 출판 스튜디오에서 도서 정보를 먼저 확인해 주세요.</p>';
   }
 }
 matchMedia('(max-width: 760px)').addEventListener?.('change',()=>{ if(forcedMode==='auto') applyMode(); });

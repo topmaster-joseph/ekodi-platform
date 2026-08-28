@@ -9,7 +9,7 @@
     "modules": ["catalog", "book-detail", "preview", "external-purchase", "library-link"]
   },
   "publishing": {
-    "name": "에코디출판",
+    "name": "출판",
     "url": "https://books.ekodi.kr/publishing/",
     "audience": ["author", "editor", "publisher"],
     "modules": ["workspace", "manuscript", "metadata", "epub-validation", "distribution", "archive"]

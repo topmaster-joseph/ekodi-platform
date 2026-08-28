@@ -9,7 +9,7 @@
     { domain:'admin.ekodi.kr', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', manage:'admins', critical:true },
     { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', manage:'admins', critical:true },
     { domain:'church.ekodi.kr', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', manage:'services' },
-    { domain:'community.ekodi.kr', name:'에코디커뮤니티', group:'Community', role:'관계·그룹·참여·소통', manage:'community' },
+    { domain:'community.ekodi.kr', name:'커뮤니티', group:'Community', role:'관계·그룹·참여·소통', manage:'community' },
     { domain:'social.ekodi.kr', name:'EKODI Social', group:'Community', role:'소셜채널·미디어 연동', manage:'social' },
     { domain:'biz.ekodi.kr', name:'에코디비즈', group:'Business & Commerce', role:'사업·고객·서비스 운영', manage:'organization' },
     { domain:'mall.ekodi.kr', name:'에코디몰', group:'Business & Commerce', role:'상품·판매·셀러 운영', manage:'services' },

@@ -192,7 +192,7 @@ jobs:
               --project-name "$project" \
               --branch main \
               --commit-hash "$sha" \
-              --commit-message "EKODI Marketing AI $sha"
+              --commit-message "Marketing AI $sha"
             echo "$project" >> /tmp/deployed-projects
           }
 
