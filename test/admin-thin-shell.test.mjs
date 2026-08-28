@@ -104,6 +104,28 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
+test('admin menu governance is grouped and repairs every sidebar back to one registry', async () => {
+  const registry = await read('admin-menu-registry.js');
+  const sidebar = await read('admin-sidebar.js');
+  assert.match(registry, /ADMIN_MENU_GROUPS/);
+  for (const group of ['sites', 'access', 'operations', 'ai', 'data', 'system', 'security-audit', 'settings']) {
+    assert.match(registry, new RegExp(`id: '${group}'`));
+  }
+  assert.match(registry, /id: 'campus', group: 'sites'/);
+  assert.match(registry, /id: 'admins', group: 'access'/);
+  assert.match(registry, /id: 'finance', group: 'operations'/);
+  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
+  assert.match(registry, /id: 'health', group: 'system'/);
+  assert.match(registry, /id: 'security', group: 'security-audit'/);
+  assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
+  assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
+  assert.match(sidebar, /if \(!id \|\| RETIRED_MENU_SECTIONS\.has\(id\) \|\| !definition\)/);
+  assert.match(sidebar, /function ensureGroupLabels\(nav, locale, rank\)/);
+  assert.match(sidebar, /getAdminMenuGroupLabel\(groupId, locale\)/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'registry-v2'/);
+  assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
+});
+
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');
