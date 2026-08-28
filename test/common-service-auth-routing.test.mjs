@@ -36,7 +36,9 @@ test('ordinary common-service members land in My EKODI while platform admins kee
   assert.match(client, /target\.searchParams\.set\('from',site\)/);
   assert.match(identity, /async function platformAdminForUser/);
   assert.match(identity, /select\("platform_admin"\)/);
-  assert.match(identity, /platformAdmin,user/);
+  assert.match(identity, /platformAdmin/);
+  assert.match(identity, /user:\{email:profile\.email,name:profile\.displayName\}/);
+  assert.match(identity, /ekodiId/);
 });
 
 test('workspace selector stays hidden before an authenticated service session', () => {
