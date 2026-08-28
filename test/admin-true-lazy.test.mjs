@@ -40,6 +40,7 @@ test('on-demand assets are independently served and not merged into startup bund
 test('device browser diagnostics are shipped and stay on the immutable admin worker path', async () => {
   const build = await read('scripts/build.mjs');
   const worker = await read('site-worker.js');
+  const wrangler = await read('wrangler.site.toml');
   const diagnostics = await read('device-browser-diagnostics.js');
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   assert.match(build, /'device-browser-diagnostics\.css'/);
@@ -47,6 +48,9 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(worker, /'\/device-browser-diagnostics\.css'/);
   assert.match(worker, /'\/device-browser-diagnostics\.js'/);
   assert.match(worker, /url\.searchParams\.has\('v'\)[\s\S]*max-age=31536000, immutable/);
+  const workerFirst = wrangler.match(/run_worker_first = \[([\s\S]*?)\]/)?.[1] || '';
+  assert.match(workerFirst, /"\/device-browser-diagnostics\.js"/);
+  assert.match(workerFirst, /"\/device-browser-diagnostics\.css"/);
   assert.match(diagnostics, /CACHE_ALLOWLIST/);
   assert.match(diagnostics, /registration\.update\(\)/);
   assert.match(diagnostics, /현재 관리자 브라우저 진단/);
