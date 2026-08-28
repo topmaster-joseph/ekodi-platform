@@ -20,6 +20,21 @@ function resolvedHost(request,env){
   return simulated||url.hostname.toLowerCase();
 }
 
+async function routeTaxFinance(request,env,ctx){
+  if(env?.FINANCE?.fetch){
+    try{
+      const response=await env.FINANCE.fetch(request);
+      const routed=new Response(response.body,response);
+      routed.headers.set('x-ekodi-tax-data-route','finance-service-binding');
+      return routed;
+    }catch{}
+  }
+  const response=await financeEntryWorker.fetch(request,env,ctx);
+  const fallback=new Response(response.body,response);
+  fallback.headers.set('x-ekodi-tax-data-route','local-finance-fallback');
+  return fallback;
+}
+
 async function withReleaseMarker(response){
   const text=await response.text();
   return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
@@ -37,7 +52,7 @@ export default {
     const host=resolvedHost(request,env);
 
     if(host===TAX_HOST){
-      if(url.pathname.startsWith('/api/finance/tax-'))return financeEntryWorker.fetch(request,env,ctx);
+      if(url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
       const portal=taxPortalWorker.fetch(request,env,ctx);
       if(portal)return url.pathname==='/tax-portal.js'?injectTaxLocalFallback(portal):portal;
       return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
