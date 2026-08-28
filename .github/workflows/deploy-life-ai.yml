@@ -1,0 +1,212 @@
+name: Deploy EKODI Life AI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'life/**'
+      - 'life-core.js'
+      - 'life-worker.js'
+      - 'supabase/migrations/20260826124000_life_ai_platform.sql'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/life-ai-platform.test.mjs'
+      - 'wrangler.life.toml'
+      - 'wrangler.life.staging.toml'
+      - 'deploy/manifests/life.worker.json'
+      - '.github/workflows/deploy-life-ai.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'life/**'
+      - 'life-core.js'
+      - 'life-worker.js'
+      - 'supabase/migrations/20260826124000_life_ai_platform.sql'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/life-ai-platform.test.mjs'
+      - 'wrangler.life.toml'
+      - 'wrangler.life.staging.toml'
+      - 'deploy/manifests/life.worker.json'
+      - '.github/workflows/deploy-life-ai.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-life-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Validate Life AI contracts
+        run: |
+          set -euo pipefail
+          node --check life-core.js
+          node --check life-worker.js
+          node --check life/app.js
+          node --test test/life-ai-platform.test.mjs
+          node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/life.worker.json','utf8'))"
+          grep -Fq '오늘의 질문' life/index.html
+          grep -Fq '말씀대화로 깊이 보기' life/index.html
+          grep -Fq "id:'life'" ekodi-service-manifest.js
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: https://ekodi-life-ai-staging.topmaster-joseph.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Deploy isolated Life AI staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.life.staging.toml
+      - name: Verify staging root, APIs, and eight topic subservices
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/life-stage-h -o /tmp/life-stage.html -w '%{http_code}' --max-time 15 "$STAGING_URL/" || true)
+            health=$(curl -sS -o /tmp/life-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)
+            config=$(curl -sS -o /tmp/life-stage-config.js -w '%{http_code}' --max-time 15 "$STAGING_URL/config.js" || true)
+            today=$(curl -sS -o /tmp/life-stage-today.json -w '%{http_code}' --max-time 15 "$STAGING_URL/api/today" || true)
+            guest=$(curl -sS -o /tmp/life-stage-guest.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' "$STAGING_URL/api/reflect" || true)
+            member=$(curl -sS -o /tmp/life-stage-member.json -w '%{http_code}' --max-time 15 -H 'authorization: Bearer staging-contract' -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' "$STAGING_URL/api/reflect" || true)
+            topics_ok=true
+            for path in relationship money work family heart future faith meaning; do
+              code=$(curl -L -sS -o "/tmp/life-stage-${path}.html" -w '%{http_code}' --max-time 15 "$STAGING_URL/$path" || true)
+              [[ "$code" == '200' ]] || topics_ok=false
+              grep -Fq '오늘의 질문' "/tmp/life-stage-${path}.html" || topics_ok=false
+            done
+            if [[ "$root" == '200' && "$health" == '200' && "$config" == '200' && "$today" == '200' && "$guest" == '401' && "$member" == '200' && "$topics_ok" == 'true' ]] \
+              && grep -Fq '오늘의 질문' /tmp/life-stage.html \
+              && grep -Fq '"service":"ekodi-life-ai"' /tmp/life-stage-health.json \
+              && grep -Fq '"stages":[1,2,3,4,5]' /tmp/life-stage-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/life-stage-health.json \
+              && grep -Fq '"dataEnabled":false' /tmp/life-stage-config.js \
+              && grep -Fq '"topics"' /tmp/life-stage-today.json \
+              && grep -Fq '"code":"LIFE_AUTH_REQUIRED"' /tmp/life-stage-guest.json \
+              && grep -Fq '"topic":{"id":"money"' /tmp/life-stage-member.json \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/life-stage-h; then
+              echo 'EKODI Life AI isolated staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Wait for Shell and central auth Life contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            shell_code=$(curl -sS -o /tmp/life-manifest.json -w '%{http_code}' --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            auth_code=$(curl -sS -o /tmp/life-auth.js -w '%{http_code}' --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] \
+              && grep -Fq '"id":"life"' /tmp/life-manifest.json \
+              && grep -Fq '"authMode":"client"' /tmp/life-manifest.json \
+              && grep -Fq 'manifestRealm' /tmp/life-auth.js; then
+              echo 'Life Shell/Auth contract is live.'
+              break
+            fi
+            if [[ "$attempt" == '30' ]]; then echo 'Life Shell/Auth contract not live'; exit 1; fi
+            sleep 5
+          done
+      - name: Verify central User AI service is reachable
+        run: |
+          code=$(curl -sS -o /tmp/life-user-ai-status.json -w '%{http_code}' --max-time 15 'https://api.ekodi.kr/api/user-ai/status?site=life' || true)
+          test "$code" = '401' || test "$code" = '200'
+      - name: Bootstrap or guarded Life AI release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.life.toml --json > /tmp/life-deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/life.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/life-deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.life.toml
+          else
+            cat /tmp/life-deployments.log
+            exit 1
+          fi
+      - name: Reconcile Life AI production hostname
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.life.toml
+      - name: Verify production root, APIs, and eight topic subservices
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            root=$(curl -L -sS -D /tmp/life-h -o /tmp/life.html -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/' || true)
+            health=$(curl -sS -o /tmp/life-health.json -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/health' || true)
+            config=$(curl -sS -o /tmp/life-config.js -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/config.js' || true)
+            today=$(curl -sS -o /tmp/life-today.json -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/api/today' || true)
+            guest=$(curl -sS -o /tmp/life-guest.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' 'https://life.ekodi.kr/api/reflect' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/life-admin-h -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/admin' || true)
+            my=$(curl -sS -o /dev/null -D /tmp/life-my-h -w '%{http_code}' --max-time 15 'https://life.ekodi.kr/my' || true)
+            topics_ok=true
+            for path in relationship money work family heart future faith meaning; do
+              code=$(curl -L -sS -o "/tmp/life-${path}.html" -w '%{http_code}' --max-time 15 "https://life.ekodi.kr/$path" || true)
+              [[ "$code" == '200' ]] || topics_ok=false
+              grep -Fq '오늘의 질문' "/tmp/life-${path}.html" || topics_ok=false
+            done
+            case "$admin" in 301|302|303|307|308) admin_ok=true;; *) admin_ok=false;; esac
+            case "$my" in 301|302|303|307|308) my_ok=true;; *) my_ok=false;; esac
+            if [[ "$root" == '200' && "$health" == '200' && "$config" == '200' && "$today" == '200' && "$guest" == '401' && "$topics_ok" == 'true' && "$admin_ok" == 'true' && "$my_ok" == 'true' ]] \
+              && grep -Fq '오늘의 질문' /tmp/life.html \
+              && grep -Fq '말씀대화로 깊이 보기' /tmp/life.html \
+              && grep -Fq '"service":"ekodi-life-ai"' /tmp/life-health.json \
+              && grep -Fq '"dataMode":"production"' /tmp/life-health.json \
+              && grep -Fq '"whiteLabel":true' /tmp/life-health.json \
+              && grep -Fq '"dataEnabled":true' /tmp/life-config.js \
+              && grep -Fq '"code":"LIFE_AUTH_REQUIRED"' /tmp/life-guest.json \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/life-h \
+              && grep -Eiq '^location: https://admin\.ekodi\.kr/#life-ai' /tmp/life-admin-h \
+              && grep -Eiq '^location: https://my\.ekodi\.kr/journey/\?source=life' /tmp/life-my-h; then
+              echo 'EKODI Life AI production verified.'
+              exit 0
+            fi
+            echo "attempt=$attempt root=$root health=$health config=$config today=$today guest=$guest admin=$admin my=$my topics=$topics_ok"
+            sleep 5
+          done
+          exit 1
+      - name: Publish Life AI production status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in success) state=success;; cancelled) state=error;; *) state=failure;; esac
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(jq -n --arg state "$state" --arg context 'ekodi/life-production' --arg description "EKODI Life AI production deployment: $JOB_STATUS" --arg target_url "$target_url" '{state:$state,context:$context,description:$description,target_url:$target_url}')
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload"

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-life-ai",
+    "config": "wrangler.life.toml",
+    "requests": [
+      {"url":"https://life.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI","관계","돈","일·진로","가족","마음","미래","신앙","삶"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://life.ekodi.kr/relationship","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/money","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/work","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/family","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/heart","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/future","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/faith","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/meaning","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://life.ekodi.kr/health","statuses":[200],"expect":["ekodi-life-ai","\"stages\":[1,2,3,4,5]","\"whiteLabel\":true","\"ekodiShell\":true"]}
+    ]
+  }
+}

@@ -7,6 +7,7 @@ const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableK
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
 let session=null;
 const access=new Map();
+let reflections=[];
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
 const activeStages=()=>EKODI_LIFE_JOURNEY.stages.filter(stage=>stage.state==='active');
@@ -74,6 +75,16 @@ async function loadAccess(){
     if(!error)access.set(stage.ownerService,data||{status:'unregistered'});
   }));
 }
+function renderReflections(){
+  const host=$('#lifeReflectionList');if(!host)return;
+  if(!session){host.innerHTML='<div class="empty"><strong>로그인하면 저장한 질문을 확인할 수 있습니다.</strong></div>';return;}
+  if(!reflections.length){host.innerHTML='<div class="empty"><strong>아직 저장한 질문이 없습니다.</strong><p>인생AI에서 “나의 여정에 저장”을 선택하면 이곳에 나타납니다.</p></div>';return;}
+  host.innerHTML=reflections.map(row=>{const date=row.created_at?new Date(row.created_at).toLocaleDateString('ko-KR'):'';const scripture=(row.scriptures||[]).join(' · ');return '<article class="question-journey-card"><small>'+esc(date)+' · '+esc(row.topic||'삶')+'</small><h3>'+esc(row.root_question||row.question_text||'오늘의 질문')+'</h3><p>'+esc(row.question_text||'')+'</p>'+(scripture?'<span class="question-scripture">'+esc(scripture)+'</span>':'')+'<strong>오늘의 한 걸음</strong><p>'+esc(row.action_text||'')+'</p></article>';}).join('');
+}
+async function loadReflections(){
+  reflections=[];if(!sb||!session){renderReflections();return;}
+  try{const response=await fetch('https://life.ekodi.kr/api/journey',{headers:{authorization:`Bearer ${session.access_token}`},cache:'no-store'});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||`life_${response.status}`);reflections=Array.isArray(payload.reflections)?payload.reflections:[]}catch(error){console.error('life reflections contract',error);reflections=[]}renderReflections();
+}
 async function refresh(){
   if(enabled&&sb){
     const {data}=await sb.auth.getSession();
@@ -98,4 +109,4 @@ if(enabled){
   try{await handoff();}catch(error){console.error('journey auth handoff',error);}
 }
 await refresh();
-if(sb)sb.auth.onAuthStateChange(async(_event,next)=>{session=next;await loadAccess();renderIdentity();renderJourney();});
+if(sb)sb.auth.onAuthStateChange(async(_event,next)=>{session=next;await loadAccess();await loadReflections();renderIdentity();renderJourney();});

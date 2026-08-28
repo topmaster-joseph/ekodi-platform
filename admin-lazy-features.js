@@ -24,6 +24,7 @@
     { domain:'ekodi.kr', name:'EKODI Home', group:'Core & Access', role:'생태계 정문·서비스 레지스트리', aliases:['에코디 홈','에코디','홈','root','home'] },
     { domain:'admin.ekodi.kr', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', aliases:['관리자','관리자페이지','컨트롤센터','control center','admin'] },
     { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', aliases:['인증센터','통합인증','인증','auth','로그인'] },
+    { domain:'life.ekodi.kr', name:'오늘의 질문 · 인생AI', group:'Life & Community', role:'삶의 질문·성찰·말씀 연결·실천', aliases:['오늘의 질문','인생ai','인생 ai','life ai','life'] },
     { domain:'church.ekodi.kr', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', aliases:['에코디교회','교회','church'] },
     { domain:'community.ekodi.kr', name:'에코디커뮤니티', group:'Community', role:'관계·그룹·참여·소통', aliases:['에코디커뮤니티','커뮤니티','community'] },
     { domain:'social.ekodi.kr', name:'EKODI Social', group:'Community', role:'소셜채널·미디어 연동', aliases:['에코디소셜','소셜','social'] },
