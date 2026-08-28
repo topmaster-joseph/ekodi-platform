@@ -4,17 +4,17 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="EKODI 무료회원과 일반회원이 자신의 브라우저 환경을 안전하게 진단하고 최적화하는 My EKODI 기기관리">
+  <meta name="description" content="EKODI 무료회원과 일반회원이 자신의 PC·POS·키오스크·태블릿 등 현재 브라우저 환경을 안전하게 진단하는 My EKODI 기기관리">
   <meta name="ekodi-ui-type" content="USER">
-  <title>내 PC 관리 | My EKODI</title>
+  <title>내 기기 관리 | My EKODI</title>
   <link rel="stylesheet" href="/styles.css?v=20260821-user-ui-1">
   <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
-  <link rel="stylesheet" href="/device-care.css?v=20260826-device-care-1">
+  <link rel="stylesheet" href="/device-care.css?v=20260827-device-care-2">
 </head>
 <body data-ekodi-ui="USER">
   <header class="topbar">
     <a class="brand" href="/" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="/">홈</a><a href="/journey/">나의 여정</a><a href="/#workspaces">내 공간</a><a href="/#platforms">서비스</a><a href="/device-care/" aria-current="page">내 PC</a></nav>
+    <nav aria-label="주요 메뉴"><a href="/">홈</a><a href="/journey/">나의 여정</a><a href="/#workspaces">내 공간</a><a href="/#platforms">서비스</a><a href="/device-care/" aria-current="page">내 기기</a></nav>
     <a class="ghost" href="/">My EKODI</a>
   </header>
 
@@ -23,13 +23,13 @@
       <div class="device-care-intro">
         <div class="device-care-copy">
           <p class="eyebrow">MY DEVICE CARE · FREE MEMBER</p>
-          <h1>내 PC, 필요한 만큼만 돌봅니다.</h1>
-          <p class="lead">설치 없이 현재 브라우저와 EKODI 웹 환경을 진단합니다. 무료회원도 사용할 수 있고, 다른 사이트의 데이터나 개인 파일은 읽지 않습니다.</p>
+          <h1>내 기기, 필요한 만큼만 돌봅니다.</h1>
+          <p class="lead">PC·POS·키오스크·태블릿 등 지금 My EKODI를 열고 있는 브라우저 환경을 설치 없이 진단합니다. 센서·서비스로봇은 실제 하드웨어를 추정하지 않고 안전한 연결 준비 정보만 제공합니다.</p>
         </div>
         <aside class="device-care-badge">
           <small>PRIVACY FIRST</small>
           <strong>내 기기 · 내 선택</strong>
-          <span>진단 기록은 이 브라우저에만 저장됩니다. OS 전체 최적화는 별도 Device Agent와 명시적 승인이 있을 때만 가능합니다.</span>
+          <span>진단 기록은 이 브라우저에만 저장됩니다. 운영체제·POS 장치·센서·로봇의 실제 제어는 별도 검증 Agent/어댑터와 명시적 승인이 있을 때만 가능합니다.</span>
         </aside>
       </div>
 
@@ -40,6 +40,12 @@
       </div>
 
       <div id="deviceCarePanel" class="device-care-panel" hidden>
+        <section class="device-care-kind" aria-labelledby="deviceCareKindTitle">
+          <div><p class="eyebrow">DEVICE TYPE</p><h2 id="deviceCareKindTitle">어떤 기기에서 보고 있나요?</h2><p>선택은 이 브라우저에만 저장되며 진단 권한을 늘리지 않습니다. 기기 종류에 따라 설명과 다음 연결 방법만 달라집니다.</p></div>
+          <div id="deviceCareTypeGrid" class="device-care-type-grid" role="group" aria-label="내 기기 유형"></div>
+          <p id="deviceCareTypeNote" class="device-care-type-note"></p>
+        </section>
+
         <div class="device-care-overview">
           <div class="device-care-score" data-health="확인 전">
             <strong id="deviceCareScore">—</strong>
@@ -51,9 +57,9 @@
               <button id="deviceCareDiagnose" class="primary" type="button">진단 시작</button>
               <button id="deviceCareOptimize" class="secondary" type="button">안전 최적화</button>
             </div>
-            <p id="deviceCareStatus" class="device-care-status" aria-live="polite">진단 시작을 누르면 이 컴퓨터의 브라우저 범위만 확인합니다.</p>
+            <p id="deviceCareStatus" class="device-care-status" aria-live="polite">진단 시작을 누르면 현재 브라우저 범위만 확인합니다.</p>
             <div class="device-care-privacy" aria-label="진단 범위">
-              <span>개인 파일 접근 안 함</span><span>다른 사이트 데이터 접근 안 함</span><span>Windows 설정 자동변경 안 함</span>
+              <span>개인 파일 접근 안 함</span><span>다른 사이트 데이터 접근 안 함</span><span>OS·기기 제어 자동실행 안 함</span>
             </div>
           </div>
         </div>
@@ -63,16 +69,21 @@
         <div class="device-care-subhead"><h2>지금 필요한 조치</h2><p id="deviceCareUpdated">아직 진단하지 않았습니다.</p></div>
         <div id="deviceCareRecommendations" class="device-care-recommendations"><article data-level="info"><span>•</span><div><strong>먼저 진단을 실행해 주세요.</strong><p>브라우저, 연결, 저장공간과 EKODI 웹 캐시 상태를 확인합니다.</p></div></article></div>
 
+        <section class="device-care-next" aria-labelledby="deviceCareNextTitle">
+          <div class="device-care-subhead"><h2 id="deviceCareNextTitle">기기별 다음 단계</h2><p>원격권한은 자동으로 생기지 않습니다.</p></div>
+          <div id="deviceCareNextStep" class="device-care-next-card"></div>
+        </section>
+
         <div class="device-care-subhead"><h2>최근 진단</h2><p>최대 8회 · 이 브라우저에만 저장</p></div>
         <div id="deviceCareHistory" class="device-care-history"></div>
 
-        <div class="device-care-limits"><strong>웹에서 할 수 없는 것</strong>CPU 프로세스 종료, Windows 시작프로그램 변경, 시스템 임시파일 정리, Windows 업데이트 설치처럼 운영체제 권한이 필요한 작업은 이 무료 웹 기능에서 실행하지 않습니다. 그런 작업은 관리자용 EKODI Device Agent에서 사용자 승인과 감사기록을 거쳐 처리합니다.</div>
+        <div class="device-care-limits"><strong>웹에서 할 수 없는 것</strong>CPU 프로세스 종료, Windows 시작프로그램 변경, 시스템 임시파일 정리, Windows 업데이트 설치, POS 결제장치 제어, 센서 설정 변경, 로봇 이동·구동처럼 운영체제나 물리 장치 권한이 필요한 작업은 이 무료 웹 기능에서 실행하지 않습니다. 그런 작업은 검증된 EKODI Agent/전용 어댑터와 사용자·관리자 승인, 감사기록을 거쳐야 합니다.</div>
       </div>
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>내 PC 관리 · 무료회원 · 개인정보 최소수집</span><a href="/">My EKODI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer><strong>My EKODI</strong><span>내 기기 관리 · 무료회원 · 개인정보 최소수집</span><a href="/">My EKODI ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
-  <script type="module" src="/device-care.js?v=20260826-device-care-1"></script>
+  <script type="module" src="/device-care.js?v=20260827-device-care-2"></script>
 </body>
 </html>
