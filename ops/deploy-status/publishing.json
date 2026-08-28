@@ -1,8 +1,8 @@
 {
   "service": "publishing",
-  "checkedAt": "2026-08-27T13:10:51.361302+00:00",
-  "githubRunId": "33075432263",
-  "githubSha": "dc2cd460f5564e806f00c29fa9f0eeafa8a2135a",
+  "checkedAt": "2026-08-28T19:07:10.860450+00:00",
+  "githubRunId": "33202246089",
+  "githubSha": "ed431aa497a4fbeda6da604569a87452da2a65f5",
   "root": {
     "http": "200",
     "remoteIp": "104.21.27.35",
