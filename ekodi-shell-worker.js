@@ -1,5 +1,7 @@
 import { EKODI_SERVICE_MANIFEST, serviceForHost, serviceForId } from './ekodi-service-manifest.js';
 
+const USER_SHORTCUT_GUARD=`(()=>{try{if(typeof document==='undefined')return;const current=document.currentScript;const serviceId=String(current?.dataset?.ekodiService||'').trim().toLowerCase();if(serviceId!=='my'){if(current)current.dataset.ekodiShell='off';document.documentElement.dataset.ekodiGlobalNav='off';}}catch{}})();`;
+
 function corsHeaders(){return {'access-control-allow-origin':'*','access-control-allow-methods':'GET,HEAD,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','x-content-type-options':'nosniff'};}
 function json(data,status=200,cache='public, max-age=60, stale-while-revalidate=300'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,...corsHeaders()}});}
 function withHeaders(response){const headers=new Headers(response.headers);headers.set('access-control-allow-origin','*');headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','no-referrer');headers.set('cross-origin-resource-policy','cross-origin');if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
@@ -46,7 +48,8 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-illustration-system',illustrationSystem?'v1':'missing');
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
-  return withHeaders(new Response(`${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  headers.set('x-ekodi-user-shortcuts','my-only');
+  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
 }
 
 export default {
