@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-28",
+  "model": "role-surface-separation",
+  "description": "EKODI 사용자 경험의 역할(Role)과 공간(Surface)을 분리해 정의하는 표준 계약",
+  "roles": [
+    {
+      "id": "guest",
+      "label": "로그인 전 일반사용자",
+      "scope": "public",
+      "description": "공개 안내와 서비스 소개를 보고 Google 로그인으로 진입하는 방문자"
+    },
+    {
+      "id": "member",
+      "label": "로그인 사용자",
+      "scope": "person",
+      "description": "Google 로그인 후 My EKODI와 허용된 공통서비스를 이용하는 회원"
+    },
+    {
+      "id": "operator",
+      "label": "운영자",
+      "scope": "workspace",
+      "description": "권한을 부여받은 운영공간 안에서만 회원·콘텐츠·업무·서비스를 운영하는 역할"
+    },
+    {
+      "id": "platform_admin",
+      "label": "관리자",
+      "scope": "platform",
+      "description": "admin.ekodi.kr에서 EKODI 전체 플랫폼을 관리하는 별도 최고 관리 역할"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "public",
+      "label": "일반사용자 공개영역",
+      "entry": "https://ekodi.kr/",
+      "audience": ["guest", "member", "operator", "platform_admin"],
+      "guestMode": "guide-only"
+    },
+    {
+      "id": "my",
+      "label": "마이 에코디",
+      "entry": "https://my.ekodi.kr/",
+      "audience": ["member", "operator", "platform_admin"],
+      "purpose": "나 중심의 개인 홈, 내 정보, 내 서비스, 내 활동, 운영공간 전환"
+    },
+    {
+      "id": "workspace",
+      "label": "운영공간",
+      "entry": "https://my.ekodi.kr/#workspaces",
+      "audience": ["member", "operator", "platform_admin"],
+      "purpose": "개인·사업자·교회·기관·단체·프로젝트 단위의 분리된 활동 공간"
+    },
+    {
+      "id": "shared_service",
+      "label": "공통서비스",
+      "entry": "service-specific",
+      "audience": ["guest", "member", "operator", "platform_admin"],
+      "guestMode": "guide-only",
+      "minimumMemberTier": "free",
+      "purpose": "여러 사용자와 운영공간이 공통으로 사용하는 전문 플랫폼"
+    },
+    {
+      "id": "admin",
+      "label": "관리자 제어영역",
+      "entry": "https://admin.ekodi.kr/",
+      "audience": ["platform_admin"],
+      "purpose": "EKODI 전체 회원·서비스·권한·도메인·배포·보안·AI 운영 통합관리"
+    }
+  ],
+  "canonicalTerms": {
+    "관리자": "platform_admin role",
+    "운영자": "operator role",
+    "로그인전 일반사용자": "guest role on public surface",
+    "로그인후 마이 에코디": "member role on my surface",
+    "운영공간": "workspace surface",
+    "공통서비스": "shared_service surface"
+  },
+  "invariants": [
+    "roles-and-surfaces-must-not-be-modeled-as-the-same-axis",
+    "operator-authority-is-always-workspace-scoped",
+    "platform-admin-authority-is-separate-from-tenant-activity",
+    "guest-access-to-shared-services-is-guide-only",
+    "signed-in-members-start-at-free-tier-or-higher",
+    "my-ekodi-is-person-centered-and-workspaces-are-space-centered",
+    "service-data-and-permissions-remain-isolated-by-workspace"
+  ]
+}
