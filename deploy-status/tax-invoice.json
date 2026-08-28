@@ -1,0 +1,14 @@
+{
+  "verifiedAt": "2026-08-28T07:37:54Z",
+  "commit": "d351cd690ce8b3cff447e19ba30fbef190d7c7e5",
+  "service": "EKODI Tax",
+  "operationPolicy": "FREE_FIRST",
+  "defaultChannel": "HOMETAX_MANUAL",
+  "multiSupplier": true,
+  "schemaVersion": 3,
+  "paidAutomationEnabled": false,
+  "financeUrl": "https://finance-api.ekodi.kr/api/finance/tax-health",
+  "taxUrl": "https://tax.ekodi.kr/",
+  "adminMenuUrl": "https://admin.ekodi.kr/admin-menu-registry.js",
+  "status": "verified"
+}
