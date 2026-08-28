@@ -23,13 +23,16 @@ test('shared user navigation exposes the stable EKODI links only on user surface
   assert.match(nav,/aria-label','EKODI 사용자 공통 메뉴/);
 });
 
-test('Shell Worker bundles global navigation and shared user/admin headers into the one shell payload',async()=>{
+test('Shell Worker bundles global navigation, shared chrome and language into one shell payload',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/user-global-nav\.js/);
   assert.match(worker,/user-ui-header\.js/);
   assert.match(worker,/user-ui-footer\.js/);
+  assert.match(worker,/user-language\.js/);
   assert.match(worker,/admin-ui-shell\.js/);
   assert.match(worker,/globalNav/);
+  assert.match(worker,/userLanguage/);
+  assert.match(worker,/x-ekodi-user-language/);
   assert.match(worker,/x-ekodi-admin-ui-shell/);
-  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{userHeader\}\\n\$\{userFooter\}\\n\$\{adminShell\}\\n\$\{fixedHeader\}/);
+  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{userHeader\}\\n\$\{userFooter\}\\n\$\{userLanguage\}\\n\$\{adminShell\}\\n\$\{fixedHeader\}/);
 });
