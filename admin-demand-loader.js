@@ -279,7 +279,19 @@
         await Promise.all((feature.styles || []).map(loadStyle));
         for (const src of feature.scripts || []) await loadScript(src);
         const real = await waitFor(feature.real);
-        if (placeholder?.isConnected) placeholder.remove();
+        if (placeholder) {
+          const generated = placeholder.dataset.demandGenerated === 'true';
+          const handler = placeholder.__ekodiDemandHandler;
+          if (handler) placeholder.removeEventListener('click', handler, true);
+          delete placeholder.__ekodiDemandHandler;
+          placeholder.disabled = false;
+          placeholder.removeAttribute('aria-busy');
+          placeholder.classList.remove('is-loading');
+          placeholder.removeAttribute('data-demand-feature');
+          placeholder.removeAttribute('data-demand-generated');
+          if (generated && placeholder !== real && placeholder.isConnected) placeholder.remove();
+        }
+        real.dataset.demandReady = 'true';
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
           queueMicrotask(() => real.click());
@@ -304,22 +316,30 @@
   }
 
   function placeholder(key, feature) {
-    if (!nav || nav.querySelector(feature.real) || nav.querySelector(`[data-demand-feature="${key}"]`)) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'nav';
+    if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return;
+    let button = nav.querySelector(feature.real);
+    if (button?.dataset.demandReady === 'true') return;
+    const generated = !button;
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'nav';
+      button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
+      button.append(document.createTextNode(`${feature.icon} `));
+      const label = document.createElement('span');
+      label.textContent = feature.label;
+      button.append(label);
+      insertPlaceholder(button, feature);
+    }
     button.dataset.demandFeature = key;
-    button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
-    button.append(document.createTextNode(`${feature.icon} `));
-    const label = document.createElement('span');
-    label.textContent = feature.label;
-    button.append(label);
-    button.addEventListener('click', event => {
+    button.dataset.demandGenerated = generated ? 'true' : 'false';
+    const handler = event => {
       event.preventDefault();
       event.stopImmediatePropagation();
       activateFeature(key, button, false);
-    }, true);
-    insertPlaceholder(button, feature);
+    };
+    button.__ekodiDemandHandler = handler;
+    button.addEventListener('click', handler, true);
   }
 
   function bindBaseEnhancements() {
