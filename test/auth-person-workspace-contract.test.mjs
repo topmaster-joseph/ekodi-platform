@@ -70,8 +70,10 @@ test('stable Google subject cannot be silently replaced by a recycled email acco
   assert.match(takeoverGuardMigration,/comment on function public\.link_person_identity\(uuid,uuid,text,text,text,text\)/i);
 });
 
-test('identity api persists Google subject and can mint a one-time handoff from an authenticated central session',()=>{
-  assert.match(identityApi,/p_provider_subject:String\(profile\.sub\)/);
+test('identity api preserves Google subject while persisting a provider-neutral verified identity',()=>{
+  assert.match(identityApi,/subject:String\(verified\.sub\)/);
+  assert.match(identityApi,/p_provider_subject:profile\.subject/);
+  assert.match(identityApi,/p_provider:provider/);
   assert.match(identityApi,/\/google\/link\/challenge/);
   assert.match(identityApi,/\/google\/link\/exchange/);
   assert.match(identityApi,/\/identities/);
