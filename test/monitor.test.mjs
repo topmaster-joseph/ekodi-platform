@@ -55,12 +55,13 @@ test('checkSite treats an expected protected auth response as healthy', async ()
   assert.equal(offline.status, 'offline');
 });
 
-test('monitor covers official services, shared infrastructure, Connect dependencies, Marketing AI tenants, private/public sites and legacy aliases', () => {
+test('monitor covers canonical professional AI paths, compatibility runtimes, infrastructure and legacy aliases', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
   assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
   assert.equal(byId.get('auth-client-js')?.[3], 'https://auth.ekodi.kr/client-auth.js');
   assert.equal(byId.get('auth-router-js')?.[3], 'https://auth.ekodi.kr/auth-router.js');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
+  assert.equal(byId.get('professional-ai-index')?.[3], 'https://ekodi.kr/ai/');
   assert.equal(byId.get('shell-js')?.[3], 'https://shell.ekodi.kr/shell.js');
   assert.equal(byId.get('community-health')?.[3], 'https://community.ekodi.kr/health');
   assert.equal(byId.get('community-connect')?.[3], 'https://community.ekodi.kr/connect/');
@@ -69,12 +70,16 @@ test('monitor covers official services, shared infrastructure, Connect dependenc
   assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
   assert.equal(byId.get('publishing')?.[2], 'publishing.ekodi.kr');
   assert.equal(byId.get('books')?.[2], 'books.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'jadam.ai.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
-  assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
-  assert.equal(byId.get('marketing-private-cgma')?.[2], 'cgma.ekodi.kr');
-  assert.equal(byId.has('marketing-public-cgma'), false);
+  assert.equal(byId.get('marketing-tenant-jadam')?.[2], 'ekodi.kr');
+  assert.equal(byId.get('marketing-tenant-jadam')?.[3], 'https://ekodi.kr/ai/marketing/jadam/');
+  assert.equal(byId.get('marketing-runtime-jadam')?.[2], 'marketing.ekodi.kr');
+  assert.equal(byId.get('marketing-runtime-jadam')?.[3], 'https://marketing.ekodi.kr/jadam/');
+  assert.equal(byId.get('marketing-tenant-pizzamaru')?.[3], 'https://ekodi.kr/ai/marketing/pizzamaru/');
+  assert.equal(byId.get('marketing-runtime-pizzamaru')?.[3], 'https://marketing.ekodi.kr/pizzamaru/');
+  assert.equal(byId.get('marketing-tenant-yogurt')?.[3], 'https://ekodi.kr/ai/marketing/yogurt/');
+  assert.equal(byId.get('marketing-runtime-yogurt')?.[3], 'https://marketing.ekodi.kr/yogurt/');
+  assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://ekodi.kr/ai/marketing/cgma/');
+  assert.equal(byId.get('marketing-runtime-cgma')?.[3], 'https://marketing.ekodi.kr/cgma/');
   assert.equal(byId.get('prelaunch-mail')?.[2], 'mail.ekodi.kr');
   assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
   assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');

@@ -40,3 +40,13 @@ test('browser router keeps workspace keys private-first and launches services th
   assert.match(router,/target\.searchParams\.set\('return_to',returnTo\.href\)/);
   assert.doesNotMatch(router,/workspace_name|workspace_owner|display_name/);
 });
+
+test('friendly /{space} aliases never invent workspace keys and keep the private workspace router authoritative',async()=>{
+  const worker=await read('my-worker.js');
+  assert.match(worker,/SPACE_SLUGS=new Set\(\['church','biz','lab','jadam','pizzamaru','yogurt','cgma'\]\)/);
+  assert.match(worker,/parseSpaceAlias/);
+  assert.match(worker,/x-ekodi-space-slug/);
+  assert.match(worker,/spaceAliasRouting:true/);
+  assert.match(worker,/spaceAliasPath:'\/\{space\}'/);
+  assert.doesNotMatch(worker,/workspaceKey=`space:/);
+});

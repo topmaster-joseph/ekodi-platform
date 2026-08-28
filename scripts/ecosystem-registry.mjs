@@ -44,7 +44,7 @@ const STATUS_DEFINITIONS = {
 const CATEGORY_IDS = new Set(CATEGORY_DEFINITIONS.map(category => category.id));
 const STATUS_IDS = new Set(Object.keys(STATUS_DEFINITIONS));
 const CLICKABLE_STATUSES = new Set(['live', 'beta']);
-const SUPPORTED_REGISTRY_VERSIONS = new Set([2, 3]);
+const SUPPORTED_REGISTRY_VERSIONS = new Set([2, 3, 4]);
 
 function escapeHtml(value) {
   return String(value)
@@ -55,6 +55,14 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function validatePublicUrl(value, id, label) {
+  let parsed;
+  try { parsed = new URL(value); } catch { throw new Error(`Invalid ${label} URL: ${id}`); }
+  if (parsed.protocol !== 'https:') throw new Error(`${label} URL must use HTTPS: ${id}`);
+  if (/staging|preview/i.test(parsed.hostname)) throw new Error(`Staging URL cannot be published: ${id}`);
+  return parsed;
+}
+
 function validateRegistry(registry) {
   if (!registry || !SUPPORTED_REGISTRY_VERSIONS.has(registry.version) || !Array.isArray(registry.services)) {
     throw new Error('Invalid EKODI ecosystem service registry');
@@ -62,18 +70,24 @@ function validateRegistry(registry) {
 
   const ids = new Set();
   const urls = new Set();
+  const canonicals = new Set();
   for (const service of registry.services) {
     if (!service || typeof service !== 'object') throw new Error('Invalid service registry entry');
     if (!/^[a-z0-9][a-z0-9-]*$/.test(service.id || '')) throw new Error(`Invalid service id: ${service.id || ''}`);
     if (ids.has(service.id)) throw new Error(`Duplicate service id: ${service.id}`);
     ids.add(service.id);
 
-    let parsed;
-    try { parsed = new URL(service.url); } catch { throw new Error(`Invalid service URL: ${service.id}`); }
-    if (parsed.protocol !== 'https:') throw new Error(`Service URL must use HTTPS: ${service.id}`);
-    if (/staging|preview/i.test(parsed.hostname)) throw new Error(`Staging URL cannot be published: ${service.id}`);
-    if (urls.has(service.url)) throw new Error(`Duplicate service URL: ${service.url}`);
+    validatePublicUrl(service.url, service.id, 'service runtime');
+    if (urls.has(service.url)) throw new Error(`Duplicate service runtime URL: ${service.url}`);
     urls.add(service.url);
+
+    if (service.canonicalUrl) {
+      const canonical = validatePublicUrl(service.canonicalUrl, service.id, 'canonical');
+      if (canonical.hostname !== 'ekodi.kr') throw new Error(`Path canonical must use ekodi.kr: ${service.id}`);
+      if (!canonical.pathname || canonical.pathname === '/') throw new Error(`Path canonical must include a route: ${service.id}`);
+      if (canonicals.has(service.canonicalUrl)) throw new Error(`Duplicate canonical URL: ${service.canonicalUrl}`);
+      canonicals.add(service.canonicalUrl);
+    }
 
     if (!service.name || !service.label) throw new Error(`Service name/label required: ${service.id}`);
     if (!ICONS[service.icon]) throw new Error(`Unknown service icon: ${service.id}`);
@@ -113,12 +127,13 @@ function serviceIsClickable(service) {
 
 function renderServiceCard(service) {
   const id = escapeHtml(service.id);
-  const url = escapeHtml(service.url);
+  const url = escapeHtml(service.canonicalUrl || service.url);
+  const runtimeUrl = escapeHtml(service.url);
   const name = escapeHtml(service.name);
   const nameEn = escapeHtml(service.nameEn || service.name);
   const descriptionKo = escapeHtml(service.descriptionKo || service.name);
   const descriptionEn = escapeHtml(service.descriptionEn || service.nameEn || service.name);
-  const label = escapeHtml(service.label);
+  const label = escapeHtml(service.canonicalLabel || service.label);
   const statusId = escapeHtml(service.status);
   const status = STATUS_DEFINITIONS[service.status];
   const clickable = serviceIsClickable(service);
@@ -127,7 +142,7 @@ function renderServiceCard(service) {
   const icon = `<span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span>`;
   const copy = `<span class="service-copy"><span class="service-title"><strong>${name}</strong><span class="service-name-en">${nameEn}</span></span><span class="service-description"><span>${descriptionKo}</span><small>${descriptionEn}</small></span><span class="service-domain">${label}</span></span>`;
   const badge = `<span class="service-status" data-status-badge="${statusId}"><b>${escapeHtml(status.label)}</b><span>${escapeHtml(status.labelEn)}</span></span>`;
-  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
+  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-runtime="${runtimeUrl}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
 
   if (clickable) {
     return `          <a ${common} href="${url}">${icon}${copy}<span class="service-card-side">${badge}<span class="arrow" aria-hidden="true">→</span></span></a>`;

@@ -1,0 +1,67 @@
+name: Domain Site Principle Guard
+
+on:
+  pull_request:
+    paths:
+      - 'config/domain-site-architecture.json'
+      - 'config/domain-site-principle.approved.json'
+      - 'scripts/validate-domain-site-architecture.mjs'
+      - '.github/workflows/domain-site-principle-guard.yml'
+      - 'config/ecosystem-services.json'
+      - 'config/marketing-tenants.json'
+      - 'test/marketing-domain-policy.test.mjs'
+      - 'test/professional-ai-path-routing.test.mjs'
+      - 'platform-router-entry-worker.js'
+      - 'professional-ai-entry-page.js'
+      - 'space-entry-page.js'
+      - 'my-worker.js'
+  push:
+    branches: [main]
+    paths:
+      - 'config/domain-site-architecture.json'
+      - 'config/domain-site-principle.approved.json'
+      - 'scripts/validate-domain-site-architecture.mjs'
+      - 'config/ecosystem-services.json'
+      - 'config/marketing-tenants.json'
+      - 'test/marketing-domain-policy.test.mjs'
+      - 'test/professional-ai-path-routing.test.mjs'
+      - 'platform-router-entry-worker.js'
+      - 'professional-ai-entry-page.js'
+      - 'space-entry-page.js'
+      - 'my-worker.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate approved architecture
+        run: node scripts/validate-domain-site-architecture.mjs
+      - name: Block silent principle snapshot changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if ! git cat-file -e "origin/${{ github.base_ref }}:config/domain-site-principle.approved.json" 2>/dev/null; then
+            echo 'Initial approved domain/site principle snapshot registered from explicit operator confirmation.'
+            exit 0
+          fi
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -Fxq 'config/domain-site-principle.approved.json'; then
+            if ! printf '%s' "$LABELS" | grep -Fq 'architecture-principle-approved'; then
+              echo 'DOMAIN_ARCHITECTURE_PRINCIPLE_CHANGED'
+              echo 'Approved principle snapshot changed. Explain the new principle to the EKODI operator, obtain explicit re-confirmation, then add label: architecture-principle-approved'
+              exit 1
+            fi
+          fi

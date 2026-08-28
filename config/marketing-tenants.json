@@ -1,44 +1,30 @@
 {
-  "version": 3,
-  "domainPattern": "{tenant}.ai.ekodi.kr",
+  "version": 5,
+  "canonicalPattern": "https://ekodi.kr/ai/marketing/{tenant}/",
+  "runtimePattern": "https://marketing.ekodi.kr/{tenant}/",
+  "legacyDomainPattern": "{tenant}.ai.ekodi.kr",
   "namespace": {
-    "domain": "ai.ekodi.kr",
-    "purpose": "EKODI customer AI workspace namespace",
-    "productHub": "marketing.ekodi.kr"
+    "gateway": "ai.ekodi.kr",
+    "canonicalRoot": "https://ekodi.kr/ai/marketing/",
+    "runtimeHub": "marketing.ekodi.kr",
+    "purpose": "Marketing AI user-facing professional service with EKODI root AI paths and a compatibility runtime host"
   },
   "hub": {
-    "domain": "marketing.ekodi.kr",
+    "canonicalUrl": "https://ekodi.kr/ai/marketing/",
+    "runtimeDomain": "marketing.ekodi.kr",
     "project": "marketing-ai"
   },
   "policy": {
-    "organizationWorkspace": {
-      "dedicatedEkodiDomain": true,
-      "pattern": "{organization}.ai.ekodi.kr"
-    },
-    "storeBasic": {
-      "dedicatedEkodiDomain": false,
-      "access": "organization workspace or shared Marketing AI hub"
-    },
-    "storePlus": {
-      "dedicatedEkodiDomain": true,
-      "pattern": "{store}.ai.ekodi.kr",
-      "customDomain": false
-    },
-    "storePro": {
-      "dedicatedEkodiDomain": true,
-      "pattern": "{store}.ai.ekodi.kr",
-      "customDomain": true,
-      "includedCustomDomains": 1
-    },
+    "tenantAddressing": "root-ai-path",
+    "dedicatedEkodiTenantDomain": false,
+    "newTenantSubdomainCreation": false,
+    "runtimeHostPolicy": "compatibility-execution-alias-until-path-equivalence",
+    "legacyTenantDomains": "preserve-as-alias-or-permanent-redirect",
     "customDomain": {
       "ownership": "customer",
       "registrationIncluded": false,
       "mappingOnly": true,
-      "examples": [
-        "ai.customer-domain.com",
-        "marketing.customer-domain.com"
-      ],
-      "note": "EKODI maps the customer-owned hostname to the same Pro workspace; domain ownership is not transferred to EKODI."
+      "note": "Customer-owned custom domains may map to the same tenant space without changing the EKODI canonical URL."
     }
   },
   "tenants": [
@@ -46,61 +32,54 @@
       "tenant": "jadam",
       "tenantType": "store",
       "name": "자담치킨 목포대점",
-      "project": "marketing-ai-jadam",
-      "domain": "jadam.ai.ekodi.kr",
-      "landingPath": "/",
-      "domainEntitlement": "grandfathered",
+      "canonicalPath": "/ai/marketing/jadam/",
+      "canonicalUrl": "https://ekodi.kr/ai/marketing/jadam/",
+      "runtimePath": "/jadam/",
+      "runtimeUrl": "https://marketing.ekodi.kr/jadam/",
+      "legacyProject": "marketing-ai-jadam",
+      "legacyDomains": ["jadam.ai.ekodi.kr", "jadam.ekodi.kr", "marketing.jadam.ekodi.kr"],
       "visibility": "private",
-      "privateSiteDomain": "jadam.ekodi.kr",
       "accessRealm": "jadam-client",
       "accessPolicy": "pre_registered_customer_only",
-      "legacyDomains": [
-        "jadam.ekodi.kr",
-        "marketing.jadam.ekodi.kr"
-      ],
       "customDomains": []
     },
     {
       "tenant": "pizzamaru",
       "tenantType": "store",
       "name": "피자마루 목포대점",
-      "project": "marketing-ai-pizzamaru",
-      "domain": "pizzamaru.ai.ekodi.kr",
-      "landingPath": "/",
-      "domainEntitlement": "grandfathered",
-      "legacyDomains": [
-        "pizzamaru.ekodi.kr",
-        "marketing.pizzamaru.ekodi.kr"
-      ],
+      "canonicalPath": "/ai/marketing/pizzamaru/",
+      "canonicalUrl": "https://ekodi.kr/ai/marketing/pizzamaru/",
+      "runtimePath": "/pizzamaru/",
+      "runtimeUrl": "https://marketing.ekodi.kr/pizzamaru/",
+      "legacyProject": "marketing-ai-pizzamaru",
+      "legacyDomains": ["pizzamaru.ai.ekodi.kr", "pizzamaru.ekodi.kr", "marketing.pizzamaru.ekodi.kr"],
       "customDomains": []
     },
     {
       "tenant": "yogurt",
       "tenantType": "store",
       "name": "요거트퍼플 목포대점",
-      "project": "marketing-ai-yogurtpurple",
-      "domain": "yogurt.ai.ekodi.kr",
-      "landingPath": "/",
-      "domainEntitlement": "grandfathered",
-      "legacyDomains": [
-        "yogurt.ekodi.kr",
-        "marketing.yogurt.ekodi.kr"
-      ],
+      "canonicalPath": "/ai/marketing/yogurt/",
+      "canonicalUrl": "https://ekodi.kr/ai/marketing/yogurt/",
+      "runtimePath": "/yogurt/",
+      "runtimeCompatibilityPaths": ["/yogurtpurple/"],
+      "runtimeUrl": "https://marketing.ekodi.kr/yogurt/",
+      "legacyProject": "marketing-ai-yogurtpurple",
+      "legacyDomains": ["yogurt.ai.ekodi.kr", "yogurt.ekodi.kr", "marketing.yogurt.ekodi.kr"],
       "customDomains": []
     },
     {
       "tenant": "cgma",
       "tenantType": "organization",
       "name": "청계면상인회",
-      "project": "cheonggye-market",
-      "domain": "cgma.ai.ekodi.kr",
-      "landingPath": "/market-ai",
-      "domainEntitlement": "organization",
+      "canonicalPath": "/ai/marketing/cgma/",
+      "canonicalUrl": "https://ekodi.kr/ai/marketing/cgma/",
+      "runtimePath": "/cgma/",
+      "runtimeUrl": "https://marketing.ekodi.kr/cgma/",
+      "legacyProject": "cheonggye-market",
+      "legacyLandingPath": "/market-ai",
+      "legacyDomains": ["cgma.ai.ekodi.kr", "cgma.ekodi.kr", "marketing.cheonggye.ekodi.kr"],
       "visibility": "private",
-      "privateSiteDomain": "cgma.ekodi.kr",
-      "legacyDomains": [
-        "marketing.cheonggye.ekodi.kr"
-      ],
       "customDomains": []
     }
   ],
@@ -109,10 +88,9 @@
       "id": "ekodibiz",
       "workspaceType": "tenant",
       "workspaceKey": "ekodibiz",
-      "tenant": "ekodibiz",
       "name": "에코디비즈",
-      "entryDomain": "marketing.ekodi.kr",
-      "entryUrl": "https://marketing.ekodi.kr/",
+      "entryUrl": "https://ekodi.kr/ai/marketing/biz/",
+      "runtimeUrl": "https://marketing.ekodi.kr/biz/",
       "templateKey": "service_b2b",
       "role": "first_party_customer",
       "dedicatedEkodiDomain": false
