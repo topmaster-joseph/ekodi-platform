@@ -7,6 +7,7 @@ on:
     paths:
       - 'ekodi-shell-injector.js'
       - 'site-shell-worker.js'
+      - 'config/user-footer.js'
       - 'config/user-ui-shell.json'
       - 'scripts/validate-user-ui-dna.mjs'
       - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
@@ -31,6 +32,7 @@ jobs:
       - name: Validate User UI Shell contract
         run: |
           set -euo pipefail
+          node --check config/user-footer.js
           node --check ekodi-shell-injector.js
           node --check site-shell-worker.js
           node scripts/validate-user-ui-dna.mjs
