@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { LIFE_AI_CORE, buildLifeAiPrompt, buildLifeReflection, lifeTopics, todayLifeQuestion } from './life-core.js';
 
+const USER_CHROME_CONTRACT='shared-csp-safe-v1';
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
@@ -54,7 +55,7 @@ export default{
   async fetch(request,env){
     const url=new URL(request.url);
     if(request.method==='OPTIONS'&&url.pathname.startsWith('/api/'))return new Response(null,{status:204,headers:{...corsHeaders(request),...SECURITY_HEADERS}});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-life-ai',brand:'오늘의 질문',platform:'인생AI',stages:[1,2,3,4,5],areas:lifeTopics().map(x=>x.id),core:LIFE_AI_CORE,dataMode:config(env).dataMode,ekodiShell:true,whiteLabel:true},200,request);
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-life-ai',brand:'오늘의 질문',platform:'인생AI',stages:[1,2,3,4,5],areas:lifeTopics().map(x=>x.id),core:LIFE_AI_CORE,dataMode:config(env).dataMode,ekodiShell:true,userChrome:USER_CHROME_CONTRACT,whiteLabel:true},200,request);
     if(url.pathname==='/config.js')return new Response(`window.EKODI_LIFE_CONFIG=${JSON.stringify(config(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(request.method==='GET'&&url.pathname==='/api/today')return json({...todayLifeQuestion(),topics:lifeTopics()},200,request);
     if(request.method==='GET'&&url.pathname==='/api/tenant')return json(await loadTenantProfile(request,env),200,request);
