@@ -1,10 +1,10 @@
-name: Cloudflare Production Staging Safe Cleanup
+name: Cloudflare Production Residue Safe Cleanup
 
 on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/cloudflare-production-staging-safe-cleanup.yml'
+      - '.github/workflows/cloudflare-production-residue-safe-cleanup.yml'
   workflow_dispatch:
 
 permissions:

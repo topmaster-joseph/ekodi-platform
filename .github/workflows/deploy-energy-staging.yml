@@ -29,7 +29,7 @@ jobs:
     environment: development
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
       STAGING_URL: https://ekodi-energy-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
@@ -64,6 +64,8 @@ jobs:
             echo '::error::Missing CLOUDFLARE_DEVELOPMENT_API_TOKEN.'
             exit 1
           }
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Deploy isolated staging Worker
         run: npx wrangler deploy --config wrangler.energy-staging.toml
       - name: Verify staging boundary and actuation isolation

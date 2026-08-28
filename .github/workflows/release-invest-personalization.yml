@@ -58,12 +58,13 @@ jobs:
           npm run build
 
   workspace-staging:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -101,6 +102,8 @@ jobs:
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Apply migrations and deploy isolated Workspace staging
         run: |
           npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.invest.runtime.toml
@@ -124,14 +127,17 @@ jobs:
         run: rm -f wrangler.invest.runtime.toml
 
   site-staging:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 14
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Build and deploy shared site staging
         run: |
           npm run build

@@ -2,7 +2,7 @@ name: Cloudflare Boundary Repair
 
 on:
   push:
-    branches: [main]
+    branches: [main, ops/cloudflare-boundary-unification-20260829]
     paths:
       - '.github/workflows/cloudflare-boundary-repair.yml'
   workflow_dispatch:
@@ -12,14 +12,15 @@ permissions:
 
 jobs:
   repair:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ops/cloudflare-boundary-unification-20260829'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
-      - name: Move every Worker staging deploy onto Development credentials
+
+      - name: Normalize every Worker staging deploy onto Development
         shell: bash
         run: |
           set -euo pipefail
@@ -34,6 +35,7 @@ jobs:
           dev_token_expr = '$' + '{{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}'
           prod_namespace = 'topmaster-joseph.workers.dev'
           dev_namespace = 'ekodi-development.workers.dev'
+          runtime_guard = 'uses: ./.github/actions/cloudflare-development-boundary'
 
           def is_worker_deploy(block):
               return bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b', block)) and 'pages deploy' not in block
@@ -46,6 +48,45 @@ jobs:
                   or '.staging.jsonc' in block
                   or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b', block))
               )
+
+          def insert_runtime_guard(block):
+              if runtime_guard in block:
+                  return block
+              lines = block.splitlines(keepends=True)
+              step_starts = [i for i, line in enumerate(lines) if re.match(r'^      - (?:name:|uses:)', line)]
+              for idx, start in enumerate(step_starts):
+                  end = step_starts[idx + 1] if idx + 1 < len(step_starts) else len(lines)
+                  step = ''.join(lines[start:end])
+                  if is_worker_deploy(step):
+                      guard = (
+                          '      - name: Verify Development Cloudflare boundary\n'
+                          '        uses: ./.github/actions/cloudflare-development-boundary\n'
+                      )
+                      return ''.join(lines[:start]) + guard + ''.join(lines[start:])
+              raise RuntimeError('Could not locate staging Worker deploy step for runtime guard insertion')
+
+          def patch_job(block):
+              original = block
+              block = block.replace(prod_token_expr, dev_token_expr)
+              block = block.replace(prod_account_expr, dev_account)
+              block = block.replace(prod_namespace, dev_namespace)
+              block = re.sub(r'^(\s+)CLOUDFLARE_API_TOKEN:\s*.*$', lambda m: f"{m.group(1)}CLOUDFLARE_API_TOKEN: {dev_token_expr}", block, flags=re.MULTILINE)
+              block = re.sub(r'^(\s+)CLOUDFLARE_ACCOUNT_ID:\s*.*$', lambda m: f"{m.group(1)}CLOUDFLARE_ACCOUNT_ID: '{dev_account}'", block, flags=re.MULTILINE)
+              if 'environment: development' not in block:
+                  first_nl = block.find('\n')
+                  insert = '    environment: development\n'
+                  block = block[:first_nl + 1] + insert + block[first_nl + 1:] if first_nl >= 0 else block + '\n' + insert
+              if dev_token_expr not in block or dev_account not in block:
+                  if re.search(r'^    env:\s*$', block, flags=re.MULTILINE):
+                      if dev_token_expr not in block:
+                          block = re.sub(r'(^    env:\s*$)', r'\1\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr, block, count=1, flags=re.MULTILINE)
+                      if dev_account not in block:
+                          block = re.sub(r'(^    env:\s*$)', r"\1\n      CLOUDFLARE_ACCOUNT_ID: '" + dev_account + "'", block, count=1, flags=re.MULTILINE)
+                  else:
+                      env_lines = '    env:\n' + f'      CLOUDFLARE_API_TOKEN: {dev_token_expr}\n' + f"      CLOUDFLARE_ACCOUNT_ID: '{dev_account}'\n"
+                      block = block.replace('    environment: development\n', '    environment: development\n' + env_lines, 1)
+              block = insert_runtime_guard(block)
+              return block, block != original
 
           def patch_jobs(text):
               lines = text.splitlines(keepends=True)
@@ -68,31 +109,8 @@ jobs:
                   end = starts[idx + 1][0] if idx + 1 < len(starts) else len(lines)
                   block = ''.join(lines[start:end])
                   if is_worker_deploy(block) and is_staging_job(name, block):
-                      original = block
-                      block = block.replace(prod_token_expr, dev_token_expr)
-                      block = block.replace(prod_account_expr, dev_account)
-                      block = block.replace(prod_namespace, dev_namespace)
-                      if 'environment: development' not in block:
-                          first_nl = block.find('\n')
-                          insert = '    environment: development\n'
-                          block = block[:first_nl+1] + insert + block[first_nl+1:] if first_nl >= 0 else block + '\n' + insert
-                      if dev_token_expr not in block or dev_account not in block:
-                          if re.search(r'^    env:\s*$', block, flags=re.MULTILINE):
-                              block = re.sub(
-                                  r'(^    env:\s*$)',
-                                  r'\1\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr + '\n      CLOUDFLARE_ACCOUNT_ID: ' + dev_account,
-                                  block,
-                                  count=1,
-                                  flags=re.MULTILINE,
-                              )
-                          else:
-                              block = block.replace(
-                                  '    environment: development\n',
-                                  '    environment: development\n    env:\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr + '\n      CLOUDFLARE_ACCOUNT_ID: ' + dev_account + '\n',
-                                  1,
-                              )
-                      if block != original:
-                          changed += 1
+                      block, did_change = patch_job(block)
+                      changed += int(did_change)
                   out.append(''.join(lines[cursor:start]))
                   out.append(block)
                   cursor = end
@@ -125,7 +143,7 @@ jobs:
               raise SystemExit('No staging jobs were patched; refusing an empty repair.')
           PY
 
-      - name: Fail if Production credentials remain in any detected staging Worker job
+      - name: Validate normalized staging contract
         shell: bash
         run: |
           set -euo pipefail
@@ -136,13 +154,15 @@ jobs:
           dev_token_expr='$' + '{{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}'
           prod_token_expr='$' + '{{ secrets.CLOUDFLARE_API_TOKEN }}'
           prod_account_expr='$' + '{{ secrets.CLOUDFLARE_ACCOUNT_ID }}'
+          runtime_guard='uses: ./.github/actions/cloudflare-development-boundary'
           failures=[]
+          if not Path('.github/actions/cloudflare-development-boundary/action.yml').exists():
+              failures.append('reusable Cloudflare Development boundary guard is missing')
           for path in sorted(Path('.github/workflows').glob('*.yml')):
               if path.name in {'cloudflare-boundary-audit.yml','cloudflare-boundary-repair.yml'}:
                   continue
               text=path.read_text(encoding='utf-8')
-              lines=text.splitlines()
-              in_jobs=False; current=None; block=[]; jobs=[]
+              lines=text.splitlines(); in_jobs=False; current=None; block=[]; jobs=[]
               for line in lines:
                   if line=='jobs:': in_jobs=True; continue
                   if not in_jobs: continue
@@ -156,11 +176,13 @@ jobs:
                   worker=bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b',b)) and 'pages deploy' not in b
                   staging=('staging' in name.lower() or 'STAGING_URL' in b or '.staging.toml' in b or '.staging.jsonc' in b or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b',b)))
                   if not (worker and staging): continue
-                  required=['environment: development',dev_token_expr,dev_account]
-                  for marker in required:
+                  for marker in ['environment: development',dev_token_expr,dev_account,runtime_guard]:
                       if marker not in b: failures.append(f'{path.name}:{name} missing {marker}')
                   if prod_token_expr in b or prod_account_expr in b or 'topmaster-joseph.workers.dev' in b:
                       failures.append(f'{path.name}:{name} retains Production Cloudflare marker')
+                  urls=re.findall(r'https://[^\s\"\']+\.workers\.dev[^\s\"\']*',b)
+                  if urls and not any('ekodi-development.workers.dev' in url for url in urls):
+                      failures.append(f'{path.name}:{name} has non-Development staging URL')
           if failures:
               print('\n'.join(failures))
               raise SystemExit(1)
@@ -176,7 +198,11 @@ jobs:
           git diff --cached --name-status --no-renames | tee /tmp/cloudflare-boundary-repair-changed.txt
           test -s /tmp/cloudflare-boundary-repair-changed.txt
 
+      - name: Export validated migration only
+        run: echo 'Validated migration is exported as an artifact; repository mutation is performed through the controlled GitHub connector.'
+
       - name: Upload validated repair artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cloudflare-boundary-repair-${{ github.sha }}

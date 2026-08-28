@@ -128,7 +128,7 @@ jobs:
         working-directory: sites/ekodi-mall
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: "46aad4738793fbaca88574832a2ccc0f"
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
       STAGING_URL: "https://ekodi-mall-api-staging.ekodi-development.workers.dev"
     steps:
       - name: Checkout
@@ -205,6 +205,8 @@ jobs:
       - name: Apply staging migrations
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.staging.runtime.toml
 
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Deploy staging Mall API
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
 

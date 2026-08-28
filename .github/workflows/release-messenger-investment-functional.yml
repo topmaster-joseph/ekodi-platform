@@ -100,12 +100,13 @@ jobs:
           ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
 
   workspace-staging:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -152,6 +153,8 @@ jobs:
           EOF
       - name: Apply all migrations to isolated Workspace staging
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.workspace.runtime.toml
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Deploy read-only isolated Workspace staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.workspace.runtime.toml
       - name: Verify Conversation and Profile schema with mutation isolation
@@ -181,12 +184,13 @@ jobs:
         run: rm -f wrangler.workspace.runtime.toml
 
   control-staging:
+    environment: development
     needs: workspace-staging
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -244,6 +248,8 @@ jobs:
           EOF
       - name: Apply migrations to isolated Control D1
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.conversation-control.runtime.toml
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Deploy isolated Conversation Control Worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.conversation-control.runtime.toml
       - name: Verify Operator authentication boundary
@@ -262,14 +268,17 @@ jobs:
         run: rm -f wrangler.conversation-control.runtime.toml
 
   staging-ui:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 14
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: '46aad4738793fbaca88574832a2ccc0f'
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Build and deploy shared site staging
         run: |
           npm run build
