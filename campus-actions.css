@@ -1,3 +1,11 @@
+body.compact-control-center .campus-category-tabs{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:0 0 12px;padding:6px;border:1px solid #d7e4f0;border-radius:12px;background:#f8fbfe;overflow-x:auto;scrollbar-width:thin}
+body.compact-control-center .campus-category-tab{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;min-height:32px;padding:6px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#52708d;font-size:10px;font-weight:700;line-height:1;cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease}
+body.compact-control-center .campus-category-tab:hover{border-color:#c9dceb;background:#fff;color:#173d61}
+body.compact-control-center .campus-category-tab.active{border-color:#b9d7ef;background:#eaf5ff;color:#0e5f99;box-shadow:0 2px 8px rgba(28,96,145,.08)}
+body.compact-control-center .campus-category-tab:focus-visible{outline:2px solid #4c9bd3;outline-offset:2px}
+body.compact-control-center .campus-category-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:18px;padding:0 5px;border-radius:999px;background:#e4edf5;color:#64819b;font-size:8px;line-height:1}
+body.compact-control-center .campus-category-tab.active .campus-category-count{background:#cfe9fb;color:#0e5f99}
+
 body.compact-control-center .campus-table-wrap.campus-groups-wrap{overflow:visible;border:0;background:transparent;padding:0}
 body.compact-control-center .campus-groups-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
 body.compact-control-center .campus-group-card{min-width:0;overflow:hidden;border:1px solid #1d3a58;border-radius:12px;background:#07182a;box-shadow:0 8px 24px rgba(0,0,0,.08)}
@@ -72,6 +80,8 @@ body.compact-control-center .campus-homepage-preview-chip.featured{border-color:
   body.compact-control-center .campus-site-type{display:inline-flex}
 }
 @media (max-width:720px){
+  body.compact-control-center .campus-category-tabs{justify-content:flex-start;margin-left:-2px;margin-right:-2px}
+  body.compact-control-center .campus-category-tab{min-height:34px;padding:7px 10px}
   body.compact-control-center .campus-site-item{grid-template-columns:minmax(0,1fr) auto;gap:5px 8px}
   body.compact-control-center .campus-site-domain{grid-column:1/2}
   body.compact-control-center .campus-row-actions{grid-column:2/3;grid-row:1/3;align-self:center;flex-wrap:wrap;max-width:108px}
