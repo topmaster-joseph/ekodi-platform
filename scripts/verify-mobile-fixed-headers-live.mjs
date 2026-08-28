@@ -1,7 +1,7 @@
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
-const attempts=Math.max(1,Math.min(3,Number(process.env.EKODI_MOBILE_HEADER_ATTEMPTS||2)));
+const attempts=Math.max(1,Math.min(30,Number(process.env.EKODI_MOBILE_HEADER_ATTEMPTS||6)));
 const delayMs=Math.max(0,Number(process.env.EKODI_MOBILE_HEADER_DELAY_MS||5000));
 const timeoutMs=Math.max(3000,Number(process.env.EKODI_MOBILE_HEADER_TIMEOUT_MS||15000));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
