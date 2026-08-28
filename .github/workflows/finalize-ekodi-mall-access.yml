@@ -1,0 +1,91 @@
+name: Finalize EKODI Mall staging Access
+
+on:
+  push:
+    branches:
+      - ops/coupang-secret-sync-20260828
+    paths:
+      - .github/workflows/finalize-ekodi-mall-access.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: ops/coupang-secret-sync-20260828
+          fetch-depth: 0
+
+      - name: Make Access enforcement durable and remove diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/deploy-ekodi-mall.yml')
+          text = path.read_text(encoding='utf-8')
+
+          deploy_marker = '''      - name: Deploy staging Mall API
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
+
+      - name: Verify staging API, schemas and safety gates
+'''
+          deploy_replacement = '''      - name: Deploy staging Mall API
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
+
+      - name: Ensure narrow staging Access bypasses
+        shell: bash
+        run: node scripts/ensure-staging-access.mjs
+
+      - name: Verify staging API, schemas and safety gates
+'''
+          if '      - name: Ensure narrow staging Access bypasses\n' not in text:
+              if deploy_marker not in text:
+                  raise SystemExit('Deploy marker not found; refusing ambiguous workflow edit.')
+              text = text.replace(deploy_marker, deploy_replacement, 1)
+
+          cleanup_marker = '''      - name: Cleanup staging config
+        if: always()
+        run: rm -f api/wrangler.staging.runtime.toml
+'''
+          protection_step = '''      - name: Verify staging private paths remain Access-protected
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers=$(mktemp)
+          code=$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "${STAGING_URL}/api/operations/__access_probe__" || true)
+          location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); sub(/\\r$/,""); print; exit}' "$headers")
+          rm -f "$headers"
+          safe_location=${location%%\\?*}
+          echo "Mall staging protected-path probe status=$code redirect=${safe_location:-none}"
+          if [ "$code" != "302" ] || [[ "$safe_location" != *"cloudflareaccess.com"* ]]; then
+            echo "Non-public Mall staging paths are not protected by Cloudflare Access; refusing promotion." >&2
+            exit 1
+          fi
+
+'''
+          if '      - name: Verify staging private paths remain Access-protected\n' not in text:
+              if cleanup_marker not in text:
+                  raise SystemExit('Cleanup marker not found; refusing ambiguous workflow edit.')
+              text = text.replace(cleanup_marker, protection_step + cleanup_marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          rm -f \
+            .github/workflows/diagnose-ekodi-access-permission.yml \
+            .github/workflows/diagnose-ekodi-mall-staging.yml \
+            .github/workflows/finalize-ekodi-mall-access.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows sites/ekodi-mall/scripts/ensure-staging-access.mjs
+          git diff --cached --check
+          git commit -m "Harden Mall staging Access boundary"
+          git push origin HEAD:ops/coupang-secret-sync-20260828
