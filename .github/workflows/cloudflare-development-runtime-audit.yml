@@ -1,0 +1,42 @@
+name: Cloudflare Development Runtime Audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/cloudflare-development-boundary/**'
+      - 'scripts/access-aware-staging.sh'
+      - 'scripts/harden-cloudflare-staging.mjs'
+      - 'scripts/validate-cloudflare-development-workflows.mjs'
+      - 'wrangler*staging*.toml'
+      - 'wrangler*staging*.jsonc'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/cloudflare-development-boundary/**'
+      - 'scripts/access-aware-staging.sh'
+      - 'scripts/harden-cloudflare-staging.mjs'
+      - 'scripts/validate-cloudflare-development-workflows.mjs'
+      - 'wrangler*staging*.toml'
+      - 'wrangler*staging*.jsonc'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Development staging boundaries
+        run: |
+          bash -n scripts/access-aware-staging.sh
+          node --check scripts/harden-cloudflare-staging.mjs
+          node --check scripts/validate-cloudflare-development-workflows.mjs
+          node scripts/validate-cloudflare-development-workflows.mjs

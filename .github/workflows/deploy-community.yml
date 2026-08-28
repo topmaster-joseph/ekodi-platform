@@ -81,6 +81,8 @@ jobs:
       STAGING_URL: https://ekodi-community-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -90,6 +92,10 @@ jobs:
       - name: Verify Community staging and Shell injection
         run: |
           set -euo pipefail
+          source scripts/access-aware-staging.sh
+          access_aware_staging_start wrangler.community.staging.toml "$STAGING_URL" 8790
+          STAGING_URL="$STAGING_VERIFY_URL"
+          trap access_aware_staging_stop EXIT
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -D /tmp/community-stage.headers -o /tmp/community-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -o /tmp/community-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)

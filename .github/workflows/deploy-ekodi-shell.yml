@@ -125,6 +125,8 @@ jobs:
       EKODI_SHELL_ALLOW_ACCESS_GATE: '1'
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'

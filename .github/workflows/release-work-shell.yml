@@ -56,6 +56,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -66,6 +68,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source scripts/access-aware-staging.sh
+          access_aware_staging_start wrangler.work-staging.toml "$STAGING_URL" 8790
+          STAGING_URL="$STAGING_VERIFY_URL"
+          trap access_aware_staging_stop EXIT
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/work-stage.headers -o /tmp/work-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/work-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)

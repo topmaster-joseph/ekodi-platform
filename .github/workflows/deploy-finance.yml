@@ -68,6 +68,9 @@ jobs:
 
   staging:
     environment: development
+    concurrency:
+      group: ekodi-development-d1-ekodi-auth-staging
+      cancel-in-progress: false
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -76,6 +79,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -132,10 +137,10 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/health' || true)
-            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/tax-business-status-health' || true)
-            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/overview' || true)
-            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/structure' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi-finance-api-staging.ekodi-development.workers.dev/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi-finance-api-staging.ekodi-development.workers.dev/api/finance/tax-business-status-health' || true)
+            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-finance-api-staging.ekodi-development.workers.dev/api/finance/overview' || true)
+            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi-finance-api-staging.ekodi-development.workers.dev/api/finance/structure' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \

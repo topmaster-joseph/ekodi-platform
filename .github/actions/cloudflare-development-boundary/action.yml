@@ -1,0 +1,33 @@
+name: Verify Cloudflare Development Boundary
+description: Fail closed unless a staging Worker deploy is using the isolated EKODI Development Cloudflare account and namespace.
+
+runs:
+  using: composite
+  steps:
+    - name: Verify Development account, token scope and namespace
+      shell: bash
+      run: |
+        set -euo pipefail
+        expected_account='46aad4738793fbaca88574832a2ccc0f'
+        expected_subdomain='ekodi-development'
+        test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'Missing Development Cloudflare API token.' >&2; exit 1; }
+        test "${CLOUDFLARE_ACCOUNT_ID:-}" = "$expected_account" || { echo 'Staging is not bound to the EKODI Development account.' >&2; exit 1; }
+
+        while IFS='=' read -r key value; do
+          case "$key" in
+            STAGING_URL|*STAGING*_URL)
+              [ -z "$value" ] && continue
+              case "$value" in
+                https://*.ekodi-development.workers.dev*) ;;
+                *) echo "$key is outside the Development workers.dev namespace." >&2; exit 1 ;;
+              esac
+              ;;
+          esac
+        done < <(env)
+
+        response=$(curl -fsS --connect-timeout 5 --max-time 20 \
+          -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+          -H 'Content-Type: application/json' \
+          "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")
+        printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);if(!j.success)process.exit(2);const sub=j.result&&j.result.subdomain;if(sub!=='ekodi-development'){console.error('Unexpected Development workers subdomain:',sub||'none');process.exit(3)}})"
+        echo 'Cloudflare Development boundary verified.'

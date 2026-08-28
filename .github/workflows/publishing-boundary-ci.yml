@@ -50,6 +50,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Verify Development Cloudflare boundary
+        uses: ./.github/actions/cloudflare-development-boundary
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -63,6 +65,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source scripts/access-aware-staging.sh
+          access_aware_staging_start wrangler.publishing.staging.toml "$STAGING_URL" 8790
+          STAGING_URL="$STAGING_VERIFY_URL"
+          trap access_aware_staging_stop EXIT
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/root-h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             studio=$(curl -L -sS -o /tmp/studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/studio/" || true)
