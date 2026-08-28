@@ -1,0 +1,143 @@
+name: Migrate Staging Boundary v2
+
+on:
+  push:
+    branches: [domain-site-architecture-v2-mainline]
+    paths:
+      - '.github/workflows/migrate-staging-boundary-v2.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrate-staging-boundary-v2
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: domain-site-architecture-v2-mainline
+          fetch-depth: 0
+      - name: Migrate every Worker staging job to Development account
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          root=Path('.github/workflows')
+          self_name='migrate-staging-boundary-v2.yml'
+          dev_account='46aad4738793fbaca88574832a2ccc0f'
+          dev_secret='${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}'
+          prod_secret='${{ secrets.CLOUDFLARE_API_TOKEN }}'
+          prod_account='${{ secrets.CLOUDFLARE_ACCOUNT_ID }}'
+          prod_ns='topmaster-joseph.workers.dev'
+          dev_ns='ekodi-development.workers.dev'
+
+          def worker_deploy(block):
+              return bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b',block)) and 'pages deploy' not in block
+
+          def staging(name,block):
+              return ('staging' in name.lower() or 'STAGING_URL' in block or '.staging.toml' in block or '.staging.jsonc' in block or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b',block)))
+
+          def job_ranges(lines):
+              try: start=lines.index('jobs:')+1
+              except ValueError: return []
+              heads=[]
+              for i in range(start,len(lines)):
+                  m=re.match(r'^  ([A-Za-z0-9_-]+):\s*$',lines[i])
+                  if m: heads.append((i,m.group(1)))
+              out=[]
+              for n,(i,name) in enumerate(heads):
+                  j=heads[n+1][0] if n+1<len(heads) else len(lines)
+                  out.append((i,j,name))
+              return out
+
+          changed=[]
+          migrated_jobs=[]
+          for path in sorted(root.glob('*.yml')):
+              if path.name in {self_name,'cloudflare-boundary-audit.yml','stage-marketing-pages-shell.yml'}:
+                  continue
+              text=path.read_text(encoding='utf-8')
+              lines=text.splitlines()
+              ranges=job_ranges(lines)
+              targets=[]
+              production_before={}
+              for i,j,name in ranges:
+                  block='\n'.join(lines[i:j])
+                  if worker_deploy(block) and staging(name,block): targets.append(name)
+                  else: production_before[name]=block
+              if not targets: continue
+
+              # Work from bottom so insertions cannot invalidate earlier ranges.
+              for i,j,name in reversed(ranges):
+                  if name not in targets: continue
+                  block=lines[i:j]
+                  block=[line.replace(prod_secret,dev_secret).replace(prod_account,dev_account).replace(prod_ns,dev_ns) for line in block]
+                  if not any(line=='    environment: development' for line in block):
+                      pos=next((k+1 for k,line in enumerate(block) if line.startswith('    runs-on:')),1)
+                      block.insert(pos,'    environment: development')
+                  env_idx=next((k for k,line in enumerate(block) if line=='    env:'),None)
+                  if env_idx is None:
+                      anchor=next((k+1 for k,line in enumerate(block) if line=='    environment: development'),1)
+                      block[anchor:anchor]=['    env:',f'      CLOUDFLARE_API_TOKEN: {dev_secret}',f'      CLOUDFLARE_ACCOUNT_ID: {dev_account}']
+                  else:
+                      env_end=env_idx+1
+                      while env_end<len(block) and (block[env_end].startswith('      ') or not block[env_end].strip()): env_end+=1
+                      env_body='\n'.join(block[env_idx:env_end])
+                      additions=[]
+                      if 'CLOUDFLARE_API_TOKEN:' not in env_body: additions.append(f'      CLOUDFLARE_API_TOKEN: {dev_secret}')
+                      if 'CLOUDFLARE_ACCOUNT_ID:' not in env_body: additions.append(f'      CLOUDFLARE_ACCOUNT_ID: {dev_account}')
+                      block[env_end:env_end]=additions
+                  lines[i:j]=block
+                  migrated_jobs.append(f'{path.name}:{name}')
+
+              new='\n'.join(lines)+'\n'
+              new_lines=new.splitlines()
+              # Production/non-staging jobs must remain byte-for-byte identical.
+              for i,j,name in job_ranges(new_lines):
+                  if name in production_before:
+                      after='\n'.join(new_lines[i:j])
+                      if after != production_before[name]:
+                          raise SystemExit(f'production job changed unexpectedly: {path.name}:{name}')
+              if new != text:
+                  path.write_text(new,encoding='utf-8')
+                  changed.append(path.name)
+
+          print('Migrated staging jobs:')
+          print('\n'.join(migrated_jobs))
+          print('Changed files:',', '.join(changed))
+          if not changed:
+              print('No remaining staging boundary migrations required.')
+          PY
+      - name: Run Cloudflare boundary audit before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          # Reuse the repository's authoritative audit implementation instead of duplicating policy.
+          import re, subprocess
+          text=open('.github/workflows/cloudflare-boundary-audit.yml',encoding='utf-8').read()
+          m=re.search(r"python - <<'PY'\n([\s\S]*?)\n          PY",text)
+          if not m: raise SystemExit('cannot extract Cloudflare boundary audit')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          exec(compile(code,'cloudflare-boundary-audit','exec'),{})
+          PY
+      - name: Commit migration to this PR branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/workflows; then
+            echo 'No workflow changes to commit.'
+            exit 0
+          fi
+          git config user.name 'EKODI Architecture Migration'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows
+          git commit -m 'ci: isolate all Worker staging in Development account'
+          git push origin HEAD:domain-site-architecture-v2-mainline
