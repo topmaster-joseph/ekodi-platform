@@ -165,9 +165,14 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
   assert.match(workflow,/name: Release EKODI Conversation Foundation/);
   assert.match(workflow,/workspace-staging:\n\s+environment: development\n\s+needs: validate/);
   assert.match(workflow,/control-staging:\n\s+environment: development\n\s+needs: workspace-staging/);
-  assert.match(workflow,/production-workspace:/);
-  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
-  assert.match(workflow,/production-ui:\n\s+needs: production-control/);
+  assert.match(workflow,/staging-ui:\n\s+environment: development\n\s+needs: validate/);
+  assert.match(workflow,/production-workspace:\n\s+environment: production\n\s+needs: \[control-staging, staging-ui\]/);
+  assert.match(workflow,/production-control:\n\s+environment: production\n\s+needs: production-workspace/);
+  assert.match(workflow,/production-ui:\n\s+environment: production\n\s+needs: production-control/);
+  assert.match(workflow,/API_STAGING_URL: https:\/\/ekodi-workspace-platform-api-staging\.ekodi-development\.workers\.dev/);
+  assert.match(workflow,/SITE_STAGING_URL: https:\/\/ekodi-shared-site-staging\.ekodi-development\.workers\.dev/);
+  assert.match(workflow,/CONTROL_STAGING_URL: https:\/\/ekodi-conversation-control-staging\.ekodi-development\.workers\.dev/);
+  assert.doesNotMatch(workflow,/\.topmaster-joseph\.workers\.dev/);
   assert.match(workflow,/ekodi-workspace-staging/);
   assert.match(workflow,/ekodi-conversation-control-staging/);
   assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
