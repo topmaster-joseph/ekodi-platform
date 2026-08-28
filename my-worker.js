@@ -3,6 +3,7 @@ import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
+const SPACE_SLUGS=new Set(['church','biz','lab','jadam','pizzamaru','yogurt','cgma']);
 const PRIVATE_ROUTER_TAG='<script src="/private-workspace-router.js?v=20260827-private-workspace-1"></script>';
 
 function securityHeaders(env={}){
@@ -54,6 +55,10 @@ function parsePrivateWorkspacePath(pathname){
   if(serviceId&&(!SERVICE_ID_RE.test(serviceId)||!visibleServices().some(service=>service.id===serviceId)))return false;
   return {workspaceKey,serviceId};
 }
+function parseSpaceAlias(pathname){
+  const match=String(pathname||'').match(/^\/([a-z0-9-]+)\/?$/);
+  return match&&SPACE_SLUGS.has(match[1])?match[1]:null;
+}
 async function manifestDrivenApp(request,env){
   const asset=await env.ASSETS.fetch(request);
   if(!asset.ok)return withHeaders(env,asset);
@@ -88,6 +93,7 @@ async function routedMyHome(request,env,route=null){
   if(route){
     headers.set('x-ekodi-private-workspace','v1');
     headers.set('x-ekodi-workspace-service',route.serviceId||'workspace-home');
+    if(route.spaceSlug)headers.set('x-ekodi-space-slug',route.spaceSlug);
   }
   return injectEkodiShell(withHeaders(env,new Response(source,{status:asset.status,statusText:asset.statusText,headers})),'my');
 }
@@ -103,12 +109,19 @@ export default{
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',lifeChannels:true,proactiveUserAi:true,humanGatedOutbound:true,serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',spaceAliasRouting:true,spaceAliasPath:'/{space}',lifeChannels:true,proactiveUserAi:true,humanGatedOutbound:true,serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/creator'||url.pathname==='/creator/')return Response.redirect('https://author.ekodi.kr/',307);
     if(url.pathname==='/personal-brand'||url.pathname==='/personal-brand/')return Response.redirect(personalBrandUrl(),307);
     if(url.pathname==='/app.js')return manifestDrivenApp(request,env);
     if(url.pathname==='/'||url.pathname==='')return routedMyHome(request,env);
+    const spaceAlias=parseSpaceAlias(url.pathname);
+    if(spaceAlias){
+      if(!url.pathname.endsWith('/')){
+        const canonical=new URL(request.url);canonical.pathname=`/${spaceAlias}/`;return Response.redirect(canonical.toString(),308);
+      }
+      return routedMyHome(request,env,{spaceSlug:spaceAlias,serviceId:''});
+    }
     const privateRoute=parsePrivateWorkspacePath(url.pathname);
     if(privateRoute===false)return json(env,{ok:false,error:'private_workspace_route_not_found'},404);
     if(privateRoute)return routedMyHome(request,env,privateRoute);
