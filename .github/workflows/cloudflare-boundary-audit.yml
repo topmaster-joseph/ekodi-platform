@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
+      - '.github/actions/cloudflare-development-boundary/**'
       - 'docs/operations/cloudflare-two-account-boundary.md'
       - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
@@ -12,6 +13,7 @@ on:
     branches: [main, development]
     paths:
       - '.github/workflows/**'
+      - '.github/actions/cloudflare-development-boundary/**'
       - 'docs/operations/cloudflare-two-account-boundary.md'
       - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
@@ -39,9 +41,14 @@ jobs:
           errors = []
           dev_account = '46aad4738793fbaca88574832a2ccc0f'
           dev_secret = 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN'
+          runtime_guard = 'uses: ./.github/actions/cloudflare-development-boundary'
           prod_secret_markers = ('secrets.CLOUDFLARE_API_TOKEN', 'secrets.CLOUDFLARE_ACCOUNT_ID')
           prod_workers_namespace = 'topmaster-joseph.workers.dev'
           dev_workers_namespace = 'ekodi-development.workers.dev'
+
+          action = Path('.github/actions/cloudflare-development-boundary/action.yml')
+          if not action.exists():
+              errors.append('reusable Cloudflare Development boundary guard is missing')
 
           def job_blocks(text):
               lines = text.splitlines()
@@ -109,6 +116,8 @@ jobs:
               for marker in ('environment: development', dev_secret, dev_account, dev_workers_namespace):
                   if marker not in text:
                       errors.append(f'{filename}: missing Development boundary marker: {marker}')
+              if runtime_guard not in text:
+                  errors.append(f'{filename}: missing reusable Development boundary guard')
               if any(marker in text for marker in prod_secret_markers):
                   errors.append(f'{filename}: staging Worker references production Cloudflare credentials')
               if prod_workers_namespace in text:
@@ -147,6 +156,8 @@ jobs:
                           errors.append(f'{label}: staging Worker deploy is missing Development API token')
                       if dev_account not in block:
                           errors.append(f'{label}: staging Worker deploy is missing Development account ID')
+                      if runtime_guard not in block:
+                          errors.append(f'{label}: staging Worker deploy is missing reusable runtime boundary guard')
                       if any(marker in block for marker in prod_secret_markers):
                           errors.append(f'{label}: staging Worker deploy references Production Cloudflare credentials')
                       if prod_workers_namespace in block:
@@ -204,5 +215,5 @@ jobs:
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Cloudflare boundary audit passed: Workers staging is Development-only and production guardrails remain intact.')
+          print('Cloudflare boundary audit passed: Workers staging is Development-only, runtime-guarded, and production guardrails remain intact.')
           PY
