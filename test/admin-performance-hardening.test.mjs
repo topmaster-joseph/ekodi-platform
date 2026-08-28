@@ -112,6 +112,24 @@ test('versioned admin assets receive immutable cache headers while unversioned r
   assert.match(worker, /admin-perf-diagnostics\.js/);
 });
 
+test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
+  const wrangler = await read('wrangler.site.toml');
+  for (const asset of [
+    '/control-center.css',
+    '/admin-central-handoff.js',
+    '/admin-authenticated-shell.js',
+    '/compact-control-center.js',
+    '/compact-control-center.css',
+    '/admin-menu-layout.js',
+    '/admin-demand-loader.js',
+    '/admin-perf-diagnostics.js',
+    '/admin-lazy-features.js',
+    '/ai-ops-admin.css',
+    '/system-health-admin.js',
+    '/system-health-admin.css',
+  ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
+});
+
 test('build ordering runs readable layer before the final performance guard', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const build = pkg.scripts.build;
