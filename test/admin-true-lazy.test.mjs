@@ -37,6 +37,17 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
 
+test('shared sidebar menu sources ship the retired Operations cleanup', async () => {
+  const registry = await read('admin-menu-registry.js');
+  const sidebar = await read('admin-sidebar.js');
+  const postbuild = await read('scripts/admin-performance-postbuild.mjs');
+  assert.doesNotMatch(registry, /id: 'overview'/);
+  assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
+  assert.match(sidebar, /RETIRED_MENU_SECTIONS\.has\(id\)/);
+  assert.match(postbuild, /admin-menu-registry\.js/);
+  assert.match(postbuild, /admin-sidebar\.js/);
+});
+
 test('AI membership admin presents the Core-first execution policy', async () => {
   const panel = await read('user-ai-tier-panel.js');
   assert.match(panel, /Core 우선 · AI 필요 시 자동 선택/);
