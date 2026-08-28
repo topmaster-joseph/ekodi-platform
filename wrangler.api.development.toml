@@ -1,0 +1,43 @@
+# EKODI Development account only. No production custom domain routes.
+name = "ekodi-auth-api-development"
+main = "mission-control-entry-worker.js"
+compatibility_date = "2026-08-12"
+workers_dev = true
+preview_urls = false
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+ENVIRONMENT = "development"
+ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
+GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+USER_AI_FREE_MONTHLY_REQUESTS = "20"
+USER_AI_FLEX_MONTHLY_REQUESTS = "20"
+ALLOWED_ORIGINS = "https://ekodi-platform-development.ekodi-development.workers.dev,https://ekodi-shared-site-staging.ekodi-development.workers.dev,https://ekodi-my-staging.ekodi-development.workers.dev"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2101"
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[[ratelimits]]
+name = "SENSITIVE_RATE_LIMITER"
+namespace_id = "2102"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth-development"
+database_id = "790a8551-cdb2-4dbf-bfcc-a46d61b62766"
+migrations_dir = "migrations"
