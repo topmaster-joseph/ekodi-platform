@@ -102,8 +102,8 @@ jobs:
           curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$TARGET/schedules" -o /tmp/dev-schedules.json
           jq -e '.success == true' /tmp/prod-schedules.json >/dev/null
           jq -e '.success == true' /tmp/dev-schedules.json >/dev/null
-          prod_crons=$(jq -c '[.result[]? | (.cron // .schedule // .)] | sort' /tmp/prod-schedules.json)
-          dev_crons=$(jq -c '[.result[]? | (.cron // .schedule // .)] | sort' /tmp/dev-schedules.json)
+          prod_crons=$(jq -c '[.result[]? | if type == "object" then (.cron // .schedule // tojson) else tostring end] | sort' /tmp/prod-schedules.json)
+          dev_crons=$(jq -c '[.result[]? | if type == "object" then (.cron // .schedule // tojson) else tostring end] | sort' /tmp/dev-schedules.json)
           test "$prod_crons" = "$dev_crons" || {
             echo "HOLD: cron mismatch production=$prod_crons development=$dev_crons"
             exit 1
