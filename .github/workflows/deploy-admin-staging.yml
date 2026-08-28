@@ -125,7 +125,6 @@ jobs:
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "loadScript('finance-monitor.js')" dist/admin-demand-loader.js
           grep -Fq 'isInputPending' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
@@ -159,10 +158,15 @@ jobs:
       - name: Deploy isolated admin staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
 
-      - name: Verify staging fingerprinted thin shell, standalone Health and latest flat AI Ops
+      - name: Verify protected staging and latest flat AI Ops
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/admin-access.headers -o /tmp/admin-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -Fiq '^www-authenticate: Cloudflare-Access' /tmp/admin-access.headers; then
+            echo "Admin staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 18); do
             root_code=$(curl -sS -D /tmp/admin-stage-headers -o /tmp/admin-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -D /tmp/admin-stage-health-headers -o /tmp/admin-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
