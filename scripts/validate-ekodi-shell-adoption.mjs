@@ -99,7 +99,15 @@ for(const service of manifest.services||[]){
   if(typeof service.targetable!=='boolean')fail(`${service.id} must declare targetable`);
   if(!allowedIntegrations.has(service.shellIntegration))fail(`${service.id} must declare a recognized shellIntegration`);
   const commonUserPage=service.operatingModel!=='customer-site';
-  if(commonUserPage){const p=service.userAccessPolicy;if(p?.scope!=='user-pages'||p?.guestMode!=='guide-only'||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!=='shared-shell')fail(`${service.id} must require Google FREE membership for common user-page content`);}
+  if(commonUserPage){
+    const p=service.userAccessPolicy;
+    const publicLanding=service.defaultSurface==='public';
+    const expectedGuestMode=publicLanding?'service-landing':'guide-only';
+    const expectedEnforcedBy=publicLanding?'service+shared-shell':'shared-shell';
+    if(p?.scope!=='user-pages'||p?.guestMode!==expectedGuestMode||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!==expectedEnforcedBy){
+      fail(`${service.id} must expose only its service landing before Google FREE membership and keep workspace content protected`);
+    }
+  }
   else if(service.userAccessPolicy!==null)fail(`${service.id} customer site must keep its own user access policy`);
   const serviceTheme=theme.services?.[service.id];
   if(!serviceTheme?.accent)fail(`${service.id} needs a Shell v2 identity accent`);
@@ -139,4 +147,4 @@ for(const service of ecosystem.services||[]){
 for(const service of manifest.services||[])if(!ecosystemById.has(service.id))fail(`canonical service ${service.id} is missing from the ecosystem registry`);
 for(const required of ['Person + Space + Role + Capability','My EKODI responsibility','Visual architecture','Public service selector','Public experience rotation','Future-site onboarding','Browser context contract','Shell API','Security boundaries'])if(!docs.includes(required))fail(`Shell contract documentation lost required section: ${required}`);
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; shared runtime fixes mobile headers, root stays zero-JS, internal surfaces remain stable, and registry services inherit One Login.`);
+console.log(`✅ EKODI Shell v${manifest.shellVersion} adoption policy passed: ${manifest.services.length} services covered; public surfaces keep service-owned landings, shared workspaces stay member-gated, and registry services inherit One Login.`);
