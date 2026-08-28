@@ -37,6 +37,17 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
 
+test('device browser diagnostics are shipped in every guarded admin release', async () => {
+  const build = await read('scripts/build.mjs');
+  const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  assert.match(build, /'device-browser-diagnostics\.css'/);
+  assert.match(build, /'device-browser-diagnostics\.js'/);
+  const smoke = JSON.stringify(manifest.smoke || manifest);
+  assert.match(smoke, /device-browser-diagnostics\.js\?device=v28/);
+  assert.match(smoke, /EKODIDeviceBrowserDiagnostics/);
+  assert.match(smoke, /device-browser-diagnostics\.css\?device=v28/);
+});
+
 test('shared sidebar menu sources ship the retired Operations cleanup', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
