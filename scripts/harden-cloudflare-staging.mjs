@@ -72,7 +72,7 @@ function hardenMarketingDomain(filename, blockName, block) {
   if (blockName === 'production' && !out.includes('DOMAIN_CF_TOKEN: ${{ secrets.MARKETING_DOMAIN_CF_API_TOKEN }}')) {
     const marker = '      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n';
     if (!out.includes(marker)) throw new Error('production Marketing domain job lost Cloudflare account env marker');
-    out = out.replace(marker, `${marker}      DOMAIN_CF_TOKEN: ${{ secrets.MARKETING_DOMAIN_CF_API_TOKEN }}\n`);
+    out = out.replace(marker, marker + '      DOMAIN_CF_TOKEN: ${{ secrets.MARKETING_DOMAIN_CF_API_TOKEN }}\n');
   }
   return out;
 }
