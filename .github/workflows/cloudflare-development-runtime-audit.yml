@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/actions/cloudflare-development-boundary/**'
+      - 'scripts/access-aware-staging.sh'
       - 'scripts/harden-cloudflare-staging.mjs'
       - 'scripts/validate-cloudflare-development-workflows.mjs'
       - 'wrangler*staging*.toml'
@@ -14,6 +15,7 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/actions/cloudflare-development-boundary/**'
+      - 'scripts/access-aware-staging.sh'
       - 'scripts/harden-cloudflare-staging.mjs'
       - 'scripts/validate-cloudflare-development-workflows.mjs'
       - 'wrangler*staging*.toml'
@@ -33,4 +35,8 @@ jobs:
         with:
           node-version: '24'
       - name: Validate Development staging boundaries
-        run: node scripts/validate-cloudflare-development-workflows.mjs
+        run: |
+          bash -n scripts/access-aware-staging.sh
+          node --check scripts/harden-cloudflare-staging.mjs
+          node --check scripts/validate-cloudflare-development-workflows.mjs
+          node scripts/validate-cloudflare-development-workflows.mjs
