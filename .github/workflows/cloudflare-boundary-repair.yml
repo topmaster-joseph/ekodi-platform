@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   repair:
@@ -70,52 +70,21 @@ jobs:
               block = block.replace(prod_token_expr, dev_token_expr)
               block = block.replace(prod_account_expr, dev_account)
               block = block.replace(prod_namespace, dev_namespace)
-
-              # Normalize any Cloudflare env assignment in a staging job, regardless of its prior value.
-              block = re.sub(
-                  r'^(\s+)CLOUDFLARE_API_TOKEN:\s*.*$',
-                  lambda m: f"{m.group(1)}CLOUDFLARE_API_TOKEN: {dev_token_expr}",
-                  block,
-                  flags=re.MULTILINE,
-              )
-              block = re.sub(
-                  r'^(\s+)CLOUDFLARE_ACCOUNT_ID:\s*.*$',
-                  lambda m: f"{m.group(1)}CLOUDFLARE_ACCOUNT_ID: '{dev_account}'",
-                  block,
-                  flags=re.MULTILINE,
-              )
-
+              block = re.sub(r'^(\s+)CLOUDFLARE_API_TOKEN:\s*.*$', lambda m: f"{m.group(1)}CLOUDFLARE_API_TOKEN: {dev_token_expr}", block, flags=re.MULTILINE)
+              block = re.sub(r'^(\s+)CLOUDFLARE_ACCOUNT_ID:\s*.*$', lambda m: f"{m.group(1)}CLOUDFLARE_ACCOUNT_ID: '{dev_account}'", block, flags=re.MULTILINE)
               if 'environment: development' not in block:
                   first_nl = block.find('\n')
                   insert = '    environment: development\n'
                   block = block[:first_nl + 1] + insert + block[first_nl + 1:] if first_nl >= 0 else block + '\n' + insert
-
               if dev_token_expr not in block or dev_account not in block:
                   if re.search(r'^    env:\s*$', block, flags=re.MULTILINE):
                       if dev_token_expr not in block:
-                          block = re.sub(
-                              r'(^    env:\s*$)',
-                              r'\1\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr,
-                              block,
-                              count=1,
-                              flags=re.MULTILINE,
-                          )
+                          block = re.sub(r'(^    env:\s*$)', r'\1\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr, block, count=1, flags=re.MULTILINE)
                       if dev_account not in block:
-                          block = re.sub(
-                              r'(^    env:\s*$)',
-                              r"\1\n      CLOUDFLARE_ACCOUNT_ID: '" + dev_account + "'",
-                              block,
-                              count=1,
-                              flags=re.MULTILINE,
-                          )
+                          block = re.sub(r'(^    env:\s*$)', r"\1\n      CLOUDFLARE_ACCOUNT_ID: '" + dev_account + "'", block, count=1, flags=re.MULTILINE)
                   else:
-                      env_lines = (
-                          '    env:\n'
-                          f'      CLOUDFLARE_API_TOKEN: {dev_token_expr}\n'
-                          f"      CLOUDFLARE_ACCOUNT_ID: '{dev_account}'\n"
-                      )
+                      env_lines = '    env:\n' + f'      CLOUDFLARE_API_TOKEN: {dev_token_expr}\n' + f"      CLOUDFLARE_ACCOUNT_ID: '{dev_account}'\n"
                       block = block.replace('    environment: development\n', '    environment: development\n' + env_lines, 1)
-
               block = insert_runtime_guard(block)
               return block, block != original
 
@@ -187,16 +156,13 @@ jobs:
           prod_account_expr='$' + '{{ secrets.CLOUDFLARE_ACCOUNT_ID }}'
           runtime_guard='uses: ./.github/actions/cloudflare-development-boundary'
           failures=[]
-
           if not Path('.github/actions/cloudflare-development-boundary/action.yml').exists():
               failures.append('reusable Cloudflare Development boundary guard is missing')
-
           for path in sorted(Path('.github/workflows').glob('*.yml')):
               if path.name in {'cloudflare-boundary-audit.yml','cloudflare-boundary-repair.yml'}:
                   continue
               text=path.read_text(encoding='utf-8')
-              lines=text.splitlines()
-              in_jobs=False; current=None; block=[]; jobs=[]
+              lines=text.splitlines(); in_jobs=False; current=None; block=[]; jobs=[]
               for line in lines:
                   if line=='jobs:': in_jobs=True; continue
                   if not in_jobs: continue
@@ -210,8 +176,7 @@ jobs:
                   worker=bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b',b)) and 'pages deploy' not in b
                   staging=('staging' in name.lower() or 'STAGING_URL' in b or '.staging.toml' in b or '.staging.jsonc' in b or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b',b)))
                   if not (worker and staging): continue
-                  required=['environment: development',dev_token_expr,dev_account,runtime_guard]
-                  for marker in required:
+                  for marker in ['environment: development',dev_token_expr,dev_account,runtime_guard]:
                       if marker not in b: failures.append(f'{path.name}:{name} missing {marker}')
                   if prod_token_expr in b or prod_account_expr in b or 'topmaster-joseph.workers.dev' in b:
                       failures.append(f'{path.name}:{name} retains Production Cloudflare marker')
@@ -233,19 +198,11 @@ jobs:
           git diff --cached --name-status --no-renames | tee /tmp/cloudflare-boundary-repair-changed.txt
           test -s /tmp/cloudflare-boundary-repair-changed.txt
 
-      - name: Commit validated migration on repair branch
-        if: github.ref == 'refs/heads/ops/cloudflare-boundary-unification-20260829'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows
-          git diff --cached --quiet && exit 0
-          git commit -m 'Unify Cloudflare staging deployments on Development boundary'
-          git push origin HEAD:${GITHUB_REF_NAME}
+      - name: Export validated migration only
+        run: echo 'Validated migration is exported as an artifact; repository mutation is performed through the controlled GitHub connector.'
 
       - name: Upload validated repair artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cloudflare-boundary-repair-${{ github.sha }}
