@@ -1,0 +1,40 @@
+name: Redeploy Shared Site on User UI Shell
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'ekodi-shell-injector.js'
+      - 'site-shell-worker.js'
+      - 'config/user-ui-shell.json'
+      - 'scripts/validate-user-ui-dna.mjs'
+      - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ekodi-user-ui-shell-site-bridge
+  cancel-in-progress: false
+
+jobs:
+  validate-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate User UI Shell contract
+        run: |
+          set -euo pipefail
+          node --check ekodi-shell-injector.js
+          node --check site-shell-worker.js
+          node scripts/validate-user-ui-dna.mjs
+      - name: Dispatch guarded shared-site production workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-site-core.yml --ref main -f sync_domains=false
