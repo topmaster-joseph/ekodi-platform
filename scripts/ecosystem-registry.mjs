@@ -128,6 +128,7 @@ function serviceIsClickable(service) {
 function renderServiceCard(service) {
   const id = escapeHtml(service.id);
   const url = escapeHtml(service.canonicalUrl || service.url);
+  const runtimeUrl = escapeHtml(service.url);
   const name = escapeHtml(service.name);
   const nameEn = escapeHtml(service.nameEn || service.name);
   const descriptionKo = escapeHtml(service.descriptionKo || service.name);
@@ -141,7 +142,7 @@ function renderServiceCard(service) {
   const icon = `<span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span>`;
   const copy = `<span class="service-copy"><span class="service-title"><strong>${name}</strong><span class="service-name-en">${nameEn}</span></span><span class="service-description"><span>${descriptionKo}</span><small>${descriptionEn}</small></span><span class="service-domain">${label}</span></span>`;
   const badge = `<span class="service-status" data-status-badge="${statusId}"><b>${escapeHtml(status.label)}</b><span>${escapeHtml(status.labelEn)}</span></span>`;
-  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
+  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-runtime="${runtimeUrl}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
 
   if (clickable) {
     return `          <a ${common} href="${url}">${icon}${copy}<span class="service-card-side">${badge}<span class="arrow" aria-hidden="true">→</span></span></a>`;
