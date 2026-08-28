@@ -21,9 +21,30 @@ await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostic
 const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js'];
 await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
 
-// Keep the first-path demand router below its hard byte budget.
+// Keep the first-path demand router below its hard byte budget. Source remains readable;
+// only the generated runtime receives safe internal identifier compaction.
 const demandLoaderPath = `${dist}admin-demand-loader.js`;
-const demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+let demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+for (const [from,to] of [
+  ['secondaryScheduled','sec'],
+  ['insertPlaceholder','insert'],
+  ['activateFeature','activate'],
+  ['bindBaseEnhancements','bindBase'],
+  ['requestedFeature','requested'],
+  ['demandGenerated','dg'],
+  ['__ekodiDemandHandler','_dh'],
+  ['scheduleSecondary','schedule'],
+  ['authenticated','authed'],
+  ['assetUrl','urlFor'],
+  ['loadScript','loadJs'],
+  ['loadStyle','loadCss'],
+  ['inputPending','inputBusy'],
+  ['onBackground','background'],
+  ['FEATURES','F'],
+  ['loadedScripts','jsCache'],
+  ['loadedStyles','cssCache'],
+  ['stylesLoaded','cssReady'],
+]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
 await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
 // Login/return parses only the base visual CSS and the small central-auth handoff.

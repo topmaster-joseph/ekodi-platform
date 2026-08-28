@@ -35,6 +35,7 @@ on:
       - 'system-map-admin.css'
       - 'platform-boundaries.json'
       - 'site-worker.js'
+      - 'wrangler.site.toml'
       - 'scripts/build.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-system-map-postbuild.mjs'
