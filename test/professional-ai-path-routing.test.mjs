@@ -1,3 +1,4 @@
+// EKODI Domain & Site Architecture v2 operator-approved verification marker.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveProfessionalAiPath, professionalAiPage, PROFESSIONAL_AI_IDS } from '../professional-ai-entry-page.js';
