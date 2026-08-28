@@ -1,0 +1,14 @@
+{
+  "approvalId": "ekodi-domain-site-v1-2026-08-28",
+  "approvedPrinciple": {
+    "standaloneSubdomainCategories": ["core", "common_service", "professional_ai"],
+    "spaceAddressing": "parent-service-path",
+    "publicSpacePattern": "https://ekodi.kr/{space}",
+    "privateSpacePattern": "https://my.ekodi.kr/{space}",
+    "professionalServicePattern": "https://{service}.ekodi.kr/{space}",
+    "legacyDomainPolicy": "alias-or-permanent-redirect",
+    "siteUnit": "space-plus-services",
+    "tenantSubdomainCreation": false
+  },
+  "approvalNote": "Approved by the EKODI operator on 2026-08-28. Future principle changes require explicit re-confirmation before this snapshot is updated."
+}
