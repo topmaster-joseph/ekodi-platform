@@ -15,6 +15,10 @@
       <span class="brand-mark">E</span>
       <span><strong>EKODI MALL</strong><small>SMART SHOPPING</small></span>
     </a>
+    <aside class="header-notice" aria-label="상품 및 제휴 안내">
+      <p>상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다.</p>
+      <p class="affiliate-disclosure" id="disclosureText">쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+    </aside>
     <nav aria-label="주요 메뉴">
       <a href="#products">상품</a>
       <a href="#categories">카테고리</a>
@@ -43,11 +47,6 @@
       <div><strong>꾸준한 업데이트</strong><span>새로운 상품을 자동으로 반영</span></div>
     </section>
 
-    <aside class="commerce-notice" aria-label="상품 및 제휴 안내">
-      <p>상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다.</p>
-      <p class="affiliate-disclosure" id="disclosureText">쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-    </aside>
-
     <section class="catalog" id="products" aria-labelledby="catalogTitle">
       <div class="section-head">
         <div>
@@ -55,10 +54,21 @@
           <h2 id="catalogTitle">오늘의 상품</h2>
           <p>복잡하지 않게, 필요한 상품에 집중합니다.</p>
         </div>
-        <label class="search-box">
-          <span class="sr-only">상품 검색</span>
-          <input id="productSearch" type="search" placeholder="상품 또는 카테고리 검색" autocomplete="off">
-        </label>
+        <div class="catalog-controls">
+          <label class="search-box">
+            <span class="sr-only">상품 검색</span>
+            <input id="productSearch" type="search" placeholder="상품 또는 카테고리 검색" autocomplete="off">
+          </label>
+          <label class="sort-box">
+            <span class="sr-only">상품 정렬</span>
+            <select id="productSort" aria-label="상품 정렬">
+              <option value="registered">등록순</option>
+              <option value="popular">인기순</option>
+              <option value="price-asc">가격 낮은순</option>
+              <option value="price-desc">가격 높은순</option>
+            </select>
+          </label>
+        </div>
       </div>
       <div class="category-bar" id="categories" aria-label="상품 카테고리">
         <div id="categoryBar"></div>
@@ -76,9 +86,28 @@
         <p class="eyebrow">SIMPLE SHOPPING</p>
         <h2>발견은 가볍게,<br>확인은 확실하게.</h2>
       </div>
-      <p>상품을 선택하면 연결된 판매처의 상품 화면으로 이동합니다. 최종 가격, 옵션, 주문, 결제, 배송, 교환·환불 조건은 해당 판매처에서 확인하고 진행합니다.</p>
+      <p>상품 이미지를 누르면 기본 정보를 먼저 확인할 수 있습니다. 구매하기를 선택하면 연결된 판매처로 이동하며, 최종 가격·옵션·주문·결제·배송·교환·환불 조건은 해당 판매처에서 확인하고 진행합니다.</p>
     </section>
   </main>
+
+  <dialog class="product-dialog" id="productDialog" aria-labelledby="productDialogTitle">
+    <div class="dialog-shell">
+      <button class="dialog-close" id="productDialogClose" type="button" aria-label="상품 정보 닫기">×</button>
+      <div class="dialog-media">
+        <img id="productDialogImage" alt="" decoding="async">
+        <span class="dialog-placeholder" id="productDialogPlaceholder">EKODI MALL</span>
+      </div>
+      <div class="dialog-copy">
+        <p class="product-dialog-category" id="productDialogCategory"></p>
+        <h2 id="productDialogTitle">상품 정보</h2>
+        <p class="product-dialog-price" id="productDialogPrice"></p>
+        <div class="product-dialog-badges" id="productDialogBadges"></div>
+        <p class="product-dialog-source">판매처 · 쿠팡</p>
+        <p class="product-dialog-note">가격과 옵션, 배송 조건은 판매처에서 최종 확인해 주세요.</p>
+        <a class="dialog-buy" id="productDialogBuy" href="#" target="_blank" rel="sponsored noopener noreferrer">구매하기</a>
+      </div>
+    </div>
+  </dialog>
 
   <footer>
     <a class="footer-brand" href="/">EKODI</a>
