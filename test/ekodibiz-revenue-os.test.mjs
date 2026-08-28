@@ -24,6 +24,17 @@ test('conversation-first UI exposes the revenue loop', () => {
   assert.match(app, /\/api\/ops\/status/);
 });
 
+test('revenue loop leads the page and footer stays compact and centered', () => {
+  const revenueLoopIndex = html.indexOf('REVENUE LOOP');
+  const goalIndex = html.indexOf('무엇을 이루고 싶으세요?');
+  assert.ok(revenueLoopIndex >= 0);
+  assert.ok(goalIndex >= 0);
+  assert.ok(revenueLoopIndex < goalIndex);
+  assert.match(html, /class="site-footer"/);
+  assert.match(html, /AI REVENUE OS · 가치에서 수익까지/);
+  assert.match(html, /aria-label="하단 메뉴"/);
+});
+
 test('high impact actions are approval-gated and prices are not invented', () => {
   for (const action of ['payment','ad_spend','refund','contract','price_change','external_publish']) assert.match(worker, new RegExp(`'${action}'`));
   assert.match(worker, /approval_required/);
