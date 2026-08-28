@@ -10,6 +10,7 @@ const worker=readFileSync(new URL('../business-worker.js',import.meta.url),'utf8
 const liveWorker=readFileSync(new URL('../business-live-worker.js',import.meta.url),'utf8');
 const authRouter=readFileSync(new URL('../auth-site/auth-router.js',import.meta.url),'utf8');
 const businessAuth=readFileSync(new URL('../auth-site/business-auth.js',import.meta.url),'utf8');
+const businessHandoff=readFileSync(new URL('../supabase/functions/business-handoff-api/index.ts',import.meta.url),'utf8');
 const migration=readFileSync(new URL('../supabase/migrations/20260817003000_business_os_live_data.sql',import.meta.url),'utf8');
 const staging=readFileSync(new URL('../wrangler.business-staging.toml',import.meta.url),'utf8');
 const production=readFileSync(new URL('../wrangler.business.toml',import.meta.url),'utf8');
@@ -108,6 +109,18 @@ test('Business OS central auth has a dedicated one-time handoff path',()=>{
   assert.match(businessAuth,/business-handoff-api/);
   assert.match(businessAuth,/Google 계정/);
   assert.match(businessAuth,/ekodi_token/);
+});
+
+test('Business OS preserves the requested workspace across sign-in without trusting legacy UI query state',()=>{
+  assert.match(app,/target\.searchParams\.set\('return_to',canonicalBusinessUrl\(\)\)/);
+  assert.match(app,/target\.searchParams\.delete\('problem'\)/);
+  assert.match(app,/handoffWorkspace/);
+  assert.match(businessAuth,/workspaceFromReturn/);
+  assert.match(businessAuth,/REQUESTED_WORKSPACE/);
+  assert.match(businessAuth,/JSON\.stringify\(body\)/);
+  assert.match(businessHandoff,/requested_workspace_access_required/);
+  assert.match(businessHandoff,/const candidates=requested\?\[requested\]/);
+  assert.match(businessHandoff,/unknown_workspace/);
 });
 
 test('high-impact business decisions are permanently human-only',()=>{
