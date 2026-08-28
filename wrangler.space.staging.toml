@@ -1,6 +1,6 @@
 name = "ekodi-space-staging"
 main = "space-worker.js"
-compatibility_date = "2026-08-29"
+compatibility_date = "2026-08-28"
 workers_dev = true
 preview_urls = false
 
