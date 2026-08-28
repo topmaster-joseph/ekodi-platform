@@ -172,7 +172,7 @@ html[data-ekodi-user-ui] {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   color: var(--ekodi-user-chrome-muted);
-  font: 12px/1.6 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  font: 13px/1.65 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
   text-align: center;
 }
 
