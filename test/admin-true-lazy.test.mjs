@@ -37,19 +37,25 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
 
-test('device browser diagnostics are shipped in every guarded admin release', async () => {
+test('device browser diagnostics are shipped and stay on the immutable admin worker path', async () => {
   const build = await read('scripts/build.mjs');
+  const worker = await read('site-worker.js');
   const diagnostics = await read('device-browser-diagnostics.js');
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   assert.match(build, /'device-browser-diagnostics\.css'/);
   assert.match(build, /'device-browser-diagnostics\.js'/);
+  assert.match(worker, /'\/device-browser-diagnostics\.css'/);
+  assert.match(worker, /'\/device-browser-diagnostics\.js'/);
+  assert.match(worker, /url\.searchParams\.has\('v'\)[\s\S]*max-age=31536000, immutable/);
   assert.match(diagnostics, /CACHE_ALLOWLIST/);
   assert.match(diagnostics, /registration\.update\(\)/);
   assert.match(diagnostics, /현재 관리자 브라우저 진단/);
   const smoke = JSON.stringify(manifest.smoke || manifest);
-  assert.match(smoke, /device-browser-diagnostics\.js\?device=v28/);
+  assert.match(smoke, /device-browser-diagnostics\.js\?v=device-v28/);
+  assert.match(smoke, /device-browser-diagnostics\.css\?v=device-v28/);
+  assert.match(smoke, /x-ekodi-route: admin-asset/);
+  assert.match(smoke, /cache-control: public, max-age=31536000, immutable/);
   assert.match(smoke, /현재 관리자 브라우저 진단/);
-  assert.match(smoke, /device-browser-diagnostics\.css\?device=v28/);
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
