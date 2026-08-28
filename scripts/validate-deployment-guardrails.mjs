@@ -64,6 +64,41 @@ for (const file of ['.github/workflows/deploy-service-proxy.yml','.github/workfl
   if (/\n\s*push\s*:/.test(text)) fail(file, 'domain-topology mutation workflow must not run automatically on push');
 }
 
+const developmentWorkflow = requireText('.github/workflows/deploy-development.yml', [
+  'branches: [development]',
+  'environment: development',
+  'refs/heads/development',
+  'CLOUDFLARE_DEVELOPMENT_API_TOKEN',
+  'wrangler.development.jsonc',
+]);
+for (const unsafe of ['secrets.CLOUDFLARE_API_TOKEN', 'secrets.CLOUDFLARE_ACCOUNT_ID', 'wrangler.site.toml', 'wrangler.api.toml', 'wrangler.finance.toml']) {
+  if (developmentWorkflow.includes(unsafe)) fail('.github/workflows/deploy-development.yml', `development deployment must not reference production credential/config marker: ${unsafe}`);
+}
+
+const supabaseLocal = requireText('.github/workflows/supabase-local-ci.yml', [
+  'Supabase Local CI',
+  '127.0.0.1:54322',
+  'supabase@$SUPABASE_CLI_VERSION db start',
+  'supabase@$SUPABASE_CLI_VERSION stop --no-backup',
+]);
+for (const unsafe of ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_PASSWORD', 'supabase link', 'db push', 'functions deploy']) {
+  if (supabaseLocal.includes(unsafe)) fail('.github/workflows/supabase-local-ci.yml', `local Supabase CI must not reach production: ${unsafe}`);
+}
+
+requireText('scripts/validate-ai-provider-independence.mjs', [
+  'guardedProductionInvocation',
+  "process.env.GITHUB_ACTIONS === 'true'",
+  "ref !== 'refs/heads/main'",
+  "event === 'pull_request_target'",
+  'Production release context blocked',
+]);
+requireText('scripts/apply-d1-migrations-with-retry.sh', [
+  'is_nonproduction_target',
+  'refs/heads/main',
+  'Production D1 migration blocked',
+]);
+requireText('.github/workflows/ci.yml', ['deploy-development.yml', 'supabase-local-ci.yml']);
+
 const accessFile = 'config/cloudflare-access-profiles.json';
 const access = JSON.parse(read(accessFile));
 if (access.status !== 'prepared-for-split-token') fail(accessFile, 'credential isolation status must remain honest until dedicated tokens are provisioned');
@@ -92,7 +127,7 @@ for (const name of ['deploy:site', 'deploy:books', 'deploy:community']) {
 }
 
 if (failed) {
-  console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
+  console.error('Deployment policy audit failed. Production must stay behind development/local validation and guarded main-branch promotion gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying.');
+console.log('✅ Deployment policy audit passed: development, local Supabase validation and production writes remain separated, and guarded production promotion is restricted to main.');
