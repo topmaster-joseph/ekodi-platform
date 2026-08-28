@@ -21,6 +21,7 @@ on:
       - 'migrations/*finance_multi_tax_suppliers.sql'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/tax-local-fallback.test.mjs'
+      - 'test/tax-finance-service-binding.test.mjs'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
   push:
     branches: [main]
@@ -42,6 +43,7 @@ on:
       - 'migrations/*finance_multi_tax_suppliers.sql'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/tax-local-fallback.test.mjs'
+      - 'test/tax-finance-service-binding.test.mjs'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
 
 permissions:
@@ -76,7 +78,7 @@ jobs:
           node --check admin-menu-registry.js
           node --check admin-menu-runtime.js
           node --check auth-site/admin-auth.js
-          node --test test/tax-professional-service.test.mjs test/tax-local-fallback.test.mjs
+          node --test test/tax-professional-service.test.mjs test/tax-local-fallback.test.mjs test/tax-finance-service-binding.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
           grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
@@ -86,6 +88,10 @@ jobs:
           grep -Fq 'ekodi-tax-local-suppliers-v1' tax-local-fallback.js
           grep -Fq 'syncLocalSuppliers' tax-local-fallback.js
           grep -Fq 'injectTaxLocalFallback' platform-router-entry-worker.js
+          grep -Fq 'routeTaxFinance' platform-router-entry-worker.js
+          grep -Fq 'finance-service-binding' platform-router-entry-worker.js
+          grep -Fq 'binding = "FINANCE"' wrangler.site.toml
+          grep -Fq 'service = "ekodi-finance-api"' wrangler.site.toml
           grep -Fq 'https://tax.ekodi.kr/' admin-menu-registry.js
           grep -Fq 'pattern = "tax.ekodi.kr"' wrangler.site.toml
 
@@ -107,17 +113,19 @@ jobs:
           gh workflow run deploy-admin-site.yml --ref main
           echo 'Guarded Finance, Shared Site and Admin releases dispatched for EKODI Tax.'
 
-      - name: Verify production Tax service, local fallback, Finance policy and Admin menu
+      - name: Verify production Tax service, D1 route, local fallback, Finance policy and Admin menu
         id: verify
         shell: bash
         run: |
           set -euo pipefail
           finance_url='https://finance-api.ekodi.kr/api/finance/tax-health'
+          tax_health_url='https://tax.ekodi.kr/api/finance/tax-health'
           tax_url='https://tax.ekodi.kr/'
           tax_js_url='https://tax.ekodi.kr/tax-portal.js'
           admin_menu_url='https://admin.ekodi.kr/admin-menu-registry.js'
           finance_json=''
           finance_ok=false
+          tax_route_ok=false
           tax_ok=false
           menu_ok=false
 
@@ -127,6 +135,15 @@ jobs:
               && printf '%s' "$finance_json" | grep -Fq '"defaultChannel":"HOMETAX_MANUAL"' \
               && printf '%s' "$finance_json" | grep -Fq '"multiSupplier":true' \
               && printf '%s' "$finance_json" | grep -Fq '"service":"ekodi-tax"'; then finance_ok=true; fi
+
+            rm -f /tmp/ekodi-tax-health-headers /tmp/ekodi-tax-health
+            curl -fsS --connect-timeout 5 --max-time 15 -D /tmp/ekodi-tax-health-headers -o /tmp/ekodi-tax-health "$tax_health_url" || true
+            tax_health=$(cat /tmp/ekodi-tax-health 2>/dev/null || true)
+            tax_health_headers=$(tr -d '\r' < /tmp/ekodi-tax-health-headers 2>/dev/null || true)
+            if printf '%s' "$tax_health" | grep -Fq '"service":"ekodi-tax"' \
+              && printf '%s' "$tax_health" | grep -Fq '"multiSupplier":true' \
+              && printf '%s' "$tax_health" | grep -Fq '"schemaVersion":3' \
+              && printf '%s' "$tax_health_headers" | grep -Fiq 'x-ekodi-tax-data-route: finance-service-binding'; then tax_route_ok=true; fi
 
             tax_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$tax_url" || true)
             rm -f /tmp/ekodi-tax-headers /tmp/ekodi-tax-js
@@ -147,16 +164,17 @@ jobs:
             if printf '%s' "$menu_body" | grep -Fq "id: 'tax'" \
               && printf '%s' "$menu_body" | grep -Fq 'https://tax.ekodi.kr/'; then menu_ok=true; fi
 
-            if $finance_ok && $tax_ok && $menu_ok; then break; fi
+            if $finance_ok && $tax_route_ok && $tax_ok && $menu_ok; then break; fi
             sleep 5
           done
 
           $finance_ok || { echo 'EKODI Tax Finance production verification failed.'; exit 1; }
+          $tax_route_ok || { echo 'tax.ekodi.kr Finance service binding / D1 route verification failed.'; exit 1; }
           $tax_ok || { echo 'tax.ekodi.kr local fallback production verification failed.'; exit 1; }
           $menu_ok || { echo 'Admin Tax menu production verification failed.'; exit 1; }
           paid_enabled=$(printf '%s' "$finance_json" | jq -r '.paidAutomationEnabled // false')
           echo "paid_enabled=$paid_enabled" >> "$GITHUB_OUTPUT"
-          echo 'EKODI Tax production verification passed, including browser-local supplier fallback.'
+          echo 'EKODI Tax production verification passed, including D1-backed Finance service binding and browser-local supplier fallback.'
 
       - name: Persist Tax production verification marker
         shell: bash
@@ -173,7 +191,7 @@ jobs:
             --arg taxUrl 'https://tax.ekodi.kr/' \
             --arg adminMenuUrl 'https://admin.ekodi.kr/admin-menu-registry.js' \
             --argjson paidAutomationEnabled "${PAID_ENABLED:-false}" \
-            '{verifiedAt:$verifiedAt,commit:$commit,service:"EKODI Tax",operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",multiSupplier:true,schemaVersion:3,localSupplierFallback:true,paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,taxUrl:$taxUrl,adminMenuUrl:$adminMenuUrl,status:"verified"}' \
+            '{verifiedAt:$verifiedAt,commit:$commit,service:"EKODI Tax",operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",multiSupplier:true,schemaVersion:3,financeServiceBinding:true,localSupplierFallback:true,paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,taxUrl:$taxUrl,adminMenuUrl:$adminMenuUrl,status:"verified"}' \
             > /tmp/tax-status.json
           content=$(base64 -w0 /tmp/tax-status.json)
           current_sha=$(gh api "repos/$GH_REPO/contents/$path" --jq '.sha' 2>/dev/null || true)
