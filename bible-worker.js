@@ -132,19 +132,17 @@ async function handleAssist(request, env) {
   if (!message) return json({ error: 'MESSAGE_REQUIRED' }, 400);
 
   const user = await verifyUser(request, env);
-  const [scriptureRef] = topicGuide(topic);
-  const fallback = fallbackReply(topic, message);
   if (!user) {
     return json({
-      ok: true,
-      mode: 'free_assist',
-      degraded: true,
+      ok: false,
+      error: 'authentication_required',
       authenticated: false,
-      ...fallback,
-      notice: '로그인하면 개인 Journey 저장과 EKODI AI 대화를 사용할 수 있습니다.',
-    });
+      notice: 'Google 로그인 후 말씀대화를 이용할 수 있습니다.',
+    }, 401);
   }
 
+  const [scriptureRef] = topicGuide(topic);
+  const fallback = fallbackReply(topic, message);
   try {
     const ai = await centralAiReply(request, {
       message,
