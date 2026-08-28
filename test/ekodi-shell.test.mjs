@@ -114,7 +114,12 @@ test('Shell-enabled asset Workers keep dynamic roots and APIs behind their wrapp
   const configs=await Promise.all([
     'wrangler.business.toml','wrangler.business-staging.toml','wrangler.work.toml','wrangler.work-staging.toml','wrangler.author.toml','wrangler.books.toml','wrangler.books.staging.toml','wrangler.social.toml','wrangler.social-staging.toml','wrangler.energy.toml','wrangler.energy-staging.toml','wrangler.site.toml','wrangler.site-staging.toml'
   ].map(read));
-  for(const config of configs)assert.match(config,/run_worker_first\s*=\s*(?:true|\["\/",\s*"\/api\/\*"\])/);
+  for(const config of configs){
+    if(/run_worker_first\s*=\s*true/.test(config))continue;
+    const routes=config.match(/run_worker_first\s*=\s*\[([^\]]+)\]/)?.[1]||'';
+    assert.match(routes,/"\/"/);
+    assert.match(routes,/"\/api\/\*"/);
+  }
 });
 
 test('guarded production release contracts require Shell v2 on migrated service roots',async()=>{
