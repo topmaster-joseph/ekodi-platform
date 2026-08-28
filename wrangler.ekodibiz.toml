@@ -1,0 +1,24 @@
+name = "ekodibiz-revenue-os"
+main = "ekodibiz-worker.js"
+compatibility_date = "2026-08-29"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "biz.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+EKODIBIZ_MODE = "production-safe-mvp"
+PAYMENT_SERVICE_URL = "https://pay.ekodi.kr"
+HIGH_IMPACT_APPROVAL = "required"
+
+[assets]
+directory = "./ekodibiz"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

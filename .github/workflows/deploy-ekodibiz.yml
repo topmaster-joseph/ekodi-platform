@@ -1,0 +1,130 @@
+name: Deploy EKODIBIZ Revenue OS
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ekodibiz/**'
+      - 'ekodibiz-worker.js'
+      - 'wrangler.ekodibiz*.toml'
+      - 'test/ekodibiz-revenue-os.test.mjs'
+      - 'deploy/manifests/ekodibiz.worker.json'
+      - '.github/workflows/deploy-ekodibiz.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ekodibiz/**'
+      - 'ekodibiz-worker.js'
+      - 'wrangler.ekodibiz*.toml'
+      - 'test/ekodibiz-revenue-os.test.mjs'
+      - 'deploy/manifests/ekodibiz.worker.json'
+      - '.github/workflows/deploy-ekodibiz.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodibiz-revenue-os-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate source and safety boundaries
+        run: |
+          set -euo pipefail
+          node --check ekodibiz-worker.js
+          node --check ekodibiz/app.js
+          node --test test/ekodibiz-revenue-os.test.mjs
+          npm run validate:boundaries
+          npm run validate:ui-dna
+          npm run validate:mission
+          grep -Fq 'pattern = "biz.ekodi.kr"' wrangler.ekodibiz.toml
+          ! grep -Fq 'business.ekodi.kr' wrangler.ekodibiz.toml
+          grep -Fq 'HIGH_IMPACT_APPROVAL = "required"' wrangler.ekodibiz.toml
+
+  deploy-staging:
+    needs: validate
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify development credentials
+        run: test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Deploy isolated staging
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml
+      - name: Verify staging funnel and gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://ekodibiz-revenue-os-staging.ekodi-development.workers.dev'
+          for attempt in $(seq 1 12); do
+            root=$(curl -L -sS --max-time 15 "$base/" || true)
+            health=$(curl -sS --max-time 15 "$base/api/health" || true)
+            consult=$(curl -sS --max-time 15 -H 'content-type: application/json' -d '{"goal":"식당 매출을 늘리고 싶어요"}' "$base/api/consult" || true)
+            if grep -Fq '무엇을 이루고 싶으세요?' <<<"$root" && grep -Fq 'ekodibiz-revenue-os' <<<"$health" && grep -Fq '30일 자동홍보팩' <<<"$consult" && grep -Fq '최종 결제' <<<"$consult"; then
+              echo 'EKODIBIZ staging verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Bootstrap Worker if it does not exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          out=$(npx --yes wrangler@4.119.0 deployments status --config wrangler.ekodibiz.toml --json 2>&1)
+          code=$?
+          set -e
+          if [[ $code -ne 0 ]] && grep -Fq 'does not exist' <<<"$out"; then
+            npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz.toml
+          elif [[ $code -ne 0 ]]; then
+            printf '%s\n' "$out"; exit $code
+          fi
+      - name: Guarded production release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ekodibiz.worker.json
+      - name: Verify production hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS --max-time 15 'https://biz.ekodi.kr/' || true)
+            health=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/health' || true)
+            catalog=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/catalog' || true)
+            if grep -Fq '무엇을 이루고 싶으세요?' <<<"$root" && grep -Fq 'production-safe-mvp' <<<"$health" && grep -Fq 'approval-gated' <<<"$health" && grep -Fq '행사 완성팩' <<<"$catalog"; then
+              echo 'EKODIBIZ production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
