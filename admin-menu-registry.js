@@ -18,7 +18,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
 
   { id: 'work', group: 'operations', icon: 'W', labels: { ko: '업무', en: 'Work' } },
   { id: 'finance', group: 'operations', icon: '₩', labels: { ko: '결제 · 회계', en: 'Finance & Accounting' } },
-  { id: 'tax', group: 'operations', icon: 'T', labels: { ko: '세금 · 증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/' },
+  { id: 'tax', group: 'operations', icon: 'T', labels: { ko: '세금 · 증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/', adminHandoff: true },
   { id: 'communication', group: 'operations', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' } },
   { id: 'community', group: 'operations', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
   { id: 'books', group: 'operations', icon: 'B', labels: { ko: '출판 · 도서', en: 'Books & Publishing' } },

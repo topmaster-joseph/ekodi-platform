@@ -3,11 +3,37 @@ import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLoca
 const API = 'https://api.ekodi.kr';
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
+const CENTRAL_ADMIN_AUTH = 'https://auth.ekodi.kr/';
+const ADMIN_HANDOFF_ALLOWED_TARGETS = new Set(['https://tax.ekodi.kr/']);
 const ROLES = ['super_admin', 'operator', 'viewer'];
 let locale = readLocale();
 let panelInstalled = false;
 
 function token() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
+function adminHandoffTarget(value) {
+  try {
+    const target = new URL(String(value || ''));
+    if (target.protocol !== 'https:' || target.username || target.password) return null;
+    target.hash = '';
+    return ADMIN_HANDOFF_ALLOWED_TARGETS.has(target.href) ? target : null;
+  } catch {
+    return null;
+  }
+}
+function adminSubserviceDestination(definition) {
+  const target = adminHandoffTarget(definition?.href);
+  if (!target) return '';
+  const currentToken = token();
+  if (currentToken) {
+    target.hash = new URLSearchParams({ ekodi_admin_token: currentToken }).toString();
+    return target.href;
+  }
+  const auth = new URL(CENTRAL_ADMIN_AUTH);
+  auth.searchParams.set('site', 'admin');
+  auth.searchParams.set('direct', '1');
+  auth.searchParams.set('return_to', target.href);
+  return auth.href;
+}
 function t(ko, en) { return locale === 'en' ? en : ko; }
 function sectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -107,7 +133,21 @@ function ensureExternalMenuItems() {
     const definition = getAdminMenuItem(id);
     if (!definition?.href || nav.querySelector('.nav[data-section="'+id+'"]')) continue;
     const link = document.createElement('a');
-    link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.target = '_blank'; link.rel = 'noopener';
+    link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.rel = 'noopener';
+    if (definition.adminHandoff === true) {
+      link.dataset.adminHandoff = 'true';
+      link.addEventListener('click', event => {
+        event.preventDefault();
+        const destination = adminSubserviceDestination(definition);
+        if (!destination) {
+          console.error(`Blocked untrusted admin handoff target: ${definition.href}`);
+          return;
+        }
+        window.location.assign(destination);
+      });
+    } else {
+      link.target = '_blank';
+    }
     link.append(document.createTextNode((definition.icon || '·')+' '));
     const label = document.createElement('span'); label.textContent = getAdminMenuLabel(id, locale); link.append(label);
     nav.append(link);
