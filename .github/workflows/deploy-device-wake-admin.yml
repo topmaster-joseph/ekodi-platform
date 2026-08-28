@@ -1,0 +1,99 @@
+name: Deploy Device Wake Admin
+
+on:
+  pull_request:
+    paths: &wake_admin_paths
+      - '.github/workflows/deploy-device-wake-admin.yml'
+      - 'device-wake-admin.js'
+      - 'device-browser-diagnostics.js'
+      - 'device-browser-diagnostics.css'
+  push:
+    branches: [main]
+    paths: *wake_admin_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate isolated Wake Admin bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check device-browser-diagnostics.js
+          node --check device-wake-admin.js
+          npm run build
+          test -f dist/device-browser-diagnostics.js
+          grep -Fq '현재 관리자 브라우저 진단' dist/device-browser-diagnostics.js
+          grep -Fq '서버로 업로드하지 않습니다' dist/device-browser-diagnostics.js
+          grep -Fq '원격 전원 · 작업 자동복귀' dist/device-browser-diagnostics.js
+          grep -Fq '/api/control/wake' dist/device-browser-diagnostics.js
+          grep -Fq 'system.autoExecutionEligible === true' dist/device-browser-diagnostics.js
+          grep -Fq 'system.isPortable === false' dist/device-browser-diagnostics.js
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Build Wake Admin release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          grep -Fq '서버로 업로드하지 않습니다' dist/device-browser-diagnostics.js
+          grep -Fq '원격 전원 · 작업 자동복귀' dist/device-browser-diagnostics.js
+          grep -Fq '/api/control/wake' dist/device-browser-diagnostics.js
+
+      - name: Guarded shared-site promotion
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify production Wake Admin contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://admin.ekodi.kr/device-browser-diagnostics.js?wake=${GITHUB_SHA}"
+          for attempt in $(seq 1 20); do
+            code=$(curl -sS -D /tmp/wake-admin-headers -o /tmp/wake-admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq '현재 관리자 브라우저 진단' /tmp/wake-admin-body \
+              && grep -Fq '서버로 업로드하지 않습니다' /tmp/wake-admin-body \
+              && grep -Fq '원격 전원 · 작업 자동복귀' /tmp/wake-admin-body \
+              && grep -Fq '/api/control/wake' /tmp/wake-admin-body \
+              && grep -Fq 'system.autoExecutionEligible === true' /tmp/wake-admin-body \
+              && grep -Fq 'system.isPortable === false' /tmp/wake-admin-body \
+              && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/wake-admin-headers; then
+              echo 'Production Wake Admin contract verified.'
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'Production Wake Admin contract verification failed.' >&2
+          exit 1
