@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "ekodi-auth-api",
     "config": "wrangler.api.toml",
@@ -10,7 +10,8 @@
       {"url":"https://api.ekodi.kr/api/status","statuses":[200],"expect":["\"initialized\""]},
       {"url":"https://api.ekodi.kr/api/google/config","statuses":[200],"expect":["\"enabled\":true","483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"]},
       {"url":"https://api.ekodi.kr/api/books/public/config","statuses":[200],"expect":["\"digital-start\""]},
-      {"url":"https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall","statuses":[200],"expect":["\"storefront\":\"ekodi-mall\"","\"providerKey\":\"coupang_partners\"","아래 추천링크 클릭 후 검색하세요."],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
+      {"url":"https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall","statuses":[200],"expect":["\"storefront\":\"ekodi-mall\"","\"providerKey\":\"coupang_partners\"","\"automationStatus\""],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
+      {"url":"https://api.ekodi.kr/api/affiliate/public/click/999999999?storefront=ekodi-mall","statuses":[404],"expect":["상품을 찾을 수 없습니다."],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
       {"url":"https://api.ekodi.kr/api/social/registry","statuses":[200],"expect":["커뮤니티","community-youtube"]},
       {"url":"https://api.ekodi.kr/api/control/social/registry","statuses":[401]},
       {"url":"https://api.ekodi.kr/api/control/ai/governance","statuses":[401]},

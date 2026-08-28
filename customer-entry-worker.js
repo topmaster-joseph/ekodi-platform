@@ -13,6 +13,7 @@ import { handleBooksPipelineRequest } from './books-pipeline-control.js';
 import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
+import { runAffiliateAutomation } from './coupang-partners-automation.js';
 import { handleSocialRegistry } from './social-registry-api.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
@@ -243,6 +244,7 @@ export default {
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(runCommunityReportSchedule(env).catch(error => console.error('Community report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
+    ctx.waitUntil(runAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));
     return apiWorker.scheduled(controller, env, ctx);
   },
 };

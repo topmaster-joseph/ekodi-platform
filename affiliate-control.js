@@ -1,10 +1,11 @@
 import authWorker from './auth-worker.js';
+import { getAffiliateAutomationStatus, runAffiliateAutomation } from './coupang-partners-automation.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
 const PUBLIC_STOREFRONT_SLUG = 'ekodi-mall';
-const DEFAULT_AFFILIATE_URL = 'https://link.coupang.com/a/cwWXWm';
 const DEFAULT_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
+const AUTO_RETRY_MS = 15 * 60 * 1000;
 
 function json(data, status = 200, sourceHeaders = new Headers()) {
   const headers = new Headers({
@@ -82,10 +83,6 @@ async function ensureSchema(db) {
   await db.prepare(`INSERT OR IGNORE INTO affiliate_providers (provider_key, display_name, provider_kind, connection_mode, enabled, created_at, updated_at) VALUES ('coupang_partners', 'Coupang Partners', 'affiliate', 'manual', 1, ?, ?)`).bind(now, now).run();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_accounts (id, provider_key, owner_type, owner_key, display_name, account_label, status, connection_mode, default_channel, disclosure_text, enabled, created_at, updated_at) VALUES (?, 'coupang_partners', 'internal', 'ekodibiz', '에코디비즈 쿠팡파트너스', 'EKODIBIZ', 'manual_ready', 'manual', '', '', 1, ?, ?)`).bind(DEFAULT_ACCOUNT_ID, now, now).run();
   await db.prepare(`UPDATE affiliate_accounts SET disclosure_text = ?, updated_at = ? WHERE id = ? AND TRIM(disclosure_text) = ''`).bind(DEFAULT_DISCLOSURE, now, DEFAULT_ACCOUNT_ID).run();
-  const seedLink = await db.prepare('SELECT id FROM affiliate_links WHERE account_id = ? AND affiliate_url = ? LIMIT 1').bind(DEFAULT_ACCOUNT_ID, DEFAULT_AFFILIATE_URL).first();
-  if (!seedLink) {
-    await db.prepare(`INSERT INTO affiliate_links (account_id, tenant_slug, product_name, destination_url, affiliate_url, channel, campaign_name, status, created_by, created_at, updated_at) VALUES (?, ?, '에코디 추천상품 검색', '', ?, 'EKODI Mall', '추천', 'active', NULL, ?, ?)`).bind(DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG, DEFAULT_AFFILIATE_URL, now, now).run();
-  }
 }
 
 function accountView(row) {
@@ -95,34 +92,152 @@ function linkView(row) {
   return { id: row.id, accountId: row.account_id, tenantSlug: row.tenant_slug || '', productName: row.product_name, destinationUrl: row.destination_url || '', affiliateUrl: row.affiliate_url, channel: row.channel || '', campaignName: row.campaign_name || '', status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
+function recentFailedRun(automation) {
+  if (automation?.status !== 'failed' || !automation?.lastRunAt) return false;
+  const timestamp = Date.parse(automation.lastRunAt);
+  return Number.isFinite(timestamp) && (Date.now() - timestamp) < AUTO_RETRY_MS;
+}
+
+async function readPublicRows(env, limit) {
+  try {
+    const rows = await env.DB.prepare(`SELECT id, product_id, product_name, price_krw, image_url, category, is_rocket, is_free_shipping, selected_at
+      FROM affiliate_storefront_products
+      WHERE account_id = ? AND storefront_slug = ? AND status = 'active'
+      ORDER BY selection_score DESC, id DESC LIMIT ?`).bind(DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG, limit).all();
+    return rows.results || [];
+  } catch { return []; }
+}
+
 async function publicProducts(request, env, url) {
   const storefront = cleanText(url.searchParams.get('storefront') || PUBLIC_STOREFRONT_SLUG, 80);
   if (storefront !== PUBLIC_STOREFRONT_SLUG) return json({ error: '지원하지 않는 공개 쇼핑몰입니다.' }, 404, publicHeaders(request));
   const requested = Math.trunc(Number(url.searchParams.get('limit')) || 100);
   const limit = Math.max(1, Math.min(100, requested));
   let disclosureText = DEFAULT_DISCLOSURE;
-  let products = [];
   try {
     const account = await env.DB.prepare('SELECT disclosure_text FROM affiliate_accounts WHERE id = ? AND enabled = 1').bind(DEFAULT_ACCOUNT_ID).first();
-    const rows = await env.DB.prepare(`SELECT id, product_name, affiliate_url, channel, campaign_name, created_at FROM affiliate_links WHERE account_id = ? AND tenant_slug = ? AND status = 'active' ORDER BY id DESC LIMIT ?`).bind(DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG, limit).all();
     disclosureText = cleanText(account?.disclosure_text, 1000) || DEFAULT_DISCLOSURE;
-    products = rows.results.map(row => ({ id: row.id, productName: row.product_name, affiliateUrl: row.affiliate_url, category: row.campaign_name || '추천', campaignName: row.campaign_name || '', channel: row.channel || 'EKODI Mall', createdAt: row.created_at }));
   } catch {}
-  if (!products.length) products = [{ id: 'ekodi-coupang-search', productName: '에코디 추천상품 검색', affiliateUrl: DEFAULT_AFFILIATE_URL, category: '추천', campaignName: '추천', channel: 'EKODI Mall', createdAt: null }];
-  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: 'coupang_partners', disclosureText, instructionText: '아래 추천링크 클릭 후 검색하세요.', products }, 200, publicHeaders(request));
+
+  let automation = await getAffiliateAutomationStatus(env);
+  if (automation.configured && automation.needsRefresh && !recentFailedRun(automation)) {
+    await runAffiliateAutomation(env, { reason: automation.activeProducts > 0 ? 'public-stale' : 'public-empty' });
+    automation = await getAffiliateAutomationStatus(env);
+  }
+  const rows = await readPublicRows(env, limit);
+  const products = rows.map(row => ({
+    id: row.id,
+    productId: row.product_id,
+    productName: row.product_name,
+    priceKrw: Number(row.price_krw || 0),
+    imageUrl: new URL(`${PREFIX}/public/image/${row.id}?storefront=${PUBLIC_STOREFRONT_SLUG}`, request.url).toString(),
+    clickUrl: new URL(`${PREFIX}/public/click/${row.id}?storefront=${PUBLIC_STOREFRONT_SLUG}`, request.url).toString(),
+    category: row.category || '추천',
+    isRocket: Boolean(row.is_rocket),
+    isFreeShipping: Boolean(row.is_free_shipping),
+    selectedAt: row.selected_at || null,
+  }));
+  const automationStatus = products.length ? 'ready' : (automation.status || 'warming');
+  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: 'coupang_partners', automationStatus, disclosureText, products }, 200, publicHeaders(request));
+}
+
+function coupangImageUrl(value) {
+  const url = httpsUrl(value);
+  if (!url) return '';
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host === 'coupang.com' || host.endsWith('.coupang.com') || host === 'coupangcdn.com' || host.endsWith('.coupangcdn.com')) return url;
+  } catch {}
+  return '';
+}
+
+async function publicImage(request, env, url) {
+  const match = url.pathname.match(/^\/api\/affiliate\/public\/image\/(\d+)$/);
+  if (!match || request.method !== 'GET') return null;
+  const storefront = cleanText(url.searchParams.get('storefront') || PUBLIC_STOREFRONT_SLUG, 80);
+  if (storefront !== PUBLIC_STOREFRONT_SLUG) return json({ error: '지원하지 않는 공개 쇼핑몰입니다.' }, 404, publicHeaders(request));
+  let row = null;
+  try {
+    row = await env.DB.prepare('SELECT image_url FROM affiliate_storefront_products WHERE id = ? AND account_id = ? AND storefront_slug = ? LIMIT 1')
+      .bind(Number(match[1]), DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG).first();
+  } catch {}
+  const source = coupangImageUrl(row?.image_url);
+  if (!source) return json({ error: '상품 이미지를 찾을 수 없습니다.' }, 404, publicHeaders(request));
+  let upstream;
+  try { upstream = await fetch(source, { headers: { accept: 'image/avif,image/webp,image/*,*/*;q=0.8' } }); } catch { return json({ error: '상품 이미지를 불러오지 못했습니다.' }, 502, publicHeaders(request)); }
+  const contentType = cleanText(upstream.headers.get('content-type'), 120).toLowerCase();
+  if (!upstream.ok || !contentType.startsWith('image/')) return json({ error: '상품 이미지를 불러오지 못했습니다.' }, 502, publicHeaders(request));
+  const headers = publicHeaders(request);
+  headers.set('content-type', contentType);
+  headers.set('cache-control', 'public, max-age=21600');
+  headers.set('x-content-type-options', 'nosniff');
+  return new Response(upstream.body, { status: 200, headers });
+}
+
+async function publicClick(request, env, url) {
+  const match = url.pathname.match(/^\/api\/affiliate\/public\/click\/(\d+)$/);
+  if (!match || request.method !== 'GET') return null;
+  const storefront = cleanText(url.searchParams.get('storefront') || PUBLIC_STOREFRONT_SLUG, 80);
+  if (storefront !== PUBLIC_STOREFRONT_SLUG) return json({ error: '지원하지 않는 공개 쇼핑몰입니다.' }, 404, publicHeaders(request));
+  let row = null;
+  try {
+    row = await env.DB.prepare('SELECT id, affiliate_url FROM affiliate_storefront_products WHERE id = ? AND account_id = ? AND storefront_slug = ? LIMIT 1')
+      .bind(Number(match[1]), DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG).first();
+  } catch {}
+  const target = httpsUrl(row?.affiliate_url);
+  if (!row || !target) return json({ error: '상품을 찾을 수 없습니다.' }, 404, publicHeaders(request));
+
+  const purpose = `${request.headers.get('purpose') || ''} ${request.headers.get('sec-purpose') || ''}`.toLowerCase();
+  if (purpose.includes('prefetch')) {
+    const headers = publicHeaders(request);
+    headers.set('cache-control', 'no-store');
+    headers.set('x-content-type-options', 'nosniff');
+    return new Response(null, { status: 204, headers });
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO affiliate_storefront_clicks (product_row_id, click_date, clicks, updated_at) VALUES (?, ?, 1, ?)
+    ON CONFLICT(product_row_id, click_date) DO UPDATE SET clicks = affiliate_storefront_clicks.clicks + 1, updated_at = excluded.updated_at`)
+    .bind(row.id, today, now).run().catch(() => {});
+  const headers = publicHeaders(request);
+  headers.set('location', target);
+  headers.set('cache-control', 'no-store');
+  headers.set('x-content-type-options', 'nosniff');
+  return new Response(null, { status: 302, headers });
 }
 
 async function overview(env) {
-  const [accounts, links, metrics] = await Promise.all([
+  const automation = await getAffiliateAutomationStatus(env);
+  const [accounts, links, metrics, tracked] = await Promise.all([
     env.DB.prepare('SELECT * FROM affiliate_accounts ORDER BY provider_key, id').all(),
     env.DB.prepare(`SELECT COUNT(*) AS total_links, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_links FROM affiliate_links`).first(),
-    env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks, COALESCE(SUM(orders), 0) AS orders, COALESCE(SUM(revenue_krw), 0) AS revenue_krw FROM affiliate_daily_metrics WHERE metric_date >= date('now', '-29 day')`).first(),
+    env.DB.prepare(`SELECT COALESCE(SUM(orders), 0) AS orders, COALESCE(SUM(revenue_krw), 0) AS revenue_krw FROM affiliate_daily_metrics WHERE metric_date >= date('now', '-29 day')`).first(),
+    env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_storefront_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
   ]);
   return {
     generatedAt: new Date().toISOString(),
     accounts: accounts.results.map(accountView),
-    summary: { providers: new Set(accounts.results.map(row => row.provider_key)).size, accounts: accounts.results.length, activeLinks: Number(links?.active_links || 0), totalLinks: Number(links?.total_links || 0), clicks30d: Number(metrics?.clicks || 0), orders30d: Number(metrics?.orders || 0), revenue30dKrw: Number(metrics?.revenue_krw || 0) },
-    capabilities: { manualLinkRegistry: true, manualPerformanceLedger: true, automaticProductSearch: false, automaticDeepLink: false, automaticPerformanceSync: false, apiStatus: 'provider_contract_not_configured' },
+    automation,
+    summary: {
+      providers: new Set(accounts.results.map(row => row.provider_key)).size,
+      accounts: accounts.results.length,
+      activeLinks: Number(links?.active_links || 0),
+      totalLinks: Number(links?.total_links || 0),
+      activeProducts: Number(automation.activeProducts || 0),
+      clicks30d: Number(tracked?.clicks || 0),
+      orders30d: Number(metrics?.orders || 0),
+      revenue30dKrw: Number(metrics?.revenue_krw || 0),
+    },
+    capabilities: {
+      manualLinkRegistry: true,
+      manualPerformanceLedger: true,
+      automaticProductSearch: true,
+      automaticDeepLink: true,
+      automaticClickTracking: true,
+      automaticPerformanceSync: false,
+      apiStatus: automation.configured ? 'configured' : 'credentials_required',
+    },
   };
 }
 
@@ -219,14 +334,23 @@ export async function handleAffiliateRequest(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return null;
   if (!env.DB) return json({ error: '제휴마케팅 데이터베이스 연결이 설정되지 않았습니다.' }, 503);
-  if (request.method === 'GET' && url.pathname === `${PREFIX}/public/products`) {
-    return publicProducts(request, env, url);
-  }
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/public/products`) return publicProducts(request, env, url);
+  const imageResponse = await publicImage(request, env, url);
+  if (imageResponse) return imageResponse;
+  const clickResponse = await publicClick(request, env, url);
+  if (clickResponse) return clickResponse;
+
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
   await ensureSchema(env.DB);
   const path = url.pathname;
   if (request.method === 'GET' && path === `${PREFIX}/overview`) return json(await overview(env), 200, auth.response.headers);
+  if (request.method === 'GET' && path === `${PREFIX}/automation`) return json(await getAffiliateAutomationStatus(env), 200, auth.response.headers);
+  if (request.method === 'POST' && path === `${PREFIX}/automation/run`) {
+    const result = await runAffiliateAutomation(env, { force: true, reason: 'admin' });
+    await audit(env, auth.session, 'affiliate.automation.run', PUBLIC_STOREFRONT_SLUG, JSON.stringify({ status: result.status, selectedCount: result.selectedCount || 0 }));
+    return json(result, result.ok ? 200 : 409, auth.response.headers);
+  }
   if (request.method === 'GET' && path === `${PREFIX}/providers`) {
     const rows = await env.DB.prepare('SELECT * FROM affiliate_providers ORDER BY provider_key').all();
     return json({ providers: rows.results.map(row => ({ providerKey: row.provider_key, displayName: row.display_name, providerKind: row.provider_kind, connectionMode: row.connection_mode, enabled: Boolean(row.enabled) })) }, 200, auth.response.headers);
