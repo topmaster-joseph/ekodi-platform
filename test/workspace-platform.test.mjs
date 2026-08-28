@@ -163,8 +163,8 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
     read('scripts/apply-d1-migrations-with-retry.sh')
   ]);
   assert.match(workflow,/name: Release EKODI Conversation Foundation/);
-  assert.match(workflow,/workspace-staging:/);
-  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
+  assert.match(workflow,/workspace-staging:\n\s+environment: development\n\s+needs: validate/);
+  assert.match(workflow,/control-staging:\n\s+environment: development\n\s+needs: workspace-staging/);
   assert.match(workflow,/production-workspace:/);
   assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
   assert.match(workflow,/production-ui:\n\s+needs: production-control/);
