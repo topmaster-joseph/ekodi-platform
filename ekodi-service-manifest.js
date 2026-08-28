@@ -7,6 +7,14 @@ const COMMON_USER_ACCESS_POLICY = Object.freeze({
   authHub:'https://auth.ekodi.kr/',
   enforcedBy:'shared-shell',
 });
+const PUBLIC_SERVICE_ACCESS_POLICY = Object.freeze({
+  scope:'user-pages',
+  guestMode:'service-landing',
+  minimumTier:'free',
+  identityProvider:'google',
+  authHub:'https://auth.ekodi.kr/',
+  enforcedBy:'service+shared-shell',
+});
 
 const SERVICES = [
   {id:'my',name:'My EKODI',shortName:'My',url:'https://my.ekodi.kr/',group:'personal',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['identity','spaces','activity','account'],sso:true,targetable:false,order:10,shellIntegration:'worker-injected'},
@@ -43,19 +51,21 @@ const SERVICES = [
 ].map(service=>{
   const ownedSite=ownedCustomerSiteFor(service.id);
   const operatingModel=operatingModelForService(service.id);
-  const userAccessPolicy=operatingModel==='customer-site'?null:COMMON_USER_ACCESS_POLICY;
+  const userAccessPolicy=operatingModel==='customer-site'
+    ?null
+    :(service.defaultSurface==='public'?PUBLIC_SERVICE_ACCESS_POLICY:COMMON_USER_ACCESS_POLICY);
   return Object.freeze({...service,operatingModel,userAccessPolicy,tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 13,
-  updatedAt: '2026-08-27',
+  version: 14,
+  updatedAt: '2026-08-28',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 2,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
-  userAccessPolicy: 'guest-guide-member-content',
+  userAccessPolicy: 'guest-service-landing-member-content',
   services: Object.freeze(SERVICES)
 });
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
