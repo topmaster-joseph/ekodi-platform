@@ -3,6 +3,9 @@ name: Deploy EKODI Development
 on:
   push:
     branches: [development]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 
 permissions:
