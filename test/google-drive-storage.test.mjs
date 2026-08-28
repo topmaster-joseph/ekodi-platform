@@ -24,7 +24,8 @@ test('primary Drive is ekodi.kr organization-bound while secondary accounts rema
   assert.doesNotMatch(config, /STORAGE_PRIMARY_GOOGLE_DOMAINS = "[^"]*ekodibiz\.kr/);
   assert.match(control, /role === 'secondary'/);
   assert.match(migration, /'primary','secondary'/);
-  assert.match(admin, /다른 Google 계정 추가/);
+  assert.match(admin, /secondary:'topmaster\.joseph@gmail\.com'/);
+  assert.match(admin, /startOAuth\('secondary'\)/);
 });
 
 test('EKODI shared drive is pinned as the canonical primary archive root', () => {
