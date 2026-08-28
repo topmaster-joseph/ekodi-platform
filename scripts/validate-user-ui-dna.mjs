@@ -5,12 +5,13 @@ import { shellServiceForHost, shellServiceForRootPath } from '../ekodi-shell-inj
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const [registry,dna,shell,messageUI,injectorSource,siteShellSource] = await Promise.all([
+const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource] = await Promise.all([
   readJson('config/ecosystem-services.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
   readJson('config/message-ui.json'),
   readText('ekodi-shell-injector.js'),
+  readText('shell/user-ui-shell.css'),
   readText('site-shell-worker.js'),
 ]);
 
@@ -95,8 +96,11 @@ if (!shell?.inheritance?.excludedRootPrefixes?.includes('/admin')) {
   errors.push('Admin root paths must stay outside the User UI Shell.');
 }
 
-for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallback','data-ekodi-user-footer','manifestServiceForHost','shellServiceForRootPath','[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)']) {
+for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallback','data-ekodi-user-footer','manifestServiceForHost','shellServiceForRootPath','data-ekodi-user-ui-style']) {
   if (!injectorSource.includes(marker)) errors.push(`Shared user UI injector lost required marker: ${marker}`);
+}
+for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.ekodi-user-ui-footer','.ekodi-user-ui-header']) {
+  if (!userUiStyle.includes(marker)) errors.push(`Shared CSP-safe user UI stylesheet lost required marker: ${marker}`);
 }
 for (const marker of ['rootUserService','rootInternalPath','shellServiceForRootPath','injectEkodiShell(response,serviceId)']) {
   if (!siteShellSource.replace(/\s+/g,'').includes(marker.replace(/\s+/g,''))) errors.push(`Shared site shell routing lost required inheritance marker: ${marker}`);
@@ -144,4 +148,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`EKODI UI DNA OK: ${Object.keys(services).length} distinct families, ${Object.keys(aliases).length} alias(es), ${EKODI_SERVICE_MANIFEST.services.filter(service=>userSurfaces.has(service.defaultSurface)).length} user-service hosts/root services inherit the shared Header/Footer contract, admin excluded, shared message UI policy valid.`);
+console.log(`EKODI UI DNA OK: ${Object.keys(services).length} distinct families, ${Object.keys(aliases).length} alias(es), ${EKODI_SERVICE_MANIFEST.services.filter(service=>userSurfaces.has(service.defaultSurface)).length} user-service hosts/root services inherit the shared Header/Footer contract, admin excluded, CSP-safe shared chrome and message UI policy valid.`);
