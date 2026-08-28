@@ -68,30 +68,34 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: development
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-management-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify staging credentials
+      - name: Verify Development staging boundary
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test "$STAGING_URL" = 'https://ekodi-management-staging.ekodi-development.workers.dev'
       - name: Deploy isolated staging Worker
         run: npx --yes wrangler@4.119.0 deploy --config wrangler.management.staging.toml
       - name: Verify guest-only staging and disabled integration
         shell: bash
         run: |
           set -euo pipefail
-          url='https://ekodi-management-staging.topmaster-joseph.workers.dev'
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/management.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/" || true)
-            config_code=$(curl -sS -o /tmp/management-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/config.js" || true)
-            catalog_code=$(curl -sS -o /tmp/management-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/api/catalog" || true)
-            auth_code=$(curl -sS -o /tmp/management-auth.json -w '%{http_code}' -H 'content-type: application/json' -d '{"tokenHash":"test","type":"email"}' --connect-timeout 5 --max-time 15 "$url/api/auth/exchange" || true)
+            root_code=$(curl -L -sS -o /tmp/management.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            config_code=$(curl -sS -o /tmp/management-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
+            catalog_code=$(curl -sS -o /tmp/management-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/catalog" || true)
+            auth_code=$(curl -sS -o /tmp/management-auth.json -w '%{http_code}' -H 'content-type: application/json' -d '{"tokenHash":"test","type":"email"}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/auth/exchange" || true)
             if [[ "$root_code" == "200" && "$config_code" == "200" && "$catalog_code" == "200" && "$auth_code" == "503" ]] \
               && grep -Fq '에코디 경영플랫폼' /tmp/management.html \
               && grep -Fq '로그인 전에는 서비스 안내만 제공합니다' /tmp/management.html \
@@ -99,7 +103,7 @@ jobs:
               && grep -Fq '"executionEnabled":false' /tmp/management-config.js \
               && grep -Fq '"guestMode":"guide-only"' /tmp/management-catalog.json \
               && grep -Fq '"error":"identity_integration_disabled"' /tmp/management-auth.json; then
-              echo 'Management staging verified with identity integration and execution disabled.'
+              echo 'Management staging verified in the Development account with identity integration and execution disabled.'
               exit 0
             fi
             sleep 5
