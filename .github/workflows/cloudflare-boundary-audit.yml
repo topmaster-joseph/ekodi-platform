@@ -58,7 +58,8 @@ jobs:
               cloudflare_write = ('wrangler@' in text and ' deploy ' in text) or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
               if staging_trigger and uses_prod and cloudflare_write:
                   errors.append(f'{path.name}: staging branch can write with production Cloudflare credentials')
-              if 'node scripts/ecosystem-load-test.mjs' in text and path.name != 'ecosystem-load-test.yml':
+              # The audit file contains this literal as a detector, so exclude itself from the detector.
+              if path.name not in {'ecosystem-load-test.yml', 'cloudflare-boundary-audit.yml'} and 'node scripts/ecosystem-load-test.mjs' in text:
                   errors.append(f'{path.name}: production load script may only be invoked by ecosystem-load-test.yml')
 
           prod_mutator = (root / 'admin-http2-stability.yml').read_text(encoding='utf-8')
@@ -92,8 +93,19 @@ jobs:
               if marker not in load_script:
                   errors.append(f'ecosystem-load-test.mjs missing fail-closed marker: {marker}')
 
+          shell_verify = (root / 'verify-shared-shell-production.yml').read_text(encoding='utf-8')
+          shell_gate = "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
+          if 'pull_request:' not in shell_verify:
+              errors.append('verify-shared-shell-production.yml lost PR source-contract validation')
+          if shell_verify.count(shell_gate) < 2:
+              errors.append('verify-shared-shell-production.yml production jobs are not manual-main gated')
+          if 'seq 1 24' in shell_verify or 'seq 1 30' in shell_verify:
+              errors.append('verify-shared-shell-production.yml restored high-retry production probes')
+          if 'max-parallel: 4' not in shell_verify:
+              errors.append('verify-shared-shell-production.yml missing bounded production matrix parallelism')
+
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Cloudflare boundary audit passed, including production load-test isolation.')
+          print('Cloudflare boundary audit passed, including production load and PR probe isolation.')
           PY
