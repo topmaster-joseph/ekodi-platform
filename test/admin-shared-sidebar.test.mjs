@@ -7,14 +7,14 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('Operations is the canonical first admin menu and Site Management follows it', () => {
-  const overview = registry.indexOf("{ id: 'overview'");
+test('Site Management is the canonical first admin menu and Operations is retired', () => {
   const campus = registry.indexOf("{ id: 'campus'");
-  assert.ok(overview >= 0);
-  assert.ok(campus > overview);
-  assert.match(registry, /id: 'overview'.*ko: '운영 현황'.*en: 'Operations'/);
+  assert.ok(campus >= 0);
+  assert.doesNotMatch(registry, /id: 'overview'/);
   assert.match(registry, /id: 'campus'.*ko: '사이트 관리'.*en: 'Site Management'/);
-  assert.doesNotMatch(registry, /id: 'overview'.*internal: true/);
+  assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
+  assert.match(sidebar, /RETIRED_MENU_SECTIONS\.has\(id\)/);
+  assert.match(sidebar, /item\.remove\(\)/);
 });
 
 test('Left navigation is a reusable shared module backed only by the registry', () => {
@@ -36,7 +36,7 @@ test('Menu labels are repaired after feature scripts or clicks mutate them', () 
   assert.match(sidebar, /window\.EKODIAdminMenu\?\.locale\?\.\(\)/);
 });
 
-test('Operations remains a public route even though Site Management is the login home', () => {
+test('Operations remains a public compatibility route even though Site Management is the login home', () => {
   assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
   assert.match(layout, /#operations:overview/);
   assert.match(layout, /overview:#operations/);
