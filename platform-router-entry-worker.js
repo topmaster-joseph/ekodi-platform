@@ -8,6 +8,7 @@ import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { resolvePublicSpace, publicSpacePage } from './space-entry-page.js';
+import { resolveProfessionalAiPath, professionalAiPage } from './professional-ai-entry-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
@@ -31,6 +32,14 @@ async function withInvestSubjectScript(response){
   const patched=text.replace(marker,'<script src="/invest-subject-ui.js" defer></script>'+marker);
   return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
+function canonicalRedirect(request,pathname){
+  const target=new URL(request.url);
+  target.hostname='ekodi.kr';
+  target.pathname=pathname;
+  target.search='';
+  target.hash='';
+  return Response.redirect(target.toString(),308);
+}
 
 export default {
   async fetch(request,env,ctx){
@@ -38,11 +47,19 @@ export default {
     const host=resolvedHost(request,env);
 
     if(ROOT_HOSTS.has(host)&&request.method==='GET'){
+      const aiRoute=resolveProfessionalAiPath(url.pathname);
+      if(aiRoute){
+        if(aiRoute.redirect||url.pathname!==aiRoute.canonicalPath)return canonicalRedirect(request,aiRoute.canonicalPath);
+        return professionalAiPage(aiRoute);
+      }
       const space=resolvePublicSpace(url.pathname);
       if(space){
         if(!url.pathname.endsWith('/')){
           const canonical=new URL(request.url);
+          canonical.hostname='ekodi.kr';
           canonical.pathname=`/${space.slug}/`;
+          canonical.search='';
+          canonical.hash='';
           return Response.redirect(canonical.toString(),308);
         }
         return publicSpacePage(space);
