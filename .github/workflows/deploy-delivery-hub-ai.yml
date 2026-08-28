@@ -67,7 +67,6 @@ jobs:
           grep -Fq '"delivery"' platform-boundaries.json
 
   staging:
-    if: github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -78,6 +77,9 @@ jobs:
       STAGING_URL: https://ekodi-delivery-hub-ai-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - name: Verify Development Cloudflare boundary
         run: |
           set -euo pipefail
@@ -85,20 +87,42 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy isolated staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.delivery.staging.toml
-      - name: Verify isolated staging or Cloudflare Access protection
+      - name: Confirm deployed staging revision exists
+        run: npx wrangler@${WRANGLER_VERSION} deployments status --config wrangler.delivery.staging.toml --json > /tmp/delivery-deployments.json
+      - name: Verify Development contract without weakening Cloudflare Access
+        shell: bash
         run: |
           set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup EXIT
+
           access_code=$(curl -sS -D /tmp/delivery-access.headers -o /tmp/delivery-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/delivery/health" || true)
           if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/delivery-access.headers; then
-            echo 'Delivery Hub AI staging deployed to Development and is correctly protected by Cloudflare Access.'
-            exit 0
+            remote_protected=1
+            echo 'Development staging is protected by Cloudflare Access. Keeping Access enabled and using a local runtime contract check for this revision.'
+            npx wrangler@${WRANGLER_VERSION} dev --config wrangler.delivery.staging.toml --local --port 8789 >/tmp/delivery-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8789'
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -sSf --max-time 5 "$verify_base/delivery/health" >/dev/null 2>&1; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/delivery-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$ready" != '1' ]]; then cat /tmp/delivery-local.log; exit 1; fi
           fi
+
           payload='{"order":{"amount":32000,"priority":"speed"},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
           for attempt in $(seq 1 12); do
-            root=$(curl -L -sS -D /tmp/delivery-headers -o /tmp/delivery.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/delivery" || true)
-            health=$(curl -sS -o /tmp/delivery-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/delivery/health" || true)
-            recommend=$(curl -sS -o /tmp/delivery-recommend.json -w '%{http_code}' -H 'content-type: application/json' -d "$payload" --connect-timeout 5 --max-time 15 "$STAGING_URL/delivery/api/recommend" || true)
-            block=$(curl -sS -o /tmp/delivery-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{}' --connect-timeout 5 --max-time 15 "$STAGING_URL/delivery/api/dispatch" || true)
+            root=$(curl -L -sS -D /tmp/delivery-headers -o /tmp/delivery.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/delivery" || true)
+            health=$(curl -sS -o /tmp/delivery-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/delivery/health" || true)
+            recommend=$(curl -sS -o /tmp/delivery-recommend.json -w '%{http_code}' -H 'content-type: application/json' -d "$payload" --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/recommend" || true)
+            block=$(curl -sS -o /tmp/delivery-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{}' --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/dispatch" || true)
             if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$block" == '409' ]] \
               && grep -Fq '배달허브 AI' /tmp/delivery.html \
               && grep -Fq '"canonicalPath":"/delivery"' /tmp/delivery-health.json \
@@ -108,7 +132,11 @@ jobs:
               && grep -Fq '"dispatchExecuted":false' /tmp/delivery-recommend.json \
               && grep -Fq '"reason":"official_adapter_required"' /tmp/delivery-block.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/delivery-headers; then
-              echo 'Delivery Hub AI Development staging verified with external execution locked.'
+              if [[ "$remote_protected" == '1' ]]; then
+                echo 'Delivery staging deployment exists, Access remains enforced, and the exact staging configuration passes its local runtime contract.'
+              else
+                echo 'Delivery Hub AI Development staging verified remotely with external execution locked.'
+              fi
               exit 0
             fi
             sleep 3
@@ -116,10 +144,11 @@ jobs:
           echo 'Delivery Hub AI Development staging verification failed.'
           cat /tmp/delivery-access.headers || true
           cat /tmp/delivery-health.json || true
+          cat /tmp/delivery-local.log 2>/dev/null || true
           exit 1
 
   production:
-    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    if: github.event_name != 'pull_request' && needs.validate.result == 'success' && needs.staging.result == 'success'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 22
