@@ -98,52 +98,24 @@ export function mountAdminSidebar(root = document, options = {}) {
   const nav = root.querySelector?.('.sidebar nav');
   if (!nav) return null;
   const existing = mounted.get(nav);
-  if (existing) {
-    existing.sync();
-    return existing;
-  }
+  if (existing) { existing.sync(); return existing; }
 
   let queued = false;
-  let syncing = false;
-  const sync = () => {
-    if (syncing) return;
-    syncing = true;
-    try { syncAdminSidebar(root, options); }
-    finally { syncing = false; }
-  };
+  const sync = () => syncAdminSidebar(root, options);
   const schedule = () => {
     if (queued) return;
     queued = true;
-    queueMicrotask(() => {
-      queued = false;
-      sync();
-    });
+    queueMicrotask(() => { queued = false; sync(); });
   };
-
-  const navObserver = new MutationObserver(schedule);
-  navObserver.observe(nav, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'data-section', 'data-lazy-section'] });
-
-  const title = root.querySelector?.('#pageTitle');
-  const titleObserver = title ? new MutationObserver(schedule) : null;
-  titleObserver?.observe(title, { childList: true, subtree: true, characterData: true });
-
-  nav.addEventListener('click', () => {
-    schedule();
-    setTimeout(sync, 0);
-    requestAnimationFrame(sync);
-  }, true);
-
-  window.addEventListener('ekodi-nav-changed', schedule);
-  window.addEventListener('ekodi-feature-installed', schedule);
-  window.addEventListener('ekodi-admin-section-changed', schedule);
+  const eventNames = ['ekodi-nav-changed', 'ekodi-feature-installed', 'ekodi-admin-section-changed', 'ekodi-admin-locale-changed'];
+  for (const name of eventNames) window.addEventListener(name, schedule);
 
   const api = Object.freeze({
     sync,
     locale: () => normalizeAdminLocale(options.locale || options.localeProvider?.() || window.EKODIAdminMenu?.locale?.() || readAdminSidebarLocale()),
     order: () => adminMenuOrder(),
     destroy: () => {
-      navObserver.disconnect();
-      titleObserver?.disconnect();
+      for (const name of eventNames) window.removeEventListener(name, schedule);
       mounted.delete(nav);
     }
   });
@@ -151,7 +123,6 @@ export function mountAdminSidebar(root = document, options = {}) {
   sync();
   return api;
 }
-
 if (typeof window !== 'undefined') {
   window.EKODIAdminSidebar = Object.freeze({
     mount: mountAdminSidebar,
