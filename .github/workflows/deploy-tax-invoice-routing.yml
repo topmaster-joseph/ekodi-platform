@@ -131,19 +131,51 @@ jobs:
     needs: validate
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 18
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - name: Dispatch guarded Tax dependencies
+      - name: Dispatch guarded Tax dependencies without Shared Site race
         shell: bash
         run: |
           set -euo pipefail
           gh workflow run deploy-finance.yml --ref main
-          gh workflow run deploy-site-core.yml --ref main -f sync_domains=true
           gh workflow run deploy-admin-site.yml --ref main
-          echo 'Guarded Finance, Shared Site and Admin releases dispatched for EKODI Tax.'
+
+          site_verified=false
+          if [ "$GITHUB_EVENT_NAME" = 'push' ]; then
+            echo "Checking for direct Shared Site deployment for commit $GITHUB_SHA before dispatching a duplicate run."
+            for attempt in $(seq 1 36); do
+              run_json=$(gh run list --workflow deploy-site-core.yml --commit "$GITHUB_SHA" --limit 1 --json databaseId,status,conclusion 2>/dev/null || printf '[]')
+              run_id=$(printf '%s' "$run_json" | jq -r '.[0].databaseId // empty')
+              run_status=$(printf '%s' "$run_json" | jq -r '.[0].status // empty')
+              run_conclusion=$(printf '%s' "$run_json" | jq -r '.[0].conclusion // empty')
+
+              if [ -z "$run_id" ]; then
+                if [ "$attempt" -ge 4 ]; then
+                  echo 'No direct Shared Site run found for this commit; Tax router will dispatch one.'
+                  break
+                fi
+              elif [ "$run_status" = 'completed' ] && [ "$run_conclusion" = 'success' ]; then
+                echo "Direct Shared Site deployment already succeeded: run $run_id"
+                site_verified=true
+                break
+              elif [ "$run_status" = 'completed' ]; then
+                echo "Direct Shared Site deployment ended with $run_conclusion: run $run_id. Tax router will dispatch one recovery run."
+                break
+              else
+                echo "Direct Shared Site deployment $run_id is $run_status; waiting before any recovery dispatch."
+              fi
+              sleep 5
+            done
+          fi
+
+          if [ "$site_verified" != 'true' ]; then
+            gh workflow run deploy-site-core.yml --ref main -f sync_domains=true
+            echo 'Dispatched one serialized Shared Site recovery deployment.'
+          fi
+          echo 'Guarded Finance and Admin releases dispatched; Shared Site was reused or serialized to avoid pending-run replacement.'
 
       - name: Verify production Tax service, HomeTax ledger, NTS business registry and D1 route
         id: verify
