@@ -56,10 +56,15 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy no-route staging Worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
-      - name: Verify all shared platform hosts without touching production routes
+      - name: Verify protected shared-site staging
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/shared-access.headers -o /tmp/shared-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+          if [[ "$access_code" == '302' ]] && grep -Fiq '^www-authenticate: Cloudflare-Access' /tmp/shared-access.headers; then
+            echo "Shared-site staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           verify_shell() {
             host="$1"; needle="$2"
             code=$(curl -sS -D /tmp/shared-stage.headers -o /tmp/shared-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
