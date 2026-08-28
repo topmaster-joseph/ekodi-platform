@@ -5,6 +5,11 @@
   const TAB_KEY = 'publications';
   const POSTING_ACTION_RE = /(post|posting|publish|publication|social|channel|콘텐츠|게시|포스팅)/i;
   const CACHE_MS = 15_000;
+  const STYLE = `
+    .marketing-ai-posting-panel{min-height:220px}.marketing-ai-posting-provider{display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding:8px 10px;border:1px solid #633f42;border-radius:9px;background:#24181d;white-space:nowrap}.marketing-ai-posting-provider span,.marketing-ai-posting-provider small{color:#9b777d;font-size:6px}.marketing-ai-posting-provider strong{color:#ffafb5;font-size:9px}.marketing-ai-posting-provider.connected{border-color:#2d6255;background:#102b26}.marketing-ai-posting-provider.connected strong{color:#8cd3b8}.marketing-ai-posting-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:9px 0}.marketing-ai-posting-kpis article{padding:9px;border:1px solid #193852;border-radius:9px;background:#081827}.marketing-ai-posting-kpis small{display:block;color:#6d88a0;font-size:6.3px}.marketing-ai-posting-kpis strong{display:block;margin-top:4px;color:#e2f1fc;font-size:13px}.marketing-ai-posting-warning{display:flex;align-items:flex-start;gap:8px;margin:8px 0 10px;padding:9px;border:1px solid #654a32;border-radius:8px;background:#211a13}.marketing-ai-posting-warning b{flex:0 0 auto;color:#f0bd79;font-size:6.5px}.marketing-ai-posting-warning span{color:#a98b67;font-size:6.8px;line-height:1.45}.marketing-ai-posting-head,.marketing-ai-posting-row{display:grid;grid-template-columns:minmax(190px,1.55fr) 90px 92px 76px 74px 54px 58px 66px;align-items:center;gap:7px}.marketing-ai-posting-head{padding:0 8px 5px;color:#5c7f9c;font-size:5.8px;font-weight:900;letter-spacing:.05em}.marketing-ai-posting-list{display:grid;gap:4px}.marketing-ai-posting-row{padding:8px;border:1px solid #193650;border-radius:8px;background:#081827;color:#7890a5;font-size:6.5px}.marketing-ai-posting-content{min-width:0}.marketing-ai-posting-content small{display:block;color:#5d7f9b;font-size:5.6px}.marketing-ai-posting-content strong{display:block;margin-top:2px;color:#d1e5f5;font-size:7.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.marketing-ai-posting-content span{display:block;margin-top:2px;color:#6f879c;font-size:6.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.marketing-ai-posting-channel{color:#a7c5dc;font-weight:800}.marketing-ai-posting-row time{color:#658099}.marketing-ai-posting-status{display:inline-flex;justify-content:center;padding:3px 5px;border:1px solid #2a4d68;border-radius:999px;background:#0d2940;color:#91b6d4;font-size:5.8px;font-weight:900;white-space:nowrap}.marketing-ai-posting-status.published{border-color:#2e6658;background:#12352d;color:#8ed2b9}.marketing-ai-posting-status.scheduled{border-color:#435d7a;background:#172b42;color:#a7c9e8}.marketing-ai-posting-status.failed{border-color:#713c46;background:#351d25;color:#ff9fa8}.marketing-ai-posting-status.retrying,.marketing-ai-posting-status.review{border-color:#735038;background:#352616;color:#f3c27f}.marketing-ai-posting-link a{color:#8ec8f8;text-decoration:none}.marketing-ai-posting-link a:hover{text-decoration:underline}.marketing-ai-console-tabs button[data-marketing-tab="publications"][data-live-count]:after{content:attr(data-live-count);display:inline-grid;place-items:center;min-width:14px;height:14px;margin-left:4px;padding:0 3px;border-radius:999px;background:#163a57;color:#8ec8f8;font-size:5.5px;vertical-align:middle}
+    @media(max-width:1080px){.marketing-ai-posting-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.marketing-ai-posting-head{display:none}.marketing-ai-posting-row{grid-template-columns:minmax(170px,1.4fr) 80px 88px 72px}.marketing-ai-posting-row>span:nth-of-type(n+4){display:none}}
+    @media(max-width:700px){.marketing-ai-posting-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.marketing-ai-posting-panel .marketing-ai-card-head{align-items:flex-start}.marketing-ai-posting-provider{align-items:flex-start}.marketing-ai-posting-row{grid-template-columns:minmax(0,1fr) auto;gap:5px}.marketing-ai-posting-content{grid-column:1}.marketing-ai-posting-channel{grid-column:2;grid-row:1}.marketing-ai-posting-row time{grid-column:1;grid-row:2}.marketing-ai-posting-status{grid-column:2;grid-row:2}.marketing-ai-posting-row>span:nth-of-type(n+3){display:none}}
+  `;
   let cache = null;
   let cacheAt = 0;
   let request = null;
@@ -18,6 +23,14 @@
     return date.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
   };
   const won = value => `${Number(value || 0).toLocaleString('ko-KR')}원`;
+
+  function ensureStyles() {
+    if (document.querySelector('#marketingAiPostingStatusStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'marketingAiPostingStatusStyle';
+    style.textContent = STYLE;
+    document.head.append(style);
+  }
 
   async function overview(force = false) {
     if (!force && cache && Date.now() - cacheAt < CACHE_MS) return cache;
@@ -69,12 +82,8 @@
       if (!POSTING_ACTION_RE.test(scope)) continue;
       const status = normalizeStatus(action.status, action.actionType);
       rows.push({
-        id:`action:${action.id}`,
-        source:'AI action',
-        title:String(action.actionType || '포스팅 작업'),
-        detail:String(action.target || action.area || '대상 정보 없음'),
-        channel:inferChannel(action),
-        status,
+        id:`action:${action.id}`, source:'AI action', title:String(action.actionType || '포스팅 작업'),
+        detail:String(action.target || action.area || '대상 정보 없음'), channel:inferChannel(action), status,
         scheduledAt:status === 'scheduled' ? (action.decidedAt || action.createdAt) : null,
         publishedAt:status === 'published' ? (action.verifiedAt || action.decidedAt || action.createdAt) : null,
         updatedAt:action.verifiedAt || action.decidedAt || action.createdAt,
@@ -87,12 +96,8 @@
       if (!['scheduled','running','completed'].includes(String(campaign.status || '').toLowerCase())) continue;
       const status = campaign.status === 'completed' ? 'published' : 'scheduled';
       rows.push({
-        id:`campaign:${campaign.id}`,
-        source:'Campaign',
-        title:String(campaign.name || '캠페인'),
-        detail:String(campaign.offerSummary || campaign.objective || ''),
-        channel:inferChannel(campaign),
-        status,
+        id:`campaign:${campaign.id}`, source:'Campaign', title:String(campaign.name || '캠페인'),
+        detail:String(campaign.offerSummary || campaign.objective || ''), channel:inferChannel(campaign), status,
         scheduledAt:campaign.scheduledAt || campaign.startedAt || null,
         publishedAt:status === 'published' ? (campaign.completedAt || null) : null,
         updatedAt:campaign.completedAt || campaign.startedAt || campaign.scheduledAt || campaign.updatedAt || campaign.createdAt,
@@ -101,14 +106,12 @@
     }
 
     const seen = new Set();
-    return rows
-      .filter(row => {
-        const key = `${row.source}:${row.id}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .sort((a,b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0));
+    return rows.filter(row => {
+      const key = `${row.source}:${row.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a,b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0));
   }
 
   function metric(value, fallback = '수집 전') {
@@ -137,12 +140,12 @@
       failed:rows.filter(row => row.status === 'failed').length,
       retrying:rows.filter(row => row.status === 'retrying').length,
     };
-    const publisherConnected = Boolean(data?.safety?.externalExecution);
+    const publisherConnected = Boolean(data?.postingPublisher?.connected);
     const activeChannels = Number(data?.summary?.channels || 0);
     view.innerHTML = `<section class="marketing-ai-console-card marketing-ai-posting-panel">
       <div class="marketing-ai-card-head">
         <div><small>POSTING LEDGER</small><h3>포스팅 현황</h3><p>캠페인 원장과 AI 감사 원장에서 실제 게시 관련 작업만 모아 보여줍니다. 없는 게시URL·클릭·전환은 0으로 꾸미지 않고 ‘수집 전’으로 표시합니다.</p></div>
-        <div class="marketing-ai-posting-provider ${publisherConnected ? 'connected' : 'disconnected'}"><span>게시 실행자</span><strong>${publisherConnected ? '연결됨' : '미연결'}</strong><small>${publisherConnected ? '외부 실행 가능' : '외부 자동실행 OFF'}</small></div>
+        <div class="marketing-ai-posting-provider ${publisherConnected ? 'connected' : 'disconnected'}"><span>Metricool / 게시 실행자</span><strong>${publisherConnected ? '연결됨' : '미연결'}</strong><small>${publisherConnected ? '게시 상태 동기화' : '게시 어댑터 연결 대기'}</small></div>
       </div>
       <div class="marketing-ai-posting-kpis">
         <article><small>게시 관련 이력</small><strong>${rows.length.toLocaleString('ko-KR')}</strong></article>
@@ -152,9 +155,9 @@
         <article><small>재시도</small><strong>${counts.retrying.toLocaleString('ko-KR')}</strong></article>
         <article><small>등록 채널</small><strong>${activeChannels.toLocaleString('ko-KR')}</strong></article>
       </div>
-      ${publisherConnected ? '' : `<div class="marketing-ai-posting-warning"><b>게시 채널 연결 대기</b><span>현재 EKODI 런타임의 외부 자동실행이 꺼져 있습니다. Metricool 또는 채널 게시 어댑터가 연결되면 예약·게시 URL·성과 수집을 이 원장에 이어 붙일 수 있습니다.</span></div>`}
+      ${publisherConnected ? '' : `<div class="marketing-ai-posting-warning"><b>게시 채널 연결 대기</b><span>현재 EKODI 런타임에는 Metricool/외부 게시 실행자 연결정보가 없습니다. 연결되기 전에는 예약·게시 성공을 추정하지 않으며, 현재 원장에 존재하는 내부 작업 이력만 표시합니다.</span></div>`}
       <div class="marketing-ai-posting-head"><span>콘텐츠/상품</span><span>채널</span><span>예약/게시시각</span><span>상태</span><span>게시URL</span><span>클릭</span><span>전환</span><span>매출</span></div>
-      <div class="marketing-ai-posting-list">${rows.length ? rows.slice(0,80).map(rowHtml).join('') : `<div class="marketing-ai-live-empty"><strong>아직 포스팅 이력이 없습니다.</strong><span>현재 예약 게시 0건입니다. 게시 어댑터 연결 후 실제 예약·게시 이력이 이곳에 누적됩니다.</span></div>`}</div>
+      <div class="marketing-ai-posting-list">${rows.length ? rows.slice(0,80).map(rowHtml).join('') : `<div class="marketing-ai-live-empty"><strong>아직 포스팅 이력이 없습니다.</strong><span>현재 확인된 예약 게시도 없습니다. 게시 어댑터 연결 후 실제 예약·게시 이력이 이곳에 누적됩니다.</span></div>`}</div>
       <div class="marketing-ai-live-boundary"><b>데이터 원칙</b><span>이 화면은 저장된 캠페인·AI 감사 원장만 사용합니다. 외부 게시 성공을 확인하지 못한 항목을 임의로 ‘게시완료’ 처리하지 않습니다.</span></div>
     </section>`;
   }
@@ -189,6 +192,7 @@
     const panel = document.querySelector('#marketingAiAdminPanel');
     if (!panel || panel.dataset.postingStatusInstalled === 'true') return false;
     panel.dataset.postingStatusInstalled = 'true';
+    ensureStyles();
     ensureTab(panel);
     panel.addEventListener('click', event => {
       const tab = event.target.closest('[data-marketing-tab]');
