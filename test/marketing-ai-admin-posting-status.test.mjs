@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-// Native merge release marker: 2026-08-29 final production verification.
+// CI verification marker: corrected posting-status contract, 2026-08-29.
 const js = readFileSync(new URL('../marketing-ai-admin-posting-status.js', import.meta.url), 'utf8');
 const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 
