@@ -5,6 +5,7 @@ const root = path.resolve('.github/workflows');
 const DEV_ACCOUNT = '46aad4738793fbaca88574832a2ccc0f';
 const GUARD = 'uses: ./.github/actions/cloudflare-development-boundary';
 const SHARED_D1_GROUP = 'ekodi-development-d1-ekodi-auth-staging';
+const ACCESS_HELPER = 'access_aware_staging_start';
 
 const customStageUrlMap = new Map([
   ['https://api-staging.ekodi.kr', 'https://ekodi-auth-api-staging.ekodi-development.workers.dev'],
@@ -62,6 +63,66 @@ function replaceCustomStageUrls(block) {
   return out;
 }
 
+function staticDeployConfig(block) {
+  const matches = [...block.matchAll(/wrangler(?:@[^\s]+)?\s+deploy\s+--config\s+([A-Za-z0-9._/-]+)/g)];
+  return matches.length ? matches[matches.length - 1][1] : '';
+}
+
+function configSupportsStatelessLocalVerification(config) {
+  if (!config || !fs.existsSync(config)) return false;
+  const text = fs.readFileSync(config, 'utf8');
+  return !/^\s*\[\[(d1_databases|kv_namespaces|r2_buckets|queues\.|services)\]\]/mi.test(text)
+    && !/^\s*\[durable_objects\]/mi.test(text);
+}
+
+function ensureAccessAwareVerification(block) {
+  if (block.includes(ACCESS_HELPER) || block.includes('Www-Authenticate: Cloudflare-Access')) return block;
+  if (!block.includes('$STAGING_URL')) return block;
+  const config = staticDeployConfig(block);
+  if (!configSupportsStatelessLocalVerification(config)) return block;
+
+  const lines = block.split('\n');
+  let deployIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].includes('deploy') && lines[i].includes(`--config ${config}`)) deployIndex = i;
+  }
+  if (deployIndex < 0) return block;
+
+  let verifyStep = -1;
+  for (let i = deployIndex + 1; i < lines.length; i += 1) {
+    if (/^      - name:\s+.*verify.*staging/i.test(lines[i])) {
+      verifyStep = i;
+      break;
+    }
+  }
+  if (verifyStep < 0) return block;
+
+  let runIndex = -1;
+  for (let i = verifyStep + 1; i < lines.length; i += 1) {
+    if (/^      - name:/.test(lines[i])) break;
+    if (/^        run:\s*\|\s*$/.test(lines[i])) {
+      runIndex = i;
+      break;
+    }
+  }
+  if (runIndex < 0) return block;
+
+  let insertIndex = runIndex + 1;
+  for (let i = runIndex + 1; i < lines.length; i += 1) {
+    if (/^      - name:/.test(lines[i])) break;
+    if (/^          set -euo pipefail\s*$/.test(lines[i])) {
+      insertIndex = i + 1;
+      break;
+    }
+  }
+  lines.splice(insertIndex, 0,
+    '          source scripts/access-aware-staging.sh',
+    `          access_aware_staging_start ${config} "$STAGING_URL" 8790`,
+    '          STAGING_URL="$STAGING_VERIFY_URL"',
+    '          trap access_aware_staging_stop EXIT');
+  return lines.join('\n');
+}
+
 function hardenMarketingDomain(filename, blockName, block) {
   if (filename !== 'deploy-marketing-domain-api.yml') return block;
   let out = block;
@@ -82,6 +143,20 @@ function hardenMarketingDomain(filename, blockName, block) {
   return out;
 }
 
+function isolatePullRequestConcurrency(filename, text) {
+  if (filename === 'deploy-control-api.yml') {
+    return text.replace(
+      '  group: ekodi-control-api-release\n',
+      "  group: ${{ github.event_name == 'pull_request' && format('ekodi-control-api-pr-{0}', github.event.pull_request.number) || 'ekodi-control-api-release' }}\n");
+  }
+  if (filename === 'release-messenger-investment-functional.yml' || filename === 'release-invest-personalization.yml') {
+    return text.replace(
+      '  group: ekodi-conversation-release\n',
+      "  group: ${{ github.event_name == 'pull_request' && format('ekodi-conversation-pr-{0}', github.event.pull_request.number) || 'ekodi-conversation-release' }}\n");
+  }
+  return text;
+}
+
 const files = fs.readdirSync(root).filter((name) => name.endsWith('.yml')).sort();
 let changed = 0;
 for (const filename of files) {
@@ -89,6 +164,7 @@ for (const filename of files) {
   let text = fs.readFileSync(full, 'utf8');
   const original = text;
 
+  text = isolatePullRequestConcurrency(filename, text);
   if (filename === 'deploy-marketing-domain-api.yml') {
     text = text.replace(/^\s*DOMAIN_CF_TOKEN:\s*\$\{\{\s*secrets\.MARKETING_DOMAIN_CF_API_TOKEN\s*\|\|\s*secrets\.CLOUDFLARE_API_TOKEN\s*\}\}\s*\n/m, '');
   }
@@ -105,13 +181,14 @@ for (const filename of files) {
       block = ensureSharedD1Concurrency(block);
       block = ensureGuard(block);
       block = hardenMarketingDomain(filename, name, block);
+      block = ensureAccessAwareVerification(block);
     }
     lines.splice(start, end - start, ...block.split('\n'));
   }
   text = lines.join('\n');
 
   if (text.includes('CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f')) {
-    // keep explicit immutable Development account binding; the runtime guard verifies it against Cloudflare.
+    // Keep explicit immutable Development account binding; the runtime guard verifies it against Cloudflare.
   }
   if (text !== original) {
     fs.writeFileSync(full, text);
