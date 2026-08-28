@@ -1,0 +1,172 @@
+name: Cloudflare Boundary Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-boundary-repair.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Move every Worker staging deploy onto Development credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.github/workflows')
+          dev_account = '46aad4738793fbaca88574832a2ccc0f'
+          dev_secret = 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN'
+          prod_namespace = 'topmaster-joseph.workers.dev'
+          dev_namespace = 'ekodi-development.workers.dev'
+
+          def is_worker_deploy(block):
+              return bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b', block)) and 'pages deploy' not in block
+
+          def is_staging_job(name, block):
+              return (
+                  'staging' in name.lower()
+                  or 'STAGING_URL' in block
+                  or '.staging.toml' in block
+                  or '.staging.jsonc' in block
+                  or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b', block))
+              )
+
+          def patch_jobs(text):
+              lines = text.splitlines(keepends=True)
+              jobs_at = None
+              starts = []
+              for i, line in enumerate(lines):
+                  if line.rstrip('\r\n') == 'jobs:':
+                      jobs_at = i
+                      continue
+                  if jobs_at is not None:
+                      m = re.match(r'^  ([A-Za-z0-9_-]+):\s*(?:\r?\n)?$', line)
+                      if m:
+                          starts.append((i, m.group(1)))
+              if not starts:
+                  return text, 0
+              out = []
+              cursor = 0
+              changed = 0
+              for idx, (start, name) in enumerate(starts):
+                  end = starts[idx + 1][0] if idx + 1 < len(starts) else len(lines)
+                  block = ''.join(lines[start:end])
+                  if is_worker_deploy(block) and is_staging_job(name, block):
+                      original = block
+                      block = block.replace('${{ secrets.CLOUDFLARE_API_TOKEN }}', '${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}')
+                      block = block.replace('${{secrets.CLOUDFLARE_API_TOKEN}}', '${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}')
+                      block = block.replace('${{ secrets.CLOUDFLARE_ACCOUNT_ID }}', dev_account)
+                      block = block.replace('${{secrets.CLOUDFLARE_ACCOUNT_ID}}', dev_account)
+                      block = block.replace(prod_namespace, dev_namespace)
+                      if 'environment: development' not in block:
+                          first_nl = block.find('\n')
+                          insert = '    environment: development\n'
+                          if first_nl >= 0:
+                              block = block[:first_nl+1] + insert + block[first_nl+1:]
+                          else:
+                              block += '\n' + insert
+                      if dev_secret not in block or dev_account not in block:
+                          # A staging deploy with no standard credential env is fail-closed rather than guessed.
+                          block = block.replace(
+                              '    environment: development\n',
+                              '    environment: development\n    env:\n      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}\n      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f\n',
+                              1,
+                          )
+                      if block != original:
+                          changed += 1
+                  out.append(''.join(lines[cursor:start]))
+                  out.append(block)
+                  cursor = end
+              out.append(''.join(lines[cursor:]))
+              return ''.join(out), changed
+
+          total = 0
+          for path in sorted(root.glob('*.yml')):
+              if path.name in {'cloudflare-boundary-audit.yml', 'cloudflare-boundary-repair.yml'}:
+                  continue
+              text = path.read_text(encoding='utf-8')
+              patched, count = patch_jobs(text)
+              if count:
+                  path.write_text(patched, encoding='utf-8')
+                  print(f'PATCHED {path.name}: {count} staging Worker job(s)')
+                  total += count
+
+          old = root / 'cloudflare-production-staging-safe-cleanup.yml'
+          new = root / 'cloudflare-production-residue-safe-cleanup.yml'
+          if old.exists():
+              old.rename(new)
+              content = new.read_text(encoding='utf-8')
+              content = content.replace('Cloudflare Production Staging Safe Cleanup', 'Cloudflare Production Residue Safe Cleanup')
+              content = content.replace("'.github/workflows/cloudflare-production-staging-safe-cleanup.yml'", "'.github/workflows/cloudflare-production-residue-safe-cleanup.yml'")
+              new.write_text(content, encoding='utf-8')
+              print('RENAMED one-off Production residue cleanup workflow')
+
+          print(f'PATCHED_STAGING_JOBS={total}')
+          if total == 0:
+              raise SystemExit('No staging jobs were patched; refusing an empty repair.')
+          PY
+
+      - name: Fail if Production credentials remain in any detected staging Worker job
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          failures=[]
+          for path in sorted(Path('.github/workflows').glob('*.yml')):
+              if path.name in {'cloudflare-boundary-audit.yml','cloudflare-boundary-repair.yml'}:
+                  continue
+              text=path.read_text(encoding='utf-8')
+              lines=text.splitlines()
+              in_jobs=False; current=None; block=[]
+              jobs=[]
+              for line in lines:
+                  if line=='jobs:': in_jobs=True; continue
+                  if not in_jobs: continue
+                  m=re.match(r'^  ([A-Za-z0-9_-]+):\s*$',line)
+                  if m:
+                      if current is not None: jobs.append((current,'\n'.join(block)))
+                      current=m.group(1); block=[line]
+                  elif current is not None: block.append(line)
+              if current is not None: jobs.append((current,'\n'.join(block)))
+              for name,b in jobs:
+                  worker=bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b',b)) and 'pages deploy' not in b
+                  staging=('staging' in name.lower() or 'STAGING_URL' in b or '.staging.toml' in b or '.staging.jsonc' in b or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b',b)))
+                  if not (worker and staging): continue
+                  required=['environment: development','secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN','46aad4738793fbaca88574832a2ccc0f']
+                  for marker in required:
+                      if marker not in b: failures.append(f'{path.name}:{name} missing {marker}')
+                  if 'secrets.CLOUDFLARE_API_TOKEN' in b or 'secrets.CLOUDFLARE_ACCOUNT_ID' in b or 'topmaster-joseph.workers.dev' in b:
+                      failures.append(f'{path.name}:{name} retains Production Cloudflare marker')
+          if failures:
+              print('\n'.join(failures))
+              raise SystemExit(1)
+          print('REPAIR_VALIDATION=PASS')
+          PY
+
+      - name: Commit boundary repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'ekodi-ops-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'Nothing to commit'; exit 0; }
+          git commit -m 'fix: isolate all Worker staging deploys to Development'
+          git push origin HEAD:main
