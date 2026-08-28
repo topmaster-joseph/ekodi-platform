@@ -1,0 +1,50 @@
+name: EKODI Constitution Check
+
+on:
+  pull_request:
+    paths:
+      - 'CONSTITUTION.md'
+      - 'governance/**'
+      - 'platform-boundaries.json'
+      - 'config/**'
+      - 'scripts/validate-constitution*.mjs'
+      - '.github/workflows/**'
+      - 'package.json'
+  push:
+    branches: [main, development]
+    paths:
+      - 'CONSTITUTION.md'
+      - 'governance/**'
+      - 'platform-boundaries.json'
+      - 'config/**'
+      - 'scripts/validate-constitution*.mjs'
+      - '.github/workflows/**'
+      - 'package.json'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  constitution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate constitution
+        run: node scripts/validate-constitution.mjs
+      - name: Validate existing platform boundaries
+        run: node scripts/validate-platform-boundaries.mjs
+      - name: Validate security baseline
+        run: node scripts/validate-security-baseline.mjs
+      - name: Validate deployment guardrails
+        run: node scripts/validate-deployment-guardrails.mjs
+      - name: Constitutional change approval gate
+        if: github.event_name == 'pull_request'
+        env:
+          EKODI_CONSTITUTION_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'constitution-approved') }}
+        run: node scripts/validate-constitution-change.mjs

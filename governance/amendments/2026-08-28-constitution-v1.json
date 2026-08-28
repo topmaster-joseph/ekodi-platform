@@ -1,0 +1,13 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-08-28-V1",
+  "date": "2026-08-28",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit user instruction to finalize, enforce, verify and deploy the agreed constitution",
+  "constitutionVersion": "1.0.0",
+  "summary": "Adopt free-first hybrid, data-sovereign, provider-independent, secure-by-default platform and one-domain-grammar constitution.",
+  "affectedAreas": ["architecture", "domain", "identity", "data", "providers", "security", "ai", "deployment", "change-control"],
+  "migrationPolicy": "non-breaking; existing feature subdomains remain registered legacy aliases and migrate incrementally to canonical paths",
+  "rollbackPlan": "revert constitution enforcement commit; no runtime route is removed by this bootstrap amendment"
+}
