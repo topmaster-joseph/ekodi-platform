@@ -1,6 +1,6 @@
 {
-  "verifiedAt": "2026-08-28T16:52:53Z",
-  "commit": "b5a9d08f35b5c7db6591df33856bea42f631802a",
+  "verifiedAt": "2026-08-28T17:42:01Z",
+  "commit": "31be308c9635afab0f0fa01c6abaf45e9de133e1",
   "service": "EKODI Tax",
   "operationPolicy": "FREE_FIRST",
   "defaultChannel": "HOMETAX_MANUAL",
@@ -10,6 +10,8 @@
   "localSupplierFallback": true,
   "hometaxLedgerImport": true,
   "hometaxSourceOfTruth": "HOMETAX",
+  "ntsBusinessRegistry": true,
+  "ntsBusinessConfigured": false,
   "paidAutomationEnabled": false,
   "financeUrl": "https://finance-api.ekodi.kr/api/finance/tax-health",
   "taxUrl": "https://tax.ekodi.kr/",
