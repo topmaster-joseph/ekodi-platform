@@ -55,7 +55,7 @@ jobs:
           node --check professional-ai-entry-page.js
           node --check space-entry-page.js
           node scripts/validate-domain-site-architecture.mjs
-          node --test test/professional-ai-path-routing.test.mjs test/marketing-domain-policy.test.mjs
+          node --test test/professional-ai-path-routing.test.mjs test/marketing-domain-policy.test.mjs test/public-space-domain.test.mjs
           npm run build
           test -f dist/trade.html
           test -f dist/hub.html
@@ -65,7 +65,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy no-route staging Worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
-      - name: Verify shared platform hosts and canonical AI paths without touching production routes
+      - name: Verify shared platform hosts, public spaces and canonical AI paths without touching production routes
         shell: bash
         run: |
           set -euo pipefail
@@ -78,13 +78,13 @@ jobs:
             grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared-stage.html
             grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
           }
-          verify_ai_path() {
+          verify_root_path() {
             path="$1"; needle="$2"; route="$3"
-            code=$(curl -sS -D /tmp/ai-path.headers -o /tmp/ai-path.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'x-ekodi-staging-host: ekodi.kr' "$STAGING_URL$path" || true)
+            code=$(curl -sS -D /tmp/root-path.headers -o /tmp/root-path.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'x-ekodi-staging-host: ekodi.kr' "$STAGING_URL$path" || true)
             echo "ekodi.kr$path -> $code"
             [[ "$code" == '200' ]]
-            grep -Fq "$needle" /tmp/ai-path.html
-            grep -Fiq "x-ekodi-route: $route" /tmp/ai-path.headers
+            grep -Fq "$needle" /tmp/root-path.html
+            grep -Fiq "x-ekodi-route: $route" /tmp/root-path.headers
           }
           for attempt in $(seq 1 18); do
             if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
@@ -92,14 +92,26 @@ jobs:
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
-              && verify_ai_path '/ai/' '에코디 전문AI' 'professional-ai' \
-              && verify_ai_path '/ai/marketing/' '에코디 마케팅AI' 'professional-ai' \
-              && verify_ai_path '/ai/creator/' '에코디 크리에이터 AI' 'professional-ai' \
-              && verify_ai_path '/ai/life/' '오늘의 질문 · 인생AI' 'professional-ai' \
-              && verify_ai_path '/ai/energy/' '에코디 에너지 AI' 'professional-ai' \
-              && verify_ai_path '/ai/support/' '에코디 지원사업 AI' 'professional-ai' \
-              && verify_ai_path '/ai/marketing/jadam/' '자담치킨 목포대점' 'professional-ai-space'; then
-              echo 'Shared-site staging verified including EKODI professional AI root paths.'
+              && verify_root_path '/ai/' '에코디 전문AI' 'professional-ai' \
+              && verify_root_path '/ai/marketing/' '에코디 마케팅AI' 'professional-ai' \
+              && verify_root_path '/ai/creator/' '에코디 크리에이터 AI' 'professional-ai' \
+              && verify_root_path '/ai/life/' '오늘의 질문 · 인생AI' 'professional-ai' \
+              && verify_root_path '/ai/energy/' '에코디 에너지 AI' 'professional-ai' \
+              && verify_root_path '/ai/support/' '에코디 지원사업 AI' 'professional-ai' \
+              && verify_root_path '/ai/marketing/church/' '에코디교회' 'professional-ai-space' \
+              && verify_root_path '/ai/marketing/biz/' '에코디비즈' 'professional-ai-space' \
+              && verify_root_path '/ai/marketing/jadam/' '자담치킨 목포대점' 'professional-ai-space' \
+              && verify_root_path '/ai/marketing/pizzamaru/' '피자마루 목포대점' 'professional-ai-space' \
+              && verify_root_path '/ai/marketing/yogurt/' '요거트퍼플 목포대점' 'professional-ai-space' \
+              && verify_root_path '/ai/marketing/cgma/' '청계면상인회' 'professional-ai-space' \
+              && verify_root_path '/church/' '에코디교회' 'public-space' \
+              && verify_root_path '/biz/' '에코디비즈' 'public-space' \
+              && verify_root_path '/lab/' '에코디연구소' 'public-space' \
+              && verify_root_path '/jadam/' '자담치킨 목포대점' 'public-space' \
+              && verify_root_path '/pizzamaru/' '피자마루 목포대점' 'public-space' \
+              && verify_root_path '/yogurt/' '요거트퍼플 목포대점' 'public-space' \
+              && verify_root_path '/cgma/' '청계면상인회' 'public-space'; then
+              echo 'Shared-site staging verified for Domain & Site Architecture v2, including public spaces and all current professional AI paths.'
               exit 0
             fi
             sleep 4
