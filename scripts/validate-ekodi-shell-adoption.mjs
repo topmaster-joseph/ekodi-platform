@@ -53,8 +53,6 @@ if(!injectorSource.includes("headers.set('x-ekodi-shell','v2')"))fail('Worker in
 if(!injectorSource.includes("headers.set('x-ekodi-surface'"))fail('Worker injection must advertise the resolved surface');
 if(!workspaceStyle.includes('data-ekodi-shell-surface="workspace"'))fail('shared workspace stylesheet must be scoped to internal surfaces');
 
-// Mobile persistent-header contract. The shared runtime is bundled into shell.js so every Shell-enabled
-// user surface receives the same fixed-header behavior even when its service Worker deploy cadence differs.
 for(const required of ["headerUrl.pathname='/mobile-fixed-header.js'",'fixedHeader','bundledShell'])if(!shellWorker.includes(required))fail(`Shell Worker lost bundled mobile header runtime: ${required}`);
 for(const required of ['position:fixed!important','ResizeObserver','data-ekodi-mobile-header-spacer','safe-area-inset-top','.site-header','.topbar'])if(!mobileHeaderSource.includes(required))fail(`mobile header runtime missing: ${required}`);
 for(const required of ['position:fixed!important','left:0!important','right:0!important','safe-area-inset-top']){
@@ -69,8 +67,6 @@ if(/<script\b/i.test(rootIndex))fail('ekodi.kr root must preserve its zero-JavaS
 if(!adminStyle.includes('.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}'))fail('admin mobile content must be offset below the fixed topbar');
 if(!adminStyle.includes('.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important'))fail('admin mobile topbar must remain fixed across control-center pages');
 
-// Central auth now follows the canonical user-service registry. New user services inherit
-// One Login automatically instead of requiring a new auth-router branch for authMode=client.
 if(!authRouter.includes('manifestService'))fail('Auth Router lost manifest-backed service discovery');
 if(!authRouter.includes('isRegistryUserService'))fail('Auth Router lost registry-driven universal identity routing');
 if(!authRouter.includes("site==='portal'||isRegistryUserService"))fail('Auth Router no longer sends registry user services through universal identity handoff');
@@ -99,7 +95,13 @@ for(const service of manifest.services||[]){
   if(typeof service.targetable!=='boolean')fail(`${service.id} must declare targetable`);
   if(!allowedIntegrations.has(service.shellIntegration))fail(`${service.id} must declare a recognized shellIntegration`);
   const commonUserPage=service.operatingModel!=='customer-site';
-  if(commonUserPage){const p=service.userAccessPolicy;if(p?.scope!=='user-pages'||p?.guestMode!=='guide-only'||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!=='shared-shell')fail(`${service.id} must require Google FREE membership for common user-page content`);}
+  if(commonUserPage){
+    const p=service.userAccessPolicy;
+    const publicGuide=service.defaultSurface==='public';
+    const expectedGuestMode=publicGuide?'public-guide':'guide-only';
+    const expectedEnforcer=publicGuide?'service-ui-and-protected-api':'shared-shell';
+    if(p?.scope!=='user-pages'||p?.guestMode!==expectedGuestMode||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!==expectedEnforcer)fail(`${service.id} must keep public guide pages visible while protecting member content`);
+  }
   else if(service.userAccessPolicy!==null)fail(`${service.id} customer site must keep its own user access policy`);
   const serviceTheme=theme.services?.[service.id];
   if(!serviceTheme?.accent)fail(`${service.id} needs a Shell v2 identity accent`);
