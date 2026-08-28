@@ -17,9 +17,9 @@ jobs:
   verify:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
-      - name: Verify live Admin and Mall framing contract
+      - name: Verify live Admin and Mall framing contract with bounded retries
         shell: bash
         run: |
           set -euo pipefail
@@ -41,7 +41,7 @@ jobs:
             printf '%s' "$code"
           }
 
-          for attempt in $(seq 1 18); do
+          for attempt in $(seq 1 3); do
             free_code=$(fetch_final 'https://mall.ekodi.kr/free-ops?embed=admin' /tmp/free-headers /tmp/free-body /tmp/free-url)
             root_code=$(fetch_final 'https://mall.ekodi.kr/' /tmp/mall-headers /tmp/mall-body /tmp/mall-url)
             admin_code=$(fetch_final 'https://admin.ekodi.kr/' /tmp/admin-headers /tmp/admin-body /tmp/admin-url)
@@ -82,7 +82,7 @@ jobs:
               exit 0
             fi
 
-            echo "attempt=$attempt free=$free_code/$free_ok url=$(cat /tmp/free-url) mall=$root_code/$root_ok admin=$admin_code/$admin_ok asset=$asset_code/$asset_ok"
+            echo "attempt=$attempt/3 free=$free_code/$free_ok url=$(cat /tmp/free-url) mall=$root_code/$root_ok admin=$admin_code/$admin_ok asset=$asset_code/$asset_ok"
             sleep 5
           done
 

@@ -6,9 +6,8 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
 test('internal operations stay available to the control plane but disappear from primary navigation', () => {
-  for (const section of ['overview', 'services', 'deployments', 'policies']) {
-    assert.match(layout, new RegExp(`['\"]${section}['\"]`));
-  }
+  assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
+  for (const route of ['#operations:overview', '#services:services', '#deployments:deployments', '#policies:policies']) assert.match(layout, new RegExp(route));
   assert.match(layout, /INTERNAL_ONLY_HREFS/);
   assert.match(layout, /\/legacy#domains/);
   assert.match(layout, /\/legacy#activity/);
@@ -20,8 +19,8 @@ test('retired Operations and Services explicitly route to demand-loaded AI Ops w
   assert.match(layout, /function routeInternalToAiOps/);
   assert.match(layout, /openDemand\('aiops'\)/);
   assert.match(layout, /#ai-ops/);
-  assert.match(layout, /\['#operations', 'overview'\]/);
-  assert.match(layout, /\['#services', 'services'\]/);
+  assert.match(layout, /#operations:overview/);
+  assert.match(layout, /#services:services/);
   assert.match(layout, /let requestedSection = ''/);
   assert.match(layout, /const initialHash = explicitHashSection\(\)/);
   assert.match(layout, /else if \(initialHash\) requestedSection = initialHash/);

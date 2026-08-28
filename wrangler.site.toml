@@ -111,4 +111,6 @@ service = "ekodi-storage-control"
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-run_worker_first = true
+# Asset-first quota guard: serve existing static assets without a Worker invocation.
+# Dynamic root shells and APIs remain Worker-first.
+run_worker_first = ["/", "/admin", "/api/*"]

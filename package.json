@@ -33,7 +33,7 @@
     "dev": "node scripts/serve.mjs",
     "monitor": "node scripts/monitor.mjs",
     "source:audit": "node scripts/source-integrity-audit.mjs",
-    "test": "node --test",
+    "test": "node --test \"test/*.test.mjs\"",
     "test:api-cost": "node --test test/api-cost-control.test.mjs"
   },
   "engines": {

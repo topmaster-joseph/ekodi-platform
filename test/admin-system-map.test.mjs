@@ -7,6 +7,8 @@ const mapJs = await readFile(new URL('../system-map-admin.js', import.meta.url),
 const postbuild = await readFile(new URL('../scripts/admin-system-map-postbuild.mjs', import.meta.url), 'utf8');
 const menuLayout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const menuRegistry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
+const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
+const canonicalPair = (source, section, hash) => source.includes(`['${section}', '${hash}']`) || source.includes(`${section}:${hash}`);
 
 test('admin system structure overview reads canonical structure, services and monitor status', () => {
   assert.match(mapJs, /\.architecture\[data-panel~="architecture"\]/);
@@ -30,7 +32,7 @@ test('postbuild keeps system map in lazy admin bundle and publishes canonical re
 test('system structure overview is a visible routed admin menu', () => {
   assert.match(menuRegistry, /id: 'architecture'[\s\S]*?ko: '시스템 구조 개요'/);
   assert.doesNotMatch(menuRegistry, /id: 'architecture'[^\n]*internal: true/);
-  assert.match(menuLayout, /\['#architecture', 'architecture'\]/);
-  assert.match(menuLayout, /\['architecture', '#architecture'\]/);
+  assert.ok(routePair(menuLayout, '#architecture', 'architecture'));
+  assert.ok(canonicalPair(menuLayout, 'architecture', '#architecture'));
   assert.match(menuLayout, /section === 'architecture'[\s\S]*?system-health-admin\.js/);
 });

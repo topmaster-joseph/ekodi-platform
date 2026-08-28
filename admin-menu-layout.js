@@ -12,13 +12,9 @@ const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
 const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
 const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
 const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
-const HASH_SECTIONS = new Map([
-  ['#sites', 'sites'], ['#ai-ops', 'aiops'], ['#ai-module-spec', 'ai-module-spec'], ['#health', 'health'], ['#security', 'security'], ['#architecture', 'architecture'], ['#devices', 'devices'], ['#campus', 'campus'],
-  ['#policies', 'policies'], ['#operations', 'overview'], ['#services', 'services'], ['#deployments', 'deployments'],
-]);
-const CANONICAL_HASH = new Map([
-  ['overview', '#operations'], ['sites', '#sites'], ['aiops', '#ai-ops'], ['ai-module-spec', '#ai-module-spec'], ['health', '#health'], ['security', '#security'], ['architecture', '#architecture'], ['devices', '#devices'], ['campus', '#campus'],
-]);
+const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
+const HASH_SECTIONS = pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #operations:overview #services:services #deployments:deployments #release:deployments');
+const CANONICAL_HASH = pairMap('overview:#operations sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
 let requestedSection = '';
 let sitesLoading = null;
 function installCompactNavigationStyle() {
@@ -138,13 +134,13 @@ function routeInternalToAiOps() {
   openDemand('aiops');
 }
 function explicitHashSection() {
-  return HASH_SECTIONS.get(location.hash) || '';
+  return HASH_SECTIONS.get(location.hash.toLowerCase()) || '';
 }
 function reconcileNavigation() {
   enforceInternalNavigationPolicy();
   if (!requestedSection) return;
   if (requestedSection === 'sites' && !hasPanel('sites')) openSites();
-  else activatePanel(requestedSection);
+  else if (!activatePanel(requestedSection)) openDemand(requestedSection);
 }
 nav.addEventListener('click', event => {
   const item = event.target.closest('.nav[data-section], .nav[data-lazy-section], .nav[data-device-control-nav], a.nav[href]');
@@ -180,8 +176,10 @@ window.addEventListener('ekodi-admin-ready', () => {
   const explicit = explicitHashSection();
   if (explicit && isInternalSection(explicit)) routeInternalToAiOps();
   else if (explicit === 'sites') openSites();
-  else if (explicit) requestedSection = explicit;
-  else {
+  else if (explicit) {
+    requestedSection = explicit;
+    if (!activatePanel(explicit)) openDemand(explicit);
+  } else {
     requestedSection = 'campus';
     window.EKODIAdminDemand?.activate('campus');
   }

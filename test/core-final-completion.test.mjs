@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const completion = JSON.parse(fs.readFileSync('config/ekodi-core-completion.json', 'utf8'));
 const workflow = fs.readFileSync('.github/workflows/verify-ekodi-core-completion.yml', 'utf8');
+const loadWorkflow = fs.readFileSync('.github/workflows/ecosystem-load-test.yml', 'utf8');
 const release = fs.readFileSync('scripts/guarded-worker-release.mjs', 'utf8');
 const backup = fs.readFileSync('.github/workflows/backup-ekodi-core.yml', 'utf8');
 
@@ -14,14 +15,20 @@ test('EKODI Core completion covers all seven stages', () => {
   assert.ok(completion.stages.every(item => item.status === 'completed'));
 });
 
-test('final completion workflow verifies live production and bounded load', () => {
+test('final completion keeps production verification automatic and bounded load manual-only', () => {
   for (const marker of [
     'npm run validate:core-completion',
     'npm run verify:core-production',
     'AI_PROVIDER: NONE',
-    'node scripts/ecosystem-load-test.mjs',
     'actions/upload-artifact@v4',
+    'Production load testing is isolated to the dedicated manual capped workflow.',
   ]) assert.ok(workflow.includes(marker), `missing final workflow marker: ${marker}`);
+  assert.doesNotMatch(workflow, /node scripts\/ecosystem-load-test\.mjs/);
+  assert.match(loadWorkflow, /workflow_dispatch:/);
+  assert.match(loadWorkflow, /EKODI_ALLOW_PRODUCTION_LOAD: MANUAL_APPROVED/);
+  assert.match(loadWorkflow, /LOAD_CONCURRENCY: '1'/);
+  assert.match(loadWorkflow, /GITHUB_REF.*refs\/heads\/main/);
+  assert.match(loadWorkflow, /node scripts\/ecosystem-load-test\.mjs/);
 });
 
 test('completion keeps rollback and independent restore as permanent gates', () => {

@@ -2,26 +2,11 @@ name: EKODI site monitor
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
-  workflow_run:
-    workflows:
-      - Deploy EKODI Shared Site Core
-      - Deploy EKODI Storage Control
-      - Deploy Admin AI Ops
-      - Deploy Admin AI Control Plane
-      - Deploy Admin True Lazy Gate
-      - Deploy My EKODI
-      - Deploy Marketing AI Pages
-      - Deploy AI Gateway
-      - Deploy EKODI Publishing
-      - EKODI Cafe · Validate and Deploy
-    types: [completed]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ekodi-site-monitor
@@ -43,11 +28,11 @@ jobs:
           node --test test/monitor.test.mjs
       - name: Check EKODI services, shared infrastructure and Marketing AI tenants
         run: npm run monitor
-      - name: Publish latest status without deployment cascade
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add monitor-status.json
-          git diff --cached --quiet && exit 0
-          git commit -m "chore: update EKODI monitoring status [skip ci]"
-          git push
+      - name: Preserve latest status without repository writes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-monitor-status
+          path: monitor-status.json
+          if-no-files-found: warn
+          retention-days: 7

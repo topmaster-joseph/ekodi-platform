@@ -33,6 +33,9 @@ test('control endpoints require the D1 operations store', async () => {
 test('control API defines health, statistics, settings and history boundaries', () => {
   assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/overview`"));
   assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/check`"));
+  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/cloudflare-accounts`"));
+  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/cloudflare-accounts/check`"));
+  assert.match(apiSource, /cloudflare_environment_checks/);
   assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/services`"));
   assert.match(apiSource, /service_controls/);
   assert.match(apiSource, /service_checks/);
@@ -47,6 +50,8 @@ test('Control Center consumes only the canonical operations API for service cont
   assert.match(controlJs, /\/api\/control\/overview/);
   assert.match(controlJs, /\/api\/control\/check/);
   assert.match(controlJs, /\/api\/control\/services\//);
+  assert.match(controlJs, /\/api\/control\/cloudflare-accounts/);
+  assert.match(controlHtml, /id="cloudflareAccountGrid"/);
   assert.doesNotMatch(controlJs, /raw\.githubusercontent\.com/);
 });
 

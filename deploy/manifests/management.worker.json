@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-management",
+    "config": "wrangler.management.toml",
+    "requests": [
+      {"url":"https://management.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디 경영플랫폼","무료로 시작하기","site=management","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://management.ekodi.kr/config.js","statuses":[200],"expect":["production-foundation","site=management","\"executionEnabled\":false","\"minimumTier\":\"free\""]},
+      {"url":"https://management.ekodi.kr/api/catalog","statuses":[200],"expect":["\"guestMode\":\"guide-only\"","마케팅AI","메뉴AI","주문AI","리뷰AI","프랜차이즈"]}
+    ]
+  }
+}

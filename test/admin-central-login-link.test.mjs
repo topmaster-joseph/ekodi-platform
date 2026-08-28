@@ -54,3 +54,41 @@ test('central handoff keeps a direct auth link fallback and does not inject dupl
   assert.match(source, /loginLink\.href = CENTRAL_ADMIN_AUTH_URL/);
   assert.match(source, /form\.hidden=true/);
 });
+
+test('central handoff preserves requested admin destinations and normalizes legacy aliases', async () => {
+  const source = await read('admin-central-handoff.js');
+  assert.ok(source.includes("storige:'storage'"));
+  assert.ok(source.includes("legacy:'ai-ops'"));
+  assert.ok(source.includes("domains:'ai-ops'"));
+  assert.ok(source.includes("activity:'ai-ops'"));
+  assert.ok(source.includes("health api-cost storage security"));
+  assert.ok(source.includes("const q=normalizeRoute(new URLSearchParams(location.search).get('route'))"));
+  assert.ok(source.includes("const h=normalizeRoute(location.hash)"));
+  assert.ok(source.includes("const target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`"));
+  assert.ok(source.includes("return`https://auth.ekodi.kr/?site=admin&direct=1&return_to=${encodeURIComponent(target)}`"));
+  assert.ok(source.includes("route=normalizeRoute(query.get('route')||hash.get('ekodi_admin_route')"));
+  assert.ok(source.includes("history.replaceState({},document.title,cleanRouteUrl(route))"));
+  assert.ok(source.includes("window.addEventListener('hashchange',()=>{normalizeEntryRoute();syncLoginLink()})"));
+});
+
+test('admin menu router recognizes every current subpage and typo alias', async () => {
+  const source = await read('admin-menu-layout.js');
+  for (const pair of [
+    '#storage:storage', '#storige:storage', '#api-cost:api-cost', '#work:work',
+    '#marketing-ai:marketing-ai', '#finance:finance', '#organization:organization',
+    '#workspace:workspace', '#clients:clients', '#admins:admins', '#community:community',
+    '#books:books', '#social:social', '#affiliates:affiliates',
+  ]) assert.ok(source.includes(pair), `missing route mapping: ${pair}`);
+  assert.ok(source.includes("HASH_SECTIONS.get(location.hash.toLowerCase())"));
+  assert.ok(source.includes("else if (!activatePanel(requestedSection)) openDemand(requestedSection)"));
+  assert.ok(source.includes("if (!activatePanel(explicit)) openDemand(explicit)"));
+});
+
+test('authenticated shell restores the requested hash after compact UI scripts finish loading', async () => {
+  const source = await read('admin-authenticated-shell.js');
+  assert.ok(source.includes("const requestedHash=location.hash"));
+  assert.ok(source.includes("await Promise.all(criticalPostAuthScripts.map(loadScript))"));
+  assert.ok(source.includes("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
+  assert.ok(source.includes("hero.href='#ai-ops'"));
+  assert.ok(source.includes("a[href=\"/legacy\"]"));
+});

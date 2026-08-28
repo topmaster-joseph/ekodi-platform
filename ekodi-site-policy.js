@@ -59,7 +59,7 @@ export const EKODI_OWNED_CUSTOMER_SITES = Object.freeze(
 const OWNED_BY_ID = new Map(EKODI_OWNED_CUSTOMER_SITES.map(site => [site.id, site]));
 const OWNED_BY_SLUG = new Map(EKODI_OWNED_CUSTOMER_SITES.map(site => [site.slug, site]));
 const OWNED_BY_DOMAIN = new Map(EKODI_OWNED_CUSTOMER_SITES.map(site => [site.domain, site]));
-const PLATFORM_CORE_IDS = new Set(['my']);
+const PLATFORM_CORE_IDS = new Set(['my','management']);
 
 export function ownedCustomerSiteFor(value = '') {
   const normalized = String(value || '').trim().toLowerCase();

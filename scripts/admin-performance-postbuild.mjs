@@ -176,7 +176,7 @@ await writeFile(path, html);
 
 // Final budgets run after every postbuild layer so later CSS/JS cannot sneak past the guard.
 const menuBudgetPath = `${dist}admin-menu-layout.js`;
-const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/^[ \t]+/gm, '');
+const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/\r\n/g, '\n').replace(/^[ \t]+/gm, '');
 await writeFile(menuBudgetPath, compactMenuForBudget);
 const files = {
   handoff: await readFile(`${dist}admin-central-handoff.js`, 'utf8'),

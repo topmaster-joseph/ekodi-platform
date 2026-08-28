@@ -10,7 +10,7 @@ const homepage = await readFile(new URL('../homepage-admin.js', import.meta.url)
 test('Campus and Sites are one canonical Site Management entry', () => {
   assert.match(registry, /id: 'campus'[\s\S]*ko: '사이트 관리'[\s\S]*en: 'Site Management'/);
   assert.doesNotMatch(registry, /id: 'sites'/);
-  assert.match(layout, /\['#sites', 'sites'\]/);
+  assert.match(layout, /#sites:sites/);
   assert.match(layout, /if \(section === 'sites'\) return openSites\(\)/);
   assert.match(layout, /navItemFor\('campus'\)\?\.classList\.add\('active'\)/);
 });
@@ -27,7 +27,7 @@ test('Site Management renders one shared list for operations and homepage presen
 });
 
 test('legacy #sites entry converges into Campus instead of creating a second list', () => {
-  assert.match(layout, /\['#sites', 'sites'\]/);
+  assert.match(layout, /#sites:sites/);
   assert.match(homepage, /mountWhenCampusReady/);
   assert.match(homepage, /data-demand-feature="campus"/);
   assert.match(homepage, /window\.EKODIAdminPanels\?\.activate\?\.\('sites'\)/);
