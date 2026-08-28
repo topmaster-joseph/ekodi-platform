@@ -7,10 +7,12 @@ import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
+import { resolvePublicSpace, publicSpacePage } from './space-entry-page.js';
 
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
+const ROOT_HOSTS=new Set(['ekodi.kr','www.ekodi.kr']);
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -34,6 +36,18 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+
+    if(ROOT_HOSTS.has(host)&&request.method==='GET'){
+      const space=resolvePublicSpace(url.pathname);
+      if(space){
+        if(!url.pathname.endsWith('/')){
+          const canonical=new URL(request.url);
+          canonical.pathname=`/${space.slug}/`;
+          return Response.redirect(canonical.toString(),308);
+        }
+        return publicSpacePage(space);
+      }
+    }
 
     if(host===TAX_HOST){
       if(url.pathname.startsWith('/api/finance/tax-'))return financeEntryWorker.fetch(request,env,ctx);
