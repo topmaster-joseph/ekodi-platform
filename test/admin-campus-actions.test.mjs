@@ -51,7 +51,7 @@ test('Campus reconciles the canonical homepage registry so the two old lists can
   assert.match(js, /Other Services/);
 });
 
-test('Campus groups related services into a compact two-column layout', () => {
+test('Campus groups related services into a compact readable layout', () => {
   for (const group of [
     'Core & Access',
     'Business & Commerce',
@@ -64,7 +64,7 @@ test('Campus groups related services into a compact two-column layout', () => {
   assert.match(js, /className = 'campus-groups-grid'/);
   assert.match(js, /className = 'campus-group-card'/);
   assert.match(js, /className = 'campus-site-item'/);
-  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /\.campus-group-card/);
   assert.match(css, /\.campus-site-item/);
 });
@@ -74,7 +74,7 @@ test('Homepage controls share the same Campus row and remain responsive', () => 
   assert.match(css, /\.campus-homepage-notice/);
   assert.match(css, /\.campus-homepage-preview/);
   assert.match(css, /word-break:keep-all/);
-  assert.match(css, /@media \(max-width:720px\)/);
+  assert.match(css, /@media \(max-width:760px\)/);
 });
 
 test('public site Open links never inherit monitor-only health endpoints', () => {
