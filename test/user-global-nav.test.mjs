@@ -27,8 +27,9 @@ test('Shell Worker bundles global navigation and shared user/admin headers into 
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/user-global-nav\.js/);
   assert.match(worker,/user-ui-header\.js/);
+  assert.match(worker,/user-ui-footer\.js/);
   assert.match(worker,/admin-ui-shell\.js/);
   assert.match(worker,/globalNav/);
   assert.match(worker,/x-ekodi-admin-ui-shell/);
-  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{userHeader\}\\n\$\{adminShell\}\\n\$\{fixedHeader\}/);
+  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{userHeader\}\\n\$\{userFooter\}\\n\$\{adminShell\}\\n\$\{fixedHeader\}/);
 });
