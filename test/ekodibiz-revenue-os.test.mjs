@@ -47,7 +47,13 @@ test('production and staging use SQLite Durable Object persistence', () => {
     assert.match(source, /\[exports\.RevenueStore\]/);
     assert.match(source, /storage = "sqlite"/);
   }
-  assert.match(config, /crons = \["\*\/15 \* \* \* \*"\]/);
+});
+
+test('free-tier operations stay event-driven without consuming a dedicated cron slot', () => {
+  assert.doesNotMatch(config, /\[triggers\]/);
+  assert.doesNotMatch(config, /crons\s*=/);
+  assert.match(config, /AI_OPERATIONS_MODE = "rules-first-event-driven"/);
+  assert.match(worker, /ctx\?\.waitUntil\(processSafeTasks\(env\)\)/);
 });
 
 test('anonymous intake is disclosed and UI forwards lead identity without contact data', () => {
