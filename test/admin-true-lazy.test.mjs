@@ -51,9 +51,11 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(diagnostics, /registration\.update\(\)/);
   assert.match(diagnostics, /현재 관리자 브라우저 진단/);
   const smoke = JSON.stringify(manifest.smoke || manifest);
-  assert.match(smoke, /device-browser-diagnostics\.js\?device=v28/);
+  assert.match(smoke, /device-browser-diagnostics\.js\?v=device-v28/);
+  assert.match(smoke, /device-browser-diagnostics\.css\?v=device-v28/);
+  assert.match(smoke, /x-ekodi-route: admin-asset/);
+  assert.match(smoke, /cache-control: public, max-age=31536000, immutable/);
   assert.match(smoke, /현재 관리자 브라우저 진단/);
-  assert.match(smoke, /device-browser-diagnostics\.css\?device=v28/);
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
