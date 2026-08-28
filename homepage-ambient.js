@@ -1,4 +1,56 @@
 (() => {
+  function installLegalFooter() {
+    if (document.querySelector('[data-ekodi-legal-footer]')) return;
+    if (!document.getElementById('ekodi-homepage-legal-style')) {
+      const style = document.createElement('style');
+      style.id = 'ekodi-homepage-legal-style';
+      style.textContent = `
+        .ekodi-legal-footer{position:relative;z-index:2;margin-top:32px;border-top:1px solid rgba(23,33,28,.12);background:rgba(250,250,247,.86);backdrop-filter:blur(12px);color:#536158;font-size:12px;line-height:1.65}
+        .ekodi-legal-footer__inner{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:24px 0 28px;display:grid;gap:7px}
+        .ekodi-legal-footer__top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+        .ekodi-legal-footer__brand{font-weight:800;letter-spacing:.12em;color:#18251d}
+        .ekodi-legal-footer__links{display:flex;gap:14px;flex-wrap:wrap}
+        .ekodi-legal-footer a{color:#315d48;text-decoration:none;text-underline-offset:3px}
+        .ekodi-legal-footer a:hover,.ekodi-legal-footer a:focus-visible{text-decoration:underline}
+        .ekodi-legal-footer__business{display:flex;gap:5px 12px;flex-wrap:wrap}
+        .ekodi-legal-footer__address{word-break:keep-all}
+        .ekodi-legal-footer__copyright{margin-top:2px;color:#738077}
+        .ekodi-legal-footer__scope{margin-top:3px;color:#829087;font-size:11px}
+        @media(prefers-color-scheme:dark){.ekodi-legal-footer{border-color:rgba(255,255,255,.12);background:rgba(16,21,18,.9);color:#adb9b1}.ekodi-legal-footer__brand{color:#edf4ef}.ekodi-legal-footer a{color:#9ed0b4}.ekodi-legal-footer__copyright,.ekodi-legal-footer__scope{color:#87958c}}
+        @media(max-width:640px){.ekodi-legal-footer__inner{width:min(100% - 24px,1180px);padding:20px 0 24px}.ekodi-legal-footer__top{align-items:flex-start;flex-direction:column}.ekodi-legal-footer__links{gap:8px 12px}.ekodi-legal-footer__business{display:grid;gap:2px}}
+      `;
+      document.head.appendChild(style);
+    }
+
+    const footer = document.createElement('footer');
+    footer.className = 'ekodi-legal-footer';
+    footer.dataset.ekodiLegalFooter = 'v1';
+    footer.setAttribute('aria-label', 'EKODI 운영 및 법적 고지');
+    footer.innerHTML = `
+      <div class="ekodi-legal-footer__inner">
+        <div class="ekodi-legal-footer__top">
+          <strong class="ekodi-legal-footer__brand">EKODI</strong>
+          <nav class="ekodi-legal-footer__links" aria-label="법적 고지">
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+            <a href="mailto:ekodibiz@gmail.com">문의</a>
+          </nav>
+        </div>
+        <div class="ekodi-legal-footer__business">
+          <span>운영주체 에코디비즈</span><span>대표 정찬균</span><span>사업자등록번호 213-13-01959</span>
+        </div>
+        <div class="ekodi-legal-footer__address">사업장 소재지 전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층 · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></div>
+        <div class="ekodi-legal-footer__copyright">© 2026 EKODI · EKODIBIZ. All rights reserved.</div>
+        <div class="ekodi-legal-footer__scope">독립 운영주체 또는 개별 서비스에 별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다.</div>
+      </div>`;
+    document.body.appendChild(footer);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installLegalFooter, { once:true });
+  else installLegalFooter();
+})();
+
+(() => {
   const palettes = [
     ['#f3c69d66','#a9d6b966','#c6b6e552','18%','18%','82%','30%','55%','82%'],
     ['#f1d6aa5c','#b6dcbf5c','#b9cae65c','24%','24%','76%','22%','68%','78%'],
