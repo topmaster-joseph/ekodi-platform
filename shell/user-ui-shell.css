@@ -5,11 +5,11 @@
  */
 
 html[data-ekodi-user-ui] {
-  --ekodi-user-chrome-bg: rgba(250, 250, 247, .96);
-  --ekodi-user-chrome-text: #18251d;
-  --ekodi-user-chrome-muted: #536158;
-  --ekodi-user-chrome-link: #315d48;
-  --ekodi-user-chrome-line: rgba(23, 33, 28, .12);
+  --ekodi-user-chrome-bg: color-mix(in srgb, var(--ekodi-service-paper, #fafaf7) 94%, var(--ekodi-service-accent, #315d48) 6%);
+  --ekodi-user-chrome-text: var(--ekodi-service-ink, #18251d);
+  --ekodi-user-chrome-muted: color-mix(in srgb, var(--ekodi-user-chrome-text) 68%, transparent);
+  --ekodi-user-chrome-link: var(--ekodi-service-accent, #315d48);
+  --ekodi-user-chrome-line: color-mix(in srgb, var(--ekodi-service-accent, #18251d) 18%, transparent);
   --ekodi-user-header-fallback-height: 64px;
 }
 
@@ -58,7 +58,8 @@ html[data-ekodi-user-ui] {
 .ekodi-user-ui-fallback-header__nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .ekodi-user-ui-fallback-header__nav a,
@@ -104,7 +105,7 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
   width: max-content !important;
-  max-width: min(66vw, 760px) !important;
+  max-width: min(58vw, 680px) !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   text-align: center !important;
@@ -160,7 +161,48 @@ html[data-ekodi-user-ui] {
   scroll-padding-top: calc(var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) + 12px);
 }
 
-/* Shared footer structure is fixed; visual mood is inherited from each service.
+/* One language control is inherited by every public/workspace user surface. */
+.ekodi-user-language {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-inline-start: 8px;
+  color: inherit;
+  font: inherit;
+}
+
+.ekodi-user-language__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ekodi-user-language__select {
+  min-height: 34px;
+  max-width: 96px;
+  box-sizing: border-box;
+  border: 1px solid var(--ekodi-user-chrome-line);
+  border-radius: max(8px, calc(var(--ekodi-service-radius-soft, 16px) * .6));
+  padding: 0 26px 0 9px;
+  background: color-mix(in srgb, var(--ekodi-user-chrome-bg) 92%, transparent);
+  color: var(--ekodi-user-chrome-text);
+  font: 650 12px/1.2 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  cursor: pointer;
+}
+
+.ekodi-user-language__select:focus-visible {
+  outline: 2px solid var(--ekodi-user-chrome-link);
+  outline-offset: 2px;
+}
+
+/* Shared footer structure is fixed and centered; visual mood is inherited from each service.
  * Services may refine only the --ekodi-user-footer-* tokens, not duplicate the footer.
  */
 .ekodi-user-ui-footer {
@@ -169,28 +211,31 @@ html[data-ekodi-user-ui] {
   width: 100%;
   box-sizing: border-box;
   margin-top: 28px;
-  border-top: 1px solid var(--ekodi-user-footer-border, color-mix(in srgb, currentColor 14%, transparent));
-  background: var(--ekodi-user-footer-background, transparent);
+  border-top: 1px solid var(--ekodi-user-footer-border, color-mix(in srgb, var(--ekodi-service-accent, currentColor) 18%, transparent));
+  background: var(--ekodi-user-footer-background, color-mix(in srgb, var(--ekodi-service-paper, transparent) 92%, var(--ekodi-service-accent, transparent) 8%));
   color: var(--ekodi-user-footer-text, inherit);
   font-family: inherit;
   font-size: 13px;
   line-height: 1.7;
-  text-align: left;
+  text-align: center;
 }
 
 .ekodi-user-ui-footer__inner {
-  width: min(1180px, calc(100% - 32px));
+  width: min(980px, calc(100% - 32px));
   margin: 0 auto;
   padding: 24px 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .ekodi-user-ui-footer__copy {
   min-width: 0;
+  width: 100%;
   display: grid;
+  justify-items: center;
   gap: 6px;
 }
 
@@ -202,8 +247,10 @@ html[data-ekodi-user-ui] {
 
 .ekodi-user-ui-footer__business,
 .ekodi-user-ui-footer__address {
+  width: 100%;
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 4px 14px;
   flex-wrap: wrap;
 }
@@ -218,11 +265,11 @@ html[data-ekodi-user-ui] {
 
 .ekodi-user-ui-footer__links {
   display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
   gap: 6px 16px;
   flex-wrap: wrap;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .ekodi-user-ui-footer a {
@@ -247,6 +294,7 @@ html[data-ekodi-user-ui] {
 }
 
 .ekodi-user-ui-footer__scope {
+  max-width: 760px;
   font-size: .92em;
 }
 
@@ -254,23 +302,17 @@ html[data-ekodi-user-ui] {
   display: none !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 840px) {
   .ekodi-user-ui-header .ekodi-user-ui-header-center {
-    max-width: 54vw !important;
+    max-width: 46vw !important;
   }
 }
 
 @media (max-width: 720px) {
   .ekodi-user-ui-footer__inner {
-    width: min(100% - 24px, 1180px);
+    width: min(100% - 24px, 980px);
     padding: 20px 0;
-    grid-template-columns: 1fr;
     gap: 10px;
-  }
-
-  .ekodi-user-ui-footer__links {
-    justify-content: flex-start;
-    white-space: normal;
   }
 
   .ekodi-user-ui-footer__business,
@@ -286,33 +328,58 @@ html[data-ekodi-user-ui] {
 
   .ekodi-user-ui-fallback-header__inner,
   .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-    width: min(100% - 24px, 1180px);
-    gap: 10px;
+    width: min(100% - 20px, 1180px);
+    gap: 8px;
   }
 
   .ekodi-user-ui-fallback-header__context,
   .ekodi-user-ui-header-fallback__context {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .ekodi-user-ui-fallback-header__nav,
   .ekodi-user-ui-header-fallback__my {
     font-size: 12px;
   }
+
+  .ekodi-user-language {
+    margin-inline-start: 2px;
+  }
+
+  .ekodi-user-language__select {
+    width: 48px;
+    min-height: 32px;
+    padding: 0 4px;
+    text-align: center;
+  }
 }
 
 @media (max-width: 480px) {
   .ekodi-user-ui-header .ekodi-user-ui-header-center {
-    max-width: 48vw !important;
+    max-width: 38vw !important;
+  }
+
+  .ekodi-user-ui-fallback-header__brand {
+    font-size: 12px;
+    letter-spacing: .08em;
   }
 }
 
 @media (prefers-color-scheme: dark) {
   html[data-ekodi-user-ui] {
-    --ekodi-user-chrome-bg: rgba(16, 21, 18, .96);
+    --ekodi-user-chrome-bg: color-mix(in srgb, #101512 92%, var(--ekodi-service-accent, #315d48) 8%);
     --ekodi-user-chrome-text: #edf4ef;
     --ekodi-user-chrome-muted: #adb9b1;
-    --ekodi-user-chrome-link: #9ed0b4;
+    --ekodi-user-chrome-link: color-mix(in srgb, var(--ekodi-service-accent, #9ed0b4) 68%, white 32%);
     --ekodi-user-chrome-line: rgba(255, 255, 255, .12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ekodi-user-ui-header *,
+  .ekodi-user-ui-footer *,
+  .ekodi-user-language * {
+    transition: none !important;
+    animation: none !important;
   }
 }

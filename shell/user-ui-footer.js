@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_FOOTER_BOOTED)return;
 window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
-const VERSION=2;
+const VERSION=3;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://shell.ekodi.kr/user-footer.json';
 const USER_SURFACES=new Set(['public','workspace']);
@@ -17,14 +17,14 @@ function installStyle(){
   const style=document.createElement('style');
   style.id=STYLE_ID;
   style.textContent=`
-    .ekodi-user-ui-footer{position:relative;z-index:2;width:100%;box-sizing:border-box;margin-top:28px;border-top:1px solid var(--ekodi-user-footer-border,color-mix(in srgb,currentColor 14%,transparent));background:var(--ekodi-user-footer-background,transparent);color:var(--ekodi-user-footer-text,inherit);font-family:inherit;font-size:13px;line-height:1.7;text-align:left}
-    .ekodi-user-ui-footer__inner{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:24px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:20px 28px}
-    .ekodi-user-ui-footer__copy{min-width:0;display:grid;gap:6px}.ekodi-user-ui-footer__brand{font-weight:800;letter-spacing:.12em;color:inherit}
-    .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{display:flex;align-items:baseline;gap:4px 14px;flex-wrap:wrap}.ekodi-user-ui-footer__address{word-break:keep-all}.ekodi-user-ui-footer__separator{opacity:.5}
-    .ekodi-user-ui-footer__links{display:flex;justify-content:flex-end;align-items:flex-start;gap:6px 16px;flex-wrap:wrap;white-space:nowrap}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-link,currentColor);text-decoration:none;text-underline-offset:3px}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
-    .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{opacity:.72}.ekodi-user-ui-footer__scope{font-size:.92em}
+    .ekodi-user-ui-footer{position:relative;z-index:2;width:100%;box-sizing:border-box;margin-top:28px;border-top:1px solid var(--ekodi-user-footer-border,color-mix(in srgb,var(--ekodi-service-accent,currentColor) 18%,transparent));background:var(--ekodi-user-footer-background,color-mix(in srgb,var(--ekodi-service-paper,transparent) 92%,var(--ekodi-service-accent,transparent) 8%));color:var(--ekodi-user-footer-text,inherit);font-family:inherit;font-size:13px;line-height:1.7;text-align:center}
+    .ekodi-user-ui-footer__inner{width:min(980px,calc(100% - 32px));margin:0 auto;padding:24px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+    .ekodi-user-ui-footer__copy{min-width:0;width:100%;display:grid;justify-items:center;gap:6px}.ekodi-user-ui-footer__brand{font-weight:800;letter-spacing:.12em;color:inherit}
+    .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{width:100%;display:flex;align-items:baseline;justify-content:center;gap:4px 14px;flex-wrap:wrap}.ekodi-user-ui-footer__address{word-break:keep-all}.ekodi-user-ui-footer__separator{opacity:.5}
+    .ekodi-user-ui-footer__links{display:flex;justify-content:center;align-items:center;gap:6px 16px;flex-wrap:wrap;white-space:normal}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-link,currentColor);text-decoration:none;text-underline-offset:3px}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+    .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{opacity:.72}.ekodi-user-ui-footer__scope{max-width:760px;font-size:.92em}
     [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer){display:none!important}
-    @media(max-width:720px){.ekodi-user-ui-footer__inner{width:min(100% - 24px,1180px);padding:20px 0;grid-template-columns:1fr;gap:10px}.ekodi-user-ui-footer__links{justify-content:flex-start;white-space:normal}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:3px 10px}}
+    @media(max-width:720px){.ekodi-user-ui-footer__inner{width:min(100% - 24px,980px);padding:20px 0;gap:10px}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:3px 10px}}
   `;
   (document.head||document.documentElement).append(style);
 }
@@ -74,6 +74,7 @@ function createFooter(config){
     if(!item?.href||!item?.label)continue;
     const link=appendText(nav,'a',item.label);
     link.href=String(item.href);
+    if(item.i18n)link.setAttribute('data-ekodi-i18n',String(item.i18n));
   }
   return footer;
 }
@@ -83,6 +84,7 @@ async function reconcile(){
   const config=await loadConfig();
   if(!config||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
   document.body.append(createFooter(config));
+  window.EKODIUserLanguage?.refresh?.();
   window.dispatchEvent(new CustomEvent('ekodi:user-footer-ready',{detail:{version:VERSION,surface:surface()}}));
 }
 window.EKODIUserUIFooter=Object.freeze({version:VERSION,refresh:reconcile});

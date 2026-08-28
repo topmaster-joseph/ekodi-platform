@@ -65,9 +65,11 @@ jobs:
           node --check shell/shell.js
           node --check shell/user-ui-header.js
           node --check shell/user-ui-footer.js
+          node --check shell/user-language.js
           node --check shell/admin-ui-shell.js
           node --check shell/mobile-fixed-header.js
           node --check shell/illustration-system.js
+          node --check shell/service-design-inheritance.js
           node --check shell/ecosystem-link-compat.js
           node --check scripts/verify-ekodi-shell-live.mjs
           test -f config/user-ui-shell.json
@@ -80,9 +82,11 @@ jobs:
           grep -Fq 'data-ekodi-document-surface' shell/workspace.css
           grep -Fq "userHeaderUrl.pathname='/user-ui-header.js'" ekodi-shell-worker.js
           grep -Fq "userFooterUrl.pathname='/user-ui-footer.js'" ekodi-shell-worker.js
+          grep -Fq "userLanguageUrl.pathname='/user-language.js'" ekodi-shell-worker.js
           grep -Fq "url.pathname==='/user-footer.json'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-footer" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-user-language" ekodi-shell-worker.js
           grep -Fq "adminShellUrl.pathname='/admin-ui-shell.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-admin-ui-shell" ekodi-shell-worker.js
           grep -Fq "messageUrl.pathname='/message-ui.js'" ekodi-shell-worker.js
@@ -95,6 +99,7 @@ jobs:
           grep -Fq 'window.EKODIIllustration' shell/illustration-system.js
           grep -Fq 'window.EKODIUserUIHeader' shell/user-ui-header.js
           grep -Fq 'window.EKODIUserUIFooter' shell/user-ui-footer.js
+          grep -Fq 'window.EKODIUserLanguage' shell/user-language.js
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js
           grep -Fq '.side-brand' shell/admin-ui-shell.js
@@ -102,8 +107,10 @@ jobs:
           grep -Fq 'cuteNotChildish' config/illustration-system.json
           grep -Fq 'aiAsCompanionNotRobotMascot' config/illustration-system.json
           grep -Fq 'config/user-footer.js' config/user-ui-shell.json
+          grep -Fq '"alignment": "center"' config/user-ui-shell.json
           grep -Fq -- '--ekodi-user-footer-background' shell/user-ui-shell.css
-          grep -Fq 'grid-template-columns: minmax(0, 1fr) auto' shell/user-ui-shell.css
+          grep -Fq 'text-align: center' shell/user-ui-shell.css
+          grep -Fq '.ekodi-user-language' shell/user-ui-shell.css
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml

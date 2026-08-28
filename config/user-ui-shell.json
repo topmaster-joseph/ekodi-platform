@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -14,15 +14,16 @@
     "subserviceInheritance": true,
     "fallbackHeaderWhenMissing": true,
     "legacyCommonFooterSuppressed": true,
-    "rootInternalPathsExcluded": true
+    "rootInternalPathsExcluded": true,
+    "languageChoiceEverywhere": true
   },
   "header": {
     "owner": "shared-shell",
     "strategy": "adopt-existing-first",
     "fallback": "shared-shell-header-when-missing",
-    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path"],
+    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path", "language choice"],
     "localNavigation": "service-owned",
-    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed"],
+    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control"],
     "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
     "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"]
   },
@@ -30,10 +31,21 @@
     "owner": "shared-shell",
     "strategy": "shell-supplied",
     "contentSource": "config/user-footer.js",
-    "layout": "operator-copy-left / legal-links-right; stack on narrow screens",
-    "themePolicy": "inherit each service typography and color mood; optional --ekodi-user-footer-* tokens may refine it",
+    "layout": "centered single-column operator copy and legal links; wrap naturally on narrow screens",
+    "alignment": "center",
+    "themePolicy": "inherit each service typography, palette and visual mood; optional --ekodi-user-footer-* tokens may refine it",
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true
+  },
+  "language": {
+    "owner": "shared-shell",
+    "runtime": "shell/user-language.js",
+    "placement": "inside the adopted or fallback user header",
+    "supported": ["ko-KR", "en", "zh-CN", "ja"],
+    "default": "ko-KR",
+    "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
+    "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
+    "adminExcluded": true
   },
   "inheritance": {
     "hostRule": "all public/workspace service hosts inherit the manifest service shell",
