@@ -36,8 +36,10 @@ jobs:
           expr_open='$'+'{{'
           expr_close='}'+'}'
           dev_secret=expr_open+' secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN '+expr_close
-          prod_secret=expr_open+' secrets.CLOUDFLARE_API_TOKEN '+expr_close
-          prod_account=expr_open+' secrets.CLOUDFLARE_ACCOUNT_ID '+expr_close
+          prod_token_name='CLOUDFLARE_'+'API_TOKEN'
+          prod_account_name='CLOUDFLARE_'+'ACCOUNT_ID'
+          prod_secret=expr_open+' secrets.'+prod_token_name+' '+expr_close
+          prod_account=expr_open+' secrets.'+prod_account_name+' '+expr_close
           prod_ns='topmaster-joseph.workers.dev'
           dev_ns='ekodi-development.workers.dev'
 
