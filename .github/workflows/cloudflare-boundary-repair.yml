@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   repair:
@@ -167,61 +167,21 @@ jobs:
           print('REPAIR_VALIDATION=PASS')
           PY
 
-      - name: Publish repair commit object for privileged fast-forward
+      - name: Record changed workflow paths
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git add .github/workflows
           git diff --cached --check
-          git diff --cached --quiet && { echo 'Nothing to publish'; exit 0; }
-          python - <<'PY'
-          import base64, json, os, subprocess, urllib.request
+          git diff --cached --name-status --no-renames | tee /tmp/cloudflare-boundary-repair-changed.txt
+          test -s /tmp/cloudflare-boundary-repair-changed.txt
 
-          repo=os.environ['GITHUB_REPOSITORY']
-          token=os.environ['GH_TOKEN']
-          base=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
-          base_tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()
-
-          def api(path, payload):
-              req=urllib.request.Request(
-                  f'https://api.github.com/repos/{repo}{path}',
-                  data=json.dumps(payload).encode(),
-                  headers={
-                      'Authorization': f'Bearer {token}',
-                      'Accept': 'application/vnd.github+json',
-                      'X-GitHub-Api-Version': '2022-11-28',
-                      'Content-Type': 'application/json',
-                  },
-                  method='POST',
-              )
-              with urllib.request.urlopen(req, timeout=30) as res:
-                  return json.load(res)
-
-          changed=subprocess.check_output(
-              ['git','diff','--cached','--name-status','--no-renames'], text=True
-          ).splitlines()
-          tree=[]
-          for row in changed:
-              status, path=row.split('\t',1)
-              if status.startswith('D'):
-                  tree.append({'path':path,'mode':'100644','type':'blob','sha':None})
-                  continue
-              raw=open(path,'rb').read()
-              blob=api('/git/blobs',{
-                  'content':base64.b64encode(raw).decode(),
-                  'encoding':'base64',
-              })
-              tree.append({'path':path,'mode':'100644','type':'blob','sha':blob['sha']})
-
-          new_tree=api('/git/trees',{'base_tree':base_tree,'tree':tree})['sha']
-          commit=api('/git/commits',{
-              'message':'fix: isolate all Worker staging deploys to Development',
-              'tree':new_tree,
-              'parents':[base],
-          })['sha']
-          print('BASE_COMMIT_SHA='+base)
-          print('REPAIR_COMMIT_SHA='+commit)
-          print('REPAIR_CHANGED_PATHS='+str(len(tree)))
-          PY
+      - name: Upload validated repair artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-boundary-repair-${{ github.sha }}
+          path: |
+            .github/workflows
+            /tmp/cloudflare-boundary-repair-changed.txt
+          if-no-files-found: error
+          retention-days: 1
