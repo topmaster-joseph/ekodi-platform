@@ -29,7 +29,9 @@ jobs:
 
           root = Path('.github/workflows')
           dev_account = '46aad4738793fbaca88574832a2ccc0f'
-          dev_secret = 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN'
+          prod_token_expr = '$' + '{{ secrets.CLOUDFLARE_API_TOKEN }}'
+          prod_account_expr = '$' + '{{ secrets.CLOUDFLARE_ACCOUNT_ID }}'
+          dev_token_expr = '$' + '{{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}'
           prod_namespace = 'topmaster-joseph.workers.dev'
           dev_namespace = 'ekodi-development.workers.dev'
 
@@ -67,25 +69,29 @@ jobs:
                   block = ''.join(lines[start:end])
                   if is_worker_deploy(block) and is_staging_job(name, block):
                       original = block
-                      block = block.replace('${{ secrets.CLOUDFLARE_API_TOKEN }}', '${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}')
-                      block = block.replace('${{secrets.CLOUDFLARE_API_TOKEN}}', '${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}')
-                      block = block.replace('${{ secrets.CLOUDFLARE_ACCOUNT_ID }}', dev_account)
-                      block = block.replace('${{secrets.CLOUDFLARE_ACCOUNT_ID}}', dev_account)
+                      block = block.replace(prod_token_expr, dev_token_expr)
+                      block = block.replace(prod_account_expr, dev_account)
                       block = block.replace(prod_namespace, dev_namespace)
                       if 'environment: development' not in block:
                           first_nl = block.find('\n')
                           insert = '    environment: development\n'
-                          if first_nl >= 0:
-                              block = block[:first_nl+1] + insert + block[first_nl+1:]
+                          block = block[:first_nl+1] + insert + block[first_nl+1:] if first_nl >= 0 else block + '\n' + insert
+                      if dev_token_expr not in block or dev_account not in block:
+                          # If a staging job had no standard Cloudflare env, add one exactly once.
+                          if re.search(r'^    env:\s*$', block, flags=re.MULTILINE):
+                              block = re.sub(
+                                  r'(^    env:\s*$)',
+                                  r'\1\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr + '\n      CLOUDFLARE_ACCOUNT_ID: ' + dev_account,
+                                  block,
+                                  count=1,
+                                  flags=re.MULTILINE,
+                              )
                           else:
-                              block += '\n' + insert
-                      if dev_secret not in block or dev_account not in block:
-                          # A staging deploy with no standard credential env is fail-closed rather than guessed.
-                          block = block.replace(
-                              '    environment: development\n',
-                              '    environment: development\n    env:\n      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}\n      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f\n',
-                              1,
-                          )
+                              block = block.replace(
+                                  '    environment: development\n',
+                                  '    environment: development\n    env:\n      CLOUDFLARE_API_TOKEN: ' + dev_token_expr + '\n      CLOUDFLARE_ACCOUNT_ID: ' + dev_account + '\n',
+                                  1,
+                              )
                       if block != original:
                           changed += 1
                   out.append(''.join(lines[cursor:start]))
@@ -127,14 +133,17 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import re
+          dev_account='46aad4738793fbaca88574832a2ccc0f'
+          dev_token_expr='$' + '{{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}'
+          prod_token_expr='$' + '{{ secrets.CLOUDFLARE_API_TOKEN }}'
+          prod_account_expr='$' + '{{ secrets.CLOUDFLARE_ACCOUNT_ID }}'
           failures=[]
           for path in sorted(Path('.github/workflows').glob('*.yml')):
               if path.name in {'cloudflare-boundary-audit.yml','cloudflare-boundary-repair.yml'}:
                   continue
               text=path.read_text(encoding='utf-8')
               lines=text.splitlines()
-              in_jobs=False; current=None; block=[]
-              jobs=[]
+              in_jobs=False; current=None; block=[]; jobs=[]
               for line in lines:
                   if line=='jobs:': in_jobs=True; continue
                   if not in_jobs: continue
@@ -148,10 +157,10 @@ jobs:
                   worker=bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b',b)) and 'pages deploy' not in b
                   staging=('staging' in name.lower() or 'STAGING_URL' in b or '.staging.toml' in b or '.staging.jsonc' in b or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b',b)))
                   if not (worker and staging): continue
-                  required=['environment: development','secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN','46aad4738793fbaca88574832a2ccc0f']
+                  required=['environment: development',dev_token_expr,dev_account]
                   for marker in required:
                       if marker not in b: failures.append(f'{path.name}:{name} missing {marker}')
-                  if 'secrets.CLOUDFLARE_API_TOKEN' in b or 'secrets.CLOUDFLARE_ACCOUNT_ID' in b or 'topmaster-joseph.workers.dev' in b:
+                  if prod_token_expr in b or prod_account_expr in b or 'topmaster-joseph.workers.dev' in b:
                       failures.append(f'{path.name}:{name} retains Production Cloudflare marker')
           if failures:
               print('\n'.join(failures))
