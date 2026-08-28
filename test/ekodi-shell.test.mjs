@@ -92,8 +92,8 @@ test('My, Community and shared service proxy all consume the same shell contract
 });
 
 test('remaining Worker services use thin shared Shell adapters without moving domain logic',async()=>{
-  const [business,work,author,books,social,energy,site,platform,platformEntry,workToml,socialToml,energyToml,siteToml]=await Promise.all([
-    read('business-live-worker.js'),read('work-shell-worker.js'),read('author-worker.js'),read('books-worker.js'),read('social-shell-worker.js'),read('energy-shell-worker.js'),read('site-shell-worker.js'),read('platform-router-worker.js'),read('platform-router-entry-worker.js'),read('wrangler.work.toml'),read('wrangler.social.toml'),read('wrangler.energy.toml'),read('wrangler.site.toml')
+  const [business,work,author,books,social,energy,site,shellInjector,platform,platformEntry,workToml,socialToml,energyToml,siteToml]=await Promise.all([
+    read('business-live-worker.js'),read('work-shell-worker.js'),read('author-worker.js'),read('books-worker.js'),read('social-shell-worker.js'),read('energy-shell-worker.js'),read('site-shell-worker.js'),read('ekodi-shell-injector.js'),read('platform-router-worker.js'),read('platform-router-entry-worker.js'),read('wrangler.work.toml'),read('wrangler.social.toml'),read('wrangler.energy.toml'),read('wrangler.site.toml')
   ]);
   assert.match(business,/injectEkodiShell\(await baseWorker\.fetch\(request,env,ctx\),'business'\)/);
   assert.match(work,/workWorker\.fetch/); assert.match(work,/,\s*'work'\)/);
@@ -101,7 +101,8 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(books,/injectEkodiShell\(await env\.ASSETS\.fetch\(request\), 'books'\)/);
   assert.match(social,/socialWorker\.fetch/); assert.match(social,/,\s*'social'\)/);
   assert.match(energy,/energyWorker\.fetch/); assert.match(energy,/,\s*'energy'\)/);
-  assert.match(site,/trade\.biz\.ekodi\.kr/); assert.match(site,/pay\.ekodi\.kr/); assert.match(site,/shellServiceForHost/);
+  assert.match(site,/shellServiceForHost/);
+  assert.match(shellInjector,/trade\.biz\.ekodi\.kr/); assert.match(shellInjector,/pay\.ekodi\.kr/);
   assert.match(platform,/messenger\.ekodi\.kr/); assert.match(platform,/invest\.ekodi\.kr/); assert.match(platform,/injectEkodiShell/);
   assert.match(platformEntry,/legacyPlatformRouter\.fetch/); assert.match(platformEntry,/injectEkodiShell\(response,'messenger'\)/);
   assert.match(workToml,/main = "work-shell-worker\.js"/);
