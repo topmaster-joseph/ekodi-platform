@@ -1,0 +1,138 @@
+name: Cloudflare Staging Residue Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-staging-residue-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CANDIDATES: ekodi-admin-staging ekodi-books-staging ekodi-energy-staging ekodi-shared-site-staging ekodi-social-staging ekodi-work-staging
+    steps:
+      - name: Audit routes custom domains and bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          api='https://api.cloudflare.com/client/v4'
+
+          # Account custom domains. Failure is recorded as unknown instead of being treated as safe.
+          domains_ok=1
+          if ! curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains" -o /tmp/domains.json; then
+            domains_ok=0
+            echo '{"success":false,"result":[]}' > /tmp/domains.json
+          fi
+
+          # Zone routes. A token without zone read permission must not produce a false-safe result.
+          routes_ok=1
+          if ! curl -fsS "${auth[@]}" "$api/zones?account.id=$CLOUDFLARE_ACCOUNT_ID&per_page=50" -o /tmp/zones.json; then
+            routes_ok=0
+            echo '{"success":false,"result":[]}' > /tmp/zones.json
+          fi
+          echo '[]' > /tmp/routes-flat.json
+          if [[ "$routes_ok" == '1' ]]; then
+            python - <<'PY' > /tmp/zone_ids.txt
+          import json
+          data=json.load(open('/tmp/zones.json', encoding='utf-8'))
+          if not data.get('success'):
+              raise SystemExit(1)
+          for z in data.get('result', []):
+              print(z.get('id','')+'\t'+z.get('name',''))
+          PY
+            : > /tmp/routes.ndjson
+            while IFS=$'\t' read -r zid zname; do
+              [[ -n "$zid" ]] || continue
+              if curl -fsS "${auth[@]}" "$api/zones/$zid/workers/routes" -o /tmp/zone-routes.json; then
+                ZONE_NAME="$zname" python - <<'PY' >> /tmp/routes.ndjson
+          import json, os
+          data=json.load(open('/tmp/zone-routes.json', encoding='utf-8'))
+          if not data.get('success'):
+              raise SystemExit(1)
+          zone=os.environ['ZONE_NAME']
+          for r in data.get('result', []):
+              print(json.dumps({'zone':zone,'pattern':r.get('pattern'),'script':r.get('script')}, ensure_ascii=False))
+          PY
+              else
+                routes_ok=0
+              fi
+            done < /tmp/zone_ids.txt
+            python - <<'PY'
+          import json
+          rows=[]
+          try:
+              for line in open('/tmp/routes.ndjson', encoding='utf-8'):
+                  line=line.strip()
+                  if line: rows.append(json.loads(line))
+          except FileNotFoundError:
+              pass
+          json.dump(rows, open('/tmp/routes-flat.json','w',encoding='utf-8'), ensure_ascii=False)
+          PY
+          fi
+
+          # Fetch only metadata/settings for the candidate scripts. Secret values are never requested or printed.
+          mkdir -p /tmp/settings
+          settings_ok=1
+          for script in $CANDIDATES; do
+            if ! curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$script/settings" -o "/tmp/settings/$script.json"; then
+              settings_ok=0
+              echo '{"success":false,"result":{}}' > "/tmp/settings/$script.json"
+            fi
+          done
+
+          DOMAINS_OK="$domains_ok" ROUTES_OK="$routes_ok" SETTINGS_OK="$settings_ok" python - <<'PY'
+          import json, os
+          candidates=os.environ['CANDIDATES'].split()
+          domains_ok=os.environ['DOMAINS_OK']=='1'
+          routes_ok=os.environ['ROUTES_OK']=='1'
+          settings_ok=os.environ['SETTINGS_OK']=='1'
+          domains=json.load(open('/tmp/domains.json', encoding='utf-8')).get('result', [])
+          routes=json.load(open('/tmp/routes-flat.json', encoding='utf-8'))
+
+          def domain_script(d):
+              return d.get('service') or d.get('script') or d.get('service_name')
+
+          summary=[]
+          for script in candidates:
+              sd=json.load(open(f'/tmp/settings/{script}.json', encoding='utf-8'))
+              result=sd.get('result') or {}
+              bindings=[]
+              for b in result.get('bindings') or []:
+                  bindings.append({'name': b.get('name'), 'type': b.get('type')})
+              dom=[{'hostname':d.get('hostname'), 'service':domain_script(d), 'environment':d.get('environment')} for d in domains if domain_script(d)==script]
+              rte=[r for r in routes if r.get('script')==script]
+              safe = domains_ok and routes_ok and sd.get('success') is True and not dom and not rte
+              summary.append({'script':script,'safe_from_route_domain':safe,'domains':dom,'routes':rte,'bindings':bindings,'settings_success':sd.get('success') is True})
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8') as f:
+              f.write('## Production staging residue dependency audit\n\n')
+              f.write(f'- Custom-domain inventory: **{"OK" if domains_ok else "UNKNOWN"}**\n')
+              f.write(f'- Zone-route inventory: **{"OK" if routes_ok else "UNKNOWN"}**\n')
+              f.write(f'- Script settings inventory: **{"OK" if settings_ok else "PARTIAL"}**\n\n')
+              f.write('| Script | Route/domain | Bindings (name:type) |\n|---|---|---|\n')
+              for x in summary:
+                  state='CLEAR' if x['safe_from_route_domain'] else 'BLOCK/UNKNOWN'
+                  bs=', '.join(f"{b.get('name')}:{b.get('type')}" for b in x['bindings']) or '(none)'
+                  f.write(f"| `{x['script']}` | **{state}** | `{bs}` |\n")
+                  for d in x['domains']:
+                      f.write(f"\n- `{x['script']}` custom domain: `{d}`\n")
+                  for r in x['routes']:
+                      f.write(f"\n- `{x['script']}` route: `{r}`\n")
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+          # Fail closed if any inventory surface is unreadable. This workflow never deletes anything.
+          if [[ "$domains_ok" != '1' || "$routes_ok" != '1' || "$settings_ok" != '1' ]]; then
+            echo '::warning::Dependency inventory is incomplete; no cleanup candidate may be treated as safe.'
+          fi
