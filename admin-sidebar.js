@@ -36,6 +36,14 @@ function navItems(nav) {
   return nav?.querySelectorAll('.nav') || [];
 }
 
+function ensureGroupStyle() {
+  if (document.querySelector('#ekodi-admin-menu-groups-style')) return;
+  const style = document.createElement('style');
+  style.id = 'ekodi-admin-menu-groups-style';
+  style.textContent = `body.compact-control-center .sidebar nav>.${GROUP_LABEL_CLASS}{padding:13px 9px 5px;margin:0;font-size:9px;font-weight:800;line-height:1;letter-spacing:.09em;text-transform:uppercase;color:rgba(159,177,195,.7);user-select:none}body.compact-control-center .sidebar nav>.${GROUP_LABEL_CLASS}:first-of-type{padding-top:5px}@media(max-width:760px){body.compact-control-center .sidebar nav>.${GROUP_LABEL_CLASS}{padding-top:12px;font-size:10px}}`;
+  document.head.append(style);
+}
+
 function ensureLabel(item) {
   let span = item.querySelector('span');
   if (!span) {
@@ -139,6 +147,7 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
 export function syncAdminSidebar(root = document, options = {}) {
   const nav = root.querySelector?.('.sidebar nav') || (root.matches?.('.sidebar nav') ? root : null);
   if (!nav) return false;
+  ensureGroupStyle();
   const locale = normalizeAdminLocale(options.locale || options.localeProvider?.() || window.EKODIAdminMenu?.locale?.() || readAdminSidebarLocale());
   const rank = menuRankMap();
 
