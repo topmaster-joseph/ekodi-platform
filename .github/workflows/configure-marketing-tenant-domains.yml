@@ -13,6 +13,7 @@ on:
     paths:
       - 'config/marketing-tenants.json'
       - 'config/domain-site-architecture.json'
+      - 'config/domain-site-principle.approved.json'
       - '.github/workflows/configure-marketing-tenant-domains.yml'
       - 'test/marketing-domain-policy.test.mjs'
   workflow_dispatch:
@@ -43,20 +44,23 @@ jobs:
           from pathlib import Path
 
           cfg=json.loads(Path('config/marketing-tenants.json').read_text())
-          assert cfg['version'] >= 4
-          assert cfg['canonicalPattern'] == 'https://marketing.ekodi.kr/{tenant}/'
-          assert cfg['policy']['tenantAddressing'] == 'parent-service-path'
+          assert cfg['version'] >= 5
+          assert cfg['canonicalPattern'] == 'https://ekodi.kr/ai/marketing/{tenant}/'
+          assert cfg['runtimePattern'] == 'https://marketing.ekodi.kr/{tenant}/'
+          assert cfg['policy']['tenantAddressing'] == 'root-ai-path'
           assert cfg['policy']['newTenantSubdomainCreation'] is False
           seen=set()
           for row in cfg['tenants']:
               tenant=row['tenant']
               assert re.fullmatch(r'[a-z0-9][a-z0-9-]*', tenant), tenant
               assert tenant not in seen, tenant
-              assert row['canonicalPath'].startswith('/') and row['canonicalPath'].endswith('/'), row
-              assert row['canonicalUrl'] == f"https://marketing.ekodi.kr{row['canonicalPath']}", row
+              assert row['canonicalPath'] == f'/ai/marketing/{tenant}/', row
+              assert row['canonicalUrl'] == f"https://ekodi.kr{row['canonicalPath']}", row
+              assert row['runtimePath'].startswith('/') and row['runtimePath'].endswith('/'), row
+              assert row['runtimeUrl'] == f"https://marketing.ekodi.kr{row['runtimePath']}", row
               assert f'{tenant}.ai.ekodi.kr' in row.get('legacyDomains', []), row
               seen.add(tenant)
-          print('Validated parent-path Marketing AI tenants:', ', '.join(sorted(seen)))
+          print('Validated root-AI-path Marketing tenants:', ', '.join(sorted(seen)))
           PY
       - name: Confirm legacy tenant domains are compatibility-only
-        run: echo 'No tenant DNS mutation job exists in this workflow; legacy domains remain compatibility aliases.'
+        run: echo 'No tenant DNS mutation job exists in this workflow; runtime and legacy domains remain compatibility aliases.'
