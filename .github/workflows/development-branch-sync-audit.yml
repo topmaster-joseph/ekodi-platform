@@ -1,0 +1,30 @@
+name: Development Branch Sync Audit
+
+on:
+  schedule:
+    - cron: "23 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Report production baseline divergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          behind="$(git rev-list --count HEAD..origin/main)"
+          ahead="$(git rev-list --count origin/main..HEAD)"
+          echo "development_ahead=$ahead"
+          echo "development_behind=$behind"
+          if [ "$behind" -gt 0 ]; then
+            echo "::warning::Development is behind main by $behind commit(s). Sync main into development before production promotion."
+          fi
