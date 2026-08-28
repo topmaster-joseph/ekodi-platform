@@ -38,8 +38,8 @@ test('Menu labels are repaired after feature scripts or clicks mutate them', () 
 
 test('Operations remains a public route even though Site Management is the login home', () => {
   assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
-  assert.match(layout, /\['#operations', 'overview'\]/);
-  assert.match(layout, /\['overview', '#operations'\]/);
+  assert.match(layout, /#operations:overview/);
+  assert.match(layout, /overview:#operations/);
   assert.match(layout, /requestedSection = 'campus'/);
   assert.doesNotMatch(layout, /INTERNAL_ONLY_SECTIONS[^\n]*overview/);
 });
