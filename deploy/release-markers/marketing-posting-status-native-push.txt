@@ -1,1 +1,0 @@
-This marker documents the native GitHub merge used to trigger the MarketingAI posting status production workflow.
