@@ -1,0 +1,124 @@
+name: Cloudflare Production Staging Cleanup Batch 1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-production-staging-cleanup-batch1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+    env:
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CANDIDATES: ekodi-admin-staging ekodi-books-staging ekodi-energy-staging ekodi-shared-site-staging ekodi-social-staging ekodi-work-staging
+    steps:
+      - name: Re-audit and remove only verified Production staging residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROD_ACCOUNT_ID"
+          test -n "$PROD_TOKEN"
+          test -n "$DEV_TOKEN"
+          test "$PROD_ACCOUNT_ID" != "$DEV_ACCOUNT_ID" || {
+            echo '::error::Production and Development account IDs must differ.'
+            exit 1
+          }
+
+          api='https://api.cloudflare.com/client/v4'
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
+
+          # 1) Development counterparts must already exist.
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers.json
+          jq -e '.success == true' /tmp/dev-workers.json >/dev/null
+          for script in $CANDIDATES; do
+            jq -e --arg s "$script" '.result[] | select(.id == $s)' /tmp/dev-workers.json >/dev/null || {
+              echo "::error::Development counterpart missing: $script"
+              exit 1
+            }
+          done
+
+          # 2) Production custom domains and every zone route must be readable.
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/prod-domains.json
+          jq -e '.success == true' /tmp/prod-domains.json >/dev/null
+          curl -fsS "${prod_auth[@]}" "$api/zones?account.id=$PROD_ACCOUNT_ID&per_page=50" -o /tmp/prod-zones.json
+          jq -e '.success == true' /tmp/prod-zones.json >/dev/null
+          : > /tmp/prod-routes.ndjson
+          jq -r '.result[]? | [.id,.name] | @tsv' /tmp/prod-zones.json > /tmp/prod-zone-ids.txt
+          while IFS=$'\t' read -r zid zname; do
+            [[ -n "$zid" ]] || continue
+            curl -fsS "${prod_auth[@]}" "$api/zones/$zid/workers/routes" -o /tmp/zone-routes.json
+            jq -e '.success == true' /tmp/zone-routes.json >/dev/null
+            jq -c --arg zone "$zname" '.result[]? | {zone:$zone, pattern:.pattern, script:.script}' /tmp/zone-routes.json >> /tmp/prod-routes.ndjson
+          done < /tmp/prod-zone-ids.txt
+
+          # 3) Re-check each script immediately before mutation.
+          mkdir -p /tmp/prod-settings
+          for script in $CANDIDATES; do
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/settings" -o "/tmp/prod-settings/$script.json"
+            jq -e '.success == true' "/tmp/prod-settings/$script.json" >/dev/null
+
+            domain_count=$(jq --arg s "$script" '[.result[]? | select((.service // .script // .service_name) == $s)] | length' /tmp/prod-domains.json)
+            route_count=$(jq --arg s "$script" -s '[.[] | select(.script == $s)] | length' /tmp/prod-routes.ndjson 2>/dev/null || echo 0)
+            risky_bindings=$(jq '[.result.bindings[]? | select((.type != "assets") and (.type != "plain_text"))] | length' "/tmp/prod-settings/$script.json")
+
+            [[ "$domain_count" == '0' ]] || {
+              echo "::error::$script still owns a Production custom domain."
+              exit 1
+            }
+            [[ "$route_count" == '0' ]] || {
+              echo "::error::$script still owns a Production zone route."
+              exit 1
+            }
+            [[ "$risky_bindings" == '0' ]] || {
+              echo "::error::$script has a non-trivial binding; refusing deletion."
+              jq -r '.result.bindings[]? | [.name,.type] | @tsv' "/tmp/prod-settings/$script.json"
+              exit 1
+            }
+            echo "SAFE $script: no custom domain, no zone route, no persistent/service binding"
+          done
+
+          # 4) Delete the six verified legacy scripts from Production only.
+          for script in $CANDIDATES; do
+            curl -fsS -X DELETE "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script" -o "/tmp/delete-$script.json"
+            jq -e '.success == true' "/tmp/delete-$script.json" >/dev/null
+            echo "DELETED Production residue: $script"
+          done
+
+          # 5) Post-delete proof: absent in Production, still present in Development.
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-workers-after.json
+          jq -e '.success == true' /tmp/prod-workers-after.json >/dev/null
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers-after.json
+          jq -e '.success == true' /tmp/dev-workers-after.json >/dev/null
+
+          for script in $CANDIDATES; do
+            if jq -e --arg s "$script" '.result[] | select(.id == $s)' /tmp/prod-workers-after.json >/dev/null; then
+              echo "::error::Production residue still exists after deletion: $script"
+              exit 1
+            fi
+            jq -e --arg s "$script" '.result[] | select(.id == $s)' /tmp/dev-workers-after.json >/dev/null || {
+              echo "::error::Development counterpart disappeared unexpectedly: $script"
+              exit 1
+            }
+          done
+
+          remaining=$(jq '[.result[] | select((.id | endswith("-staging")) or (.id | contains("-staging-")))] | length' /tmp/prod-workers-after.json)
+          {
+            echo '## Cloudflare Production staging cleanup batch 1'
+            echo
+            echo '- Deleted from Production: `ekodi-admin-staging`, `ekodi-books-staging`, `ekodi-energy-staging`, `ekodi-shared-site-staging`, `ekodi-social-staging`, `ekodi-work-staging`'
+            echo '- Development counterparts: **verified present**'
+            echo '- Production routes/custom domains: **verified absent before deletion**'
+            echo '- Persistent/service bindings: **none on deleted scripts**'
+            echo "- Remaining staging-named Production Workers: **$remaining**"
+          } >> "$GITHUB_STEP_SUMMARY"
