@@ -67,9 +67,9 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.topmaster-joseph.workers.dev
-  SITE_STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
-  CONTROL_STAGING_URL: https://ekodi-conversation-control-staging.topmaster-joseph.workers.dev
+  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.ekodi-development.workers.dev
+  SITE_STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
+  CONTROL_STAGING_URL: https://ekodi-conversation-control-staging.ekodi-development.workers.dev
 
 jobs:
   validate:
@@ -287,6 +287,7 @@ jobs:
           done
 
   production-workspace:
+    environment: production
     needs: [control-staging, staging-ui]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -330,6 +331,7 @@ jobs:
           echo "D1 recovery bookmark before Conversation release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
 
   production-control:
+    environment: production
     needs: production-workspace
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -353,6 +355,7 @@ jobs:
           [[ "$inbox" == '401' ]]
 
   production-ui:
+    environment: production
     needs: production-control
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
