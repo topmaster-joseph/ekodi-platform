@@ -3,6 +3,7 @@ import financeEntryWorker from './finance-entry-worker.js';
 import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
 import { injectTaxHometaxLedger } from './tax-hometax-ledger.js';
+import { injectTaxBusinessRegistry } from './tax-business-registry.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
@@ -58,7 +59,8 @@ export default {
       if(portal){
         if(url.pathname==='/tax-portal.js'){
           const withFallback=await injectTaxLocalFallback(portal);
-          return injectTaxHometaxLedger(withFallback);
+          const withLedger=await injectTaxHometaxLedger(withFallback);
+          return injectTaxBusinessRegistry(withLedger);
         }
         return portal;
       }
