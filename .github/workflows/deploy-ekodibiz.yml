@@ -76,14 +76,14 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml
-      - name: Verify staging through authenticated remote preview
+      - name: Verify functional bundle and AI operations locally
         shell: bash
         run: |
           set -euo pipefail
-          log=/tmp/ekodibiz-remote-preview.log
-          npx --yes wrangler@4.119.0 dev --remote --config wrangler.ekodibiz-staging.toml --port 8787 >"$log" 2>&1 &
-          preview_pid=$!
-          cleanup() { kill "$preview_pid" 2>/dev/null || true; }
+          log=/tmp/ekodibiz-local-runtime.log
+          npx --yes wrangler@4.119.0 dev --config wrangler.ekodibiz-staging.toml --local --port 8787 >"$log" 2>&1 &
+          runtime_pid=$!
+          cleanup() { kill "$runtime_pid" 2>/dev/null || true; }
           trap cleanup EXIT
 
           ready=0
@@ -92,7 +92,7 @@ jobs:
               ready=1
               break
             fi
-            if ! kill -0 "$preview_pid" 2>/dev/null; then
+            if ! kill -0 "$runtime_pid" 2>/dev/null; then
               cat "$log"
               exit 1
             fi
@@ -107,17 +107,27 @@ jobs:
           health=$(cat /tmp/ekodibiz-health.json)
           catalog=$(curl -sS --max-time 15 'http://127.0.0.1:8787/api/catalog' || true)
           consult=$(curl -sS --max-time 15 -H 'content-type: application/json' -d '{"goal":"식당 매출을 늘리고 싶어요"}' 'http://127.0.0.1:8787/api/consult' || true)
+          lead_id=$(node -e 'const s=process.argv[1]; const x=JSON.parse(s); process.stdout.write(x.leadId||"")' "$consult")
+          offer=$(curl -sS --max-time 15 -H 'content-type: application/json' -d "{\"goal\":\"식당 매출을 늘리고 싶어요\",\"offerId\":\"growth-30\",\"leadId\":\"$lead_id\"}" 'http://127.0.0.1:8787/api/offers' || true)
+          order_id=$(node -e 'const s=process.argv[1]; const x=JSON.parse(s); process.stdout.write(x.orderId||"")' "$offer")
+          sleep 1
           ops=$(curl -sS --max-time 15 'http://127.0.0.1:8787/api/ops/status' || true)
+          checkout=$(curl -sS --max-time 15 -H 'content-type: application/json' -d "{\"orderId\":\"$order_id\"}" 'http://127.0.0.1:8787/api/checkout-intent' || true)
 
-          printf 'HEALTH=%s\nCONSULT=%s\nOPS=%s\n' "${health:0:600}" "${consult:0:600}" "${ops:0:600}"
+          printf 'HEALTH=%s\nCONSULT=%s\nOFFER=%s\nOPS=%s\nCHECKOUT=%s\n' "${health:0:700}" "${consult:0:700}" "${offer:0:700}" "${ops:0:700}" "${checkout:0:700}"
           grep -Fq '무엇을 이루고 싶으세요?' <<<"$root"
           grep -Fq 'operational-mvp' <<<"$health"
           grep -Fq 'durable-object-sqlite' <<<"$health"
           grep -Fq '30일 자동홍보팩' <<<"$catalog"
           grep -Fq 'LEAD-' <<<"$consult"
+          grep -Fq 'EB-' <<<"$offer"
+          grep -Fq '"taskCount":4' <<<"$offer"
           grep -Fq 'growth_scout' <<<"$ops"
           grep -Fq 'finance_gatekeeper' <<<"$ops"
-          echo 'EKODIBIZ staging verified with persistent AI operations.'
+          grep -Fq '"tasks":4' <<<"$ops"
+          grep -Fq 'approval_required' <<<"$checkout"
+          grep -Fq 'https://pay.ekodi.kr' <<<"$checkout"
+          echo 'EKODIBIZ deployed to development and functional AI operations verified.'
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
