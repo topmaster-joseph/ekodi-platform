@@ -1,6 +1,7 @@
 name: Verify Shared Shell Production
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - '.github/workflows/verify-shared-shell-production.yml'
@@ -18,34 +19,47 @@ permissions:
   contents: read
 
 concurrency:
-  group: verify-shared-shell-production-${{ github.event.pull_request.number }}
+  group: verify-shared-shell-production-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  inventory:
+  source-contract:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - id: matrix
-        name: Build production-verified service audit matrix
+        name: Build Shell audit matrix without contacting production
         shell: bash
         run: |
           set -euo pipefail
           matrix=$(node scripts/build-shell-audit-matrix.mjs)
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "$matrix"
+      - name: Validate Shell source contracts
+        run: |
+          set -euo pipefail
+          node scripts/validate-ekodi-shell-adoption.mjs
+          node scripts/validate-seasonal-design-governance.mjs
+          node --test test/ekodi-shell.test.mjs
+      - name: Confirm PR checks are production-free
+        if: github.event_name == 'pull_request'
+        run: echo 'PR Shell verification completed without production network probes.'
 
-  shell:
+  shell-production:
+    needs: source-contract
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify shared Shell service
+      - name: Verify shared Shell service with bounded retries
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 24); do
+          for attempt in $(seq 1 3); do
             health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
             script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/shell.js' || true)
             theme=$(curl -sS -o /tmp/theme.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/theme.json' || true)
@@ -62,15 +76,17 @@ jobs:
           done
           exit 1
 
-  services:
-    needs: [inventory, shell]
+  services-production:
+    needs: [source-contract, shell-production]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 7
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.inventory.outputs.matrix) }}
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.source-contract.outputs.matrix) }}
     steps:
-      - name: Verify ${{ matrix.id }} production Shell contract
+      - name: Verify ${{ matrix.id }} production Shell contract once
         shell: bash
         env:
           URL: ${{ matrix.url }}
@@ -78,39 +94,23 @@ jobs:
           INTEGRATION: ${{ matrix.integration }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 30); do
-            code=$(curl -L -sS -D /tmp/service.headers -o /tmp/service.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$URL" || true)
-            echo "$SERVICE_ID $URL -> $code integration=$INTEGRATION attempt=$attempt"
-            body_shell=false
-            header_shell=false
-            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/service.html && body_shell=true || true
-            grep -Eiq '^x-ekodi-shell:[[:space:]]*v2[[:space:]]*$' /tmp/service.headers && header_shell=true || true
-
-            contract_ok=false
-            case "$INTEGRATION" in
-              static-script|external-build)
-                [[ "$body_shell" == 'true' ]] && contract_ok=true
-                ;;
-              worker-injected|shared-proxy)
-                [[ "$header_shell" == 'true' || "$body_shell" == 'true' ]] && contract_ok=true
-                ;;
-              *)
-                echo "Unsupported production Shell integration for $SERVICE_ID: $INTEGRATION" >&2
-                exit 1
-                ;;
-            esac
-
-            if [[ "$code" == '200' && "$contract_ok" == 'true' ]]; then
-              echo "$SERVICE_ID Shell verified by $INTEGRATION contract."
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Shared Shell production audit failed for $SERVICE_ID at $URL integration=$INTEGRATION" >&2
-          exit 1
+          code=$(curl -L -sS -D /tmp/service.headers -o /tmp/service.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$URL" || true)
+          echo "$SERVICE_ID $URL -> $code integration=$INTEGRATION"
+          body_shell=false
+          header_shell=false
+          grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/service.html && body_shell=true || true
+          grep -Eiq '^x-ekodi-shell:[[:space:]]*v2[[:space:]]*$' /tmp/service.headers && header_shell=true || true
+          contract_ok=false
+          case "$INTEGRATION" in
+            static-script|external-build) [[ "$body_shell" == 'true' ]] && contract_ok=true ;;
+            worker-injected|shared-proxy) [[ "$header_shell" == 'true' || "$body_shell" == 'true' ]] && contract_ok=true ;;
+            *) echo "Unsupported production Shell integration for $SERVICE_ID: $INTEGRATION" >&2; exit 1 ;;
+          esac
+          [[ "$code" == '200' && "$contract_ok" == 'true' ]]
 
   summary:
-    needs: [inventory, shell, services]
+    needs: [source-contract, shell-production, services-production]
+    if: always() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'All production-verified services from the canonical EKODI registry were verified using their declared Shell integration contract, weekly public identity rotation, and My/Shell contract.'
+      - run: echo 'Manual, bounded Shared Shell production verification completed.'
