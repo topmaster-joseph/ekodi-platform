@@ -52,12 +52,14 @@ const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promi
 await writeFile(`${output}control-center-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
 await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n`);
 
-const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs] = await Promise.all([
+const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs, marketingPostingStatusJs] = await Promise.all([
   readFile(`${output}marketing-ai-admin.css`, 'utf8'), readFile(`${output}marketing-ai-admin.js`, 'utf8'),
   readFile(`${root}marketing-ai-admin-live-ops.css`, 'utf8'), readFile(`${root}marketing-ai-admin-live-ops.js`, 'utf8'),
+  readFile(`${root}marketing-ai-admin-posting-status.js`, 'utf8'),
 ]);
+if (!marketingPostingStatusJs.includes("TAB_KEY = 'publications'")) throw new Error('Marketing posting status marker missing');
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
-await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n`);
+await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n${marketingPostingStatusJs}\n`);
 
 const [compactCss, compactJs, deviceControlCss, deviceControlJs, hybridExecutionAdminJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'), readFile(`${output}compact-control-center.js`, 'utf8'),
@@ -116,4 +118,4 @@ const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
 await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
 await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/External AI Spec/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/External AI Spec/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops and posting status, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
