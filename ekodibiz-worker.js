@@ -1,6 +1,9 @@
+import { DurableObject } from 'cloudflare:workers';
+
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const MAX_GOAL_LENGTH = 4000;
 const PAYMENT_URL = 'https://pay.ekodi.kr';
+const STORE_NAME = 'ekodibiz-global';
 
 const CATALOG = [
   {
@@ -30,6 +33,12 @@ const CATALOG = [
 ];
 
 const HIGH_IMPACT = new Set(['payment', 'ad_spend', 'refund', 'contract', 'price_change', 'external_publish']);
+const OPS_ROLES = [
+  { id: 'growth_scout', name: '성장진단 직원', scope: '목표 분류·수익기회·추천상품' },
+  { id: 'offer_builder', name: '제안구성 직원', scope: '상품·실행계획·콘텐츠 초안' },
+  { id: 'ops_coordinator', name: '운영조정 직원', scope: '작업 큐·납품 준비·후속 단계' },
+  { id: 'finance_gatekeeper', name: '재무승인 직원', scope: '견적·결제·광고비 등 승인 경계' }
+];
 
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, ...securityHeaders(), ...extra } });
@@ -101,14 +110,16 @@ function consult(goal) {
   };
 }
 
-function buildOffer(goal, requestedId) {
+function buildOffer(goal, requestedId, leadId = null) {
   const insight = consult(goal);
   const selected = CATALOG.find((x) => x.id === requestedId) || insight.suggestedOffers[0];
   const orderId = `EB-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
   return {
     orderId,
+    leadId,
     goal,
     offer: selected,
+    status: 'draft',
     pricing: { status: 'quote_required', amount: null, currency: 'KRW', message: '승인된 가격정책이 연결되기 전에는 임의 가격을 제시하지 않습니다.' },
     next: { action: 'approve_offer', approvalRequired: true },
     createdAt: new Date().toISOString()
@@ -131,6 +142,17 @@ function executionPlan(goal, offerId) {
   };
 }
 
+function taskBundle(order) {
+  const now = new Date().toISOString();
+  const base = { orderId: order.orderId, leadId: order.leadId, createdAt: now, updatedAt: now };
+  return [
+    { ...base, id: `TASK-${crypto.randomUUID()}`, role: 'growth_scout', action: 'qualify_opportunity', impact: 'low', status: 'queued', input: { intent: classify(order.goal), offerId: order.offer.id } },
+    { ...base, id: `TASK-${crypto.randomUUID()}`, role: 'offer_builder', action: 'prepare_execution_assets', impact: 'low', status: 'queued', input: { offerId: order.offer.id } },
+    { ...base, id: `TASK-${crypto.randomUUID()}`, role: 'ops_coordinator', action: 'prepare_delivery_queue', impact: 'low', status: 'queued', input: { offerId: order.offer.id } },
+    { ...base, id: `TASK-${crypto.randomUUID()}`, role: 'finance_gatekeeper', action: 'approve_quote_and_payment', impact: 'high', status: 'approval_required', input: { priceMode: order.offer.priceMode } }
+  ];
+}
+
 function checkoutIntent(body) {
   const orderId = String(body.orderId || '').trim();
   if (!orderId.startsWith('EB-')) throw new Error('invalid_order');
@@ -144,14 +166,64 @@ function checkoutIntent(body) {
   };
 }
 
-async function handleApi(request, url) {
+async function storeFetch(env, path, init = {}) {
+  if (!env.REVENUE_STORE) throw new Error('store_unavailable');
+  const id = env.REVENUE_STORE.idFromName(STORE_NAME);
+  const stub = env.REVENUE_STORE.get(id);
+  const response = await stub.fetch(`https://revenue-store.internal${path}`, init);
+  if (!response.ok) throw new Error(`store_${response.status}`);
+  return response.json();
+}
+
+async function persistLead(env, goal, insight) {
+  const lead = {
+    leadId: `LEAD-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+    goal,
+    intent: insight.intent,
+    recommendedOfferId: insight.suggestedOffers[0]?.id || null,
+    status: 'qualified',
+    source: 'biz.ekodi.kr',
+    containsContactData: false,
+    createdAt: new Date().toISOString()
+  };
+  await storeFetch(env, '/lead', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(lead) });
+  return lead;
+}
+
+async function persistOrder(env, order) {
+  const tasks = taskBundle(order);
+  await storeFetch(env, '/order', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ order, tasks }) });
+  return tasks;
+}
+
+async function processSafeTasks(env) {
+  return storeFetch(env, '/process-safe', { method: 'POST', headers: JSON_HEADERS, body: '{}' });
+}
+
+async function requestFinanceGate(env, orderId) {
+  return storeFetch(env, '/finance-gate', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ orderId, requestedAt: new Date().toISOString() }) });
+}
+
+async function opsStatus(env) {
+  return storeFetch(env, '/status');
+}
+
+async function handleApi(request, url, env, ctx) {
   if (url.pathname === '/api/health' && request.method === 'GET') {
-    return json({ ok: true, service: 'ekodibiz-revenue-os', stage: 'production-safe-mvp', execution: 'approval-gated', payment: PAYMENT_URL });
+    return json({ ok: true, service: 'ekodibiz-revenue-os', stage: 'operational-mvp', execution: 'approval-gated', persistence: 'durable-object-sqlite', aiOperations: 'rules-first-active', payment: PAYMENT_URL });
   }
   if (url.pathname === '/api/runtime' && request.method === 'GET') {
-    return json({ service: '에코디비즈', lifecycle: ['discover', 'create', 'promote', 'consult', 'sell', 'pay', 'deliver', 'grow'], highImpactHumanGate: [...HIGH_IMPACT], paymentService: PAYMENT_URL });
+    return json({ service: '에코디비즈', lifecycle: ['discover', 'create', 'promote', 'consult', 'sell', 'pay', 'deliver', 'grow'], highImpactHumanGate: [...HIGH_IMPACT], paymentService: PAYMENT_URL, operationsRoles: OPS_ROLES, personalDataMode: 'anonymous-goal-only' });
   }
   if (url.pathname === '/api/catalog' && request.method === 'GET') return json({ items: CATALOG });
+  if (url.pathname === '/api/ops/status' && request.method === 'GET') {
+    try {
+      const status = await opsStatus(env);
+      return json({ ...status, roles: OPS_ROLES, mode: 'rules-first', highImpactHumanGate: true });
+    } catch {
+      return json({ ok: false, error: 'operations_store_unavailable' }, 503);
+    }
+  }
 
   if (request.method === 'POST' && ['/api/consult', '/api/offers', '/api/execution-preview', '/api/checkout-intent'].includes(url.pathname)) {
     let body;
@@ -159,32 +231,121 @@ async function handleApi(request, url) {
     try {
       if (url.pathname === '/api/consult') {
         const goal = cleanGoal(body.goal);
-        return json({ goal, ...consult(goal) });
+        const insight = consult(goal);
+        const lead = await persistLead(env, goal, insight);
+        return json({ goal, leadId: lead.leadId, operations: { status: 'received', aiStaff: 'active', personalDataStored: false }, ...insight });
       }
       if (url.pathname === '/api/offers') {
         const goal = cleanGoal(body.goal);
-        return json(buildOffer(goal, body.offerId));
+        const order = buildOffer(goal, body.offerId, body.leadId || null);
+        const tasks = await persistOrder(env, order);
+        ctx?.waitUntil(processSafeTasks(env));
+        return json({ ...order, operations: { status: 'queued', taskCount: tasks.length, humanGateCount: tasks.filter((t) => t.status === 'approval_required').length } });
       }
       if (url.pathname === '/api/execution-preview') {
         const goal = cleanGoal(body.goal);
         return json(executionPlan(goal, body.offerId));
       }
-      if (url.pathname === '/api/checkout-intent') return json(checkoutIntent(body));
+      if (url.pathname === '/api/checkout-intent') {
+        const intent = checkoutIntent(body);
+        await requestFinanceGate(env, intent.orderId);
+        return json(intent);
+      }
     } catch (error) {
       const code = error?.message || 'invalid_request';
-      return json({ error: code }, code === 'goal_too_long' ? 413 : 400);
+      const status = code === 'goal_too_long' ? 413 : code === 'store_unavailable' || code.startsWith('store_5') ? 503 : 400;
+      return json({ error: code }, status);
     }
   }
   return json({ error: 'not_found' }, 404);
 }
 
-export default {
-  async fetch(request, env) {
+export class RevenueStore extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.ctx = ctx;
+  }
+
+  async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/')) return handleApi(request, url);
+    const storage = this.ctx.storage;
+
+    if (url.pathname === '/lead' && request.method === 'POST') {
+      const lead = await request.json();
+      await storage.put(`lead:${lead.leadId}`, lead);
+      return json({ ok: true, leadId: lead.leadId });
+    }
+
+    if (url.pathname === '/order' && request.method === 'POST') {
+      const { order, tasks = [] } = await request.json();
+      await storage.put(`order:${order.orderId}`, order);
+      for (const task of tasks) await storage.put(`task:${task.id}`, task);
+      return json({ ok: true, orderId: order.orderId, tasks: tasks.length });
+    }
+
+    if (url.pathname === '/finance-gate' && request.method === 'POST') {
+      const { orderId, requestedAt } = await request.json();
+      const order = await storage.get(`order:${orderId}`);
+      if (!order) return json({ error: 'order_not_found' }, 404);
+      order.status = 'approval_required';
+      order.financeApprovalRequestedAt = requestedAt;
+      await storage.put(`order:${orderId}`, order);
+      return json({ ok: true, orderId, status: 'approval_required' });
+    }
+
+    if (url.pathname === '/process-safe' && request.method === 'POST') {
+      const tasks = await storage.list({ prefix: 'task:' });
+      let processed = 0;
+      const now = new Date().toISOString();
+      for (const [key, task] of tasks) {
+        if (task.status !== 'queued' || task.impact !== 'low') continue;
+        task.status = 'completed';
+        task.updatedAt = now;
+        task.completedAt = now;
+        task.output = task.role === 'growth_scout'
+          ? '목표 분류와 추천상품 검토 완료'
+          : task.role === 'offer_builder'
+            ? '실행 산출물 초안 큐 구성 완료'
+            : '견적 승인 전 준비 가능한 운영 작업 정리 완료';
+        await storage.put(key, task);
+        processed += 1;
+      }
+      await storage.put('meta:lastProcessedAt', now);
+      return json({ ok: true, processed, at: now });
+    }
+
+    if (url.pathname === '/status' && request.method === 'GET') {
+      const [leads, orders, tasks, lastProcessedAt] = await Promise.all([
+        storage.list({ prefix: 'lead:' }),
+        storage.list({ prefix: 'order:' }),
+        storage.list({ prefix: 'task:' }),
+        storage.get('meta:lastProcessedAt')
+      ]);
+      const taskCounts = { queued: 0, completed: 0, approval_required: 0, other: 0 };
+      const roleCounts = {};
+      for (const task of tasks.values()) {
+        if (taskCounts[task.status] === undefined) taskCounts.other += 1;
+        else taskCounts[task.status] += 1;
+        roleCounts[task.role] = (roleCounts[task.role] || 0) + 1;
+      }
+      return json({ ok: true, leads: leads.size, orders: orders.size, tasks: tasks.size, taskCounts, roleCounts, lastProcessedAt: lastProcessedAt || null });
+    }
+
+    return json({ error: 'not_found' }, 404);
+  }
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/')) return handleApi(request, url, env, ctx);
     if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'method_not_allowed' }, 405);
     if (!env.ASSETS) return new Response('EKODIBIZ assets unavailable', { status: 503, headers: securityHeaders() });
     const response = await env.ASSETS.fetch(request);
     return withSecurity(response);
+  },
+
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(processSafeTasks(env));
   }
 };
