@@ -17,9 +17,7 @@ on:
       - 'scripts/validate-central-modules.mjs'
       - 'scripts/validate-ekodi-core-contract.mjs'
       - 'scripts/validate-ekodi-core-completion.mjs'
-      - 'scripts/verify-ekodi-core-production.mjs'
       - 'scripts/guarded-worker-release.mjs'
-      - 'scripts/ecosystem-load-test.mjs'
       - '.github/workflows/verify-ekodi-core-completion.yml'
       - '.github/workflows/backup-ekodi-core.yml'
       - '.github/workflows/deploy-control-api.yml'
@@ -27,15 +25,15 @@ on:
       - 'test/core-*.test.mjs'
       - 'package.json'
   push:
-    branches: [main]
+    branches: [development]
     paths: *core_paths
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-core-completion-${{ github.ref }}
-  cancel-in-progress: false
+  group: ekodi-core-completion-development-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   contract:
@@ -46,6 +44,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Assert development verification never targets production
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R --line-number -E 'https://([A-Za-z0-9-]+\.)?ekodi\.kr|ecosystem-load-test\.mjs|verify:core-production' .github/workflows/verify-ekodi-core-completion.yml; then
+            echo 'ERROR: development Core verification contains a production target or production load/smoke command.'
+            exit 1
+          fi
+          echo 'Development Core verification is production-free.'
       - name: Validate final Core completion contract
         run: npm run validate:core-completion
       - name: Verify central permission, workflow, evidence and AI contracts
@@ -70,45 +77,10 @@ jobs:
             test/core-ai-gateway.test.mjs \
             test/core-data-boundary.test.mjs \
             test/core-recovery-contract.test.mjs
-
-  production-readonly:
-    needs: contract
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Verify live EKODI Core production contract
-        run: npm run verify:core-production
-      - name: Run bounded GET-only ecosystem load verification
-        env:
-          LOAD_CONCURRENCY: '1,5,10,20'
-          LOAD_REQUESTS_PER_STAGE: '40'
-          LOAD_P95_BUDGET_MS: '1500'
-          LOAD_INCIDENT_P95_MS: '2500'
-          LOAD_ERROR_RATE_BUDGET: '0.01'
-        run: node scripts/ecosystem-load-test.mjs
-      - name: Upload final completion evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: ekodi-core-completion-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            artifacts/ekodi-core-production-verification.json
-            artifacts/ecosystem-load-test.json
-            artifacts/ecosystem-load-test.md
-          if-no-files-found: error
-          retention-days: 30
-      - name: Completion summary
+      - name: Development verification summary
         run: |
-          echo '### EKODI Core v1.0 completion verification' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Seven-stage completion contract: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Central permission/workflow/evidence contracts: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Production Core API: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Protected routes fail closed without auth: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Security headers: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- AI provider-independent survival: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Independent backup/restore contract: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Automatic rollback contract: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Bounded production load verification: passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '### EKODI development Core verification' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Core contracts: verified' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Security and AI resilience: verified' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Production hosts: not contacted' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Production load/smoke commands: not executed' >> "$GITHUB_STEP_SUMMARY"
