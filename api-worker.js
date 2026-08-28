@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -22,6 +23,15 @@ const SERVICE_CATALOG = [
 const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
 const VALID_STATES = new Set(['planned', 'active', 'paused']);
 const CONTROL_PREFIX = '/api/control';
+const DEVELOPMENT_WORKER = 'https://ekodi-platform-development.ekodi-development.workers.dev';
+const ACCOUNT_SERVICE_TARGETS = Object.freeze(EKODI_SERVICE_MANIFEST.services
+  .filter(service => service.state !== 'planned')
+  .map(service => Object.freeze({
+    id: service.id,
+    name: service.name,
+    host: new URL(service.url).hostname,
+    path: `${new URL(service.url).pathname}${new URL(service.url).search}`
+  })));
 
 function controlJson(data, status, headers = new Headers()) {
   const responseHeaders = new Headers();
@@ -55,7 +65,19 @@ async function ensureControlSchema(db) {
       checked_at TEXT NOT NULL
     )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_service_checks_service_time ON service_checks(service_id, checked_at DESC)'),
-    db.prepare('CREATE INDEX IF NOT EXISTS idx_service_checks_time ON service_checks(checked_at DESC)')
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_service_checks_time ON service_checks(checked_at DESC)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS cloudflare_environment_checks (
+      environment TEXT NOT NULL,
+      service_id TEXT NOT NULL,
+      service_name TEXT NOT NULL,
+      host TEXT NOT NULL,
+      status TEXT NOT NULL,
+      http_status INTEGER,
+      response_ms INTEGER,
+      detail TEXT NOT NULL DEFAULT '',
+      checked_at TEXT NOT NULL,
+      PRIMARY KEY (environment, service_id)
+    )`)
   ]);
 
   const now = new Date().toISOString();
@@ -68,6 +90,102 @@ async function ensureControlSchema(db) {
     service.defaultMonitor ? 1 : 0,
     now
   )));
+}
+
+async function probeEnvironmentService(environment, target) {
+  const isDevelopment = environment === 'development';
+  const url = isDevelopment
+    ? `${DEVELOPMENT_WORKER}${target.path || '/'}`
+    : `https://${target.host}${target.path || '/'}`;
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort('timeout'), 8000);
+  try {
+    const headers = { 'user-agent': 'EKODI-Account-Monitor/1.0' };
+    if (isDevelopment) headers['x-ekodi-staging-host'] = target.host;
+    const response = await fetch(url, { redirect: 'follow', signal: controller.signal, headers });
+    await response.body?.cancel();
+    const responseMs = Date.now() - startedAt;
+    const status = response.status >= 200 && response.status < 400
+      ? (responseMs > 3000 ? 'degraded' : 'online')
+      : 'offline';
+    return { environment, ...target, status, httpStatus: response.status, responseMs, detail: response.ok ? '' : `HTTP ${response.status}`, checkedAt: new Date().toISOString() };
+  } catch (error) {
+    return { environment, ...target, status: 'offline', httpStatus: null, responseMs: Date.now() - startedAt, detail: error?.name === 'AbortError' ? 'timeout' : String(error?.message || 'network error').slice(0, 160), checkedAt: new Date().toISOString() };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function mapWithConcurrency(items, limit, operation) {
+  const results = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await operation(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
+async function runCloudflareEnvironmentChecks(env) {
+  await ensureControlSchema(env.DB);
+  const jobs = [
+    ...ACCOUNT_SERVICE_TARGETS.map(target => ({ environment: 'production', target })),
+    ...ACCOUNT_SERVICE_TARGETS.map(target => ({ environment: 'development', target }))
+  ];
+  const checks = await mapWithConcurrency(jobs, 6, ({ environment, target }) => probeEnvironmentService(environment, target));
+  const upsert = env.DB.prepare(`INSERT INTO cloudflare_environment_checks
+    (environment, service_id, service_name, host, status, http_status, response_ms, detail, checked_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(environment, service_id) DO UPDATE SET
+      service_name=excluded.service_name, host=excluded.host, status=excluded.status,
+      http_status=excluded.http_status, response_ms=excluded.response_ms,
+      detail=excluded.detail, checked_at=excluded.checked_at`);
+  await env.DB.batch(checks.map(check => upsert.bind(
+    check.environment, check.id, check.name, check.host, check.status,
+    check.httpStatus, check.responseMs, check.detail, check.checkedAt
+  )));
+  return checks;
+}
+
+function environmentSummary(environment, rows) {
+  const services = rows.filter(row => row.environment === environment).map(row => ({
+    id: row.service_id,
+    name: row.service_name,
+    host: row.host,
+    status: row.status,
+    httpStatus: row.http_status,
+    responseTime: row.response_ms,
+    detail: row.detail || '',
+    checkedAt: row.checked_at
+  }));
+  const offline = services.filter(service => service.status === 'offline').length;
+  const degraded = services.filter(service => service.status === 'degraded').length;
+  return {
+    id: environment,
+    name: environment === 'production' ? 'EKODI Production' : 'EKODI Development',
+    accountId: environment === 'production' ? '6986…d797' : '46aa…c0f',
+    deploymentBranch: environment === 'production' ? 'main' : 'development',
+    status: offline ? 'offline' : degraded ? 'degraded' : 'online',
+    summary: { total: services.length, online: services.length - offline - degraded, degraded, offline },
+    checkedAt: services.reduce((latest, service) => service.checkedAt > latest ? service.checkedAt : latest, ''),
+    services
+  };
+}
+
+async function cloudflareAccountSnapshot(env, force = false) {
+  await ensureControlSchema(env.DB);
+  const latest = await env.DB.prepare('SELECT MAX(checked_at) AS checked_at FROM cloudflare_environment_checks').first();
+  const stale = !latest?.checked_at || Date.now() - Date.parse(latest.checked_at) > 30 * 60 * 1000;
+  if (force || stale) await runCloudflareEnvironmentChecks(env);
+  const rows = await env.DB.prepare('SELECT * FROM cloudflare_environment_checks ORDER BY environment, service_name').all();
+  return {
+    generatedAt: new Date().toISOString(),
+    accounts: ['production', 'development'].map(environment => environmentSummary(environment, rows.results))
+  };
 }
 
 async function sessionCheck(request, env) {
@@ -293,6 +411,16 @@ async function handleControl(request, env) {
     return controlJson(await overview(env), 200, auth.response.headers);
   }
 
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/cloudflare-accounts`) {
+    return controlJson(await cloudflareAccountSnapshot(env), 200, auth.response.headers);
+  }
+
+  if (request.method === 'POST' && path === `${CONTROL_PREFIX}/cloudflare-accounts/check`) {
+    const snapshot = await cloudflareAccountSnapshot(env, true);
+    await writeAudit(env, auth.session, 'cloudflare.accounts.check', 'platform', 'manual account and subservice health check');
+    return controlJson(snapshot, 200, auth.response.headers);
+  }
+
   if (request.method === 'POST' && path === `${CONTROL_PREFIX}/check`) {
     await runChecks(env);
     await writeAudit(env, auth.session, 'service.check', 'platform', 'manual service health check');
@@ -364,6 +492,9 @@ export default {
   },
 
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(runChecks(env).catch(error => console.error('Scheduled service check failed', error)));
+    ctx.waitUntil(Promise.all([
+      runChecks(env),
+      cloudflareAccountSnapshot(env)
+    ]).catch(error => console.error('Scheduled service or Cloudflare account check failed', error)));
   }
 };

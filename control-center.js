@@ -11,6 +11,7 @@ const scopeBadge = document.querySelector('#scopeBadge');
 const pageTitle = document.querySelector('#pageTitle');
 const sidebar = document.querySelector('.sidebar');
 const serviceControlGrid = document.querySelector('#serviceControlGrid');
+const cloudflareAccountGrid = document.querySelector('#cloudflareAccountGrid');
 const operationsGenerated = document.querySelector('#operationsGenerated');
 const runHealthCheckButton = document.querySelector('#runHealthCheck');
 let authMode = 'login';
@@ -530,6 +531,56 @@ function renderServices(services) {
   for (const service of services) serviceControlGrid.append(serviceCard(service));
 }
 
+function renderCloudflareAccounts(accounts) {
+  cloudflareAccountGrid.textContent = '';
+  for (const account of accounts || []) {
+    const card = document.createElement('article');
+    card.className = 'cloudflare-account-card';
+    card.dataset.status = account.status;
+    const header = document.createElement('div');
+    header.className = 'cloudflare-account-head';
+    const identity = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = account.name;
+    const meta = document.createElement('small');
+    meta.textContent = `${account.deploymentBranch} · ${account.accountId}`;
+    identity.append(name, meta);
+    const badge = document.createElement('span');
+    badge.className = `health-badge ${account.status}`;
+    badge.textContent = healthLabel(account.status);
+    header.append(identity, badge);
+    const counts = document.createElement('div');
+    counts.className = 'cloudflare-account-counts';
+    counts.append(
+      metric('정상', String(account.summary?.online ?? 0)),
+      metric('지연', String(account.summary?.degraded ?? 0)),
+      metric('장애', String(account.summary?.offline ?? 0))
+    );
+    const issues = (account.services || []).filter(service => service.status !== 'online').slice(0, 3);
+    const detail = document.createElement('p');
+    detail.className = 'cloudflare-account-detail';
+    detail.textContent = issues.length
+      ? issues.map(service => `${service.name} ${healthLabel(service.status)}`).join(' · ')
+      : `하위서비스 ${account.summary?.total ?? 0}개 연결 정상`;
+    const checked = document.createElement('small');
+    checked.className = 'cloudflare-account-checked';
+    checked.textContent = account.checkedAt ? `최근 점검 ${new Date(account.checkedAt).toLocaleString('ko-KR')}` : '점검 전';
+    card.append(header, counts, detail, checked);
+    cloudflareAccountGrid.append(card);
+  }
+}
+
+async function loadCloudflareAccounts() {
+  if (!token()) return;
+  cloudflareAccountGrid.replaceChildren(statusMessage('Cloudflare 계정별 하위서비스를 확인하는 중입니다.'));
+  try {
+    const data = await apiRequest('/api/control/cloudflare-accounts');
+    renderCloudflareAccounts(data.accounts || []);
+  } catch (error) {
+    cloudflareAccountGrid.replaceChildren(statusMessage(`계정별 상태를 불러오지 못했습니다: ${error.message}`, 'operations-error'));
+  }
+}
+
 async function loadOperationsOverview() {
   if (!token()) return;
   serviceControlGrid.replaceChildren(statusMessage('api.ekodi.kr에서 서비스 상태와 통계를 확인하는 중입니다.'));
@@ -537,6 +588,7 @@ async function loadOperationsOverview() {
     const data = await apiRequest('/api/control/overview');
     updateSummary(data);
     renderServices(data.services || []);
+    await loadCloudflareAccounts();
     apiState.textContent = '운영 API 정상';
   } catch (error) {
     apiState.textContent = '운영 API 확인 필요';
@@ -549,9 +601,13 @@ runHealthCheckButton.addEventListener('click', async () => {
   runHealthCheckButton.disabled = true;
   runHealthCheckButton.textContent = '↻ 점검 중…';
   try {
-    const data = await apiRequest('/api/control/check', { method: 'POST' });
+    const [data, accountData] = await Promise.all([
+      apiRequest('/api/control/check', { method: 'POST' }),
+      apiRequest('/api/control/cloudflare-accounts/check', { method: 'POST' })
+    ]);
     updateSummary(data);
     renderServices(data.services || []);
+    renderCloudflareAccounts(accountData.accounts || []);
   } catch (error) {
     operationsGenerated.textContent = error.message;
   } finally {
