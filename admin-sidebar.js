@@ -5,6 +5,7 @@ const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
 
 export function adminSidebarSectionOf(item) {
+  if (item?.dataset?.adminGatewaySection) return String(item.dataset.adminGatewaySection).trim();
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
   const raw = String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
   return raw === 'marketing' ? 'marketing-ai' : raw;
