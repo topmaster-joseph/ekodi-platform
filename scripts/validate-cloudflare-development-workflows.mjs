@@ -115,7 +115,7 @@ for (const filename of fs.readdirSync('.').filter((name) => stagingConfigPattern
 }
 
 const accessHelper = fs.readFileSync('scripts/access-aware-staging.sh', 'utf8');
-for (const marker of ['Cloudflare-Access', 'deployments status', 'wrangler@${wrangler_version}']} ) {
+for (const marker of ['Cloudflare-Access', 'deployments status', 'wrangler@${wrangler_version}']) {
   if (!accessHelper.includes(marker)) errors.push(`scripts/access-aware-staging.sh: missing safety marker ${marker}`);
 }
 if (accessHelper.includes('CLOUDFLARE_API_TOKEN=')) errors.push('scripts/access-aware-staging.sh: must not manufacture or override Cloudflare credentials');
