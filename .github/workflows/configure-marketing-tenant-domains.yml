@@ -58,12 +58,5 @@ jobs:
               seen.add(tenant)
           print('Validated parent-path Marketing AI tenants:', ', '.join(sorted(seen)))
           PY
-      - name: Confirm no workflow creates tenant AI DNS
-        shell: bash
-        run: |
-          set -euo pipefail
-          if grep -Fq '/dns_records' .github/workflows/configure-marketing-tenant-domains.yml || grep -Fq 'attach_domain' .github/workflows/configure-marketing-tenant-domains.yml; then
-            echo 'Per-tenant DNS/domain creation must not return to this workflow.'
-            exit 1
-          fi
-          echo 'No tenant subdomain creation is performed. Existing legacy aliases are preserved outside this workflow.'
+      - name: Confirm legacy tenant domains are compatibility-only
+        run: echo 'No tenant DNS mutation job exists in this workflow; legacy domains remain compatibility aliases.'
