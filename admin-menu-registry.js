@@ -13,7 +13,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'tax', icon: 'T', labels: { ko: '세금 · 증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/' },
   { id: 'communication', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' } },
   { id: 'workspace', icon: '▣', labels: { ko: '클라우드 · 자료', en: 'Cloud & Files' } },
-  { id: 'devices', icon: 'D', labels: { ko: '기기 · 장치', en: 'Devices' } },
+  { id: 'devices', icon: 'D', labels: { ko: '기기 관리', en: 'Devices' } },
   { id: 'organization', icon: '◫', labels: { ko: '조직 · 사업', en: 'Organizations' } },
   { id: 'clients', icon: 'C', labels: { ko: '고객 사이트', en: 'Customer Sites' } },
   { id: 'admins', icon: '♜', labels: { ko: '관리자 · 권한', en: 'Administrators & Access' }, superAdminOnly: true },
