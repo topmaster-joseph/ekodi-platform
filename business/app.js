@@ -1,9 +1,18 @@
 const cfg=window.EKODI_BUSINESS_CONFIG||{};
 const $=(id)=>document.getElementById(id);
 const SESSION_KEY='ekodi-business-session';
-const AUTH_FALLBACK='https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F';
+const AUTH_FALLBACK='https://auth.ekodi.kr/';
 const state={workspaces:[],current:null,metrics:null,liveSnapshot:null,session:null};
 
+function canonicalBusinessUrl(){
+  const target=new URL(location.href);target.hash='';target.searchParams.delete('problem');return target.href;
+}
+function businessAuthUrl(){
+  const target=new URL(cfg.authUrl||AUTH_FALLBACK);target.searchParams.set('site','business');target.searchParams.set('return_to',canonicalBusinessUrl());return target.href;
+}
+function normalizeLegacyUiQuery(){
+  const target=new URL(location.href);if(!target.searchParams.has('problem'))return;target.searchParams.delete('problem');history.replaceState(history.state,'',`${target.pathname}${target.search}${target.hash}`);
+}
 function applyConfig(){
   const readiness=Number.isFinite(Number(cfg.readiness))?Math.min(100,Math.max(0,Number(cfg.readiness))):62;
   $('readinessScore').textContent=`${readiness}%`;
@@ -14,7 +23,7 @@ function applyConfig(){
 function syncAuthLink(){
   const link=$('authLink');if(!link)return;
   if(state.session?.accessToken){link.href='#logout';link.textContent=state.session?.user?.email?'Sign out':'Sign out'}
-  else{link.href=cfg.authUrl||AUTH_FALLBACK;link.textContent='Sign in'}
+  else{link.href=businessAuthUrl();link.textContent='Sign in'}
 }
 function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken&&value?.refreshToken?value:null}catch{return null}}
 function saveSession(value){state.session=value;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));syncAuthLink()}
@@ -22,9 +31,10 @@ function clearSession(){state.session=null;sessionStorage.removeItem(SESSION_KEY
 function sessionExpiry(value){const explicit=Number(value?.expiresAt||0);if(explicit>0)return explicit;return Math.floor(Date.now()/1000)+Number(value?.expiresIn||3600)}
 async function exchangeCentralToken(){
   const params=new URLSearchParams(location.hash.slice(1));const tokenHash=params.get('ekodi_token');if(!tokenHash)return;
-  const type=params.get('ekodi_type')||'email';
+  const type=params.get('ekodi_type')||'email';const handoffWorkspace=String(params.get('ekodi_workspace')||'').trim().toLowerCase();
   const response=await fetch('/api/auth/exchange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tokenHash,type})});
   const data=await response.json();if(!response.ok)throw new Error(data.error||'auth_exchange_failed');
+  if(handoffWorkspace)data.handoffWorkspace=handoffWorkspace;
   data.expiresAt=sessionExpiry(data);saveSession(data);history.replaceState(null,'',location.pathname+location.search);
 }
 async function ensureAccessToken(){
@@ -47,7 +57,7 @@ function routeWorkspaceId(){
   const path=location.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
   if(path)return path;
   const query=new URLSearchParams(location.search).get('workspace');
-  return String(query||localStorage.getItem('ekodi-business-workspace')||cfg.defaultWorkspace||'ekodibiz').toLowerCase();
+  return String(query||state.session?.handoffWorkspace||localStorage.getItem('ekodi-business-workspace')||cfg.defaultWorkspace||'ekodibiz').toLowerCase();
 }
 function workspaceLabel(workspace){return workspace.classification==='internal'?'EKODI INTERNAL':'EXTERNAL CLIENT'}
 function statusClass(status){return status==='available'?'live':status==='next'?'stage':'plan'}
@@ -115,7 +125,7 @@ function renderWorkspace(payload,snapshot=null,error=null){
   $('workspaceName').textContent=workspace.name;$('workspaceEnglish').textContent=workspace.englishName;$('workspaceKind').textContent=workspaceLabel(workspace);$('heroCopy').textContent=workspace.description;
   $('dataNotice').textContent=dataNoticeText(workspace,snapshot,error);
   $('publicLink').href=workspace.publicUrl;$('publicLink').textContent=workspace.scope==='store'?'전용 AI':'에코디비즈';$('marketingLink').href=workspace.marketingUrl;
-  renderWorkspaceSelector();renderMetrics(state.metrics);renderModules(effectiveModules(workspace,snapshot));refreshBrief();
+  renderWorkspaceSelector();renderMetrics(state.metrics);renderModules(effectiveModules(workspace,snapshot));refreshBrief();syncAuthLink();
 }
 
 function fallbackBrief(){
@@ -156,7 +166,7 @@ async function selectWorkspace(id,{push=true}={}){
 }
 async function logout(){clearSession();await selectWorkspace(state.current?.id||cfg.defaultWorkspace||'ekodibiz',{push:false})}
 async function boot(){
-  state.session=storedSession();applyConfig();
+  normalizeLegacyUiQuery();state.session=storedSession();applyConfig();
   try{await exchangeCentralToken()}catch(error){console.error(error);clearSession();$('dataNotice').textContent='통합인증 token을 Business OS 세션으로 바꾸지 못했습니다. 다시 로그인해 주세요.'}
   syncAuthLink();
   try{const response=await fetch('/api/workspaces',{headers:{accept:'application/json'}});if(!response.ok)throw new Error(`workspaces_${response.status}`);const data=await response.json();state.workspaces=data.workspaces||[];const requested=routeWorkspaceId();const target=state.workspaces.some(item=>item.id===requested)?requested:(data.defaultWorkspace||state.workspaces[0]?.id);await selectWorkspace(target,{push:false})}
