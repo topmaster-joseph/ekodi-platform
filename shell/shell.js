@@ -231,7 +231,7 @@ function renderMemberGate(mode='guest'){
   wrap.querySelector('h1').textContent=service?.name||'EKODI';wrap.querySelector('p').textContent='이 공통서비스의 실제 기능과 콘텐츠는 Google 로그인한 EKODI 무료회원 이상에게 제공합니다.';
   wrap.querySelector('.features').textContent=capabilitySummary();
   wrap.querySelector('.note').textContent=mode==='handoff'?'Google 인증을 서비스에 연결하고 있습니다.':'로그인 전에는 서비스 기본 안내만 제공되며 실제 작업공간과 개인 데이터는 로그인 후 열립니다.';
-  const actions=wrap.querySelector('.actions');if(mode==='handoff'){const span=document.createElement('span');span.textContent='인증 연결 중…';span.className='primary';span.style.cssText='display:inline-flex;align-items:center;min-height:46px;padding:0 18px;border-radius:12px;font-weight:850';actions.append(span);}else{const login=document.createElement('a');login.href=memberLoginUrl();login.className='primary';login.textContent='Google로 무료 시작';const info=document.createElement('a');info.href='https://ekodi.kr/#services';info.className='secondary';info.textContent='서비스 안내';actions.append(login,info);}
+  const actions=wrap.querySelector('.actions');if(mode==='handoff'){const span=document.createElement('span');span.textContent='인증 연결 중…';span.className='primary';span.style.cssText='display:inline-flex;align-items:center;min-height:46px;padding:0 18px;border-radius:12px;font-weight:850';actions.append(span);}else{const login=document.createElement('a');login.href=memberLoginUrl();login.className='primary';login.textContent='Google로 무료 시작';const info=document.createElement('a');info.href='https://ekodi.kr/#start';info.className='secondary';info.textContent='서비스 안내';actions.append(login,info);}
   shadow.append(wrap);document.documentElement.append(host);memberGateRoot=host;
 }
 function reconcileMemberGate(){syncWorkspaceUiVisibility();if(!memberGateApplies()){clearMemberGate();document.documentElement.dataset.ekodiMemberAccess='not-applicable';return;}if(localMemberSession()){clearMemberGate();document.documentElement.dataset.ekodiMemberAccess='member';return;}const mode=handoffPending()?'handoff':'guest';document.documentElement.dataset.ekodiMemberAccess=mode;renderMemberGate(mode);}
@@ -255,7 +255,7 @@ function render(){
   if(name)name.textContent=publicMode?service.name:(state.workspaceName||inferredWorkspaceName(state.workspaceKey));
   const role=root.querySelector('[data-role]');
   if(role){
-    role.textContent=publicMode?'EKODI 서비스 전환':(state.role||service.shortName||service.name);
+    role.textContent=publicMode?'EKODI 다음 행동':(state.role||service.shortName||service.name);
     role.hidden=!role.textContent;
   }
   const person=root.querySelector('[data-person]');
@@ -264,7 +264,7 @@ function render(){
     person.hidden=!person.textContent;
   }
   const contextHint=root.querySelector('[data-context-hint]');
-  if(contextHint)contextHint.textContent=publicMode?'EKODI · 서비스 선택 · My EKODI에서 공간 관리':'EKODI · 사람 → 공간 → 기능';
+  if(contextHint)contextHint.textContent=publicMode?'EKODI · 필요한 일 → 추천 → 선택':'EKODI · 사람 → 공간 → 기능';
   const wrap=root.querySelector('.wrap');
   if(wrap){
     wrap.style.setProperty('--accent',themeValue.accent);
@@ -279,6 +279,29 @@ function render(){
   if(rail)rail.hidden=!publicMode;
   syncWorkspaceUiVisibility();
 }
+const INTENT_PRESETS=Object.freeze([
+  {label:'공동체 · 사역',query:'교회 예배 말씀 묵상 공동체 모임 기도 사역',preferred:['church','bible','community']},
+  {label:'일 · 사업',query:'사업 경영 마케팅 홍보 일 프로젝트 채용',preferred:['marketing','management','work','business','biz']},
+  {label:'콘텐츠 · 지식',query:'콘텐츠 글 출판 책 연구 소셜 창작',preferred:['author','publishing','lab','social','books']},
+]);
+function suggestionWords(value){return String(value||'').toLowerCase().split(/[\s,./·]+/).map(v=>v.trim()).filter(v=>v.length>1);}
+function suggestedServices(query='',preferred=[]){
+  const words=suggestionWords(query);const preferredRank=new Map(preferred.map((id,index)=>[id,Math.max(2,18-index*3)]));
+  const currentCaps=new Set(service?.capabilities||[]);
+  return (manifest?.services||[]).filter(item=>item.state!=='planned'&&item.id!==service?.id&&item.id!=='my').map(item=>{
+    const text=`${item.id} ${item.name} ${item.shortName||''} ${(item.capabilities||[]).join(' ')} ${item.group||''}`.toLowerCase();
+    let score=preferredRank.get(item.id)||0;if(item.group&&item.group===service?.group)score+=4;
+    for(const capability of item.capabilities||[])if(currentCaps.has(capability))score+=2;
+    for(const word of words)if(text.includes(word))score+=5;
+    return {item,score};
+  }).sort((a,b)=>b.score-a.score||(a.item.order||999)-(b.item.order||999)).slice(0,3).map(entry=>entry.item);
+}
+function renderSuggestionRows(container,query='',preferred=[]){
+  container.replaceChildren();for(const item of suggestedServices(query,preferred)){
+    const row=el('button',undefined,'service');row.type='button';const left=el('span');left.append(el('b',item.shortName||item.name));
+    const hint=el('small',(item.capabilities||[]).slice(0,2).map(value=>CAPABILITY_LABELS[value]||value).join(' · '));row.append(left,hint);row.addEventListener('click',()=>navigate(item));container.append(row);
+  }
+}
 function closePanel(){if(panel)panel.hidden=true;}
 function buildUi(){
   if(hidden||!service||document.querySelector('[data-ekodi-shell-root]'))return;
@@ -287,17 +310,22 @@ function buildUi(){
   const style=document.createElement('style');style.textContent=`:host{all:initial}.wrap{--accent:#8ec8ff;--companion:#b5a2ff;--selector-bg:rgba(7,21,34,.94);--selector-border:#24425e;--selector-shadow:0 10px 30px rgba(0,0,0,.28);--public-rail:none;--rail-opacity:0;position:relative;font-family:Inter,"Noto Sans KR",system-ui,sans-serif;color:#f4f7fb}.public-rail{position:fixed;z-index:2147482999;left:0;right:0;top:0;height:max(3px,env(safe-area-inset-top));min-height:3px;background:var(--public-rail);opacity:var(--rail-opacity);pointer-events:none}.public-rail[hidden]{display:none}.pill{display:flex;align-items:center;gap:8px;border:1px solid var(--selector-border);background:var(--selector-bg);backdrop-filter:blur(16px);box-shadow:var(--selector-shadow);border-radius:999px;padding:7px 9px 7px 11px;color:#f4f7fb;cursor:pointer;max-width:min(360px,calc(100vw - 24px));min-height:42px}.pill[hidden]{display:none!important}.pill:focus-visible,.action:focus-visible,.service:focus-visible,.footer a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);flex:0 0 auto}.labels{min-width:0;text-align:left}.space{display:block;font-size:12px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px}.sub{display:flex;gap:6px;align-items:center;font-size:9px;color:#9fb1c3;margin-top:2px;white-space:nowrap}.chev{font-size:10px;color:#9fb1c3}.panel{position:absolute;right:0;top:calc(100% + 8px);width:min(326px,calc(100vw - 24px));max-height:min(72vh,560px);overflow:auto;background:#0b1d2e;border:1px solid color-mix(in srgb,var(--accent) 22%,#24425e);box-shadow:0 20px 56px rgba(0,0,0,.42);border-radius:16px;padding:10px;color:#f4f7fb}.panel[hidden]{display:none}.head{padding:6px 7px 10px;border-bottom:1px solid #18344d}.head strong{display:block;font-size:13px}.head small{display:block;color:#9fb1c3;font-size:9px;margin-top:3px}.action{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #23445f;background:#10263a;border-radius:11px;padding:10px;margin-top:9px;text-align:left;cursor:pointer;color:#f4f7fb;font-size:10px;font-weight:800}.services{display:grid;gap:3px;margin-top:8px}.service{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:0;background:transparent;border-radius:10px;padding:9px;cursor:pointer;text-align:left;color:#eaf0f6}.service:hover{background:#10263a}.service b{font-size:10px}.service small{font-size:8px;color:#91a6ba}.current{background:#10263a;box-shadow:inset 2px 0 0 var(--accent)}.footer{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #18344d}.footer a{flex:1;text-decoration:none;color:#dce7f0;background:#10263a;border-radius:9px;padding:8px;text-align:center;font-size:9px;font-weight:800}@media(max-width:560px){.pill{max-width:230px}.panel{width:min(304px,calc(100vw - 20px))}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}`;
   const wrap=el('div',undefined,'wrap');
   const rail=el('div',undefined,'public-rail');rail.hidden=true;rail.setAttribute('aria-hidden','true');wrap.append(rail);
-  const button=el('button',undefined,'pill');button.type='button';button.setAttribute('aria-label','EKODI 현재 공간과 서비스 열기');button.setAttribute('aria-expanded','false');
+  const button=el('button',undefined,'pill');button.type='button';button.setAttribute('aria-label','EKODI 현재 공간과 다음 행동 열기');button.setAttribute('aria-expanded','false');
   button.append(el('span','', 'dot'));
   const labels=el('span',undefined,'labels');const space=el('span','공간 선택','space');space.dataset.space='1';const sub=el('span',undefined,'sub');const person=el('span','',undefined);person.dataset.person='1';const role=el('span',service.shortName||service.name);role.dataset.role='1';sub.append(person,role);labels.append(space,sub);button.append(labels,el('span','▾','chev'));
   panel=el('div',undefined,'panel');panel.hidden=true;
-  const head=el('div',undefined,'head');const contextHint=el('small','EKODI · 사람 → 공간 → 기능');contextHint.dataset.contextHint='1';head.append(el('strong',service.name),contextHint);panel.append(head);
-  const switcher=el('button',undefined,'action');switcher.type='button';switcher.append(el('span','공간 전환 · My EKODI'),el('span','→'));switcher.addEventListener('click',()=>location.assign(myUrl()));panel.append(switcher);
-  const services=el('div',undefined,'services');
-  for(const item of (manifest.services||[]).filter(s=>s.state!=='planned'&&s.id!=='my').sort((a,b)=>(a.order||999)-(b.order||999))){
-    const row=el('button',undefined,`service${item.id===service.id?' current':''}`);row.type='button';const left=el('span');left.append(el('b',item.shortName||item.name));const hint=el('small',item.id===service.id?'현재 서비스':(item.capabilities||[]).slice(0,2).join(' · '));row.append(left,hint);row.addEventListener('click',()=>navigate(item));services.append(row);
-  }
-  panel.append(services);
+  const head=el('div',undefined,'head');const contextHint=el('small','EKODI · 필요한 일 → 추천 → 선택');contextHint.dataset.contextHint='1';head.append(el('strong',service.name),contextHint);panel.append(head);
+  const switcher=el('button',undefined,'action');switcher.type='button';switcher.append(el('span','내 공간 · My EKODI'),el('span','→'));switcher.addEventListener('click',()=>location.assign(myUrl()));panel.append(switcher);
+  const prompt=el('small','원하는 일을 고르거나 적어보세요');prompt.style.cssText='display:block;margin:10px 7px 3px;color:#9fb1c3;font-size:9px';panel.append(prompt);
+  const quick=el('div',undefined,'services');
+  for(const intent of INTENT_PRESETS){const row=el('button',undefined,'service');row.type='button';row.append(el('b',intent.label),el('small','추천 3개'));row.addEventListener('click',()=>{input.value=intent.label;renderSuggestionRows(suggestions,intent.query,intent.preferred);});quick.append(row);}panel.append(quick);
+  const form=document.createElement('form');form.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:9px';form.setAttribute('role','search');
+  const input=document.createElement('input');input.type='search';input.autocomplete='off';input.placeholder='무엇을 하시나요?';input.setAttribute('aria-label','하고 싶은 일 입력');input.style.cssText='min-width:0;height:38px;padding:0 10px;border:1px solid #23445f;border-radius:10px;background:#071522;color:#f4f7fb;font:700 10px Inter,"Noto Sans KR",system-ui,sans-serif;outline:none';
+  const search=el('button','찾기','action');search.type='submit';search.style.cssText='width:auto;margin:0;padding:0 12px;justify-content:center';form.append(input,search);panel.append(form);
+  const suggestions=el('div',undefined,'services');suggestions.setAttribute('aria-live','polite');panel.append(suggestions);renderSuggestionRows(suggestions);
+  form.addEventListener('submit',event=>{event.preventDefault();const query=input.value.trim();if(!query){input.focus();return;}renderSuggestionRows(suggestions,query);});
+  const catalog=document.createElement('details');catalog.style.cssText='margin-top:8px;padding-top:8px;border-top:1px solid #18344d';const summary=document.createElement('summary');summary.textContent='모든 서비스 보기';summary.style.cssText='cursor:pointer;padding:6px 7px;color:#9fb1c3;font-size:9px;font-weight:800';catalog.append(summary);
+  const allServices=el('div',undefined,'services');for(const item of (manifest.services||[]).filter(s=>s.state!=='planned'&&s.id!=='my').sort((a,b)=>(a.order||999)-(b.order||999))){const row=el('button',undefined,`service${item.id===service.id?' current':''}`);row.type='button';const left=el('span');left.append(el('b',item.shortName||item.name));const hint=el('small',item.id===service.id?'현재 서비스':(item.capabilities||[]).slice(0,2).map(value=>CAPABILITY_LABELS[value]||value).join(' · '));row.append(left,hint);row.addEventListener('click',()=>navigate(item));allServices.append(row);}catalog.append(allServices);panel.append(catalog);
   const footer=el('div',undefined,'footer');const my=el('a','My EKODI');my.href=myUrl();const rootLink=el('a','EKODI');rootLink.href='https://ekodi.kr/';footer.append(my,rootLink);panel.append(footer);
   button.addEventListener('click',()=>{panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',panel.hidden?'false':'true');});
   document.addEventListener('click',event=>{if(!event.composedPath().includes(host)){closePanel();button.setAttribute('aria-expanded','false');}},{capture:true});

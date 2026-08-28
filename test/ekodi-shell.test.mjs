@@ -12,13 +12,19 @@ test('service manifest is the person-space-role registry for future EKODI sites'
   assert.match(manifest,/serviceForId/);
 });
 
-test('browser shell preserves workspace context and exposes bounded visual surfaces',async()=>{
+test('browser shell preserves workspace context, bounded surfaces and intent-first navigation',async()=>{
   const shell=await read('shell/shell.js');
   assert.match(shell,/ekodiShellSurface/);
   assert.match(shell,/workspace/);
   assert.match(shell,/document/);
   assert.match(shell,/form/);
   assert.match(shell,/data/);
+  assert.match(shell,/EKODI 다음 행동/);
+  assert.match(shell,/원하는 일을 고르거나 적어보세요/);
+  assert.match(shell,/suggestedServices/);
+  assert.match(shell,/slice\(0,3\)/);
+  assert.match(shell,/모든 서비스 보기/);
+  assert.match(shell,/내 공간 · My EKODI/);
 });
 
 test('shell injector is isolated in Shadow DOM and applies shared style only to internal surfaces',async()=>{

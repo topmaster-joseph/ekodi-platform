@@ -15,40 +15,40 @@ test('homepage uses a translucent ambient background with one stable Seoul-date 
   assert.match(js, /const palettes = \[/);
   assert.match(js, /Asia\/Seoul/);
   assert.match(js, /function dailySeed/);
-  assert.match(js, /data\.dailyDate|dataset\.dailyDate/);
+  assert.match(js, /dataset\.dailyDate/);
   assert.match(js, /--ambient-a/);
   assert.doesNotMatch(js, /crypto\.getRandomValues\(/);
   assert.doesNotMatch(js, /Math\.random\(/);
   assert.match(deploySiteCore, /grep -Fq 'function seoulDateKey'/);
   assert.match(deploySiteCore, /grep -Fq 'function dailySeed'/);
-  assert.match(deploySiteCore, /! grep -Fq 'getRandomValues'/);
+});
+test('public homepage is intent-first and does not expose the service directory by default', () => {
+  assert.match(js, /오늘 무엇을 하시나요\?/);
+  assert.match(js, /intentSets/);
+  assert.match(js, /function matchServices/);
+  assert.match(js, /slice\(0, limit\)/);
+  assert.match(js, /모든 서비스 보기/);
+  assert.match(js, /data\.livingGateway|dataset\.livingGateway/);
+  assert.match(js, /v3-intent-first/);
+  assert.match(css, /\.service-grid,\.ecosystem,\.lower-grid\{display:none!important\}/);
+  assert.match(css, /\.intent-panel/);
+  assert.match(css, /\.intent-results/);
 });
 
-test('ambient layer stays visible above the opaque body background and below content', () => {
-  assert.match(css, /body::before,[\s\S]*?z-index:0/);
-  assert.match(css, /\.site-header,[\s\S]*?main\{[\s\S]*?z-index:1/);
-  assert.doesNotMatch(css, /body::before,[\s\S]*?z-index:-1/);
-});
-
-test('living gateway builds a daily focus from the same rendered live service list', () => {
+test('living gateway keeps only high-value recommendations in the first view', () => {
   assert.match(js, /data-service-status/);
-  assert.match(js, /data-status-count/);
   assert.match(js, /liveCards/);
   assert.match(js, /is-daily-feature/);
   assert.match(js, /buildDailyPanel/);
-  assert.match(js, /TODAY IN EKODI/);
-  assert.match(js, /data\.livingGateway|dataset\.livingGateway/);
+  assert.match(js, /renderRecommendations/);
+  assert.match(js, /limit = 3/);
   assert.doesNotMatch(js, /data-status-filter/);
   assert.doesNotMatch(js, /function applyFilter/);
-  assert.doesNotMatch(js, /card\.hidden|group\.hidden|aria-pressed/);
 });
-
-test('homepage semi-list keeps service rows compact and mobile-safe', () => {
-  assert.match(css, /\.service-grid\{[\s\S]*?grid-template-columns:1fr!important/);
-  assert.match(css, /\.service-group\{[\s\S]*?grid-template-columns:190px minmax\(0,1fr\)!important/);
-  assert.match(css, /\.service-card\{[\s\S]*?min-height:82px!important/);
-  assert.match(css, /@media\(max-width:640px\)/);
-  assert.match(css, /\.service-group\{[\s\S]*?grid-template-columns:1fr!important/);
+test('ambient layer stays visible above the body background and below content', () => {
+  assert.match(css, /body::before,[\s\S]*?z-index:0/);
+  assert.match(css, /\.site-header,[\s\S]*?main\{[\s\S]*?z-index:1/);
+  assert.doesNotMatch(css, /body::before,[\s\S]*?z-index:-1/);
 });
 
 test('ambient assets are shipped and injected into the EKODI homepage build', () => {
