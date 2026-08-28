@@ -1,0 +1,67 @@
+name: Verify EKODI Mall Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'mall.html'
+      - 'mall.css'
+      - 'mall.js'
+      - 'coupang-partners-automation.js'
+      - 'affiliate-control.js'
+      - 'deploy/manifests/control-api.worker.json'
+      - 'deploy/manifests/shared-site.worker.json'
+      - '.github/workflows/verify-ekodi-mall-production.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-ekodi-mall-production
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify storefront and live product feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/mall' -o /tmp/mall.html
+          grep -Fq 'EKODI MALL' /tmp/mall.html
+          grep -Fq 'SMART SHOPPING' /tmp/mall.html
+          grep -Fq '오늘 필요한 것, 에코디몰에서.' /tmp/mall.html
+          grep -Fq '오늘의 상품' /tmp/mall.html
+          grep -Fq '상품 둘러보기' /tmp/mall.html
+          grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall.html
+          if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
+            echo 'Legacy affiliate storefront wording or fallback link is still exposed.'
+            exit 1
+          fi
+
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100' -o /tmp/products.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
+          if (payload.storefront !== 'ekodi-mall') throw new Error(`unexpected storefront: ${payload.storefront}`);
+          if (payload.providerKey !== 'coupang_partners') throw new Error(`unexpected provider: ${payload.providerKey}`);
+          if (!payload.automationStatus) throw new Error('automationStatus is missing');
+          if (!Array.isArray(payload.products)) throw new Error('products is not an array');
+          const count = payload.products.length;
+          console.log(`automationStatus=${payload.automationStatus}`);
+          console.log(`productCount=${count}`);
+          if (count < 1) throw new Error(`EKODI Mall has no live products; automationStatus=${payload.automationStatus}`);
+          for (const product of payload.products.slice(0, 5)) {
+            if (!String(product.productName || '').trim()) throw new Error('productName missing');
+            if (!(Number(product.priceKrw) > 0)) throw new Error(`invalid price for ${product.productName}`);
+            if (!/^https:\/\//.test(String(product.imageUrl || ''))) throw new Error(`imageUrl missing for ${product.productName}`);
+            const click = new URL(String(product.clickUrl || ''));
+            if (click.origin !== 'https://api.ekodi.kr' || !click.pathname.startsWith('/api/affiliate/public/click/')) {
+              throw new Error(`invalid tracked click URL for ${product.productName}`);
+            }
+          }
+          console.log('EKODI Mall live product feed verified.');
+          NODE
