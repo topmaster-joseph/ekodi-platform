@@ -47,10 +47,31 @@ forbidText('.github/workflows/deploy-books.yml', ['npm run deploy:books', 'deplo
 forbidText('.github/workflows/deploy-community.yml', ['npm run deploy:community', 'deploy --config wrangler.community.toml']);
 forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.social.toml']);
 
-requireText('.github/workflows/deploy-control-api.yml', ['api-staging.ekodi.kr','ekodi-auth-staging','d1 time-travel info','guarded-worker-release.mjs','control-api.worker.json','validate-additive-migrations.mjs']);
-forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
-requireText('.github/workflows/deploy-finance.yml', ['finance-api-staging.ekodi.kr','d1 time-travel info','guarded-worker-release.mjs','finance-api.worker.json','--secrets-file /tmp/finance-secrets.json']);
-forbidText('.github/workflows/deploy-finance.yml', ['npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
+requireText('.github/workflows/deploy-control-api.yml', [
+  'environment: development',
+  'STAGING_BASE_URL',
+  'workers\\.dev',
+  'ekodi-auth-staging',
+  'environment: production',
+  "github.event_name == 'push' && github.ref == 'refs/heads/main'",
+  'd1 time-travel info',
+  'guarded-worker-release.mjs',
+  'control-api.worker.json',
+  'validate-additive-migrations.mjs',
+]);
+forbidText('.github/workflows/deploy-control-api.yml', ['api-staging.ekodi.kr', 'npm run deploy:api', 'deploy --config wrangler.api.toml']);
+requireText('.github/workflows/deploy-finance.yml', [
+  'environment: development',
+  'STAGING_BASE_URL',
+  'workers\\.dev',
+  'environment: production',
+  "github.event_name == 'push' && github.ref == 'refs/heads/main'",
+  'd1 time-travel info',
+  'guarded-worker-release.mjs',
+  'finance-api.worker.json',
+  '--secrets-file /tmp/finance-secrets.json',
+]);
+forbidText('.github/workflows/deploy-finance.yml', ['finance-api-staging.ekodi.kr','npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
 
 requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
 requireText('.github/workflows/deploy-jadam-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
@@ -130,4 +151,4 @@ if (failed) {
   console.error('Deployment policy audit failed. Production must stay behind development/local validation and guarded main-branch promotion gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: development, local Supabase validation and production writes remain separated, and guarded production promotion is restricted to main.');
+console.log('✅ Deployment policy audit passed: development, local Supabase validation and production writes remain separated, staging avoids production DNS, and guarded production promotion is restricted to main.');
