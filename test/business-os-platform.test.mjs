@@ -15,7 +15,7 @@ const staging=readFileSync(new URL('../wrangler.business-staging.toml',import.me
 const production=readFileSync(new URL('../wrangler.business.toml',import.meta.url),'utf8');
 
 test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
-  for(const term of ['EKODI BUSINESS OS','에코디비즈','자담치킨 목포대점','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
+  for(const term of ['BUSINESS OS','에코디비즈','자담치킨 목포대점','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
   assert.match(worker,/ekodibiz/);
   assert.match(worker,/jadam/);
   assert.match(worker,/https:\/\/biz\.ekodi\.kr/);
@@ -48,7 +48,7 @@ test('customer-first layer monetizes execution rather than inventing a subscript
 });
 
 test('public Business OS header stays local and keeps workspace chrome behind sign-in',()=>{
-  assert.match(html,/class="brand" href="\/" aria-label="EKODI Business OS 홈으로 이동"/);
+  assert.match(html,/class="brand" href="\/" aria-label="Business OS 홈으로 이동"/);
   assert.doesNotMatch(html,/class="brand" href="https:\/\/ekodi\.kr"/);
   assert.match(html,/class="workspace-picker session-only"/);
   assert.match(html,/:has\(#authLink\[href="#logout"\]\)/);
