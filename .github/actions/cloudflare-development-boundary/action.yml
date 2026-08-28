@@ -12,12 +12,21 @@ runs:
         expected_subdomain='ekodi-development'
         test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'Missing Development Cloudflare API token.' >&2; exit 1; }
         test "${CLOUDFLARE_ACCOUNT_ID:-}" = "$expected_account" || { echo 'Staging is not bound to the EKODI Development account.' >&2; exit 1; }
-        if [ -n "${STAGING_URL:-}" ]; then
-          case "$STAGING_URL" in
-            https://*.ekodi-development.workers.dev*) ;;
-            *) echo 'Staging URL is outside the Development workers.dev namespace.' >&2; exit 1 ;;
+
+        # Validate every staging URL exported by a workflow, not only a variable literally named STAGING_URL.
+        # This covers API_STAGING_URL, SITE_STAGING_URL, CONTROL_STAGING_URL, SHELL_STAGING_URL and future variants.
+        while IFS='=' read -r key value; do
+          case "$key" in
+            STAGING_URL|*STAGING*_URL)
+              [ -z "$value" ] && continue
+              case "$value" in
+                https://*.ekodi-development.workers.dev*) ;;
+                *) echo "$key is outside the Development workers.dev namespace." >&2; exit 1 ;;
+              esac
+              ;;
           esac
-        fi
+        done < <(env)
+
         response=$(curl -fsS --connect-timeout 5 --max-time 20 \
           -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
           -H 'Content-Type: application/json' \
