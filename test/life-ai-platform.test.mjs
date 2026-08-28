@@ -57,3 +57,11 @@ test('guest-facing copy stays guide-first while member actions remain explicit',
   assert.match(app,/Google 로그인한 무료회원부터 질문 대화를 이용할 수 있습니다/);
   assert.match(worker,/LIFE_AUTH_REQUIRED/);
 });
+
+test('production release guard only requires markers present in static Life HTML',()=>{
+  const html=fs.readFileSync(new URL('../life/index.html',import.meta.url),'utf8');
+  const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/life.worker.json',import.meta.url),'utf8'));
+  const root=release.worker.requests.find(request=>request.url==='https://life.ekodi.kr/');
+  assert.ok(root);
+  for(const marker of root.expect||[])assert.ok(html.includes(marker),`static Life HTML is missing release marker: ${marker}`);
+});
