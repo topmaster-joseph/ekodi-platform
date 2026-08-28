@@ -1,0 +1,4 @@
+EKODI MarketingAI posting status production release
+Date: 2026-08-29
+Target: admin.ekodi.kr MarketingAI > 포스팅 현황
+Verification: workflow guarded release + live asset receipt
