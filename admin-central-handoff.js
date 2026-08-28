@@ -7,7 +7,7 @@ const EMAIL_KEY='ekodi-admin-email';
 const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
 const CENTRAL_ADMIN_AUTH_URL = 'https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
 const ROUTES=new Set('operations campus ai-ops ai-module-spec ai-membership health api-cost storage security devices work marketing-ai deployments finance organization workspace architecture policies clients admins community books social affiliates'.split(' '));
-const ALIASES={storige:'storage',overview:'operations',aiops:'ai-ops',release:'deployments',legacy:'ai-ops',domains:'ai-ops',activity:'ai-ops'};
+const ALIASES={storige:'storage',operations:'campus',overview:'campus',aiops:'ai-ops',release:'deployments',legacy:'ai-ops',domains:'ai-ops',activity:'ai-ops'};
 const app=document.querySelector('#app'),loginScreen=document.querySelector('#loginScreen'),apiState=document.querySelector('#apiState'),profileEmail=document.querySelector('#profileEmail'),profileName=document.querySelector('#profileName'),scopeBadge=document.querySelector('#scopeBadge'),sidebar=document.querySelector('.sidebar'),loginForm=document.querySelector('#loginForm'),legacyLink=document.querySelector('.login-screen .legacy-link'),logoutButton=document.querySelector('#logoutButton'),menuButton=document.querySelector('#menuButton');
 let loginLink=document.querySelector('#centralAdminLogin');
 const safeSession={get(k){try{return sessionStorage.getItem(k)||''}catch{return''}},set(k,v){try{sessionStorage.setItem(k,v)}catch{}},remove(k){try{sessionStorage.removeItem(k)}catch{}}};
