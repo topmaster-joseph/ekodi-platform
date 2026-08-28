@@ -20,7 +20,7 @@ test('affiliate automation modules compile and connect', () => {
   assert.equal(typeof runAffiliateAutomation, 'function');
   assert.doesNotThrow(() => new Function(adminSource));
   assert.match(entrySource, /handleAffiliateRequest/);
-  assert.match(apiSource, /\/api\/affiliate\/automation\/run/);
+  assert.match(apiSource, /path === `\$\{PREFIX\}\/automation\/run`/);
 });
 
 test('base and automatic storefront schemas are additive', () => {
