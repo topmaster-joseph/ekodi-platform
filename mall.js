@@ -3,20 +3,13 @@
 
   const API = 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100';
   const DEFAULT_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
-  const INSTRUCTION = '아래 추천링크 클릭 후 검색하세요.';
-  const FALLBACK_PRODUCTS = [{
-    id: 'ekodi-coupang-search',
-    productName: '에코디 추천상품 검색',
-    affiliateUrl: 'https://link.coupang.com/a/cwWXWm',
-    category: '추천',
-    channel: 'EKODI Mall',
-  }];
-
-  const state = { products: [], category: '전체', query: '' };
+  const state = { products: [], category: '전체', query: '', status: 'loading' };
   const grid = document.querySelector('#productGrid');
   const empty = document.querySelector('#emptyState');
   const categories = document.querySelector('#categoryBar');
   const search = document.querySelector('#productSearch');
+  const statusNode = document.querySelector('#catalogStatus');
+  const imageCache = new Map();
 
   function safeUrl(value) {
     try {
@@ -26,47 +19,122 @@
   }
 
   function normalize(product) {
-    const affiliateUrl = safeUrl(product?.affiliateUrl);
-    if (!affiliateUrl) return null;
+    const clickUrl = safeUrl(product?.clickUrl);
+    if (!clickUrl) return null;
+    const price = Number(product?.priceKrw || 0);
     return {
       id: String(product?.id || ''),
-      productName: String(product?.productName || '추천상품').trim().slice(0, 200),
-      affiliateUrl,
-      category: String(product?.category || product?.campaignName || '추천').trim().slice(0, 60) || '추천',
-      channel: String(product?.channel || 'EKODI Mall').trim().slice(0, 80),
+      productId: String(product?.productId || ''),
+      productName: String(product?.productName || '상품').trim().slice(0, 240),
+      priceKrw: Number.isFinite(price) && price > 0 ? Math.trunc(price) : 0,
+      imageUrl: safeUrl(product?.imageUrl),
+      clickUrl,
+      category: String(product?.category || '추천').trim().slice(0, 60) || '추천',
+      isRocket: Boolean(product?.isRocket),
+      isFreeShipping: Boolean(product?.isFreeShipping),
     };
   }
+
+  function formatPrice(value) {
+    const amount = Number(value || 0);
+    return amount > 0 ? `${new Intl.NumberFormat('ko-KR').format(amount)}원` : '가격 확인';
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(reader.error || new Error('IMAGE_READ_FAILED'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function resolveImage(url) {
+    if (!url) return '';
+    if (imageCache.has(url)) return imageCache.get(url);
+    const promise = fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit' })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const type = String(response.headers.get('content-type') || '').toLowerCase();
+        if (!type.startsWith('image/')) throw new Error('NOT_IMAGE');
+        return response.blob();
+      })
+      .then(blobToDataUrl)
+      .catch(() => '');
+    imageCache.set(url, promise);
+    return promise;
+  }
+
+  const observer = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      observer.unobserve(entry.target);
+      hydrateImage(entry.target);
+    }
+  }, { rootMargin: '180px 0px' }) : null;
+
+  async function hydrateImage(img) {
+    if (!img || img.dataset.loaded === '1') return;
+    img.dataset.loaded = '1';
+    const source = img.dataset.source || '';
+    const dataUrl = await resolveImage(source);
+    if (!dataUrl || !img.isConnected) return;
+    img.src = dataUrl;
+    img.classList.add('loaded');
+  }
+
+  function queueImage(img) {
+    if (!img?.dataset.source) return;
+    if (observer) observer.observe(img);
+    else hydrateImage(img);
+  }
+
+  function makeBadge(text, light = false) {
+    const badge = document.createElement('span');
+    badge.className = `badge${light ? ' light' : ''}`;
+    badge.textContent = text;
+    return badge;
+  }
+
   function makeCard(product) {
     const article = document.createElement('article');
     article.className = 'product-card';
 
-    const visual = document.createElement('div');
-    visual.className = 'product-visual';
-    const badge = document.createElement('span');
-    badge.textContent = product.category;
-    visual.append(badge);
+    const media = document.createElement('div');
+    media.className = 'product-media';
+    const image = document.createElement('img');
+    image.alt = product.productName;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.dataset.source = product.imageUrl;
+    const placeholder = document.createElement('span');
+    placeholder.className = 'product-placeholder';
+    placeholder.textContent = 'EKODI MALL';
+    const badges = document.createElement('div');
+    badges.className = 'badge-row';
+    if (product.isRocket) badges.append(makeBadge('로켓'));
+    if (product.isFreeShipping) badges.append(makeBadge('무료배송', true));
+    media.append(image, placeholder, badges);
 
+    const body = document.createElement('div');
+    body.className = 'product-body';
+    const category = document.createElement('p');
+    category.className = 'product-category';
+    category.textContent = product.category;
     const title = document.createElement('h3');
     title.textContent = product.productName;
-    const meta = document.createElement('p');
-    meta.className = 'product-meta';
-    meta.textContent = `${product.channel} · 쿠팡 제휴`;
-
+    const price = document.createElement('p');
+    price.className = 'product-price';
+    price.textContent = formatPrice(product.priceKrw);
     const link = document.createElement('a');
     link.className = 'buy-link';
-    link.href = product.affiliateUrl;
+    link.href = product.clickUrl;
     link.target = '_blank';
     link.rel = 'sponsored noopener noreferrer';
-    const label = document.createElement('span');
-    label.textContent = '쿠팡에서 확인';
-    const arrow = document.createElement('span');
-    arrow.textContent = '↗';
-    link.append(label, arrow);
-
-    const instruction = document.createElement('p');
-    instruction.className = 'instruction';
-    instruction.textContent = INSTRUCTION;
-    article.append(visual, title, meta, link, instruction);
+    link.textContent = '상품보기';
+    body.append(category, title, price, link);
+    article.append(media, body);
+    queueMicrotask(() => queueImage(image));
     return article;
   }
 
@@ -74,14 +142,20 @@
     const query = state.query.toLocaleLowerCase('ko-KR');
     return state.products.filter(product => {
       const categoryMatch = state.category === '전체' || product.category === state.category;
-      const text = `${product.productName} ${product.category} ${product.channel}`.toLocaleLowerCase('ko-KR');
+      const text = `${product.productName} ${product.category}`.toLocaleLowerCase('ko-KR');
       return categoryMatch && (!query || text.includes(query));
     });
   }
+
   function renderProducts() {
     const products = filteredProducts();
     grid.replaceChildren(...products.map(makeCard));
     empty.hidden = products.length > 0;
+    if (!state.products.length) {
+      statusNode.textContent = state.status === 'loading' ? '상품을 불러오고 있습니다.' : '';
+    } else {
+      statusNode.textContent = `${products.length}개 상품`;
+    }
   }
 
   function renderCategories() {
@@ -103,25 +177,30 @@
 
   function setDisclosure(text) {
     const disclosure = String(text || DEFAULT_DISCLOSURE).trim() || DEFAULT_DISCLOSURE;
-    document.querySelectorAll('#disclosureText,#affiliateDisclosure').forEach(node => { node.textContent = disclosure; });
+    const node = document.querySelector('#disclosureText');
+    if (node) node.textContent = disclosure;
   }
 
   async function loadProducts() {
+    state.status = 'loading';
+    renderProducts();
     try {
       const response = await fetch(API, { method: 'GET', mode: 'cors', credentials: 'omit' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      const products = Array.isArray(data.products) ? data.products.map(normalize).filter(Boolean) : [];
-      state.products = products.length ? products : FALLBACK_PRODUCTS.map(normalize).filter(Boolean);
+      state.products = Array.isArray(data.products) ? data.products.map(normalize).filter(Boolean) : [];
+      state.status = state.products.length ? 'ready' : 'preparing';
       setDisclosure(data.disclosureText);
     } catch (error) {
-      console.warn('EKODI Mall affiliate API fallback', error);
-      state.products = FALLBACK_PRODUCTS.map(normalize).filter(Boolean);
+      console.warn('EKODI Mall product catalog unavailable', error);
+      state.products = [];
+      state.status = 'preparing';
       setDisclosure(DEFAULT_DISCLOSURE);
     }
     renderCategories();
     renderProducts();
   }
+
   search?.addEventListener('input', event => {
     state.query = String(event.currentTarget.value || '').trim();
     renderProducts();
