@@ -73,6 +73,20 @@ requireText('.github/workflows/deploy-finance.yml', [
 ]);
 forbidText('.github/workflows/deploy-finance.yml', ['finance-api-staging.ekodi.kr','npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
 
+requireText('.github/workflows/release-messenger-investment-functional.yml', [
+  'API_STAGING_URL: https://ekodi-workspace-platform-api-staging.ekodi-development.workers.dev',
+  'SITE_STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev',
+  'CONTROL_STAGING_URL: https://ekodi-conversation-control-staging.ekodi-development.workers.dev',
+  'workspace-staging:\n    environment: development',
+  'control-staging:\n    environment: development',
+  'staging-ui:\n    environment: development',
+  'production-workspace:\n    environment: production',
+  'production-control:\n    environment: production',
+  'production-ui:\n    environment: production',
+  "github.event_name == 'push' && github.ref == 'refs/heads/main'",
+]);
+forbidText('.github/workflows/release-messenger-investment-functional.yml', ['.topmaster-joseph.workers.dev']);
+
 requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
 requireText('.github/workflows/deploy-jadam-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
 forbidText('.github/workflows/deploy-jadam-marketing-ai.yml', ['pages deploy', 'Configure EKODI DNS', 'Attach custom domains']);
