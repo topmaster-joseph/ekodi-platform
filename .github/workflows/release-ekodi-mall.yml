@@ -1,0 +1,112 @@
+name: Release EKODI Mall to Shared Site
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'mall.html'
+      - 'mall.css'
+      - 'mall.js'
+      - '.github/workflows/release-ekodi-mall.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ekodi-mall-shared-site-release
+  cancel-in-progress: false
+
+jobs:
+  release-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate canonical Mall source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check mall.js
+          grep -Fq 'class="header-notice"' mall.html
+          grep -Fq '상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다.' mall.html
+          grep -Fq '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.' mall.html
+          grep -Fq 'id="productSort"' mall.html
+          grep -Fq 'value="registered"' mall.html
+          grep -Fq 'value="popular"' mall.html
+          grep -Fq 'value="price-asc"' mall.html
+          grep -Fq 'value="price-desc"' mall.html
+          grep -Fq 'id="productDialog"' mall.html
+          grep -Fq 'id="productDialogBuy"' mall.html
+          grep -Fq '.header-notice{justify-self:center' mall.css
+          grep -Fq 'function openProductDialog(product)' mall.js
+          grep -Fq 'function sortProducts(products)' mall.js
+          grep -Fq "detail.textContent = '상품정보 보기'" mall.js
+
+      - name: Dispatch guarded shared-site production deployment
+        id: dispatch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-site-core.yml --ref main -f sync_domains=false
+          run_id=''
+          for attempt in $(seq 1 30); do
+            run_id=$(gh run list --workflow deploy-site-core.yml --branch main --event workflow_dispatch --limit 30 --json databaseId,headSha,createdAt -q ".[] | select(.headSha == \"$GITHUB_SHA\") | .databaseId" | head -n1)
+            if [ -n "$run_id" ]; then break; fi
+            sleep 2
+          done
+          test -n "$run_id" || { echo 'Shared-site deployment run was not found.'; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Shared-site deployment run: $run_id"
+
+      - name: Wait for guarded shared-site deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          gh run watch "$RUN_ID" --exit-status
+
+      - name: Verify Mall production UI and product feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          stamp="${GITHUB_SHA:0:12}"
+          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall?release=$stamp" -o /tmp/mall.html
+          grep -Fq 'class="header-notice"' /tmp/mall.html
+          grep -Fq '상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다.' /tmp/mall.html
+          grep -Fq '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.' /tmp/mall.html
+          grep -Fq 'id="productSort"' /tmp/mall.html
+          grep -Fq 'id="productDialog"' /tmp/mall.html
+          grep -Fq 'id="productDialogBuy"' /tmp/mall.html
+
+          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall.css?release=$stamp" -o /tmp/mall.css
+          grep -Fq '.header-notice{justify-self:center' /tmp/mall.css
+          grep -Fq 'text-align:center' /tmp/mall.css
+
+          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall.js?release=$stamp" -o /tmp/mall.js
+          grep -Fq 'function openProductDialog(product)' /tmp/mall.js
+          grep -Fq 'function sortProducts(products)' /tmp/mall.js
+          grep -Fq "detail.textContent = '상품정보 보기'" /tmp/mall.js
+
+          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=5' -o /tmp/products.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
+          if (payload.storefront !== 'ekodi-mall') throw new Error(`unexpected storefront: ${payload.storefront}`);
+          if (payload.providerKey !== 'coupang_partners') throw new Error(`unexpected provider: ${payload.providerKey}`);
+          if (!Array.isArray(payload.products) || payload.products.length < 1) throw new Error('live Mall product feed is empty');
+          const first = payload.products[0];
+          if (!String(first.productName || '').trim()) throw new Error('productName missing');
+          if (!(Number(first.priceKrw) > 0)) throw new Error('priceKrw invalid');
+          if (!/^https:\/\//.test(String(first.clickUrl || ''))) throw new Error('clickUrl invalid');
+          console.log(`EKODI Mall verified: ${payload.products.length} live products sampled.`);
+          NODE
