@@ -40,6 +40,43 @@ jobs:
           dev_account = '46aad4738793fbaca88574832a2ccc0f'
           dev_secret = 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN'
           prod_secret_markers = ('secrets.CLOUDFLARE_API_TOKEN', 'secrets.CLOUDFLARE_ACCOUNT_ID')
+          prod_workers_namespace = 'topmaster-joseph.workers.dev'
+          dev_workers_namespace = 'ekodi-development.workers.dev'
+
+          def job_blocks(text):
+              lines = text.splitlines()
+              in_jobs = False
+              current_name = None
+              current = []
+              for line in lines:
+                  if line == 'jobs:':
+                      in_jobs = True
+                      continue
+                  if not in_jobs:
+                      continue
+                  match = re.match(r'^  ([A-Za-z0-9_-]+):\s*$', line)
+                  if match:
+                      if current_name is not None:
+                          yield current_name, '\n'.join(current)
+                      current_name = match.group(1)
+                      current = [line]
+                  elif current_name is not None:
+                      current.append(line)
+              if current_name is not None:
+                  yield current_name, '\n'.join(current)
+
+          def is_worker_deploy(block):
+              return bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b', block)) and 'pages deploy' not in block
+
+          def is_staging_job(name, block):
+              low_name = name.lower()
+              return (
+                  'staging' in low_name
+                  or 'STAGING_URL' in block
+                  or '.staging.toml' in block
+                  or '.staging.jsonc' in block
+                  or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b', block))
+              )
 
           dev = (root / 'deploy-development.yml').read_text(encoding='utf-8')
           required = [
@@ -69,12 +106,12 @@ jobs:
                   errors.append(f'{filename}: required staging workflow is missing')
                   continue
               text = path.read_text(encoding='utf-8')
-              for marker in ('environment: development', dev_secret, dev_account, 'ekodi-development.workers.dev'):
+              for marker in ('environment: development', dev_secret, dev_account, dev_workers_namespace):
                   if marker not in text:
                       errors.append(f'{filename}: missing Development boundary marker: {marker}')
               if any(marker in text for marker in prod_secret_markers):
                   errors.append(f'{filename}: staging Worker references production Cloudflare credentials')
-              if 'topmaster-joseph.workers.dev' in text:
+              if prod_workers_namespace in text:
                   errors.append(f'{filename}: staging verification still targets the Production workers.dev namespace')
 
           # Marketing Pages previews are the only temporary exception. They are static Pages previews,
@@ -96,6 +133,28 @@ jobs:
                       errors.append(f'{path.name}: temporary exception may only deploy Cloudflare Pages previews')
                   if re.search(r'wrangler(?:@[^\s]+)?\s+deploy\s+--config', text):
                       errors.append(f'{path.name}: temporary Pages exception must never deploy a Worker')
+
+              # Enforce the boundary at job level too. Mixed deploy-*.yml workflows can contain both
+              # Production and staging jobs, so filename-only checks are insufficient.
+              if path.name != 'cloudflare-boundary-audit.yml':
+                  for job_name, block in job_blocks(text):
+                      if not is_worker_deploy(block) or not is_staging_job(job_name, block):
+                          continue
+                      label = f'{path.name}:{job_name}'
+                      if 'environment: development' not in block:
+                          errors.append(f'{label}: staging Worker deploy is missing environment: development')
+                      if dev_secret not in block:
+                          errors.append(f'{label}: staging Worker deploy is missing Development API token')
+                      if dev_account not in block:
+                          errors.append(f'{label}: staging Worker deploy is missing Development account ID')
+                      if any(marker in block for marker in prod_secret_markers):
+                          errors.append(f'{label}: staging Worker deploy references Production Cloudflare credentials')
+                      if prod_workers_namespace in block:
+                          errors.append(f'{label}: staging Worker deploy targets the Production workers.dev namespace')
+                      workers_urls = re.findall(r'https://[^\s\"\']+\.workers\.dev[^\s\"\']*', block)
+                      if workers_urls and not any(dev_workers_namespace in url for url in workers_urls):
+                          errors.append(f'{label}: staging Worker URL is not in the Development workers.dev namespace')
+
               # The audit file contains this literal as a detector, so exclude itself from the detector.
               if path.name not in {'ecosystem-load-test.yml', 'cloudflare-boundary-audit.yml'} and 'node scripts/ecosystem-load-test.mjs' in text:
                   errors.append(f'{path.name}: production load script may only be invoked by ecosystem-load-test.yml')
