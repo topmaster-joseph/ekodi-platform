@@ -1,0 +1,31 @@
+# EKODI Development account only. No production custom domain routes or production storage bindings.
+name = "ekodi-storage-control-development"
+main = "storage-worker.js"
+compatibility_date = "2026-08-25"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "development"
+GOOGLE_DRIVE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"
+STORAGE_PRIMARY_SHARED_DRIVE_ID = ""
+STORAGE_PRIMARY_SHARED_DRIVE_NAME = "EKODI Development"
+ALLOWED_ORIGINS = "https://ekodi-shared-site-staging.ekodi-development.workers.dev,https://ekodi-platform-development.ekodi-development.workers.dev,https://ekodi-my-staging.ekodi-development.workers.dev"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[ratelimits]]
+name = "SENSITIVE_RATE_LIMITER"
+namespace_id = "3401"
+  [ratelimits.simple]
+  limit = 90
+  period = 60
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth-development"
+database_id = "790a8551-cdb2-4dbf-bfcc-a46d61b62766"
+migrations_dir = "migrations"
