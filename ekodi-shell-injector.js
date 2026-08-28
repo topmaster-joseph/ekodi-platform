@@ -1,4 +1,5 @@
 import { EKODI_SERVICE_MANIFEST, serviceForId, serviceForHost as manifestServiceForHost } from './ekodi-service-manifest.js';
+import { renderEkodiUserFooter } from './config/user-footer.js';
 
 const SHELL_ORIGIN='https://shell.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
@@ -9,7 +10,6 @@ const USER_SURFACES=new Set(['public','workspace']);
 const MY_SERVICE_ID='my';
 const USER_UI_VERSION='v1';
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
-const USER_UI_FOOTER=`<footer class="ekodi-user-ui-footer" data-ekodi-user-footer="${USER_UI_VERSION}" data-ekodi-legal-footer="user-shell-v1" aria-label="EKODI 운영 및 법적 고지 · Operator and legal information"><div class="ekodi-user-ui-footer__inner"><strong class="ekodi-user-ui-footer__brand">EKODI · EKODIBIZ</strong><div class="ekodi-user-ui-footer__business"><span>에코디비즈 · EKODIBIZ</span><span>대표 · Representative 정찬균</span><span>사업자등록번호 · BRN 213-13-01959</span></div><div class="ekodi-user-ui-footer__address">전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층 · Contact <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></div><nav class="ekodi-user-ui-footer__links" aria-label="법적 고지 · Legal"><a href="https://ekodi.kr/privacy">개인정보처리방침 · Privacy</a><a href="https://ekodi.kr/terms">이용약관 · Terms</a><a href="mailto:ekodibiz@gmail.com">문의 · Contact</a></nav><div class="ekodi-user-ui-footer__copyright">© 2026 EKODI · EKODIBIZ. All rights reserved.</div></div></footer>`;
 const SPECIAL_HOST_ALIASES=Object.freeze({
   'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'
 });
@@ -94,7 +94,7 @@ class UserHeaderAdopter{
 }
 class UserChromeInjector{
   constructor(serviceId){this.serviceId=serviceId;}
-  element(element){element.prepend(fallbackHeader(this.serviceId),{html:true});element.append(USER_UI_FOOTER,{html:true});}
+  element(element){element.prepend(fallbackHeader(this.serviceId),{html:true});element.append(renderEkodiUserFooter(),{html:true});}
 }
 
 export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
