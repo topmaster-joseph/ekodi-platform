@@ -27,6 +27,8 @@ jobs:
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
             .github/workflows/ci.yml \
+            .github/workflows/deploy-development.yml \
+            .github/workflows/supabase-local-ci.yml \
             .github/workflows/deploy-control-api.yml \
             .github/workflows/backup-ekodi-core.yml \
             .github/workflows/verify-ekodi-core-completion.yml \
