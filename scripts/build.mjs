@@ -12,6 +12,14 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 
+const [browserDiagnosticsBaseJs, deviceWakeAdminJs] = await Promise.all([
+  readFile(`${output}device-browser-diagnostics.js`, 'utf8'),
+  readFile(`${root}device-wake-admin.js`, 'utf8'),
+]);
+if (!browserDiagnosticsBaseJs.includes('서버로 업로드하지 않습니다')) throw new Error('Browser diagnostics local-only marker missing');
+if (!deviceWakeAdminJs.includes('원격 전원 · 작업 자동복귀')) throw new Error('Device Wake admin marker missing');
+await writeFile(`${output}device-browser-diagnostics.js`, `${browserDiagnosticsBaseJs}\n${deviceWakeAdminJs}\n`);
+
 const [aiOpsBaseJs, userAiTierPanelJs] = await Promise.all([
   readFile(`${output}ai-ops-admin.js`, 'utf8'),
   readFile(`${root}user-ai-tier-panel.js`, 'utf8'),
