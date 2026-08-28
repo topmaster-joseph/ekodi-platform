@@ -62,7 +62,7 @@ permissions:
 
 # All Conversation-related D1 and Worker changes move through one ordered workflow.
 concurrency:
-  group: ekodi-conversation-release
+  group: ${{ github.event_name == 'pull_request' && format('ekodi-conversation-pr-{0}', github.event.pull_request.number) || 'ekodi-conversation-release' }}
   cancel-in-progress: false
 
 env:

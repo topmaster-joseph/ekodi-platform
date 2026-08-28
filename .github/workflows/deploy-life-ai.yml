@@ -86,6 +86,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source scripts/access-aware-staging.sh
+          access_aware_staging_start wrangler.life.staging.toml "$STAGING_URL" 8790
+          STAGING_URL="$STAGING_VERIFY_URL"
+          trap access_aware_staging_stop EXIT
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/life-stage-h -o /tmp/life-stage.html -w '%{http_code}' --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/life-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)

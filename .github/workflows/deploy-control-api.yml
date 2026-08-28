@@ -131,7 +131,7 @@ permissions:
 # Generic Control-plane release lane. Conversation changes are owned by the
 # Release EKODI Conversation Foundation orchestrator.
 concurrency:
-  group: ekodi-control-api-release
+  group: ${{ github.event_name == 'pull_request' && format('ekodi-control-api-pr-{0}', github.event.pull_request.number) || 'ekodi-control-api-release' }}
   cancel-in-progress: false
 
 env:
