@@ -18,7 +18,7 @@ on:
       - '.github/workflows/deploy-marketing-admin-console.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ekodi-shared-site-worker-production
@@ -115,3 +115,30 @@ jobs:
             sleep 4
           done
           exit 1
+
+      - name: Record verified production receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deploy/receipts
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const receipt = {
+            service: 'marketing-admin-posting-status',
+            status: 'verified',
+            commit: process.env.GITHUB_SHA,
+            verifiedAt: new Date().toISOString(),
+            url: 'https://admin.ekodi.kr/marketing-ai-admin.js',
+            markers: ['POSTING LEDGER', '포스팅 현황'],
+          };
+          fs.writeFileSync('deploy/receipts/marketing-admin-posting-status.json', JSON.stringify(receipt, null, 2) + '\n');
+          NODE
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deploy/receipts/marketing-admin-posting-status.json
+          if git diff --cached --quiet; then
+            echo 'Production receipt unchanged.'
+            exit 0
+          fi
+          git commit -m 'chore(marketing): record posting status deployment [skip ci]'
+          git push origin HEAD:main
