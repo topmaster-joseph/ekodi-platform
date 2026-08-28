@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <meta name="description" content="EKODI 서비스 공통 Google 계정 통합 인증" />
+  <meta name="description" content="EKODI 서비스 공통 통합 인증 및 고유 EKODI ID" />
   <title>EKODI 로그인</title>
   <script>
     (()=>{
@@ -41,17 +41,17 @@
     <section class="intro">
       <span class="eyebrow">EKODI IDENTITY</span>
       <h1>한 번 로그인하고,<br>내 공간으로 이동합니다.</h1>
-      <p>Google 계정은 본인확인에 사용하고, 로그인 후에는 개인·사업장·단체 Workspace를 중심으로 이동합니다. 연결된 Google 계정 목록은 기본 화면에서 숨기고 계정관리에서만 다룹니다.</p>
+      <p>외부 로그인 수단은 본인확인용 모듈로 사용하고, 서비스 안에서는 하나의 고유 EKODI ID로 연결됩니다. 현재 사용 가능한 로그인 수단만 표시되며, 새 공급자는 기존 서비스 수정 없이 인증 허브에서 추가할 수 있습니다.</p>
     </section>
 
     <section class="auth-card">
       <div class="service-line"><div><small>접속 서비스</small><strong id="serviceName">EKODI</strong></div><span id="serviceBadge">인증 필요</span></div>
 
       <div id="signedOut">
-        <div id="googleButtonHost" class="google-button-host" aria-label="Google 계정 인증"></div>
+        <div id="googleButtonHost" class="google-button-host" aria-label="현재 사용 가능한 로그인 수단"></div>
         <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>다시 시도</span></button>
         <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
-        <p class="micro" id="signedOutCopy">EKODI에서 처음 본인을 확인할 때만 Google 로그인이 필요합니다. 이후에는 통합 로그인 상태를 재사용합니다.</p>
+        <p class="micro" id="signedOutCopy">현재 활성화된 로그인 수단으로 본인을 확인하면 고유 EKODI ID와 연결되고, 이후에는 통합 로그인 상태를 재사용합니다.</p>
         <div id="authStatus" class="notice">로그인 상태를 확인하고 있습니다.</div>
       </div>
 
@@ -66,7 +66,7 @@
         </section>
 
         <section id="identityPanel" class="subpanel hide" aria-label="연결된 로그인 계정">
-          <div class="subpanel-head"><div><small>LOGIN IDENTITIES</small><strong>연결 계정 관리</strong></div><button id="addGoogleAccount" class="quiet" type="button">Google 계정 추가</button></div>
+          <div class="subpanel-head"><div><small>LOGIN IDENTITIES</small><strong>로그인 수단 관리</strong></div><button id="addGoogleAccount" class="quiet" type="button">Google 계정 추가</button></div>
           <div id="linkedAccounts" class="linked-accounts"></div>
           <div id="linkGoogleButtonHost" class="google-button-host compact hide"></div>
           <div id="identityLinkStatus" class="notice hide"></div>
@@ -106,12 +106,12 @@
     </section>
 
     <section class="principles" aria-label="인증 원칙">
-      <div><b>One Login</b><span>최초 1회 본인확인</span></div>
-      <div><b>Workspace</b><span>개인·상가·단체 중심 이동</span></div>
+      <div><b>One Identity</b><span>고유 EKODI ID 중심</span></div>
+      <div><b>Login Adapters</b><span>외부 로그인 수단 모듈화</span></div>
       <div><b>Permission</b><span>공간별 권한 자동 적용</span></div>
     </section>
   </main>
-  <footer>EKODI Platform · 로그인은 한 번, 실제 이용은 Workspace와 권한을 기준으로 합니다.</footer>
+  <footer>EKODI Platform · 로그인 수단은 바뀌어도, 내 EKODI ID와 공간·권한은 그대로 유지됩니다.</footer>
   <script type="module" src="/auth-router.js?v=20260826-universal-sso-1"></script>
 </body>
 </html>
