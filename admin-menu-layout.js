@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const [{ adminMenuOrder }, { mountAdminSidebar }] = await Promise.all([
+const [{ adminMenuOrder, getAdminMenuItem }, { mountAdminSidebar }] = await Promise.all([
   import('./admin-menu-registry.js'),
   import('./admin-sidebar.js'),
 ]);
@@ -94,6 +94,8 @@ function activatePanel(section) {
     else if (!panel.hidden) panel.hidden = true;
   }
   for (const item of allNavItems()) item.classList.toggle('active', !isInternalNav(item) && sectionOf(item) === section);
+  const parentSection = getAdminMenuItem(section)?.mergedInto || '';
+  if (parentSection) navItemFor(parentSection)?.classList.add('active');
   syncTitle(section);
   const hash = CANONICAL_HASH.get(section);
   if (hash && location.hash !== hash) history.replaceState(null, '', hash);
