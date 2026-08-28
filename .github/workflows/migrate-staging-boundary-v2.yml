@@ -33,9 +33,11 @@ jobs:
           root=Path('.github/workflows')
           self_name='migrate-staging-boundary-v2.yml'
           dev_account='46aad4738793fbaca88574832a2ccc0f'
-          dev_secret='${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}'
-          prod_secret='${{ secrets.CLOUDFLARE_API_TOKEN }}'
-          prod_account='${{ secrets.CLOUDFLARE_ACCOUNT_ID }}'
+          expr_open='$'+'{{'
+          expr_close='}'+'}'
+          dev_secret=expr_open+' secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN '+expr_close
+          prod_secret=expr_open+' secrets.CLOUDFLARE_API_TOKEN '+expr_close
+          prod_account=expr_open+' secrets.CLOUDFLARE_ACCOUNT_ID '+expr_close
           prod_ns='topmaster-joseph.workers.dev'
           dev_ns='ekodi-development.workers.dev'
 
@@ -74,7 +76,6 @@ jobs:
                   else: production_before[name]=block
               if not targets: continue
 
-              # Work from bottom so insertions cannot invalidate earlier ranges.
               for i,j,name in reversed(ranges):
                   if name not in targets: continue
                   block=lines[i:j]
@@ -99,7 +100,6 @@ jobs:
 
               new='\n'.join(lines)+'\n'
               new_lines=new.splitlines()
-              # Production/non-staging jobs must remain byte-for-byte identical.
               for i,j,name in job_ranges(new_lines):
                   if name in production_before:
                       after='\n'.join(new_lines[i:j])
@@ -120,8 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          # Reuse the repository's authoritative audit implementation instead of duplicating policy.
-          import re, subprocess
+          import re
           text=open('.github/workflows/cloudflare-boundary-audit.yml',encoding='utf-8').read()
           m=re.search(r"python - <<'PY'\n([\s\S]*?)\n          PY",text)
           if not m: raise SystemExit('cannot extract Cloudflare boundary audit')
