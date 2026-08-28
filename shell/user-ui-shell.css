@@ -1,0 +1,317 @@
+/* EKODI shared user chrome
+ * Public/workspace header + footer only.
+ * Service body/hero/card design remains service-owned.
+ * Served from shell.ekodi.kr so strict service CSPs can keep inline styles disabled.
+ */
+
+html[data-ekodi-user-ui] {
+  --ekodi-user-chrome-bg: rgba(250, 250, 247, .96);
+  --ekodi-user-chrome-text: #18251d;
+  --ekodi-user-chrome-muted: #536158;
+  --ekodi-user-chrome-link: #315d48;
+  --ekodi-user-chrome-line: rgba(23, 33, 28, .12);
+  --ekodi-user-header-fallback-height: 64px;
+}
+
+/* Server fallback. It is present from the first HTML response, before JS boots. */
+.ekodi-user-ui-fallback-header {
+  position: sticky;
+  top: 0;
+  z-index: 2147481900;
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--ekodi-user-chrome-line);
+  background: var(--ekodi-user-chrome-bg);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--ekodi-user-chrome-text);
+  font: 14px/1.4 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+.ekodi-user-ui-fallback-header__inner {
+  width: min(1180px, calc(100% - 32px));
+  min-height: var(--ekodi-user-header-fallback-height);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.ekodi-user-ui-fallback-header__brand {
+  color: inherit;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-decoration: none;
+}
+
+.ekodi-user-ui-fallback-header__context,
+.ekodi-user-ui-header-fallback__context {
+  min-width: 0;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ekodi-user-ui-fallback-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ekodi-user-ui-fallback-header__nav a,
+.ekodi-user-ui-header-fallback__my {
+  color: var(--ekodi-user-chrome-link);
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.ekodi-user-ui-fallback-header a:focus-visible,
+.ekodi-user-ui-header-fallback a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* If a service already owns a valid header, adopt it and suppress the fallback. */
+body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.ekodi-user-ui-header-fallback)) > .ekodi-user-ui-fallback-header {
+  display: none !important;
+}
+
+/* Runtime adoption. These rules intentionally live in this external stylesheet.
+ * Do not move them into <style> blocks: many services use strict style-src CSP.
+ */
+.ekodi-user-ui-header {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  z-index: 2147482000 !important;
+  box-sizing: border-box !important;
+  min-height: var(--ekodi-user-header-min-height, var(--ekodi-user-header-fallback-height)) !important;
+  padding-top: calc(var(--ekodi-user-header-base-padding-top, 0px) + env(safe-area-inset-top, 0px)) !important;
+  transform: none !important;
+  isolation: isolate;
+}
+
+.ekodi-user-ui-header .ekodi-user-ui-header-center {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: max-content !important;
+  max-width: min(66vw, 760px) !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  text-align: center !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 1;
+}
+
+.ekodi-user-ui-header-fallback {
+  min-height: var(--ekodi-user-header-fallback-height) !important;
+  border-bottom: 1px solid var(--ekodi-user-chrome-line) !important;
+  background: var(--ekodi-user-chrome-bg) !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--ekodi-user-chrome-text) !important;
+  font: 14px/1.4 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif !important;
+}
+
+.ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
+  width: min(1180px, calc(100% - 32px));
+  min-height: var(--ekodi-user-header-fallback-height);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.ekodi-user-ui-header-fallback a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ekodi-user-ui-header-fallback__brand {
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+[data-ekodi-user-header-spacer] {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) !important;
+  height: var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height));
+  flex: 0 0 var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  grid-column: 1 / -1 !important;
+}
+
+html[data-ekodi-user-ui] {
+  scroll-padding-top: calc(var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) + 12px);
+}
+
+/* One shared legal/operator footer, in normal document flow. */
+.ekodi-user-ui-footer {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 32px;
+  border-top: 1px solid var(--ekodi-user-chrome-line);
+  background: rgba(250, 250, 247, .94);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--ekodi-user-chrome-muted);
+  font: 13px/1.65 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  text-align: left;
+}
+
+.ekodi-user-ui-footer__inner {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 28px;
+  display: grid;
+  gap: 7px;
+}
+
+.ekodi-user-ui-footer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ekodi-user-ui-footer__brand {
+  color: var(--ekodi-user-chrome-text);
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.ekodi-user-ui-footer__links,
+.ekodi-user-ui-footer__business {
+  display: flex;
+  gap: 5px 12px;
+  flex-wrap: wrap;
+}
+
+.ekodi-user-ui-footer__links {
+  gap: 14px;
+}
+
+.ekodi-user-ui-footer a {
+  color: var(--ekodi-user-chrome-link);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.ekodi-user-ui-footer a:hover,
+.ekodi-user-ui-footer a:focus-visible {
+  text-decoration: underline;
+}
+
+.ekodi-user-ui-footer a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.ekodi-user-ui-footer__address {
+  word-break: keep-all;
+}
+
+.ekodi-user-ui-footer__copyright {
+  margin-top: 2px;
+  color: #738077;
+}
+
+.ekodi-user-ui-footer__scope {
+  margin-top: 3px;
+  color: #829087;
+  font-size: 12px;
+}
+
+[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer) {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .ekodi-user-ui-header .ekodi-user-ui-header-center {
+    max-width: 54vw !important;
+  }
+}
+
+@media (max-width: 640px) {
+  html[data-ekodi-user-ui] {
+    --ekodi-user-header-fallback-height: 58px;
+  }
+
+  .ekodi-user-ui-fallback-header__inner,
+  .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
+    width: min(100% - 24px, 1180px);
+    gap: 10px;
+  }
+
+  .ekodi-user-ui-fallback-header__context,
+  .ekodi-user-ui-header-fallback__context {
+    font-size: 13px;
+  }
+
+  .ekodi-user-ui-fallback-header__nav,
+  .ekodi-user-ui-header-fallback__my {
+    font-size: 12px;
+  }
+
+  .ekodi-user-ui-footer__inner {
+    width: min(100% - 24px, 1180px);
+    padding: 20px 0 24px;
+  }
+
+  .ekodi-user-ui-footer__top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ekodi-user-ui-footer__links {
+    gap: 8px 12px;
+  }
+
+  .ekodi-user-ui-footer__business {
+    display: grid;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ekodi-user-ui-header .ekodi-user-ui-header-center {
+    max-width: 48vw !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-ekodi-user-ui] {
+    --ekodi-user-chrome-bg: rgba(16, 21, 18, .96);
+    --ekodi-user-chrome-text: #edf4ef;
+    --ekodi-user-chrome-muted: #adb9b1;
+    --ekodi-user-chrome-link: #9ed0b4;
+    --ekodi-user-chrome-line: rgba(255, 255, 255, .12);
+  }
+
+  .ekodi-user-ui-footer {
+    background: rgba(16, 21, 18, .94);
+  }
+
+  .ekodi-user-ui-footer__copyright,
+  .ekodi-user-ui-footer__scope {
+    color: #87958c;
+  }
+}
