@@ -1,15 +1,18 @@
 {
-  "version": 1,
-  "principleApprovalId": "ekodi-domain-site-v1-2026-08-28",
+  "version": 2,
+  "principleApprovalId": "ekodi-domain-site-v2-2026-08-28",
   "principle": {
-    "standaloneSubdomainCategories": ["core", "common_service", "professional_ai"],
-    "spaceAddressing": "parent-service-path",
-    "publicSpacePattern": "https://ekodi.kr/{space}",
-    "privateSpacePattern": "https://my.ekodi.kr/{space}",
-    "professionalServicePattern": "https://{service}.ekodi.kr/{space}",
-    "legacyDomainPolicy": "alias-or-permanent-redirect",
+    "standaloneSubdomainCategories": ["core", "common_service", "gateway"],
+    "spaceAddressing": "root-path",
+    "publicSpacePattern": "https://ekodi.kr/{space}/",
+    "privateSpacePattern": "https://my.ekodi.kr/{space}/",
+    "professionalAiAddressing": "root-ai-path",
+    "professionalAiPattern": "https://ekodi.kr/ai/{ai}/",
+    "professionalAiSpacePattern": "https://ekodi.kr/ai/{ai}/{space}/",
+    "legacyDomainPolicy": "compatibility-runtime-until-path-equivalence-then-permanent-redirect",
     "siteUnit": "space-plus-services",
-    "tenantSubdomainCreation": false
+    "tenantSubdomainCreation": false,
+    "professionalAiSubdomainCreation": false
   },
   "standaloneServices": [
     {"id":"root","category":"core","url":"https://ekodi.kr/"},
@@ -20,8 +23,14 @@
     {"id":"drive","category":"common_service","url":"https://drive.ekodi.kr/"},
     {"id":"mail","category":"common_service","url":"https://mail.ekodi.kr/"},
     {"id":"live","category":"common_service","url":"https://live.ekodi.kr/"},
-    {"id":"ai-gateway","category":"professional_ai","url":"https://ai.ekodi.kr/"},
-    {"id":"marketing","category":"professional_ai","url":"https://marketing.ekodi.kr/"}
+    {"id":"ai-gateway","category":"gateway","url":"https://ai.ekodi.kr/"}
+  ],
+  "professionalAis": [
+    {"id":"marketing","name":"에코디 마케팅AI","canonicalUrl":"https://ekodi.kr/ai/marketing/","runtimeUrl":"https://marketing.ekodi.kr/","runtimeStatus":"compatibility-execution-alias"},
+    {"id":"creator","name":"에코디 크리에이터 AI","canonicalUrl":"https://ekodi.kr/ai/creator/","runtimeUrl":"https://author.ekodi.kr/","runtimeStatus":"compatibility-execution-alias"},
+    {"id":"life","name":"오늘의 질문 · 인생AI","canonicalUrl":"https://ekodi.kr/ai/life/","runtimeUrl":"https://life.ekodi.kr/","runtimeStatus":"compatibility-execution-alias"},
+    {"id":"energy","name":"에코디 에너지 AI","canonicalUrl":"https://ekodi.kr/ai/energy/","runtimeUrl":"https://energy.ekodi.kr/","runtimeStatus":"compatibility-execution-alias"},
+    {"id":"support","name":"에코디 지원사업 AI","canonicalUrl":"https://ekodi.kr/ai/support/","runtimeUrl":"https://support.ekodi.kr/","runtimeStatus":"compatibility-execution-alias"}
   ],
   "spaces": [
     {"slug":"church","name":"에코디교회","canonicalUrl":"https://ekodi.kr/church/","legacyUrls":["https://church.ekodi.kr/"]},
