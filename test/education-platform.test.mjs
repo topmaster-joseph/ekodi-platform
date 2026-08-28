@@ -46,7 +46,7 @@ test('Education is an isolated Worker with Shell and admin handoff',async()=>{
 
 test('Admin Campus observes Education as live, not planned',async()=>{
   const campus=await read('campus-actions.js');
-  assert.match(campus,/name: 'EKODI Education', domain: 'edu\.ekodi\.kr'/);
+  assert.match(campus,/name: '에코디교육', domain: 'edu\.ekodi\.kr'/);
   assert.doesNotMatch(campus,/domain: 'edu\.ekodi\.kr'[^\n]*lifecycle: 'planned'/);
 });
 
