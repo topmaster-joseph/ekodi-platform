@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -10,14 +10,20 @@
     "progressiveAdoption": true,
     "serviceVisualIdentityPreserved": true,
     "mobileAndDesktopSemanticsMatch": true,
-    "noDuplicatedHeaderOrFooter": true
+    "noDuplicatedHeaderOrFooter": true,
+    "subserviceInheritance": true,
+    "fallbackHeaderWhenMissing": true,
+    "legacyCommonFooterSuppressed": true,
+    "rootInternalPathsExcluded": true
   },
   "header": {
     "owner": "shared-shell",
     "strategy": "adopt-existing-first",
+    "fallback": "shared-shell-header-when-missing",
     "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path"],
     "localNavigation": "service-owned",
     "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed"],
+    "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
     "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"]
   },
   "footer": {
@@ -38,5 +44,12 @@
     "copyright": "© 2026 EKODI · EKODIBIZ. All rights reserved.",
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true
+  },
+  "inheritance": {
+    "hostRule": "all public/workspace service hosts inherit the manifest service shell",
+    "pathRule": "all subordinate paths inherit their parent service shell",
+    "rootServiceRule": "ekodi.kr/<service>/... inherits that service when the route is a user surface",
+    "rootPolicyPages": ["/privacy", "/terms"],
+    "excludedRootPrefixes": ["/admin"]
   }
 }
