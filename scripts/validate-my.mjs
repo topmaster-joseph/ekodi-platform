@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 
 const files={
   html:'my/index.html',
   app:'my/app.js',
+  accessContext:'my/access-context.js',
   userAi:'my/user-ai.js',
   userAiUi:'my/user-ai-ui.js',
   userAiProviderUi:'my/user-ai-provider-ui.js',
@@ -29,6 +31,8 @@ const content=Object.fromEntries(await Promise.all(Object.entries(files).map(asy
 function must(key,marker){if(!content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} missing ${marker}`)}
 function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} contains forbidden ${marker}`)}
 
+execFileSync(process.execPath,['--check',files.accessContext],{stdio:'inherit'});
+
 must('html','My EKODI');
 must('html','data-ekodi-ui="USER"');
 must('html','EKODI USER AI');
@@ -47,6 +51,13 @@ must('app','creator_portfolio_items');
 must('app','current_site_access');
 must('app','current_site_workspaces');
 must('app','ekodi_token');
+must('accessContext','current_site_access');
+must('accessContext','current_site_workspaces');
+must('accessContext','요청한 공간을 바로 열 수 없습니다.');
+must('accessContext','다른 공간으로 임의 전환하지 않습니다.');
+must('accessContext','target.origin!==base.origin');
+must('accessContext','Google로 무료 시작');
+must('accessContext','minimumTier');
 must('userAi',"name:'EKODI User AI'");
 must('userAi',"role:'개인 AI 비서'");
 must('userAi',"boundary:'suggest-and-handoff'");
@@ -98,12 +109,17 @@ must('deviceCareCss','.device-care-type-grid');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
+must('worker','ACCESS_CONTEXT_TAG');
+must('worker','/access-context.js');
+must('worker','accessContextGuidance:true');
 must('prod','my.ekodi.kr');
 must('prod','DATA_ENABLED = "true"');
 must('staging','DATA_ENABLED = "false"');
 mustNot('staging','my.ekodi.kr');
 must('auth',"'my':{name:'My EKODI'");
 must('auth',"returnTo:'https://my.ekodi.kr/'");
+must('auth',"target.searchParams.set('return_to',RETURN_TO)");
+must('auth',"target.searchParams.set('workspace',REQUESTED_WORKSPACE)");
 must('router','isRegistryUserService');
 must('router',"site==='portal'||isRegistryUserService");
 must('router','await loadClientAuth()');
@@ -120,4 +136,4 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: USER UI, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
+console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');
