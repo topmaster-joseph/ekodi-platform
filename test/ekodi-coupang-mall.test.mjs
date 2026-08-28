@@ -41,31 +41,53 @@ test('official storefront canonical is ekodi.kr/mall', () => {
   assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/mall">/);
 });
 
-test('affiliate and seller disclosures appear before the product catalog, not in the footer', () => {
-  const noticeIndex = html.indexOf('class="commerce-notice"');
+test('affiliate and seller disclosures are centered inside the header and absent from footer', () => {
+  const headerIndex = html.indexOf('<header class="site-header">');
+  const noticeIndex = html.indexOf('class="header-notice"');
+  const headerEnd = html.indexOf('</header>');
   const catalogIndex = html.indexOf('class="catalog"');
   const footerIndex = html.indexOf('<footer>');
-  assert.ok(noticeIndex > 0 && noticeIndex < catalogIndex);
-  assert.ok(catalogIndex > 0 && catalogIndex < footerIndex);
-  assert.match(html, /쿠팡 파트너스 활동의 일환으로/);
-  assert.match(html, /판매·주문·결제·배송·교환·환불/);
+  assert.ok(headerIndex >= 0 && headerIndex < noticeIndex);
+  assert.ok(noticeIndex > headerIndex && noticeIndex < headerEnd);
+  assert.ok(headerEnd < catalogIndex && catalogIndex < footerIndex);
+  assert.match(html, /상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다\./);
+  assert.match(html, /쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다\./);
   const footer = html.slice(footerIndex, html.indexOf('</footer>') + '</footer>'.length);
   assert.doesNotMatch(footer, /쿠팡 파트너스 활동의 일환으로/);
   assert.doesNotMatch(footer, /판매·주문·결제·배송·교환·환불/);
-  assert.match(css, /\.commerce-notice/);
+  assert.match(css, /\.header-notice\{[^}]*text-align:center/);
   assert.match(css, /footer\{[^}]*text-align:center/);
 });
 
-test('product cards support real images, prices, shipping badges and safe outbound clicks', () => {
+test('product cards open basic information before outbound purchase', () => {
   assert.match(js, /priceKrw/);
   assert.match(js, /imageUrl/);
   assert.match(js, /isRocket/);
   assert.match(js, /isFreeShipping/);
-  assert.match(js, /상품보기/);
-  assert.match(js, /sponsored noopener noreferrer/);
+  assert.match(js, /product-media-trigger/);
+  assert.match(js, /openProductDialog/);
+  assert.match(js, /상품정보 보기/);
+  assert.match(html, /id="productDialog"/);
+  assert.match(html, /id="productDialogBuy"/);
+  assert.match(html, />구매하기<\/a>/);
+  assert.match(html, /rel="sponsored noopener noreferrer"/);
+  assert.match(js, /dialogBuy\.href = product\.clickUrl/);
   assert.match(js, /FileReader/);
   assert.match(css, /product-media/);
+  assert.match(css, /product-dialog/);
   assert.match(css, /grid-template-columns:repeat\(4/);
+});
+
+test('catalog supports registered popularity and price sorting', () => {
+  assert.match(html, /<option value="registered">등록순<\/option>/);
+  assert.match(html, /<option value="popular">인기순<\/option>/);
+  assert.match(html, /<option value="price-asc">가격 낮은순<\/option>/);
+  assert.match(html, /<option value="price-desc">가격 높은순<\/option>/);
+  assert.match(js, /selectedAt/);
+  assert.match(js, /popularityRank/);
+  assert.match(js, /sortProducts/);
+  assert.match(js, /state\.sort/);
+  assert.match(css, /\.sort-box select/);
 });
 
 test('mall has no fake or generic fallback products', () => {
