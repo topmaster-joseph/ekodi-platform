@@ -1,0 +1,60 @@
+name: Cloudflare Production Usage Diagnose
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-production-usage-diagnose.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Enforce read-only main diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Query current UTC-day Workers usage
+        shell: bash
+        run: |
+          set -euo pipefail
+          start="$(date -u +%Y-%m-%dT00:00:00.000Z)"
+          end="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          jq -n --arg account "$CLOUDFLARE_ACCOUNT_ID" --arg start "$start" --arg end "$end" '{
+            query:"query Usage($accountTag: string, $datetimeStart: string, $datetimeEnd: string) { viewer { accounts(filter:{accountTag:$accountTag}) { workersInvocationsAdaptive(limit:10000, filter:{datetime_geq:$datetimeStart, datetime_leq:$datetimeEnd}) { dimensions { datetime scriptName status } sum { requests subrequests errors } } } } }",
+            variables:{accountTag:$account,datetimeStart:$start,datetimeEnd:$end}
+          }' > /tmp/query.json
+          curl -fsS 'https://api.cloudflare.com/client/v4/graphql' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            --data @/tmp/query.json > /tmp/usage.json
+          jq -e '.errors == null' /tmp/usage.json >/dev/null
+          echo "Window: $start .. $end"
+          jq -r '[.data.viewer.accounts[0].workersInvocationsAdaptive[] | {script:(.dimensions.scriptName // "unknown"), requests:(.sum.requests // 0), subrequests:(.sum.subrequests // 0), errors:(.sum.errors // 0)}] | group_by(.script) | map({script:.[0].script,requests:(map(.requests)|add),subrequests:(map(.subrequests)|add),errors:(map(.errors)|add)}) | sort_by(.requests) | reverse | .[] | "\(.requests) requests | \(.subrequests) subrequests | \(.errors) errors | \(.script)"' /tmp/usage.json
+          total=$(jq '[.data.viewer.accounts[0].workersInvocationsAdaptive[].sum.requests // 0] | add // 0' /tmp/usage.json)
+          echo "TOTAL_WORKER_REQUESTS=$total"
+          echo "TOTAL_WORKER_REQUESTS=$total" >> "$GITHUB_ENV"
+      - name: Interpret free-plan quota pressure
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Current UTC-day sampled/aggregated Worker requests: $TOTAL_WORKER_REQUESTS"
+          if [ "$TOTAL_WORKER_REQUESTS" -ge 90000 ]; then
+            echo 'CRITICAL: usage is at or above 90% of the Workers Free 100,000 requests/day quota.'
+          elif [ "$TOTAL_WORKER_REQUESTS" -ge 70000 ]; then
+            echo 'WARNING: usage is above 70% of the Workers Free daily request quota.'
+          else
+            echo 'Usage reported by Analytics is below 70% of the Free daily request quota.'
+          fi

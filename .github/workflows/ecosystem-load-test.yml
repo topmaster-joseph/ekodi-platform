@@ -20,17 +20,57 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      EKODI_ALLOW_PRODUCTION_LOAD: MANUAL_APPROVED
       LOAD_TARGETS_JSON: >-
         [{"label":"root","url":"https://ekodi.kr/"},{"label":"admin","url":"https://admin.ekodi.kr/"},{"label":"api-health","url":"https://api.ekodi.kr/health"},{"label":"biz","url":"https://biz.ekodi.kr/"},{"label":"marketing","url":"https://marketing.ekodi.kr/"},{"label":"church","url":"https://church.ekodi.kr/"},{"label":"lab","url":"https://lab.ekodi.kr/"},{"label":"support","url":"https://support.ekodi.kr/"}]
       LOAD_CONCURRENCY: '1'
       LOAD_REQUESTS_PER_STAGE: '5'
+      LOAD_WARMUP_REQUESTS: '1'
       LOAD_TIMEOUT_MS: '5000'
       LOAD_P95_BUDGET_MS: '1500'
       LOAD_INCIDENT_P95_MS: '3000'
       LOAD_ERROR_RATE_BUDGET: '0.05'
     steps:
-      - name: Block production load from development branch
+      - name: Enforce approved production boundary
         shell: bash
         run: |
-          echo '::error::Production load testing is disabled from the development branch. Use the main-branch manual workflow only.'
-          exit 1
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || {
+            echo '::error::Production load checks are main-only.'
+            exit 1
+          }
+          test "$GITHUB_EVENT_NAME" = 'workflow_dispatch' || {
+            echo '::error::Production load checks are manual-only.'
+            exit 1
+          }
+          echo "Approved reason: ${{ inputs.reason }}"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Run tiny bounded production load check
+        run: node scripts/ecosystem-load-test.mjs
+
+      - name: Publish load summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/ecosystem-load-test.md ]; then
+            cat artifacts/ecosystem-load-test.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Load test did not produce a report.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload load report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecosystem-load-test
+          path: |
+            artifacts/ecosystem-load-test.json
+            artifacts/ecosystem-load-test.md
+          if-no-files-found: warn
+          retention-days: 14

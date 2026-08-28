@@ -8,7 +8,7 @@ on:
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
   push:
-    branches: [development]
+    branches: [main, development]
     paths:
       - '.github/workflows/**'
       - 'scripts/ecosystem-load-test.mjs'
@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Enforce development Cloudflare and production-probe boundaries
+      - name: Enforce Cloudflare development production and load boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -39,10 +39,14 @@ jobs:
           dev = (root / 'deploy-development.yml').read_text(encoding='utf-8')
           required = [
               'branches: [development]',
+              'paths-ignore:',
               'environment: development',
               'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN',
               dev_account,
               'refs/heads/development',
+              'verify-development:',
+              'needs: validate-and-deploy',
+              'ekodi-development.workers.dev',
           ]
           for marker in required:
               if marker not in dev:
@@ -59,37 +63,52 @@ jobs:
               if staging_trigger and uses_prod and cloudflare_write:
                   errors.append(f'{path.name}: staging branch can write with production Cloudflare credentials')
               if path.name not in {'ecosystem-load-test.yml', 'cloudflare-boundary-audit.yml'} and 'node scripts/ecosystem-load-test.mjs' in text:
-                  errors.append(f'{path.name}: development workflow invokes the production load script')
+                  errors.append(f'{path.name}: production load script may only be invoked by ecosystem-load-test.yml')
+
+          prod_mutator = (root / 'admin-http2-stability.yml').read_text(encoding='utf-8')
+          if 'refs/heads/main' not in prod_mutator or 'workflow_dispatch:' not in prod_mutator:
+              errors.append('admin-http2-stability.yml is not main-only/manual-only')
 
           load_workflow = (root / 'ecosystem-load-test.yml').read_text(encoding='utf-8')
-          if 'Block production load from development branch' not in load_workflow:
-              errors.append('development ecosystem-load-test.yml is missing the fail-closed block')
-          if 'node scripts/ecosystem-load-test.mjs' in load_workflow:
-              errors.append('development ecosystem-load-test.yml must not invoke the load script')
+          load_required = [
+              'workflow_dispatch:',
+              'EKODI_ALLOW_PRODUCTION_LOAD: MANUAL_APPROVED',
+              "LOAD_CONCURRENCY: '1'",
+              "LOAD_REQUESTS_PER_STAGE: '5'",
+              "LOAD_WARMUP_REQUESTS: '1'",
+              "refs/heads/main",
+          ]
+          for marker in load_required:
+              if marker not in load_workflow:
+                  errors.append(f'ecosystem-load-test.yml missing production safety marker: {marker}')
           if re.search(r'^\s{2}(pull_request|push):', load_workflow, flags=re.MULTILINE):
-              errors.append('development ecosystem-load-test.yml must never auto-run')
+              errors.append('ecosystem-load-test.yml must never auto-run on pull_request or push')
 
-          core_verify = (root / 'verify-ekodi-core-completion.yml').read_text(encoding='utf-8')
-          for forbidden in ['ecosystem-load-test.mjs', 'verify:core-production', 'production-readonly:']:
-              # The guard step intentionally names the first two forbidden strings; only reject runnable forms.
-              if forbidden == 'ecosystem-load-test.mjs' and 'run: node scripts/ecosystem-load-test.mjs' in core_verify:
-                  errors.append('development Core verification can run the production load test')
-              elif forbidden == 'verify:core-production' and 'run: npm run verify:core-production' in core_verify:
-                  errors.append('development Core verification can run production verification')
-              elif forbidden == 'production-readonly:' and forbidden in core_verify:
-                  errors.append('development Core verification restored a production job')
+          load_script = Path('scripts/ecosystem-load-test.mjs').read_text(encoding='utf-8')
+          script_required = [
+              "EKODI_ALLOW_PRODUCTION_LOAD === 'MANUAL_APPROVED'",
+              "GITHUB_EVENT_NAME !== 'workflow_dispatch'",
+              "GITHUB_REF !== 'refs/heads/main'",
+              'requestsPerStage > 5',
+              'warmupRequests > 1',
+          ]
+          for marker in script_required:
+              if marker not in load_script:
+                  errors.append(f'ecosystem-load-test.mjs missing fail-closed marker: {marker}')
 
           shell_verify = (root / 'verify-shared-shell-production.yml').read_text(encoding='utf-8')
           shell_gate = "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
+          if 'pull_request:' not in shell_verify:
+              errors.append('verify-shared-shell-production.yml lost PR source-contract validation')
           if shell_verify.count(shell_gate) < 2:
-              errors.append('Shared Shell production jobs are not manual-main gated')
+              errors.append('verify-shared-shell-production.yml production jobs are not manual-main gated')
           if 'seq 1 24' in shell_verify or 'seq 1 30' in shell_verify:
-              errors.append('Shared Shell high-retry production probes were restored')
+              errors.append('verify-shared-shell-production.yml restored high-retry production probes')
           if 'max-parallel: 4' not in shell_verify:
-              errors.append('Shared Shell production matrix is not bounded')
+              errors.append('verify-shared-shell-production.yml missing bounded production matrix parallelism')
 
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Development Cloudflare boundary audit passed with production-probe isolation.')
+          print('Cloudflare boundary audit passed, including isolated development deploy verification and bounded production probes.')
           PY
