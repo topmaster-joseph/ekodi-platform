@@ -74,6 +74,21 @@ test('shared sidebar menu sources ship the retired Operations cleanup', async ()
   assert.match(postbuild, /admin-sidebar\.js/);
 });
 
+test('tax admin subservice reuses the authenticated admin session through an explicit protected handoff', async () => {
+  const registry = await read('admin-menu-registry.js');
+  const runtime = await read('admin-menu-runtime.js');
+  const taxPortal = await read('tax-portal-worker.js');
+  assert.match(registry, /id: 'tax'[\s\S]*href: 'https:\/\/tax\.ekodi\.kr\/'[\s\S]*adminHandoff: true/);
+  assert.match(runtime, /ADMIN_HANDOFF_ALLOWED_TARGETS = new Set\(\['https:\/\/tax\.ekodi\.kr\/'\]\)/);
+  assert.match(runtime, /definition\.adminHandoff === true/);
+  assert.match(runtime, /new URLSearchParams\(\{ ekodi_admin_token: currentToken \}\)/);
+  assert.match(runtime, /auth\.searchParams\.set\('direct', '1'\)/);
+  assert.match(runtime, /window\.location\.assign\(destination\)/);
+  assert.doesNotMatch(runtime, /link\.href\s*=\s*[^;]*ekodi_admin_token/);
+  assert.match(taxPortal, /hp\.get\('ekodi_admin_token'\)/);
+  assert.match(taxPortal, /history\.replaceState/);
+});
+
 test('AI membership admin presents the Core-first execution policy', async () => {
   const panel = await read('user-ai-tier-panel.js');
   assert.match(panel, /Core 우선 · AI 필요 시 자동 선택/);
