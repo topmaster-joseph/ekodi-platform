@@ -5,10 +5,14 @@ import { readFile } from 'node:fs/promises';
 const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
 const authIndex = await readFile(new URL('../auth-site/index.html', import.meta.url), 'utf8');
 const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+const siteConfig = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+
+const criticalAuthAssets = ['/auth.js', '/auth-router.js', '/marketing-auth-hotfix.js', '/auth-workspace-target.js', '/admin-auth.js', '/client-auth.js', '/author-auth.js', '/business-auth.js', '/marketing-onboarding.js', '/membership-ui.js'];
 
 test('critical central auth JavaScript cannot remain stale in the browser or edge cache', () => {
-  for (const asset of ['/auth.js', '/auth-router.js', '/auth-workspace-target.js', '/admin-auth.js', '/client-auth.js', '/author-auth.js', '/business-auth.js']) {
+  for (const asset of criticalAuthAssets) {
     assert.match(worker, new RegExp(`AUTH_CRITICAL_ASSETS[\\s\\S]*?${asset.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`));
+    assert.ok(siteConfig.includes(`"${asset}"`), `${asset} must be Worker-first so candidate and production security headers match`);
   }
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
   assert.match(authIndex, /auth-router\.js\?v=20260826-universal-sso-1/);
