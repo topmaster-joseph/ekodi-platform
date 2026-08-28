@@ -18,15 +18,16 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  STAGING_URL: https://ekodi-books-staging.topmaster-joseph.workers.dev
+  STAGING_URL: https://ekodi-books-staging.ekodi-development.workers.dev
 
 jobs:
   staging:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    environment: development
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -39,10 +40,12 @@ jobs:
           node --check ekodi-shell-injector.js
           npm run validate:books
           grep -Fq "injectEkodiShell(await env.ASSETS.fetch(request), 'books')" books-worker.js
-      - name: Verify Cloudflare credentials
+      - name: Enforce Development account boundary
+        shell: bash
         run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy isolated Books staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.books.staging.toml
       - name: Verify Books staging and Shell
