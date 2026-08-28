@@ -1,11 +1,13 @@
 /* EKODI Admin: bright, readable, flat command surface */
-body.compact-control-center{color-scheme:light;background:#f4f7fb!important;color:#182438!important;font-size:15px;line-height:1.55}
+body.compact-control-center{color-scheme:light;--panel:#fff;--line:#d9e3ec;--text:#182438;--muted:#607287;--blue:#165f9d;--green:#237a54;--amber:#8a6418;background:#f4f7fb!important;color:#182438!important;font-size:15px;line-height:1.55}
 body.compact-control-center .app,body.compact-control-center .app>main,body.compact-control-center .content{background:#f4f7fb!important;color:#182438!important}
 body.compact-control-center .sidebar,body.compact-control-center .topbar{background:#fff!important;color:#182438!important;border-color:#dde6ef!important}
 body.compact-control-center .topbar h1{font-size:22px!important;color:#182438!important}
 body.compact-control-center .nav{min-height:44px!important;color:#405269!important;background:transparent!important;border-radius:11px!important}
 body.compact-control-center .nav span{font-size:14px!important}
 body.compact-control-center .nav:hover,body.compact-control-center .nav.active{background:#edf5ff!important;color:#0b5cab!important}
+body.compact-control-center .side-caption{font-size:10px!important;color:#718297!important}body.compact-control-center .kicker{font-size:11px!important}body.compact-control-center .profile strong{font-size:13px!important}body.compact-control-center .profile small{font-size:11px!important;color:#66798f!important}
+body.compact-control-center .primary,body.compact-control-center .secondary,body.compact-control-center .ghost{font-size:13px!important;min-height:40px!important}
 body.compact-control-center .hero,body.compact-control-center .section,body.compact-control-center .architecture,body.compact-control-center .metrics article,body.compact-control-center .module{background:#fff!important;color:#182438!important;border-color:#dde6ef!important;box-shadow:0 7px 22px rgba(44,62,84,.045)!important}
 body.compact-control-center .hero p:not(.kicker),body.compact-control-center .section-head>p,body.compact-control-center .operations-copy,body.compact-control-center .module p{color:#5f7084!important;font-size:14px!important;line-height:1.55!important}
 
