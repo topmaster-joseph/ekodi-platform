@@ -4,49 +4,43 @@ import { readFile } from 'node:fs/promises';
 
 const cfg = JSON.parse(await readFile(new URL('../config/marketing-tenants.json', import.meta.url), 'utf8'));
 
-test('customer AI workspaces live under ai.ekodi.kr', () => {
-  assert.equal(cfg.domainPattern, '{tenant}.ai.ekodi.kr');
-  assert.equal(cfg.namespace.domain, 'ai.ekodi.kr');
+test('Marketing AI tenants use shared product-hub paths as canonical URLs', () => {
+  assert.equal(cfg.canonicalPattern, 'https://marketing.ekodi.kr/{tenant}/');
+  assert.equal(cfg.namespace.gateway, 'ai.ekodi.kr');
   assert.equal(cfg.namespace.productHub, 'marketing.ekodi.kr');
+  assert.equal(cfg.policy.tenantAddressing, 'parent-service-path');
+  assert.equal(cfg.policy.newTenantSubdomainCreation, false);
   for (const tenant of cfg.tenants) {
-    assert.equal(tenant.domain, `${tenant.tenant}.ai.ekodi.kr`);
+    assert.equal(tenant.canonicalUrl, `https://marketing.ekodi.kr${tenant.canonicalPath}`);
+    assert.ok(tenant.legacyDomains.includes(`${tenant.tenant}.ai.ekodi.kr`));
   }
 });
 
-test('EKODIBIZ is a first-party Marketing AI consumer without a separate customer domain', () => {
-  const biz = cfg.internalConsumers.find((row) => row.id === 'ekodibiz');
-  assert.ok(biz);
-  assert.equal(biz.workspaceType, 'tenant');
-  assert.equal(biz.workspaceKey, 'ekodibiz');
-  assert.equal(biz.entryDomain, cfg.namespace.productHub);
-  assert.equal(biz.templateKey, 'service_b2b');
-  assert.equal(biz.dedicatedEkodiDomain, false);
+test('legacy tenant domains are compatibility aliases, never canonical', () => {
+  for (const tenant of cfg.tenants) {
+    for (const legacy of tenant.legacyDomains) {
+      assert.ok(!tenant.canonicalUrl.includes(legacy));
+    }
+  }
 });
 
-test('organization and store domain entitlements stay separate', () => {
-  assert.equal(cfg.policy.organizationWorkspace.dedicatedEkodiDomain, true);
-  assert.equal(cfg.policy.storeBasic.dedicatedEkodiDomain, false);
-  assert.equal(cfg.policy.storePlus.dedicatedEkodiDomain, true);
-  assert.equal(cfg.policy.storePlus.customDomain, false);
-  assert.equal(cfg.policy.storePro.dedicatedEkodiDomain, true);
-  assert.equal(cfg.policy.storePro.customDomain, true);
-  assert.equal(cfg.policy.storePro.includedCustomDomains, 1);
-});
-
-test('Pro custom domain means mapping a customer-owned hostname, not giving away a domain', () => {
+test('customer-owned custom domains are mappings only', () => {
   assert.equal(cfg.policy.customDomain.ownership, 'customer');
   assert.equal(cfg.policy.customDomain.registrationIncluded, false);
   assert.equal(cfg.policy.customDomain.mappingOnly, true);
 });
 
-test('CGMA organization site is private and separate from its AI workspace', () => {
+test('CGMA follows the same Marketing AI parent-path rule', () => {
   const cgma = cfg.tenants.find((row) => row.tenant === 'cgma');
   assert.ok(cgma);
   assert.equal(cgma.tenantType, 'organization');
-  assert.equal(cgma.visibility, 'private');
-  assert.equal(cgma.privateSiteDomain, 'cgma.ekodi.kr');
-  assert.equal(cgma.publicSiteDomain, undefined);
-  assert.equal(cgma.domain, 'cgma.ai.ekodi.kr');
-  assert.equal(cgma.landingPath, '/market-ai');
-  assert.ok(!cgma.legacyDomains.includes('cgma.ekodi.kr'));
+  assert.equal(cgma.canonicalUrl, 'https://marketing.ekodi.kr/cgma/');
+  assert.ok(cgma.legacyDomains.includes('cgma.ai.ekodi.kr'));
+});
+
+test('EKODIBIZ consumes the shared Marketing AI without a dedicated tenant domain', () => {
+  const biz = cfg.internalConsumers.find((row) => row.id === 'ekodibiz');
+  assert.ok(biz);
+  assert.equal(biz.entryUrl, 'https://marketing.ekodi.kr/biz/');
+  assert.equal(biz.dedicatedEkodiDomain, false);
 });
