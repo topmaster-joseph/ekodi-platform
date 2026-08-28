@@ -53,11 +53,13 @@ jobs:
           grep -Fq '>실시간 화상<' church/index.html
           grep -Fq 'class="community-visit"' church/index.html
           grep -Fq '함께 예배하고,' church/index.html
-          grep -Fq '<strong>에코디교회</strong>' church/index.html
           grep -Fq 'class="shell-my"' church/index.html
-          grep -Fq '서비스 전환' church/index.html
-          grep -Fq 'linear-gradient(90deg,rgba(7,25,22,.98)' church/community-visual.css
-          grep -Fq 'flex-direction:column' church/community-visual.css
+          grep -Fq "headerBrandName.textContent = '에코디교회'" church/script.js
+          grep -Fq "dailyScriptures" church/script.js
+          grep -Fq "오늘의 말씀" church/script.js
+          ! grep -Fq "label: '서비스 전환'" church/script.js
+          grep -Fq '.daily-verse{' church/community-visual.css
+          grep -Fq 'grid-template-columns:auto minmax(220px,1fr) auto' church/community-visual.css
 
       - name: Prepare static Pages payload
         shell: bash
@@ -85,24 +87,24 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/?release=ui-shell-20260829' || true)
-            refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-refresh.css?release=ui-shell-20260829' || true)
-            visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/community-visual.css?release=ui-shell-20260829' || true)
-            script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/script.js?release=ui-shell-20260829' || true)
+            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/?release=daily-verse-20260829' || true)
+            refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-refresh.css?release=daily-verse-20260829' || true)
+            visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/community-visual.css?release=daily-verse-20260829' || true)
+            script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/script.js?release=daily-verse-20260829' || true)
             if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$script_code" == '200' ]] \
               && grep -Fq 'class="online-triad"' /tmp/church.html \
               && grep -Fq 'class="community-visit"' /tmp/church.html \
-              && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
               && grep -Fq 'class="shell-my"' /tmp/church.html \
-              && grep -Fq '서비스 전환' /tmp/church.html \
-              && grep -Fq 'linear-gradient(90deg,rgba(7,25,22,.98)' /tmp/community-visual.css \
-              && grep -Fq 'flex-direction:column' /tmp/community-visual.css \
-              && grep -Fq 'Public EKODI Shell' /tmp/script.js; then
-              echo 'EKODI Church user-shell alignment verified in production.'
+              && grep -Fq '.daily-verse{' /tmp/community-visual.css \
+              && grep -Fq "headerBrandName.textContent = '에코디교회'" /tmp/script.js \
+              && grep -Fq 'dailyScriptures' /tmp/script.js \
+              && grep -Fq '오늘의 말씀' /tmp/script.js \
+              && ! grep -Fq "label: '서비스 전환'" /tmp/script.js; then
+              echo 'EKODI Church daily Scripture header verified in production.'
               exit 0
             fi
             echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code"
             sleep 5
           done
-          echo 'Production did not converge to the expected Church UI-shell release.'
+          echo 'Production did not converge to the expected daily Scripture header release.'
           exit 1
