@@ -1,12 +1,12 @@
 {
-  "version": 28,
+  "version": 29,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
       {"url":"https://ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디의 모든 길을 한눈에","One ecosystem. Many ways to connect."]},
       {"url":"https://ekodi.kr/history","statuses":[200],"redirect":"follow","expect":["EKODI HISTORY","Ecclesia","Koinonia","Diaspora","Jubilee"]},
-      {"url":"https://ekodi.kr/mall","statuses":[200],"redirect":"follow","expect":["EKODI MALL","COUPANG AFFILIATE CURATION","아래 추천링크 클릭 후 검색하세요"],"headerExpect":["x-content-type-options: nosniff"]},
+      {"url":"https://ekodi.kr/mall","statuses":[200],"redirect":"follow","expect":["EKODI MALL","SMART SHOPPING","오늘 필요한 것","오늘의 상품","상품 둘러보기"],"headerExpect":["x-content-type-options: nosniff"]},
       {"url":"https://ekodi.kr/admin","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","return_to=https%3A%2F%2Fekodi.kr%2Fadmin"],"headerExpect":["x-ekodi-route: admin-fallback","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
       {"url":"https://admin.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","admin-authenticated-shell.js?v=","compact-control-center.js admin-menu-layout.js admin-demand-loader.js","https://auth.ekodi.kr/?site=admin"],"headerExpect":["x-ekodi-route: admin-control-center","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
       {"url":"https://admin.ekodi.kr/admin-demand-loader.js?device=v28","statuses":[200],"redirect":"manual","expect":["label: '기기 관리'","device-browser-diagnostics.js","device-browser-diagnostics.css"],"headerExpect":["x-content-type-options: nosniff"]},
