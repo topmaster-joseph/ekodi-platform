@@ -46,7 +46,7 @@ for (const section of ['communication', 'workspace', 'organization']) {
 const financePath = `${dist}finance-monitor.js`;
 let finance = await readFile(financePath, 'utf8');
 const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
-if (!financeTail.test(finance)) throw new Error('finance polling tail marker missing');
+if (financeTail.test(finance)) {
 finance = finance.replace(financeTail, `let financeRefreshTimer = 0;
 function cancelFinanceRefresh() {
   if (financeRefreshTimer) clearTimeout(financeRefreshTimer);
@@ -72,6 +72,8 @@ if ((location.hash === '#finance' || financeSectionButton.classList.contains('ac
   queueMicrotask(() => loadFinance(false).finally(scheduleFinanceRefresh));
 }`);
 await writeFile(financePath, finance);
+}
+if (finance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 
 // Mobile browsers pay heavily for backdrop blur and off-screen panel painting.
 const cssPath = `${dist}control-center.css`;
@@ -86,6 +88,11 @@ let compactCss = await readFile(compactCssPath, 'utf8');
 const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.compact-control-center .app>main{padding-top:0!important}body.compact-control-center .topbar{position:static!important;inset:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important}body.compact-control-center .topbar .kicker{display:none!important}body.compact-control-center .topbar h1{font-size:16px!important;margin:0!important}body.compact-control-center .content{padding:12px 12px 32px!important}}\n`;
 if (!compactCss.includes('admin mobile flow')) compactCss += mobileCss;
 await writeFile(compactCssPath, compactCss);
+
+// Compact the generated compact runtime without changing JavaScript semantics.
+const compactJsPath = `${dist}compact-control-center.js`;
+const compactJsSource = (await readFile(compactJsPath, 'utf8')).replace(/^[ \t]+/gm, '');
+await writeFile(compactJsPath, compactJsSource);
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
@@ -109,6 +116,41 @@ for (const asset of ['admin-central-handoff.js','admin-authenticated-shell.js','
   if (!source.includes('__EKODI_ADMIN_ASSET_VERSION__')) throw new Error(`${asset} asset-version placeholder missing`);
   await writeFile(assetPath, source.replaceAll('__EKODI_ADMIN_ASSET_VERSION__', assetVersion));
 }
+
+// Compact generated first-path JS without changing source contracts.
+const handoffPath = `${dist}admin-central-handoff.js`;
+let compactHandoff = await readFile(handoffPath, 'utf8');
+compactHandoff = compactHandoff.replace(/^\/\/ Minimal admin entry runtime:[^\r\n]*(?:\r?\n)/, '');
+for (const [from,to] of [
+  ['CENTRAL_ADMIN_AUTH_URL','AUTH_URL'],
+  ['ensureCentralLoginFallback','ensureLogin'],
+  ['normalizeEntryRoute','normalizeEntry'],
+  ['syncLoginLink','syncLogin'],
+  ['routeFromLocation','routeNow'],
+  ['cleanRouteUrl','cleanUrl'],
+  ['centralAdminAuthUrl','authUrl'],
+  ['updateSessionState','updateState'],
+  ['loadPerfDiagnostics','loadPerf'],
+  ['validateSession','validate'],
+]) compactHandoff = compactHandoff.replaceAll(from, to);
+await writeFile(handoffPath, compactHandoff);
+
+const shellPath = `${dist}admin-authenticated-shell.js`;
+let compactShell = await readFile(shellPath, 'utf8');
+for (const [from,to] of [
+  ['postAuthStyles','styles'],
+  ['criticalPostAuthScripts','scripts'],
+  ['canonicalizeLegacyEntry','legacyEntry'],
+  ['applyOfficialAdminSurface','applySurface'],
+  ['keepLoginInteractive','keepLogin'],
+  ['installSharedAdminLayout','installLayout'],
+  ['deactivateMallFreeOps','closeMall'],
+  ['installMallFreeOpsIsolation','installMall'],
+  ['repairLegacyLinks','repairLinks'],
+  ['startAuthenticatedShell','startShell'],
+  ['onStateChange','onState'],
+]) compactShell = compactShell.replaceAll(from, to);
+await writeFile(shellPath, compactShell);
 
 // ES-module imports are versioned too. This prevents a browser from combining a new layout
 // with a five-minute-old menu registry after a deployment.
@@ -134,7 +176,7 @@ await writeFile(path, html);
 
 // Final budgets run after every postbuild layer so later CSS/JS cannot sneak past the guard.
 const menuBudgetPath = `${dist}admin-menu-layout.js`;
-const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/^[ \t]+/gm, '');
+const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/\r\n/g, '\n').replace(/^[ \t]+/gm, '');
 await writeFile(menuBudgetPath, compactMenuForBudget);
 const files = {
   handoff: await readFile(`${dist}admin-central-handoff.js`, 'utf8'),

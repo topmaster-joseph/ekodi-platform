@@ -2,37 +2,27 @@ const FINANCE_API = 'https://finance-api.ekodi.kr';
 const financeSectionButton = document.querySelector('button.nav[data-section="finance"]');
 const financeRefresh = document.querySelector('#refreshFinance');
 const FINANCE_TTL_MS = 60 * 1000;
-const ECOSYSTEM_TTL_MS = 5 * 60 * 1000;
 let financeLoading = false;
 let financeLastLoadedAt = 0;
-let ecosystemLastLoadedAt = 0;
 
 function financeToken() { return sessionStorage.getItem('ekodi-auth-token') || ''; }
 function financeKRW(value) { return `₩${Math.round(Number(value) || 0).toLocaleString('ko-KR')}`; }
 function financeDate(value) {
   if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ko-KR', { dateStyle:'short', timeStyle:'short' });
 }
 
 async function financeRequest(path) {
-  const response = await fetch(`${FINANCE_API}${path}`, {
-    cache: 'no-store',
-    headers: { authorization: `Bearer ${financeToken()}` }
-  });
+  const response = await fetch(`${FINANCE_API}${path}`, { cache:'no-store', headers:{ authorization:`Bearer ${financeToken()}` } });
   let data = {};
   try { data = await response.json(); } catch {}
   if (!response.ok) throw new Error(data.error || `Finance API 요청 실패 (${response.status})`);
   return data;
 }
 
-async function ecosystemRequest() {
-  const response = await fetch('/monitor-status.json', { cache: 'default' });
-  if (!response.ok) throw new Error(`전체 생태계 모니터 조회 실패 (${response.status})`);
-  return response.json();
-}
-
 function financeEmpty(tbody, columns, text) {
+  if (!tbody) return;
   tbody.textContent = '';
   const row = document.createElement('tr');
   const cell = document.createElement('td');
@@ -41,6 +31,31 @@ function financeEmpty(tbody, columns, text) {
   cell.textContent = text;
   row.append(cell);
   tbody.append(row);
+}
+
+function ensureTaxServiceLink() {
+  const section = document.querySelector('#financeTitle')?.closest('section');
+  if (!section || document.querySelector('#taxProfessionalServiceLink')) return;
+  const box = document.createElement('div');
+  box.id = 'taxProfessionalServiceLink';
+  box.className = 'finance-note good';
+  box.style.display = 'flex';
+  box.style.alignItems = 'center';
+  box.style.justifyContent = 'space-between';
+  box.style.gap = '12px';
+  box.style.flexWrap = 'wrap';
+  const copy = document.createElement('span');
+  copy.textContent = '세금계산서 상세 업무는 EKODI Tax 전문서비스에서 같은 Finance Core로 처리합니다.';
+  const link = document.createElement('a');
+  link.href = 'https://tax.ekodi.kr/';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.className = 'primary compact';
+  link.textContent = '세금 · 증빙 열기 ↗';
+  box.append(copy, link);
+  const notice = section.querySelector('#financeNotice');
+  if (notice) notice.insertAdjacentElement('beforebegin', box);
+  else section.querySelector('.section-head')?.insertAdjacentElement('afterend', box);
 }
 
 function renderFinanceOverview(data) {
@@ -66,7 +81,7 @@ function renderFinanceOverview(data) {
     notice.className = 'finance-note good';
     notice.textContent = '결제·회계 관제 구성요소가 정상 범위입니다.';
   }
-  window.dispatchEvent(new CustomEvent('ekodi-finance-overview', { detail: data }));
+  window.dispatchEvent(new CustomEvent('ekodi-finance-overview', { detail:data }));
 }
 
 function renderFinancePayments(payments) {
@@ -76,9 +91,7 @@ function renderFinancePayments(payments) {
   for (const payment of payments) {
     const row = document.createElement('tr');
     const values = [financeDate(payment.approvedAt), payment.orderId, payment.organizationId, payment.businessUnitId, payment.method || '—', payment.status];
-    for (const value of values) {
-      const cell = document.createElement('td'); cell.textContent = value; row.append(cell);
-    }
+    for (const value of values) { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }
     const amount = document.createElement('td'); amount.className = 'right'; amount.textContent = financeKRW(payment.grossAmount); row.append(amount);
     tbody.append(row);
   }
@@ -91,12 +104,9 @@ function renderFinanceAccounting(rows) {
   for (const item of rows) {
     const revenue = Number(item.revenue) || 0;
     const expense = Number(item.expense) || 0;
-    const values = [item.organizationId, item.businessUnitId || '공통'];
     const row = document.createElement('tr');
-    for (const value of values) { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }
-    for (const value of [revenue, expense, revenue - expense]) {
-      const cell = document.createElement('td'); cell.className = 'right'; cell.textContent = financeKRW(value); row.append(cell);
-    }
+    for (const value of [item.organizationId, item.businessUnitId || '공통']) { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }
+    for (const value of [revenue, expense, revenue - expense]) { const cell = document.createElement('td'); cell.className = 'right'; cell.textContent = financeKRW(value); row.append(cell); }
     const entries = document.createElement('td'); entries.className = 'right'; entries.textContent = String(item.entries); row.append(entries);
     tbody.append(row);
   }
@@ -122,78 +132,12 @@ function renderFinanceStructure(data) {
   }
 }
 
-function ensureEcosystemPanel() {
-  let tbody = document.querySelector('#ecosystemRows');
-  if (tbody) return tbody;
-  const financeSection = document.querySelector('#financeTitle')?.closest('section');
-  if (!financeSection) return null;
-  const heading = document.createElement('h3');
-  heading.className = 'finance-subtitle';
-  heading.textContent = 'EKODI 전체 생태계 · 10분 외부 점검';
-  const meta = document.createElement('p');
-  meta.className = 'operations-copy';
-  meta.id = 'ecosystemGenerated';
-  meta.textContent = '전 생태계 상태를 불러오는 중입니다.';
-  const wrap = document.createElement('div');
-  wrap.className = 'finance-table-wrap';
-  const table = document.createElement('table');
-  table.className = 'finance-table';
-  table.innerHTML = '<thead><tr><th>서비스</th><th>주소</th><th>상태</th><th>HTTP</th><th class="right">응답</th><th>점검시각</th></tr></thead><tbody id="ecosystemRows"></tbody>';
-  wrap.append(table);
-  financeSection.append(heading, meta, wrap);
-  tbody = table.querySelector('#ecosystemRows');
-  financeEmpty(tbody, 6, '전체 생태계 상태를 불러오는 중입니다.');
-  return tbody;
-}
-
-function renderEcosystem(data) {
-  const tbody = ensureEcosystemPanel();
-  if (!tbody) return;
-  const sites = Array.isArray(data?.sites) ? data.sites : [];
-  if (!sites.length) return financeEmpty(tbody, 6, '아직 전체 생태계 점검 데이터가 없습니다.');
-  tbody.textContent = '';
-  for (const site of sites) {
-    const row = document.createElement('tr');
-    const name = document.createElement('td'); name.textContent = site.name || site.id;
-    const domain = document.createElement('td'); domain.textContent = site.domain || '—';
-    const status = document.createElement('td'); status.textContent = site.status === 'online' ? '정상' : site.status === 'degraded' ? '지연' : '장애';
-    status.className = site.status === 'online' ? 'finance-ready' : 'finance-warn';
-    const http = document.createElement('td'); http.textContent = site.httpStatus ?? '—';
-    const response = document.createElement('td'); response.className = 'right'; response.textContent = Number.isFinite(site.responseTime) ? `${site.responseTime}ms` : '—';
-    const checked = document.createElement('td'); checked.textContent = financeDate(site.checkedAt);
-    row.append(name, domain, status, http, response, checked);
-    tbody.append(row);
-  }
-  const meta = document.querySelector('#ecosystemGenerated');
-  const age = data.generatedAt ? Date.now() - new Date(data.generatedAt).getTime() : Infinity;
-  const stale = !Number.isFinite(age) || age > 30 * 60 * 1000;
-  const summary = data.summary || {};
-  meta.textContent = `${financeDate(data.generatedAt)} · 정상 ${summary.online ?? 0} · 지연 ${summary.degraded ?? 0} · 장애 ${summary.offline ?? 0}${stale ? ' · 데이터 갱신 확인 필요' : ''}`;
-  if (stale) meta.classList.add('finance-warn'); else meta.classList.remove('finance-warn');
-}
-
-async function loadEcosystem(force = false) {
-  const now = Date.now();
-  if (!force && ecosystemLastLoadedAt && now - ecosystemLastLoadedAt < ECOSYSTEM_TTL_MS) return;
-  const tbody = ensureEcosystemPanel();
-  try {
-    renderEcosystem(await ecosystemRequest());
-    ecosystemLastLoadedAt = Date.now();
-  } catch (error) {
-    if (tbody) financeEmpty(tbody, 6, error.message);
-    const meta = document.querySelector('#ecosystemGenerated');
-    if (meta) { meta.textContent = '외부 점검 데이터 연결을 확인해야 합니다.'; meta.classList.add('finance-warn'); }
-  }
-}
-
 async function loadFinance(force = false) {
   if (!financeToken() || financeLoading) return;
   const now = Date.now();
   if (!force && financeLastLoadedAt && now - financeLastLoadedAt < FINANCE_TTL_MS) return;
   financeLoading = true;
-  financeRefresh.disabled = true;
-  financeRefresh.textContent = '↻ 확인 중…';
-  loadEcosystem(force);
+  if (financeRefresh) { financeRefresh.disabled = true; financeRefresh.textContent = '↻ 확인 중…'; }
   try {
     const [overview, payments, accounting, structure] = await Promise.all([
       financeRequest('/api/finance/overview'),
@@ -207,28 +151,23 @@ async function loadFinance(force = false) {
     renderFinanceStructure(structure);
     financeLastLoadedAt = Date.now();
   } catch (error) {
-    document.querySelector('#financeGenerated').textContent = error.message;
+    const generated = document.querySelector('#financeGenerated');
+    if (generated) generated.textContent = error.message;
     const notice = document.querySelector('#financeNotice');
-    notice.className = 'finance-note';
-    notice.textContent = `결제·회계 관제 연결을 확인해야 합니다: ${error.message}`;
+    if (notice) { notice.className = 'finance-note'; notice.textContent = `결제·회계 관제 연결을 확인해야 합니다: ${error.message}`; }
   } finally {
     financeLoading = false;
-    financeRefresh.disabled = false;
-    financeRefresh.textContent = '↻ 결제 · 회계 새로고침';
+    if (financeRefresh) { financeRefresh.disabled = false; financeRefresh.textContent = '↻ 결제 · 회계 새로고침'; }
   }
 }
 
-financeRefresh.addEventListener('click', () => loadFinance(true));
-financeSectionButton.addEventListener('click', () => {
-  document.querySelector('#pageTitle').textContent = '결제 · 회계';
+ensureTaxServiceLink();
+financeRefresh?.addEventListener('click', () => loadFinance(true));
+financeSectionButton?.addEventListener('click', () => {
+  const title = document.querySelector('#pageTitle');
+  if (title) title.textContent = '재무 · 세금';
+  ensureTaxServiceLink();
   loadFinance(false);
 });
 
-if ((location.hash === '#finance' || financeSectionButton.classList.contains('active')) && financeToken()) {
-  setTimeout(() => loadFinance(false), 0);
-}
-
-setInterval(() => {
-  const financeVisible = financeSectionButton.classList.contains('active');
-  if (financeVisible && financeToken()) loadFinance(false);
-}, 120000);
+if ((location.hash === '#finance' || financeSectionButton?.classList.contains('active')) && financeToken()) setTimeout(() => loadFinance(false), 0);

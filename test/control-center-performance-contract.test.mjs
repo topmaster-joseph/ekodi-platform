@@ -35,21 +35,22 @@ test('dynamic navigation stays event-driven and the simple Campus table needs no
   assert.match(compact, /campusServiceRow/);
 });
 
-test('payment readiness stays off the first path and reuses the Finance overview response', () => {
+test('Finance and Creator Billing stay off the first path and load independently', () => {
   assert.doesNotMatch(handoff, /FINANCE_API|api\/finance\/overview|ekodi-finance-overview/);
   assert.doesNotMatch(handoff, /setInterval/);
   assert.match(finance, /new CustomEvent\('ekodi-finance-overview'/);
-  assert.match(billing, /window\.addEventListener\('ekodi-finance-overview'/);
-  assert.match(loader, /await loadScript\('author-billing-admin\.js'\);\s*\n\s*await loadScript\('finance-monitor\.js'\);/);
-  assert.doesNotMatch(billing, /api\/finance\/overview|FINANCE_API/);
+  assert.doesNotMatch(billing, /ekodi-finance-overview|api\/finance\/overview|FINANCE_API/);
+  assert.match(billing, /#booksAdminSection/);
+  assert.match(loader, /loadScript\('finance-monitor\.js'\)/);
+  assert.match(loader, /loadScript\('author-billing-admin\.js'\)/);
 });
 
 test('Finance keeps a short in-memory freshness window while explicit refresh bypasses it', () => {
   assert.match(finance, /FINANCE_TTL_MS = 60 \* 1000/);
-  assert.match(finance, /ECOSYSTEM_TTL_MS = 5 \* 60 \* 1000/);
+  assert.doesNotMatch(finance, /ECOSYSTEM_TTL_MS|setInterval\(/);
   assert.match(finance, /loadFinance\(true\)/);
   assert.match(finance, /loadFinance\(false\)/);
-  assert.match(finance, /cache: 'default'/);
+  assert.match(finance, /cache:'no-store'/);
 });
 
 test('production build still ships optional modules as standalone assets rather than eager scripts', () => {

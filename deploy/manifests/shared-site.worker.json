@@ -19,7 +19,7 @@
       {"url":"https://auth.ekodi.kr/auth-router.js?release=25","statuses":[200],"redirect":"manual","expect":["admin-auth.js?v=20260823-mobile-handoff-1","business-auth.js?v=20260826-free-fallback-1","client-auth.js?v=20260827-common-service-routing-1","isRegistryUserService","manifestService"],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
       {"url":"https://auth.ekodi.kr/client-auth.js?release=25","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","EKODI Investment","https://shell.ekodi.kr/manifest.json","/session/handoff","session_timeout","use_fedcm_for_button:true"],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
       {"url":"https://auth.ekodi.kr/auth-workspace-target.js?release=25","statuses":[200],"redirect":"manual","expect":["workspace_key:requested","serviceOrigins","marketing:","books:","church:","social:","energy:"],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
-      {"url":"https://auth.ekodi.kr/admin-auth.js?release=25","statuses":[200],"redirect":"manual","expect":["use_fedcm_for_button:supportsFedCmButton()","button_auto_select:false","isEmbeddedWebView","Chrome에서 관리자 로그인 열기","location.replace(targetHref)","expired_challenge","u.origin==='https://ekodi.kr'","u.origin==='https://ai.ekodi.kr'"],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
+      {"url":"https://auth.ekodi.kr/admin-auth.js?release=25","statuses":[200],"redirect":"manual","expect":["use_fedcm_for_button:supportsFedCmButton()","button_auto_select:false","isEmbeddedWebView","Chrome에서 관리자 로그인 열기","location.replace(targetHref)","expired_challenge","u.origin==='https://ekodi.kr'","u.origin==='https://ai.ekodi.kr'","u.origin==='https://tax.ekodi.kr'"],"headerExpect":["cache-control: no-store","x-content-type-options: nosniff"]},
       {"url":"https://messenger.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Messenger","궁금한 것을 편하게 말씀해 주세요.","대화 검색","무엇을 도와드릴까요?","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: platform-messenger","x-ekodi-shell: v2"]},
       {"url":"https://messenger.ekodi.kr/messenger-ui.js","statuses":[200],"redirect":"manual","expect":["thread-open","conversationSearch","makeTitle"]},
       {"url":"https://messenger.ekodi.kr/app.js","statuses":[200],"redirect":"manual","expect":["https://workspace-api.ekodi.kr","/v1/messenger/threads","/handoff"]},
@@ -29,7 +29,9 @@
       {"url":"https://live.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브"],"headerExpect":["x-ekodi-route: hub"]},
       {"url":"https://cloud.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Hub","EKODI 서비스 허브"],"headerExpect":["x-ekodi-route: hub"]},
       {"url":"https://trade.biz.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Global Trading","TRADING DIVISION · EKODIBIZ","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-route: trade","x-ekodi-shell: v2"]},
-      {"url":"https://trade.ekodi.kr/","statuses":[308],"redirect":"manual","headerExpect":["location: https://trade.biz.ekodi.kr/"]}
+      {"url":"https://trade.ekodi.kr/","statuses":[308],"redirect":"manual","headerExpect":["location: https://trade.biz.ekodi.kr/"]},
+      {"url":"https://tax.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Tax","FREE-FIRST","/tax-portal.js"]},
+      {"url":"https://tax.ekodi.kr/tax-portal.js","statuses":[200],"redirect":"manual","expect":["/api/finance/tax-profiles","/api/finance/tax-invoices","manual-issued"]}
     ]
   }
 }

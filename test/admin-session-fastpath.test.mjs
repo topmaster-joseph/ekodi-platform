@@ -25,7 +25,9 @@ test('initial admin handoff contains no Finance readiness runtime', async () => 
   assert.doesNotMatch(handoff, /ekodi-finance-overview/);
   assert.doesNotMatch(handoff, /paymentKeyStatusPanel|ensurePaymentKeyPanel|tossSecretConfigured/);
   assert.doesNotMatch(handoff, /MutationObserver|setInterval\(/);
-  assert.match(billing, /ekodi-finance-overview/);
-  assert.match(billing, /ensurePaymentKeyPanel/);
-  assert.match(loader, /await loadScript\('author-billing-admin\.js'\);\s*\n\s*await loadScript\('finance-monitor\.js'\);/);
+  assert.doesNotMatch(billing, /ekodi-finance-overview|ensurePaymentKeyPanel|tossSecretConfigured/);
+  assert.match(billing, /#booksAdminSection/);
+  assert.match(billing, /data-books-pane=\"finance\"/);
+  assert.match(loader, /loadScript\('finance-monitor\.js'\)/);
+  assert.match(loader, /loadScript\('author-billing-admin\.js'\)/);
 });

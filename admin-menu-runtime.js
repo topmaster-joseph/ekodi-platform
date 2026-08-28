@@ -1,4 +1,4 @@
-import { getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
 
 const API = 'https://api.ekodi.kr';
 const LOCALE_KEY = 'ekodi-admin-locale';
@@ -100,6 +100,20 @@ function installStyle() {
   style.textContent = '.ekodi-admin-access{display:grid;gap:18px}.ekodi-admin-add{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:10px;align-items:end}.ekodi-admin-add label{display:grid;gap:6px}.ekodi-admin-add input,.ekodi-admin-add select,.ekodi-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-admin-add button,.ekodi-admin-row button{min-height:38px;border-radius:9px;padding:7px 12px}.ekodi-admin-list{display:grid;gap:9px}.ekodi-admin-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 170px 150px auto;gap:10px;align-items:center;padding:13px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-admin-id{display:grid;gap:4px}.ekodi-admin-id small{opacity:.65}.ekodi-admin-msg.error{color:#fca5a5}@media(max-width:760px){.ekodi-admin-add,.ekodi-admin-row{grid-template-columns:1fr}}';
   document.head.append(style);
 }
+function ensureExternalMenuItems() {
+  const nav = document.querySelector('.sidebar nav');
+  if (!nav) return;
+  for (const id of adminMenuOrder()) {
+    const definition = getAdminMenuItem(id);
+    if (!definition?.href || nav.querySelector('.nav[data-section="'+id+'"]')) continue;
+    const link = document.createElement('a');
+    link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.target = '_blank'; link.rel = 'noopener';
+    link.append(document.createTextNode((definition.icon || '·')+' '));
+    const label = document.createElement('span'); label.textContent = getAdminMenuLabel(id, locale); link.append(label);
+    nav.append(link);
+  }
+  window.dispatchEvent(new Event('ekodi-nav-changed'));
+}
 function ensureAdminNav() {
   const nav = document.querySelector('.sidebar nav');
   if (!nav) return;
@@ -172,7 +186,7 @@ async function addAccount(event) {
 }
 function applyLocale() { updateLocaleControl(); applyMenuLabels(); translateAdminPanel(); }
 async function install() {
-  installLocaleControl(); applyMenuLabels();
+  installLocaleControl(); ensureExternalMenuItems(); applyMenuLabels();
   if (!token()) return;
   try {
     const session = await api('/api/session');

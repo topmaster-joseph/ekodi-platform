@@ -1,4 +1,4 @@
-name: Route Tax Invoice Deployments
+name: Route EKODI Tax Deployments
 
 on:
   workflow_dispatch:
@@ -6,16 +6,36 @@ on:
     paths:
       - 'tax-invoice-worker.js'
       - 'tax-invoice-free-first-worker.js'
-      - 'tax-invoice-admin.js'
-      - 'tax-invoice-admin.css'
+      - 'tax-service-worker.js'
+      - 'tax-portal-worker.js'
+      - 'finance-entry-worker.js'
+      - 'finance-monitor.js'
+      - 'admin-menu-registry.js'
+      - 'admin-menu-runtime.js'
+      - 'admin-demand-loader.js'
+      - 'author-billing-admin.js'
+      - 'auth-site/admin-auth.js'
+      - 'wrangler.site.toml'
+      - 'migrations/*finance_multi_tax_suppliers.sql'
+      - 'deploy/manifests/shared-site.worker.json'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
   push:
     branches: [main]
     paths:
       - 'tax-invoice-worker.js'
       - 'tax-invoice-free-first-worker.js'
-      - 'tax-invoice-admin.js'
-      - 'tax-invoice-admin.css'
+      - 'tax-service-worker.js'
+      - 'tax-portal-worker.js'
+      - 'finance-entry-worker.js'
+      - 'finance-monitor.js'
+      - 'admin-menu-registry.js'
+      - 'admin-menu-runtime.js'
+      - 'admin-demand-loader.js'
+      - 'author-billing-admin.js'
+      - 'auth-site/admin-auth.js'
+      - 'wrangler.site.toml'
+      - 'migrations/*finance_multi_tax_suppliers.sql'
+      - 'deploy/manifests/shared-site.worker.json'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
 
 permissions:
@@ -23,88 +43,103 @@ permissions:
   actions: write
 
 concurrency:
-  group: ekodi-tax-invoice-routing-${{ github.ref }}
+  group: ekodi-tax-routing-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate FREE-FIRST tax invoice boundary
+      - name: Validate professional Tax boundary
         shell: bash
         run: |
           set -euo pipefail
           node --check tax-invoice-worker.js
           node --check tax-invoice-free-first-worker.js
-          node --check tax-invoice-admin.js
+          node --check tax-service-worker.js
+          node --check tax-portal-worker.js
+          node --check finance-entry-worker.js
+          node --check finance-monitor.js
+          node --check admin-menu-registry.js
+          node --check admin-menu-runtime.js
+          node --check auth-site/admin-auth.js
+          node --test test/tax-professional-service.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
           grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
           grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
           grep -Fq "defaultChannel: 'HOMETAX_MANUAL'" tax-invoice-free-first-worker.js
-          grep -Fq "'/api/finance/tax-health'" tax-invoice-free-first-worker.js
-          grep -Fq '홈택스 · 무료 기본' tax-invoice-admin.js
-          grep -Fq '발행완료 기록' tax-invoice-admin.js
+          grep -Fq 'multiSupplier:true' tax-service-worker.js
+          grep -Fq 'EKODI Tax' tax-portal-worker.js
+          grep -Fq 'https://tax.ekodi.kr/' admin-menu-registry.js
+          grep -Fq 'pattern = "tax.ekodi.kr"' wrangler.site.toml
 
   dispatch-and-verify:
     needs: validate
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 14
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - name: Dispatch guarded Finance and Admin releases
+      - name: Dispatch guarded Tax dependencies
         shell: bash
         run: |
           set -euo pipefail
           gh workflow run deploy-finance.yml --ref main
+          gh workflow run deploy-site-core.yml --ref main -f sync_domains=true
           gh workflow run deploy-admin-site.yml --ref main
-          echo 'Guarded Finance and Admin deployment workflows dispatched for FREE-FIRST tax invoice changes.'
+          echo 'Guarded Finance, Shared Site and Admin releases dispatched for EKODI Tax.'
 
-      - name: Verify production FREE-FIRST Finance and Admin assets
+      - name: Verify production Tax service, Finance policy and Admin menu
         id: verify
         shell: bash
         run: |
           set -euo pipefail
           finance_url='https://finance-api.ekodi.kr/api/finance/tax-health'
-          admin_asset_url='https://admin.ekodi.kr/finance-monitor.js'
+          tax_url='https://tax.ekodi.kr/'
+          tax_js_url='https://tax.ekodi.kr/tax-portal.js'
+          admin_menu_url='https://admin.ekodi.kr/admin-menu-registry.js'
           finance_json=''
-          finance_ok='false'
-          admin_ok='false'
+          finance_ok=false
+          tax_ok=false
+          menu_ok=false
 
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 72); do
             finance_json=$(curl -fsS --connect-timeout 5 --max-time 12 "$finance_url" || true)
             if printf '%s' "$finance_json" | grep -Fq '"operationPolicy":"FREE_FIRST"' \
-              && printf '%s' "$finance_json" | grep -Fq '"defaultChannel":"HOMETAX_MANUAL"'; then
-              finance_ok='true'
-            fi
+              && printf '%s' "$finance_json" | grep -Fq '"defaultChannel":"HOMETAX_MANUAL"' \
+              && printf '%s' "$finance_json" | grep -Fq '"multiSupplier":true' \
+              && printf '%s' "$finance_json" | grep -Fq '"service":"ekodi-tax"'; then finance_ok=true; fi
 
-            admin_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$admin_asset_url" || true)
-            if printf '%s' "$admin_body" | grep -Fq 'FREE-FIRST' \
-              && printf '%s' "$admin_body" | grep -Fq '홈택스 · 무료 기본' \
-              && printf '%s' "$admin_body" | grep -Fq '발행완료 기록'; then
-              admin_ok='true'
-            fi
+            tax_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$tax_url" || true)
+            tax_js=$(curl -fsS --connect-timeout 5 --max-time 15 "$tax_js_url" || true)
+            if printf '%s' "$tax_body" | grep -Fq 'EKODI Tax' \
+              && printf '%s' "$tax_body" | grep -Fq 'FREE-FIRST' \
+              && printf '%s' "$tax_js" | grep -Fq '/api/finance/tax-profiles' \
+              && printf '%s' "$tax_js" | grep -Fq 'manual-issued'; then tax_ok=true; fi
 
-            if [ "$finance_ok" = 'true' ] && [ "$admin_ok" = 'true' ]; then
-              break
-            fi
+            menu_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$admin_menu_url" || true)
+            if printf '%s' "$menu_body" | grep -Fq "id: 'tax'" \
+              && printf '%s' "$menu_body" | grep -Fq 'https://tax.ekodi.kr/'; then menu_ok=true; fi
+
+            if $finance_ok && $tax_ok && $menu_ok; then break; fi
             sleep 5
           done
 
-          [ "$finance_ok" = 'true' ] || { echo 'FREE-FIRST Finance production verification failed.'; exit 1; }
-          [ "$admin_ok" = 'true' ] || { echo 'FREE-FIRST Admin production asset verification failed.'; exit 1; }
-
+          $finance_ok || { echo 'EKODI Tax Finance production verification failed.'; exit 1; }
+          $tax_ok || { echo 'tax.ekodi.kr production verification failed.'; exit 1; }
+          $menu_ok || { echo 'Admin Tax menu production verification failed.'; exit 1; }
           paid_enabled=$(printf '%s' "$finance_json" | jq -r '.paidAutomationEnabled // false')
           echo "paid_enabled=$paid_enabled" >> "$GITHUB_OUTPUT"
-          echo 'FREE-FIRST Finance and Admin production verification passed.'
+          echo 'EKODI Tax production verification passed.'
 
-      - name: Persist production verification marker
+      - name: Persist Tax production verification marker
         shell: bash
         env:
           PAID_ENABLED: ${{ steps.verify.outputs.paid_enabled }}
@@ -116,20 +151,16 @@ jobs:
             --arg verifiedAt "$verified_at" \
             --arg commit "$GITHUB_SHA" \
             --arg financeUrl 'https://finance-api.ekodi.kr/api/finance/tax-health' \
-            --arg adminAssetUrl 'https://admin.ekodi.kr/finance-monitor.js' \
+            --arg taxUrl 'https://tax.ekodi.kr/' \
+            --arg adminMenuUrl 'https://admin.ekodi.kr/admin-menu-registry.js' \
             --argjson paidAutomationEnabled "${PAID_ENABLED:-false}" \
-            '{verifiedAt:$verifiedAt,commit:$commit,operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,adminAssetUrl:$adminAssetUrl,status:"verified"}' \
-            > /tmp/tax-invoice-status.json
-          content=$(base64 -w0 /tmp/tax-invoice-status.json)
+            '{verifiedAt:$verifiedAt,commit:$commit,service:"EKODI Tax",operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",multiSupplier:true,schemaVersion:3,paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,taxUrl:$taxUrl,adminMenuUrl:$adminMenuUrl,status:"verified"}' \
+            > /tmp/tax-status.json
+          content=$(base64 -w0 /tmp/tax-status.json)
           current_sha=$(gh api "repos/$GH_REPO/contents/$path" --jq '.sha' 2>/dev/null || true)
           if [ -n "$current_sha" ]; then
-            gh api --method PUT "repos/$GH_REPO/contents/$path" \
-              -f message='chore: record FREE-FIRST tax invoice deployment [skip ci]' \
-              -f content="$content" \
-              -f sha="$current_sha" >/dev/null
+            gh api --method PUT "repos/$GH_REPO/contents/$path" -f message='chore: record EKODI Tax deployment [skip ci]' -f content="$content" -f sha="$current_sha" >/dev/null
           else
-            gh api --method PUT "repos/$GH_REPO/contents/$path" \
-              -f message='chore: record FREE-FIRST tax invoice deployment [skip ci]' \
-              -f content="$content" >/dev/null
+            gh api --method PUT "repos/$GH_REPO/contents/$path" -f message='chore: record EKODI Tax deployment [skip ci]' -f content="$content" >/dev/null
           fi
-          cat /tmp/tax-invoice-status.json
+          cat /tmp/tax-status.json

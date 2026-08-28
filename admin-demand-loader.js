@@ -326,13 +326,7 @@
     finance.addEventListener('click', () => {
       if (finance.dataset.financeAssetsRequested === 'true') return;
       finance.dataset.financeAssetsRequested = 'true';
-      Promise.all([
-        loadStyle('control-center-finance.css'),
-        loadStyle('author-billing-admin.css'),
-      ]).then(async () => {
-        await loadScript('author-billing-admin.js');
-        await loadScript('finance-monitor.js');
-      }).catch(error => {
+      loadStyle('control-center-finance.css').then(() => loadScript('finance-monitor.js')).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
       });
@@ -349,6 +343,7 @@
     if (!authenticated() || !nav) return;
     Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
     bindBaseEnhancements();
+    if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);}
     window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
     if (requested) {
