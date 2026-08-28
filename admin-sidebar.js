@@ -3,6 +3,7 @@ import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLoca
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
+const RETIRED_MENU_SECTIONS = new Set(['overview']);
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -70,7 +71,10 @@ export function syncAdminSidebar(root = document, options = {}) {
   for (const item of navItems(nav)) {
     const id = adminSidebarSectionOf(item);
     const definition = getAdminMenuItem(id);
-    if (!definition) continue;
+    if (!definition) {
+      if (RETIRED_MENU_SECTIONS.has(id)) item.remove();
+      continue;
+    }
     const label = ensureLabel(item);
     const canonical = getAdminMenuLabel(id, locale);
     if (label.textContent !== canonical) label.textContent = canonical;

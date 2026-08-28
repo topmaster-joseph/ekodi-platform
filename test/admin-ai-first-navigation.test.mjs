@@ -44,7 +44,7 @@ test('Campus shortcuts cannot reopen hidden operational panels', () => {
 test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
   assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
   const expected = [
-    'overview', 'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'finance',
+    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'finance',
     'communication', 'workspace', 'devices', 'organization', 'clients', 'admins', 'community',
     'books', 'social', 'affiliates',
   ];
@@ -54,6 +54,7 @@ test('human-facing Admin menu has one canonical order independent of lazy module
     assert.ok(next > cursor, `${section} must remain in canonical menu order`);
     cursor = next;
   }
+  assert.doesNotMatch(registry, /id: 'overview'/);
   assert.match(layout, /VISIBLE_NAV_RANK/);
   assert.match(layout, /applyStableNavigationOrder/);
   assert.match(layout, /item\.style\.order/);
