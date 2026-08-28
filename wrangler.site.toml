@@ -105,6 +105,10 @@ pattern = "auth.ekodi.kr"
 custom_domain = true
 
 [[services]]
+binding = "FINANCE"
+service = "ekodi-finance-api"
+
+[[services]]
 binding = "STORAGE"
 service = "ekodi-storage-control"
 
