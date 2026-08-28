@@ -1,0 +1,42 @@
+name: Normalize platform and AI display names
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'config/ecosystem-services.json'
+      - 'scripts/normalize-platform-ai-names.mjs'
+      - '.github/workflows/normalize-display-names.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: normalize-platform-ai-display-names
+  cancel-in-progress: false
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Normalize platform and specialist AI display names
+        run: node scripts/normalize-platform-ai-names.mjs
+      - name: Persist normalized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Display names already follow the prefix-free policy.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore: persist prefix-free platform and AI display names'
+          git push origin HEAD:main
