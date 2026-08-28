@@ -65,12 +65,20 @@ jobs:
       - name: Verify development credentials
         run: test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy isolated staging
-        run: npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml 2>&1 | tee /tmp/ekodibiz-staging-deploy.log
       - name: Verify staging funnel and gates
         shell: bash
         run: |
           set -euo pipefail
-          base='https://ekodibiz-revenue-os-staging.ekodi-development.workers.dev'
+          base=$(grep -Eo 'https://[-A-Za-z0-9.]+\.workers\.dev' /tmp/ekodibiz-staging-deploy.log | tail -n 1 || true)
+          if [[ -z "$base" ]]; then
+            echo 'No workers.dev URL was emitted by Wrangler.'
+            exit 1
+          fi
+          echo "Verifying $base"
           for attempt in $(seq 1 12); do
             root=$(curl -L -sS --max-time 15 "$base/" || true)
             health=$(curl -sS --max-time 15 "$base/api/health" || true)
