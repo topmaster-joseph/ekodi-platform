@@ -1,14 +1,17 @@
 {
-  "approvalId": "ekodi-domain-site-v1-2026-08-28",
+  "approvalId": "ekodi-domain-site-v2-2026-08-28",
   "approvedPrinciple": {
-    "standaloneSubdomainCategories": ["core", "common_service", "professional_ai"],
-    "spaceAddressing": "parent-service-path",
-    "publicSpacePattern": "https://ekodi.kr/{space}",
-    "privateSpacePattern": "https://my.ekodi.kr/{space}",
-    "professionalServicePattern": "https://{service}.ekodi.kr/{space}",
-    "legacyDomainPolicy": "alias-or-permanent-redirect",
+    "standaloneSubdomainCategories": ["core", "common_service", "gateway"],
+    "spaceAddressing": "root-path",
+    "publicSpacePattern": "https://ekodi.kr/{space}/",
+    "privateSpacePattern": "https://my.ekodi.kr/{space}/",
+    "professionalAiAddressing": "root-ai-path",
+    "professionalAiPattern": "https://ekodi.kr/ai/{ai}/",
+    "professionalAiSpacePattern": "https://ekodi.kr/ai/{ai}/{space}/",
+    "legacyDomainPolicy": "compatibility-runtime-until-path-equivalence-then-permanent-redirect",
     "siteUnit": "space-plus-services",
-    "tenantSubdomainCreation": false
+    "tenantSubdomainCreation": false,
+    "professionalAiSubdomainCreation": false
   },
-  "approvalNote": "Approved by the EKODI operator on 2026-08-28. Future principle changes require explicit re-confirmation before this snapshot is updated."
+  "approvalNote": "Explicitly re-confirmed by the EKODI operator on 2026-08-28: user-facing professional AI services use ekodi.kr/ai paths; ai.ekodi.kr remains the technical AI Gateway. Existing runtime subdomains stay compatibility execution aliases until path equivalence is verified, then may become permanent redirects. Future principle changes require explicit re-confirmation before this snapshot is updated."
 }
