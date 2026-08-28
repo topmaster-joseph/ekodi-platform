@@ -7,8 +7,8 @@ select plan(7);
 insert into auth.users(id, email)
 values ('11111111-1111-4111-8111-111111111111', 'owner@example.com');
 
-insert into public.people(id, display_name)
-values ('22222222-2222-4222-8222-222222222222', '점주');
+insert into public.people(id, display_name, ekodi_id)
+values ('22222222-2222-4222-8222-222222222222', '점주', 'EKD-22222222222242228222222222222222');
 
 insert into public.login_identities(
   person_id, auth_user_id, provider, provider_subject, email, is_primary
