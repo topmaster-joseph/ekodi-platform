@@ -108,10 +108,10 @@ test('admin menu governance is grouped and repairs every sidebar back to one reg
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['sites', 'access', 'operations', 'ai', 'data', 'system', 'security-audit', 'settings']) {
+  for (const group of ['site-management', 'access', 'operations', 'ai', 'data', 'system', 'security-audit', 'settings']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  assert.match(registry, /id: 'campus', group: 'sites'/);
+  assert.match(registry, /id: 'campus', group: 'site-management'/);
   assert.match(registry, /id: 'admins', group: 'access'/);
   assert.match(registry, /id: 'finance', group: 'operations'/);
   assert.match(registry, /id: 'ai-membership', group: 'ai'/);
