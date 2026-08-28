@@ -34,6 +34,7 @@ const SERVICES = [
   {id:'cafe',name:'에코디 카페',shortName:'Cafe',url:'https://cafe.ekodi.kr/',group:'community',defaultSurface:'public',workspaceKinds:['person','community','church','organization','project'],capabilities:['place','community','culture','local','imagination'],sso:true,targetable:true,order:125,state:'preparing',shellIntegration:'static-script',onboardingVersion:1},
   {id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/mall',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['commerce','affiliate-curation','products'],sso:true,targetable:true,order:130,shellIntegration:'shared-proxy'},
   {id:'shop',name:'쇼핑플랫폼',shortName:'Shop',url:'https://shop.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','church','community'],capabilities:['commerce-platform','store-creation','multi-tenant'],sso:true,targetable:true,order:135,state:'planned',shellIntegration:'planned',onboardingVersion:1},
+  {id:'delivery',name:'배달허브 AI',shortName:'배달허브',url:'https://ekodi.kr/delivery',group:'business',defaultSurface:'public',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['delivery-orchestration','delivery-request','dispatch-recommendation','settlement-preview','operations-ai'],sso:true,targetable:true,openSso:true,order:137,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'trade',name:'EKODI Global Trading',shortName:'Trade',url:'https://trade.ekodi.kr/',group:'business',defaultSurface:'public',workspaceKinds:['business','organization'],capabilities:['trade','buyers','suppliers'],sso:true,targetable:true,order:140,shellIntegration:'worker-injected'},
   {id:'invest',name:'EKODI Investment',shortName:'Investment',url:'https://invest.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','project'],capabilities:['investment','research','due-diligence','ir','opportunities'],sso:true,targetable:true,order:145,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1,transactionMode:'analysis-and-connection-only'},
   {id:'money',name:'EKODI Money',shortName:'Money',url:'https://money.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['financial-cleanup','accounts','autopay','financial-relationships','decision-support','official-handoff'],sso:true,targetable:true,openSso:true,order:147,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'human-confirmed-official-handoff'},
@@ -53,7 +54,7 @@ const SERVICES = [
 });
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 14,
+  version: 15,
   updatedAt: '2026-08-28',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',

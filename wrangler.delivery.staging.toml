@@ -1,0 +1,19 @@
+name = "ekodi-delivery-hub-ai-staging"
+main = "delivery-worker.js"
+compatibility_date = "2026-08-28"
+workers_dev = true
+preview_urls = false
+
+[vars]
+DATA_MODE = "isolated-staging"
+AUTH_URL = "https://auth.ekodi.kr/?site=delivery"
+EXECUTION_ENABLED = "false"
+
+[assets]
+directory = "./delivery"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
