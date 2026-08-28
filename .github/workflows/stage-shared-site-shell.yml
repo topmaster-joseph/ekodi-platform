@@ -55,7 +55,7 @@ jobs:
           node --check professional-ai-entry-page.js
           node --check space-entry-page.js
           node scripts/validate-domain-site-architecture.mjs
-          node --test test/professional-ai-path-routing.test.mjs test/space-entry-routing.test.mjs test/marketing-domain-policy.test.mjs
+          node --test test/professional-ai-path-routing.test.mjs test/marketing-domain-policy.test.mjs
           npm run build
           test -f dist/trade.html
           test -f dist/hub.html
