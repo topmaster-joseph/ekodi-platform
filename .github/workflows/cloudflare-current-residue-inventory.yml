@@ -1,0 +1,38 @@
+name: Cloudflare Current Residue Inventory
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-current-residue-inventory.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: List remaining Production staging Workers
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" -o /tmp/workers.json
+          jq -e '.success == true' /tmp/workers.json >/dev/null
+          jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/workers.json | sort | tee /tmp/remain.txt
+          count=$(wc -l < /tmp/remain.txt | tr -d ' ')
+          echo "REMAINING_COUNT=$count"
+          {
+            echo '## Remaining Production staging Workers'
+            echo
+            echo "Count: **$count**"
+            echo
+            sed 's/^/- `/' /tmp/remain.txt | sed 's/$/`/'
+          } >> "$GITHUB_STEP_SUMMARY"
