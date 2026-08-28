@@ -10,10 +10,10 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'marketing-ai', icon: 'M', labels: { ko: '마케팅 AI', en: 'Marketing AI' } },
   { id: 'work', icon: 'W', labels: { ko: '업무', en: 'Work' } },
   { id: 'finance', icon: '₩', labels: { ko: '결제 · 회계', en: 'Finance & Accounting' } },
-  { id: 'communication', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' } },
-  { id: 'workspace', icon: '▣', labels: { ko: '클라우드 · 자료', en: 'Cloud & Files' } },
+  { id: 'communication', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' }, mergedInto: 'campus' },
+  { id: 'workspace', icon: '▣', labels: { ko: '클라우드 · 자료', en: 'Cloud & Files' }, mergedInto: 'campus' },
   { id: 'devices', icon: 'D', labels: { ko: '기기 · 장치', en: 'Devices' } },
-  { id: 'organization', icon: '◫', labels: { ko: '조직 · 사업', en: 'Organizations' } },
+  { id: 'organization', icon: '◫', labels: { ko: '조직 · 사업', en: 'Organizations' }, mergedInto: 'campus' },
   { id: 'clients', icon: 'C', labels: { ko: '고객 사이트', en: 'Customer Sites' } },
   { id: 'admins', icon: '♜', labels: { ko: '관리자 · 권한', en: 'Administrators & Access' }, superAdminOnly: true },
   { id: 'community', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
@@ -43,5 +43,5 @@ export function getAdminMenuLabel(id, locale = 'ko') {
 }
 
 export function adminMenuOrder() {
-  return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id);
+  return ADMIN_MENU_REGISTRY.filter(item => !item.internal && !item.mergedInto).map(item => item.id);
 }
