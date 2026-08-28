@@ -6,6 +6,7 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
@@ -50,6 +52,7 @@ jobs:
           set -euo pipefail
           node --check finance-worker.js
           node --check finance-entry-worker.js
+          node --check tax-business-registry-service.js
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
@@ -57,6 +60,9 @@ jobs:
           test -f deploy/manifests/finance-api.worker.json
           grep -Fq "finance_organizations" finance-entry-worker.js
           grep -Fq "finance_payments" finance-entry-worker.js
+          grep -Fq "finance_tax_business_registry_status" finance-entry-worker.js
+          grep -Fq "NTS_STATUS_ENDPOINT" tax-business-registry-service.js
+          grep -Fq "NTS_BUSINESS_STATUS_SERVICE_KEY" tax-business-registry-service.js
           grep -Fq "TOSS_SECRET_KEY_NOT_CONFIGURED" finance-worker.js
           grep -Fq "'/health'" finance-worker.js
 
@@ -131,10 +137,13 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/structure' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
+              && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
+              && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
               && [ "$overview_code" = '401' ] \
               && [ "$structure_code" = '401' ]; then
               echo 'Finance API isolated staging verified.'
@@ -157,6 +166,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       TOSS_PAYMENTS_SECRET_KEY: ${{ secrets.TOSS_PAYMENTS_SECRET_KEY }}
       TOSS_PAYMENTS_MID: ${{ secrets.TOSS_PAYMENTS_MID }}
+      NTS_BUSINESS_STATUS_SERVICE_KEY: ${{ secrets.NTS_BUSINESS_STATUS_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -186,8 +196,9 @@ jobs:
           const secrets = {};
           if (process.env.TOSS_PAYMENTS_SECRET_KEY) secrets.TOSS_SECRET_KEY = process.env.TOSS_PAYMENTS_SECRET_KEY;
           if (process.env.TOSS_PAYMENTS_MID) secrets.TOSS_MID = process.env.TOSS_PAYMENTS_MID;
+          if (process.env.NTS_BUSINESS_STATUS_SERVICE_KEY) secrets.NTS_BUSINESS_STATUS_SERVICE_KEY = process.env.NTS_BUSINESS_STATUS_SERVICE_KEY;
           fs.writeFileSync('/tmp/finance-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
-          console.log(`Prepared guarded Finance candidate with ${Object.keys(secrets).length} payment secret key(s); values remain hidden.`);
+          console.log(`Prepared guarded Finance candidate with ${Object.keys(secrets).length} secret key(s); values remain hidden.`);
           NODE
           trap 'rm -f /tmp/finance-secrets.json' EXIT
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/finance-api.worker.json --secrets-file /tmp/finance-secrets.json
@@ -197,10 +208,14 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/structure' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
+              && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
+              && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
+              && printf '%s' "$registry_health" | grep -Fq '"schemaVersion":1' \
               && [ "$overview_code" = '401' ] \
               && [ "$structure_code" = '401' ]; then
               echo 'EKODI Finance API production verified.'
@@ -218,7 +233,7 @@ jobs:
             echo '## Finance API production recovery point'
             echo
             echo "- D1 bookmark before production migrations: \`$BOOKMARK\`"
-            echo '- Toss secrets are included only in the 0% candidate version when GitHub secrets are present.'
+            echo '- Toss and optional NTS public-data secrets are included only in the 0% candidate version when GitHub secrets are present.'
             echo '- Missing keys in the candidate secrets file preserve the previous Worker secret values.'
             echo '- No immediate `wrangler secret put` runs after promotion, so secret rotation cannot bypass the release gate.'
             echo '- D1 restore remains manual to avoid discarding legitimate writes after deployment.'

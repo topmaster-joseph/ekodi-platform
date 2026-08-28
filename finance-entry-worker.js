@@ -1,6 +1,7 @@
 import financeWorker from './finance-worker.js';
 import taxServiceWorker from './tax-service-worker.js';
 import taxHometaxLedgerService from './tax-hometax-ledger-service.js';
+import taxBusinessRegistryService from './tax-business-registry-service.js';
 
 const FINANCE_TABLES = Object.freeze({
   organizations: 'finance_organizations',
@@ -16,7 +17,8 @@ const FINANCE_TABLES = Object.freeze({
   tax_invoices: 'finance_tax_invoices',
   tax_invoice_events: 'finance_tax_invoice_events',
   tax_hometax_import_batches: 'finance_tax_hometax_import_batches',
-  tax_hometax_ledger: 'finance_tax_hometax_ledger'
+  tax_hometax_ledger: 'finance_tax_hometax_ledger',
+  tax_business_registry_status: 'finance_tax_business_registry_status'
 });
 
 const TABLE_PATTERN = new RegExp(`\\b(${Object.keys(FINANCE_TABLES).join('|')})\\b`, 'g');
@@ -43,6 +45,7 @@ export default {
     const financeEnv = Object.create(env || null);
     if (env?.DB) financeEnv.DB = namespacedDatabase(env.DB);
     const pathname = new URL(request.url).pathname;
+    if (pathname.startsWith('/api/finance/tax-business-')) return taxBusinessRegistryService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-hometax-')) return taxHometaxLedgerService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-')) return taxServiceWorker.fetch(request, financeEnv, ctx);
     return financeWorker.fetch(request, financeEnv, ctx);
