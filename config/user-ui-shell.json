@@ -29,19 +29,9 @@
   "footer": {
     "owner": "shared-shell",
     "strategy": "shell-supplied",
-    "legalLinks": {
-      "privacy": "https://ekodi.kr/privacy",
-      "terms": "https://ekodi.kr/terms",
-      "contact": "mailto:ekodibiz@gmail.com"
-    },
-    "operator": {
-      "name": "에코디비즈",
-      "representative": "정찬균",
-      "businessRegistrationNumber": "213-13-01959",
-      "address": "전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층",
-      "email": "ekodibiz@gmail.com"
-    },
-    "copyright": "© 2026 EKODI · EKODIBIZ. All rights reserved.",
+    "contentSource": "config/user-footer.js",
+    "layout": "operator-copy-left / legal-links-right; stack on narrow screens",
+    "themePolicy": "inherit each service typography and color mood; optional --ekodi-user-footer-* tokens may refine it",
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true
   },
