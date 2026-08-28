@@ -25,7 +25,7 @@ permissions:
 
 concurrency:
   group: ekodibiz-revenue-os-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -60,7 +60,7 @@ jobs:
     needs: validate
     environment: development
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 14
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
@@ -75,39 +75,49 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml 2>&1 | tee /tmp/ekodibiz-staging-deploy.log
-      - name: Verify staging funnel, persistence and gates
+          npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml
+      - name: Verify staging through authenticated remote preview
         shell: bash
         run: |
           set -euo pipefail
-          base=$(grep -Eo 'https://[-A-Za-z0-9.]+\.workers\.dev' /tmp/ekodibiz-staging-deploy.log | tail -n 1 || true)
-          if [[ -z "$base" ]]; then
-            echo 'No workers.dev URL was emitted by Wrangler.'
+          log=/tmp/ekodibiz-remote-preview.log
+          npx --yes wrangler@4.119.0 dev --remote --config wrangler.ekodibiz-staging.toml --port 8787 >"$log" 2>&1 &
+          preview_pid=$!
+          cleanup() { kill "$preview_pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl -sSf --max-time 5 'http://127.0.0.1:8787/api/health' >/tmp/ekodibiz-health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$preview_pid" 2>/dev/null; then
+              cat "$log"
+              exit 1
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != "1" ]]; then
+            cat "$log"
             exit 1
           fi
-          echo "Verifying $base"
-          for attempt in $(seq 1 18); do
-            root=$(curl -L -sS --max-time 15 "$base/" || true)
-            health=$(curl -sS --max-time 15 "$base/api/health" || true)
-            catalog=$(curl -sS --max-time 15 "$base/api/catalog" || true)
-            consult=$(curl -sS --max-time 15 -H 'content-type: application/json' -d '{"goal":"식당 매출을 늘리고 싶어요"}' "$base/api/consult" || true)
-            ops=$(curl -sS --max-time 15 "$base/api/ops/status" || true)
-            if grep -Fq '무엇을 이루고 싶으세요?' <<<"$root" \
-              && grep -Fq 'operational-mvp' <<<"$health" \
-              && grep -Fq 'durable-object-sqlite' <<<"$health" \
-              && grep -Fq '30일 자동홍보팩' <<<"$catalog" \
-              && grep -Fq 'LEAD-' <<<"$consult" \
-              && grep -Fq 'growth_scout' <<<"$ops" \
-              && grep -Fq 'finance_gatekeeper' <<<"$ops"; then
-              echo 'EKODIBIZ staging verified with persistent AI operations.'
-              exit 0
-            fi
-            if [[ "$attempt" == "18" ]]; then
-              printf 'ROOT=%s\nHEALTH=%s\nCATALOG=%s\nCONSULT=%s\nOPS=%s\n' "${root:0:500}" "${health:0:500}" "${catalog:0:500}" "${consult:0:500}" "${ops:0:500}"
-            fi
-            sleep 5
-          done
-          exit 1
+
+          root=$(curl -L -sS --max-time 15 'http://127.0.0.1:8787/' || true)
+          health=$(cat /tmp/ekodibiz-health.json)
+          catalog=$(curl -sS --max-time 15 'http://127.0.0.1:8787/api/catalog' || true)
+          consult=$(curl -sS --max-time 15 -H 'content-type: application/json' -d '{"goal":"식당 매출을 늘리고 싶어요"}' 'http://127.0.0.1:8787/api/consult' || true)
+          ops=$(curl -sS --max-time 15 'http://127.0.0.1:8787/api/ops/status' || true)
+
+          printf 'HEALTH=%s\nCONSULT=%s\nOPS=%s\n' "${health:0:600}" "${consult:0:600}" "${ops:0:600}"
+          grep -Fq '무엇을 이루고 싶으세요?' <<<"$root"
+          grep -Fq 'operational-mvp' <<<"$health"
+          grep -Fq 'durable-object-sqlite' <<<"$health"
+          grep -Fq '30일 자동홍보팩' <<<"$catalog"
+          grep -Fq 'LEAD-' <<<"$consult"
+          grep -Fq 'growth_scout' <<<"$ops"
+          grep -Fq 'finance_gatekeeper' <<<"$ops"
+          echo 'EKODIBIZ staging verified with persistent AI operations.'
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
