@@ -15,7 +15,7 @@ function installStyle(){
   const style=document.createElement('style');
   style.id=STYLE_ID;
   style.textContent=`
-    .ekodi-user-ui-footer{position:relative;z-index:2;margin-top:28px;border-top:1px solid color-mix(in srgb,var(--ekodi-shell-border,#dfe4df) 70%,transparent);background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 94%,transparent);backdrop-filter:blur(12px);color:var(--ekodi-shell-muted,#536158);font:12px/1.6 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;text-align:center}
+    .ekodi-user-ui-footer{position:relative;z-index:2;margin-top:28px;border-top:1px solid color-mix(in srgb,var(--ekodi-shell-border,#dfe4df) 70%,transparent);background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 94%,transparent);backdrop-filter:blur(12px);color:var(--ekodi-shell-muted,#536158);font:13px/1.65 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;text-align:center}
     .ekodi-user-ui-footer__inner{width:min(980px,calc(100% - 32px));margin:0 auto;padding:18px 0 20px;display:grid;justify-items:center;gap:6px}
     .ekodi-user-ui-footer__brand{font-weight:800;letter-spacing:.12em;color:var(--ekodi-shell-text,#18251d)}
     .ekodi-user-ui-footer__links,.ekodi-user-ui-footer__business{display:flex;justify-content:center;gap:4px 12px;flex-wrap:wrap}.ekodi-user-ui-footer__links{gap:6px 14px}
