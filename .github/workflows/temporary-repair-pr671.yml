@@ -1,3 +1,4 @@
+# One-shot repair workflow. Remove after PR #671 verifier is updated.
 name: Temporary Repair PR671 Staging Verifier
 on:
   push:
