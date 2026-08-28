@@ -21,9 +21,14 @@ test('Conversation release is one ordered orchestrator from staging through prod
   assert.match(workflow,/group: ekodi-conversation-release/);
   assert.match(workflow,/workspace-staging:\n\s+environment: development\n\s+needs: validate/);
   assert.match(workflow,/control-staging:\n\s+environment: development\n\s+needs: workspace-staging/);
-  assert.match(workflow,/production-workspace:/);
-  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
-  assert.match(workflow,/production-ui:\n\s+needs: production-control/);
+  assert.match(workflow,/staging-ui:\n\s+environment: development\n\s+needs: validate/);
+  assert.match(workflow,/production-workspace:\n\s+environment: production\n\s+needs: \[control-staging, staging-ui\]/);
+  assert.match(workflow,/production-control:\n\s+environment: production\n\s+needs: production-workspace/);
+  assert.match(workflow,/production-ui:\n\s+environment: production\n\s+needs: production-control/);
+  assert.match(workflow,/API_STAGING_URL: https:\/\/ekodi-workspace-platform-api-staging\.ekodi-development\.workers\.dev/);
+  assert.match(workflow,/SITE_STAGING_URL: https:\/\/ekodi-shared-site-staging\.ekodi-development\.workers\.dev/);
+  assert.match(workflow,/CONTROL_STAGING_URL: https:\/\/ekodi-conversation-control-staging\.ekodi-development\.workers\.dev/);
+  assert.doesNotMatch(workflow,/\.topmaster-joseph\.workers\.dev/);
   assert.match(workflow,/Apply production migration once after both staging gates/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
