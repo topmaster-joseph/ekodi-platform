@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
+      - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
   push:
-    branches: [main, development]
+    branches: [development]
     paths:
       - '.github/workflows/**'
+      - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
   workflow_dispatch:
@@ -23,7 +25,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Enforce Cloudflare development and production boundaries
+      - name: Enforce development Cloudflare and production-probe boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -56,9 +58,38 @@ jobs:
               cloudflare_write = ('wrangler@' in text and ' deploy ' in text) or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
               if staging_trigger and uses_prod and cloudflare_write:
                   errors.append(f'{path.name}: staging branch can write with production Cloudflare credentials')
+              if path.name not in {'ecosystem-load-test.yml', 'cloudflare-boundary-audit.yml'} and 'node scripts/ecosystem-load-test.mjs' in text:
+                  errors.append(f'{path.name}: development workflow invokes the production load script')
+
+          load_workflow = (root / 'ecosystem-load-test.yml').read_text(encoding='utf-8')
+          if 'Block production load from development branch' not in load_workflow:
+              errors.append('development ecosystem-load-test.yml is missing the fail-closed block')
+          if 'node scripts/ecosystem-load-test.mjs' in load_workflow:
+              errors.append('development ecosystem-load-test.yml must not invoke the load script')
+          if re.search(r'^\s{2}(pull_request|push):', load_workflow, flags=re.MULTILINE):
+              errors.append('development ecosystem-load-test.yml must never auto-run')
+
+          core_verify = (root / 'verify-ekodi-core-completion.yml').read_text(encoding='utf-8')
+          for forbidden in ['ecosystem-load-test.mjs', 'verify:core-production', 'production-readonly:']:
+              # The guard step intentionally names the first two forbidden strings; only reject runnable forms.
+              if forbidden == 'ecosystem-load-test.mjs' and 'run: node scripts/ecosystem-load-test.mjs' in core_verify:
+                  errors.append('development Core verification can run the production load test')
+              elif forbidden == 'verify:core-production' and 'run: npm run verify:core-production' in core_verify:
+                  errors.append('development Core verification can run production verification')
+              elif forbidden == 'production-readonly:' and forbidden in core_verify:
+                  errors.append('development Core verification restored a production job')
+
+          shell_verify = (root / 'verify-shared-shell-production.yml').read_text(encoding='utf-8')
+          shell_gate = "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
+          if shell_verify.count(shell_gate) < 2:
+              errors.append('Shared Shell production jobs are not manual-main gated')
+          if 'seq 1 24' in shell_verify or 'seq 1 30' in shell_verify:
+              errors.append('Shared Shell high-retry production probes were restored')
+          if 'max-parallel: 4' not in shell_verify:
+              errors.append('Shared Shell production matrix is not bounded')
 
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Cloudflare boundary audit passed.')
+          print('Development Cloudflare boundary audit passed with production-probe isolation.')
           PY
