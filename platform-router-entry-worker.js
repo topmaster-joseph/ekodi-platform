@@ -1,6 +1,7 @@
 import legacyPlatformRouter from './platform-router-worker.js';
 import financeEntryWorker from './finance-entry-worker.js';
 import taxPortalWorker from './tax-portal-worker.js';
+import { injectTaxLocalFallback } from './tax-local-fallback.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
@@ -38,7 +39,7 @@ export default {
     if(host===TAX_HOST){
       if(url.pathname.startsWith('/api/finance/tax-'))return financeEntryWorker.fetch(request,env,ctx);
       const portal=taxPortalWorker.fetch(request,env,ctx);
-      if(portal)return portal;
+      if(portal)return url.pathname==='/tax-portal.js'?injectTaxLocalFallback(portal):portal;
       return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
     }
 
