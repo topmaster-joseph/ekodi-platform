@@ -1,9 +1,17 @@
-import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
+import {
+  adminMenuGroups,
+  adminMenuOrder,
+  getAdminMenuGroupLabel,
+  getAdminMenuItem,
+  getAdminMenuLabel,
+  normalizeAdminLocale,
+} from './admin-menu-registry.js';
 
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
+const GROUP_LABEL_CLASS = 'admin-menu-group-label';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -25,7 +33,15 @@ export function readAdminSidebarLocale() {
 }
 
 function navItems(nav) {
-  return nav?.querySelectorAll('.nav[data-section], .nav[data-lazy-section], .nav[data-device-control-nav]') || [];
+  return nav?.querySelectorAll('.nav') || [];
+}
+
+function ensureGroupStyle() {
+  if (document.querySelector('#ekodi-admin-menu-groups-style')) return;
+  const style = document.createElement('style');
+  style.id = 'ekodi-admin-menu-groups-style';
+  style.textContent = `body.compact-control-center .sidebar nav>.${GROUP_LABEL_CLASS}{padding:13px 9px 5px;margin:0;font-size:9px;font-weight:800;line-height:1;letter-spacing:.09em;text-transform:uppercase;color:rgba(159,177,195,.7);user-select:none}body.compact-control-center .sidebar nav>.${GROUP_LABEL_CLASS}:first-of-type{padding-top:5px}@media(max-width:760px){body.compact-control-center .sidebar nav>.${GROUP_LABEL_CLASS}{padding-top:12px;font-size:10px}}`;
+  document.head.append(style);
 }
 
 function ensureLabel(item) {
@@ -37,19 +53,85 @@ function ensureLabel(item) {
   return span;
 }
 
-export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
+function visibleDefinition(id) {
   const definition = getAdminMenuItem(id);
-  if (!definition || definition.internal) return null;
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'nav';
-  button.dataset.section = definition.id;
-  button.append(document.createTextNode(`${definition.icon || '·'} `));
+  return definition && !definition.internal ? definition : null;
+}
+
+function pruneNonRegistryItems(nav) {
+  let changed = false;
+  for (const item of [...navItems(nav)]) {
+    const id = adminSidebarSectionOf(item);
+    const definition = visibleDefinition(id);
+    if (!id || RETIRED_MENU_SECTIONS.has(id) || !definition) {
+      item.remove();
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function menuRankMap() {
+  return new Map(adminMenuOrder().map((id, index) => [id, (index + 1) * 10]));
+}
+
+function ensureGroupLabels(nav, locale, rank) {
+  const present = new Map();
+  for (const item of navItems(nav)) {
+    const id = adminSidebarSectionOf(item);
+    const definition = visibleDefinition(id);
+    if (!definition?.group) continue;
+    if (!present.has(definition.group)) present.set(definition.group, []);
+    present.get(definition.group).push(item);
+  }
+
+  const existing = new Map(
+    [...nav.querySelectorAll(`.${GROUP_LABEL_CLASS}[data-admin-menu-group]`)]
+      .map(node => [node.dataset.adminMenuGroup, node]),
+  );
+
+  for (const groupId of adminMenuGroups()) {
+    const items = present.get(groupId) || [];
+    let label = existing.get(groupId);
+    if (!items.length) {
+      label?.remove();
+      continue;
+    }
+    if (!label) {
+      label = document.createElement('div');
+      label.className = GROUP_LABEL_CLASS;
+      label.dataset.adminMenuGroup = groupId;
+      label.setAttribute('role', 'presentation');
+      nav.append(label);
+    }
+    const text = getAdminMenuGroupLabel(groupId, locale);
+    if (label.textContent !== text) label.textContent = text;
+    const firstRank = Math.min(...items.map(item => rank.get(adminSidebarSectionOf(item)) || 9000));
+    label.style.order = String(Math.max(0, firstRank - 1));
+    existing.delete(groupId);
+  }
+
+  for (const label of existing.values()) label.remove();
+}
+
+export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
+  const definition = visibleDefinition(id);
+  if (!definition) return null;
+  const item = definition.href ? document.createElement('a') : document.createElement('button');
+  if (item.tagName === 'BUTTON') item.type = 'button';
+  else {
+    item.href = definition.href;
+    item.target = '_blank';
+    item.rel = 'noopener';
+  }
+  item.className = 'nav';
+  item.dataset.section = definition.id;
+  item.append(document.createTextNode(`${definition.icon || '·'} `));
   const label = document.createElement('span');
   label.textContent = getAdminMenuLabel(definition.id, locale);
-  button.append(label);
-  button.dataset.adminSidebarShared = 'true';
-  return button;
+  item.append(label);
+  item.dataset.adminSidebarShared = 'true';
+  return item;
 }
 
 export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids = adminMenuOrder() } = {}) {
@@ -57,35 +139,38 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
   const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
   nav.replaceChildren(...items);
   nav.dataset.adminSidebarShared = 'true';
+  nav.dataset.adminMenuGovernance = 'registry-v2';
+  syncAdminSidebar(nav.ownerDocument || document, { locale });
   return items;
 }
 
 export function syncAdminSidebar(root = document, options = {}) {
   const nav = root.querySelector?.('.sidebar nav') || (root.matches?.('.sidebar nav') ? root : null);
   if (!nav) return false;
+  ensureGroupStyle();
   const locale = normalizeAdminLocale(options.locale || options.localeProvider?.() || window.EKODIAdminMenu?.locale?.() || readAdminSidebarLocale());
-  const order = adminMenuOrder();
-  const rank = new Map(order.map((id, index) => [id, index + 1]));
-  let unknownRank = 500;
+  const rank = menuRankMap();
+
+  pruneNonRegistryItems(nav);
 
   for (const item of navItems(nav)) {
     const id = adminSidebarSectionOf(item);
-    const definition = getAdminMenuItem(id);
-    if (!definition) {
-      if (RETIRED_MENU_SECTIONS.has(id)) item.remove();
-      continue;
-    }
+    const definition = visibleDefinition(id);
+    if (!definition) continue;
     const label = ensureLabel(item);
     const canonical = getAdminMenuLabel(id, locale);
     if (label.textContent !== canonical) label.textContent = canonical;
     item.dataset.adminSidebarShared = 'true';
-    const menuRank = definition.internal ? 9999 : (rank.get(id) ?? unknownRank++);
+    item.dataset.adminMenuGroup = definition.group || '';
+    const menuRank = rank.get(id) ?? 9000;
     if (item.style.order !== String(menuRank)) item.style.order = String(menuRank);
-    item.dataset.menuOrder = String(menuRank);
+    if (item.dataset.menuOrder !== String(menuRank)) item.dataset.menuOrder = String(menuRank);
   }
 
+  ensureGroupLabels(nav, locale, rank);
   nav.dataset.adminSidebarShared = 'true';
   nav.dataset.adminSidebarLocale = locale;
+  nav.dataset.adminMenuGovernance = 'registry-v2';
 
   const active = [...navItems(nav)].find(item => item.classList.contains('active'));
   const activeId = adminSidebarSectionOf(active);
@@ -125,7 +210,13 @@ export function mountAdminSidebar(root = document, options = {}) {
   };
 
   const navObserver = new MutationObserver(schedule);
-  navObserver.observe(nav, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'data-section', 'data-lazy-section'] });
+  navObserver.observe(nav, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['class', 'data-section', 'data-lazy-section', 'data-device-control-nav'],
+  });
 
   const title = root.querySelector?.('#pageTitle');
   const titleObserver = title ? new MutationObserver(schedule) : null;
@@ -149,7 +240,7 @@ export function mountAdminSidebar(root = document, options = {}) {
       navObserver.disconnect();
       titleObserver?.disconnect();
       mounted.delete(nav);
-    }
+    },
   });
   mounted.set(nav, api);
   sync();
@@ -164,6 +255,6 @@ if (typeof window !== 'undefined') {
     createItem: createAdminSidebarItem,
     sectionOf: adminSidebarSectionOf,
     order: adminMenuOrder,
-    locale: readAdminSidebarLocale
+    locale: readAdminSidebarLocale,
   });
 }
