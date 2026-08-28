@@ -301,7 +301,7 @@ export default {
       }
     }
 
-    if (TRADD_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
+    if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
 
     if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));
