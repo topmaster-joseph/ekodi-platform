@@ -9,15 +9,26 @@ const manifest = read('ekodi-service-manifest.js');
 const shell = read('shell/shell.js');
 const membership = JSON.parse(read('config/universal-membership.json'));
 
-test('common-service guest pages are guide-only until Google FREE membership', () => {
+test('common-service public pages stay visible as guide landings before Google FREE membership', () => {
   assert.equal(membership.guestAccess?.mode, 'guide_only');
   assert.equal(membership.guestAccess?.minimumTierForContent, 'free');
-  assert.match(manifest, /guestMode:'guide-only'/);
-  assert.match(manifest, /operatingModel==='customer-site'\?null:COMMON_USER_ACCESS_POLICY/);
+  assert.match(manifest, /guestMode:'public-guide'/);
+  assert.match(manifest, /service\.defaultSurface==='public'\?COMMON_PUBLIC_ACCESS_POLICY:COMMON_USER_ACCESS_POLICY/);
+  assert.match(manifest, /operatingModel==='customer-site'\?null:/);
+  assert.match(shell, /p\.guestMode==='guide-only'/);
+  assert.match(shell, /surface==='public'\|\|surface==='workspace'/);
   assert.match(shell, /Google로 무료 시작/);
   assert.match(shell, /capabilitySummary/);
   assert.match(shell, /guestPublicException/);
 });
+
+test('workspace common services remain member-gated while public services use service-owned guide UI', () => {
+  assert.match(manifest, /const COMMON_USER_ACCESS_POLICY/);
+  assert.match(manifest, /const COMMON_PUBLIC_ACCESS_POLICY/);
+  assert.match(manifest, /enforcedBy:'service-ui-and-protected-api'/);
+  assert.match(manifest, /userAccessPolicy: 'public-guide-workspace-member-content'/);
+});
+
 test('ordinary common-service members land in My EKODI while platform admins keep original return', () => {
   assert.match(client, /const commonServiceEntry=config\.operatingModel==='shared-service'/);
   assert.match(client, /new URL\('https:\/\/my\.ekodi\.kr\/'\)/);
