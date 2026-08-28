@@ -52,21 +52,24 @@ function persist(locale){
   try{document.cookie=`${COOKIE_KEY}=${encodeURIComponent(locale)}; Domain=.ekodi.kr; Path=/; Max-Age=31536000; SameSite=Lax; Secure`; }catch{}
 }
 function text(){return COPY[activeLocale]||COPY['ko-KR'];}
+function setText(node,value){if(node&&node.textContent!==String(value))node.textContent=String(value);}
+function setAttr(node,name,value){if(node&&node.getAttribute(name)!==String(value))node.setAttribute(name,String(value));}
 function updateSharedCopy(){
   const copy=text();
   const brand=document.querySelector('.ekodi-user-ui-fallback-header__brand,.ekodi-user-ui-header-fallback__brand');
-  if(brand)brand.setAttribute('aria-label',copy.home);
+  setAttr(brand,'aria-label',copy.home);
   const accountNav=document.querySelector('.ekodi-user-ui-fallback-header__nav');
-  if(accountNav)accountNav.setAttribute('aria-label',copy.account);
+  setAttr(accountNav,'aria-label',copy.account);
   const legal=document.querySelector('.ekodi-user-ui-footer__links');
-  if(legal)legal.setAttribute('aria-label',copy.legal);
+  setAttr(legal,'aria-label',copy.legal);
   const labels={privacy:copy.privacy,terms:copy.terms,contact:copy.contact};
   for(const [key,value] of Object.entries(labels)){
-    for(const node of document.querySelectorAll(`[data-ekodi-i18n="${key}"]`))node.textContent=value;
+    for(const node of document.querySelectorAll(`[data-ekodi-i18n="${key}"]`))setText(node,value);
   }
 }
 function apply(locale,{save=true,emit=true}={}){
   const next=normalize(locale)||'ko-KR';
+  const changed=activeLocale!==next||document.documentElement.lang!==next;
   activeLocale=next;
   document.documentElement.lang=next;
   document.documentElement.dir='ltr';
@@ -74,7 +77,7 @@ function apply(locale,{save=true,emit=true}={}){
   if(save)persist(next);
   updateSharedCopy();
   syncControls();
-  if(emit)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale:next,version:VERSION,source:'shared-user-shell'}}));
+  if(emit&&changed)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale:next,version:VERSION,source:'shared-user-shell'}}));
   return next;
 }
 function header(){
@@ -115,17 +118,17 @@ function placeControl(){
   if(control.parentElement!==parent){
     if(fallbackNav)fallbackNav.prepend(control);else parent.append(control);
   }
-  control.querySelector('.ekodi-user-language__label').textContent=text().language;
+  setText(control.querySelector('.ekodi-user-language__label'),text().language);
   const select=control.querySelector('select');
-  select.setAttribute('aria-label',text().language);
-  select.value=activeLocale;
+  setAttr(select,'aria-label',text().language);
+  if(select&&select.value!==activeLocale)select.value=activeLocale;
 }
 function syncControls(){
   for(const control of document.querySelectorAll('[data-ekodi-language-control]')){
-    const label=control.querySelector('.ekodi-user-language__label');
+    setText(control.querySelector('.ekodi-user-language__label'),text().language);
     const select=control.querySelector('select');
-    if(label)label.textContent=text().language;
-    if(select){select.setAttribute('aria-label',text().language);select.value=activeLocale;}
+    setAttr(select,'aria-label',text().language);
+    if(select&&select.value!==activeLocale)select.value=activeLocale;
   }
 }
 function reconcile(){scheduled=false;placeControl();updateSharedCopy();}
