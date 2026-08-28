@@ -9,11 +9,11 @@ const COMMON_USER_ACCESS_POLICY = Object.freeze({
 });
 const PUBLIC_SERVICE_ACCESS_POLICY = Object.freeze({
   scope:'user-pages',
-  guestMode:'service-landing',
+  guestMode:'landing',
   minimumTier:'free',
   identityProvider:'google',
   authHub:'https://auth.ekodi.kr/',
-  enforcedBy:'service+shared-shell',
+  enforcedBy:'service',
 });
 
 const SERVICES = [
@@ -65,7 +65,7 @@ export const EKODI_SERVICE_MANIFEST = Object.freeze({
   shellVersion: 2,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
-  userAccessPolicy: 'guest-service-landing-member-content',
+  userAccessPolicy: 'guest-landing-member-content',
   services: Object.freeze(SERVICES)
 });
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
