@@ -6,12 +6,20 @@ on:
       - 'site-worker.js'
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
+      - 'platform-router-entry-worker.js'
+      - 'professional-ai-entry-page.js'
+      - 'space-entry-page.js'
+      - 'config/domain-site-architecture.json'
+      - 'config/ecosystem-services.json'
+      - 'config/marketing-tenants.json'
       - 'ekodi-shell-injector.js'
       - 'trade.html'
       - 'hub.html'
       - 'wrangler.site.toml'
       - 'wrangler.site-staging.toml'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'scripts/build.mjs'
+      - 'scripts/ecosystem-registry.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
 permissions:
@@ -43,7 +51,11 @@ jobs:
           node --check site-worker.js
           node --check site-shell-worker.js
           node --check platform-router-worker.js
-          node --check ekodi-shell-injector.js
+          node --check platform-router-entry-worker.js
+          node --check professional-ai-entry-page.js
+          node --check space-entry-page.js
+          node scripts/validate-domain-site-architecture.mjs
+          node --test test/professional-ai-path-routing.test.mjs test/space-entry-routing.test.mjs test/marketing-domain-policy.test.mjs
           npm run build
           test -f dist/trade.html
           test -f dist/hub.html
@@ -53,7 +65,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy no-route staging Worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
-      - name: Verify all shared platform hosts without touching production routes
+      - name: Verify shared platform hosts and canonical AI paths without touching production routes
         shell: bash
         run: |
           set -euo pipefail
@@ -66,13 +78,28 @@ jobs:
             grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared-stage.html
             grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
           }
+          verify_ai_path() {
+            path="$1"; needle="$2"; route="$3"
+            code=$(curl -sS -D /tmp/ai-path.headers -o /tmp/ai-path.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'x-ekodi-staging-host: ekodi.kr' "$STAGING_URL$path" || true)
+            echo "ekodi.kr$path -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq "$needle" /tmp/ai-path.html
+            grep -Fiq "x-ekodi-route: $route" /tmp/ai-path.headers
+          }
           for attempt in $(seq 1 18); do
             if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
               && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
-              && verify_shell 'invest.ekodi.kr' 'EKODI Investment'; then
-              echo 'Shared-site Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'
+              && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_ai_path '/ai/' '에코디 전문AI' 'professional-ai' \
+              && verify_ai_path '/ai/marketing/' '에코디 마케팅AI' 'professional-ai' \
+              && verify_ai_path '/ai/creator/' '에코디 크리에이터 AI' 'professional-ai' \
+              && verify_ai_path '/ai/life/' '오늘의 질문 · 인생AI' 'professional-ai' \
+              && verify_ai_path '/ai/energy/' '에코디 에너지 AI' 'professional-ai' \
+              && verify_ai_path '/ai/support/' '에코디 지원사업 AI' 'professional-ai' \
+              && verify_ai_path '/ai/marketing/jadam/' '자담치킨 목포대점' 'professional-ai-space'; then
+              echo 'Shared-site staging verified including EKODI professional AI root paths.'
               exit 0
             fi
             sleep 4
