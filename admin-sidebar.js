@@ -38,7 +38,7 @@ function ensureLabel(item) {
 
 export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
   const definition = getAdminMenuItem(id);
-  if (!definition || definition.internal) return null;
+  if (!definition || definition.internal || definition.mergedInto) return null;
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'nav';
@@ -71,6 +71,14 @@ export function syncAdminSidebar(root = document, options = {}) {
     const id = adminSidebarSectionOf(item);
     const definition = getAdminMenuItem(id);
     if (!definition) continue;
+    if (definition.mergedInto) {
+      item.hidden = true;
+      item.setAttribute('aria-hidden', 'true');
+      item.tabIndex = -1;
+      item.dataset.adminMenuParent = definition.mergedInto;
+      item.classList.remove('active');
+      continue;
+    }
     const label = ensureLabel(item);
     const canonical = getAdminMenuLabel(id, locale);
     if (label.textContent !== canonical) label.textContent = canonical;
