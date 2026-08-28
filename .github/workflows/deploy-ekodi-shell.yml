@@ -43,7 +43,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.127.1'
 
 jobs:
   validate:
@@ -115,7 +115,6 @@ jobs:
 
   staging:
     environment: development
-    if: github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -129,22 +128,22 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify Cloudflare credentials
+      - name: Verify Development Cloudflare boundary
         run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Prepare shared Message UI asset
         run: cp ekodi-message-ui.js shell/message-ui.js
       - name: Deploy isolated Shell staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.staging.toml
+      - name: Confirm Shell staging deployment exists
+        run: npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.shell.staging.toml --json > /tmp/shell-staging-deployments.json
       - name: Verify Shell staging with release cache busting
         run: node scripts/verify-ekodi-shell-live.mjs
 
   production:
-    if: >-
-      always() && needs.validate.result == 'success' &&
-      (github.event_name != 'pull_request' ||
-       (startsWith(github.event.pull_request.head.ref, 'release/ekodi-shell-') && needs.staging.result == 'success'))
+    if: github.event_name != 'pull_request' && needs.validate.result == 'success' && needs.staging.result == 'success'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -163,7 +162,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Prepare shared Message UI asset
         run: cp ekodi-message-ui.js shell/message-ui.js
-      - name: Deploy Shell production
+      - name: Deploy Shell production after Development success
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.toml
       - name: Verify real Shell hostname with release cache busting
         run: node scripts/verify-ekodi-shell-live.mjs
