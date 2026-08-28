@@ -44,14 +44,20 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -f church/index.html
           test -f church/church-refresh.css
+          test -f church/community-visual.css
           node --check church/script.js
           grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' church/index.html
           grep -Fq 'class="online-triad"' church/index.html
           grep -Fq '>유튜브 예배<' church/index.html
           grep -Fq '>묵상<' church/index.html
           grep -Fq '>실시간 화상<' church/index.html
-          grep -Fq '예배에서 일상으로' church/index.html
-          grep -Fq '일상에서 희년으로' church/index.html
+          grep -Fq 'class="community-visit"' church/index.html
+          grep -Fq '함께 예배하고,' church/index.html
+          grep -Fq '<strong>에코디교회</strong>' church/index.html
+          grep -Fq 'class="shell-my"' church/index.html
+          grep -Fq '서비스 전환' church/index.html
+          grep -Fq 'linear-gradient(90deg,rgba(7,25,22,.98)' church/community-visual.css
+          grep -Fq 'flex-direction:column' church/community-visual.css
 
       - name: Prepare static Pages payload
         shell: bash
@@ -62,6 +68,8 @@ jobs:
           rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
           test -s /tmp/ekodi-church-pages/index.html
           test -s /tmp/ekodi-church-pages/church-refresh.css
+          test -s /tmp/ekodi-church-pages/community-visual.css
+          test -s /tmp/ekodi-church-pages/script.js
 
       - name: Deploy Church to Cloudflare Pages
         shell: bash
@@ -77,20 +85,24 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/?release=jubilee-20260829' || true)
-            css_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-refresh.css?release=jubilee-20260829' || true)
-            if [[ "$root_code" == '200' && "$css_code" == '200' ]] \
-              && grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' /tmp/church.html \
+            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/?release=ui-shell-20260829' || true)
+            refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-refresh.css?release=ui-shell-20260829' || true)
+            visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/community-visual.css?release=ui-shell-20260829' || true)
+            script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/script.js?release=ui-shell-20260829' || true)
+            if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$script_code" == '200' ]] \
               && grep -Fq 'class="online-triad"' /tmp/church.html \
-              && grep -Fq '유튜브 예배' /tmp/church.html \
-              && grep -Fq '실시간 화상' /tmp/church.html \
-              && grep -Fq '일상에서 희년으로' /tmp/church.html \
-              && grep -Fq '.online-triad' /tmp/church-refresh.css; then
-              echo 'EKODI Church Jubilee redesign verified in production.'
+              && grep -Fq 'class="community-visit"' /tmp/church.html \
+              && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
+              && grep -Fq 'class="shell-my"' /tmp/church.html \
+              && grep -Fq '서비스 전환' /tmp/church.html \
+              && grep -Fq 'linear-gradient(90deg,rgba(7,25,22,.98)' /tmp/community-visual.css \
+              && grep -Fq 'flex-direction:column' /tmp/community-visual.css \
+              && grep -Fq 'Public EKODI Shell' /tmp/script.js; then
+              echo 'EKODI Church user-shell alignment verified in production.'
               exit 0
             fi
-            echo "attempt=$attempt root=$root_code css=$css_code"
+            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code"
             sleep 5
           done
-          echo 'Production did not converge to the expected Church release.'
+          echo 'Production did not converge to the expected Church UI-shell release.'
           exit 1
