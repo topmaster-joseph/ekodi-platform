@@ -32,7 +32,7 @@ function extendDirective(csp,name,value){
 
 function shellCsp(csp){
   let next=String(csp||'').trim();
-  if(!next)next="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'";
+  if(!next)next="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'";
   next=extendDirective(next,'script-src',SHELL_ORIGIN);
   next=extendDirective(next,'style-src',SHELL_ORIGIN);
   next=extendDirective(next,'connect-src',SHELL_ORIGIN);
