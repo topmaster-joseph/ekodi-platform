@@ -2,6 +2,7 @@ const base=String(process.env.EKODI_SHELL_VERIFY_BASE||'https://shell.ekodi.kr')
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
 const attempts=Math.max(1,Number(process.env.EKODI_SHELL_VERIFY_ATTEMPTS||18));
 const delayMs=Math.max(0,Number(process.env.EKODI_SHELL_VERIFY_DELAY_MS||5000));
+const allowAccessGate=String(process.env.EKODI_SHELL_ALLOW_ACCESS_GATE||'')==='1';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
@@ -11,10 +12,16 @@ async function read(path,attempt){
   url.searchParams.set('attempt',String(attempt));
   try{
     const response=await fetch(url,{headers:{'cache-control':'no-cache','pragma':'no-cache'}});
-    return {ok:response.ok,status:response.status,text:await response.text(),url:String(url),headers:response.headers};
+    return {ok:response.ok,status:response.status,text:await response.text(),url:String(url),finalUrl:String(response.url||url),headers:response.headers};
   }catch(error){
-    return {ok:false,status:0,text:'',url:String(url),error:String(error?.message||error),headers:new Headers()};
+    return {ok:false,status:0,text:'',url:String(url),finalUrl:String(url),error:String(error?.message||error),headers:new Headers()};
   }
+}
+
+function isCloudflareAccessGate(result){
+  const target=String(result?.finalUrl||'').toLowerCase();
+  const text=String(result?.text||'').toLowerCase();
+  return target.includes('cloudflareaccess.com')||text.includes('cloudflare access')||text.includes('/cdn-cgi/access/login')||text.includes('cf-access-');
 }
 
 function parseJson(result,label,failures){
@@ -30,6 +37,12 @@ for(let attempt=1;attempt<=attempts;attempt++){
   const [healthResult,manifestResult,footerConfigResult,shellResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
     read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/shell.js',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
   ]);
+  const results=[healthResult,manifestResult,footerConfigResult,shellResult,themeResult,styleResult,userUiStyleResult];
+  if(allowAccessGate&&results.every(result=>result.ok&&isCloudflareAccessGate(result))){
+    console.log(`✅ EKODI Shell staging deployed at ${base}; endpoint is intentionally protected by Cloudflare Access, so content verification remains covered by the Shell contract test suite. release=${release}.`);
+    process.exit(0);
+  }
+
   const failures=[];
   const health=parseJson(healthResult,'health',failures);
   const manifest=parseJson(manifestResult,'manifest',failures);
@@ -90,7 +103,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
   includesAll(userUiStyleResult.text,'user-ui-style',['.ekodi-user-ui-header','.ekodi-user-ui-footer','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','grid-template-columns: minmax(0, 1fr) auto','[data-ekodi-user-header-spacer]'],failures);
 
-  const statuses=[healthResult,manifestResult,footerConfigResult,shellResult,themeResult,styleResult,userUiStyleResult].map(item=>item.status).join('/');
+  const statuses=results.map(item=>item.status).join('/');
   if(!failures.length){
     console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v1/footer-v2+csp-safe-css, centralFooter=ok, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
