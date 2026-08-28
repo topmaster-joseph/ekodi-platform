@@ -53,8 +53,8 @@ jobs:
       - name: Validate Cloudflare bundle
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 deploy --dry-run --config wrangler.ekodibiz-staging.toml --outdir /tmp/ekodibiz-staging-dry
-          npx --yes wrangler@4.119.0 deploy --dry-run --config wrangler.ekodibiz.toml --outdir /tmp/ekodibiz-production-dry
+          npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodibiz-staging.toml --outdir /tmp/ekodibiz-staging-dry
+          npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodibiz.toml --outdir /tmp/ekodibiz-production-dry
 
   deploy-staging:
     needs: validate
@@ -75,13 +75,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz-staging.toml
+          npx --yes wrangler@4.127.1 deploy --config wrangler.ekodibiz-staging.toml
       - name: Verify functional bundle and AI operations locally
         shell: bash
         run: |
           set -euo pipefail
           log=/tmp/ekodibiz-local-runtime.log
-          npx --yes wrangler@4.119.0 dev --config wrangler.ekodibiz-staging.toml --local --port 8787 >"$log" 2>&1 &
+          npx --yes wrangler@4.127.1 dev --config wrangler.ekodibiz-staging.toml --local --port 8787 >"$log" 2>&1 &
           runtime_pid=$!
           cleanup() { kill "$runtime_pid" 2>/dev/null || true; }
           trap cleanup EXIT
@@ -149,11 +149,11 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          out=$(npx --yes wrangler@4.119.0 deployments status --config wrangler.ekodibiz.toml --json 2>&1)
+          out=$(npx --yes wrangler@4.127.1 deployments status --config wrangler.ekodibiz.toml --json 2>&1)
           code=$?
           set -e
           if [[ $code -ne 0 ]] && grep -Fq 'does not exist' <<<"$out"; then
-            npx --yes wrangler@4.119.0 deploy --config wrangler.ekodibiz.toml
+            npx --yes wrangler@4.127.1 deploy --config wrangler.ekodibiz.toml
           elif [[ $code -ne 0 ]]; then
             printf '%s\n' "$out"; exit $code
           fi
