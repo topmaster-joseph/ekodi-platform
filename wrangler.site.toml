@@ -1,5 +1,6 @@
 # Admin site rollout: password recovery interface
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
+# Mall canonical release: publish ekodi.kr/mall disclosures and centered footer
 name = "shy-thunder-39a4"
 main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"
