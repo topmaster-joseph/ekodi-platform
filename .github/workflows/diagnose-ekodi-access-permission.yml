@@ -20,23 +20,26 @@ jobs:
       CF_ACCOUNT_ID: "46aad4738793fbaca88574832a2ccc0f"
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
     steps:
-      - name: Check Access apps API permission
+      - name: Inspect Access apps safely
         shell: bash
         run: |
           set -euo pipefail
           code=$(curl -sS -o /tmp/access-apps.json -w '%{http_code}' \
             -H "Authorization: Bearer $CF_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" || true)
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=100" || true)
           echo "access_apps_status=$code"
           if [ "$code" = "200" ]; then
             node - <<'NODE'
           const fs=require('fs');
           const j=JSON.parse(fs.readFileSync('/tmp/access-apps.json','utf8'));
-          for (const app of (j.result||[])) {
-            const d=String(app.domain||'');
-            if (d.includes('ekodi-development.workers.dev') || d.includes('ekodi-mall-api-staging')) {
-              console.log(`matching_access_app=${app.id} domain=${d}`);
-            }
+          const apps=Array.isArray(j.result)?j.result:[];
+          console.log(`access_apps_count=${apps.length}`);
+          for (const app of apps) {
+            const id=String(app.id||'');
+            const name=String(app.name||'').replace(/[\r\n]/g,' ');
+            const domain=String(app.domain||'').replace(/[\r\n]/g,' ');
+            const type=String(app.type||'');
+            console.log(`access_app id=${id} type=${type} name=${name} domain=${domain}`);
           }
           NODE
           fi
