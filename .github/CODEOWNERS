@@ -1,0 +1,12 @@
+# EKODI constitutional and release-control ownership
+/CONSTITUTION.md @topmaster-joseph
+/governance/constitution/ @topmaster-joseph
+/governance/amendments/ @topmaster-joseph
+/platform-boundaries.json @topmaster-joseph
+/config/core-data-boundaries.json @topmaster-joseph
+/config/storage-policy.json @topmaster-joseph
+/config/service-workspace-policy.json @topmaster-joseph
+/scripts/validate-constitution.mjs @topmaster-joseph
+/scripts/validate-constitution-change.mjs @topmaster-joseph
+/.github/workflows/constitution-check.yml @topmaster-joseph
+/.github/workflows/deploy-*.yml @topmaster-joseph
