@@ -53,6 +53,15 @@ const SERVICES = [
   return Object.freeze({...service,operatingModel,userAccessPolicy,tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
+const canonicalPath=value=>{
+  const path=String(value||'/').replace(/\/+$/,'');
+  return path||'/';
+};
+const canonicalKey=value=>{
+  const url=value instanceof URL?value:new URL(value);
+  return `${url.origin}${canonicalPath(url.pathname)}`;
+};
+
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
   version: 15,
   updatedAt: '2026-08-28',
@@ -65,6 +74,28 @@ export const EKODI_SERVICE_MANIFEST = Object.freeze({
   services: Object.freeze(SERVICES)
 });
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
-export const EKODI_SERVICE_BY_HOST = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[new URL(service.url).hostname,service]));
-export function serviceForHost(hostname){return EKODI_SERVICE_BY_HOST.get(String(hostname||'').toLowerCase())||null;}
+export const EKODI_SERVICE_BY_URL = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[canonicalKey(service.url),service]));
+export const EKODI_SERVICES_BY_HOST = new Map();
+for(const service of EKODI_SERVICE_MANIFEST.services){
+  const host=new URL(service.url).hostname;
+  const list=EKODI_SERVICES_BY_HOST.get(host)||[];
+  list.push(service);
+  EKODI_SERVICES_BY_HOST.set(host,list);
+}
+for(const list of EKODI_SERVICES_BY_HOST.values())list.sort((a,b)=>canonicalPath(new URL(b.url).pathname).length-canonicalPath(new URL(a.url).pathname).length);
+export function serviceForHost(hostname){
+  const list=EKODI_SERVICES_BY_HOST.get(String(hostname||'').toLowerCase())||[];
+  if(list.length===1)return list[0];
+  return list.find(service=>canonicalPath(new URL(service.url).pathname)==='/')||null;
+}
+export function serviceForUrl(value){
+  let url;
+  try{url=value instanceof URL?value:new URL(String(value||''));}catch{return null;}
+  const path=canonicalPath(url.pathname);
+  const list=EKODI_SERVICES_BY_HOST.get(url.hostname.toLowerCase())||[];
+  return list.find(service=>{
+    const base=canonicalPath(new URL(service.url).pathname);
+    return base==='/'?path==='/':path===base||path.startsWith(`${base}/`);
+  })||null;
+}
 export function serviceForId(id){return EKODI_SERVICE_BY_ID.get(String(id||'').toLowerCase())||null;}

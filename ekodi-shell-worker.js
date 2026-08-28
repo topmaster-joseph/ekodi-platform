@@ -1,4 +1,4 @@
-import { EKODI_SERVICE_MANIFEST, serviceForHost, serviceForId } from './ekodi-service-manifest.js';
+import { EKODI_SERVICE_MANIFEST, serviceForHost, serviceForId, serviceForUrl } from './ekodi-service-manifest.js';
 import { EKODI_USER_FOOTER } from './config/user-footer.js';
 
 const USER_SHORTCUT_GUARD=`(()=>{try{if(typeof document==='undefined')return;const current=document.currentScript;const serviceId=String(current?.dataset?.ekodiService||'').trim().toLowerCase();if(serviceId!=='my'){if(current)current.dataset.ekodiShell='off';document.documentElement.dataset.ekodiGlobalNav='off';}}catch{}})();`;
@@ -66,7 +66,10 @@ export default {
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/user-footer.json')return json(EKODI_USER_FOOTER,200,'public, max-age=300, stale-while-revalidate=3600');
     if(url.pathname==='/service'){
-      const id=url.searchParams.get('id');const host=url.searchParams.get('host');const service=id?serviceForId(id):host?serviceForHost(host):null;
+      const id=url.searchParams.get('id');
+      const canonicalUrl=url.searchParams.get('url');
+      const host=url.searchParams.get('host');
+      const service=id?serviceForId(id):canonicalUrl?serviceForUrl(canonicalUrl):host?serviceForHost(host):null;
       return service?json(service):json({error:'service_not_found'},404,'no-store');
     }
     if(url.pathname==='/shell.js')return bundledShell(request,env);

@@ -27,6 +27,8 @@ const legacyPending=new Set();
 const legacyServiceIds=new Set(['my','marketing','community','church','business','biz','work','author','books','lab','social','energy','mall','trade','pay','edu','media','insurance','mail','live','cloud']);
 const compactPlatformRouter=platformRouter.replace(/\s+/g,'');
 const compactUserUiStyle=userUiStyle.replace(/\s+/g,'');
+const canonicalPath=value=>{const path=String(value||'/').replace(/\/+$/,'');return path||'/';};
+const canonicalUrl=value=>{const url=value instanceof URL?value:new URL(value);return `${url.origin}${canonicalPath(url.pathname)}`;};
 
 function fail(message){console.error(`❌ EKODI Shell adoption: ${message}`);process.exitCode=1;}
 
@@ -78,7 +80,7 @@ if(!clientAuth.includes("serviceUrl.protocol!=='https:'"))fail('Client Auth must
 if(!clientAuth.includes('/session/handoff'))fail('Client Auth lost central session handoff');
 
 const byId=new Map();
-const byHost=new Map();
+const byCanonical=new Map();
 const ecosystemById=new Map((ecosystem.services||[]).map(service=>[service.id,service]));
 for(const service of manifest.services||[]){
   if(!service?.id||!/^[a-z][a-z0-9-]*$/.test(service.id)){fail(`invalid service id: ${service?.id||'(missing)'}`);continue;}
@@ -87,8 +89,9 @@ for(const service of manifest.services||[]){
   let url;
   try{url=new URL(service.url);}catch{fail(`${service.id} has an invalid URL`);continue;}
   if(url.protocol!=='https:')fail(`${service.id} must use https`);
-  if(byHost.has(url.hostname))fail(`duplicate canonical host: ${url.hostname}`);
-  byHost.set(url.hostname,service.id);
+  const canonical=canonicalUrl(url);
+  if(byCanonical.has(canonical))fail(`duplicate canonical URL: ${canonical}`);
+  byCanonical.set(canonical,service.id);
   if(!allowedSurfaces.has(service.defaultSurface))fail(`${service.id} must declare a recognized defaultSurface`);
   if(!Array.isArray(service.workspaceKinds)||!service.workspaceKinds.length)fail(`${service.id} needs workspaceKinds`);
   for(const kind of service.workspaceKinds||[])if(!allowedKinds.has(kind))fail(`${service.id} has unsupported workspace kind ${kind}`);
@@ -134,9 +137,9 @@ for(const service of ecosystem.services||[]){
   const manifestService=byId.get(service.id);
   if(!manifestService)continue;
   try{
-    const ecosystemHost=new URL(service.url).hostname;
-    const manifestHost=new URL(manifestService.url).hostname;
-    if(ecosystemHost!==manifestHost)fail(`${service.id} host differs between ecosystem registry (${ecosystemHost}) and service manifest (${manifestHost})`);
+    const ecosystemCanonical=canonicalUrl(service.url);
+    const manifestCanonical=canonicalUrl(manifestService.url);
+    if(ecosystemCanonical!==manifestCanonical)fail(`${service.id} URL differs between ecosystem registry (${ecosystemCanonical}) and service manifest (${manifestCanonical})`);
   }catch{fail(`${service.id} has an invalid registry URL`);}
   if(['live','beta'].includes(service.status)&&service.productionVerified===true&&manifestService.state==='planned')fail(`${service.id} is production verified but planned in service manifest`);
 }
