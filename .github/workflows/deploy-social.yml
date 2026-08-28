@@ -48,13 +48,14 @@ jobs:
           if grep -R -Fq '에코디선교회' social; then echo 'Legacy mission label found in social source'; exit 1; fi
 
   deploy-staging:
+    environment: development
     if: github.ref != 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
     steps:
       - uses: actions/checkout@v7
