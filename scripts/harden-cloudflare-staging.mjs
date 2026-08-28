@@ -34,8 +34,13 @@ function isWorkerStaging(block) {
 function ensureGuard(block) {
   if (block.includes(GUARD)) return block;
   const lines = block.split('\n');
-  const checkoutIndex = lines.findIndex((line) => line.includes('- uses: actions/checkout@v7'));
-  if (checkoutIndex < 0) throw new Error('staging Worker job has no actions/checkout@v7 step');
+  let checkoutIndex = lines.findIndex((line) => line.includes('- uses: actions/checkout@v7'));
+  if (checkoutIndex < 0) {
+    const stepsIndex = lines.findIndex((line) => /^\s{4}steps:\s*$/.test(line));
+    if (stepsIndex < 0) throw new Error('staging Worker job has neither checkout nor steps block');
+    lines.splice(stepsIndex + 1, 0, '      - uses: actions/checkout@v7');
+    checkoutIndex = stepsIndex + 1;
+  }
   lines.splice(checkoutIndex + 1, 0,
     '      - name: Verify Development Cloudflare boundary',
     '        uses: ./.github/actions/cloudflare-development-boundary');
