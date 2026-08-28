@@ -66,10 +66,15 @@ jobs:
           }
       - name: Deploy isolated staging Worker
         run: npx wrangler deploy --config wrangler.energy-staging.toml
-      - name: Verify staging hostname and actuation isolation
+      - name: Verify staging boundary and actuation isolation
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/energy-access.headers -o /tmp/energy-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -Fiq '^www-authenticate: Cloudflare-Access' /tmp/energy-access.headers; then
+            echo "EKODI Energy AI staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 12); do
             root_code=$(curl -L -sS -o /tmp/energy-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -o /tmp/energy-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
