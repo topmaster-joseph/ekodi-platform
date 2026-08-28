@@ -1,0 +1,33 @@
+name: Development Promotion Readiness
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'development'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify development promotion contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .github/workflows/deploy-development.yml
+          test -f .github/workflows/verify-development.yml
+          grep -Fq 'branches: [development]' .github/workflows/deploy-development.yml
+          grep -Fq 'environment: development' .github/workflows/deploy-development.yml
+          grep -Fq 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN' .github/workflows/deploy-development.yml
+          grep -Fq '46aad4738793fbaca88574832a2ccc0f' .github/workflows/deploy-development.yml
+          if grep -Fq 'secrets.CLOUDFLARE_API_TOKEN' .github/workflows/deploy-development.yml; then
+            echo '::error::Development deploy references the production token.'
+            exit 1
+          fi
+          grep -Fq 'ekodi-development.workers.dev' .github/workflows/verify-development.yml
+          echo 'Development promotion contract is ready for review.'
