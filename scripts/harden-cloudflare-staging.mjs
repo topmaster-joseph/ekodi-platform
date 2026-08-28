@@ -149,10 +149,15 @@ function isolatePullRequestConcurrency(filename, text) {
       '  group: ekodi-control-api-release\n',
       "  group: ${{ github.event_name == 'pull_request' && format('ekodi-control-api-pr-{0}', github.event.pull_request.number) || 'ekodi-control-api-release' }}\n");
   }
-  if (filename === 'release-messenger-investment-functional.yml' || filename === 'release-invest-personalization.yml') {
+  if (filename === 'release-messenger-investment-functional.yml') {
     return text.replace(
       '  group: ekodi-conversation-release\n',
       "  group: ${{ github.event_name == 'pull_request' && format('ekodi-conversation-pr-{0}', github.event.pull_request.number) || 'ekodi-conversation-release' }}\n");
+  }
+  if (filename === 'release-invest-personalization.yml') {
+    return text.replace(
+      '  group: ekodi-conversation-release\n',
+      "  group: ${{ github.event_name == 'pull_request' && format('ekodi-invest-personalization-pr-{0}', github.event.pull_request.number) || 'ekodi-conversation-release' }}\n");
   }
   return text;
 }
