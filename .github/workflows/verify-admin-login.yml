@@ -38,13 +38,13 @@ jobs:
     if: github.event_name == 'push'
     needs: contract
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 4
     steps:
-      - name: Verify live Work admin entry and central-auth redirect
+      - name: Verify live Work admin entry and central-auth redirect with bounded retries
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 5); do
             page_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/work' || true)
             redirect_code=$(curl -sS --max-redirs 0 -D /tmp/login-headers -o /tmp/login-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/auth/start?return_to=%2Fwork' || true)
             location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); sub(/^location:[[:space:]]*/,""); print; exit}' /tmp/login-headers || true)
@@ -58,8 +58,8 @@ jobs:
               echo 'Live Work admin login flow verified.'
               exit 0
             fi
-            echo "Waiting for live login flow ($attempt/60): page=$page_code redirect=$redirect_code location=$location"
+            echo "Waiting for live login flow ($attempt/5): page=$page_code redirect=$redirect_code location=$location"
             sleep 4
           done
-          echo 'Live Work admin login flow did not become healthy.'
+          echo 'Live Work admin login flow did not become healthy within the bounded retry window.'
           exit 1
