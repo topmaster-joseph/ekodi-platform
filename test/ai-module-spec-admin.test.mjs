@@ -16,7 +16,7 @@ test('administrator menu exposes a dedicated external AI integration spec', () =
   assert.match(menu, /외부 AI 연동규격/);
   assert.match(demand, /ai-module-spec-admin\.js/);
   assert.match(demand, /ai-module-spec-admin\.css/);
-  assert.match(layout, /'#ai-module-spec', 'ai-module-spec'/);
+  assert.match(layout, /#ai-module-spec:ai-module-spec/);
 });
 
 test('spec workspace is vendor-handoff ready without exposing privileged credentials', () => {
