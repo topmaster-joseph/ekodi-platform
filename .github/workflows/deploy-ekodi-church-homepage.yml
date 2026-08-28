@@ -1,0 +1,96 @@
+name: Deploy EKODI Church Homepage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-ekodi-church-homepage.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-homepage-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout Church source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: main
+          path: church
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate redesigned Church source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -f church/index.html
+          test -f church/church-refresh.css
+          node --check church/script.js
+          grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' church/index.html
+          grep -Fq 'class="online-triad"' church/index.html
+          grep -Fq '>유튜브 예배<' church/index.html
+          grep -Fq '>묵상<' church/index.html
+          grep -Fq '>실시간 화상<' church/index.html
+          grep -Fq '예배에서 일상으로' church/index.html
+          grep -Fq '일상에서 희년으로' church/index.html
+
+      - name: Prepare static Pages payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ekodi-church-pages
+          mkdir -p /tmp/ekodi-church-pages
+          rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
+          test -s /tmp/ekodi-church-pages/index.html
+          test -s /tmp/ekodi-church-pages/church-refresh.css
+
+      - name: Deploy Church to Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy /tmp/ekodi-church-pages \
+            --project-name ekodi-church \
+            --branch main \
+            --commit-dirty=true
+
+      - name: Verify production content and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/?release=jubilee-20260829' || true)
+            css_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-refresh.css?release=jubilee-20260829' || true)
+            if [[ "$root_code" == '200' && "$css_code" == '200' ]] \
+              && grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' /tmp/church.html \
+              && grep -Fq 'class="online-triad"' /tmp/church.html \
+              && grep -Fq '유튜브 예배' /tmp/church.html \
+              && grep -Fq '실시간 화상' /tmp/church.html \
+              && grep -Fq '일상에서 희년으로' /tmp/church.html \
+              && grep -Fq '.online-triad' /tmp/church-refresh.css; then
+              echo 'EKODI Church Jubilee redesign verified in production.'
+              exit 0
+            fi
+            echo "attempt=$attempt root=$root_code css=$css_code"
+            sleep 5
+          done
+          echo 'Production did not converge to the expected Church release.'
+          exit 1
