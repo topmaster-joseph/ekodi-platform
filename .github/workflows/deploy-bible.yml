@@ -58,9 +58,12 @@ jobs:
           grep -Fq '돌아보기' bible/index.html
           grep -Fq '공동체 피드' bible/index.html
           grep -Fq 'bible_shared_feed' supabase/bible-conversation.sql
+          grep -Fq 'bible_content_plans for select to authenticated' supabase/bible-conversation.sql
+          grep -Fq 'c.id=conversation_id and c.user_id=(select auth.uid())' supabase/bible-conversation.sql
           grep -Fq "id:'bible'" ekodi-service-manifest.js
           grep -Fq "authMode:'client'" ekodi-service-manifest.js
           grep -Fq '"bible-conversation"' platform-boundaries.json
+          grep -Fq "error: 'authentication_required'" bible-worker.js
 
   staging:
     if: github.event_name == 'pull_request'
@@ -92,7 +95,7 @@ jobs:
             health=$(curl -sS -o /tmp/bible-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)
             config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$STAGING_URL/config.js" || true)
             assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$STAGING_URL/api/assist" || true)
-            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '200' ]] \
+            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible-stage.html \
               && grep -Fq '돌아보기' /tmp/bible-stage-journey.html \
               && grep -Fq '공동체 피드' /tmp/bible-stage-together.html \
@@ -100,7 +103,7 @@ jobs:
               && grep -Fq '"centralUserAi":true' /tmp/bible-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/bible-stage-health.json \
               && grep -Fq '"dataEnabled":false' /tmp/bible-stage-config.js \
-              && grep -Fq '"mode":"free_assist"' /tmp/bible-stage-assist.json \
+              && grep -Fq '"error":"authentication_required"' /tmp/bible-stage-assist.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-stage-h; then
               echo 'EKODI Bible isolated staging verified.'
               exit 0
@@ -165,7 +168,7 @@ jobs:
             assist=$(curl -sS -o /tmp/bible-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' 'https://bible.ekodi.kr/api/assist' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/bible-admin-h -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/admin' || true)
             case "$admin" in 301|302|303|307|308) admin_redirect=true;; *) admin_redirect=false;; esac
-            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '200' && "$admin_redirect" == 'true' ]] \
+            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible.html \
               && grep -Fq '오늘의 말씀대화' /tmp/bible-today.html \
               && grep -Fq '말씀대화 AI' /tmp/bible-conversation.html \
@@ -174,7 +177,7 @@ jobs:
               && grep -Fq '"dataMode":"production"' /tmp/bible-health.json \
               && grep -Fq '"centralUserAi":true' /tmp/bible-health.json \
               && grep -Fq '"dataEnabled":true' /tmp/bible-config.js \
-              && grep -Fq '"mode":"free_assist"' /tmp/bible-assist.json \
+              && grep -Fq '"error":"authentication_required"' /tmp/bible-assist.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-h \
               && grep -Eiq '^location: https://admin\.ekodi\.kr/#ai-services' /tmp/bible-admin-h; then
               echo 'EKODI Bible production verified.'
