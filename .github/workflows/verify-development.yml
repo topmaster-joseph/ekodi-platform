@@ -1,0 +1,39 @@
+name: Verify EKODI Development
+
+on:
+  workflow_run:
+    workflows: ["Deploy EKODI Development"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-ekodi-development
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEV_URL: https://ekodi-platform-development.ekodi-development.workers.dev
+    steps:
+      - name: Verify isolated development endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error --location --max-time 20 "$DEV_URL/")"
+          test -n "$body"
+          printf '%s' "$body" | grep -qi '<html'
+          headers="$(curl --fail --silent --show-error --head --max-time 20 "$DEV_URL/")"
+          printf '%s' "$headers" | grep -qi '^HTTP/.* 200'
+          case "$DEV_URL" in
+            *ekodi-development.workers.dev*) ;;
+            *) echo '::error::Verification endpoint escaped the development account boundary.'; exit 1 ;;
+          esac
+          echo "Development endpoint verification passed."
