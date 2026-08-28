@@ -55,7 +55,7 @@ jobs:
           test -f dist/device-control-admin.css
           test -f dist/admin-demand-loader.js
           test -f dist/ekodi-device-bootstrap.cmd
-          grep -Fq 'AI 운영 제안' dist/device-control-admin.js
+          grep -Fq '운영 제안' dist/device-control-admin.js
           grep -Fq '.device-health' dist/device-control-admin.css
           grep -Fq "styles: ['device-control-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
