@@ -8,7 +8,7 @@ const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'ut
 
 test('posting status is an authenticated Marketing admin subview', () => {
   assert.match(js, /TAB_KEY = 'publications'/);
-  assert.match(js, /data\.marketingTab = TAB_KEY/);
+  assert.match(js, /dataset\.marketingTab = TAB_KEY/);
   assert.match(js, /포스팅 현황/);
   assert.match(js, /\/api\/marketing\/admin\/overview/);
   assert.match(js, /authorization/);
