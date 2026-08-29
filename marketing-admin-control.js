@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { readMarketingPublicationOverview } from './marketing-admin-publications.js';
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
 const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
@@ -217,7 +218,7 @@ async function overview(request, env) {
   const session = await adminSession(request, env);
   if (!session) return json({ error:'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
 
-  const [subscriptionsResult, chargesResult, workspacesResult, aiActionsResult, socialRegistryRow, templatesResult, campaignsResult, marketingEventsResult] = await Promise.all([
+  const [subscriptionsResult, chargesResult, workspacesResult, aiActionsResult, socialRegistryRow, templatesResult, campaignsResult, marketingEventsResult, publicationLedger] = await Promise.all([
     env.DB.prepare(`SELECT id,subject_type,subject_key,site,plan_id,status,monthly_fee,provider,
       current_period_start,current_period_end,next_billing_at,cancel_at_period_end,created_at,updated_at
       FROM service_subscriptions
@@ -247,6 +248,7 @@ async function overview(request, env) {
       ORDER BY c.updated_at DESC LIMIT 500`).all(),
     env.DB.prepare(`SELECT workspace_type,workspace_key,customer_key,event_type,value_krw,occurred_at
       FROM marketing_events ORDER BY occurred_at DESC LIMIT 10000`).all(),
+    readMarketingPublicationOverview(env),
   ]);
 
   const subscriptions = subscriptionsResult.results || [];
@@ -316,6 +318,16 @@ async function overview(request, env) {
     });
   }
 
+  for (const row of publicationLedger.jobs.filter(item => ['failed','credentials_required'].includes(item.status)).slice(0, 30)) {
+    attention.push({
+      kind:'publication', severity:row.status === 'failed' ? 'high' : 'medium', code:`publication_${row.status}`,
+      subjectType:'publication_job', subjectKey:String(row.id),
+      title:row.status === 'failed' ? '포스팅 실패 확인 필요' : '게시 채널 인증 필요',
+      detail:`${row.provider || 'provider'} · ${row.channelName || row.channelType || 'channel'}${row.lastError ? ` · ${row.lastError}` : ''}`,
+      updatedAt:row.updatedAt,
+    });
+  }
+
   const eventGroups = new Map();
   for (const row of marketingEvents) {
     const key = templateKey(row);
@@ -350,6 +362,14 @@ async function overview(request, env) {
       activeCampaigns:activeCampaigns.length,
       crmCustomers:crm.reduce((sum, row) => sum + Number(row.customers || 0), 0),
       marketingEvents:crm.reduce((sum, row) => sum + Number(row.events || 0), 0),
+      publicationJobs:publicationLedger.summary.jobs,
+      scheduledPublications:publicationLedger.summary.scheduled,
+      publishedPublications:publicationLedger.summary.published,
+      failedPublications:publicationLedger.summary.failed,
+      retryingPublications:publicationLedger.summary.retrying,
+      publicationCredentialsRequired:publicationLedger.summary.credentialsRequired,
+      publishChannels:publicationLedger.summary.channels,
+      activePublishChannels:publicationLedger.summary.activeChannels,
     },
     subscriptions,
     charges,
@@ -358,6 +378,17 @@ async function overview(request, env) {
     crm,
     channels:channelRegistry.channels,
     channelRegistry:{ revision:channelRegistry.revision, updatedAt:channelRegistry.updatedAt },
+    publicationJobs:publicationLedger.jobs,
+    publishChannels:publicationLedger.channels,
+    postingEngine:{
+      connected:publicationLedger.connected,
+      service:'marketing-publish-api',
+      scheduler:true,
+      channelCount:publicationLedger.summary.channels,
+      activeChannelCount:publicationLedger.summary.activeChannels,
+      adapterCoverage:['webhook','facebook_page','instagram_business'],
+      error:publicationLedger.connected ? null : publicationLedger.error || 'publication ledger unavailable',
+    },
     automationActions:aiActions,
     approvals,
     attention:attention.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))).slice(0, 100),
@@ -368,6 +399,7 @@ async function overview(request, env) {
       campaigns:'connected',
       crm:'connected',
       channels:'connected',
+      publications:publicationLedger.connected ? 'connected' : 'unavailable',
       automation:'connected',
       approvals:'connected',
     },
@@ -375,6 +407,7 @@ async function overview(request, env) {
       readOnly:true,
       customerPiiIncluded:false,
       customerKeysIncluded:false,
+      publicationCredentialsIncluded:false,
       externalExecution:false,
       approvalDecisionEndpointExposedHere:false,
     },
