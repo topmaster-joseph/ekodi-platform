@@ -76,9 +76,37 @@ body.compact-control-center .content .section,body.compact-control-center .conte
 body.compact-control-center .content button,body.compact-control-center .content .btn{box-shadow:none!important;transition:none!important}
 body.compact-control-center .content p,body.compact-control-center .content small,body.compact-control-center .content .muted{color:var(--admin-secondary)}
 body.compact-control-center .content h1,body.compact-control-center .content h2,body.compact-control-center .content h3,body.compact-control-center .content strong{color:var(--admin-readable)}
-body.compact-control-center #campusSiteGroups .campus-site-item{box-shadow:none!important;backdrop-filter:none!important}
-body.compact-control-center .campus-homepage-controls{padding-top:8px!important;padding-bottom:8px!important}
-@media(max-width:760px){body.compact-control-center .admin-global-nav{min-height:40px;font-size:13px}body.compact-control-center .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:6px 10px;gap:7px}body.compact-control-center .admin-context-title{display:none}body.compact-control-center .admin-context-tab{min-height:34px;padding:0 9px}body.compact-control-center .content{padding:10px 10px 24px!important}}
+body.compact-control-center #campusPanel .campus-toolbar{padding:13px 15px!important}
+body.compact-control-center #campusPanel .campus-toolbar h2{font-size:20px!important}
+body.compact-control-center #campusPanel .campus-toolbar p:not(.kicker){font-size:12px!important;line-height:1.45!important}
+body.compact-control-center #campusPanel .campus-toolbar-actions{gap:6px!important}
+body.compact-control-center #campusPanel .campus-toolbar-actions button,body.compact-control-center #campusPanel .campus-toolbar-actions a{min-height:34px!important;padding:7px 10px!important;font-size:12px!important}
+body.compact-control-center #campusPanel .campus-table-wrap.campus-groups-wrap{padding:10px!important}
+body.compact-control-center #campusSiteGroups .campus-groups-grid{gap:10px!important}
+body.compact-control-center #campusSiteGroups .campus-group-card{border-radius:11px!important;box-shadow:none!important;backdrop-filter:none!important}
+body.compact-control-center #campusSiteGroups .campus-group-head{min-height:48px!important;padding:9px 12px!important;gap:8px!important}
+body.compact-control-center #campusSiteGroups .campus-group-head h3{font-size:15px!important;line-height:1.25!important}
+body.compact-control-center #campusSiteGroups .campus-group-head p{margin-top:2px!important;font-size:11px!important;line-height:1.3!important}
+body.compact-control-center #campusSiteGroups .campus-group-count{min-width:26px!important;height:26px!important;padding:0 7px!important}
+body.compact-control-center #campusSiteGroups .campus-site-item{min-height:52px!important;padding:7px 10px!important;gap:7px 10px!important;box-shadow:none!important;backdrop-filter:none!important;transition:none!important}
+body.compact-control-center #campusSiteGroups .campus-site-identity{gap:6px!important}
+body.compact-control-center #campusSiteGroups .campus-site-identity strong{font-size:13px!important;line-height:1.3!important}
+body.compact-control-center #campusSiteGroups .campus-site-type,body.compact-control-center #campusSiteGroups .campus-site-stage{min-height:21px!important;padding:3px 6px!important;font-size:10px!important}
+body.compact-control-center #campusSiteGroups .campus-site-domain{font-size:11px!important;line-height:1.3!important}
+body.compact-control-center #campusSiteGroups .campus-row-actions{gap:4px!important}
+body.compact-control-center #campusSiteGroups .campus-row-action{min-width:54px!important;min-height:32px!important;padding:6px 8px!important;border-radius:7px!important;font-size:11px!important}
+body.compact-control-center #campusSiteGroups .campus-row-action.primary{min-width:56px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-controls{padding:5px 7px!important;gap:5px 8px!important;border-radius:7px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-check,body.compact-control-center #campusSiteGroups .campus-homepage-order,body.compact-control-center #campusSiteGroups .campus-homepage-scope{font-size:10px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-check input{width:15px!important;height:15px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-order button{min-width:28px!important;width:28px!important;height:28px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-state b{font-size:10px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-state small{margin-top:1px!important;font-size:9px!important;line-height:1.25!important}
+body.compact-control-center #campusPanel .campus-homepage-notice{margin-bottom:9px!important;padding:9px 11px!important;border-radius:9px!important;gap:8px!important}
+body.compact-control-center #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
+body.compact-control-center #campusPanel .campus-homepage-notice strong{font-size:11px!important}body.compact-control-center #campusPanel .campus-homepage-notice small{font-size:10px!important;line-height:1.35!important}
+@media(max-width:1480px){body.compact-control-center #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
+@media(max-width:760px){body.compact-control-center .admin-global-nav{min-height:40px;font-size:13px}body.compact-control-center .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:6px 10px;gap:7px}body.compact-control-center .admin-context-title{display:none}body.compact-control-center .admin-context-tab{min-height:34px;padding:0 9px}body.compact-control-center .content{padding:10px 10px 24px!important}body.compact-control-center #campusPanel .campus-toolbar{padding:11px!important}body.compact-control-center #campusSiteGroups .campus-site-item{padding:10px!important}body.compact-control-center #campusSiteGroups .campus-row-action{min-height:40px!important;font-size:12px!important}}
 `;
   document.head.append(style);
 }
