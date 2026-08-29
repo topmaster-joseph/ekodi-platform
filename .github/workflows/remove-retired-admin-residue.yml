@@ -29,8 +29,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Remove retired runtime and test residue
-        run: node scripts/remove-retired-admin-residue.mjs
+      - name: Remove retired runtime and consume migration helpers
+        run: |
+          set -euo pipefail
+          node scripts/remove-retired-admin-residue.mjs
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'test/admin-central-login-link.test.mjs';
+          let source = fs.readFileSync(path, 'utf8');
+          source = source.replace(
+            "  assert.doesNotMatch(source, /legacy:'ai-ops'|domains:'ai-ops'|activity:'ai-ops'|overview:'operations'/);",
+            "  assert.doesNotMatch(source, /const ALIASES=\\{[^}]*\\b(?:legacy|domains|activity|overview):/);"
+          );
+          fs.writeFileSync(path, source);
+          NODE
+          rm -f scripts/remove-retired-admin-residue.mjs .github/workflows/remove-retired-admin-residue.yml
       - name: Validate source policy and build
         run: |
           set -euo pipefail
@@ -40,14 +53,16 @@ jobs:
           test ! -e control-center.js
           test ! -e control-center-features.js
           test ! -e control-center-ops.css
-          ! grep -R -F '/legacy#domains' --include='*.js' --include='*.mjs' --include='*.html' --exclude='scripts/remove-retired-admin-residue.mjs' .
-          ! grep -R -F '/legacy#activity' --include='*.js' --include='*.mjs' --include='*.html' --exclude='scripts/remove-retired-admin-residue.mjs' .
+          test ! -e scripts/remove-retired-admin-residue.mjs
+          test ! -e .github/workflows/remove-retired-admin-residue.yml
+          ! grep -R -F '/legacy#domains' --include='*.js' --include='*.mjs' --include='*.html' .
+          ! grep -R -F '/legacy#activity' --include='*.js' --include='*.mjs' --include='*.html' .
       - name: Commit cleaned source
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin-authenticated-shell.js campus-actions.js domains-hub.js release-control-admin.js system-timeline-admin.js test/admin-ai-first-navigation.test.mjs test/admin-central-login-link.test.mjs test/admin-free-ops-nav.contract.test.mjs
+          git add -A
           if ! git diff --cached --quiet; then
             git commit -m 'refactor(admin): remove retired admin compatibility residue'
             git pull --rebase origin main
