@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "effectiveDate": "2026-08-28",
+  "version": "1.1.0",
+  "effectiveDate": "2026-08-29",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -17,18 +17,40 @@
   "systemBoundaries": {
     "production": ["ekodi.kr", "my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "status.ekodi.kr"],
     "development": ["dev.ekodi.kr", "my.dev.ekodi.kr", "admin.dev.ekodi.kr", "auth.dev.ekodi.kr", "api.dev.ekodi.kr"],
-    "rule": "Subdomains represent security/system boundaries; paths represent features and content."
+    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
   },
-  "publicNamespaces": ["people", "org", "biz", "project"],
+  "publicNamespaces": ["personal", "org", "group", "project"],
+  "canonicalWorkspacePatterns": [
+    "https://ekodi.kr/personal/{slug}",
+    "https://ekodi.kr/org/{slug}",
+    "https://ekodi.kr/group/{slug}",
+    "https://ekodi.kr/project/{slug}"
+  ],
+  "organizationSubtypes": ["business", "church", "school", "nonprofit", "association", "institution"],
   "privateWorkspacePattern": "https://my.ekodi.kr/w/{workspace}",
   "featurePatterns": ["https://ekodi.kr/{feature}", "https://my.ekodi.kr/{feature}", "https://api.ekodi.kr/v1/{feature}"],
+  "workspaceRoutingPolicy": {
+    "canonicalHost": "ekodi.kr",
+    "identityKey": "workspace_id",
+    "slugIsLocatorOnly": true,
+    "workspaceSubdomainsForbidden": true,
+    "personalHomeSubdomainException": "my.ekodi.kr"
+  },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
+    "newTenantSubdomainsForbidden": true,
+    "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": true,
     "customDomainsMapToTenantPublicSpace": true,
     "legacyAliasesMayRedirect": true,
     "legacyAliasesMustBeRegistered": true
   },
-  "legacyDomainAllowlist": ["shell.ekodi.kr","management.ekodi.kr","mall.ekodi.kr","mall.biz.ekodi.kr","cafe.ekodi.kr","books.ekodi.kr","publishing.ekodi.kr","community.ekodi.kr","work.ekodi.kr","edu.ekodi.kr","bible.ekodi.kr","life.ekodi.kr","support.ekodi.kr","money.ekodi.kr","social.ekodi.kr","energy.ekodi.kr","business.ekodi.kr","finance-api.ekodi.kr","drive.ekodi.kr","marketing-api.ekodi.kr","marketing-publish-api.ekodi.kr","www.ekodi.kr","pay.ekodi.kr","trade.ekodi.kr","mail.ekodi.kr","live.ekodi.kr","biz.ekodi.kr","church.ekodi.kr","lab.ekodi.kr","mail.*.ekodi.kr","marketing.ekodi.kr","cgma.ekodi.kr","cgma.ai.ekodi.kr","jadam.ai.ekodi.kr","pizzamaru.ai.ekodi.kr","yogurt.ai.ekodi.kr"],
+  "legacyPathAliases": {
+    "/people/{slug}": "/personal/{slug}",
+    "/biz/{slug}": "/org/{slug}",
+    "https://space.ekodi.kr/{path}": "https://ekodi.kr/{path}",
+    "https://user.ekodi.kr/{path}": "https://ekodi.kr/{path}"
+  },
+  "legacyDomainAllowlist": ["shell.ekodi.kr","management.ekodi.kr","mall.ekodi.kr","mall.biz.ekodi.kr","cafe.ekodi.kr","books.ekodi.kr","publishing.ekodi.kr","community.ekodi.kr","work.ekodi.kr","edu.ekodi.kr","bible.ekodi.kr","life.ekodi.kr","support.ekodi.kr","money.ekodi.kr","social.ekodi.kr","energy.ekodi.kr","business.ekodi.kr","finance-api.ekodi.kr","drive.ekodi.kr","marketing-api.ekodi.kr","marketing-publish-api.ekodi.kr","www.ekodi.kr","pay.ekodi.kr","trade.ekodi.kr","mail.ekodi.kr","live.ekodi.kr","biz.ekodi.kr","church.ekodi.kr","lab.ekodi.kr","mail.*.ekodi.kr","marketing.ekodi.kr","cgma.ekodi.kr","cgma.ai.ekodi.kr","jadam.ai.ekodi.kr","pizzamaru.ai.ekodi.kr","yogurt.ai.ekodi.kr","space.ekodi.kr","user.ekodi.kr"],
   "dataSovereignty": {
     "ekodiCoreOwns": ["users","identity_links","tenants","workspaces","memberships","roles","permissions","crm","orders","payments","service_config","automation","audit_log"],
     "humanCollaborationDocuments": "google_workspace_or_user_selected_provider",
@@ -90,15 +112,17 @@
     "trade.ekodi.kr":"https://ekodi.kr/trade",
     "mail.ekodi.kr":"https://my.ekodi.kr/mail",
     "live.ekodi.kr":"https://ekodi.kr/live",
-    "biz.ekodi.kr":"https://ekodi.kr/biz",
+    "biz.ekodi.kr":"https://ekodi.kr/org/ekodi-biz",
     "church.ekodi.kr":"https://ekodi.kr/org/ekodi-church",
     "lab.ekodi.kr":"https://ekodi.kr/org/ekodi-lab",
     "mail.*.ekodi.kr":"https://my.ekodi.kr/mail",
     "marketing.ekodi.kr":"https://ekodi.kr/marketing",
     "cgma.ekodi.kr":"https://ekodi.kr/org/cgma",
     "cgma.ai.ekodi.kr":"https://ekodi.kr/org/cgma",
-    "jadam.ai.ekodi.kr":"https://ekodi.kr/biz/jadam",
-    "pizzamaru.ai.ekodi.kr":"https://ekodi.kr/biz/pizzamaru",
-    "yogurt.ai.ekodi.kr":"https://ekodi.kr/biz/yogurt"
+    "jadam.ai.ekodi.kr":"https://ekodi.kr/org/jadam",
+    "pizzamaru.ai.ekodi.kr":"https://ekodi.kr/org/pizzamaru",
+    "yogurt.ai.ekodi.kr":"https://ekodi.kr/org/yogurt",
+    "space.ekodi.kr":"https://ekodi.kr",
+    "user.ekodi.kr":"https://ekodi.kr"
   }
 }
