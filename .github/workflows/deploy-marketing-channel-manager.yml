@@ -1,0 +1,74 @@
+name: Deploy Marketing Channel Direct Connector
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-ai-channel-manager.js'
+      - 'scripts/build.mjs'
+      - 'site-worker.js'
+      - '.github/workflows/deploy-marketing-channel-manager.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate direct connector
+        run: |
+          set -euo pipefail
+          node --check marketing-ai-channel-manager.js
+          grep -Fq '무료 직접 연결 모드' marketing-ai-channel-manager.js
+          grep -Fq "credentialPolicy:'fixed-provider-secret'" marketing-ai-channel-manager.js
+          ! grep -Fq 'Metricool 연결센터' marketing-ai-channel-manager.js
+          grep -Fq "marketing-ai-channel-manager.js" scripts/build.mjs
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Build shared admin assets
+        run: |
+          set -euo pipefail
+          npm run build
+          test -f dist/marketing-ai-admin.js
+          grep -Fq '무료 직접 연결 모드' dist/marketing-ai-admin.js
+          grep -Fq "credentialPolicy:'fixed-provider-secret'" dist/marketing-ai-admin.js
+          grep -Fq 'Metricool은 필수가 아닙니다' dist/marketing-ai-admin.js
+
+      - name: Guarded shared-site release
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify production direct connector
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 15); do
+            code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.js' || true)
+            if [ "$code" = '200' ] && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/headers && grep -Fq '무료 직접 연결 모드' /tmp/body && grep -Fq 'Metricool은 필수가 아닙니다' /tmp/body; then
+              echo 'Direct social connector verified in production.'
+              exit 0
+            fi
+            echo "Production verification pending ($attempt/15)."
+            sleep 4
+          done
+          exit 1
