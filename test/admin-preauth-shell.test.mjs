@@ -15,12 +15,14 @@ function scriptTag(name) {
 
 test('generated admin HTML ends with content-fingerprinted first-path assets', () => {
   assert.match(build, /admin-authenticated-shell\.js\?v=20260819-true-lazy-1/);
+  assert.match(build, /data-ekodi-postauth="admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.match(postbuild, /20260819-thin-shell-2/);
+  assert.match(postbuild, /const minimalCompactJs =/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}compact-control-center\.js`, minimalCompactJs\)/);
   assert.match(performancePostbuild, /createHash\('sha256'\)/);
   assert.match(performancePostbuild, /const assetVersion = hash\.digest\('hex'\)\.slice\(0, 16\)/);
   assert.match(performancePostbuild, /control-center\.css\?v=\$\{assetVersion\}/);
   assert.match(performancePostbuild, /admin-central-handoff\.js\?v=\$\{assetVersion\}/);
-  assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="compact-control-center\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
 });
@@ -34,8 +36,9 @@ test('post-auth loader starts only when the authenticated app is visible and use
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',onStateChange\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.doesNotMatch(shell, /new MutationObserver/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /history\.replaceState/);
+  assert.doesNotMatch(shell, /function canonicalizeLegacyEntry\(\)/);
+  assert.match(shell, /const requestedHash=location\.hash/);
+  assert.match(shell, /if\(requestedHash&&location\.hash!==requestedHash\)history\.replaceState/);
 });
 
 test('minimal login shell keeps the central auth link interactive while app is hidden', () => {
@@ -48,9 +51,10 @@ test('minimal login shell keeps the central auth link interactive while app is h
 test('authenticated route stays on the current thin shell and defers optional helpers until ready', () => {
   const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js']) {
+  for (const asset of ['admin-menu-layout.js','admin-demand-loader.js']) {
     assert.match(critical, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
   }
+  assert.doesNotMatch(critical, /'compact-control-center\.js'/);
   for (const asset of ['google-admin-auth.js','ekodi-message-ui.js']) {
     assert.doesNotMatch(critical, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
     assert.match(deferred, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
@@ -58,7 +62,8 @@ test('authenticated route stays on the current thin shell and defers optional he
   for (const noncritical of ['control-center-features.js','campus-actions.js','device-control-admin.js','ai-ops-admin.js','admin-lazy-features.js','release-control-admin.js','work-admin.js','marketing-ai-admin.js']) {
     assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
   }
-  assert.match(shell, /canonicalizeLegacyEntry\(\)/);
+  assert.match(shell, /const requestedHash=location\.hash/);
+  assert.doesNotMatch(shell, /canonicalizeLegacyEntry\(\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
   assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
