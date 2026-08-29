@@ -1,0 +1,73 @@
+name: Cloudflare Account Protection
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'account-protection-policy.js'
+      - 'scripts/cloudflare-account-protection.mjs'
+      - '.github/workflows/cloudflare-account-protection.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-account-protection
+  cancel-in-progress: true
+
+jobs:
+  development:
+    name: Protect development account
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      WORKERS_DAILY_REQUEST_BUDGET: ${{ vars.CLOUDFLARE_WORKERS_DAILY_REQUEST_BUDGET || '100000' }}
+      EKODI_ACCOUNT_LABEL: development
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify development account boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Evaluate and enforce development protection
+        id: protection
+        run: node scripts/cloudflare-account-protection.mjs --account-label development --apply-observability
+
+  production:
+    name: Protect production account
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WORKERS_DAILY_REQUEST_BUDGET: ${{ vars.CLOUDFLARE_WORKERS_DAILY_REQUEST_BUDGET || '100000' }}
+      EKODI_ACCOUNT_LABEL: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f' || {
+            echo '::error::Production protection must never target the development account.'
+            exit 1
+          }
+      - name: Evaluate and enforce production protection
+        id: protection
+        run: node scripts/cloudflare-account-protection.mjs --account-label production --apply-observability
