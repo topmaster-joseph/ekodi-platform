@@ -1,0 +1,205 @@
+name: Purge Retired Admin Source
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/purge-admin-legacy.yml'
+      - 'control-center.html'
+      - 'admin-central-handoff.js'
+      - 'admin-authenticated-shell.js'
+      - 'admin-menu-layout.js'
+      - 'scripts/admin-thin-postbuild.mjs'
+      - 'scripts/build.mjs'
+      - 'package.json'
+      - 'site-worker.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ekodi-shared-site-worker-production
+  cancel-in-progress: false
+
+jobs:
+  purge-build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Purge retired admin source and bootstrap markup
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+
+          const read = path => readFileSync(path, 'utf8');
+          const write = (path, value) => writeFileSync(path, value);
+          const must = (condition, message) => { if (!condition) throw new Error(message); };
+
+          let html = read('control-center.html');
+          html = html.replace(/\s*<link rel="stylesheet" href="control-center-ops\.css">\s*/g, '\n');
+          html = html.replace(/\s*<link rel="stylesheet" href="control-center-finance\.css">\s*/g, '\n');
+          html = html.replace(/\s*<a class="legacy-link"[\s\S]*?<\/a>\s*/g, '\n');
+          html = html.replace(/\s*<a class="brand side-brand"[\s\S]*?<\/a>\s*<small class="side-caption">[\s\S]*?<\/small>\s*/g, '\n');
+          html = html.replace(/<nav>[\s\S]*?<\/nav>/, '<nav aria-label="관리자 메뉴"></nav>');
+          html = html.replace(/\s*<span id="scopeBadge">ALL<\/span>/g, '');
+          html = html.replace(/\s*<section class="hero" data-panel="overview">[\s\S]*?<\/section>\s*/g, '\n');
+          html = html.replace(/\s*<section class="metrics" data-panel="overview services"[\s\S]*?<\/section>\s*/g, '\n');
+          html = html.replace(/\s*<section class="section operations-section" data-panel="overview services"[\s\S]*?<\/section>\s*/g, '\n');
+          html = html.replaceAll('data-panel="overview finance"', 'data-panel="finance"');
+          html = html.replaceAll('href="/legacy#domains"', 'href="#ai-ops"');
+          html = html.replaceAll('href="/legacy#activity"', 'href="#ai-ops"');
+          html = html.replaceAll('href="/legacy"', 'href="#ai-ops"');
+          html = html.replace('<div><p class="kicker">EKODI DIGITAL CAMPUS</p><h1 id="pageTitle">통합 운영</h1></div>', '<div><h1 id="pageTitle">사이트 관리</h1></div>');
+          must(!html.includes('data-panel="overview"'), 'retired overview panel survived');
+          must(!html.includes('data-section="overview"'), 'retired overview navigation survived');
+          must(!html.includes('legacy-link'), 'retired legacy login link survived');
+          must(!html.includes('control-center-ops.css'), 'retired operations stylesheet reference survived');
+          write('control-center.html', html);
+
+          let menu = read('admin-menu-layout.js');
+          if (!menu.includes('mountAdminSidebar, renderAdminSidebar')) {
+            menu = menu.replace('{ mountAdminSidebar }', '{ mountAdminSidebar, renderAdminSidebar }');
+          }
+          if (!menu.includes('renderAdminSidebar(nav);')) {
+            menu = menu.replace("if (!sidebar || !nav || !content) return;\n", "if (!sidebar || !nav || !content) return;\nrenderAdminSidebar(nav);\n");
+          }
+          menu = menu.replace("const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);", 'const INTERNAL_ONLY_HREFS = new Set();');
+          must(menu.includes('renderAdminSidebar(nav);'), 'registry-owned admin sidebar seed missing');
+          write('admin-menu-layout.js', menu);
+
+          let shell = read('admin-authenticated-shell.js');
+          shell = shell.replace(/function repairLegacyLinks\(\)\{[\s\S]*?\}\nfunction announceReady/, 'function announceReady');
+          shell = shell.replaceAll(';repairLegacyLinks()', '');
+          must(!shell.includes('repairLegacyLinks'), 'legacy-link repair runtime survived');
+          must(!shell.includes('.hero[data-panel~="overview"]'), 'legacy overview hero selector survived');
+          write('admin-authenticated-shell.js', shell);
+
+          let thin = read('scripts/admin-thin-postbuild.mjs');
+          const compactStart = thin.indexOf('const minimalCompactJs = `');
+          const compactEndMarker = 'new Function(minimalCompactJs);';
+          const compactEnd = thin.indexOf(compactEndMarker, compactStart);
+          must(compactStart >= 0 && compactEnd > compactStart, 'minimal compact runtime block not found');
+          const compactReplacement = `const minimalCompactJs = \`(() => {\\n  'use strict';\\n  function normalizeShell() {\\n    document.body.classList.add('compact-control-center');\\n    const logout = document.querySelector('#logoutButton');\\n    if (logout && logout.textContent !== 'Logout') logout.textContent = 'Logout';\\n  }\\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeShell, { once:true });\\n  else normalizeShell();\\n})();\\n\${assistBootstrapJs}\\n\`;\nnew Function(minimalCompactJs);`;
+          thin = thin.slice(0, compactStart) + compactReplacement + thin.slice(compactEnd + compactEndMarker.length);
+          thin = thin.replace(/html = html\.replaceAll\(\n  'compact-control-center\.js control-center-features\.js campus-actions\.js admin-menu-layout\.js admin-demand-loader\.js',\n  'compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js',\n\);\n/g, '');
+          must(!thin.includes('EKODI Platform Operations'), 'retired operations title generator survived');
+          must(!thin.includes('OPERATIONS OVERVIEW'), 'retired operations kicker generator survived');
+          must(!thin.includes("const NAV_MAP = Object.freeze"), 'retired navigation normalizer survived');
+          must(!thin.includes('control-center-features.js'), 'retired feature runtime reference survived postbuild');
+          write('scripts/admin-thin-postbuild.mjs', thin);
+
+          let build = read('scripts/build.mjs');
+          for (const dead of ["'admin.html',", "'control-center-ops.css',", "'control-center.js',", "'control-center-features.js',", "'compact-control-center.js',"]) build = build.replaceAll(dead, '');
+          const blockStart = build.indexOf('const [compactCss, compactJs, deviceControlCss, deviceControlJs, hybridExecutionAdminJs] = await Promise.all([');
+          const blockEndMarker = "await writeFile(`${output}compact-control-center.js`, `${compactJs}\\n${deviceControlJs}\\n${hybridExecutionAdminJs}\\n`);";
+          const blockEnd = build.indexOf(blockEndMarker, blockStart);
+          must(blockStart >= 0 && blockEnd > blockStart, 'legacy compact build block not found');
+          const cssBlock = `const [compactCss, deviceControlCss] = await Promise.all([\n  readFile(\`${output}compact-control-center.css\`, 'utf8'),\n  readFile(\`${root}device-control-admin.css\`, 'utf8'),\n]);\nawait writeFile(\`${output}compact-control-center.css\`, \`${compactCss}\\n${deviceControlCss}\\n\`);`;
+          build = build.slice(0, blockStart) + cssBlock + build.slice(blockEnd + blockEndMarker.length);
+          build = build.replaceAll('compact-control-center.js control-center-features.js campus-actions.js admin-menu-layout.js admin-demand-loader.js', 'compact-control-center.js admin-menu-layout.js admin-demand-loader.js');
+          for (const dead of ['admin.html','control-center-ops.css','control-center.js','control-center-features.js']) must(!build.includes(`'${dead}'`), `dead build asset survived: ${dead}`);
+          write('scripts/build.mjs', build);
+
+          let pkg = read('package.json');
+          pkg = pkg.replaceAll('node --check control-center.js && ', '');
+          pkg = pkg.replaceAll('node --check control-center-features.js && ', '');
+          pkg = pkg.replaceAll('node --check compact-control-center.js && ', '');
+          write('package.json', pkg);
+
+          let worker = read('site-worker.js');
+          for (const dead of ["  '/control-center-ops.css',\n", "  '/control-center.js',\n", "  '/control-center-features.js',\n"]) worker = worker.replaceAll(dead, '');
+          must(!worker.includes("'/control-center.js'"), 'retired control-center runtime remains routable');
+          must(!worker.includes("'/control-center-features.js'"), 'retired feature runtime remains routable');
+          must(!worker.includes("'/control-center-ops.css'"), 'retired operations CSS remains routable');
+          write('site-worker.js', worker);
+
+          for (const path of ['admin.html','control-center.js','control-center-features.js','control-center-ops.css','compact-control-center.js']) {
+            if (existsSync(path)) rmSync(path);
+          }
+          NODE
+
+          test ! -e admin.html
+          test ! -e control-center.js
+          test ! -e control-center-features.js
+          test ! -e control-center-ops.css
+          test ! -e compact-control-center.js
+          ! grep -Fq 'EKODI Platform Operations' scripts/admin-thin-postbuild.mjs
+          ! grep -Fq 'OPERATIONS OVERVIEW' scripts/admin-thin-postbuild.mjs
+          ! grep -Fq 'data-panel="overview"' control-center.html
+          ! grep -Fq 'control-center-ops.css' control-center.html
+
+      - name: Verify source, tests and production build
+        run: |
+          set -euo pipefail
+          npm run check
+          npm run build
+          test -f dist/control-center.html
+          test -f dist/compact-control-center.js
+          ! grep -Fq 'EKODI Platform Operations' dist/control-center.html
+          ! grep -Fq 'EKODI Platform Operations' dist/compact-control-center.js
+          ! grep -Fq 'OPERATIONS OVERVIEW' dist/compact-control-center.js
+          ! grep -Fq 'control-center-ops.css' dist/control-center.html
+          ! grep -Fq 'control-center.js' dist/control-center.html
+          ! grep -Fq 'control-center-features.js' dist/control-center.html
+          test ! -e dist/admin.html
+          test ! -e dist/control-center-ops.css
+          test ! -e dist/control-center.js
+          test ! -e dist/control-center-features.js
+
+      - name: Commit retired-source purge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No source purge changes required.'
+          else
+            git commit -m 'refactor(admin): remove retired control-center implementation'
+            git push origin HEAD:main
+          fi
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Guarded shared-site release
+        run: |
+          set -euo pipefail
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify retired source is absent in production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            root_code=$(curl -sS -o /tmp/root -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/?purge=${GITHUB_RUN_ID}" || true)
+            compact_code=$(curl -sS -o /tmp/compact -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.js?purge=${GITHUB_RUN_ID}" || true)
+            old_runtime=$(curl -sS -o /tmp/old-runtime -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center.js?purge=${GITHUB_RUN_ID}" || true)
+            old_features=$(curl -sS -o /tmp/old-features -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center-features.js?purge=${GITHUB_RUN_ID}" || true)
+            old_css=$(curl -sS -o /tmp/old-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center-ops.css?purge=${GITHUB_RUN_ID}" || true)
+            markers=no
+            if grep -Fq 'EKODI Platform Operations' /tmp/root || grep -Fq 'OPERATIONS OVERVIEW' /tmp/root || grep -Fq 'EKODI Platform Operations' /tmp/compact || grep -Fq 'OPERATIONS OVERVIEW' /tmp/compact; then markers=yes; fi
+            echo "admin purge verify -> root=$root_code compact=$compact_code old=$old_runtime/$old_features/$old_css markers=$markers"
+            if [ "$root_code" = '200' ] && [ "$compact_code" = '200' ] && [ "$old_runtime" = '404' ] && [ "$old_features" = '404' ] && [ "$old_css" = '404' ] && [ "$markers" = no ]; then
+              echo 'Retired admin source is absent from production.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
