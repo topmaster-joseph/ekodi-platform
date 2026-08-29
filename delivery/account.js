@@ -55,14 +55,18 @@ async function loadDeliveryWorkspace(){
     rows(client.from('stores').select('id,tenant_id,slug,name,category,order_enabled').in('tenant_id',tenantIds)),
     rows(client.from('delivery_provider_connections').select('id,tenant_id,store_id,name,provider_key,provider_type,adapter_status,active,public_config,updated_at').in('tenant_id',tenantIds).eq('active',true).order('name')),
     rows(client.from('delivery_policies').select('id,tenant_id,store_id,name,priority,max_delivery_fee,approval_fee_threshold,target_minutes,minimum_reliability,allowed_provider_ids,subsidy_type,subsidy_value,subsidy_cap,customer_min_share,active,updated_at').in('tenant_id',tenantIds).eq('active',true).order('updated_at',{ascending:false})),
-    rows(client.from('delivery_decisions').select('id,tenant_id,store_id,order_id,provider_connection_id,policy_id,decision_snapshot,approval_required,dispatch_executed,created_at').in('tenant_id',tenantIds).order('created_at',{ascending:false}).limit(40)),
+    rows(client.from('delivery_decisions').select('id,tenant_id,store_id,order_id,provider_connection_id,policy_id,request_snapshot,decision_snapshot,approval_required,dispatch_executed,created_at').in('tenant_id',tenantIds).order('created_at',{ascending:false}).limit(40)),
     rows(client.from('delivery_settlement_drafts').select('id,tenant_id,store_id,period_start,period_end,status,totals,balanced,settlement_executed,created_at').in('tenant_id',tenantIds).order('created_at',{ascending:false}).limit(20)),
   ]):[[],[],[],[],[],[]];
+  const visibleTenants=[...tenants];
+  for(const store of directStores){
+    if(store?.tenant_id&&!visibleTenants.some(item=>item.id===store.tenant_id))visibleTenants.push({id:store.tenant_id,slug:'',name:`${store.name} 운영공간`,status:'active',kind:'business',derivedFromStore:true});
+  }
   return{
     userId,
     tenantMemberships,
     storeMemberships,
-    tenants,
+    tenants:visibleTenants,
     stores:uniqueRows([...directStores,...tenantStores]),
     providers,
     policies,
