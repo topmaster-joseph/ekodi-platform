@@ -20,13 +20,21 @@ html[data-ekodi-user-ui] {
  * This centers the composition, not every sentence: readable copy, forms and tables
  * keep their service-owned text alignment. Full-bleed backgrounds remain outside the
  * adopted main canvas when a service needs edge-to-edge visual treatment.
+ *
+ * body > main / body > [role="main"] are backward-compatible selectors so the
+ * principle takes effect as soon as the shared shell CSS is deployed, even while
+ * individual edge workers are still rolling forward to the centered-v1 marker.
  */
+html[data-ekodi-user-ui] body > main,
+html[data-ekodi-user-ui] body > [role="main"],
 html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] {
   width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
   margin-inline: auto;
   box-sizing: border-box;
 }
 
+html[data-ekodi-user-ui] body > main > :where(section, article, aside, .section, .panel, .content-section),
+html[data-ekodi-user-ui] body > [role="main"] > :where(section, article, aside, .section, .panel, .content-section),
 html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] > :where(section, article, aside, .section, .panel, .content-section) {
   margin-inline: auto;
 }
@@ -327,6 +335,8 @@ html[data-ekodi-user-ui] {
 }
 
 @media (max-width: 720px) {
+  html[data-ekodi-user-ui] body > main,
+  html[data-ekodi-user-ui] body > [role="main"],
   html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] {
     width: min(var(--ekodi-user-canvas-max), calc(100% - 24px));
   }
@@ -348,6 +358,8 @@ html[data-ekodi-user-ui] {
     --ekodi-user-header-fallback-height: 58px;
   }
 
+  html[data-ekodi-user-ui] body > main,
+  html[data-ekodi-user-ui] body > [role="main"],
   html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] {
     width: min(var(--ekodi-user-canvas-max), calc(100% - 20px));
   }
