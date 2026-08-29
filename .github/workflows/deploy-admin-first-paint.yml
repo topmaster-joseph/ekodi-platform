@@ -36,13 +36,9 @@ jobs:
           set -euo pipefail
           node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
-          grep -Fq 'function holdAppUntilReady' admin-central-handoff.js
-          grep -Fq "dataset.ekodiFirstPaintGuard='active'" admin-central-handoff.js
-          grep -Fq "app.style.setProperty('visibility','hidden','important')" admin-central-handoff.js
-          grep -Fq 'function settleInitialRoute' admin-authenticated-shell.js
-          grep -Fq 'function waitForSettledPaint' admin-authenticated-shell.js
-          grep -Fq "app.style.removeProperty('visibility')" admin-authenticated-shell.js
-          grep -Fq "const campus=document.querySelector('.sidebar [data-section=\"campus\"]')" admin-authenticated-shell.js
+          grep -Fq "if(becameVisible)app.style.visibility='hidden'" admin-central-handoff.js
+          grep -Fq "function announceReady(){if(app)app.style.visibility=''" admin-authenticated-shell.js
+          grep -Fq 'await new Promise(resolve=>setTimeout(resolve,0));announceReady()' admin-authenticated-shell.js
 
       - name: Verify Cloudflare credentials
         run: |
@@ -56,9 +52,9 @@ jobs:
           test -f dist/admin-central-handoff.js
           test -f dist/admin-authenticated-shell.js
           test -f dist/control-center.html
-          grep -Fq 'function holdAppUntilReady' dist/admin-central-handoff.js
-          grep -Fq 'function waitForSettledPaint' dist/admin-authenticated-shell.js
-          grep -Fq "app.style.removeProperty('visibility')" dist/admin-authenticated-shell.js
+          grep -Fq "if(becameVisible)app.style.visibility='hidden'" dist/admin-central-handoff.js
+          grep -Fq "function announceReady(){if(app)app.style.visibility=''" dist/admin-authenticated-shell.js
+          grep -Fq 'await new Promise(resolve=>setTimeout(resolve,0));announceReady()' dist/admin-authenticated-shell.js
           grep -Fq 'admin-authenticated-shell.js' dist/control-center.html
 
       - name: Guarded shared-site release
@@ -80,9 +76,9 @@ jobs:
             shell_code=$(curl -sS -o /tmp/shell -w '%{http_code}' --connect-timeout 5 --max-time 15 "$shell_url" || true)
             root_code=$(curl -sS -o /tmp/root -w '%{http_code}' --connect-timeout 5 --max-time 15 "$root_url" || true)
             guard=no; settle=no; reveal=no; wired=no
-            grep -Fq 'function holdAppUntilReady' /tmp/handoff && grep -Fq "app.style.setProperty('visibility','hidden','important')" /tmp/handoff && guard=yes || true
-            grep -Fq 'function waitForSettledPaint' /tmp/shell && grep -Fq 'function settleInitialRoute' /tmp/shell && settle=yes || true
-            grep -Fq "app.style.removeProperty('visibility')" /tmp/shell && reveal=yes || true
+            grep -Fq "if(becameVisible)app.style.visibility='hidden'" /tmp/handoff && guard=yes || true
+            grep -Fq 'await new Promise(resolve=>setTimeout(resolve,0));announceReady()' /tmp/shell && settle=yes || true
+            grep -Fq "function announceReady(){if(app)app.style.visibility=''" /tmp/shell && reveal=yes || true
             grep -Fq 'admin-authenticated-shell.js' /tmp/root && wired=yes || true
             echo "admin first paint -> codes=$handoff_code/$shell_code/$root_code guard=$guard settle=$settle reveal=$reveal wired=$wired"
             if [ "$handoff_code" = '200' ] && [ "$shell_code" = '200' ] && [[ "$root_code" =~ ^[23] ]] && [ "$guard" = yes ] && [ "$settle" = yes ] && [ "$reveal" = yes ] && [ "$wired" = yes ]; then
