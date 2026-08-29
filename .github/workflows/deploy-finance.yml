@@ -131,11 +131,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.finance.staging.runtime.toml --json > /tmp/staging-deployments.json
+          npx --yes wrangler@$WRANGLER_VERSION dev --remote --config wrangler.finance.staging.runtime.toml --ip 127.0.0.1 --port 8792 > /tmp/finance-remote-dev.log 2>&1 &
+          remote_pid=$!
+          trap 'kill $remote_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8792/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $remote_pid 2>/dev/null; then cat /tmp/finance-remote-dev.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != '1' ]; then cat /tmp/finance-remote-dev.log; exit 1; fi
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/health' || true)
-            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/tax-business-status-health' || true)
-            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/overview' || true)
-            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/structure' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/tax-business-status-health' || true)
+            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/overview' || true)
+            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/structure' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
