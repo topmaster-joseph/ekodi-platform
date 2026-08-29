@@ -7,6 +7,7 @@ const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
+const SERVICE_OWNED_FOOTER_SERVICES=new Set(['church']);
 const MY_SERVICE_ID='my';
 const USER_UI_VERSION='v1';
 const USER_LAYOUT_VERSION='centered-v1';
@@ -44,6 +45,7 @@ function cleanSurface(value){const v=String(value||'').trim().toLowerCase();retu
 function cleanServiceId(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');}
 function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
 function isMyEkodi(serviceId){return cleanServiceId(serviceId)===MY_SERVICE_ID;}
+function serviceOwnsFooter(serviceId){return SERVICE_OWNED_FOOTER_SERVICES.has(cleanServiceId(serviceId));}
 function defaultSurface(serviceId){return cleanSurface(serviceForId(serviceId)?.defaultSurface)||'public';}
 function resolvedSurface(serviceId,surface=''){return cleanSurface(surface)||defaultSurface(serviceId);}
 function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurface(serviceId));}
@@ -78,10 +80,12 @@ class ShellHeadInjector{
 class UserUiHtmlInjector{
   constructor(serviceId,surface){this.serviceId=serviceId;this.surface=surface;}
   element(element){
+    const service=cleanServiceId(this.serviceId)||'ekodi';
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
-    element.setAttribute('data-ekodi-service',cleanServiceId(this.serviceId)||'ekodi');
+    element.setAttribute('data-ekodi-service',service);
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
+    if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
 class UserUiHeadInjector{element(element){element.append(`<link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
@@ -104,7 +108,10 @@ class UserCanvasAdopter{
 }
 class UserChromeInjector{
   constructor(serviceId){this.serviceId=serviceId;}
-  element(element){element.prepend(fallbackHeader(this.serviceId),{html:true});element.append(renderEkodiUserFooter(),{html:true});}
+  element(element){
+    element.prepend(fallbackHeader(this.serviceId),{html:true});
+    if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(),{html:true});
+  }
 }
 
 export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
@@ -118,6 +125,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
   headers.set('x-ekodi-user-ui',USER_UI_VERSION);
   headers.set('x-ekodi-user-ui-surface',resolved);
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
+  headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();
   return new HTMLRewriter()
