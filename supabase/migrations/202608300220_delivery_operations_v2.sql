@@ -1,10 +1,14 @@
 -- Delivery Hub AI operations v2
 -- Extends the existing tenants / stores / orders model. No credentials or provider secrets live in these tables.
 
+-- The existing stores PK is id-only. This additive unique index lets delivery rows
+-- enforce that a selected store really belongs to the supplied tenant.
+create unique index if not exists stores_id_tenant_delivery_uidx on public.stores(id, tenant_id);
+
 create table if not exists public.delivery_provider_connections (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references public.tenants(id) on delete cascade,
-  store_id uuid references public.stores(id) on delete cascade,
+  store_id uuid,
   name text not null check (char_length(name) between 1 and 120),
   provider_key text not null check (provider_key ~ '^[a-z0-9][a-z0-9._-]{0,63}$'),
   provider_type text not null default 'agency' check (provider_type in ('agency','self','platform','manual')),
@@ -25,7 +29,7 @@ create index if not exists delivery_provider_store_idx on public.delivery_provid
 create table if not exists public.delivery_policies (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references public.tenants(id) on delete cascade,
-  store_id uuid references public.stores(id) on delete cascade,
+  store_id uuid,
   name text not null check (char_length(name) between 1 and 120),
   priority text not null default 'balanced' check (priority in ('balanced','cost','speed')),
   max_delivery_fee integer check (max_delivery_fee is null or max_delivery_fee >= 0),
@@ -151,5 +155,5 @@ create policy delivery_settlement_write on public.delivery_settlement_drafts
   );
 
 comment on table public.delivery_provider_connections is 'Non-secret delivery provider connection metadata. Credentials remain in official adapter secret storage.';
-comment on table public.delivery_decisions is 'Immutable-ish decision-support audit records. V2 forbids external dispatch execution.';
+comment on table public.delivery_decisions is 'Decision-support audit records. V2 forbids external dispatch execution.';
 comment on table public.delivery_settlement_drafts is 'Preview/export drafts only. V2 forbids settlement execution.';
