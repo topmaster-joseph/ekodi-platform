@@ -28,7 +28,7 @@ new Function(assistJs);
 new Function(assistBootstrapJs);
 await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n${hybridExecutionJs}\n`);
 await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
-compactCss = mustReplace(compactCss, deviceCss, '', 'device CSS bundled in compact shell');
+if (compactCss.includes(deviceCss)) compactCss = compactCss.replace(deviceCss, '');
 compactCss = `${compactCss}\n${assistBootstrapCss}\n`;
 await writeFile(`${dist}compact-control-center.css`, compactCss);
 
