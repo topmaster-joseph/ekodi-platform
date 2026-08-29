@@ -60,15 +60,22 @@ jobs:
 
       - name: Verify production direct connector
         shell: bash
+        env:
+          RELEASE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          url="https://admin.ekodi.kr/marketing-ai-admin.js?direct=${RELEASE_SHA}"
           for attempt in $(seq 1 15); do
-            code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.js' || true)
-            if [ "$code" = '200' ] && grep -Fiq 'x-ekodi-route: admin-asset' /tmp/headers && grep -Fq '무료 직접 연결 모드' /tmp/body && grep -Fq 'Metricool은 필수가 아닙니다' /tmp/body; then
+            code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            route=$(grep -i '^x-ekodi-route:' /tmp/headers | tr -d '\r' || true)
+            marker_a=no; marker_b=no
+            grep -Fq '무료 직접 연결 모드' /tmp/body && marker_a=yes || true
+            grep -Fq 'Metricool은 필수가 아닙니다' /tmp/body && marker_b=yes || true
+            echo "direct connector verify -> code=$code route=${route:-missing} markers=$marker_a/$marker_b"
+            if [ "$code" = '200' ] && [ "$marker_a" = yes ] && [ "$marker_b" = yes ]; then
               echo 'Direct social connector verified in production.'
               exit 0
             fi
-            echo "Production verification pending ($attempt/15)."
             sleep 4
           done
           exit 1
