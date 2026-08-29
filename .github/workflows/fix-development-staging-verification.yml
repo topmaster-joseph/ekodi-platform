@@ -13,62 +13,12 @@ permissions:
 jobs:
   fix:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Repair authenticated admin lazy runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          shell = Path('admin-authenticated-shell.js')
-          text = shell.read_text(encoding='utf-8')
-          old = "const criticalPostAuthScripts = ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js'];"
-          new = "const criticalPostAuthScripts = ['admin-menu-layout.js','admin-demand-loader.js'];"
-          if old not in text:
-              raise SystemExit('admin shell legacy critical script marker missing')
-          shell.write_text(text.replace(old, new, 1), encoding='utf-8')
-
-          build = Path('scripts/build.mjs')
-          text = build.read_text(encoding='utf-8')
-          old_assets = "'admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','homepage-admin.js'"
-          new_assets = "'admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','admin-menu-registry.js','admin-sidebar.js','admin-menu-runtime.js','device-control-admin.css','device-control-admin.js','storage-admin.css','storage-admin.js','homepage-admin.js'"
-          if old_assets not in text:
-              raise SystemExit('build admin asset marker missing')
-          text = text.replace(old_assets, new_assets, 1)
-
-          old_device_css = """const [compactCss, deviceControlCss] = await Promise.all([\n  readFile(`${output}compact-control-center.css`, 'utf8'),\n  readFile(`${root}device-control-admin.css`, 'utf8'),\n]);\nawait writeFile(`${output}compact-control-center.css`, `${compactCss}\\n${deviceControlCss}\\n`);\n\n"""
-          if old_device_css not in text:
-              raise SystemExit('legacy device CSS bundling block missing')
-          text = text.replace(old_device_css, '', 1)
-
-          old_postauth = 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"'
-          new_postauth = 'data-ekodi-postauth="admin-menu-layout.js admin-demand-loader.js"'
-          if old_postauth not in text:
-              raise SystemExit('legacy postauth marker missing')
-          text = text.replace(old_postauth, new_postauth, 1)
-          build.write_text(text, encoding='utf-8')
-
-          test = Path('test/device-control-contract.test.mjs')
-          text = test.read_text(encoding='utf-8')
-          old_test = """test('admin Device Control is bundled only into authenticated compact assets', () => {\n  assert.match(build, /device-control-admin\\.css/);\n  assert.match(build, /device-control-admin\\.js/);\n  assert.match(build, /ekodi-device-bootstrap\\.cmd/);\n  assert.match(build, /compact-control-center\\.css/);\n  assert.match(build, /compact-control-center\\.js/);\n  assert.doesNotMatch(build.match(/const assets = \\[[\\s\\S]*?\\];/)?.[0] || '', /device-control-admin/);\n});\n"""
-          new_test = """test('admin Device Control is lazy-loaded from authenticated production assets', () => {\n  const assets = build.match(/const assets = \\[[\\s\\S]*?\\];/)?.[0] || '';\n  assert.match(assets, /device-control-admin\\.css/);\n  assert.match(assets, /device-control-admin\\.js/);\n  assert.match(assets, /admin-menu-registry\\.js/);\n  assert.match(assets, /admin-sidebar\\.js/);\n  assert.match(assets, /admin-menu-runtime\\.js/);\n  assert.match(assets, /storage-admin\\.css/);\n  assert.match(assets, /storage-admin\\.js/);\n  assert.match(build, /ekodi-device-bootstrap\\.cmd/);\n  assert.match(build, /admin-demand-loader\\.js/);\n  assert.doesNotMatch(build, /data-ekodi-postauth=\\"compact-control-center\\.js/);\n});\n"""
-          if old_test not in text:
-              raise SystemExit('legacy Device Control test block missing')
-          test.write_text(text.replace(old_test, new_test, 1), encoding='utf-8')
-          PY
-
-          node --check admin-authenticated-shell.js
-          node --check scripts/build.mjs
-          node --test test/device-control-contract.test.mjs
-      - name: Generate Access-safe Development verification workflows
+      - name: Generate corrected workflow blobs
         shell: bash
         run: |
           set -euo pipefail
@@ -76,45 +26,37 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          specs = [
-            ('deploy-control-api.yml', 'wrangler.api.staging.runtime.toml', '8791'),
-            ('deploy-finance.yml', 'wrangler.finance.staging.runtime.toml', '8792'),
-            ('deploy-marketing-domain-api.yml', 'wrangler.marketing-domains.staging.toml', '8793'),
+          names = [
+              'deploy-control-api.yml',
+              'deploy-finance.yml',
+              'deploy-marketing-domain-api.yml',
           ]
-          for filename, config, port in specs:
-              src = Path('.github/workflows') / filename
+          for name in names:
+              src = Path('.github/workflows') / name
+              out = Path('ops/generated-workflows') / name
               text = src.read_text(encoding='utf-8')
-              text = text.replace("WRANGLER_VERSION: '4.119.0'", "WRANGLER_VERSION: '4.127.1'")
-              remote = f"          npx --yes wrangler@$WRANGLER_VERSION dev --remote --config {config} --ip 127.0.0.1 --port {port}"
-              local = (
-                  f"          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config {config} >/tmp/local-migrations.log 2>&1\\n"
-                  f"          npx --yes wrangler@$WRANGLER_VERSION dev --local --config {config} --ip 127.0.0.1 --port {port}"
-              )
-              if remote not in text:
-                  raise SystemExit(f'{filename}: remote preview marker missing')
-              text = text.replace(remote, local, 1)
-              text = text.replace('remote_pid=$!', 'runtime_pid=$!', 1)
-              text = text.replace("trap 'kill $remote_pid 2>/dev/null || true' EXIT", "trap 'kill $runtime_pid 2>/dev/null || true' EXIT", 1)
-              text = text.replace('kill -0 $remote_pid', 'kill -0 $runtime_pid', 1)
-              out = Path('ops/generated-workflows') / filename
+              broken = '>/tmp/local-migrations.log 2>&1\\n          npx --yes wrangler@'
+              fixed = '>/tmp/local-migrations.log 2>&1\n          npx --yes wrangler@'
+              if text.count(broken) != 1:
+                  raise SystemExit(f'{name}: expected exactly one malformed local-verification newline, found {text.count(broken)}')
+              text = text.replace(broken, fixed, 1)
+              if '\\n          npx --yes wrangler@' in text:
+                  raise SystemExit(f'{name}: malformed literal newline remains')
               out.write_text(text, encoding='utf-8')
               print(f'Generated {out}')
           PY
-
-          grep -Fq 'wrangler@$WRANGLER_VERSION dev --local' ops/generated-workflows/deploy-control-api.yml
-          grep -Fq 'd1 migrations apply DB --local' ops/generated-workflows/deploy-finance.yml
-          grep -Fq 'd1 migrations apply DB --local' ops/generated-workflows/deploy-marketing-domain-api.yml
-          ! grep -Fq 'wrangler@$WRANGLER_VERSION dev --remote' ops/generated-workflows/deploy-control-api.yml
-      - name: Commit repaired runtime and staged workflow blobs
+          grep -Fq 'd1 migrations apply DB --local' ops/generated-workflows/deploy-control-api.yml
+          grep -Fq 'dev --local' ops/generated-workflows/deploy-control-api.yml
+      - name: Commit corrected staged blobs
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin-authenticated-shell.js scripts/build.mjs test/device-control-contract.test.mjs ops/generated-workflows/deploy-control-api.yml ops/generated-workflows/deploy-finance.yml ops/generated-workflows/deploy-marketing-domain-api.yml
+          git add ops/generated-workflows/deploy-control-api.yml ops/generated-workflows/deploy-finance.yml ops/generated-workflows/deploy-marketing-domain-api.yml
           if git diff --cached --quiet; then
-            echo 'No change required.'
+            echo 'No changes required.'
             exit 0
           fi
-          git commit -m 'fix(admin): restore lazy runtime after retired-source cleanup'
+          git commit -m 'chore(ops): correct Development verification workflow blobs'
           git push origin HEAD:main
