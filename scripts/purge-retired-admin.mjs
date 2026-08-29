@@ -1,4 +1,4 @@
-// Physical purge trigger 2026-08-30: remove retired admin implementation from source, build graph and production.
+// Physical purge: remove retired admin implementation from source, build graph and production.
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 const read = path => readFileSync(path, 'utf8');
@@ -79,6 +79,20 @@ function purgeThinPostbuildLegacyGenerator() {
   write('scripts/admin-thin-postbuild.mjs', thin);
 }
 
+function purgePerformanceDependencies() {
+  let source = read('scripts/admin-performance-postbuild.mjs');
+  source = source.replace("function mustReplace(search, replacement, label) {\n  if (!html.includes(search)) throw new Error(`admin performance marker missing: ${label}`);\n  html = html.replace(search, replacement);\n}\n\n", '');
+  const old = `// Only the overview hero participates in first authenticated layout. Operational DOM remains\n// for compatibility but is display:none until its workspace is explicitly selected.\nmustReplace('<section class="metrics" data-panel="overview services"', '<section class="metrics hidden-panel" data-panel="services"', 'services metrics panel');\nmustReplace('<section class="section operations-section" data-panel="overview services"', '<section class="section operations-section hidden-panel" data-panel="services"', 'services operations panel');\nmustReplace('<section class="section" data-panel="overview finance"', '<section class="section hidden-panel" data-panel="finance"', 'finance panel');\nfor (const section of ['communication', 'workspace', 'organization']) {\n  html = html.replace(\`<section class="section" data-panel="\${section}"\`, \`<section class="section hidden-panel" data-panel="\${section}"\`);\n}\n`;
+  const replacement = `// The retired overview/services bootstrap DOM no longer exists. Keep surviving workspaces hidden until selected.\nfor (const section of ['finance', 'communication', 'workspace', 'organization']) {\n  html = html.replace(\`<section class="section" data-panel="\${section}"\`, \`<section class="section hidden-panel" data-panel="\${section}"\`);\n}\n`;
+  source = source.replace(old, replacement);
+  source = source.replace("  ['repairLegacyLinks','repairLinks'],\n", '');
+  source = source.replace('immutable versioning ready, shared menu modules published, legacy runtime/polling deferred.', 'immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.');
+  must(!source.includes('mustReplace('), 'retired overview mustReplace dependency survived');
+  must(!source.includes('overview services'), 'retired overview/services dependency survived');
+  must(!source.includes('overview finance'), 'retired overview/finance dependency survived');
+  write('scripts/admin-performance-postbuild.mjs', source);
+}
+
 function purgeBuildInputs() {
   let build = read('scripts/build.mjs');
   for (const dead of ["'admin.html',", "'control-center-ops.css',", "'control-center.js',", "'control-center-features.js',", "'compact-control-center.js',"]) build = build.replaceAll(dead, '');
@@ -117,7 +131,6 @@ function purgeDisplayNameLegacyRequirements() {
   source = source.replace("  'admin.html',\n", '');
   source = source.replace("  'control-center-features.js',\n", '');
   source = source.replace("  'admin.html': ['<strong>에코디서점</strong><small>books.ekodi.kr</small>', '<strong>마케팅 AI</strong>']\n", '');
-  source = source.replace("  'control-center.html': ['<strong>에코디 메일</strong>', '<strong>에코디 라이브</strong>', '<strong>에코디 클라우드</strong>', '<strong>마케팅 AI</strong>'],\n};", "  'control-center.html': ['<strong>에코디 메일</strong>', '<strong>에코디 라이브</strong>', '<strong>에코디 클라우드</strong>', '<strong>마케팅 AI</strong>']\n};");
   must(!source.includes("'admin.html': ["), 'retired admin.html canonical requirement survived');
   write('scripts/normalize-platform-ai-names.mjs', source);
 }
@@ -141,6 +154,7 @@ purgeControlCenterHtml();
 migrateMenuToRegistryOnly();
 purgeAuthenticatedShellCompatibility();
 purgeThinPostbuildLegacyGenerator();
+purgePerformanceDependencies();
 purgeBuildInputs();
 purgeCheckInputs();
 purgeDisplayNameLegacyRequirements();
