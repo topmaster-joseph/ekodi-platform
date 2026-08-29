@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+// Verification marker: authoritative publication job ledger is the primary posting-status source.
 const js = readFileSync(new URL('../marketing-ai-admin-posting-status.js', import.meta.url), 'utf8');
 const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 
