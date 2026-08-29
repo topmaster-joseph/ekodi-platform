@@ -34,6 +34,7 @@ jobs:
               'config': 'wrangler.api.staging.runtime.toml',
               'log': '/tmp/control-remote-dev.log',
               'port': '8791',
+              'shell': True,
             },
             {
               'path': Path('.github/workflows/deploy-finance.yml'),
@@ -43,6 +44,7 @@ jobs:
               'config': 'wrangler.finance.staging.runtime.toml',
               'log': '/tmp/finance-remote-dev.log',
               'port': '8792',
+              'shell': True,
             },
             {
               'path': Path('.github/workflows/deploy-marketing-domain-api.yml'),
@@ -52,6 +54,7 @@ jobs:
               'config': 'wrangler.marketing-domains.staging.toml',
               'log': '/tmp/marketing-domain-remote-dev.log',
               'port': '8793',
+              'shell': False,
             },
           ]
 
@@ -62,7 +65,8 @@ jobs:
             if host_count < 1:
               raise SystemExit(f'{p}: expected old staging hostname is missing')
 
-            marker = f"      - name: {spec['step']}\n        shell: bash\n        run: |\n          set -euo pipefail\n"
+            shell_line = "        shell: bash\n" if spec['shell'] else ""
+            marker = f"      - name: {spec['step']}\n{shell_line}        run: |\n          set -euo pipefail\n"
             if text.count(marker) != 1:
               raise SystemExit(f'{p}: verification marker count was {text.count(marker)}, expected 1')
 
