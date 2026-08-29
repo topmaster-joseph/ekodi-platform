@@ -3,6 +3,7 @@ import {
   adminMenuOrder,
   getAdminMenuGroupDefault,
   getAdminMenuGroupForSection,
+  getAdminMenuGroupLabel,
   getAdminMenuItem,
   getAdminMenuLabel,
   normalizeAdminLocale,
@@ -10,13 +11,12 @@ import {
 
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
-const RECENT_KEY = 'ekodi-admin-recent-sections';
-const FAVORITES_KEY = 'ekodi-admin-favorite-sections';
 const mounted = new WeakMap();
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
 const GLOBAL_CLASS = 'admin-global-navs';
-const CONTEXT_CLASS = 'admin-context-nav';
-const ASSIST_CLASS = 'admin-nav-assist';
+const SOURCE_CLASS = 'admin-context-source';
+const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
+const TABS_CLASS = 'admin-context-tabs';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -41,28 +41,73 @@ function navItems(nav) {
   return nav?.querySelectorAll('.nav') || [];
 }
 
-function readList(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || '[]');
-    return Array.isArray(value) ? value.filter(id => getAdminMenuItem(id) && !getAdminMenuItem(id).internal) : [];
-  } catch {
-    return [];
-  }
+function visibleDefinition(id) {
+  const definition = getAdminMenuItem(id);
+  return definition && !definition.internal ? definition : null;
 }
 
-function saveRecent(section) {
-  if (!section || !getAdminMenuItem(section)?.group) return;
-  try {
-    const next = [section, ...readList(RECENT_KEY).filter(id => id !== section)].slice(0, 4);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-  } catch {}
+function menuRankMap() {
+  return new Map(adminMenuOrder().map((id, index) => [id, (index + 1) * 10]));
 }
 
 function ensureStyle() {
-  if (document.querySelector('#ekodi-admin-five-axis-style')) return;
+  if (document.querySelector('#ekodi-admin-workbench-tabs-style')) return;
   const style = document.createElement('style');
-  style.id = 'ekodi-admin-five-axis-style';
-  style.textContent = `body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;overflow:visible!important}body.compact-control-center .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 10px}body.compact-control-center .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:7px 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:rgba(226,232,240,.78);font:inherit;font-size:13px;font-weight:760;text-align:left;cursor:pointer}body.compact-control-center .admin-global-nav:hover{background:rgba(148,163,184,.1);color:#fff}body.compact-control-center .admin-global-nav.active{border-color:rgba(96,165,250,.22);background:rgba(59,130,246,.16);color:#fff}body.compact-control-center .admin-global-nav b{display:inline-grid;place-items:center;min-width:21px;font-size:12px}body.compact-control-center .${CONTEXT_CLASS}{display:grid;gap:1px;padding:9px 0;border-top:1px solid rgba(148,163,184,.14);border-bottom:1px solid rgba(148,163,184,.14)}body.compact-control-center .${CONTEXT_CLASS}::before{content:attr(data-context-label);padding:2px 9px 6px;color:rgba(148,163,184,.68);font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}body.compact-control-center .${CONTEXT_CLASS}>.nav{min-height:31px!important;padding:5px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.15!important;gap:8px!important}body.compact-control-center .${CONTEXT_CLASS}>.nav span{font-size:12px!important;line-height:1.2!important}body.compact-control-center .${ASSIST_CLASS}{display:grid;gap:7px;padding:10px 0 2px}body.compact-control-center .admin-assist-block{display:grid;gap:3px}body.compact-control-center .admin-assist-title{padding:0 9px;color:rgba(148,163,184,.62);font-size:9px;font-weight:800;letter-spacing:.08em}body.compact-control-center .admin-assist-links{display:flex;gap:4px;flex-wrap:wrap;padding:0 7px}body.compact-control-center .admin-assist-link{max-width:100%;padding:4px 7px;border:0;border-radius:7px;background:rgba(148,163,184,.08);color:rgba(226,232,240,.72);font-size:10px;line-height:1.2;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}body.compact-control-center .admin-assist-empty{padding:1px 9px;color:rgba(148,163,184,.42);font-size:9px}@media(max-width:760px){body.compact-control-center .admin-global-nav{min-height:42px;font-size:14px}body.compact-control-center .${CONTEXT_CLASS}>.nav{min-height:40px!important;font-size:13px!important}}`;
+  style.id = 'ekodi-admin-workbench-tabs-style';
+  style.textContent = `
+body.compact-control-center{--admin-readable:#f4f8fc;--admin-secondary:#aebed0;--admin-border:rgba(148,163,184,.18);--admin-soft:rgba(148,163,184,.07);--admin-active:rgba(56,189,248,.13)}
+body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important}
+body.compact-control-center .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 8px}
+body.compact-control-center .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:7px 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:rgba(226,232,240,.78);font:inherit;font-size:13px;font-weight:760;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important}
+body.compact-control-center .admin-global-nav:hover{background:var(--admin-soft);color:#fff}
+body.compact-control-center .admin-global-nav.active{border-color:rgba(56,189,248,.22);background:var(--admin-active);color:#fff}
+body.compact-control-center .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;font-size:11px;letter-spacing:-.03em}
+body.compact-control-center .${SOURCE_CLASS}{display:none!important}
+body.compact-control-center .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:50px;padding:7px 16px;border-bottom:1px solid var(--admin-border);background:rgba(7,21,34,.97);box-shadow:none!important;backdrop-filter:none!important}
+body.compact-control-center .admin-context-title{flex:0 0 auto;color:var(--admin-secondary);font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+body.compact-control-center .${TABS_CLASS}{display:flex;align-items:center;gap:3px;min-width:0;overflow-x:auto;scrollbar-width:none}
+body.compact-control-center .${TABS_CLASS}::-webkit-scrollbar{display:none}
+body.compact-control-center .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--admin-secondary);font:inherit;font-size:12px;font-weight:740;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
+body.compact-control-center .admin-context-tab:hover{background:var(--admin-soft);color:var(--admin-readable)}
+body.compact-control-center .admin-context-tab.active{border-color:rgba(56,189,248,.18);background:var(--admin-active);color:#fff}
+body.compact-control-center .content{padding:14px 16px 28px!important}
+body.compact-control-center .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
+body.compact-control-center .content .section,body.compact-control-center .content .module,body.compact-control-center .content .architecture,body.compact-control-center .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
+body.compact-control-center .content button,body.compact-control-center .content .btn{box-shadow:none!important;transition:none!important}
+body.compact-control-center .content p,body.compact-control-center .content small,body.compact-control-center .content .muted{color:var(--admin-secondary)}
+body.compact-control-center .content h1,body.compact-control-center .content h2,body.compact-control-center .content h3,body.compact-control-center .content strong{color:var(--admin-readable)}
+body.compact-control-center #campusPanel .campus-toolbar{padding:13px 15px!important}
+body.compact-control-center #campusPanel .campus-toolbar h2{font-size:20px!important}
+body.compact-control-center #campusPanel .campus-toolbar p:not(.kicker){font-size:12px!important;line-height:1.45!important}
+body.compact-control-center #campusPanel .campus-toolbar-actions{gap:6px!important}
+body.compact-control-center #campusPanel .campus-toolbar-actions button,body.compact-control-center #campusPanel .campus-toolbar-actions a{min-height:34px!important;padding:7px 10px!important;font-size:12px!important}
+body.compact-control-center #campusPanel .campus-table-wrap.campus-groups-wrap{padding:10px!important}
+body.compact-control-center #campusSiteGroups .campus-groups-grid{gap:10px!important}
+body.compact-control-center #campusSiteGroups .campus-group-card{border-radius:11px!important;box-shadow:none!important;backdrop-filter:none!important}
+body.compact-control-center #campusSiteGroups .campus-group-head{min-height:48px!important;padding:9px 12px!important;gap:8px!important}
+body.compact-control-center #campusSiteGroups .campus-group-head h3{font-size:15px!important;line-height:1.25!important}
+body.compact-control-center #campusSiteGroups .campus-group-head p{margin-top:2px!important;font-size:11px!important;line-height:1.3!important}
+body.compact-control-center #campusSiteGroups .campus-group-count{min-width:26px!important;height:26px!important;padding:0 7px!important}
+body.compact-control-center #campusSiteGroups .campus-site-item{min-height:52px!important;padding:7px 10px!important;gap:7px 10px!important;box-shadow:none!important;backdrop-filter:none!important;transition:none!important}
+body.compact-control-center #campusSiteGroups .campus-site-identity{gap:6px!important}
+body.compact-control-center #campusSiteGroups .campus-site-identity strong{font-size:13px!important;line-height:1.3!important}
+body.compact-control-center #campusSiteGroups .campus-site-type,body.compact-control-center #campusSiteGroups .campus-site-stage{min-height:21px!important;padding:3px 6px!important;font-size:10px!important}
+body.compact-control-center #campusSiteGroups .campus-site-domain{font-size:11px!important;line-height:1.3!important}
+body.compact-control-center #campusSiteGroups .campus-row-actions{gap:4px!important}
+body.compact-control-center #campusSiteGroups .campus-row-action{min-width:54px!important;min-height:32px!important;padding:6px 8px!important;border-radius:7px!important;font-size:11px!important}
+body.compact-control-center #campusSiteGroups .campus-row-action.primary{min-width:56px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-controls{padding:5px 7px!important;gap:5px 8px!important;border-radius:7px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-check,body.compact-control-center #campusSiteGroups .campus-homepage-order,body.compact-control-center #campusSiteGroups .campus-homepage-scope{font-size:10px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-check input{width:15px!important;height:15px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-order button{min-width:28px!important;width:28px!important;height:28px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-state b{font-size:10px!important}
+body.compact-control-center #campusSiteGroups .campus-homepage-state small{margin-top:1px!important;font-size:9px!important;line-height:1.25!important}
+body.compact-control-center #campusPanel .campus-homepage-notice{margin-bottom:9px!important;padding:9px 11px!important;border-radius:9px!important;gap:8px!important}
+body.compact-control-center #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
+body.compact-control-center #campusPanel .campus-homepage-notice strong{font-size:11px!important}body.compact-control-center #campusPanel .campus-homepage-notice small{font-size:10px!important;line-height:1.35!important}
+@media(max-width:1480px){body.compact-control-center #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
+@media(max-width:760px){body.compact-control-center .admin-global-nav{min-height:40px;font-size:13px}body.compact-control-center .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:6px 10px;gap:7px}body.compact-control-center .admin-context-title{display:none}body.compact-control-center .admin-context-tab{min-height:34px;padding:0 9px}body.compact-control-center .content{padding:10px 10px 24px!important}body.compact-control-center #campusPanel .campus-toolbar{padding:11px!important}body.compact-control-center #campusSiteGroups .campus-site-item{padding:10px!important}body.compact-control-center #campusSiteGroups .campus-row-action{min-height:40px!important;font-size:12px!important}}
+`;
   document.head.append(style);
 }
 
@@ -73,11 +118,6 @@ function ensureLabel(item) {
     item.append(span);
   }
   return span;
-}
-
-function visibleDefinition(id) {
-  const definition = getAdminMenuItem(id);
-  return definition && !definition.internal ? definition : null;
 }
 
 function pruneNonRegistryItems(nav) {
@@ -93,32 +133,43 @@ function pruneNonRegistryItems(nav) {
   return changed;
 }
 
-function menuRankMap() {
-  return new Map(adminMenuOrder().map((id, index) => [id, (index + 1) * 10]));
-}
-
-function ensureContainers(nav) {
+function ensureContainers(nav, root = document) {
   let globals = nav.querySelector(`:scope>.${GLOBAL_CLASS}`);
   if (!globals) {
     globals = document.createElement('div');
     globals.className = GLOBAL_CLASS;
-    globals.setAttribute('aria-label', 'Admin global navigation');
+    globals.setAttribute('aria-label', 'Admin work areas');
     nav.prepend(globals);
   }
-  let context = nav.querySelector(`:scope>.${CONTEXT_CLASS}`);
-  if (!context) {
-    context = document.createElement('div');
-    context.className = CONTEXT_CLASS;
-    globals.insertAdjacentElement('afterend', context);
+
+  let source = nav.querySelector(`:scope>.${SOURCE_CLASS}`);
+  if (!source) {
+    source = document.createElement('div');
+    source.className = SOURCE_CLASS;
+    source.setAttribute('aria-hidden', 'true');
+    nav.append(source);
   }
-  let assist = nav.querySelector(`:scope>.${ASSIST_CLASS}`);
-  if (!assist) {
-    assist = document.createElement('div');
-    assist.className = ASSIST_CLASS;
-    context.insertAdjacentElement('afterend', assist);
+
+  for (const item of [...navItems(nav)]) if (item.parentElement !== source) source.append(item);
+  for (const legacy of [...nav.querySelectorAll(':scope>.admin-context-nav,:scope>.admin-nav-assist')]) legacy.remove();
+
+  const main = root.querySelector?.('#app main') || root.querySelector?.('main');
+  let shell = main?.querySelector(`:scope>.${TABS_SHELL_CLASS}`) || null;
+  if (main && !shell) {
+    shell = document.createElement('div');
+    shell.className = TABS_SHELL_CLASS;
+    shell.dataset.adminContextHeader = 'true';
+    const title = document.createElement('div');
+    title.className = 'admin-context-title';
+    const tabs = document.createElement('div');
+    tabs.className = TABS_CLASS;
+    tabs.setAttribute('role', 'tablist');
+    shell.append(title, tabs);
+    const topbar = main.querySelector(':scope>.topbar');
+    if (topbar) topbar.insertAdjacentElement('afterend', shell);
+    else main.prepend(shell);
   }
-  for (const item of [...navItems(nav)]) if (item.parentElement !== context) context.append(item);
-  return { globals, context, assist };
+  return { globals, source, shell };
 }
 
 function globalButtons(globals, locale) {
@@ -137,82 +188,85 @@ function globalButtons(globals, locale) {
       globals.append(button);
     }
     const label = group.labels?.[locale] || group.labels?.ko || group.id;
-    const icon = button.querySelector('b');
-    const labelNode = button.querySelector('span');
-    if (icon && icon.textContent !== (group.icon || '·')) icon.textContent = group.icon || '·';
-    if (labelNode && labelNode.textContent !== label) labelNode.textContent = label;
-    if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
+    button.querySelector('b').textContent = group.icon || '·';
+    button.querySelector('span').textContent = label;
+    button.setAttribute('aria-label', label);
     existing.delete(group.id);
   }
   for (const button of existing.values()) button.remove();
 }
 
 function activeSection(nav) {
-  const active = [...navItems(nav)].find(item => item.classList.contains('active') && !item.hidden);
-  return adminSidebarSectionOf(active) || window.EKODIAdminPanels?.current?.() || 'campus';
+  const panelSection = window.EKODIAdminPanels?.current?.();
+  if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
+  const active = [...navItems(nav)].find(item => item.classList.contains('active'));
+  return adminSidebarSectionOf(active) || 'campus';
 }
 
-function renderAssist(host, locale) {
-  const blocks = [
-    { key: RECENT_KEY, ko: '최근', en: 'Recent' },
-    { key: FAVORITES_KEY, ko: '즐겨찾기', en: 'Favorites' },
-  ];
-  const signature = blocks.map(block => `${block.key}:${readList(block.key).join(',')}`).join('|') + `|${locale}`;
-  if (host.dataset.renderSignature === signature) return;
-  host.dataset.renderSignature = signature;
-  host.replaceChildren(...blocks.map(block => {
-    const wrap = document.createElement('div');
-    wrap.className = 'admin-assist-block';
-    const title = document.createElement('div');
-    title.className = 'admin-assist-title';
-    title.textContent = locale === 'en' ? block.en : block.ko;
-    const ids = readList(block.key);
-    if (!ids.length) {
-      const empty = document.createElement('div');
-      empty.className = 'admin-assist-empty';
-      empty.textContent = locale === 'en' ? 'None yet' : '아직 없음';
-      wrap.append(title, empty);
-      return wrap;
-    }
-    const links = document.createElement('div');
-    links.className = 'admin-assist-links';
-    for (const id of ids) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'admin-assist-link';
-      button.dataset.adminQuickSection = id;
-      button.textContent = getAdminMenuLabel(id, locale);
-      links.append(button);
-    }
-    wrap.append(title, links);
-    return wrap;
-  }));
+function availableIds(nav, group) {
+  const present = new Set([...navItems(nav)].map(adminSidebarSectionOf).filter(Boolean));
+  const defaultSection = getAdminMenuGroupDefault(group);
+  return adminMenuOrder().filter(id => {
+    const definition = visibleDefinition(id);
+    if (!definition || definition.group !== group) return false;
+    if (definition.superAdminOnly && !present.has(id)) return false;
+    return present.has(id) || id === defaultSection || Boolean(document.querySelector(`[data-panel~="${id}"]`));
+  });
 }
 
-function syncAxisState(nav, locale, preferredSection = '') {
-  const { globals, context, assist } = ensureContainers(nav);
+function renderContextTabs(nav, shell, group, section, locale) {
+  if (!shell) return;
+  const title = shell.querySelector('.admin-context-title');
+  const tabs = shell.querySelector(`.${TABS_CLASS}`);
+  if (!tabs) return;
+  if (title) title.textContent = getAdminMenuGroupLabel(group, locale);
+  const ids = availableIds(nav, group);
+  const signature = `${locale}|${group}|${section}|${ids.join(',')}`;
+  if (tabs.dataset.renderSignature === signature) return;
+  tabs.dataset.renderSignature = signature;
+  const nodes = ids.map(id => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'admin-context-tab';
+    button.dataset.adminContextSection = id;
+    button.setAttribute('role', 'tab');
+    const selected = id === section;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    button.textContent = getAdminMenuLabel(id, locale);
+    return button;
+  });
+  tabs.replaceChildren(...nodes);
+}
+
+function syncWorkbenchState(nav, locale, preferredSection = '') {
+  const { globals, shell } = ensureContainers(nav);
   globalButtons(globals, locale);
   const section = preferredSection || activeSection(nav);
   const group = getAdminMenuGroupForSection(section);
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
-    const active = button.dataset.adminGlobalGroup === group;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-current', active ? 'page' : 'false');
+    const selected = button.dataset.adminGlobalGroup === group;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-current', selected ? 'page' : 'false');
   }
-  const groupDef = ADMIN_MENU_GROUPS.find(item => item.id === group);
-  context.dataset.contextLabel = locale === 'en' ? `${groupDef?.labels?.en || 'Context'} tools` : `${groupDef?.labels?.ko || '현재'} 도구`;
-  for (const item of navItems(nav)) {
-    const id = adminSidebarSectionOf(item);
-    const hidden = getAdminMenuGroupForSection(id) !== group;
-    if (item.hidden !== hidden) item.hidden = hidden;
-    const ariaHidden = hidden ? 'true' : 'false';
-    if (item.getAttribute('aria-hidden') !== ariaHidden) item.setAttribute('aria-hidden', ariaHidden);
-    if (hidden) {
-      if (item.tabIndex !== -1) item.tabIndex = -1;
-    } else if (item.hasAttribute('tabindex')) item.removeAttribute('tabindex');
-  }
-  renderAssist(assist, locale);
+  renderContextTabs(nav, shell, group, section, locale);
   nav.dataset.adminGlobalGroup = group;
+}
+
+function activateSection(nav, section) {
+  if (!section) return;
+  syncWorkbenchState(nav, readAdminSidebarLocale(), section);
+  const definition = getAdminMenuItem(section);
+  const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
+  if (definition?.href && fallback) {
+    fallback.click();
+    return;
+  }
+  if (window.EKODIAdminPanels?.activate) {
+    window.EKODIAdminPanels.activate(section);
+    return;
+  }
+  fallback?.click?.();
 }
 
 export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
@@ -240,7 +294,7 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
   const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
   nav.replaceChildren(...items);
   nav.dataset.adminSidebarShared = 'true';
-  nav.dataset.adminMenuGovernance = 'five-axis-v1';
+  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
   syncAdminSidebar(nav.ownerDocument || document, { locale });
   return items;
 }
@@ -252,34 +306,31 @@ export function syncAdminSidebar(root = document, options = {}) {
   const locale = normalizeAdminLocale(options.locale || options.localeProvider?.() || window.EKODIAdminMenu?.locale?.() || readAdminSidebarLocale());
   const rank = menuRankMap();
   pruneNonRegistryItems(nav);
-  const { context } = ensureContainers(nav);
+  const { source } = ensureContainers(nav, root);
 
   for (const item of navItems(nav)) {
     const id = adminSidebarSectionOf(item);
     const definition = visibleDefinition(id);
     if (!definition) continue;
-    const label = ensureLabel(item);
     const canonical = getAdminMenuLabel(id, locale);
+    const label = ensureLabel(item);
     if (label.textContent !== canonical) label.textContent = canonical;
     item.dataset.adminSidebarShared = 'true';
     item.dataset.adminMenuGroup = definition.group || '';
     const menuRank = rank.get(id) ?? 9000;
-    if (item.style.order !== String(menuRank)) item.style.order = String(menuRank);
-    if (item.dataset.menuOrder !== String(menuRank)) item.dataset.menuOrder = String(menuRank);
-    if (item.parentElement !== context) context.append(item);
+    item.style.order = String(menuRank);
+    item.dataset.menuOrder = String(menuRank);
+    if (item.parentElement !== source) source.append(item);
   }
 
-  syncAxisState(nav, locale);
+  syncWorkbenchState(nav, locale);
   nav.dataset.adminSidebarShared = 'true';
   nav.dataset.adminSidebarLocale = locale;
-  nav.dataset.adminMenuGovernance = 'five-axis-v1';
+  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
 
   const id = activeSection(nav);
   const title = root.querySelector?.('#pageTitle');
-  if (title && id && getAdminMenuItem(id)) {
-    const canonicalTitle = getAdminMenuLabel(id, locale);
-    if (title.textContent !== canonicalTitle) title.textContent = canonicalTitle;
-  }
+  if (title && id && getAdminMenuItem(id)) title.textContent = getAdminMenuLabel(id, locale);
   return true;
 }
 
@@ -310,46 +361,28 @@ export function mountAdminSidebar(root = document, options = {}) {
   };
 
   const observer = new MutationObserver(schedule);
-  observer.observe(nav, {
-    childList: true,
-    subtree: false,
-  });
+  observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
     const global = event.target.closest('[data-admin-global-group]');
-    if (global) {
-      event.preventDefault();
-      const target = getAdminMenuGroupDefault(global.dataset.adminGlobalGroup);
-      saveRecent(target);
-      syncAxisState(nav, readAdminSidebarLocale(), target);
-      window.EKODIAdminPanels?.activate?.(target);
-      schedule();
-      return;
-    }
-    const quick = event.target.closest('[data-admin-quick-section]');
-    if (quick) {
-      event.preventDefault();
-      const target = quick.dataset.adminQuickSection;
-      saveRecent(target);
-      syncAxisState(nav, readAdminSidebarLocale(), target);
-      window.EKODIAdminPanels?.activate?.(target);
-      schedule();
-      return;
-    }
-    const item = event.target.closest('.nav');
-    if (item) saveRecent(adminSidebarSectionOf(item));
+    if (!global) return;
+    event.preventDefault();
+    activateSection(nav, getAdminMenuGroupDefault(global.dataset.adminGlobalGroup));
     schedule();
-    setTimeout(sync, 0);
-    requestAnimationFrame(sync);
+  }, true);
+
+  const main = root.querySelector?.('#app main') || root.querySelector?.('main');
+  main?.addEventListener('click', event => {
+    const tab = event.target.closest('[data-admin-context-section]');
+    if (!tab) return;
+    event.preventDefault();
+    activateSection(nav, tab.dataset.adminContextSection);
+    schedule();
   }, true);
 
   window.addEventListener('ekodi-nav-changed', schedule);
   window.addEventListener('ekodi-feature-installed', schedule);
-  window.addEventListener('ekodi-admin-section-changed', event => {
-    const section = event.detail?.section || '';
-    if (section) saveRecent(section);
-    schedule();
-  });
+  window.addEventListener('ekodi-admin-section-changed', schedule);
 
   const api = Object.freeze({
     sync,
@@ -366,13 +399,12 @@ export function mountAdminSidebar(root = document, options = {}) {
 }
 
 if (typeof window !== 'undefined') {
-  window.EKODIAdminSidebar = Object.freeze({
+  window.EKODIAdminSidebar = {
     mount: mountAdminSidebar,
-    sync: syncAdminSidebar,
     render: renderAdminSidebar,
+    sync: syncAdminSidebar,
     createItem: createAdminSidebarItem,
     sectionOf: adminSidebarSectionOf,
-    order: adminMenuOrder,
-    locale: readAdminSidebarLocale,
-  });
+    readLocale: readAdminSidebarLocale,
+  };
 }

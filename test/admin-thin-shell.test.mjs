@@ -9,10 +9,14 @@ const routePair = (source, hash, section) => source.includes(`['${hash}', '${sec
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
   assert.match(shell, /const postAuthStyles = \['compact-control-center\.css','google-admin-auth\.css'\]/);
-  assert.match(shell, /'compact-control-center\.js'/);
-  assert.match(shell, /'admin-menu-layout\.js'/);
-  assert.match(shell, /'admin-demand-loader\.js'/);
-  assert.match(shell, /'google-admin-auth\.js'/);
+  const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  assert.match(criticalBlock, /'compact-control-center\.js'/);
+  assert.match(criticalBlock, /'admin-menu-layout\.js'/);
+  assert.match(criticalBlock, /'admin-demand-loader\.js'/);
+  assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
+  assert.match(deferredBlock, /'google-admin-auth\.js'/);
+  assert.match(deferredBlock, /'ekodi-message-ui\.js'/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.match(shell, /assetUrl\(src\)/);
   assert.doesNotMatch(shell, /'campus-actions\.js'/);
@@ -104,34 +108,36 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses exactly five global axes and one context registry', async () => {
+test('admin menu governance uses eight work areas and one contextual top-tab registry', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'space', 'services', 'system']) {
+  for (const group of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  for (const retired of ['site-management', 'access', 'ai', 'data', 'security-audit', 'settings']) {
+  for (const retired of ['site-management', 'access', 'space', 'security-audit', 'settings']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   }
   assert.match(registry, /id: 'campus', group: 'home'/);
-  assert.match(registry, /id: 'finance', group: 'operations'/);
-  assert.match(registry, /id: 'workspace', group: 'space'/);
-  assert.match(registry, /id: 'ai-membership', group: 'services'/);
+  assert.match(registry, /id: 'work', group: 'operations'/);
+  assert.match(registry, /id: 'workspace', group: 'people'/);
+  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
+  assert.match(registry, /id: 'finance', group: 'business'/);
+  assert.match(registry, /id: 'storage', group: 'data'/);
   assert.match(registry, /id: 'health', group: 'system'/);
-  assert.match(registry, /id: 'security', group: 'system'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
-  assert.match(sidebar, /if \(!id \|\| RETIRED_MENU_SECTIONS\.has\(id\) \|\| !definition\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
-  assert.match(sidebar, /CONTEXT_CLASS = 'admin-context-nav'/);
-  assert.match(sidebar, /const hidden = getAdminMenuGroupForSection\(id\) !== group/);
-  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'five-axis-v1'/);
+  assert.match(sidebar, /SOURCE_CLASS = 'admin-context-source'/);
+  assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
+  assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
+  assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'workbench-tabs-v2'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
-  assert.match(sidebar, /observer\.observe\(nav, \{\s*childList: true,\s*subtree: false,\s*\}\)/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
-  assert.doesNotMatch(sidebar, /button\.innerHTML =/);
-  assert.match(sidebar, /host\.dataset\.renderSignature/);
+  assert.doesNotMatch(sidebar, /innerHTML\s*=/);
+  assert.match(sidebar, /tabs\.dataset\.renderSignature/);
 });
 
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {

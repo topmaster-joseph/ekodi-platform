@@ -7,11 +7,11 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('five global axes replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'space', 'services', 'system']) {
+test('eight stable work areas replace the former many-group admin taxonomy', () => {
+  for (const id of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
-  for (const retired of ['site-management', 'ai', 'security-audit', 'settings', 'access', 'data']) {
+  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'space']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   }
   assert.match(sidebar, /admin-global-navs/);
@@ -20,7 +20,7 @@ test('five global axes replace the former many-group admin taxonomy', () => {
   assert.match(sidebar, /getAdminMenuGroupForSection/);
 });
 
-test('Left navigation is a reusable shared module backed only by the registry', () => {
+test('left navigation is a reusable shared module backed only by the registry', () => {
   assert.match(sidebar, /export function renderAdminSidebar/);
   assert.match(sidebar, /export function syncAdminSidebar/);
   assert.match(sidebar, /export function mountAdminSidebar/);
@@ -31,23 +31,27 @@ test('Left navigation is a reusable shared module backed only by the registry', 
   assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
 });
 
-test('Context-first navigation hides unrelated subservices and keeps recent/favorites shortcuts', () => {
-  assert.match(sidebar, /CONTEXT_CLASS = 'admin-context-nav'/);
-  assert.match(sidebar, /item\.hidden = getAdminMenuGroupForSection\(id\) !== group/);
-  assert.match(sidebar, /RECENT_KEY = 'ekodi-admin-recent-sections'/);
-  assert.match(sidebar, /FAVORITES_KEY = 'ekodi-admin-favorite-sections'/);
-  assert.match(sidebar, /data-admin-quick-section/);
+test('contextual subservices render as a sticky top tab strip and source nav stays hidden', () => {
+  assert.match(sidebar, /SOURCE_CLASS = 'admin-context-source'/);
+  assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
+  assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
+  assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /position:sticky/);
+  assert.match(sidebar, /backdrop-filter:none/);
+  assert.doesNotMatch(sidebar, /RECENT_KEY|FAVORITES_KEY|data-admin-quick-section/);
 });
 
-test('Menu labels are repaired after feature scripts or clicks mutate them', () => {
+test('menu labels and tab state are repaired when features are installed or sections change', () => {
   assert.match(sidebar, /MutationObserver\(schedule\)/);
-  assert.match(sidebar, /characterData: true/);
-  assert.match(sidebar, /nav\.addEventListener\('click'/);
-  assert.match(sidebar, /requestAnimationFrame\(sync\)/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
+  assert.match(sidebar, /ekodi-nav-changed/);
+  assert.match(sidebar, /ekodi-feature-installed/);
+  assert.match(sidebar, /ekodi-admin-section-changed/);
   assert.match(sidebar, /window\.EKODIAdminMenu\?\.locale\?\.\(\)/);
+  assert.doesNotMatch(sidebar, /subtree: true/);
 });
 
-test('Internal operational capabilities stay off the global axes as direct items', () => {
+test('internal operational capabilities stay off the global work areas as direct items', () => {
   assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
   assert.match(layout, /#operations:overview/);
   assert.match(layout, /overview:#operations/);
@@ -55,7 +59,7 @@ test('Internal operational capabilities stay off the global axes as direct items
   assert.doesNotMatch(layout, /INTERNAL_ONLY_SECTIONS[^\n]*overview/);
 });
 
-test('Shared menu ES modules are published and cache-busted with the admin release', () => {
+test('shared menu ES modules are published and cache-busted with the admin release', () => {
   assert.match(postbuild, /sharedAdminMenuModules = \['admin-menu-registry\.js', 'admin-sidebar\.js', 'admin-menu-runtime\.js'\]/);
   assert.match(postbuild, /copyFile\(`\$\{root\}\$\{asset\}`, `\$\{dist\}\$\{asset\}`\)/);
   assert.match(postbuild, /\.\.\.sharedAdminMenuModules/);

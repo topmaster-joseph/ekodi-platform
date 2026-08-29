@@ -45,9 +45,15 @@ test('minimal login shell keeps the central auth link interactive while app is h
   assert.equal(scriptTag('compact-control-center.js'), '<script src="compact-control-center.js"');
 });
 
-test('authenticated route stays on the current thin shell and never starts the retired legacy runtime', () => {
-  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js','google-admin-auth.js']) {
-    assert.match(shell, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
+test('authenticated route stays on the current thin shell and defers optional helpers until ready', () => {
+  const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js']) {
+    assert.match(critical, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
+  }
+  for (const asset of ['google-admin-auth.js','ekodi-message-ui.js']) {
+    assert.doesNotMatch(critical, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
+    assert.match(deferred, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
   }
   for (const noncritical of ['control-center-features.js','campus-actions.js','device-control-admin.js','ai-ops-admin.js','admin-lazy-features.js','release-control-admin.js','work-admin.js','marketing-ai-admin.js']) {
     assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
@@ -55,7 +61,8 @@ test('authenticated route stays on the current thin shell and never starts the r
   assert.match(shell, /canonicalizeLegacyEntry\(\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
-  assert.doesNotMatch(shell, /deferredPostAuthScripts|scheduleDeferredFeatures/);
+  assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
+  assert.match(shell, /requestAnimationFrame\(\(\)=>requestAnimationFrame/);
 });
 
 test('Mall Free Ops is event-isolated without a document-wide mutation observer', () => {

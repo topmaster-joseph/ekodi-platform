@@ -41,14 +41,17 @@ test('Campus shortcuts cannot reopen hidden operational panels', () => {
   assert.match(layout, /openDemand\('aiops'\)/);
 });
 
-test('human-facing Admin menu has one canonical order inside the five global axes', () => {
+test('human-facing Admin menu has one canonical order inside the eight work areas', () => {
   assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
   const expected = [
     'campus',
-    'aiops', 'work', 'finance', 'tax', 'communication',
-    'workspace', 'organization', 'clients',
-    'marketing-ai', 'ai-module-spec', 'ai-membership', 'life-ai', 'community', 'books', 'social', 'affiliates',
-    'health', 'security', 'devices', 'architecture', 'admins', 'api-cost', 'storage',
+    'work', 'communication',
+    'workspace', 'organization', 'clients', 'admins',
+    'life-ai', 'community', 'books', 'social',
+    'aiops', 'marketing-ai', 'ai-module-spec', 'ai-membership',
+    'finance', 'tax', 'affiliates',
+    'storage', 'api-cost',
+    'health', 'security', 'devices', 'architecture',
   ];
   let cursor = -1;
   for (const section of expected) {
@@ -57,7 +60,7 @@ test('human-facing Admin menu has one canonical order inside the five global axe
     cursor = next;
   }
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const axis of ['home', 'operations', 'space', 'services', 'system']) {
+  for (const axis of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
     assert.match(registry, new RegExp(`id: '${axis}'`));
   }
   assert.match(layout, /VISIBLE_NAV_RANK/);
