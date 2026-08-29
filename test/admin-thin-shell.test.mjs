@@ -6,12 +6,12 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
 
-test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
+test('post-auth startup contains only the minimal navigation and demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
   assert.match(shell, /const postAuthStyles = \['compact-control-center\.css','google-admin-auth\.css'\]/);
   const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  assert.match(criticalBlock, /'compact-control-center\.js'/);
+  assert.doesNotMatch(criticalBlock, /'compact-control-center\.js'/);
   assert.match(criticalBlock, /'admin-menu-layout\.js'/);
   assert.match(criticalBlock, /'admin-demand-loader\.js'/);
   assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
@@ -150,7 +150,7 @@ test('postbuild emits a purpose-built minimal compact runtime and strips legacy 
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
-  assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
+  assert.match(postbuild, /ekodiAssistBootstrap/);
   assert.match(postbuild, /brand side-brand/);
   assert.match(postbuild, /scopeBadge/);
   assert.match(postbuild, /Legacy Admin sidebar header or scope badge survived postbuild/);
