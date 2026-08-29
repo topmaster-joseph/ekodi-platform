@@ -94,18 +94,22 @@ for(let attempt=1;attempt<=attempts;attempt++){
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'"
   ],failures);
   if(shellResult.headers?.get?.('x-ekodi-user-ui-header')!=='v1')failures.push(`shell:user-ui-header:${shellResult.headers?.get?.('x-ekodi-user-ui-header')||'missing'}`);
-  if(shellResult.headers?.get?.('x-ekodi-user-ui-footer')!=='v2')failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
+  const expectedFooterHeader=footerConfig?.version?`v${Number(footerConfig.version)}`:'';
+  if(expectedFooterHeader&&shellResult.headers?.get?.('x-ekodi-user-ui-footer')!==expectedFooterHeader)failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-admin-ui-shell')!=='v1')failures.push(`shell:admin-ui-shell:${shellResult.headers?.get?.('x-ekodi-admin-ui-shell')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-message-ui')!=='v1')failures.push(`shell:message-ui-header:${shellResult.headers?.get?.('x-ekodi-message-ui')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-illustration-system')!=='v1')failures.push(`shell:illustration-header:${shellResult.headers?.get?.('x-ekodi-illustration-system')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-link-compat')!=='v1')failures.push(`shell:link-compat-header:${shellResult.headers?.get?.('x-ekodi-link-compat')||'missing'}`);
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
-  includesAll(userUiStyleResult.text,'user-ui-style',['.ekodi-user-ui-header','.ekodi-user-ui-footer','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','grid-template-columns: minmax(0, 1fr) auto','[data-ekodi-user-header-spacer]'],failures);
+  includesAll(userUiStyleResult.text,'user-ui-style',[
+    '.ekodi-user-ui-header','.ekodi-user-ui-footer','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','[data-ekodi-user-header-spacer]',
+    '--ekodi-user-canvas-max: 1240px','[data-ekodi-user-layout="centered-v1"]','margin-inline: auto;'
+  ],failures);
 
   const statuses=results.map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v1/footer-v2+csp-safe-css, centralFooter=ok, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v1/footer-${expectedFooterHeader||'current'}+centered-v1+csp-safe-css, centralFooter=ok, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);
