@@ -67,10 +67,10 @@ jobs:
               raise SystemExit(f'{p}: verification marker count was {text.count(marker)}, expected 1')
 
             prelude = marker + (
-              f"          npx --yes wrangler@${{WRANGLER_VERSION}} deployments status --config {spec['config']} --json > /tmp/staging-deployments.json\n"
-              f"          npx --yes wrangler@${{WRANGLER_VERSION}} dev --remote --config {spec['config']} --ip 127.0.0.1 --port {spec['port']} > {spec['log']} 2>&1 &\n"
+              f"          npx --yes wrangler@$WRANGLER_VERSION deployments status --config {spec['config']} --json > /tmp/staging-deployments.json\n"
+              f"          npx --yes wrangler@$WRANGLER_VERSION dev --remote --config {spec['config']} --ip 127.0.0.1 --port {spec['port']} > {spec['log']} 2>&1 &\n"
               "          remote_pid=$!\n"
-              f"          trap 'kill $remote_pid 2>/dev/null || true' EXIT\n"
+              "          trap 'kill $remote_pid 2>/dev/null || true' EXIT\n"
               "          ready=0\n"
               "          for attempt in $(seq 1 30); do\n"
               f"            code=$(curl -sS -o /dev/null -w '%{{http_code}}' --connect-timeout 3 --max-time 8 '{spec['local_host']}/health' || true)\n"
