@@ -125,9 +125,13 @@ test('admin menu governance uses exactly five global axes and one context regist
   assert.match(sidebar, /if \(!id \|\| RETIRED_MENU_SECTIONS\.has\(id\) \|\| !definition\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
   assert.match(sidebar, /CONTEXT_CLASS = 'admin-context-nav'/);
-  assert.match(sidebar, /item\.hidden = getAdminMenuGroupForSection\(id\) !== group/);
+  assert.match(sidebar, /const hidden = getAdminMenuGroupForSection\(id\) !== group/);
   assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'five-axis-v1'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
+  assert.match(sidebar, /observer\.observe\(nav, \{\s*childList: true,\s*subtree: false,\s*\}\)/);
+  assert.doesNotMatch(sidebar, /subtree: true/);
+  assert.doesNotMatch(sidebar, /button\.innerHTML =/);
+  assert.match(sidebar, /host\.dataset\.renderSignature/);
 });
 
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
