@@ -1,12 +1,12 @@
 name = "ekodibiz-revenue-os-staging"
-main = "ekodibiz-worker.js"
+main = "ekodibiz-payment-worker.js"
 compatibility_date = "2026-08-28"
 workers_dev = true
 preview_urls = false
 
 [vars]
 EKODIBIZ_MODE = "isolated-staging"
-PAYMENT_SERVICE_URL = "https://pay.ekodi.kr"
+PAYMENT_SERVICE_URL = "https://pay.biz.ekodi.kr"
 HIGH_IMPACT_APPROVAL = "required"
 AI_OPERATIONS_MODE = "rules-first"
 
