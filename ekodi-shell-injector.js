@@ -9,6 +9,7 @@ const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const MY_SERVICE_ID='my';
 const USER_UI_VERSION='v1';
+const USER_LAYOUT_VERSION='centered-v1';
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
 const SPECIAL_HOST_ALIASES=Object.freeze({
   'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'
@@ -80,6 +81,7 @@ class UserUiHtmlInjector{
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
     element.setAttribute('data-ekodi-service',cleanServiceId(this.serviceId)||'ekodi');
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
+    element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
   }
 }
 class UserUiHeadInjector{element(element){element.append(`<link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
@@ -90,6 +92,14 @@ class UserHeaderAdopter{
     this.seen=true;
     element.setAttribute('data-ekodi-user-header-root',USER_UI_VERSION);
     if(!element.getAttribute('role'))element.setAttribute('role','banner');
+  }
+}
+class UserCanvasAdopter{
+  constructor(){this.seen=false;}
+  element(element){
+    if(this.seen)return;
+    this.seen=true;
+    element.setAttribute('data-ekodi-user-canvas',USER_LAYOUT_VERSION);
   }
 }
 class UserChromeInjector{
@@ -107,10 +117,14 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
   if(csp)headers.set('content-security-policy',extendDirective(csp,'style-src',SHELL_ORIGIN));
   headers.set('x-ekodi-user-ui',USER_UI_VERSION);
   headers.set('x-ekodi-user-ui-surface',resolved);
+  headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
   const headerAdopter=new UserHeaderAdopter();
+  const canvasAdopter=new UserCanvasAdopter();
   return new HTMLRewriter()
     .on('html',new UserUiHtmlInjector(serviceId,resolved))
     .on('head',new UserUiHeadInjector())
+    .on('main',canvasAdopter)
+    .on('[role="main"]',canvasAdopter)
     .on('header',headerAdopter)
     .on('.site-header',headerAdopter)
     .on('.topbar',headerAdopter)
@@ -156,4 +170,4 @@ export function shellServiceForRootPath(pathname){
   return '';
 }
 
-export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, USER_UI_VERSION, shellCsp };
+export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, USER_UI_VERSION, USER_LAYOUT_VERSION, shellCsp };
