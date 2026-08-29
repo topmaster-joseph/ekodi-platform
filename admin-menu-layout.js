@@ -17,6 +17,7 @@ const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH_SECTIONS = pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
 const CANONICAL_HASH = pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
 let requestedSection = '';
+let activeSectionState = '';
 let sitesLoading = null;
 function installCompactNavigationStyle() {
   if (document.querySelector('#ekodi-admin-menu-density')) return;
@@ -88,6 +89,7 @@ function syncTitle(section) {
 function activatePanel(section) {
   if (!section || !hasPanel(section)) return false;
   requestedSection = section;
+  activeSectionState = section;
   for (const panel of content.querySelectorAll('[data-panel]')) {
     const visible = panelTargets(panel).includes(section);
     panel.classList.toggle('hidden-panel', !visible);
@@ -208,7 +210,7 @@ window.EKODIAdminPanels = Object.freeze({
     requestedSection = section;
     if (!activatePanel(section)) openDemand(section);
   },
-  current: () => requestedSection,
+  current: () => activeSectionState || requestedSection,
   internalSections: Object.freeze([...INTERNAL_ONLY_SECTIONS]),
   visibleMenuOrder: VISIBLE_NAV_ORDER,
 });
