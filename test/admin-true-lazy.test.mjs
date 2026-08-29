@@ -4,10 +4,17 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('admin startup does not auto-load heavy operational workspaces', async () => {
+test('admin startup keeps only shell, navigation and demand loader on the critical path', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  const criticalBlock = shell.match(/const criticalPostAuthScripts = \[([\s\S]*?)\];/)?.[1] || '';
+  const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   assert.match(criticalBlock, /admin-demand-loader\.js/);
+  assert.match(criticalBlock, /admin-menu-layout\.js/);
+  assert.doesNotMatch(criticalBlock, /ekodi-message-ui\.js|google-admin-auth\.js/);
+  assert.match(deferredBlock, /ekodi-message-ui\.js/);
+  assert.match(deferredBlock, /google-admin-auth\.js/);
+  assert.match(shell, /requestAnimationFrame\(\(\)=>requestAnimationFrame/);
+  assert.match(shell, /for\(let i=0;i<8/);
   for (const heavy of ['ai-ops-admin.js', 'admin-lazy-features.js', 'release-control-admin.js', 'work-admin.js', 'marketing-ai-admin.js']) {
     assert.doesNotMatch(criticalBlock, new RegExp(heavy.replaceAll('.', '\\.')));
   }
@@ -63,22 +70,23 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
-test('shared sidebar ships exactly five global axes and context-first subservices', async () => {
+test('shared admin navigation exposes eight work areas with top contextual tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const axis of ['home', 'operations', 'space', 'services', 'system']) assert.match(registry, new RegExp(`id: '${axis}'`));
-  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'data']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  for (const area of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'space']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
-  assert.match(sidebar, /admin-context-nav/);
-  assert.match(sidebar, /const hidden = getAdminMenuGroupForSection\(id\) !== group/);
-  assert.match(sidebar, /if \(item\.hidden !== hidden\) item\.hidden = hidden/);
-  assert.match(sidebar, /observer\.observe\(nav, \{\s*childList: true,\s*subtree: false,\s*\}\)/);
+  assert.match(sidebar, /admin-context-tabs-shell/);
+  assert.match(sidebar, /admin-context-tabs/);
+  assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /admin-context-source/);
+  assert.match(sidebar, /adminMenuGovernance = 'workbench-tabs-v2'/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
-  assert.match(sidebar, /ekodi-admin-recent-sections/);
-  assert.match(sidebar, /ekodi-admin-favorite-sections/);
+  assert.doesNotMatch(sidebar, /ekodi-admin-recent-sections|ekodi-admin-favorite-sections/);
   assert.match(postbuild, /admin-menu-registry\.js/);
   assert.match(postbuild, /admin-sidebar\.js/);
 });
