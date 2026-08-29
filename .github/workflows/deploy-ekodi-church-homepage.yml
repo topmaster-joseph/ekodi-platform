@@ -40,6 +40,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          assert_absent() {
+            local needle="$1"
+            local file="$2"
+            if grep -Fq "$needle" "$file"; then
+              echo "Unexpected content found in $file: $needle"
+              exit 1
+            fi
+          }
+
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -f church/index.html
@@ -55,9 +65,9 @@ jobs:
           grep -Fq '오늘의 말씀' church/index.html
           grep -Fq 'class="shell-my"' church/index.html
           grep -Fq 'https://my.ekodi.kr/' church/index.html
-          ! grep -Fq 'EKODI교회' church/index.html
-          ! grep -Fq 'class="shell-switch"' church/index.html
-          ! grep -Fq '>Social<' church/index.html
+          assert_absent 'EKODI교회' church/index.html
+          assert_absent 'class="shell-switch"' church/index.html
+          assert_absent 'data-ekodi-social="true"' church/index.html
 
           grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' church/index.html
           grep -Fq 'class="online-triad"' church/index.html
@@ -73,7 +83,7 @@ jobs:
           grep -Fq 'dailyScriptures' church/script.js
           grep -Fq 'https://social.ekodi.kr/?org=church' church/script.js
           grep -Fq 'https://api.ekodi.kr/api/social/registry' church/script.js
-          ! grep -Fq "label: '서비스 전환'" church/script.js
+          assert_absent "label: '서비스 전환'" church/script.js
 
           grep -Fq '.daily-verse{' church/community-visual.css
           grep -Fq 'grid-template-columns:auto minmax(220px,1fr) auto' church/community-visual.css
@@ -134,14 +144,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release='church-review-20260829-3'
+          release='church-review-20260829-4'
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-refresh.css?release=${release}" || true)
             visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/community-visual.css?release=${release}" || true)
             script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/script.js?release=${release}" || true)
 
+            legacy_name=0
+            legacy_switch=0
+            legacy_social=0
+            grep -Fq 'EKODI교회' /tmp/church.html && legacy_name=1 || true
+            grep -Fq 'class="shell-switch"' /tmp/church.html && legacy_switch=1 || true
+            grep -Fq 'data-ekodi-social="true"' /tmp/church.html && legacy_social=1 || true
+
             if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$script_code" == '200' ]] \
+              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' ]] \
               && grep -Fq '<title>에코디교회 |' /tmp/church.html \
               && grep -Fq 'aria-label="에코디교회 홈"' /tmp/church.html \
               && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
@@ -150,8 +168,6 @@ jobs:
               && grep -Fq 'class="community-visit"' /tmp/church.html \
               && grep -Fq 'class="shell-my"' /tmp/church.html \
               && grep -Fq '© 2026 에코디교회' /tmp/church.html \
-              && ! grep -Fq 'EKODI교회' /tmp/church.html \
-              && ! grep -Fq 'class="shell-switch"' /tmp/church.html \
               && grep -Fq '.daily-verse{' /tmp/community-visual.css \
               && grep -Fq 'background:rgba(244,240,229,.96);' /tmp/community-visual.css \
               && grep -Fq '.footer-brand{justify-content:center' /tmp/community-visual.css \
@@ -162,10 +178,10 @@ jobs:
             fi
 
             if [[ "$attempt" == '18' ]]; then
-              echo 'Production did not converge to the reviewed Church release.'
+              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social"
               exit 1
             fi
-            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code"
+            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social"
             sleep 5
           done
 
