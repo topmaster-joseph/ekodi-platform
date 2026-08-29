@@ -57,7 +57,10 @@ test('global navigation remains synchronized to the actually active panel', () =
   const activeNavIndex = sidebar.indexOf("find(item => item.classList.contains('active'))");
   const requestedPanelIndex = sidebar.indexOf('window.EKODIAdminPanels?.current?.()');
   assert.ok(activeNavIndex >= 0 && requestedPanelIndex > activeNavIndex, 'active rendered panel should win over a pending requested section');
-  assert.doesNotMatch(sidebar, /function activateSection[\s\S]*?syncWorkbenchState\(nav, readAdminSidebarLocale\(\), section\)/);
+  const activateStart = sidebar.indexOf('function activateSection');
+  const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
+  const activateSource = sidebar.slice(activateStart, activateEnd);
+  assert.doesNotMatch(activateSource, /syncWorkbenchState/);
   assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(global\.dataset\.adminGlobalGroup\)\)/);
 });
 
