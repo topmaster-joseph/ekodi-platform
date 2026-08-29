@@ -121,13 +121,18 @@ test('agent self-update validates actual PowerShell command AST instead of raw g
   assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
 });
 
-test('admin Device Control is bundled only into authenticated compact assets', () => {
-  assert.match(build, /device-control-admin\.css/);
-  assert.match(build, /device-control-admin\.js/);
+test('admin Device Control is lazy-loaded from authenticated production assets', () => {
+  const assets = build.match(/const assets = \[[\s\S]*?\];/)?.[0] || '';
+  assert.match(assets, /device-control-admin\.css/);
+  assert.match(assets, /device-control-admin\.js/);
+  assert.match(assets, /admin-menu-registry\.js/);
+  assert.match(assets, /admin-sidebar\.js/);
+  assert.match(assets, /admin-menu-runtime\.js/);
+  assert.match(assets, /storage-admin\.css/);
+  assert.match(assets, /storage-admin\.js/);
   assert.match(build, /ekodi-device-bootstrap\.cmd/);
-  assert.match(build, /compact-control-center\.css/);
-  assert.match(build, /compact-control-center\.js/);
-  assert.doesNotMatch(build.match(/const assets = \[[\s\S]*?\];/)?.[0] || '', /device-control-admin/);
+  assert.match(build, /admin-demand-loader\.js/);
+  assert.doesNotMatch(build, /data-ekodi-postauth=\"compact-control-center\.js/);
 });
 
 test('Windows agent preserves reversible state before privileged changes', () => {
