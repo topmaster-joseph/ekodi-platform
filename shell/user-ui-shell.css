@@ -1,6 +1,6 @@
-/* EKODI shared user chrome
- * Public/workspace header + footer only.
- * Service body/hero/card design remains service-owned.
+/* EKODI shared user layout + chrome
+ * Public/workspace pages inherit one centered visual canvas, header and footer.
+ * Service body/hero/card styling remains service-owned inside that canvas.
  * Served from shell.ekodi.kr so strict service CSPs can keep inline styles disabled.
  */
 
@@ -11,6 +11,24 @@ html[data-ekodi-user-ui] {
   --ekodi-user-chrome-link: var(--ekodi-service-accent, #315d48);
   --ekodi-user-chrome-line: color-mix(in srgb, var(--ekodi-service-accent, #18251d) 18%, transparent);
   --ekodi-user-header-fallback-height: 64px;
+  --ekodi-user-canvas-max: 1240px;
+  --ekodi-user-reading-max: 760px;
+}
+
+/* Centered Canvas Principle
+ * Every public/workspace user surface shares one visual centerline.
+ * This centers the composition, not every sentence: readable copy, forms and tables
+ * keep their service-owned text alignment. Full-bleed backgrounds remain outside the
+ * adopted main canvas when a service needs edge-to-edge visual treatment.
+ */
+html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] {
+  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] > :where(section, article, aside, .section, .panel, .content-section) {
+  margin-inline: auto;
 }
 
 /* Server fallback. It is present from the first HTML response, before JS boots. */
@@ -29,7 +47,7 @@ html[data-ekodi-user-ui] {
 }
 
 .ekodi-user-ui-fallback-header__inner {
-  width: min(1180px, calc(100% - 32px));
+  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
   margin: 0 auto;
   display: grid;
@@ -126,7 +144,7 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
 }
 
 .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-  width: min(1180px, calc(100% - 32px));
+  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
   margin: 0 auto;
   display: grid;
@@ -309,6 +327,10 @@ html[data-ekodi-user-ui] {
 }
 
 @media (max-width: 720px) {
+  html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] {
+    width: min(var(--ekodi-user-canvas-max), calc(100% - 24px));
+  }
+
   .ekodi-user-ui-footer__inner {
     width: min(100% - 24px, 980px);
     padding: 20px 0;
@@ -326,9 +348,13 @@ html[data-ekodi-user-ui] {
     --ekodi-user-header-fallback-height: 58px;
   }
 
+  html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"] {
+    width: min(var(--ekodi-user-canvas-max), calc(100% - 20px));
+  }
+
   .ekodi-user-ui-fallback-header__inner,
   .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-    width: min(100% - 20px, 1180px);
+    width: min(100% - 20px, var(--ekodi-user-canvas-max));
     gap: 8px;
   }
 
