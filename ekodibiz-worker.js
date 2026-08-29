@@ -29,6 +29,38 @@ const CATALOG = [
     outcomes: ['행사 실행안', '모집·홍보 콘텐츠', '참가자 안내', '결과 공유 체크리스트'],
     priceMode: 'quote',
     category: 'event'
+  },
+  {
+    id: 'repeat-loop',
+    name: '단골·재방문 성장팩',
+    summary: '기존 고객이 다시 찾을 이유와 후속 접점을 설계해 재방문과 재구매를 반복 가능한 흐름으로 만듭니다.',
+    outcomes: ['재방문 고객군 설계', '후속 메시지 초안', '재구매 제안 구조', '재방문 측정 지표'],
+    priceMode: 'quote',
+    category: 'repeat'
+  },
+  {
+    id: 'lead-conversion',
+    name: '문의·예약 전환팩',
+    summary: '관심 고객의 문의가 상담, 예약, 신청으로 이어지도록 질문과 제안, 후속 흐름을 정리합니다.',
+    outcomes: ['문의 응대 시나리오', '상담 질문 구조', '예약·신청 흐름', '후속 안내 초안'],
+    priceMode: 'quote',
+    category: 'sales'
+  },
+  {
+    id: 'recurring-revenue',
+    name: '구독·멤버십 수익팩',
+    summary: '한 번의 판매로 끝나지 않도록 정기 이용 이유와 혜택, 갱신 흐름을 포함한 반복수익 구조를 설계합니다.',
+    outcomes: ['멤버십 가치제안', '등급·혜택 구조', '가입·갱신 흐름', '유지율 측정 지표'],
+    priceMode: 'quote',
+    category: 'recurring'
+  },
+  {
+    id: 'content-revenue',
+    name: '콘텐츠 수익화팩',
+    summary: '지식과 경험을 반복 판매 가능한 콘텐츠, 교육, 자료 또는 디지털 상품의 형태로 정리합니다.',
+    outcomes: ['콘텐츠 상품 구조', '판매 메시지 초안', '랜딩·신청 흐름', '후속 상품 확장안'],
+    priceMode: 'quote',
+    category: 'creator'
   }
 ];
 
@@ -76,32 +108,62 @@ function cleanGoal(value) {
 function classify(goal) {
   const text = goal.toLowerCase();
   if (/행사|축제|모임|설명회|세미나|예배|캠프/.test(text)) return 'event';
-  if (/창업|개업|시작|사업.*아이디어|홈페이지|브랜드|예약/.test(text)) return 'launch';
+  if (/구독|멤버십|정기|반복.?수익|월정액/.test(text)) return 'recurring';
+  if (/콘텐츠|지식|강의|교육|전자책|출판|자료.*판매|디지털.?상품/.test(text)) return 'creator';
+  if (/단골|재방문|재구매|휴면|다시.?오/.test(text)) return 'repeat';
+  if (/문의|상담|예약|신청|전환/.test(text)) return 'sales';
+  if (/창업|개업|시작|사업.*아이디어|홈페이지|브랜드/.test(text)) return 'launch';
   if (/홍보|마케팅|매출|고객|손님|sns|인스타|페이스북|네이버|광고|유튜브/.test(text)) return 'growth';
   return 'discover';
 }
 
+function offerById(id) {
+  return CATALOG.find((item) => item.id === id);
+}
+
 function catalogFor(intent) {
-  if (intent === 'event') return [CATALOG[2], CATALOG[0]];
-  if (intent === 'launch') return [CATALOG[1], CATALOG[0]];
-  if (intent === 'growth') return [CATALOG[0], CATALOG[1]];
-  return [CATALOG[1], CATALOG[0], CATALOG[2]];
+  const ids = intent === 'event'
+    ? ['event-complete', 'growth-30', 'lead-conversion', 'content-revenue']
+    : intent === 'launch'
+      ? ['launch-online', 'lead-conversion', 'growth-30', 'recurring-revenue']
+      : intent === 'growth'
+        ? ['growth-30', 'repeat-loop', 'lead-conversion', 'content-revenue']
+        : intent === 'repeat'
+          ? ['repeat-loop', 'growth-30', 'lead-conversion', 'recurring-revenue']
+          : intent === 'sales'
+            ? ['lead-conversion', 'growth-30', 'repeat-loop', 'launch-online']
+            : intent === 'recurring'
+              ? ['recurring-revenue', 'repeat-loop', 'content-revenue', 'growth-30']
+              : intent === 'creator'
+                ? ['content-revenue', 'recurring-revenue', 'growth-30', 'launch-online']
+                : ['launch-online', 'growth-30', 'lead-conversion', 'recurring-revenue'];
+  return ids.map(offerById).filter(Boolean);
 }
 
 function consult(goal) {
   const intent = classify(goal);
   const suggested = catalogFor(intent);
-  const diagnosis = intent === 'event'
-    ? '행사의 목적과 참가자 경험을 먼저 고정한 뒤 모집과 홍보를 한 흐름으로 묶는 것이 좋습니다.'
-    : intent === 'launch'
-      ? '아이디어를 바로 크게 만들기보다 첫 고객이 이해하고 신청할 수 있는 최소 상품과 온라인 입구를 먼저 만드는 것이 좋습니다.'
-      : intent === 'growth'
-        ? '광고부터 늘리기보다 누구에게 어떤 약속을 팔 것인지 정리하고 무료 유입과 유료 전환을 함께 설계하는 것이 좋습니다.'
-        : '말씀하신 목표를 실제 거래가 가능한 작은 결과 단위로 나누고, 가장 빨리 검증할 수 있는 첫 상품부터 만드는 것이 좋습니다.';
+  const diagnosisByIntent = {
+    event: '행사의 목적과 참가자 경험을 먼저 고정한 뒤 모집과 홍보를 한 흐름으로 묶는 것이 좋습니다.',
+    launch: '아이디어를 바로 크게 만들기보다 첫 고객이 이해하고 신청할 수 있는 최소 상품과 온라인 입구를 먼저 만드는 것이 좋습니다.',
+    growth: '광고부터 늘리기보다 누구에게 어떤 약속을 팔 것인지 정리하고 무료 유입과 유료 전환을 함께 설계하는 것이 좋습니다.',
+    repeat: '새 고객을 계속 사는 것보다 기존 고객이 다시 올 이유와 적절한 후속 접점을 먼저 설계하는 것이 효율적입니다.',
+    sales: '문의량 자체보다 문의가 상담과 예약으로 넘어가는 과정에서 어디서 멈추는지 먼저 좁히는 것이 좋습니다.',
+    recurring: '단발 판매를 반복수익으로 바꾸려면 정기적으로 다시 지불할 이유와 유지되는 경험을 먼저 설계해야 합니다.',
+    creator: '지식과 경험을 한 번 제공하는 데서 끝내지 말고 반복 전달 가능한 결과물과 다음 상품으로 이어지는 구조를 만드는 것이 좋습니다.',
+    discover: '말씀하신 목표를 실제 거래가 가능한 작은 결과 단위로 나누고, 가장 빨리 검증할 수 있는 첫 상품부터 만드는 것이 좋습니다.'
+  };
+  const nextStepByIntent = {
+    growth: '현재 고객이 가장 자주 묻는 질문 3개를 판매 메시지로 바꿔 무료 유입 실험을 시작합니다.',
+    repeat: '기존 고객이 다시 찾는 이유와 떠나는 이유를 각각 3개씩 적고 가장 작은 후속 제안 하나를 만듭니다.',
+    sales: '최근 문의 5건을 기준으로 고객이 결정 전에 가장 많이 멈추는 질문 한 가지를 찾습니다.',
+    recurring: '고객이 매달 또는 정기적으로 다시 받을 가치 한 가지를 한 문장으로 정의합니다.',
+    creator: '반복해서 설명하거나 제공하는 지식 하나를 선택해 첫 디지털 결과물의 범위를 정합니다.'
+  };
   return {
     intent,
-    diagnosis,
-    freeNextStep: intent === 'growth' ? '현재 고객이 가장 자주 묻는 질문 3개를 판매 메시지로 바꿔 무료 유입 실험을 시작합니다.' : '목표를 한 문장의 고객 약속으로 바꾸고 첫 실행 단위를 설계합니다.',
+    diagnosis: diagnosisByIntent[intent] || diagnosisByIntent.discover,
+    freeNextStep: nextStepByIntent[intent] || '목표를 한 문장의 고객 약속으로 바꾸고 첫 실행 단위를 설계합니다.',
     suggestedOffers: suggested,
     safeguards: {
       humanApprovalRequired: ['최종 결제', '광고비 지출', '계약', '환불', '가격 변경', '외부 채널 실제 게시'],

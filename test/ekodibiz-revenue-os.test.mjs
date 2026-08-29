@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const worker = fs.readFileSync(new URL('../ekodibiz-worker.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../ekodibiz/index.html', import.meta.url), 'utf8');
 const app = fs.readFileSync(new URL('../ekodibiz/app.js', import.meta.url), 'utf8');
+const css = fs.readFileSync(new URL('../ekodibiz/style.css', import.meta.url), 'utf8');
 const config = fs.readFileSync(new URL('../wrangler.ekodibiz.toml', import.meta.url), 'utf8');
 const staging = fs.readFileSync(new URL('../wrangler.ekodibiz-staging.toml', import.meta.url), 'utf8');
 
@@ -22,6 +23,34 @@ test('conversation-first UI exposes the revenue loop', () => {
   assert.match(app, /\/api\/offers/);
   assert.match(app, /\/api\/checkout-intent/);
   assert.match(app, /\/api\/ops\/status/);
+});
+
+test('guided start separates direct input from selectable goals and pins compact progress', () => {
+  assert.match(html, /직접 입력하기/);
+  assert.match(html, /더 많은 종류에서 선택하기/);
+  assert.match(html, /선택만으로 실행하지 않고/);
+  assert.match(html, /data-progress-step="discover"/);
+  assert.match(app, /journey-started/);
+  assert.match(app, /IntersectionObserver/);
+  assert.match(app, /state\.selectedPrompt/);
+  assert.match(css, /body\.journey-started \.flow/);
+  assert.match(css, /position:sticky/);
+});
+
+test('personalized catalog offers several repeatable revenue paths', () => {
+  for (const offer of ['30일 자동홍보팩','온라인 개업팩','행사 완성팩','단골·재방문 성장팩','문의·예약 전환팩','구독·멤버십 수익팩','콘텐츠 수익화팩']) assert.match(worker, new RegExp(offer));
+  for (const intent of ['repeat','sales','recurring','creator']) assert.match(worker, new RegExp(`'${intent}'`));
+  assert.match(worker, /suggestedOffers: suggested/);
+  assert.match(app, /slice\(0,\s*4\)/);
+});
+
+test('shared user footer stays centered and keeps legal and contact routes visible', () => {
+  assert.match(html, /개인정보처리방침/);
+  assert.match(html, /이용약관/);
+  assert.match(html, /mailto:ekodibiz@gmail\.com/);
+  assert.match(html, /Turn value into a business/);
+  assert.match(css, /\.site-footer/);
+  assert.match(css, /text-align:center/);
 });
 
 test('high impact actions are approval-gated and prices are not invented', () => {
