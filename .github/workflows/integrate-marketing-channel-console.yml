@@ -127,3 +127,5 @@ async function proxyAdminMarketingPublishing(request) {
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy-site-core.yml --ref main
+
+# retrigger: 2026-08-29T14:47:00+09:00
