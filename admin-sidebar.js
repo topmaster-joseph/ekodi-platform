@@ -130,13 +130,18 @@ function globalButtons(globals, locale) {
       button.type = 'button';
       button.className = 'admin-global-nav';
       button.dataset.adminGlobalGroup = group.id;
+      const icon = document.createElement('b');
+      icon.setAttribute('aria-hidden', 'true');
+      const labelNode = document.createElement('span');
+      button.append(icon, labelNode);
       globals.append(button);
     }
     const label = group.labels?.[locale] || group.labels?.ko || group.id;
-    button.innerHTML = `<b aria-hidden="true"></b><span></span>`;
-    button.querySelector('b').textContent = group.icon || '·';
-    button.querySelector('span').textContent = label;
-    button.setAttribute('aria-label', label);
+    const icon = button.querySelector('b');
+    const labelNode = button.querySelector('span');
+    if (icon && icon.textContent !== (group.icon || '·')) icon.textContent = group.icon || '·';
+    if (labelNode && labelNode.textContent !== label) labelNode.textContent = label;
+    if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
     existing.delete(group.id);
   }
   for (const button of existing.values()) button.remove();
@@ -152,6 +157,9 @@ function renderAssist(host, locale) {
     { key: RECENT_KEY, ko: '최근', en: 'Recent' },
     { key: FAVORITES_KEY, ko: '즐겨찾기', en: 'Favorites' },
   ];
+  const signature = blocks.map(block => `${block.key}:${readList(block.key).join(',')}`).join('|') + `|${locale}`;
+  if (host.dataset.renderSignature === signature) return;
+  host.dataset.renderSignature = signature;
   host.replaceChildren(...blocks.map(block => {
     const wrap = document.createElement('div');
     wrap.className = 'admin-assist-block';
@@ -195,10 +203,13 @@ function syncAxisState(nav, locale, preferredSection = '') {
   context.dataset.contextLabel = locale === 'en' ? `${groupDef?.labels?.en || 'Context'} tools` : `${groupDef?.labels?.ko || '현재'} 도구`;
   for (const item of navItems(nav)) {
     const id = adminSidebarSectionOf(item);
-    item.hidden = getAdminMenuGroupForSection(id) !== group;
-    item.setAttribute('aria-hidden', item.hidden ? 'true' : 'false');
-    if (item.hidden) item.tabIndex = -1;
-    else item.removeAttribute('tabindex');
+    const hidden = getAdminMenuGroupForSection(id) !== group;
+    if (item.hidden !== hidden) item.hidden = hidden;
+    const ariaHidden = hidden ? 'true' : 'false';
+    if (item.getAttribute('aria-hidden') !== ariaHidden) item.setAttribute('aria-hidden', ariaHidden);
+    if (hidden) {
+      if (item.tabIndex !== -1) item.tabIndex = -1;
+    } else if (item.hasAttribute('tabindex')) item.removeAttribute('tabindex');
   }
   renderAssist(assist, locale);
   nav.dataset.adminGlobalGroup = group;
@@ -301,10 +312,7 @@ export function mountAdminSidebar(root = document, options = {}) {
   const observer = new MutationObserver(schedule);
   observer.observe(nav, {
     childList: true,
-    subtree: true,
-    characterData: true,
-    attributes: true,
-    attributeFilter: ['class', 'data-section', 'data-lazy-section', 'data-device-control-nav'],
+    subtree: false,
   });
 
   nav.addEventListener('click', event => {
