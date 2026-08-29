@@ -47,11 +47,13 @@ test('Primary AI Ops does not auto-hydrate Governance, Health or Deployments',as
   assert.match(worker,/'admin-asset'/);
 });
 
-test('System hub assets remain available behind separate technical navigation',async()=>{
+test('System route opens the separate Deployments surface where System Timeline is attached',async()=>{
   const [mission,timeline,build]=await Promise.all([read('mission-control-admin.js'),read('system-timeline-admin.js'),read('scripts/build.mjs')]);
   assert.match(mission,/key:'system'/);
-  assert.match(timeline,/governanceSystemHub/);
-  assert.match(timeline,/key:'operations', label:'Operations'/);
+  assert.match(mission,/function setSystemMode\(active\)/);
+  assert.match(mission,/if \(active\) routeSection\('deployments'\)/);
+  assert.match(timeline,/document\.querySelector\('#releaseControl'\)/);
+  assert.match(timeline,/root\.id = 'systemTimeline'/);
   assert.match(build,/system-timeline-admin\.js/);
   assert.match(build,/system-timeline-admin\.css/);
 });
