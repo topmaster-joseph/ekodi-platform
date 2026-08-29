@@ -56,12 +56,14 @@ for (const marker of jsMarkers) {
   if (!js.includes(marker)) throw new Error(`Admin orchestration JS contract missing: ${marker}`);
 }
 
-// The readability base and shared UI principles belong to the authenticated Admin shell and every subservice.
-// Keep compact runtime CSS inside its hard budget; AI Ops layout/orchestration stays lazy.
+// Shared readability stays in the small authenticated first path.
+// Marketing-specific visual normalization rides only with the already-lazy Marketing AI stylesheet,
+// so improving readability does not tax every admin page at startup.
 await Promise.all([
-  appendFile(`${output}control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n/* admin-ui-principles.css */\n${principlesCss}\n`),
+  appendFile(`${output}control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
+  appendFile(`${output}marketing-ai-admin.css`, `\n/* admin-ui-principles.css */\n${principlesCss}\n`),
   appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
 ]);
 
-console.log('Applied EKODI admin-only readability base and shared lightweight UI principles to the Admin shell and all Admin subservices; kept AI Ops layout and Chief AI orchestration on demand.');
+console.log('Applied the shared Admin readability base on first path, the readable lightweight Marketing AI skin on demand, and kept AI Ops orchestration lazy.');
