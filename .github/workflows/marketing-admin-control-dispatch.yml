@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'marketing-admin-control.js'
+      - 'marketing-admin-publications.js'
       - 'test/marketing-admin-control-contract.test.mjs'
       - '.github/workflows/marketing-admin-control-dispatch.yml'
   workflow_dispatch:
@@ -30,19 +31,29 @@ jobs:
         run: |
           set -euo pipefail
           node --check marketing-admin-control.js
+          node --check marketing-admin-publications.js
           node --test test/marketing-admin-control-contract.test.mjs
           grep -Fq "campaigns:'connected'" marketing-admin-control.js
           grep -Fq "crm:'connected'" marketing-admin-control.js
           grep -Fq "channels:'connected'" marketing-admin-control.js
+          grep -Fq 'publicationJobs:publicationLedger.jobs' marketing-admin-control.js
+          grep -Fq 'postingEngine' marketing-admin-control.js
+          grep -Fq 'marketing_publication_jobs' marketing-admin-publications.js
+          grep -Fq 'external_post_url' marketing-admin-publications.js
           grep -Fq "automation:'connected'" marketing-admin-control.js
           grep -Fq "approvals:'connected'" marketing-admin-control.js
           grep -Fq 'customerPiiIncluded:false' marketing-admin-control.js
           grep -Fq 'customerKeysIncluded:false' marketing-admin-control.js
+          grep -Fq 'publicationCredentialsIncluded:false' marketing-admin-control.js
           grep -Fq 'externalExecution:false' marketing-admin-control.js
+          if grep -Fq 'credential_ref' marketing-admin-publications.js; then
+            echo 'Publication admin projection must not expose credential references.'
+            exit 1
+          fi
       - name: Dispatch guarded Control API workflow
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           gh workflow run deploy-control-api.yml --ref main
-          echo 'Guarded Control API deployment dispatched for Marketing admin handler change.'
+          echo 'Guarded Control API deployment dispatched for Marketing publication overview change.'
