@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const worker = fs.readFileSync(new URL('../ekodibiz-worker.js', import.meta.url), 'utf8');
+const paymentAdapter = fs.readFileSync(new URL('../ekodibiz-payment-worker.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../ekodibiz/index.html', import.meta.url), 'utf8');
 const app = fs.readFileSync(new URL('../ekodibiz/app.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../ekodibiz/style.css', import.meta.url), 'utf8');
@@ -12,7 +13,8 @@ const staging = fs.readFileSync(new URL('../wrangler.ekodibiz-staging.toml', imp
 test('EKODIBIZ stays separate from common Business OS', () => {
   assert.match(config, /pattern = "biz\.ekodi\.kr"/);
   assert.doesNotMatch(config, /pattern = "business\.ekodi\.kr"/);
-  assert.match(config, /main = "ekodibiz-worker\.js"/);
+  assert.match(config, /main = "ekodibiz-payment-worker\.js"/);
+  assert.match(paymentAdapter, /from '\.\/ekodibiz-worker\.js'/);
 });
 
 test('conversation-first UI exposes the revenue loop', () => {
@@ -58,7 +60,16 @@ test('high impact actions are approval-gated and prices are not invented', () =>
   assert.match(worker, /approval_required/);
   assert.match(worker, /quote_required/);
   assert.match(worker, /amount: null/);
-  assert.match(worker, /https:\/\/pay\.ekodi\.kr/);
+});
+
+test('canonical payment gateway is normalized at the runtime boundary', () => {
+  assert.match(paymentAdapter, /https:\/\/pay\.biz\.ekodi\.kr/);
+  assert.match(paymentAdapter, /LEGACY_PAYMENT_URL/);
+  assert.match(paymentAdapter, /replaceAll/);
+  for (const source of [config, staging]) {
+    assert.match(source, /PAYMENT_SERVICE_URL = "https:\/\/pay\.biz\.ekodi\.kr"/);
+    assert.match(source, /main = "ekodibiz-payment-worker\.js"/);
+  }
 });
 
 test('worker exposes operational APIs and persistent AI staff queue', () => {
