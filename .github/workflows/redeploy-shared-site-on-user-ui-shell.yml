@@ -7,6 +7,9 @@ on:
     paths:
       - 'ekodi-shell-injector.js'
       - 'site-shell-worker.js'
+      - 'shell/ccm-mr-player.js'
+      - 'scripts/ccm-mr-postbuild.mjs'
+      - 'package.json'
       - 'config/user-footer.js'
       - 'config/user-ui-shell.json'
       - 'scripts/validate-user-ui-dna.mjs'
@@ -35,6 +38,8 @@ jobs:
           node --check config/user-footer.js
           node --check ekodi-shell-injector.js
           node --check site-shell-worker.js
+          node --check shell/ccm-mr-player.js
+          node --check scripts/ccm-mr-postbuild.mjs
           node scripts/validate-user-ui-dna.mjs
       - name: Dispatch guarded shared-site production workflow
         env:
