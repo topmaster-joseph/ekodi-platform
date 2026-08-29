@@ -26,6 +26,7 @@ const workerGuarded = {
   '.github/workflows/deploy-community.yml': ['guarded-worker-release.mjs', 'community.worker.json'],
   '.github/workflows/deploy-social.yml': ['guarded-worker-release.mjs', 'social.worker.json'],
   '.github/workflows/deploy-life-ai.yml': ['guarded-worker-release.mjs', 'life.worker.json'],
+  '.github/workflows/deploy-delivery-hub-ai.yml': ['guarded-worker-release.mjs', 'delivery.worker.json', 'CLOUDFLARE_DEVELOPMENT_API_TOKEN', '46aad4738793fbaca88574832a2ccc0f'],
 };
 for (const [file, needles] of Object.entries(workerGuarded)) requireText(file, needles);
 
@@ -47,9 +48,12 @@ forbidText('.github/workflows/deploy-books.yml', ['npm run deploy:books', 'deplo
 forbidText('.github/workflows/deploy-community.yml', ['npm run deploy:community', 'deploy --config wrangler.community.toml']);
 forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.social.toml']);
 
-requireText('.github/workflows/deploy-control-api.yml', ['api-staging.ekodi.kr','ekodi-auth-staging','d1 time-travel info','guarded-worker-release.mjs','control-api.worker.json','validate-additive-migrations.mjs']);
+// Staging for stateful Workers is isolated in the dedicated Development Cloudflare
+// account. Do not require production-zone staging hostnames here: that would weaken
+// the account boundary by making staging depend on production DNS/topology.
+requireText('.github/workflows/deploy-control-api.yml', ['environment: development','CLOUDFLARE_DEVELOPMENT_API_TOKEN','46aad4738793fbaca88574832a2ccc0f','ekodi-auth-api-staging','ekodi-auth-staging','d1 time-travel info','guarded-worker-release.mjs','control-api.worker.json','validate-additive-migrations.mjs']);
 forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
-requireText('.github/workflows/deploy-finance.yml', ['finance-api-staging.ekodi.kr','d1 time-travel info','guarded-worker-release.mjs','finance-api.worker.json','--secrets-file /tmp/finance-secrets.json']);
+requireText('.github/workflows/deploy-finance.yml', ['environment: development','CLOUDFLARE_DEVELOPMENT_API_TOKEN','46aad4738793fbaca88574832a2ccc0f','ekodi-finance-api-staging','ekodi-auth-staging','d1 time-travel info','guarded-worker-release.mjs','finance-api.worker.json','--secrets-file /tmp/finance-secrets.json']);
 forbidText('.github/workflows/deploy-finance.yml', ['npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
 
 requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
@@ -95,4 +99,4 @@ if (failed) {
   console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying.');
+console.log('✅ Deployment policy audit passed: production deploys remain guarded while staging stays isolated in the Development account and the retired admin compatibility workflow stays manual-only and non-deploying.');
