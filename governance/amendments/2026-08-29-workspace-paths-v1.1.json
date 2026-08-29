@@ -1,0 +1,15 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-08-29-WORKSPACE-PATHS-V1.1",
+  "date": "2026-08-29",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit user instruction to remove space/user workspace subdomains, use direct ekodi.kr path namespaces consistently, preserve common/core/admin/My EKODI subdomain exceptions, and record the rule in the EKODI constitution",
+  "constitutionVersion": "1.1.0",
+  "summary": "Canonicalize person, organization, group and project spaces directly under ekodi.kr paths while reserving subdomains for justified system/common/core boundaries.",
+  "affectedAreas": ["domain", "workspace-routing", "identity", "legacy-migration", "governance"],
+  "canonicalWorkspacePaths": ["/personal/{slug}", "/org/{slug}", "/group/{slug}", "/project/{slug}"],
+  "subdomainExceptions": ["my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "status.ekodi.kr", "registered common/core service boundaries"],
+  "migrationPolicy": "non-breaking; /people/{slug} redirects to /personal/{slug}, tenant-style /biz/{slug} redirects to /org/{slug}, and any deployed space.ekodi.kr or user.ekodi.kr alias redirects to the equivalent ekodi.kr path while preserving workspace_id as the canonical internal identity",
+  "rollbackPlan": "revert the v1.1.0 constitution, machine-readable governance and validator commits; legacy aliases remain available so rollback does not require destructive DNS or identity changes"
+}
