@@ -56,7 +56,12 @@ jobs:
           test -f church/church-refresh.css
           test -f church/community-visual.css
           test -f church/script.js
+          test -f church/giving.js
+          test -f church/functions/api/giving/config.js
+          test -f church/functions/api/giving/order.js
+          test -f church/functions/api/giving/confirm.js
           node --check church/script.js
+          node --check church/giving.js
 
           grep -Fq '<title>에코디교회 |' church/index.html
           grep -Fq 'aria-label="에코디교회 홈"' church/index.html
@@ -76,7 +81,11 @@ jobs:
           grep -Fq '>실시간 화상<' church/index.html
           grep -Fq 'class="community-visit"' church/index.html
           grep -Fq '함께 예배하고,' church/index.html
-          grep -Fq '© 2026 에코디교회' church/index.html
+          grep -Fq 'id="giving"' church/index.html
+          grep -Fq 'id="giving-dialog"' church/index.html
+          grep -Fq '<footer class="site-footer">' church/index.html
+          grep -Fq '© 2026 에코디교회 · EKODI CHURCH' church/index.html
+          assert_absent 'class="brand footer-brand"' church/index.html
           grep -Fq 'https://community.ekodi.kr' church/index.html
 
           grep -Fq "headerBrandName.textContent = '에코디교회'" church/script.js
@@ -85,11 +94,19 @@ jobs:
           grep -Fq 'https://api.ekodi.kr/api/social/registry' church/script.js
           assert_absent "label: '서비스 전환'" church/script.js
 
+          grep -Fq 'https://js.tosspayments.com/v2/standard' church/giving.js
+          grep -Fq '/api/giving/order' church/giving.js
+          grep -Fq '/api/giving/confirm' church/giving.js
+          grep -Fq 'TOSS_CLIENT_KEY' church/functions/api/giving/config.js
+          grep -Fq 'TOSS_SECRET_KEY' church/functions/api/giving/confirm.js
+          grep -Fq 'api.tosspayments.com/v1/payments/confirm' church/functions/api/giving/confirm.js
+
           grep -Fq '.daily-verse{' church/community-visual.css
           grep -Fq 'grid-template-columns:auto minmax(220px,1fr) auto' church/community-visual.css
           grep -Fq 'background:rgba(244,240,229,.96);' church/community-visual.css
-          grep -Fq '.footer-brand{justify-content:center' church/community-visual.css
-          grep -Fq 'text-align:center' church/community-visual.css
+          grep -Fq '.site-footer-inner{' church/community-visual.css
+          grep -Fq 'place-items:center' church/community-visual.css
+          grep -Fq '.giving-dialog{' church/community-visual.css
 
           python - <<'PY'
           from html.parser import HTMLParser
@@ -116,72 +133,98 @@ jobs:
               raise SystemExit(f'duplicate ids: {duplicates}')
           if missing:
               raise SystemExit(f'missing anchor targets: {missing}')
-          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets')
+          address_count = Path('church/index.html').read_text(encoding='utf-8').count('백련동1길 17-4')
+          if address_count != 1:
+              raise SystemExit(f'footer/location duplication detected: address_count={address_count}')
+          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets; footer duplication audit ok')
           PY
 
       - name: Prepare static Pages payload
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/ekodi-church-pages
+          rm -rf /tmp/ekodi-church-pages /tmp/ekodi-church-functions
           mkdir -p /tmp/ekodi-church-pages
           rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
           test -s /tmp/ekodi-church-pages/index.html
           test -s /tmp/ekodi-church-pages/church-refresh.css
           test -s /tmp/ekodi-church-pages/community-visual.css
           test -s /tmp/ekodi-church-pages/script.js
+          test -s /tmp/ekodi-church-pages/giving.js
+          test -s /tmp/ekodi-church-pages/functions/api/giving/config.js
+          test -s /tmp/ekodi-church-pages/functions/api/giving/order.js
+          test -s /tmp/ekodi-church-pages/functions/api/giving/confirm.js
+          cd /tmp/ekodi-church-pages
+          npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
+          test -s /tmp/ekodi-church-functions/index.js
 
       - name: Deploy Church to Cloudflare Pages
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} pages deploy /tmp/ekodi-church-pages \
+          cd /tmp/ekodi-church-pages
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . \
             --project-name ekodi-church \
             --branch main \
             --commit-dirty=true
 
-      - name: Verify production source and assets
+      - name: Verify production source, footer and giving runtime
         shell: bash
         run: |
           set -euo pipefail
-          release='church-review-20260829-4'
+          release='church-giving-20260830-1'
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-refresh.css?release=${release}" || true)
             visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/community-visual.css?release=${release}" || true)
             script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/script.js?release=${release}" || true)
+            giving_code=$(curl -L -sS -o /tmp/giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/giving.js?release=${release}" || true)
+            config_code=$(curl -L -sS -o /tmp/giving-config.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/api/giving/config?release=${release}" || true)
 
             legacy_name=0
             legacy_switch=0
             legacy_social=0
+            legacy_footer=0
             grep -Fq 'EKODI교회' /tmp/church.html && legacy_name=1 || true
             grep -Fq 'class="shell-switch"' /tmp/church.html && legacy_switch=1 || true
             grep -Fq 'data-ekodi-social="true"' /tmp/church.html && legacy_social=1 || true
+            grep -Fq 'class="brand footer-brand"' /tmp/church.html && legacy_footer=1 || true
 
-            if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$script_code" == '200' ]] \
-              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' ]] \
+            address_count=$(grep -Fo '백련동1길 17-4' /tmp/church.html | wc -l | tr -d ' ')
+            config_valid=0
+            if [[ "$config_code" == '200' ]]; then
+              node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); if(x.provider==='toss' && typeof x.enabled==='boolean') process.exit(0); process.exit(1)" && config_valid=1 || true
+            fi
+
+            if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$script_code" == '200' && "$giving_code" == '200' && "$config_code" == '200' ]] \
+              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' && "$legacy_footer" == '0' && "$address_count" == '1' && "$config_valid" == '1' ]] \
               && grep -Fq '<title>에코디교회 |' /tmp/church.html \
               && grep -Fq 'aria-label="에코디교회 홈"' /tmp/church.html \
               && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
               && grep -Fq 'class="daily-verse"' /tmp/church.html \
               && grep -Fq 'class="online-triad"' /tmp/church.html \
               && grep -Fq 'class="community-visit"' /tmp/church.html \
+              && grep -Fq 'id="giving-dialog"' /tmp/church.html \
+              && grep -Fq '<footer class="site-footer">' /tmp/church.html \
               && grep -Fq 'class="shell-my"' /tmp/church.html \
-              && grep -Fq '© 2026 에코디교회' /tmp/church.html \
+              && grep -Fq '© 2026 에코디교회 · EKODI CHURCH' /tmp/church.html \
               && grep -Fq '.daily-verse{' /tmp/community-visual.css \
               && grep -Fq 'background:rgba(244,240,229,.96);' /tmp/community-visual.css \
-              && grep -Fq '.footer-brand{justify-content:center' /tmp/community-visual.css \
+              && grep -Fq '.site-footer-inner{' /tmp/community-visual.css \
+              && grep -Fq 'place-items:center' /tmp/community-visual.css \
+              && grep -Fq 'https://js.tosspayments.com/v2/standard' /tmp/giving.js \
               && grep -Fq "headerBrandName.textContent = '에코디교회'" /tmp/script.js \
               && grep -Fq 'dailyScriptures' /tmp/script.js; then
-              echo 'Church production source and assets verified.'
+              echo 'Church production source, minimal centered footer and giving runtime verified.'
+              node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); console.log('giving_payment_enabled=' + x.enabled)"
               break
             fi
 
             if [[ "$attempt" == '18' ]]; then
-              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social"
+              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code giving=$giving_code config=$config_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social legacy_footer=$legacy_footer address_count=$address_count config_valid=$config_valid"
               exit 1
             fi
-            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social"
+            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code giving=$giving_code config=$config_code legacy_footer=$legacy_footer address_count=$address_count config_valid=$config_valid"
             sleep 5
           done
 
@@ -195,7 +238,7 @@ jobs:
 
           source = '\n'.join(
               Path(path).read_text(encoding='utf-8')
-              for path in ('church/index.html', 'church/script.js')
+              for path in ('church/index.html', 'church/script.js', 'church/giving.js')
           )
           pattern = re.compile(r'https://(?:[A-Za-z0-9-]+\.)?ekodi\.kr(?:/[^\s"\'<>]*)?')
           targets = sorted(set(match.rstrip('.,;)') for match in pattern.findall(source)))
