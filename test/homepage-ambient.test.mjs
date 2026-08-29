@@ -30,7 +30,8 @@ test('public homepage is hook-first and routes intent instead of leading with a 
   assert.match(js, /function rankServices/);
   assert.match(js, /slice\(0, limit\)/);
   assert.match(js, /dataset\.livingGateway = 'v4-hook-first'/);
-  assert.match(css, /\.intent-panel/);
+  assert.match(js, /daily-connect intent-panel/);
+  assert.match(css, /\.daily-connect\{/);
   assert.match(css, /\.intent-results/);
   assert.match(css, /\.quick-paths/);
   assert.match(css, /grid-template-columns:minmax\(0,1\.08fr\) minmax\(340px,\.92fr\)/);
