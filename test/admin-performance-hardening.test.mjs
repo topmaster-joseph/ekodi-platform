@@ -33,21 +33,22 @@ test('detailed diagnostics are standalone and only observe when explicitly loade
   assert.doesNotMatch(diagnostics, /setInterval\(/);
 });
 
-test('authenticated startup is observer-free and legacy URLs converge into the current shell', async () => {
+test('authenticated startup is observer-free, preserves the requested route and loads only navigation-critical scripts', async () => {
   const shell = await read('admin-authenticated-shell.js');
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',\s*onStateChange\)/);
   assert.doesNotMatch(shell, /new MutationObserver/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
-  assert.match(shell, /history\.replaceState/);
+  assert.doesNotMatch(shell, /function canonicalizeLegacyEntry\(\)/);
+  assert.match(shell, /const requestedHash=location\.hash/);
+  assert.match(shell, /if\(requestedHash&&location\.hash!==requestedHash\)history\.replaceState/);
+  assert.doesNotMatch(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
   assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
   assert.doesNotMatch(shell, /loadStyle\('control-center-finance\.css'\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
-  for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js', 'control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['compact-control-center.js', 'google-admin-auth.js', 'ekodi-message-ui.js', 'control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js']) assert.match(deferred, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
 });
