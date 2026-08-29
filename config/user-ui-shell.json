@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -15,7 +15,30 @@
     "fallbackHeaderWhenMissing": true,
     "legacyCommonFooterSuppressed": true,
     "rootInternalPathsExcluded": true,
-    "languageChoiceEverywhere": true
+    "languageChoiceEverywhere": true,
+    "publicLandingBeforeAuth": true,
+    "workspaceRequiresMember": true,
+    "publicPreviewNeverLeaksPrivateData": true
+  },
+  "publicEntry": {
+    "surface": "public",
+    "guestMode": "public-guide",
+    "owner": "service-ui",
+    "goal": "invite before authenticate",
+    "requiredMeaning": ["clear service value", "human question or context", "capability preview", "how it works", "free start path"],
+    "recommendedMeaning": ["example or preview", "privacy or trust note", "related EKODI path"],
+    "authBoundary": "real AI actions, saved records, personal data and member workspaces stay protected",
+    "visualRule": "inherit each service UI DNA; never replace service identity with one generic gate or one cloned landing template",
+    "copyRule": "lead with the user's situation or question, not a membership restriction notice",
+    "forbidden": ["full-screen generic member gate on public service root", "private data preview", "technical access-policy copy as the hero", "identical visual clone across specialist services"]
+  },
+  "workspaceEntry": {
+    "surface": "workspace",
+    "guestMode": "guide-only",
+    "owner": "shared-shell",
+    "goal": "protect before execute",
+    "requiredMeaning": ["service identity", "why sign-in is needed", "Google free-member start path"],
+    "forbidden": ["private workspace content before member session", "service-specific auth fork"]
   },
   "header": {
     "owner": "shared-shell",

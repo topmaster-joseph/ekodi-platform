@@ -8,106 +8,199 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="hero">
-    <div class="hero-inner">
-      <p class="eyebrow">EKODI BIBLE CONVERSATION</p>
-      <h1>에코디 말씀대화</h1>
-      <p class="tagline">성경을 읽는 데서 멈추지 않고, 이야기하고 살아봅니다.</p>
-      <div class="identity"><span id="identityName">로그인 전</span><button id="authButton" class="ghost" type="button">Google로 시작</button></div>
-    </div>
-  </header>
-
-  <nav class="tabs" aria-label="말씀대화 주요 메뉴">
-    <button data-view="today" class="active" type="button">오늘</button>
-    <button data-view="conversation" type="button">말씀대화</button>
-    <button data-view="journey" type="button">나의 Journey</button>
-    <button data-view="together" type="button">함께</button>
-  </nav>
-
-  <main>
-    <section id="view-today" class="view active">
-      <div class="intro center">
-        <p class="kicker">오늘 당신의 마음에 가장 가까운 것은 무엇인가요?</p>
-        <h2>정답보다 질문에서 시작합니다.</h2>
-        <p>삶의 언어에서 시작해 말씀으로 천천히 걸어갑니다.</p>
+  <div class="guest-only guest-landing">
+    <header class="public-header">
+      <a class="public-brand" href="/"><span class="brand-mark">말</span><span>에코디 말씀대화</span></a>
+      <div class="public-header-actions">
+        <a class="text-link" href="https://ekodi.kr/">EKODI</a>
+        <a class="cta compact" href="https://auth.ekodi.kr/?site=bible&amp;return_to=https%3A%2F%2Fbible.ekodi.kr%2F">Google로 무료 시작</a>
       </div>
-      <div id="topicGrid" class="topic-grid" aria-label="오늘의 주제"></div>
-      <article class="today-card">
-        <small>오늘의 말씀대화</small>
-        <h3 id="todayTitle">오늘의 질문을 불러오는 중입니다</h3>
-        <p id="todayQuestion"></p>
-        <p class="scripture" id="todayScripture"></p>
-        <button id="startToday" class="primary" type="button">이 질문으로 이야기하기</button>
-      </article>
-      <div class="principles">
-        <strong>이 공간의 약속</strong>
-        <p>당신의 고백은 기본적으로 비공개입니다. AI는 목회자나 공동체를 대신하지 않으며, 공유는 당신이 직접 선택할 때만 이루어집니다.</p>
+    </header>
+
+    <main class="public-main">
+      <section class="public-hero">
+        <div class="hero-copy">
+          <p class="public-eyebrow"><span class="spark">✦</span> 말씀과 삶 사이, 대화가 시작되는 곳</p>
+          <h1>요즘, 어떤 마음을<br><span>말씀과 이야기해보고 싶나요?</span></h1>
+          <p class="hero-lead">성경을 읽는 데서 멈추지 않고, 질문하고 대화하고 작은 한 걸음으로 살아봅니다. 정답을 서두르기보다 지금의 삶에서 말씀 쪽으로 천천히 걸어가요.</p>
+          <div class="hero-actions">
+            <a class="cta" href="https://auth.ekodi.kr/?site=bible&amp;return_to=https%3A%2F%2Fbible.ekodi.kr%2F">Google로 무료 시작 <span>→</span></a>
+            <a class="cta secondary" href="#how">어떻게 사용하는지 보기</a>
+          </div>
+          <p class="free-note">무료회원부터 이용 · 개인 기록은 기본 비공개</p>
+          <div class="topic-pills" aria-label="말씀대화에서 다루는 삶의 주제">
+            <span>관계</span><span>가족</span><span>돈</span><span>일</span><span>진로</span><span>외로움</span><span>실패</span><span>분노</span><span>감사</span><span>믿음</span>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="말씀대화 예시">
+          <div class="soft-orb orb-mint"></div><div class="soft-orb orb-peach"></div><div class="soft-orb orb-lilac"></div>
+          <article class="preview-card preview-main">
+            <div class="preview-top"><span class="preview-dot"></span><strong>오늘의 말씀대화</strong><span class="preview-chip">관계</span></div>
+            <p class="preview-question">“지금 그 관계에서 가장 지키고 싶은 것은 무엇인가요?”</p>
+            <div class="preview-scripture"><span>골로새서 3:12-14</span><small>말씀과 함께 바라보기</small></div>
+            <div class="preview-conversation">
+              <p class="bubble-sample user-sample">상대가 먼저 바뀌었으면 좋겠어요.</p>
+              <p class="bubble-sample ai-sample">그 마음을 그대로 두고, 내가 지키고 싶은 관계의 모습부터 한 문장으로 말해볼까요?</p>
+            </div>
+          </article>
+          <div class="float-card float-one"><span>한 질문</span><strong>삶에서 시작</strong></div>
+          <div class="float-card float-two"><span>한 실천</span><strong>오늘 한 걸음</strong></div>
+        </div>
+      </section>
+
+      <section id="how" class="public-section how-section">
+        <div class="section-title">
+          <p class="public-eyebrow">HOW IT FLOWS</p>
+          <h2>읽고 끝나지 않도록,<br>말씀을 삶의 흐름으로 연결합니다.</h2>
+          <p>한 번의 좋은 질문이 대화를 열고, 작은 실천이 다음 이야기를 만듭니다.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card mint-card"><span class="feature-no">01</span><div class="feature-icon">?</div><h3>오늘의 질문</h3><p>성경 지식보다 지금 내 삶에 가까운 질문에서 시작합니다.</p><small>삶 → 질문</small></article>
+          <article class="feature-card peach-card"><span class="feature-no">02</span><div class="feature-icon">↗</div><h3>말씀대화</h3><p>AI가 답을 대신하기보다 성경 쪽으로 생각을 이어갈 질문을 건넵니다.</p><small>질문 → 말씀</small></article>
+          <article class="feature-card lilac-card"><span class="feature-no">03</span><div class="feature-icon">⌁</div><h3>나의 Journey</h3><p>묵상·기도·실천·돌아보기를 한 흐름으로 남겨 삶의 변화를 기억합니다.</p><small>말씀 → 실천</small></article>
+          <article class="feature-card yellow-card"><span class="feature-no">04</span><div class="feature-icon">＋</div><h3>함께</h3><p>내가 직접 선택한 이야기만 가족·소그룹·교회와 안전하게 나눕니다.</p><small>실천 → 공동체</small></article>
+        </div>
+      </section>
+
+      <section class="public-section signature-section">
+        <div class="signature-copy">
+          <p class="public-eyebrow">ONE SIMPLE RHYTHM</p>
+          <h2>복잡한 계획보다<br>작은 리듬 하나.</h2>
+          <p>말씀이 생활 속에서 다시 떠오르도록 네 개의 장면만 이어갑니다.</p>
+        </div>
+        <div class="rhythm-row">
+          <div><span>01</span><strong>한 말씀</strong><small>오늘 붙잡을 본문</small></div><b>＋</b>
+          <div><span>02</span><strong>한 질문</strong><small>마음을 여는 질문</small></div><b>＋</b>
+          <div><span>03</span><strong>한 실천</strong><small>작게 살아보기</small></div><b>＋</b>
+          <div><span>04</span><strong>한 번의 다시묻기</strong><small>삶을 돌아보기</small></div>
+        </div>
+      </section>
+
+      <section class="public-section privacy-section">
+        <div class="privacy-copy"><span class="privacy-mark">♡</span><div><p class="public-eyebrow">SAFE BY DEFAULT</p><h2>마음의 이야기는 가볍게 다루지 않습니다.</h2></div></div>
+        <div class="privacy-grid">
+          <div><strong>기본은 비공개</strong><p>개인 대화와 Journey는 본인만 봅니다.</p></div>
+          <div><strong>공유는 직접 선택</strong><p>원하는 기록만 공동체에 나눌 수 있습니다.</p></div>
+          <div><strong>AI는 동행 도구</strong><p>목회자나 공동체, 하나님의 뜻을 대신하지 않습니다.</p></div>
+        </div>
+      </section>
+
+      <section class="public-cta-section">
+        <span class="cta-blob blob-one"></span><span class="cta-blob blob-two"></span>
+        <p class="public-eyebrow">START WITH ONE QUESTION</p>
+        <h2>오늘 마음에 있는 한 문장부터<br>말씀과 이야기해보세요.</h2>
+        <p>Google 로그인 후 무료회원으로 바로 시작할 수 있습니다.</p>
+        <a class="cta" href="https://auth.ekodi.kr/?site=bible&amp;return_to=https%3A%2F%2Fbible.ekodi.kr%2F">무료로 시작하기 <span>→</span></a>
+      </section>
+    </main>
+
+    <footer class="public-footer"><span>EKODI 말씀대화</span><div><a href="https://church.ekodi.kr/">에코디교회</a><a href="https://ekodi.kr/">EKODI</a></div></footer>
+  </div>
+
+  <div class="member-only member-app">
+    <header class="hero">
+      <div class="hero-inner">
+        <p class="eyebrow">EKODI BIBLE CONVERSATION</p>
+        <h1>에코디 말씀대화</h1>
+        <p class="tagline">성경을 읽는 데서 멈추지 않고, 이야기하고 살아봅니다.</p>
+        <div class="identity"><span id="identityName">로그인 전</span><button id="authButton" class="ghost" type="button">Google로 시작</button></div>
       </div>
-    </section>
+    </header>
 
-    <section id="view-conversation" class="view">
-      <div class="section-head"><div><small>말씀대화 AI</small><h2 id="conversationTitle">삶에서 말씀으로</h2></div><span id="modeBadge" class="badge">무료 안내</span></div>
-      <div id="chat" class="chat" aria-live="polite"></div>
-      <form id="chatForm" class="composer">
-        <label for="message">지금 마음을 이야기해 주세요</label>
-        <textarea id="message" name="message" rows="3" maxlength="4000" placeholder="예: 앞으로가 불안해요"></textarea>
-        <div class="composer-row"><span id="conversationScripture" class="scripture"></span><button class="primary" type="submit">대화하기</button></div>
-      </form>
-      <p id="aiNotice" class="notice"></p>
-    </section>
+    <nav class="tabs" aria-label="말씀대화 주요 메뉴">
+      <button data-view="today" class="active" type="button">오늘</button>
+      <button data-view="conversation" type="button">말씀대화</button>
+      <button data-view="journey" type="button">나의 Journey</button>
+      <button data-view="together" type="button">함께</button>
+    </nav>
 
-    <section id="view-journey" class="view">
-      <div class="section-head"><div><small>나의 Journey</small><h2>말씀을 삶의 흔적으로 남깁니다.</h2></div><button id="newJourney" class="ghost" type="button">새 Journey</button></div>
-      <div id="journeyGate" class="empty"></div>
-      <div id="journeyList" class="records"></div>
-      <form id="journeyForm" class="panel hidden">
-        <input type="hidden" name="id">
-        <label>제목<input name="title" maxlength="120" required></label>
-        <label>주제<input name="topic" maxlength="60" required></label>
-        <label>연결 본문<input name="scripture_ref" maxlength="120"></label>
-        <label>묵상<textarea name="reflection" rows="4" maxlength="4000"></textarea></label>
-        <label>기도<textarea name="prayer" rows="3" maxlength="3000"></textarea></label>
-        <label>이번 주 작은 실천<input name="practice" maxlength="300"></label>
-        <label>돌아볼 날짜<input name="followup_date" type="date"></label>
-        <div class="actions"><button class="primary" type="submit">Journey 저장</button><button id="cancelJourney" class="ghost" type="button">취소</button></div>
-      </form>
-      <div class="section-subhead"><div><small>돌아보기</small><h3>말씀을 어떻게 살아보았나요?</h3></div></div>
-      <div id="followupList" class="records"></div>
-    </section>
+    <main class="member-main">
+      <section id="view-today" class="view active">
+        <div class="intro center">
+          <p class="kicker">오늘 당신의 마음에 가장 가까운 것은 무엇인가요?</p>
+          <h2>정답보다 질문에서 시작합니다.</h2>
+          <p>삶의 언어에서 시작해 말씀으로 천천히 걸어갑니다.</p>
+        </div>
+        <div id="topicGrid" class="topic-grid" aria-label="오늘의 주제"></div>
+        <article class="today-card">
+          <small>오늘의 말씀대화</small>
+          <h3 id="todayTitle">오늘의 질문을 불러오는 중입니다</h3>
+          <p id="todayQuestion"></p>
+          <p class="scripture" id="todayScripture"></p>
+          <button id="startToday" class="primary" type="button">이 질문으로 이야기하기</button>
+        </article>
+        <div class="principles">
+          <strong>이 공간의 약속</strong>
+          <p>당신의 고백은 기본적으로 비공개입니다. AI는 목회자나 공동체를 대신하지 않으며, 공유는 당신이 직접 선택할 때만 이루어집니다.</p>
+        </div>
+      </section>
 
-    <section id="view-together" class="view">
-      <div class="section-head"><div><small>함께</small><h2>혼자 품은 말씀을, 원할 때 공동체와 나눕니다.</h2></div></div>
-      <div id="groupGate" class="empty"></div>
-      <div class="two-col">
-        <form id="createGroupForm" class="panel">
-          <h3>공동체 만들기</h3>
-          <label>이름<input name="name" maxlength="120" required></label>
-          <label>종류<select name="kind"><option value="family">가족</option><option value="small_group" selected>소그룹</option><option value="church">교회</option><option value="other">기타</option></select></label>
-          <button class="primary" type="submit">만들기</button>
+      <section id="view-conversation" class="view">
+        <div class="section-head"><div><small>말씀대화 AI</small><h2 id="conversationTitle">삶에서 말씀으로</h2></div><span id="modeBadge" class="badge">무료 안내</span></div>
+        <div id="chat" class="chat" aria-live="polite"></div>
+        <form id="chatForm" class="composer">
+          <label for="message">지금 마음을 이야기해 주세요</label>
+          <textarea id="message" name="message" rows="3" maxlength="4000" placeholder="예: 앞으로가 불안해요"></textarea>
+          <div class="composer-row"><span id="conversationScripture" class="scripture"></span><button class="primary" type="submit">대화하기</button></div>
         </form>
-        <form id="joinGroupForm" class="panel">
-          <h3>초대코드로 참여</h3>
-          <label>초대코드<input name="invite_code" maxlength="20" required autocomplete="off"></label>
-          <button class="primary" type="submit">참여하기</button>
-        </form>
-      </div>
-      <div id="groupList" class="records"></div>
-      <div class="section-subhead"><div><small>공동체 피드</small><h3>명시적으로 나눈 Journey</h3></div></div>
-      <div id="sharedFeed" class="records"></div>
-      <div id="sharePanel" class="panel">
-        <h3>Journey 나누기</h3>
-        <p>공유는 자동으로 켜지지 않습니다. 아래에서 Journey와 공동체를 직접 선택해야 합니다. 기도문은 공동체 피드에 공개하지 않습니다.</p>
-        <form id="shareForm" class="inline-form">
-          <select name="journey_id" id="shareJourney"></select>
-          <select name="group_id" id="shareGroup"></select>
-          <input name="note" maxlength="280" placeholder="함께 나누고 싶은 한 문장">
-          <button class="primary" type="submit">명시적으로 공유</button>
-        </form>
-      </div>
-    </section>
-  </main>
+        <p id="aiNotice" class="notice"></p>
+      </section>
 
-  <footer><a href="https://church.ekodi.kr/">에코디교회</a><span>·</span><a href="/admin">관리자</a><span>·</span><a href="https://ekodi.kr/">EKODI</a></footer>
+      <section id="view-journey" class="view">
+        <div class="section-head"><div><small>나의 Journey</small><h2>말씀을 삶의 흔적으로 남깁니다.</h2></div><button id="newJourney" class="ghost" type="button">새 Journey</button></div>
+        <div id="journeyGate" class="empty"></div>
+        <div id="journeyList" class="records"></div>
+        <form id="journeyForm" class="panel hidden">
+          <input type="hidden" name="id">
+          <label>제목<input name="title" maxlength="120" required></label>
+          <label>주제<input name="topic" maxlength="60" required></label>
+          <label>연결 본문<input name="scripture_ref" maxlength="120"></label>
+          <label>묵상<textarea name="reflection" rows="4" maxlength="4000"></textarea></label>
+          <label>기도<textarea name="prayer" rows="3" maxlength="3000"></textarea></label>
+          <label>이번 주 작은 실천<input name="practice" maxlength="300"></label>
+          <label>돌아볼 날짜<input name="followup_date" type="date"></label>
+          <div class="actions"><button class="primary" type="submit">Journey 저장</button><button id="cancelJourney" class="ghost" type="button">취소</button></div>
+        </form>
+        <div class="section-subhead"><div><small>돌아보기</small><h3>말씀을 어떻게 살아보았나요?</h3></div></div>
+        <div id="followupList" class="records"></div>
+      </section>
+
+      <section id="view-together" class="view">
+        <div class="section-head"><div><small>함께</small><h2>혼자 품은 말씀을, 원할 때 공동체와 나눕니다.</h2></div></div>
+        <div id="groupGate" class="empty"></div>
+        <div class="two-col">
+          <form id="createGroupForm" class="panel">
+            <h3>공동체 만들기</h3>
+            <label>이름<input name="name" maxlength="120" required></label>
+            <label>종류<select name="kind"><option value="family">가족</option><option value="small_group" selected>소그룹</option><option value="church">교회</option><option value="other">기타</option></select></label>
+            <button class="primary" type="submit">만들기</button>
+          </form>
+          <form id="joinGroupForm" class="panel">
+            <h3>초대코드로 참여</h3>
+            <label>초대코드<input name="invite_code" maxlength="20" required autocomplete="off"></label>
+            <button class="primary" type="submit">참여하기</button>
+          </form>
+        </div>
+        <div id="groupList" class="records"></div>
+        <div class="section-subhead"><div><small>공동체 피드</small><h3>명시적으로 나눈 Journey</h3></div></div>
+        <div id="sharedFeed" class="records"></div>
+        <div id="sharePanel" class="panel">
+          <h3>Journey 나누기</h3>
+          <p>공유는 자동으로 켜지지 않습니다. 아래에서 Journey와 공동체를 직접 선택해야 합니다. 기도문은 공동체 피드에 공개하지 않습니다.</p>
+          <form id="shareForm" class="inline-form">
+            <select name="journey_id" id="shareJourney"></select>
+            <select name="group_id" id="shareGroup"></select>
+            <input name="note" maxlength="280" placeholder="함께 나누고 싶은 한 문장">
+            <button class="primary" type="submit">명시적으로 공유</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="member-footer"><a href="https://church.ekodi.kr/">에코디교회</a><span>·</span><a href="/admin">관리자</a><span>·</span><a href="https://ekodi.kr/">EKODI</a></footer>
+  </div>
+
   <script src="/config.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
