@@ -6,6 +6,7 @@ on:
     paths:
       - 'ekodibiz/**'
       - 'ekodibiz-worker.js'
+      - 'ekodibiz-payment-worker.js'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
       - 'deploy/manifests/ekodibiz.worker.json'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'ekodibiz/**'
       - 'ekodibiz-worker.js'
+      - 'ekodibiz-payment-worker.js'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
       - 'deploy/manifests/ekodibiz.worker.json'
@@ -40,16 +42,20 @@ jobs:
         run: |
           set -euo pipefail
           node --check ekodibiz-worker.js
+          node --check ekodibiz-payment-worker.js
           node --check ekodibiz/app.js
           node --test test/ekodibiz-revenue-os.test.mjs
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
+          grep -Fq 'main = "ekodibiz-payment-worker.js"' wrangler.ekodibiz.toml
           grep -Fq 'pattern = "biz.ekodi.kr"' wrangler.ekodibiz.toml
           ! grep -Fq 'pattern = "business.ekodi.kr"' wrangler.ekodibiz.toml
+          grep -Fq 'PAYMENT_SERVICE_URL = "https://pay.biz.ekodi.kr"' wrangler.ekodibiz.toml
           grep -Fq 'HIGH_IMPACT_APPROVAL = "required"' wrangler.ekodibiz.toml
           grep -Fq '[exports.RevenueStore]' wrangler.ekodibiz.toml
           grep -Fq 'storage = "sqlite"' wrangler.ekodibiz.toml
+          grep -Fq 'https://pay.biz.ekodi.kr' deploy/manifests/ekodibiz.worker.json
       - name: Validate Cloudflare bundle
         run: |
           set -euo pipefail
@@ -72,10 +78,7 @@ jobs:
       - name: Verify development credentials
         run: test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy isolated staging
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4.127.1 deploy --config wrangler.ekodibiz-staging.toml
+        run: npx --yes wrangler@4.127.1 deploy --config wrangler.ekodibiz-staging.toml
       - name: Verify functional bundle and AI operations locally
         shell: bash
         run: |
@@ -85,39 +88,27 @@ jobs:
           runtime_pid=$!
           cleanup() { kill "$runtime_pid" 2>/dev/null || true; }
           trap cleanup EXIT
-
           ready=0
           for attempt in $(seq 1 30); do
-            if curl -sSf --max-time 5 'http://127.0.0.1:8787/api/health' >/tmp/ekodibiz-health.json 2>/dev/null; then
-              ready=1
-              break
-            fi
-            if ! kill -0 "$runtime_pid" 2>/dev/null; then
-              cat "$log"
-              exit 1
-            fi
+            if curl -sSf --max-time 5 'http://127.0.0.1:8787/api/health' >/tmp/ekodibiz-health.json 2>/dev/null; then ready=1; break; fi
+            if ! kill -0 "$runtime_pid" 2>/dev/null; then cat "$log"; exit 1; fi
             sleep 2
           done
-          if [[ "$ready" != "1" ]]; then
-            cat "$log"
-            exit 1
-          fi
-
+          [[ "$ready" == "1" ]] || { cat "$log"; exit 1; }
           root=$(curl -L -sS --max-time 15 'http://127.0.0.1:8787/' || true)
           health=$(cat /tmp/ekodibiz-health.json)
           catalog=$(curl -sS --max-time 15 'http://127.0.0.1:8787/api/catalog' || true)
           consult=$(curl -sS --max-time 15 -H 'content-type: application/json' -d '{"goal":"식당 매출을 늘리고 싶어요"}' 'http://127.0.0.1:8787/api/consult' || true)
-          lead_id=$(node -e 'const s=process.argv[1]; const x=JSON.parse(s); process.stdout.write(x.leadId||"")' "$consult")
+          lead_id=$(node -e 'const x=JSON.parse(process.argv[1]);process.stdout.write(x.leadId||"")' "$consult")
           offer=$(curl -sS --max-time 15 -H 'content-type: application/json' -d "{\"goal\":\"식당 매출을 늘리고 싶어요\",\"offerId\":\"growth-30\",\"leadId\":\"$lead_id\"}" 'http://127.0.0.1:8787/api/offers' || true)
-          order_id=$(node -e 'const s=process.argv[1]; const x=JSON.parse(s); process.stdout.write(x.orderId||"")' "$offer")
+          order_id=$(node -e 'const x=JSON.parse(process.argv[1]);process.stdout.write(x.orderId||"")' "$offer")
           sleep 1
           ops=$(curl -sS --max-time 15 'http://127.0.0.1:8787/api/ops/status' || true)
           checkout=$(curl -sS --max-time 15 -H 'content-type: application/json' -d "{\"orderId\":\"$order_id\"}" 'http://127.0.0.1:8787/api/checkout-intent' || true)
-
-          printf 'HEALTH=%s\nCONSULT=%s\nOFFER=%s\nOPS=%s\nCHECKOUT=%s\n' "${health:0:700}" "${consult:0:700}" "${offer:0:700}" "${ops:0:700}" "${checkout:0:700}"
           grep -Fq '무엇을 이루고 싶으세요?' <<<"$root"
           grep -Fq 'operational-mvp' <<<"$health"
           grep -Fq 'durable-object-sqlite' <<<"$health"
+          grep -Fq 'https://pay.biz.ekodi.kr' <<<"$health"
           grep -Fq '30일 자동홍보팩' <<<"$catalog"
           grep -Fq 'LEAD-' <<<"$consult"
           grep -Fq 'EB-' <<<"$offer"
@@ -126,8 +117,9 @@ jobs:
           grep -Fq 'finance_gatekeeper' <<<"$ops"
           grep -Fq '"tasks":4' <<<"$ops"
           grep -Fq 'approval_required' <<<"$checkout"
-          grep -Fq 'https://pay.ekodi.kr' <<<"$checkout"
-          echo 'EKODIBIZ deployed to development and functional AI operations verified.'
+          grep -Fq 'https://pay.biz.ekodi.kr' <<<"$checkout"
+          ! grep -Fq 'https://pay.ekodi.kr' <<<"$checkout"
+          echo 'EKODIBIZ staging functional AI operations and canonical payment gateway verified.'
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -172,9 +164,10 @@ jobs:
               && grep -Fq 'operational-mvp' <<<"$health" \
               && grep -Fq 'approval-gated' <<<"$health" \
               && grep -Fq 'durable-object-sqlite' <<<"$health" \
+              && grep -Fq 'https://pay.biz.ekodi.kr' <<<"$health" \
               && grep -Fq '행사 완성팩' <<<"$catalog" \
               && grep -Fq 'finance_gatekeeper' <<<"$ops"; then
-              echo 'EKODIBIZ production verified and operations active.'
+              echo 'EKODIBIZ production verified and operations active with canonical payment gateway.'
               exit 0
             fi
             sleep 5
