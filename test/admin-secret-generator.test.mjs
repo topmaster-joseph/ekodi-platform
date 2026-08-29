@@ -51,7 +51,7 @@ test('local secret display lifetime remains bounded and clears on navigation awa
 });
 
 
-test('Security remains lazy-loaded inside the System axis and build publishes only requested assets', () => {
+test('Security remains lazy-loaded inside the System work area and build publishes only requested assets', () => {
   assert.match(loader, /security:\s*\{/);
   assert.match(loader, /styles: \['admin-secret-generator\.css'\]/);
   assert.match(loader, /scripts: \['admin-secret-generator\.js'\]/);
@@ -60,6 +60,6 @@ test('Security remains lazy-loaded inside the System axis and build publishes on
   assert.match(menuRegistry, /\{ id: 'system'[\s\S]*defaultSection: 'health'/);
   assert.match(menuRegistry, /\{ id: 'health', group: 'system'/);
   assert.match(menuRegistry, /\{ id: 'security', group: 'system'/);
-  assert.match(menuRegistry, /\{ id: 'marketing-ai', group: 'services'/);
+  assert.match(menuRegistry, /\{ id: 'marketing-ai', group: 'ai'/);
   assert.match(build, /'admin-secret-generator\.css','admin-secret-generator\.js'/);
 });
