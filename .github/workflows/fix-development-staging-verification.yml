@@ -98,16 +98,17 @@ jobs:
           ! grep -Fq 'https://api-staging.ekodi.kr' .github/workflows/deploy-control-api.yml
           ! grep -Fq 'https://finance-api-staging.ekodi.kr' .github/workflows/deploy-finance.yml
           ! grep -Fq 'https://marketing-api-staging.ekodi.kr' .github/workflows/deploy-marketing-domain-api.yml
-      - name: Commit isolated verification targets
+      - name: Publish generated workflow blobs for trusted apply
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- .github/workflows/deploy-control-api.yml .github/workflows/deploy-finance.yml .github/workflows/deploy-marketing-domain-api.yml; then
-            echo 'No change required.'
-            exit 0
-          fi
+          mkdir -p ops/generated-workflows
+          cp .github/workflows/deploy-control-api.yml ops/generated-workflows/deploy-control-api.yml
+          cp .github/workflows/deploy-finance.yml ops/generated-workflows/deploy-finance.yml
+          cp .github/workflows/deploy-marketing-domain-api.yml ops/generated-workflows/deploy-marketing-domain-api.yml
+          git checkout -- .github/workflows/deploy-control-api.yml .github/workflows/deploy-finance.yml .github/workflows/deploy-marketing-domain-api.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/deploy-control-api.yml .github/workflows/deploy-finance.yml .github/workflows/deploy-marketing-domain-api.yml
-          git commit -m 'fix(cloudflare): verify staging only in Development account'
+          git add ops/generated-workflows/deploy-control-api.yml ops/generated-workflows/deploy-finance.yml ops/generated-workflows/deploy-marketing-domain-api.yml
+          git commit -m 'chore(ops): stage Development verification workflow blobs'
           git push origin HEAD:main
