@@ -7,12 +7,14 @@ on:
     paths:
       - '.github/workflows/purge-admin-legacy.yml'
       - 'scripts/purge-retired-admin.mjs'
+      - 'scripts/admin-performance-postbuild.mjs'
       - 'control-center.html'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-menu-layout.js'
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/build.mjs'
+      - 'scripts/normalize-platform-ai-names.mjs'
       - 'package.json'
       - 'site-worker.js'
       - 'admin.html'
@@ -47,6 +49,37 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/purge-retired-admin.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/admin-performance-postbuild.mjs')
+          source = path.read_text()
+          source = source.replace("function mustReplace(search, replacement, label) {\n  if (!html.includes(search)) throw new Error(`admin performance marker missing: ${label}`);\n  html = html.replace(search, replacement);\n}\n\n", "")
+          old = """// Only the overview hero participates in first authenticated layout. Operational DOM remains
+// for compatibility but is display:none until its workspace is explicitly selected.
+mustReplace('<section class=\"metrics\" data-panel=\"overview services\"', '<section class=\"metrics hidden-panel\" data-panel=\"services\"', 'services metrics panel');
+mustReplace('<section class=\"section operations-section\" data-panel=\"overview services\"', '<section class=\"section operations-section hidden-panel\" data-panel=\"services\"', 'services operations panel');
+mustReplace('<section class=\"section\" data-panel=\"overview finance\"', '<section class=\"section hidden-panel\" data-panel=\"finance\"', 'finance panel');
+for (const section of ['communication', 'workspace', 'organization']) {
+  html = html.replace(`<section class=\"section\" data-panel=\"${section}\"`, `<section class=\"section hidden-panel\" data-panel=\"${section}\"`);
+}
+"""
+          new = """// The retired overview/services bootstrap DOM no longer exists. Keep only surviving
+// optional workspaces hidden until their registry route is selected.
+for (const section of ['finance', 'communication', 'workspace', 'organization']) {
+  html = html.replace(`<section class=\"section\" data-panel=\"${section}\"`, `<section class=\"section hidden-panel\" data-panel=\"${section}\"`);
+}
+"""
+          if old in source:
+              source = source.replace(old, new)
+          source = source.replace("  ['repairLegacyLinks','repairLinks'],\n", "")
+          source = source.replace("if (html.includes('control-center.js\"></script>')) throw new Error('Legacy control-center.js leaked into admin first path');", "if (html.includes('control-center.js\"></script>')) throw new Error('Retired control-center.js leaked into admin first path');")
+          source = source.replace('immutable versioning ready, shared menu modules published, legacy runtime/polling deferred.', 'immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.')
+          if 'mustReplace(' in source:
+              raise SystemExit('legacy mustReplace bootstrap dependency survived')
+          if 'overview services' in source or 'overview finance' in source:
+              raise SystemExit('legacy overview performance dependency survived')
+          path.write_text(source)
+          PY
           test ! -e admin.html
           test ! -e control-center.js
           test ! -e control-center-features.js
@@ -56,6 +89,9 @@ jobs:
           ! grep -Fq 'OPERATIONS OVERVIEW' scripts/admin-thin-postbuild.mjs
           ! grep -Fq 'data-panel="overview"' control-center.html
           ! grep -Fq 'control-center-ops.css' control-center.html
+          ! grep -Fq 'overview services' scripts/admin-performance-postbuild.mjs
+          ! grep -Fq 'overview finance' scripts/admin-performance-postbuild.mjs
+          ! grep -Fq 'repairLegacyLinks' scripts/admin-performance-postbuild.mjs
 
       - name: Verify source, tests and production build
         run: |
@@ -86,6 +122,7 @@ jobs:
             echo 'No source purge changes required.'
           else
             git commit -m 'refactor(admin): remove retired control-center implementation'
+            git pull --rebase origin main
             git push origin HEAD:main
           fi
 
