@@ -1,0 +1,371 @@
+name: Deploy Control API
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'api-worker.js'
+      - 'auth-worker.js'
+      - 'admin-session-fastpath.js'
+      - 'admin-google-auth.js'
+      - 'customer-auth.js'
+      - 'customer-entry-worker.js'
+      - 'mission-control-entry-worker.js'
+      - 'user-ai-control.js'
+      - 'ai-access-orchestration.js'
+      - 'personal-ai-provider-registry.js'
+      - 'gemini-provider-adapter.js'
+      - 'personal-openai-provider-adapter.js'
+      - 'claude-provider-adapter.js'
+      - 'user-openai-provider-adapter.js'
+      - 'test/user-ai-routing-policy.test.mjs'
+      - 'test/personal-ai-provider-registry.test.mjs'
+      - 'universal-membership.js'
+      - 'membership-billing.js'
+      - 'generated/user-services.js'
+      - 'config/ecosystem-services.json'
+      - 'config/universal-membership.json'
+      - 'scripts/generate-user-service-registry.mjs'
+      - 'scripts/validate-universal-membership.mjs'
+      - 'test/universal-membership-contract.test.mjs'
+      - 'device-control.js'
+      - 'security-edge.js'
+      - 'ai-agent-control.js'
+      - 'ai-governance-runtime.js'
+      - 'ai-resilience-runtime.js'
+      - 'core-ai-gateway.js'
+      - 'core-api.js'
+      - 'openai-provider-adapter.js'
+      - 'api-usage-meter.js'
+      - 'api-cost-control.js'
+      - 'test/api-cost-control.test.mjs'
+      - 'test/core-ai-gateway.test.mjs'
+      - 'test/openai-provider-adapter.test.mjs'
+      - 'config/ai-mission-governance.json'
+      - 'customer-google-prereg.js'
+      - 'customer-federated-auth.js'
+      - 'customer-member-directory.js'
+      - 'books-control.js'
+      - 'books-finance-control.js'
+      - 'books-distribution-control.js'
+      - 'books-pipeline-control.js'
+      - 'books-royalty-control.js'
+      - 'affiliate-control.js'
+      - 'social-registry-api.js'
+      - 'migrations/**'
+      - '!migrations/*messenger*.sql'
+      - 'wrangler.api.toml'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'scripts/validate-additive-migrations.mjs'
+      - 'scripts/validate-ai-mission-governance.mjs'
+      - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'deploy/manifests/control-api.worker.json'
+      - '.github/workflows/deploy-control-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api-worker.js'
+      - 'auth-worker.js'
+      - 'admin-session-fastpath.js'
+      - 'admin-google-auth.js'
+      - 'customer-auth.js'
+      - 'customer-entry-worker.js'
+      - 'mission-control-entry-worker.js'
+      - 'user-ai-control.js'
+      - 'ai-access-orchestration.js'
+      - 'personal-ai-provider-registry.js'
+      - 'gemini-provider-adapter.js'
+      - 'personal-openai-provider-adapter.js'
+      - 'claude-provider-adapter.js'
+      - 'user-openai-provider-adapter.js'
+      - 'test/user-ai-routing-policy.test.mjs'
+      - 'test/personal-ai-provider-registry.test.mjs'
+      - 'universal-membership.js'
+      - 'membership-billing.js'
+      - 'generated/user-services.js'
+      - 'config/ecosystem-services.json'
+      - 'config/universal-membership.json'
+      - 'scripts/generate-user-service-registry.mjs'
+      - 'scripts/validate-universal-membership.mjs'
+      - 'test/universal-membership-contract.test.mjs'
+      - 'device-control.js'
+      - 'security-edge.js'
+      - 'ai-agent-control.js'
+      - 'ai-governance-runtime.js'
+      - 'ai-resilience-runtime.js'
+      - 'core-ai-gateway.js'
+      - 'core-api.js'
+      - 'openai-provider-adapter.js'
+      - 'api-usage-meter.js'
+      - 'api-cost-control.js'
+      - 'test/api-cost-control.test.mjs'
+      - 'test/core-ai-gateway.test.mjs'
+      - 'test/openai-provider-adapter.test.mjs'
+      - 'config/ai-mission-governance.json'
+      - 'customer-google-prereg.js'
+      - 'customer-federated-auth.js'
+      - 'customer-member-directory.js'
+      - 'books-control.js'
+      - 'books-finance-control.js'
+      - 'books-distribution-control.js'
+      - 'books-pipeline-control.js'
+      - 'books-royalty-control.js'
+      - 'affiliate-control.js'
+      - 'social-registry-api.js'
+      - 'migrations/**'
+      - '!migrations/*messenger*.sql'
+      - 'wrangler.api.toml'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'scripts/validate-additive-migrations.mjs'
+      - 'scripts/validate-ai-mission-governance.mjs'
+      - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'deploy/manifests/control-api.worker.json'
+      - '.github/workflows/deploy-control-api.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+# Generic Control-plane release lane. Conversation changes are owned by the
+# Release EKODI Conversation Foundation orchestrator.
+concurrency:
+  group: ekodi-control-api-release
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Generate universal user-service registry
+        run: npm run generate:user-services
+      - name: Validate control plane, Core AI Gateway and governance
+        run: |
+          set -euo pipefail
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
+            node --check "$file"
+          done
+          node --check scripts/generate-user-service-registry.mjs
+          node --check scripts/validate-universal-membership.mjs
+          node --check scripts/guarded-worker-release.mjs
+          node --check scripts/validate-additive-migrations.mjs
+          node --check scripts/validate-ai-mission-governance.mjs
+          node --check scripts/validate-security-baseline.mjs
+          node scripts/validate-universal-membership.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          node scripts/validate-ai-mission-governance.mjs
+          node scripts/validate-security-baseline.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs
+          bash -n scripts/apply-d1-migrations-with-retry.sh
+          grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
+          grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
+          ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
+
+  staging:
+    environment: development
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Generate universal user-service registry
+        run: npm run generate:user-services
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Resolve isolated Control staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-auth-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-auth-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated Control staging config
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.api.staging.runtime.toml <<EOF
+          name = "ekodi-auth-api-staging"
+          main = "mission-control-entry-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          ENVIRONMENT = "staging"
+          ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+          ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
+          GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          AI_PROVIDER = "NONE"
+          OPENAI_MODEL = "gpt-5.6-terra"
+          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+          [[ratelimits]]
+          name = "AUTH_RATE_LIMITER"
+          namespace_id = "3101"
+            [ratelimits.simple]
+            limit = 20
+            period = 60
+          [[ratelimits]]
+          name = "SENSITIVE_RATE_LIMITER"
+          namespace_id = "3102"
+            [ratelimits.simple]
+            limit = 120
+            period = 60
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-auth-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply all migrations to isolated Control staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
+      - name: Deploy isolated Control staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
+      - name: Verify security, AI auth boundary and universal membership
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.api.staging.runtime.toml --json > /tmp/staging-deployments.json
+          npx --yes wrangler@$WRANGLER_VERSION dev --remote --config wrangler.api.staging.runtime.toml --ip 127.0.0.1 --port 8791 > /tmp/control-remote-dev.log 2>&1 &
+          remote_pid=$!
+          trap 'kill $remote_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8791/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $remote_pid 2>/dev/null; then cat /tmp/control-remote-dev.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != '1' ]; then cat /tmp/control-remote-dev.log; exit 1; fi
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
+            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
+            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/devices' || true)
+            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/ai/governance' || true)
+            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/ai/provider-status' || true)
+            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/user-ai/status' || true)
+            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/portfolio' || true)
+            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/catalog?site=invest' || true)
+            if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
+              && [ "$devices" = '401' ] \
+              && [ "$ai" = '401' ] \
+              && [ "$provider" = '401' ] \
+              && [ "$user_ai" = '401' ] \
+              && [ "$membership" = '401' ] \
+              && [ "$catalog" = '200' ] \
+              && grep -Fq '"inheritedDefault":true' /tmp/catalog.json; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f wrangler.api.staging.runtime.toml
+
+  production:
+    needs: [validate, staging]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Generate universal user-service registry
+        run: npm run generate:user-services
+      - name: Capture production D1 recovery bookmark
+        id: d1_bookmark
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.api.toml --json > /tmp/bookmark.json
+          BOOKMARK=$(node -e "const j=require('/tmp/bookmark.json');const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          test -n "$BOOKMARK"
+          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
+      - name: Apply production migrations after isolated staging success
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
+      - name: Guarded 0-percent Control candidate then promote
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
+      - name: Verify production Control and universal membership boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
+          devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
+          ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
+          provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/provider-status')
+          user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/user-ai/status')
+          membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/portfolio')
+          catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
+          printf '%s' "$health" | grep -q '"ok":true'
+          [ "$devices" = '401' ]
+          [ "$ai" = '401' ]
+          [ "$provider" = '401' ]
+          [ "$user_ai" = '401' ]
+          [ "$membership" = '401' ]
+          [ "$catalog" = '200' ]
+          grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Record recovery point
+        env:
+          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+        run: |
+          echo "D1 recovery bookmark before Control release: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish Control API production status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            cancelled) state=error ;;
+            *) state=failure ;;
+          esac
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(jq -n \
+            --arg state "$state" \
+            --arg context 'ekodi/control-api-production' \
+            --arg description "Control API production deployment: $JOB_STATUS" \
+            --arg target_url "$target_url" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}')
+          curl --fail-with-body -sS \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$payload"

@@ -1,0 +1,261 @@
+name: Deploy Marketing Domain API
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'marketing-domain-control.js'
+      - 'marketing-domain-worker.js'
+      - 'marketing-store-workspace.js'
+      - 'marketing-store-domain.js'
+      - 'marketing-auth-handoff.js'
+      - 'wrangler.marketing-domains.toml'
+      - 'migrations/0017_marketing_custom_domains.sql'
+      - 'migrations/0018_marketing_store_workspaces.sql'
+      - 'migrations/0019_marketing_handoff_exchange.sql'
+      - 'test/marketing-custom-domain.test.mjs'
+      - 'test/marketing-store-workspace.test.mjs'
+      - 'test/marketing-auth-handoff.test.mjs'
+      - 'deploy/manifests/marketing-domain-api.worker.json'
+      - '.github/workflows/deploy-marketing-domain-api.yml'
+      - 'scripts/guarded-worker-release.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-domain-control.js'
+      - 'marketing-domain-worker.js'
+      - 'marketing-store-workspace.js'
+      - 'marketing-store-domain.js'
+      - 'marketing-auth-handoff.js'
+      - 'wrangler.marketing-domains.toml'
+      - 'migrations/0017_marketing_custom_domains.sql'
+      - 'migrations/0018_marketing_store_workspaces.sql'
+      - 'migrations/0019_marketing_handoff_exchange.sql'
+      - 'test/marketing-custom-domain.test.mjs'
+      - 'test/marketing-store-workspace.test.mjs'
+      - 'test/marketing-auth-handoff.test.mjs'
+      - 'deploy/manifests/marketing-domain-api.worker.json'
+      - '.github/workflows/deploy-marketing-domain-api.yml'
+      - 'scripts/guarded-worker-release.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-marketing-domain-api-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  DOMAIN_CF_TOKEN: ${{ secrets.MARKETING_DOMAIN_CF_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Marketing domain API and policy
+        run: |
+          set -euo pipefail
+          node --check marketing-domain-control.js
+          node --check marketing-store-workspace.js
+          node --check marketing-store-domain.js
+          node --check marketing-auth-handoff.js
+          node --check marketing-domain-worker.js
+          node --test test/marketing-custom-domain.test.mjs test/marketing-store-workspace.test.mjs test/marketing-auth-handoff.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          test -f deploy/manifests/marketing-domain-api.worker.json
+          grep -Fq 'main = "marketing-domain-worker.js"' wrangler.marketing-domains.toml
+          grep -Fq "PRO_REQUIRED" marketing-domain-control.js
+          grep -Fq "CNAME" marketing-domain-control.js
+          grep -Fq "marketing_custom_domains" migrations/0017_marketing_custom_domains.sql
+          grep -Fq "marketing_store_workspaces" migrations/0018_marketing_store_workspaces.sql
+          grep -Fq "marketing_store_custom_domains" migrations/0018_marketing_store_workspaces.sql
+          grep -Fq "marketing_handoff_exchanges" migrations/0019_marketing_handoff_exchange.sql
+          grep -Fq "/api/marketing/workspace/provision" marketing-store-workspace.js
+          grep -Fq "/api/marketing/workspace/resolve" marketing-store-workspace.js
+          grep -Fq "/api/marketing/store-domains" marketing-store-domain.js
+          grep -Fq "/api/marketing/handoff/start" marketing-auth-handoff.js
+          grep -Fq "/api/marketing/handoff/consume" marketing-auth-handoff.js
+          grep -Fq "__Host-ekodi_handoff" marketing-auth-handoff.js
+          grep -Fq "HttpOnly; Secure; SameSite=Lax" marketing-auth-handoff.js
+
+  staging:
+    environment: development
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          test -n "$DOMAIN_CF_TOKEN" || (echo 'Missing Marketing domain Cloudflare API token' && exit 1)
+      - name: Resolve or create isolated Marketing domain staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-marketing-domain-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-marketing-domain-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated staging Worker config
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.marketing-domains.staging.toml <<EOF
+          name = "ekodi-marketing-domain-api-staging"
+          main = "marketing-domain-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+          [triggers]
+          crons = ["*/10 * * * *"]
+
+          [vars]
+          ENVIRONMENT = "staging"
+          ALLOWED_ORIGINS = "https://marketing.ekodi.kr,https://auth.ekodi.kr"
+
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-marketing-domain-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply migrations and deploy isolated staging
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.marketing-domains.staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-domains.staging.toml
+          printf '%s' "$DOMAIN_CF_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put CF_API_TOKEN --config wrangler.marketing-domains.staging.toml
+      - name: Verify staging boundaries
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.marketing-domains.staging.toml --json > /tmp/staging-deployments.json
+          npx --yes wrangler@$WRANGLER_VERSION dev --remote --config wrangler.marketing-domains.staging.toml --ip 127.0.0.1 --port 8793 > /tmp/marketing-domain-remote-dev.log 2>&1 &
+          remote_pid=$!
+          trap 'kill $remote_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8793/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $remote_pid 2>/dev/null; then cat /tmp/marketing-domain-remote-dev.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != '1' ]; then cat /tmp/marketing-domain-remote-dev.log; exit 1; fi
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/health' || true)
+            unauthorized=$(curl -sS -o /tmp/domain-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/domains' || true)
+            store_workspace=$(curl -sS -o /tmp/store-workspace-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
+            store_domains=$(curl -sS -o /tmp/store-domains-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
+            invalid_resolve=$(curl -sS -o /tmp/store-resolve-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/workspace/resolve?host=invalid.example.com' || true)
+            preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://demo.ai.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/workspace/provision' || true)
+            handoff_preflight=$(curl -sS -D /tmp/handoff-options-headers.txt -o /tmp/handoff-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://auth.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/handoff/start' || true)
+            consume_empty=$(curl -sS -D /tmp/handoff-consume-headers.txt -o /tmp/handoff-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://marketing.ekodi.kr' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/handoff/consume' || true)
+            bad_handoff_origin=$(curl -sS -o /tmp/handoff-bad-origin.txt -w '%{http_code}' -X POST -H 'Origin: https://evil.example' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/handoff/consume' || true)
+            if printf '%s' "$health" | grep -Fq '"authHandoff":"httpOnly-cookie"' \
+              && [ "$unauthorized" = '401' ] \
+              && [ "$store_workspace" = '403' ] \
+              && [ "$store_domains" = '403' ] \
+              && [ "$invalid_resolve" = '400' ] \
+              && [ "$preflight" = '204' ] \
+              && [ "$handoff_preflight" = '204' ] \
+              && [ "$consume_empty" = '204' ] \
+              && [ "$bad_handoff_origin" = '403' ] \
+              && grep -Fiq 'access-control-allow-credentials: true' /tmp/handoff-options-headers.txt \
+              && grep -Fiq 'set-cookie: __Host-ekodi_handoff=' /tmp/handoff-consume-headers.txt; then
+              echo 'Marketing domain API isolated staging and URL-free auth boundary verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f wrangler.marketing-domains.staging.toml
+
+  production:
+    needs: [validate, staging]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          test -n "$DOMAIN_CF_TOKEN" || (echo 'Missing Marketing domain Cloudflare API token' && exit 1)
+      - name: Apply production D1 migration after staging success
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-domains.toml
+      - name: Guarded production promotion or first-install bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.marketing-domains.toml --json >/tmp/marketing-domain-status.json 2>/tmp/marketing-domain-status.err; then
+            echo 'Existing production Worker found. Using the normal guarded release.'
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/marketing-domain-api.worker.json
+          elif grep -Eq 'does not exist|10007' /tmp/marketing-domain-status.err; then
+            echo 'First production install detected. Staging has already passed, so bootstrap the isolated Worker once.'
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-domains.toml
+          else
+            cat /tmp/marketing-domain-status.err
+            echo 'Could not safely determine whether this is a first Worker install.'
+            exit 1
+          fi
+      - name: Install server-side Cloudflare provider credential
+        run: printf '%s' "$DOMAIN_CF_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put CF_API_TOKEN --config wrangler.marketing-domains.toml
+      - name: Deep verify production API boundary
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/health' || true)
+            unauthorized=$(curl -sS -o /tmp/domain-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/domains' || true)
+            store_workspace=$(curl -sS -o /tmp/store-workspace-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
+            store_domains=$(curl -sS -o /tmp/store-domains-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
+            invalid_resolve=$(curl -sS -o /tmp/store-resolve-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace/resolve?host=invalid.example.com' || true)
+            handoff_preflight=$(curl -sS -D /tmp/handoff-prod-options-headers.txt -o /tmp/handoff-prod-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://auth.ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/handoff/start' || true)
+            consume_empty=$(curl -sS -D /tmp/handoff-prod-consume-headers.txt -o /tmp/handoff-prod-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://marketing.ekodi.kr' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/handoff/consume' || true)
+            if printf '%s' "$health" | grep -Fq '"authHandoff":"httpOnly-cookie"' \
+              && [ "$unauthorized" = '401' ] \
+              && [ "$store_workspace" = '403' ] \
+              && [ "$store_domains" = '403' ] \
+              && [ "$invalid_resolve" = '400' ] \
+              && [ "$handoff_preflight" = '204' ] \
+              && [ "$consume_empty" = '204' ] \
+              && grep -Fiq 'access-control-allow-credentials: true' /tmp/handoff-prod-options-headers.txt \
+              && grep -Fiq 'set-cookie: __Host-ekodi_handoff=' /tmp/handoff-prod-consume-headers.txt; then
+              echo 'Marketing domain API production and URL-free auth boundary verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
