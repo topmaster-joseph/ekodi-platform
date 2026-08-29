@@ -3,28 +3,20 @@ name: Deploy Delivery Hub AI
 on:
   workflow_dispatch:
   pull_request:
-    paths:
+    paths: &delivery_paths
       - 'delivery/**'
       - 'delivery-worker.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/delivery-hub-ai.test.mjs'
+      - 'supabase/migrations/*delivery*.sql'
       - 'wrangler.delivery.toml'
       - 'wrangler.delivery.staging.toml'
       - 'deploy/manifests/delivery.worker.json'
       - '.github/workflows/deploy-delivery-hub-ai.yml'
   push:
     branches: [main]
-    paths:
-      - 'delivery/**'
-      - 'delivery-worker.js'
-      - 'ekodi-service-manifest.js'
-      - 'platform-boundaries.json'
-      - 'test/delivery-hub-ai.test.mjs'
-      - 'wrangler.delivery.toml'
-      - 'wrangler.delivery.staging.toml'
-      - 'deploy/manifests/delivery.worker.json'
-      - '.github/workflows/deploy-delivery-hub-ai.yml'
+    paths: *delivery_paths
 
 permissions:
   contents: read
@@ -54,17 +46,23 @@ jobs:
           node --check delivery/app.js
           node --check delivery/account.js
           node --check ekodi-service-manifest.js
+          test -f delivery/operations-v2.css
+          test -f supabase/migrations/202608300220_delivery_operations_v2.sql
           node --test test/delivery-hub-ai.test.mjs
           node scripts/validate-constitution.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/delivery.worker.json','utf8'))"
           grep -Fq '배달허브 AI' delivery/index.html
+          grep -Fq 'OPERATIONS V2' delivery/index.html
           grep -Fq '외부 실행 잠금' delivery/index.html
           grep -Fq 'pattern = "ekodi.kr/delivery*"' wrangler.delivery.toml
           grep -Fq 'EXECUTION_ENABLED = "false"' wrangler.delivery.toml
           grep -Fq "id:'delivery'" ekodi-service-manifest.js
           grep -Fq '"delivery"' platform-boundaries.json
+          grep -Fq 'dispatch_executed boolean not null default false check (dispatch_executed = false)' supabase/migrations/202608300220_delivery_operations_v2.sql
+          grep -Fq 'settlement_executed boolean not null default false check (settlement_executed = false)' supabase/migrations/202608300220_delivery_operations_v2.sql
+          grep -Fq 'revoke all on public.delivery_decisions from anon' supabase/migrations/202608300220_delivery_operations_v2.sql
 
   staging:
     needs: validate
@@ -118,32 +116,45 @@ jobs:
           fi
 
           payload='{"order":{"amount":32000,"priority":"speed"},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
+          policy_payload='{"order":{"amount":32000,"priority":"balanced"},"policy":{"id":"joint","maxDeliveryFee":4000,"subsidyType":"fixed","subsidyValue":1000},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
+          workspace_payload='{"role":"tenant_admin","tenant":{"id":"demo"},"stores":[]}'
           for attempt in $(seq 1 12); do
             root=$(curl -L -sS -D /tmp/delivery-headers -o /tmp/delivery.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/delivery" || true)
             health=$(curl -sS -o /tmp/delivery-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/delivery/health" || true)
             recommend=$(curl -sS -o /tmp/delivery-recommend.json -w '%{http_code}' -H 'content-type: application/json' -d "$payload" --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/recommend" || true)
+            policy=$(curl -sS -o /tmp/delivery-policy.json -w '%{http_code}' -H 'content-type: application/json' -d "$policy_payload" --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/recommend" || true)
+            workspace=$(curl -sS -o /tmp/delivery-workspace.json -w '%{http_code}' -H 'content-type: application/json' -d "$workspace_payload" --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/workspace-model" || true)
             block=$(curl -sS -o /tmp/delivery-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{}' --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/dispatch" || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$block" == '409' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$policy" == '200' && "$workspace" == '200' && "$block" == '409' ]] \
               && grep -Fq '배달허브 AI' /tmp/delivery.html \
+              && grep -Fq 'OPERATIONS V2' /tmp/delivery.html \
               && grep -Fq '"canonicalPath":"/delivery"' /tmp/delivery-health.json \
+              && grep -Fq '"operationsVersion":2' /tmp/delivery-health.json \
+              && grep -Fq '"schemaContract":"delivery_operations_v2"' /tmp/delivery-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/delivery-health.json \
               && grep -Fq '"executionEnabled":false' /tmp/delivery-health.json \
               && grep -Fq '"recommendedProviderId":"b"' /tmp/delivery-recommend.json \
+              && grep -Fq '"recommendedProviderId":"a"' /tmp/delivery-policy.json \
+              && grep -Fq '"subsidy":1000' /tmp/delivery-policy.json \
+              && grep -Fq '"role":"tenant_admin"' /tmp/delivery-workspace.json \
+              && grep -Fq '"executionEnabled":false' /tmp/delivery-workspace.json \
               && grep -Fq '"dispatchExecuted":false' /tmp/delivery-recommend.json \
               && grep -Fq '"reason":"official_adapter_required"' /tmp/delivery-block.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/delivery-headers; then
               if [[ "$remote_protected" == '1' ]]; then
-                echo 'Delivery staging deployment exists, Access remains enforced, and the exact staging configuration passes its local runtime contract.'
+                echo 'Delivery Operations V2 staging exists behind Access and the exact local runtime contract passes.'
               else
-                echo 'Delivery Hub AI Development staging verified remotely with external execution locked.'
+                echo 'Delivery Operations V2 Development staging verified remotely with external execution locked.'
               fi
               exit 0
             fi
             sleep 3
           done
-          echo 'Delivery Hub AI Development staging verification failed.'
+          echo 'Delivery Operations V2 Development verification failed.'
           cat /tmp/delivery-access.headers || true
           cat /tmp/delivery-health.json || true
+          cat /tmp/delivery-policy.json || true
+          cat /tmp/delivery-workspace.json || true
           cat /tmp/delivery-local.log 2>/dev/null || true
           exit 1
 
@@ -186,28 +197,41 @@ jobs:
         run: |
           set -euo pipefail
           payload='{"order":{"amount":32000,"priority":"speed"},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
+          policy_payload='{"order":{"amount":32000,"priority":"balanced"},"policy":{"id":"joint","maxDeliveryFee":4000,"subsidyType":"fixed","subsidyValue":1000},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
+          workspace_payload='{"role":"tenant_admin","tenant":{"id":"demo"},"stores":[]}'
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/delivery-headers -o /tmp/delivery.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery' || true)
             health=$(curl -sS -o /tmp/delivery-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/health' || true)
             recommend=$(curl -sS -o /tmp/delivery-recommend.json -w '%{http_code}' -H 'content-type: application/json' -d "$payload" --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/api/recommend' || true)
+            policy=$(curl -sS -o /tmp/delivery-policy.json -w '%{http_code}' -H 'content-type: application/json' -d "$policy_payload" --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/api/recommend' || true)
+            workspace=$(curl -sS -o /tmp/delivery-workspace.json -w '%{http_code}' -H 'content-type: application/json' -d "$workspace_payload" --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/api/workspace-model' || true)
             block=$(curl -sS -o /tmp/delivery-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/api/dispatch' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/delivery-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/admin' || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$block" == '409' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$policy" == '200' && "$workspace" == '200' && "$block" == '409' ]] \
               && grep -Fq '배달허브 AI' /tmp/delivery.html \
+              && grep -Fq 'OPERATIONS V2' /tmp/delivery.html \
               && grep -Fq '"canonicalPath":"/delivery"' /tmp/delivery-health.json \
+              && grep -Fq '"operationsVersion":2' /tmp/delivery-health.json \
+              && grep -Fq '"schemaContract":"delivery_operations_v2"' /tmp/delivery-health.json \
               && grep -Fq '"dataMode":"production"' /tmp/delivery-health.json \
               && grep -Fq '"executionEnabled":false' /tmp/delivery-health.json \
               && grep -Fq '"recommendedProviderId":"b"' /tmp/delivery-recommend.json \
+              && grep -Fq '"recommendedProviderId":"a"' /tmp/delivery-policy.json \
+              && grep -Fq '"subsidy":1000' /tmp/delivery-policy.json \
+              && grep -Fq '"role":"tenant_admin"' /tmp/delivery-workspace.json \
+              && grep -Fq '"executionEnabled":false' /tmp/delivery-workspace.json \
               && grep -Fq '"dispatchExecuted":false' /tmp/delivery-recommend.json \
               && grep -Fq '"reason":"official_adapter_required"' /tmp/delivery-block.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/delivery-headers \
               && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/delivery-admin-headers; then
-              echo 'Delivery Hub AI production verified on https://ekodi.kr/delivery.'
+              echo 'Delivery Hub AI Operations V2 production verified on https://ekodi.kr/delivery.'
               exit 0
             fi
             sleep 5
           done
           cat /tmp/delivery-health.json || true
+          cat /tmp/delivery-policy.json || true
+          cat /tmp/delivery-workspace.json || true
           exit 1
       - name: Publish production verification status
         if: always()
@@ -221,4 +245,4 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"Delivery Hub AI Production\",\"description\":\"ekodi.kr/delivery production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
+            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"Delivery Hub AI Production\",\"description\":\"ekodi.kr/delivery Operations V2 verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

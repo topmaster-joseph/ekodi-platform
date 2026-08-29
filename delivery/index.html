@@ -3,89 +3,120 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="여러 주문과 배달을 하나로 연결하고 비용·시간·정산을 더 잘 판단하는 배달허브 AI">
+  <meta name="description" content="기관·단체·상가의 주문·배달·공동지원금·정산을 하나의 운영 흐름으로 연결하는 배달허브 AI">
   <title>배달허브 AI | EKODI</title>
   <link rel="stylesheet" href="/delivery/styles.css">
+  <link rel="stylesheet" href="/delivery/operations-v2.css">
 </head>
 <body>
   <header class="app-header" data-ekodi-fixed-header>
     <a class="brand" href="/delivery" aria-label="배달허브 AI 홈"><span class="brand-mark">DH</span><span>배달허브 AI</span></a>
-    <div class="account" id="ekodiAccount" data-state="loading">
-      <span id="ekodiAccountText">계정 확인 중</span>
-      <button type="button" id="ekodiAccountAction" hidden>EKODI 로그인</button>
-      <small id="ekodiAccountDetail" hidden></small>
-    </div>
+    <div class="account" id="ekodiAccount" data-state="loading"><span id="ekodiAccountText">계정 확인 중</span><button type="button" id="ekodiAccountAction" hidden>EKODI 로그인</button><small id="ekodiAccountDetail" hidden></small></div>
   </header>
 
   <main>
     <section class="hero" id="publicGuide">
       <div class="hero-copy">
-        <p class="eyebrow">DELIVERY HUB AI</p>
+        <p class="eyebrow">DELIVERY OPERATIONS HUB</p>
         <h1>흩어진 주문과 배달을<br>하나의 운영 흐름으로.</h1>
-        <p class="lead">배달앱을 새로 만드는 대신, 매장과 기관이 이미 쓰는 주문·배달망 위에서 비용·시간·정산을 비교하고 더 나은 선택을 돕습니다.</p>
-        <div class="hero-actions">
-          <button class="primary" type="button" id="heroLogin">Google로 시작</button>
-          <a class="secondary" href="#how">어떻게 작동하나요?</a>
-        </div>
-        <p class="micro">로그인 전에는 안내만 제공합니다. 실제 운영공간은 EKODI 무료회원 이상에게 열립니다.</p>
+        <p class="lead">새 배달앱을 만드는 대신, 기관·단체·상가가 이미 쓰는 주문망과 배달망 위에서 비용·시간·공동지원금·정산을 함께 관리합니다.</p>
+        <div class="hero-actions"><button class="primary" type="button" id="heroLogin">Google로 시작</button><a class="secondary" href="#how">운영 구조 보기</a></div>
+        <p class="micro">로그인 전에는 안내만 제공합니다. 실제 운영공간과 데이터는 EKODI 회원 권한과 RLS 경계 안에서만 열립니다.</p>
       </div>
-      <div class="decision-card" aria-label="AI 추천 예시">
-        <div class="decision-top"><span>AI 배차 추천</span><span class="status-dot">실행 전 확인</span></div>
-        <strong>대행 B 추천</strong>
-        <p>대행 A보다 400원 높지만 예상 도착이 9분 빠릅니다. 속도 우선 주문에 적합합니다.</p>
-        <div class="decision-grid"><span>예상 배달비 <b>4,200원</b></span><span>예상 시간 <b>19분</b></span><span>외부 배차 <b>자동 실행 안 함</b></span></div>
+      <div class="decision-card" aria-label="운영정책 예시">
+        <div class="decision-top"><span>공동배달 운영정책</span><span class="status-dot">외부 실행 잠금</span></div>
+        <strong>정책 안에서 추천</strong>
+        <p>최대 배달비·허용 대행사·신뢰도·지원금·승인 기준을 먼저 적용한 뒤 가장 적합한 배달망을 추천합니다.</p>
+        <div class="decision-grid"><span>공동지원금 <b>자동 계산</b></span><span>기관·상가 분리 <b>RLS 적용</b></span><span>실제 자동배차 <b>공식 Adapter 후</b></span></div>
       </div>
     </section>
 
     <section class="feature-grid" id="how">
-      <article><span>01</span><h2>주문을 모읍니다</h2><p>배달앱·QR·전화·자체몰·기관 배송요청을 하나의 표준 주문 흐름으로 연결합니다.</p></article>
-      <article><span>02</span><h2>배달망을 비교합니다</h2><p>이미 계약한 대행사나 자체 배송수단의 비용·예상시간·신뢰도를 비교합니다.</p></article>
-      <article><span>03</span><h2>AI가 판단을 돕습니다</h2><p>가장 싼 선택만 찾지 않고 주문 우선순위에 따라 비용·시간·안정성의 균형을 계산합니다.</p></article>
-      <article><span>04</span><h2>정산을 한눈에 봅니다</h2><p>배달비·고객부담·매장부담·공동지원금을 미리 계산해 월말 정산의 실마리를 만듭니다.</p></article>
+      <article><span>01</span><h2>공간을 구분합니다</h2><p>기관·단체·상권과 각 상가를 기존 EKODI tenant/store 구조로 구분해 중복 회원체계를 만들지 않습니다.</p></article>
+      <article><span>02</span><h2>운영정책을 적용합니다</h2><p>허용 대행사, 최대 배달비, 목표시간, 신뢰도, 승인 기준을 공간별로 관리합니다.</p></article>
+      <article><span>03</span><h2>지원금을 분담합니다</h2><p>고객·상가·상인회·기관의 배달비 부담을 규칙으로 계산하고 주문별 합계를 검산합니다.</p></article>
+      <article><span>04</span><h2>정산을 남깁니다</h2><p>AI 판단기록과 정산 초안을 권한별로 저장하되 실제 배차·송금은 공식 연결과 확인 전까지 잠급니다.</p></article>
     </section>
 
     <section class="workspace" id="memberWorkspace" hidden aria-labelledby="workspaceTitle">
-      <div class="workspace-head">
-        <div><p class="eyebrow">MEMBER WORKSPACE · MVP</p><h2 id="workspaceTitle">오늘의 배달 운영</h2><p>현재 단계는 공식 배차 실행 전의 비교·판단·정산 미리보기입니다.</p></div>
-        <div class="guard-badge">외부 실행 잠금</div>
-      </div>
+      <div class="workspace-head"><div><p class="eyebrow">MEMBER WORKSPACE · OPERATIONS V2</p><h2 id="workspaceTitle">공동 배달 운영</h2><p>기관·단체·상가의 운영정책을 적용해 추천·지원금·정산 초안을 함께 관리합니다.</p></div><div class="guard-badge">외부 실행 잠금</div></div>
+
+      <section class="context-bar panel" aria-label="운영공간 선택">
+        <div><p class="eyebrow">OPERATING SPACE</p><strong id="workspaceContextLabel">운영공간 불러오는 중</strong><small id="workspaceSyncStatus">중앙 데이터 확인 중</small></div>
+        <label>기관·단체<select id="tenantSelect"><option value="">선택</option></select></label>
+        <label>상가·매장<select id="storeSelect"><option value="">기관 전체</option></select></label>
+        <span class="role-badge" id="roleBadge">member</span>
+      </section>
 
       <div class="metric-grid">
-        <article><small>등록 요청</small><strong id="metricOrders">0</strong><span>이 브라우저</span></article>
-        <article><small>평균 배달비</small><strong id="metricFee">0원</strong><span>등록 데이터 기준</span></article>
-        <article><small>지연 위험</small><strong id="metricDelay">0</strong><span>확인 필요</span></article>
-        <article><small>공식 연동</small><strong>0개</strong><span>Adapter 준비 단계</span></article>
+        <article><small>AI 판단기록</small><strong id="metricOrders">0</strong><span>선택 공간</span></article>
+        <article><small>평균 배달비</small><strong id="metricFee">0원</strong><span>최근 데이터</span></article>
+        <article><small>공동지원금</small><strong id="metricSubsidy">0원</strong><span>최근 데이터</span></article>
+        <article><small>공식 Adapter</small><strong id="metricAdapters">0</strong><span>외부 실행은 계속 잠금</span></article>
       </div>
 
       <div class="workspace-grid">
         <section class="panel">
-          <div class="panel-head"><div><p class="eyebrow">NEW REQUEST</p><h3>배달 비교 요청</h3></div><span class="chip">수동 입력 MVP</span></div>
+          <div class="panel-head"><div><p class="eyebrow">NEW DECISION</p><h3>배달 비교 요청</h3></div><span class="chip">정책 반영</span></div>
           <form id="recommendForm">
             <div class="form-grid compact">
               <label>주문 금액<input name="orderAmount" type="number" min="0" step="100" value="32000" required></label>
-              <label>우선순위<select name="priority"><option value="balanced">균형</option><option value="cost">비용</option><option value="speed">속도</option></select></label>
+              <label>운영정책<select name="policyId" id="policySelect"><option value="">기본 정책</option></select></label>
+              <label>우선순위<select name="priority"><option value="balanced">정책/균형</option><option value="cost">비용</option><option value="speed">속도</option></select></label>
+              <label>주문 참조<input name="orderRef" maxlength="80" placeholder="선택 입력"></label>
             </div>
             <div class="provider-inputs">
               <div class="provider-row"><strong>대행 A</strong><label>배달비<input name="aFee" type="number" min="0" step="100" value="3800" required></label><label>예상 분<input name="aEta" type="number" min="1" value="28" required></label></div>
               <div class="provider-row"><strong>대행 B</strong><label>배달비<input name="bFee" type="number" min="0" step="100" value="4200" required></label><label>예상 분<input name="bEta" type="number" min="1" value="19" required></label></div>
               <div class="provider-row"><strong>지역 대행</strong><label>배달비<input name="cFee" type="number" min="0" step="100" value="3500" required></label><label>예상 분<input name="cEta" type="number" min="1" value="34" required></label></div>
             </div>
-            <button class="primary full" type="submit">AI 추천 계산</button>
+            <button class="primary full" type="submit">정책 적용 AI 추천</button>
           </form>
         </section>
 
-        <section class="panel result-panel" aria-live="polite">
-          <div class="panel-head"><div><p class="eyebrow">DECISION SUPPORT</p><h3>추천 결과</h3></div><span class="chip">자동배차 없음</span></div>
-          <div id="recommendResult" class="empty-state">조건을 입력하면 비용·시간·신뢰도 균형을 계산합니다.</div>
+        <section class="panel result-panel" aria-live="polite"><div class="panel-head"><div><p class="eyebrow">DECISION SUPPORT</p><h3>추천 결과</h3></div><span class="chip">자동배차 없음</span></div><div id="recommendResult" class="empty-state">운영공간과 조건을 선택하면 정책 안에서 추천합니다.</div></section>
+      </div>
+
+      <div class="workspace-grid">
+        <section class="panel">
+          <div class="panel-head"><div><p class="eyebrow">DELIVERY POLICY</p><h3>공간 운영정책</h3></div><span class="chip" id="policyPermission">조회</span></div>
+          <form id="policyForm">
+            <div class="form-grid">
+              <label>정책명<input name="name" value="공동배달 기본정책" maxlength="120"></label>
+              <label>최대 배달비<input name="maxDeliveryFee" type="number" min="0" step="100" value="5000"></label>
+              <label>승인 기준 배달비<input name="approvalFeeThreshold" type="number" min="0" step="100" value="4500"></label>
+              <label>최소 신뢰도 %<input name="minimumReliability" type="number" min="0" max="100" value="80"></label>
+              <label>지원 방식<select name="subsidyType"><option value="none">없음</option><option value="fixed" selected>정액</option><option value="percent">비율</option></select></label>
+              <label>지원 값<input name="subsidyValue" type="number" min="0" step="100" value="1000"></label>
+              <label>지원 상한<input name="subsidyCap" type="number" min="0" step="100" value="1000"></label>
+              <label>고객 최소부담<input name="customerMinShare" type="number" min="0" step="100" value="0"></label>
+            </div>
+            <button class="secondary full" id="savePolicy" type="submit">이 공간에 정책 저장</button>
+          </form>
+          <p class="micro" id="policyMessage">tenant_admin 또는 상가 운영권한이 있을 때 저장할 수 있습니다.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><p class="eyebrow">PROVIDER CONNECTION</p><h3>배달대행 연결</h3></div><span class="chip">비밀값 저장 안 함</span></div>
+          <form id="providerForm">
+            <div class="form-grid">
+              <label>대행사명<input name="name" maxlength="120" placeholder="예: 지역 공동배달"></label>
+              <label>연결 키<input name="providerKey" maxlength="64" placeholder="local-agency"></label>
+              <label>유형<select name="providerType"><option value="agency">배달대행사</option><option value="self">자체배송</option><option value="platform">플랫폼</option><option value="manual">수동</option></select></label>
+              <label>메모<input name="note" maxlength="300" placeholder="계약/담당자 메모(비밀값 금지)"></label>
+            </div>
+            <button class="secondary full" id="saveProvider" type="submit">연결 메타데이터 저장</button>
+          </form>
+          <div id="providerList" class="brief-list"><p>등록된 연결을 불러오는 중입니다.</p></div>
         </section>
       </div>
 
       <div class="workspace-grid lower">
         <section class="panel"><div class="panel-head"><div><p class="eyebrow">OPERATIONS BRIEF</p><h3>AI 운영 브리프</h3></div></div><div id="operationsBrief" class="brief-list"><p>등록된 운영 데이터가 없습니다.</p></div></section>
-        <section class="panel"><div class="panel-head"><div><p class="eyebrow">CONNECTIONS</p><h3>연결 상태</h3></div></div><ul class="connection-list"><li><span>배달앱 주문</span><b>공식 Adapter 준비</b></li><li><span>배달대행사</span><b>기존 계약 연결 방식</b></li><li><span>외부 자동배차</span><b class="locked">잠금</b></li><li><span>정산</span><b>미리보기만</b></li></ul></section>
+        <section class="panel"><div class="panel-head"><div><p class="eyebrow">SETTLEMENT</p><h3>공동정산 미리보기</h3></div><button class="text-button" type="button" id="saveSettlement">초안 저장</button></div><div id="settlementPreview" class="brief-list"><p>최근 판단기록을 기반으로 정산 구조를 계산합니다.</p></div></section>
       </div>
 
-      <section class="panel recent-panel"><div class="panel-head"><div><p class="eyebrow">LOCAL HISTORY</p><h3>최근 비교 기록</h3></div><button class="text-button" type="button" id="clearHistory">기록 비우기</button></div><div id="historyList" class="history-list"><p class="empty-state">아직 기록이 없습니다.</p></div></section>
+      <section class="panel recent-panel"><div class="panel-head"><div><p class="eyebrow">AUDITABLE DECISIONS</p><h3>최근 AI 판단기록</h3></div><button class="text-button" type="button" id="refreshWorkspace">새로고침</button></div><div id="historyList" class="history-list"><p class="empty-state">아직 기록이 없습니다.</p></div></section>
     </section>
   </main>
 
