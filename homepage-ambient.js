@@ -17,7 +17,7 @@
   const localeOptions = [
     { code:'ko-KR', short:'KO', label:'한국어' },
     { code:'en', short:'EN', label:'English' },
-    { code:'zh-CN', short:'中', label:'中文(简体)' },
+    { code:'zh-CN', short:'ZH', label:'中文' },
     { code:'ja', short:'JA', label:'日本語' },
   ];
 
