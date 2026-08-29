@@ -89,7 +89,9 @@ export function getAdminMenuGroupForSection(section) {
 
 export function getAdminMenuGroupDefault(id) {
   const group = getAdminMenuGroup(id);
-  return group?.defaultSection || 'campus';
+  if (!group) return 'campus';
+  const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal);
+  return firstVisibleChild?.id || group.defaultSection || 'campus';
 }
 
 export function adminMenuGroups() {
