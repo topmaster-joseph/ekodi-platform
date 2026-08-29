@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-// CI verification marker: corrected posting-status contract, 2026-08-29.
 const js = readFileSync(new URL('../marketing-ai-admin-posting-status.js', import.meta.url), 'utf8');
 const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 
@@ -14,27 +13,35 @@ test('posting status is an authenticated Marketing admin subview', () => {
   assert.match(js, /authorization/);
 });
 
-test('posting ledger derives only stored campaign and audit state', () => {
+test('posting ledger prefers authoritative publication jobs and real external post urls', () => {
+  assert.match(js, /actualPublicationRows/);
+  assert.match(js, /data\?\.publicationJobs/);
+  assert.match(js, /externalPostUrl/);
+  assert.match(js, /postingEngine/);
+  assert.match(js, /scheduledPublications/);
+  assert.match(js, /publishedPublications/);
+  assert.match(js, /failedPublications/);
+  assert.match(js, /retryingPublications/);
+  assert.match(js, /게시 대기/);
+  assert.match(js, /게시중/);
+  assert.match(js, /게시완료/);
+  assert.match(js, /인증 필요/);
+  assert.match(js, /재시도/);
+  assert.match(js, /수집 전/);
+  assert.match(js, /실제 publication job 원장을 우선 사용합니다/);
+});
+
+test('posting ledger keeps rollout fallback but never mutates external channels', () => {
+  assert.match(js, /fallbackPublicationRows/);
   assert.match(js, /automationActions/);
   assert.match(js, /campaigns/);
   assert.match(js, /POSTING_ACTION_RE/);
-  assert.match(js, /publicationRows/);
-  assert.match(js, /작성중/);
-  assert.match(js, /예약/);
-  assert.match(js, /게시완료/);
-  assert.match(js, /실패/);
-  assert.match(js, /재시도/);
-  assert.match(js, /수집 전/);
-  assert.match(js, /외부 게시 성공을 확인하지 못한 항목을 임의로/);
-});
-
-test('posting view does not execute or mutate external channels', () => {
   assert.doesNotMatch(js, /method\s*:\s*['"]POST['"]/);
   assert.doesNotMatch(js, /method\s*:\s*['"]PUT['"]/);
   assert.doesNotMatch(js, /method\s*:\s*['"]DELETE['"]/);
-  assert.match(js, /postingPublisher\?\.connected/);
-  assert.match(js, /Metricool \/ 게시 실행자/);
-  assert.match(js, /게시 어댑터 연결 대기/);
+  assert.match(js, /게시 실행 엔진/);
+  assert.match(js, /활성 게시 채널 없음/);
+  assert.match(js, /외부 게시 성공을 확인하지 못한 항목을 임의로/);
 });
 
 test('posting status is bundled into the existing on-demand Marketing admin asset', () => {
