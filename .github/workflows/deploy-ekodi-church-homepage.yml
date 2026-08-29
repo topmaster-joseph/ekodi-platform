@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate Church source, footer and navigation
+      - name: Validate Church source, footer and media routes
         shell: bash
         run: |
           set -euo pipefail
@@ -68,7 +68,8 @@ jobs:
           grep -Fq 'aria-label="에코디교회 홈"' church/index.html
           grep -Fq '<strong>에코디교회</strong>' church/index.html
           grep -Fq 'class="daily-verse"' church/index.html
-          grep -Fq '오늘의 말씀' church/index.html
+          grep -Fq 'class="daily-verse-text"' church/index.html
+          assert_absent 'class="daily-verse-label"' church/index.html
           grep -Fq 'class="shell-my"' church/index.html
           grep -Fq 'https://my.ekodi.kr/' church/index.html
           assert_absent 'EKODI교회' church/index.html
@@ -78,6 +79,10 @@ jobs:
           grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' church/index.html
           grep -Fq 'class="online-triad"' church/index.html
           grep -Fq '>유튜브 예배<' church/index.html
+          grep -Fq 'https://www.youtube.com/@ekodichurch/videos' church/index.html
+          grep -Fq 'class="button primary youtube-worship-link"' church/index.html
+          grep -Fq 'referrerpolicy="strict-origin-when-cross-origin"' church/index.html
+          grep -Fq 'origin=https%3A%2F%2Fchurch.ekodi.kr' church/index.html
           grep -Fq '>묵상<' church/index.html
           grep -Fq '>실시간 화상<' church/index.html
           grep -Fq 'class="community-visit"' church/index.html
@@ -98,6 +103,10 @@ jobs:
 
           grep -Fq "headerBrandName.textContent = '에코디교회'" church/script.js
           grep -Fq 'dailyScriptures' church/script.js
+          grep -Fq 'dailyVerse.innerHTML = '\''<span class="daily-verse-text"></span><span class="daily-verse-ref"></span>'\''' church/script.js
+          grep -Fq "channel.provider !== 'youtube'" church/script.js
+          grep -Fq 'youtubePlaylistUrl' church/script.js
+          grep -Fq 'strict-origin-when-cross-origin' church/script.js
           grep -Fq 'https://social.ekodi.kr/?org=church' church/script.js
           grep -Fq 'https://api.ekodi.kr/api/social/registry' church/script.js
           assert_absent "label: '서비스 전환'" church/script.js
@@ -110,6 +119,9 @@ jobs:
           grep -Fq 'api.tosspayments.com/v1/payments/confirm' church/functions/api/giving/confirm.js
 
           grep -Fq '.daily-verse{' church/community-visual.css
+          grep -Fq 'font-size:16px;' church/community-visual.css
+          grep -Fq '.daily-verse-label,.daily-verse-ref{display:none!important}' church/community-visual.css
+          grep -Fq '.youtube-direct-actions{' church/community-visual.css
           grep -Fq 'grid-template-columns:auto minmax(220px,1fr) auto' church/community-visual.css
           grep -Fq 'background:rgba(244,240,229,.96);' church/community-visual.css
           grep -Fq '.giving-dialog{' church/community-visual.css
@@ -147,7 +159,7 @@ jobs:
           address_count = source.count('백련동1길 17-4')
           if address_count != 2:
               raise SystemExit(f'church address placement unexpected: address_count={address_count}')
-          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets; church footer audit ok')
+          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets; church footer/media audit ok')
           PY
 
       - name: Prepare static Pages payload
@@ -180,11 +192,11 @@ jobs:
             --branch main \
             --commit-dirty=true
 
-      - name: Verify production church footer and giving runtime
+      - name: Verify production scripture, YouTube route, footer and giving runtime
         shell: bash
         run: |
           set -euo pipefail
-          release='church-footer-20260830-1'
+          release='church-scripture-youtube-20260830-1'
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-refresh.css?release=${release}" || true)
@@ -199,11 +211,13 @@ jobs:
             legacy_social=0
             legacy_footer=0
             legacy_policy=0
+            verse_label=0
             grep -Fq 'EKODI교회' /tmp/church.html && legacy_name=1 || true
             grep -Fq 'class="shell-switch"' /tmp/church.html && legacy_switch=1 || true
             grep -Fq 'data-ekodi-social="true"' /tmp/church.html && legacy_social=1 || true
             grep -Fq 'class="brand footer-brand"' /tmp/church.html && legacy_footer=1 || true
             grep -Fq '독립 운영주체 또는 개별 서비스에 별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다.' /tmp/church.html && legacy_policy=1 || true
+            grep -Fq 'class="daily-verse-label"' /tmp/church.html && verse_label=1 || true
 
             address_count=$(grep -Fo '백련동1길 17-4' /tmp/church.html | wc -l | tr -d ' ')
             config_valid=0
@@ -212,11 +226,14 @@ jobs:
             fi
 
             if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$footer_code" == '200' && "$script_code" == '200' && "$giving_code" == '200' && "$config_code" == '200' ]] \
-              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' && "$legacy_footer" == '0' && "$legacy_policy" == '0' && "$address_count" == '2' && "$config_valid" == '1' ]] \
+              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' && "$legacy_footer" == '0' && "$legacy_policy" == '0' && "$verse_label" == '0' && "$address_count" == '2' && "$config_valid" == '1' ]] \
               && grep -Fq '<title>에코디교회 |' /tmp/church.html \
               && grep -Fq 'aria-label="에코디교회 홈"' /tmp/church.html \
               && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
-              && grep -Fq 'class="daily-verse"' /tmp/church.html \
+              && grep -Fq 'class="daily-verse-text"' /tmp/church.html \
+              && grep -Fq 'https://www.youtube.com/@ekodichurch/videos' /tmp/church.html \
+              && grep -Fq 'referrerpolicy="strict-origin-when-cross-origin"' /tmp/church.html \
+              && grep -Fq 'origin=https%3A%2F%2Fchurch.ekodi.kr' /tmp/church.html \
               && grep -Fq 'class="online-triad"' /tmp/church.html \
               && grep -Fq 'class="community-visit"' /tmp/church.html \
               && grep -Fq 'id="giving-dialog"' /tmp/church.html \
@@ -229,25 +246,52 @@ jobs:
               && grep -Fq '© 2026 EKODI CHURCH' /tmp/church.html \
               && grep -Fq 'class="shell-my"' /tmp/church.html \
               && grep -Fq '.daily-verse{' /tmp/community-visual.css \
+              && grep -Fq 'font-size:16px;' /tmp/community-visual.css \
+              && grep -Fq '.daily-verse-label,.daily-verse-ref{display:none!important}' /tmp/community-visual.css \
+              && grep -Fq '.youtube-direct-actions{' /tmp/community-visual.css \
               && grep -Fq 'background:rgba(244,240,229,.96);' /tmp/community-visual.css \
               && grep -Fq '.site-footer.church-footer{' /tmp/church-footer.css \
               && grep -Fq '.church-footer-inner{' /tmp/church-footer.css \
               && grep -Fq 'justify-items:center' /tmp/church-footer.css \
               && grep -Fq 'https://js.tosspayments.com/v2/standard' /tmp/giving.js \
+              && grep -Fq "channel.provider !== 'youtube'" /tmp/script.js \
+              && grep -Fq 'youtubePlaylistUrl' /tmp/script.js \
               && grep -Fq "headerBrandName.textContent = '에코디교회'" /tmp/script.js \
               && grep -Fq 'dailyScriptures' /tmp/script.js; then
-              echo 'Church production source, dedicated footer and giving runtime verified.'
+              echo 'Church production scripture, YouTube route, footer and giving runtime verified.'
               node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); console.log('giving_payment_enabled=' + x.enabled)"
               break
             fi
 
             if [[ "$attempt" == '18' ]]; then
-              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social legacy_footer=$legacy_footer legacy_policy=$legacy_policy address_count=$address_count config_valid=$config_valid"
+              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social legacy_footer=$legacy_footer legacy_policy=$legacy_policy verse_label=$verse_label address_count=$address_count config_valid=$config_valid"
               exit 1
             fi
-            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code legacy_footer=$legacy_footer legacy_policy=$legacy_policy address_count=$address_count config_valid=$config_valid"
+            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code verse_label=$verse_label address_count=$address_count config_valid=$config_valid"
             sleep 5
           done
+
+      - name: Verify YouTube worship destination and embed endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
+          channel='https://www.youtube.com/@ekodichurch/videos'
+          embed='https://www.youtube-nocookie.com/embed/videoseries?list=UUnp_LXmJBcJRX7CgJT9FF7w&rel=0&playsinline=1&origin=https%3A%2F%2Fchurch.ekodi.kr'
+
+          channel_code=$(curl -L -A "$user_agent" -sS -o /tmp/youtube-channel.html -w '%{http_code}' --connect-timeout 8 --max-time 25 "$channel" || true)
+          embed_code=$(curl -L -A "$user_agent" -e 'https://church.ekodi.kr/' -sS -o /tmp/youtube-embed.html -w '%{http_code}' --connect-timeout 8 --max-time 25 "$embed" || true)
+
+          case "$channel_code" in
+            2*|3*) echo "YouTube channel route reachable: $channel_code" ;;
+            429) echo 'YouTube channel route reachable but rate-limited by YouTube (429).' ;;
+            *) echo "YouTube channel route failed: $channel_code"; exit 1 ;;
+          esac
+          case "$embed_code" in
+            2*|3*) echo "YouTube embed endpoint reachable with church referrer: $embed_code" ;;
+            429) echo 'YouTube embed endpoint reachable but rate-limited by YouTube (429).' ;;
+            *) echo "YouTube embed endpoint failed: $embed_code"; exit 1 ;;
+          esac
 
       - name: Verify every linked first-party EKODI service
         shell: bash
