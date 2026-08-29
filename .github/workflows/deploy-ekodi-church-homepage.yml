@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate Church source and navigation
+      - name: Validate Church source, footer and navigation
         shell: bash
         run: |
           set -euo pipefail
@@ -55,6 +55,7 @@ jobs:
           test -f church/index.html
           test -f church/church-refresh.css
           test -f church/community-visual.css
+          test -f church/church-footer.css
           test -f church/script.js
           test -f church/giving.js
           test -f church/functions/api/giving/config.js
@@ -83,8 +84,15 @@ jobs:
           grep -Fq '함께 예배하고,' church/index.html
           grep -Fq 'id="giving"' church/index.html
           grep -Fq 'id="giving-dialog"' church/index.html
-          grep -Fq '<footer class="site-footer">' church/index.html
-          grep -Fq '© 2026 에코디교회 · EKODI CHURCH' church/index.html
+          grep -Fq '<footer class="site-footer church-footer">' church/index.html
+          grep -Fq '<strong class="church-footer-brand">EKODI CHURCH</strong>' church/index.html
+          grep -Fq '사업자 소재지 전남 무안군 청계면 백련동1길 17-4, 1층' church/index.html
+          grep -Fq '운영주체 에코디교회' church/index.html
+          grep -Fq '대표 정찬균' church/index.html
+          grep -Fq '고유번호 213-13-01959' church/index.html
+          grep -Fq 'mailto:ekodichurch@gmail.com' church/index.html
+          grep -Fq '© 2026 EKODI CHURCH' church/index.html
+          assert_absent '독립 운영주체 또는 개별 서비스에 별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다.' church/index.html
           assert_absent 'class="brand footer-brand"' church/index.html
           grep -Fq 'https://community.ekodi.kr' church/index.html
 
@@ -104,9 +112,11 @@ jobs:
           grep -Fq '.daily-verse{' church/community-visual.css
           grep -Fq 'grid-template-columns:auto minmax(220px,1fr) auto' church/community-visual.css
           grep -Fq 'background:rgba(244,240,229,.96);' church/community-visual.css
-          grep -Fq '.site-footer-inner{' church/community-visual.css
-          grep -Fq 'place-items:center' church/community-visual.css
           grep -Fq '.giving-dialog{' church/community-visual.css
+          grep -Fq '.site-footer.church-footer{' church/church-footer.css
+          grep -Fq '.church-footer-inner{' church/church-footer.css
+          grep -Fq 'justify-items:center' church/church-footer.css
+          grep -Fq '.church-footer-info{' church/church-footer.css
 
           python - <<'PY'
           from html.parser import HTMLParser
@@ -126,17 +136,18 @@ jobs:
                       self.anchors.append(href[1:])
 
           parser = Audit()
-          parser.feed(Path('church/index.html').read_text(encoding='utf-8'))
+          source = Path('church/index.html').read_text(encoding='utf-8')
+          parser.feed(source)
           duplicates = sorted({x for x in parser.ids if parser.ids.count(x) > 1})
           missing = sorted(set(parser.anchors) - set(parser.ids))
           if duplicates:
               raise SystemExit(f'duplicate ids: {duplicates}')
           if missing:
               raise SystemExit(f'missing anchor targets: {missing}')
-          address_count = Path('church/index.html').read_text(encoding='utf-8').count('백련동1길 17-4')
-          if address_count != 1:
-              raise SystemExit(f'footer/location duplication detected: address_count={address_count}')
-          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets; footer duplication audit ok')
+          address_count = source.count('백련동1길 17-4')
+          if address_count != 2:
+              raise SystemExit(f'church address placement unexpected: address_count={address_count}')
+          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets; church footer audit ok')
           PY
 
       - name: Prepare static Pages payload
@@ -149,6 +160,7 @@ jobs:
           test -s /tmp/ekodi-church-pages/index.html
           test -s /tmp/ekodi-church-pages/church-refresh.css
           test -s /tmp/ekodi-church-pages/community-visual.css
+          test -s /tmp/ekodi-church-pages/church-footer.css
           test -s /tmp/ekodi-church-pages/script.js
           test -s /tmp/ekodi-church-pages/giving.js
           test -s /tmp/ekodi-church-pages/functions/api/giving/config.js
@@ -168,15 +180,16 @@ jobs:
             --branch main \
             --commit-dirty=true
 
-      - name: Verify production source, footer and giving runtime
+      - name: Verify production church footer and giving runtime
         shell: bash
         run: |
           set -euo pipefail
-          release='church-giving-20260830-1'
+          release='church-footer-20260830-1'
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-refresh.css?release=${release}" || true)
             visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/community-visual.css?release=${release}" || true)
+            footer_code=$(curl -L -sS -o /tmp/church-footer.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-footer.css?release=${release}" || true)
             script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/script.js?release=${release}" || true)
             giving_code=$(curl -L -sS -o /tmp/giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/giving.js?release=${release}" || true)
             config_code=$(curl -L -sS -o /tmp/giving-config.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/api/giving/config?release=${release}" || true)
@@ -185,10 +198,12 @@ jobs:
             legacy_switch=0
             legacy_social=0
             legacy_footer=0
+            legacy_policy=0
             grep -Fq 'EKODI교회' /tmp/church.html && legacy_name=1 || true
             grep -Fq 'class="shell-switch"' /tmp/church.html && legacy_switch=1 || true
             grep -Fq 'data-ekodi-social="true"' /tmp/church.html && legacy_social=1 || true
             grep -Fq 'class="brand footer-brand"' /tmp/church.html && legacy_footer=1 || true
+            grep -Fq '독립 운영주체 또는 개별 서비스에 별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다.' /tmp/church.html && legacy_policy=1 || true
 
             address_count=$(grep -Fo '백련동1길 17-4' /tmp/church.html | wc -l | tr -d ' ')
             config_valid=0
@@ -196,8 +211,8 @@ jobs:
               node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); if(x.provider==='toss' && typeof x.enabled==='boolean') process.exit(0); process.exit(1)" && config_valid=1 || true
             fi
 
-            if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$script_code" == '200' && "$giving_code" == '200' && "$config_code" == '200' ]] \
-              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' && "$legacy_footer" == '0' && "$address_count" == '1' && "$config_valid" == '1' ]] \
+            if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$footer_code" == '200' && "$script_code" == '200' && "$giving_code" == '200' && "$config_code" == '200' ]] \
+              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' && "$legacy_footer" == '0' && "$legacy_policy" == '0' && "$address_count" == '2' && "$config_valid" == '1' ]] \
               && grep -Fq '<title>에코디교회 |' /tmp/church.html \
               && grep -Fq 'aria-label="에코디교회 홈"' /tmp/church.html \
               && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
@@ -205,26 +220,32 @@ jobs:
               && grep -Fq 'class="online-triad"' /tmp/church.html \
               && grep -Fq 'class="community-visit"' /tmp/church.html \
               && grep -Fq 'id="giving-dialog"' /tmp/church.html \
-              && grep -Fq '<footer class="site-footer">' /tmp/church.html \
+              && grep -Fq '<footer class="site-footer church-footer">' /tmp/church.html \
+              && grep -Fq '<strong class="church-footer-brand">EKODI CHURCH</strong>' /tmp/church.html \
+              && grep -Fq '운영주체 에코디교회' /tmp/church.html \
+              && grep -Fq '대표 정찬균' /tmp/church.html \
+              && grep -Fq '고유번호 213-13-01959' /tmp/church.html \
+              && grep -Fq 'mailto:ekodichurch@gmail.com' /tmp/church.html \
+              && grep -Fq '© 2026 EKODI CHURCH' /tmp/church.html \
               && grep -Fq 'class="shell-my"' /tmp/church.html \
-              && grep -Fq '© 2026 에코디교회 · EKODI CHURCH' /tmp/church.html \
               && grep -Fq '.daily-verse{' /tmp/community-visual.css \
               && grep -Fq 'background:rgba(244,240,229,.96);' /tmp/community-visual.css \
-              && grep -Fq '.site-footer-inner{' /tmp/community-visual.css \
-              && grep -Fq 'place-items:center' /tmp/community-visual.css \
+              && grep -Fq '.site-footer.church-footer{' /tmp/church-footer.css \
+              && grep -Fq '.church-footer-inner{' /tmp/church-footer.css \
+              && grep -Fq 'justify-items:center' /tmp/church-footer.css \
               && grep -Fq 'https://js.tosspayments.com/v2/standard' /tmp/giving.js \
               && grep -Fq "headerBrandName.textContent = '에코디교회'" /tmp/script.js \
               && grep -Fq 'dailyScriptures' /tmp/script.js; then
-              echo 'Church production source, minimal centered footer and giving runtime verified.'
+              echo 'Church production source, dedicated footer and giving runtime verified.'
               node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); console.log('giving_payment_enabled=' + x.enabled)"
               break
             fi
 
             if [[ "$attempt" == '18' ]]; then
-              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code giving=$giving_code config=$config_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social legacy_footer=$legacy_footer address_count=$address_count config_valid=$config_valid"
+              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social legacy_footer=$legacy_footer legacy_policy=$legacy_policy address_count=$address_count config_valid=$config_valid"
               exit 1
             fi
-            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code script=$script_code giving=$giving_code config=$config_code legacy_footer=$legacy_footer address_count=$address_count config_valid=$config_valid"
+            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code legacy_footer=$legacy_footer legacy_policy=$legacy_policy address_count=$address_count config_valid=$config_valid"
             sleep 5
           done
 
