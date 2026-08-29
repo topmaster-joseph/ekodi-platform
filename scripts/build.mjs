@@ -60,8 +60,11 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs, m
 ]);
 if (!marketingPostingStatusJs.includes("TAB_KEY = 'publications'")) throw new Error('Marketing posting status marker missing');
 if (!marketingChannelManagerJs.includes("TAB_KEY = 'channels'")) throw new Error('Marketing channel manager marker missing');
+if (!marketingAdminJs.includes("['channels','Channels']")) throw new Error('Marketing channels tab source marker missing');
+const marketingAdminLocalizedJs = marketingAdminJs.replace("['channels','Channels']", "['channels','게시 · 홍보']");
+if (!marketingAdminLocalizedJs.includes("['channels','게시 · 홍보']")) throw new Error('Marketing 게시 · 홍보 tab label build marker missing');
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
-await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminJs}\n${marketingLiveJs}\n${marketingPostingStatusJs}\n${marketingChannelManagerJs}\n`);
+await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminLocalizedJs}\n${marketingLiveJs}\n${marketingPostingStatusJs}\n${marketingChannelManagerJs}\n`);
 
 const [compactCss, compactJs, deviceControlCss, deviceControlJs, hybridExecutionAdminJs] = await Promise.all([
   readFile(`${output}compact-control-center.css`, 'utf8'), readFile(`${output}compact-control-center.js`, 'utf8'),
