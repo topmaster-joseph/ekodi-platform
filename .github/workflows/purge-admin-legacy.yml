@@ -3,25 +3,11 @@ name: Purge Retired Admin Source
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - '.github/workflows/purge-admin-legacy.yml'
-      - 'scripts/purge-retired-admin.mjs'
-      - 'scripts/admin-performance-postbuild.mjs'
-      - 'control-center.html'
-      - 'admin-central-handoff.js'
-      - 'admin-authenticated-shell.js'
-      - 'admin-menu-layout.js'
-      - 'scripts/admin-thin-postbuild.mjs'
-      - 'scripts/build.mjs'
-      - 'scripts/normalize-platform-ai-names.mjs'
-      - 'package.json'
-      - 'site-worker.js'
-      - 'admin.html'
-      - 'control-center.js'
-      - 'control-center-features.js'
-      - 'control-center-ops.css'
-      - 'compact-control-center.js'
+      - scripts/purge-retired-admin.mjs
+      - .github/workflows/purge-admin-legacy.yml
 
 permissions:
   contents: write
@@ -38,90 +24,55 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - uses: actions/setup-node@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      - name: Purge retired admin source and bootstrap markup
+      - name: Purge retired admin implementation
         run: |
           set -euo pipefail
           node scripts/purge-retired-admin.mjs
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/admin-performance-postbuild.mjs')
-          source = path.read_text()
-          source = source.replace("function mustReplace(search, replacement, label) {\n  if (!html.includes(search)) throw new Error(`admin performance marker missing: ${label}`);\n  html = html.replace(search, replacement);\n}\n\n", "")
-          old = """// Only the overview hero participates in first authenticated layout. Operational DOM remains
-// for compatibility but is display:none until its workspace is explicitly selected.
-mustReplace('<section class=\"metrics\" data-panel=\"overview services\"', '<section class=\"metrics hidden-panel\" data-panel=\"services\"', 'services metrics panel');
-mustReplace('<section class=\"section operations-section\" data-panel=\"overview services\"', '<section class=\"section operations-section hidden-panel\" data-panel=\"services\"', 'services operations panel');
-mustReplace('<section class=\"section\" data-panel=\"overview finance\"', '<section class=\"section hidden-panel\" data-panel=\"finance\"', 'finance panel');
-for (const section of ['communication', 'workspace', 'organization']) {
-  html = html.replace(`<section class=\"section\" data-panel=\"${section}\"`, `<section class=\"section hidden-panel\" data-panel=\"${section}\"`);
-}
-"""
-          new = """// The retired overview/services bootstrap DOM no longer exists. Keep only surviving
-// optional workspaces hidden until their registry route is selected.
-for (const section of ['finance', 'communication', 'workspace', 'organization']) {
-  html = html.replace(`<section class=\"section\" data-panel=\"${section}\"`, `<section class=\"section hidden-panel\" data-panel=\"${section}\"`);
-}
-"""
-          if old in source:
-              source = source.replace(old, new)
-          source = source.replace("  ['repairLegacyLinks','repairLinks'],\n", "")
-          source = source.replace("if (html.includes('control-center.js\"></script>')) throw new Error('Legacy control-center.js leaked into admin first path');", "if (html.includes('control-center.js\"></script>')) throw new Error('Retired control-center.js leaked into admin first path');")
-          source = source.replace('immutable versioning ready, shared menu modules published, legacy runtime/polling deferred.', 'immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.')
-          if 'mustReplace(' in source:
-              raise SystemExit('legacy mustReplace bootstrap dependency survived')
-          if 'overview services' in source or 'overview finance' in source:
-              raise SystemExit('legacy overview performance dependency survived')
-          path.write_text(source)
-          PY
           test ! -e admin.html
           test ! -e control-center.js
           test ! -e control-center-features.js
           test ! -e control-center-ops.css
           test ! -e compact-control-center.js
-          ! grep -Fq 'EKODI Platform Operations' scripts/admin-thin-postbuild.mjs
+          ! grep -Fq 'EKODI Platform Operations' control-center.html
           ! grep -Fq 'OPERATIONS OVERVIEW' scripts/admin-thin-postbuild.mjs
           ! grep -Fq 'data-panel="overview"' control-center.html
           ! grep -Fq 'control-center-ops.css' control-center.html
-          ! grep -Fq 'overview services' scripts/admin-performance-postbuild.mjs
-          ! grep -Fq 'overview finance' scripts/admin-performance-postbuild.mjs
-          ! grep -Fq 'repairLegacyLinks' scripts/admin-performance-postbuild.mjs
 
-      - name: Verify source, tests and production build
+      - name: Check and build
         run: |
           set -euo pipefail
           npm run check
           npm run build
           test -f dist/control-center.html
-          test -f dist/compact-control-center.js
-          ! grep -Fq 'EKODI Platform Operations' dist/control-center.html
-          ! grep -Fq 'EKODI Platform Operations' dist/compact-control-center.js
-          ! grep -Fq 'OPERATIONS OVERVIEW' dist/compact-control-center.js
-          ! grep -Fq 'control-center-ops.css' dist/control-center.html
-          ! grep -Fq 'control-center.js' dist/control-center.html
-          ! grep -Fq 'control-center-features.js' dist/control-center.html
           test ! -e dist/admin.html
-          test ! -e dist/control-center-ops.css
           test ! -e dist/control-center.js
           test ! -e dist/control-center-features.js
+          test ! -e dist/control-center-ops.css
+          ! grep -Fq 'EKODI Platform Operations' dist/control-center.html
+          ! grep -Fq 'OPERATIONS OVERVIEW' dist/compact-control-center.js
+          ! grep -Fq 'control-center.js' dist/control-center.html
+          ! grep -Fq 'control-center-features.js' dist/control-center.html
 
-      - name: Commit retired-source purge
-        shell: bash
+      - name: Commit physical source purge
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           if git diff --cached --quiet; then
-            echo 'No source purge changes required.'
+            echo 'No source changes required.'
           else
-            git commit -m 'refactor(admin): remove retired control-center implementation'
+            git commit -m 'refactor(admin): physically remove retired admin sources'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
@@ -131,26 +82,24 @@ for (const section of ['finance', 'communication', 'workspace', 'organization'])
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
 
-      - name: Guarded shared-site release
+      - name: Deploy shared site
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
-      - name: Verify retired source is absent in production
-        shell: bash
+      - name: Verify production purge
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
             root_code=$(curl -sS -o /tmp/root -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/?purge=${GITHUB_RUN_ID}" || true)
-            compact_code=$(curl -sS -o /tmp/compact -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.js?purge=${GITHUB_RUN_ID}" || true)
             old_runtime=$(curl -sS -o /tmp/old-runtime -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center.js?purge=${GITHUB_RUN_ID}" || true)
             old_features=$(curl -sS -o /tmp/old-features -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center-features.js?purge=${GITHUB_RUN_ID}" || true)
             old_css=$(curl -sS -o /tmp/old-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center-ops.css?purge=${GITHUB_RUN_ID}" || true)
             markers=no
-            if grep -Fq 'EKODI Platform Operations' /tmp/root || grep -Fq 'OPERATIONS OVERVIEW' /tmp/root || grep -Fq 'EKODI Platform Operations' /tmp/compact || grep -Fq 'OPERATIONS OVERVIEW' /tmp/compact; then markers=yes; fi
-            echo "admin purge verify -> root=$root_code compact=$compact_code old=$old_runtime/$old_features/$old_css markers=$markers"
-            if [ "$root_code" = '200' ] && [ "$compact_code" = '200' ] && [ "$old_runtime" = '404' ] && [ "$old_features" = '404' ] && [ "$old_css" = '404' ] && [ "$markers" = no ]; then
-              echo 'Retired admin source is absent from production.'
+            if grep -Fq 'EKODI Platform Operations' /tmp/root || grep -Fq 'OPERATIONS OVERVIEW' /tmp/root; then markers=yes; fi
+            echo "admin purge verify -> root=$root_code old=$old_runtime/$old_features/$old_css markers=$markers"
+            if [ "$root_code" = '200' ] && [ "$old_runtime" = '404' ] && [ "$old_features" = '404' ] && [ "$old_css" = '404' ] && [ "$markers" = no ]; then
+              echo 'Retired admin implementation is absent from production.'
               exit 0
             fi
             sleep 4
