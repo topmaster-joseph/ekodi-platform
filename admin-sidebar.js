@@ -210,7 +210,7 @@ function availableIds(nav, group) {
     const definition = visibleDefinition(id);
     if (!definition || definition.group !== group) return false;
     if (definition.superAdminOnly && !present.has(id)) return false;
-    return present.has(id) || id === defaultSection || Boolean(definition.href) || Boolean(document.querySelector(`[data-panel~="${id}"]`));
+    return present.has(id) || id === defaultSection || Boolean(document.querySelector(`[data-panel~="${id}"]`));
   });
 }
 
@@ -256,11 +256,16 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
 function activateSection(nav, section) {
   if (!section) return;
   syncWorkbenchState(nav, readAdminSidebarLocale(), section);
+  const definition = getAdminMenuItem(section);
+  const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
+  if (definition?.href && fallback) {
+    fallback.click();
+    return;
+  }
   if (window.EKODIAdminPanels?.activate) {
     window.EKODIAdminPanels.activate(section);
     return;
   }
-  const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
   fallback?.click?.();
 }
 
