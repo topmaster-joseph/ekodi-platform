@@ -36,7 +36,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.127.1'
 
 jobs:
   validate:
@@ -132,14 +132,14 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.finance.staging.runtime.toml --json > /tmp/staging-deployments.json
-          npx --yes wrangler@$WRANGLER_VERSION dev --remote --config wrangler.finance.staging.runtime.toml --ip 127.0.0.1 --port 8792 > /tmp/finance-remote-dev.log 2>&1 &
-          remote_pid=$!
-          trap 'kill $remote_pid 2>/dev/null || true' EXIT
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.finance.staging.runtime.toml >/tmp/local-migrations.log 2>&1\n          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.finance.staging.runtime.toml --ip 127.0.0.1 --port 8792 > /tmp/finance-remote-dev.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
           ready=0
           for attempt in $(seq 1 30); do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8792/health' || true)
             if [ "$code" = '200' ]; then ready=1; break; fi
-            if ! kill -0 $remote_pid 2>/dev/null; then cat /tmp/finance-remote-dev.log; exit 1; fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/finance-remote-dev.log; exit 1; fi
             sleep 2
           done
           if [ "$ready" != '1' ]; then cat /tmp/finance-remote-dev.log; exit 1; fi
