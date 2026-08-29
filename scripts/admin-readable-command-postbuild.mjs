@@ -3,8 +3,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
-const [baseCss, css, js] = await Promise.all([
+const [baseCss, principlesCss, css, js] = await Promise.all([
   readFile(`${root}admin-readability-base.css`, 'utf8'),
+  readFile(`${root}admin-ui-principles.css`, 'utf8'),
   readFile(`${root}admin-readable-command.css`, 'utf8'),
   readFile(`${root}admin-readable-command.js`, 'utf8'),
 ]);
@@ -17,6 +18,13 @@ const baseCssMarkers = [
   '.content [data-panel] th',
   '#userAiMembershipPanel .uam-head h2',
   ':focus-visible',
+];
+const principlesCssMarkers = [
+  'EKODI Admin UI Principles v1',
+  '--admin-page:#f6f8fb',
+  '#marketingAiAdminPanel.marketing-ai-admin-panel',
+  '.marketing-ai-console-view',
+  '@media(max-width:620px)',
 ];
 const cssMarkers = [
   'governance-command-bar{display:none!important}',
@@ -38,6 +46,9 @@ const jsMarkers = [
 for (const marker of baseCssMarkers) {
   if (!baseCss.includes(marker)) throw new Error(`Admin readability base contract missing: ${marker}`);
 }
+for (const marker of principlesCssMarkers) {
+  if (!principlesCss.includes(marker)) throw new Error(`Admin UI principles contract missing: ${marker}`);
+}
 for (const marker of cssMarkers) {
   if (!css.includes(marker)) throw new Error(`Admin flat CSS contract missing: ${marker}`);
 }
@@ -45,12 +56,12 @@ for (const marker of jsMarkers) {
   if (!js.includes(marker)) throw new Error(`Admin orchestration JS contract missing: ${marker}`);
 }
 
-// The readability base belongs to the authenticated Admin shell and its subservices only.
+// The readability base and shared UI principles belong to the authenticated Admin shell and every subservice.
 // Keep compact runtime CSS inside its hard budget; AI Ops layout/orchestration stays lazy.
 await Promise.all([
-  appendFile(`${output}control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
+  appendFile(`${output}control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n/* admin-ui-principles.css */\n${principlesCss}\n`),
   appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
 ]);
 
-console.log('Applied EKODI admin-only readability base to the Admin shell and all Admin subservices; kept AI Ops layout and Chief AI orchestration on demand.');
+console.log('Applied EKODI admin-only readability base and shared lightweight UI principles to the Admin shell and all Admin subservices; kept AI Ops layout and Chief AI orchestration on demand.');
