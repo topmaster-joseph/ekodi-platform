@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [hybrid, mission, migration, admin, build] = await Promise.all([
+const [hybrid, mission, migration, admin, postbuild] = await Promise.all([
   readFile(new URL('../hybrid-execution.js', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0040_hybrid_execution.sql', import.meta.url), 'utf8'),
   readFile(new URL('../hybrid-execution-admin.js', import.meta.url), 'utf8'),
-  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8'),
 ]);
 
 test('hybrid queue is cloud-owned and new nodes default to auto execution off', () => {
@@ -61,9 +61,11 @@ test('admin control exposes node policy, execution records and audit state witho
   assert.match(admin, /전체 진단 자동배정/);
 });
 
-test('production build bundles hybrid admin into authenticated control center', () => {
-  assert.match(build, /hybrid-execution-admin\.js/);
-  assert.match(build, /\$\{hybridExecutionAdminJs\}/);
+test('production postbuild bundles hybrid admin into the demand-loaded Device Control asset', () => {
+  assert.match(postbuild, /hybrid-execution-admin\.js/);
+  assert.match(postbuild, /const hybridExecutionJs/);
+  assert.match(postbuild, /device-control-admin\.js/);
+  assert.match(postbuild, /\$\{deviceJs\}\\n\$\{hybridExecutionJs\}\\n/);
 });
 
 test('migration creates durable node, job and event ledgers with queue indexes', () => {
