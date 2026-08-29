@@ -105,7 +105,7 @@ jobs:
           test -n "$version"
           grep -Fq "control-center.css?v=$version" dist/control-center.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
-          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
+          grep -Fq 'data-ekodi-postauth="admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
           ! grep -Fq '<script src="control-center.js"' dist/control-center.html
           ! grep -Fq 'control-center-ops.css' dist/control-center.html
           ! grep -Fq 'control-center-finance.css' dist/control-center.html
