@@ -7,11 +7,10 @@ const js = await readFile(new URL('../homepage-ambient.js', import.meta.url), 'u
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const deploySiteCore = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
-test('homepage uses a translucent ambient background with one stable Seoul-date scene per day', () => {
+test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(css, /body::before/);
   assert.match(css, /backdrop-filter:blur/);
   assert.match(css, /ekodiAmbientDrift/);
-  assert.match(css, /ekodiPulseGlow/);
   assert.match(js, /const palettes = \[/);
   assert.match(js, /Asia\/Seoul/);
   assert.match(js, /function dailySeed/);
@@ -22,29 +21,49 @@ test('homepage uses a translucent ambient background with one stable Seoul-date 
   assert.match(deploySiteCore, /grep -Fq 'function seoulDateKey'/);
   assert.match(deploySiteCore, /grep -Fq 'function dailySeed'/);
 });
-test('public homepage is intent-first and does not expose the service directory by default', () => {
+
+test('public homepage is hook-first and routes intent instead of leading with a directory', () => {
+  assert.match(js, /원하는 일, 바로 시작하세요/);
   assert.match(js, /오늘 무엇을 하시나요\?/);
   assert.match(js, /intentSets/);
-  assert.match(js, /function matchServices/);
+  assert.match(js, /quickPaths/);
+  assert.match(js, /function rankServices/);
   assert.match(js, /slice\(0, limit\)/);
-  assert.match(js, /모든 서비스 보기/);
-  assert.match(js, /data\.livingGateway|dataset\.livingGateway/);
-  assert.match(js, /v3-intent-first/);
-  assert.match(css, /\.service-grid,\.ecosystem,\.lower-grid\{display:none!important\}/);
+  assert.match(js, /dataset\.livingGateway = 'v4-hook-first'/);
   assert.match(css, /\.intent-panel/);
   assert.match(css, /\.intent-results/);
+  assert.match(css, /\.quick-paths/);
+  assert.match(css, /grid-template-columns:minmax\(0,1\.08fr\) minmax\(340px,\.92fr\)/);
 });
 
-test('living gateway keeps only high-value recommendations in the first view', () => {
-  assert.match(js, /data-service-status/);
-  assert.match(js, /liveCards/);
-  assert.match(js, /is-daily-feature/);
-  assert.match(js, /buildDailyPanel/);
+test('hook-first gateway keeps recommendations compact and expands only after user intent', () => {
+  assert.match(js, /data-service-status|dataset\.serviceStatus/);
   assert.match(js, /renderRecommendations/);
   assert.match(js, /limit = 3/);
+  assert.match(js, /results\.hidden = true/);
+  assert.match(js, /results\.hidden = false/);
+  assert.match(js, /buildQuickLinks/);
+  assert.match(js, /무료로 시작/);
   assert.doesNotMatch(js, /data-status-filter/);
   assert.doesNotMatch(js, /function applyFilter/);
 });
+
+test('homepage language selector supports and persists Korean English Chinese and Japanese', () => {
+  assert.match(js, /ekodi\.locale/);
+  assert.match(js, /localStorage\.setItem\('ekodi\.locale'/);
+  assert.match(js, /'ko-KR'/);
+  assert.match(js, /'zh-CN'/);
+  assert.match(js, /code:'en'/);
+  assert.match(js, /code:'ja'/);
+  assert.match(js, /한국어/);
+  assert.match(js, /English/);
+  assert.match(js, /中文\(简体\)/);
+  assert.match(js, /日本語/);
+  assert.match(js, /data\.ekodiLanguage|dataset\.ekodiLanguage/);
+  assert.match(js, /document\.documentElement\.lang = locale/);
+  assert.match(js, /@media\(max-width:640px\)/);
+});
+
 test('ambient layer stays visible above the body background and below content', () => {
   assert.match(css, /body::before,[\s\S]*?z-index:0/);
   assert.match(css, /\.site-header,[\s\S]*?main\{[\s\S]*?z-index:1/);
