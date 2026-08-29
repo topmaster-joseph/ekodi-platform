@@ -45,11 +45,7 @@ const ADMIN_ALIASES = new Set([
   '/',
   '/admin',
   '/admin/',
-  '/admin.html',
   '/index.html',
-  '/control-center',
-  '/control-center/',
-  '/control-center.html',
   '/community',
   '/community/',
   '/books',
@@ -57,7 +53,18 @@ const ADMIN_ALIASES = new Set([
   '/work',
   '/work/',
 ]);
-const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
+const RETIRED_ADMIN_PATHS = new Set([
+  '/admin.html',
+  '/control-center',
+  '/control-center/',
+  '/control-center.html',
+  '/legacy',
+  '/legacy/',
+  '/legacy.html',
+  '/control-center.js',
+  '/control-center-features.js',
+  '/control-center-ops.css',
+]);
 const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/control-center.css',
@@ -192,6 +199,10 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   return secured;
 }
 
+function retiredAdminResponse() {
+  return withHostSecurity(new Response('Not Found', { status: 404 }), ADMIN_CSP, 'no-store', 'admin-retired');
+}
+
 function adminAssetCacheControl(url) {
   return url.searchParams.has('v')
     ? 'public, max-age=31536000, immutable'
@@ -301,6 +312,7 @@ export default {
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
     if (host === PUBLIC_HOST) {
+      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
@@ -332,6 +344,7 @@ export default {
     }
 
     if (ADMIN_HOSTS.has(host)) {
+      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
       if (url.pathname === '/auth/start') {
@@ -343,10 +356,6 @@ export default {
         return adminAuthRedirect(url.searchParams.get('return_to'));
       }
       if (ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
-      }
-      if (LEGACY_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
         return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
       }
