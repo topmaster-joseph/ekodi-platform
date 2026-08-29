@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "name": "EKODI Specialist AI Service Policy",
+  "status": "standard",
+  "purpose": "Make every EKODI specialist AI feel simple and inviting to the user while keeping execution bounded, private, portable, auditable and under human authority.",
+  "inherits": [
+    "config/ai-mission-governance.json",
+    "config/ai-provider-independence.json",
+    "config/external-ai-module-contract.json",
+    "config/user-ui-shell.json",
+    "config/user-ui-dna.json"
+  ],
+  "coveredServiceIds": [
+    "bible",
+    "life",
+    "marketing",
+    "energy",
+    "author",
+    "support",
+    "delivery",
+    "management",
+    "publishing",
+    "edu",
+    "money",
+    "insurance"
+  ],
+  "futureCoverage": {
+    "allRegisteredSpecialistAiModules": true,
+    "externalModuleContractApplies": true,
+    "subservicesInheritParentPolicy": true,
+    "newSpecialistAiMustDeclareServiceId": true,
+    "newSpecialistAiMustPassPolicyValidationBeforeProduction": true
+  },
+  "oneLinePrincipleKo": "로그인 전은 초대, 로그인 후는 실행, AI는 사용자의 판단을 빼앗지 않고 다음 행동을 돕는다.",
+  "experience": {
+    "publicEntry": {
+      "leadWith": ["user situation", "question", "goal"],
+      "maxPrimaryNextActions": 3,
+      "required": ["clear value", "safe capability preview", "short how-it-works", "free sign-in path", "trust or privacy note"],
+      "forbidden": ["generic full-screen member gate as the whole public service", "service catalog dump as the first screen", "real private data in preview", "technical policy copy as hero content"],
+      "rule": "Invite before authenticate. Do not make users understand the internal EKODI service map before receiving value."
+    },
+    "authenticatedWorkspace": {
+      "goal": "execute the user's actual task with minimum friction",
+      "required": ["member session", "tenant or workspace context when applicable", "least-privilege capability check", "clear current task", "visible save/share boundary"],
+      "rule": "After sign-in, stop re-selling the service and move directly into useful work."
+    },
+    "visualIdentity": {
+      "shared": ["accessibility", "responsive behavior", "EKODI relationship", "auth semantics", "privacy semantics"],
+      "serviceOwned": ["palette", "typography", "card geometry", "information rhythm", "hero composition", "motion character"],
+      "forbidden": ["one cloned visual template for all specialist AI services"]
+    }
+  },
+  "aiBehavior": {
+    "defaultRole": "bounded_professional_delegate",
+    "conversationPattern": ["understand", "ask only what is necessary", "propose up to three useful next actions", "act within delegated scope", "verify", "report plainly"],
+    "preferDeterministicRulesBeforeModelCalls": true,
+    "mustStateMaterialUncertainty": true,
+    "mustDistinguish": ["source data", "user input", "AI inference", "AI-generated draft", "authoritative human or institutional content"],
+    "mustNot": ["pretend certainty", "claim human or divine authority", "hide material automation", "manufacture urgency", "optimize engagement over user agency", "silently expand delegated authority"]
+  },
+  "privacyAndSharing": {
+    "privateByDefault": true,
+    "explicitShareRequired": true,
+    "crossTenantPrivateAccessDefault": "deny",
+    "leaderOrAdminMayNotReadPrivateAiConversationByDefault": true,
+    "aggregateAnalyticsPreferred": true,
+    "guestPreviewUsesSyntheticOrPublicDataOnly": true,
+    "dataMinimization": true
+  },
+  "actionSafety": {
+    "observe": "automatic",
+    "assist": "automatic_with_transparency",
+    "reversibleExecute": "guarded_auto_with_preflight_log_and_postcheck",
+    "highImpact": "human_gate",
+    "forbidden": "never",
+    "humanGateSources": ["config/ai-mission-governance.json actionTiers.human_gate", "service-specific regulated or pastoral policy"]
+  },
+  "providerAndRuntime": {
+    "providerIndependent": true,
+    "browserDirectProviderExecution": false,
+    "providerFailureMode": "degrade_not_disable_core_service",
+    "providerSecrets": "server_side_only",
+    "directProviderDatabaseAccess": false,
+    "directProviderSharedDriveAccess": false,
+    "gateway": "EKODI AI Gateway",
+    "externalModules": "config/external-ai-module-contract.json"
+  },
+  "adminOperations": {
+    "singleManagementSurface": "AI 서비스 관리",
+    "perServiceControls": ["enabled", "eligibility", "provider", "data connectors", "prompts and expert rules", "approval policy", "usage and cost", "logs", "external module connection"],
+    "noSeparateAdminArchitecturePerAi": true,
+    "auditRequired": true
+  },
+  "quality": {
+    "mobileFirst": true,
+    "lightweightByDefault": true,
+    "noModelCallForBasicNavigation": true,
+    "gracefulEmptyAndErrorStates": true,
+    "accessibilityRequired": true,
+    "subserviceInheritanceRequired": true,
+    "productionRequires": ["policy validation", "security boundary validation", "service smoke test", "rollback path when code changes"]
+  }
+}
