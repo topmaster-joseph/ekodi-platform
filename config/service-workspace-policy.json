@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
   },
   "entityBoundary": {
     "service": "EKODI가 제공·운영하는 공통 기능 또는 상품",
-    "workspace": "EKODI 서비스를 이용하는 개인·사업체·교회·기관·단체의 독립 운영공간",
+    "workspace": "EKODI 서비스를 이용하는 개인·사업체·교회·기관·단체·프로젝트의 독립 운영공간",
     "entitlement": "사용자 또는 Workspace가 특정 Service를 이용할 수 있는 권리"
   },
   "userServiceKinds": [
@@ -23,6 +23,33 @@
     "managedBy": "customer_tenant_directory",
     "preserveCustomerOwnership": true,
     "examples": ["청계면상인회", "자담치킨 목포대점", "피자마루 목포대점", "요거트퍼플 목포대점"]
+  },
+  "publicWorkspaceRouting": {
+    "canonicalHost": "ekodi.kr",
+    "workspaceIdentityKey": "workspace_id",
+    "slugRole": "routing_locator_only",
+    "namespaces": {
+      "personal": "/personal/{slug}",
+      "organization": "/org/{slug}",
+      "group": "/group/{slug}",
+      "project": "/project/{slug}"
+    },
+    "organizationSubtypes": ["business", "church", "school", "nonprofit", "association", "institution"],
+    "workspaceSubdomains": "forbidden",
+    "legacyRedirects": {
+      "/people/{slug}": "/personal/{slug}",
+      "/biz/{slug}": "/org/{slug}",
+      "space.ekodi.kr": "ekodi.kr",
+      "user.ekodi.kr": "ekodi.kr"
+    }
+  },
+  "subdomainExceptions": {
+    "personalHome": "my.ekodi.kr",
+    "administration": "admin.ekodi.kr",
+    "authentication": "auth.ekodi.kr",
+    "api": "api.ekodi.kr",
+    "status": "status.ekodi.kr",
+    "commonAndCoreServices": "allowed_only_when_security_operational_protocol_or_service_boundary_is_justified_and_registered"
   },
   "commonServiceUserAccessRule": {
     "appliesTo": ["platform-core", "shared-service"],
