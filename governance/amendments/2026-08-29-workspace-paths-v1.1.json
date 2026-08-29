@@ -11,5 +11,6 @@
   "canonicalWorkspacePaths": ["/personal/{slug}", "/org/{slug}", "/group/{slug}", "/project/{slug}"],
   "subdomainExceptions": ["my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "status.ekodi.kr", "registered common/core service boundaries"],
   "migrationPolicy": "non-breaking; /people/{slug} redirects to /personal/{slug}, tenant-style /biz/{slug} redirects to /org/{slug}, and any deployed space.ekodi.kr or user.ekodi.kr alias redirects to the equivalent ekodi.kr path while preserving workspace_id as the canonical internal identity",
+  "verificationPolicy": "constitutional validation, platform-boundary validation, security baseline and deployment guardrails must pass; protected-file PR must carry the constitution-approved label",
   "rollbackPlan": "revert the v1.1.0 constitution, machine-readable governance and validator commits; legacy aliases remain available so rollback does not require destructive DNS or identity changes"
 }
