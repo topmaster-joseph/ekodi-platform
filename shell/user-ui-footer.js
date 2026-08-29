@@ -7,11 +7,16 @@ const VERSION=3;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://shell.ekodi.kr/user-footer.json';
 const USER_SURFACES=new Set(['public','workspace']);
+const SERVICE_OWNED_FOOTER_SERVICES=new Set(['church']);
 const FOOTER_ATTR='data-ekodi-user-footer';
 let configPromise=null;
 
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||document.documentElement.dataset.ekodiUserSurface||'').toLowerCase();}
-function enabled(){return USER_SURFACES.has(surface());}
+function serviceId(){return String(document.documentElement.dataset.ekodiService||'').trim().toLowerCase();}
+function footerMode(){return String(document.body?.dataset.ekodiFooterMode||document.documentElement.dataset.ekodiFooterMode||'').trim().toLowerCase();}
+function serviceOwnsFooter(){return SERVICE_OWNED_FOOTER_SERVICES.has(serviceId())||['service','custom','off'].includes(footerMode())||Boolean(document.querySelector('[data-ekodi-service-footer]'));}
+function enabled(){return USER_SURFACES.has(surface())&&!serviceOwnsFooter();}
+function removeSharedFooter(){document.querySelectorAll(`[${FOOTER_ATTR}]`).forEach(node=>node.remove());}
 function installStyle(){
   if(document.getElementById(STYLE_ID)||document.querySelector('[data-ekodi-user-ui-style]'))return;
   const style=document.createElement('style');
@@ -79,9 +84,17 @@ function createFooter(config){
   return footer;
 }
 async function reconcile(){
+  if(serviceOwnsFooter()){
+    removeSharedFooter();
+    return;
+  }
   if(!enabled()||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
   installStyle();
   const config=await loadConfig();
+  if(serviceOwnsFooter()){
+    removeSharedFooter();
+    return;
+  }
   if(!config||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
   document.body.append(createFooter(config));
   window.EKODIUserLanguage?.refresh?.();
