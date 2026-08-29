@@ -40,6 +40,7 @@ jobs:
           grep -Fq 'Metricool은 필수가 아닙니다' marketing-ai-channel-manager.js
           ! grep -Fq 'META_FACEBOOK_ACCESS_TOKEN' marketing-ai-channel-manager.js
           grep -Fq 'marketing-ai-channel-manager.js' scripts/build.mjs
+          grep -Fq "['channels','게시 · 홍보']" scripts/build.mjs
 
       - name: Verify Cloudflare credentials
         run: |
@@ -51,6 +52,7 @@ jobs:
           set -euo pipefail
           npm run build
           test -f dist/marketing-ai-admin.js
+          grep -Fq "['channels','게시 · 홍보']" dist/marketing-ai-admin.js
           grep -Fq '게시 · 홍보 연결센터' dist/marketing-ai-admin.js
           grep -Fq '중앙 OAuth · 암호화 Vault' dist/marketing-ai-admin.js
           grep -Fq 'Metricool은 필수가 아닙니다' dist/marketing-ai-admin.js
@@ -69,13 +71,14 @@ jobs:
           url="https://admin.ekodi.kr/marketing-ai-admin.js?growth=${RELEASE_SHA}"
           for attempt in $(seq 1 18); do
             code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
-            marker_a=no; marker_b=no; marker_c=no
+            marker_label=no; marker_a=no; marker_b=no; marker_c=no
+            grep -Fq "['channels','게시 · 홍보']" /tmp/body && marker_label=yes || true
             grep -Fq '게시 · 홍보 연결센터' /tmp/body && marker_a=yes || true
             grep -Fq '중앙 OAuth · 암호화 Vault' /tmp/body && marker_b=yes || true
             grep -Fq 'marketing-connect-api.ekodi.kr' /tmp/body && marker_c=yes || true
-            echo "growth console verify -> code=$code markers=$marker_a/$marker_b/$marker_c"
-            if [ "$code" = '200' ] && [ "$marker_a" = yes ] && [ "$marker_b" = yes ] && [ "$marker_c" = yes ]; then
-              echo 'Posting and promotion console verified in production.'
+            echo "growth console verify -> code=$code label=$marker_label markers=$marker_a/$marker_b/$marker_c"
+            if [ "$code" = '200' ] && [ "$marker_label" = yes ] && [ "$marker_a" = yes ] && [ "$marker_b" = yes ] && [ "$marker_c" = yes ]; then
+              echo 'Posting and promotion console verified in production with first-render label.'
               exit 0
             fi
             sleep 4
