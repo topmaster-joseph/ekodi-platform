@@ -33,7 +33,7 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(root.expect.includes('/auth-router.js?v=20260826-universal-sso-1'));
   assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
-  assert.ok(router.expect.includes('client-auth.js?v=20260827-common-service-routing-1'));
+  assert.ok(router.expect.includes('client-auth.js?v=20260829-stale-session-recovery-1'));
   assert.ok(router.expect.includes('isRegistryUserService'));
   assert.ok(client.expect.includes('/session/handoff'));
   assert.ok(client.expect.includes('session_timeout'));
