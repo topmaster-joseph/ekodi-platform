@@ -1,4 +1,3 @@
-// Minimal admin entry runtime: central-auth handoff + optimistic shell + background session validation.
 (() => {
 'use strict';
 const API='https://api.ekodi.kr';
