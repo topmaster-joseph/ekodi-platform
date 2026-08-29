@@ -1,0 +1,18 @@
+name = "ekodi-marketing-growth"
+main = "marketing-growth-worker.js"
+compatibility_date = "2026-08-29"
+workers_dev = false
+route = { pattern = "marketing-connect-api.ekodi.kr", custom_domain = true }
+
+[vars]
+ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
+PUBLIC_BASE_URL = "https://marketing-connect-api.ekodi.kr"
+META_GRAPH_VERSION = "v25.0"
+MAX_DAILY_AD_BUDGET_KRW = "100000"
+MAX_TOTAL_AD_BUDGET_KRW = "1000000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "a6d4db56-5f96-4629-843b-7f63a5cac2bd"
+migrations_dir = "migrations"

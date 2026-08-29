@@ -1,0 +1,112 @@
+name: Deploy Marketing Growth Connector
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-growth-worker.js'
+      - 'wrangler.marketing-growth.toml'
+      - 'migrations/0028_marketing_growth_connectors.sql'
+      - '.github/workflows/deploy-marketing-growth.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-marketing-growth-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+      THREADS_APP_ID: ${{ secrets.THREADS_APP_ID }}
+      THREADS_APP_SECRET: ${{ secrets.THREADS_APP_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate central OAuth growth engine
+        run: |
+          set -euo pipefail
+          node --check marketing-growth-worker.js
+          grep -Fq 'encryptedVault:true' marketing-growth-worker.js
+          grep -Fq 'oauthBroker:true' marketing-growth-worker.js
+          grep -Fq 'paidActivation:false' marketing-growth-worker.js
+          grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql; then
+            echo 'Plain provider token columns are forbidden.'
+            exit 1
+          fi
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Apply encrypted connector schema
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-growth.toml
+
+      - name: Verify connector schema
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns') ORDER BY name;" \
+            --json > /tmp/growth-schema.json
+          grep -Fq 'marketing_oauth_states' /tmp/growth-schema.json
+          grep -Fq 'marketing_oauth_connections' /tmp/growth-schema.json
+          grep -Fq 'marketing_growth_campaigns' /tmp/growth-schema.json
+
+      - name: Deploy growth connector worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml
+
+      - name: Install central provider app credentials when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local key="$1" value="$2"
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | npx --yes wrangler@${WRANGLER_VERSION} secret put "$key" --config wrangler.marketing-growth.toml >/dev/null
+              echo "$key installed."
+            else
+              echo "$key not supplied; connector stays safely disabled for that provider."
+            fi
+          }
+          put_secret META_APP_ID "$META_APP_ID"
+          put_secret META_APP_SECRET "$META_APP_SECRET"
+          put_secret THREADS_APP_ID "$THREADS_APP_ID"
+          put_secret THREADS_APP_SECRET "$THREADS_APP_SECRET"
+
+      - name: Verify production growth gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            code=$(curl -sS -o /tmp/growth-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-connect-api.ekodi.kr/health' || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq '"service":"ekodi-marketing-growth"' /tmp/growth-health.json \
+              && grep -Fq '"schemaReady":true' /tmp/growth-health.json \
+              && grep -Fq '"oauthBroker":true' /tmp/growth-health.json \
+              && grep -Fq '"encryptedVault":true' /tmp/growth-health.json \
+              && grep -Fq '"organicPublishing":true' /tmp/growth-health.json \
+              && grep -Fq '"paidActivation":false' /tmp/growth-health.json; then
+              cat /tmp/growth-health.json
+              echo 'Marketing growth connector verified in production.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/growth-health.json || true
+          exit 1
