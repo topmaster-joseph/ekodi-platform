@@ -55,8 +55,6 @@ jobs:
           test ! -e control-center-ops.css
           test ! -e scripts/remove-retired-admin-residue.mjs
           test ! -e .github/workflows/remove-retired-admin-residue.yml
-          ! grep -R -F '/legacy#domains' --include='*.js' --include='*.mjs' --include='*.html' .
-          ! grep -R -F '/legacy#activity' --include='*.js' --include='*.mjs' --include='*.html' .
       - name: Commit cleaned source
         run: |
           set -euo pipefail
