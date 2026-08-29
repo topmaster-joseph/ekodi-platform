@@ -46,7 +46,7 @@ jobs:
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
           grep -Fq "site==='portal'||isRegistryUserService" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
-          grep -Fq "client-auth.js?v=20260827-common-service-routing-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260829-stale-session-recovery-1" auth-site/auth-router.js
           grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
           grep -Fq 'privateClientSites' auth-site/auth-router.js
 
@@ -62,6 +62,9 @@ jobs:
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
           grep -Fq "commonServiceEntry&&proof.platformAdmin!==true" auth-site/client-auth.js
           grep -Fq "new URL('https://my.ekodi.kr/')" auth-site/client-auth.js
+          grep -Fq 'recoverableStaleSession' auth-site/client-auth.js
+          grep -Fq "sb.auth.signOut({scope:'local'})" auth-site/client-auth.js
+          grep -Fq "error.message==='session_identity_mismatch'" auth-site/client-auth.js
           if grep -Fq 'onAuthStateChange(async' auth-site/client-auth.js || grep -Fq 'use_fedcm_for_prompt' auth-site/client-auth.js; then
             echo 'Universal identity auth contains a known deadlock/deprecated pattern.'
             exit 1
