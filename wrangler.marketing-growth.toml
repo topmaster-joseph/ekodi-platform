@@ -14,5 +14,5 @@ MAX_TOTAL_AD_BUDGET_KRW = "1000000"
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"
-database_id = "a6d4db56-5f96-4629-843b-7f63a5cac2bd"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
