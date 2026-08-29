@@ -33,21 +33,15 @@ jobs:
           api='https://api.cloudflare.com/client/v4'
           prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
           dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
-          candidates=(
-            ekodi-bible-conversation-staging
-            ekodi-business-staging
-            ekodi-education-staging
-            ekodi-money-staging
-            ekodi-publishing-staging
-            ekodi-shared-site-staging
-            ekodi-shell-staging
-            ekodi-support-opportunity-staging
-          )
 
           curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-workers.json
           curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers.json
           jq -e '.success == true' /tmp/prod-workers.json >/dev/null
           jq -e '.success == true' /tmp/dev-workers.json >/dev/null
+
+          mapfile -t candidates < <(jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/prod-workers.json | sort -u)
+          echo "CURRENT_PRODUCTION_STAGING_COUNT=${#candidates[@]}"
+          printf '  candidate: %s\n' "${candidates[@]}"
 
           curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/domains.json
           jq -e '.success == true' /tmp/domains.json >/dev/null
@@ -72,11 +66,7 @@ jobs:
           done < <(jq -r '.result[]?.id' /tmp/prod-workers.json)
 
           for script in "${candidates[@]}"; do
-            if jq -e --arg s "$script" '.result[]? | select(.id == $s)' /tmp/prod-workers.json >/dev/null; then
-              curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/schedules" -o "/tmp/prod-schedules/$script.json"
-            else
-              echo '{"success":false,"result":null}' > "/tmp/prod-schedules/$script.json"
-            fi
+            curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts/$script/schedules" -o "/tmp/prod-schedules/$script.json"
             if jq -e --arg s "$script" '.result[]? | select(.id == $s)' /tmp/dev-workers.json >/dev/null; then
               curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts/$script/schedules" -o "/tmp/dev-schedules/$script.json"
             else
@@ -85,23 +75,17 @@ jobs:
           done
 
           python - <<'PY'
-          import glob, json, os
+          import glob, json
 
-          candidates = [
-            'ekodi-bible-conversation-staging',
-            'ekodi-business-staging',
-            'ekodi-education-staging',
-            'ekodi-money-staging',
-            'ekodi-publishing-staging',
-            'ekodi-shared-site-staging',
-            'ekodi-shell-staging',
-            'ekodi-support-opportunity-staging',
-          ]
           prod = json.load(open('/tmp/prod-workers.json', encoding='utf-8'))
           dev = json.load(open('/tmp/dev-workers.json', encoding='utf-8'))
           domains = json.load(open('/tmp/domains.json', encoding='utf-8')).get('result') or []
           prod_names = {x.get('id') for x in prod.get('result') or []}
           dev_names = {x.get('id') for x in dev.get('result') or []}
+          candidates = sorted(
+              name for name in prod_names
+              if name and (name.endswith('-staging') or '-staging-' in name)
+          )
           routes = []
           for line in open('/tmp/routes.ndjson', encoding='utf-8'):
               line = line.strip()
@@ -119,12 +103,7 @@ jobs:
           safe = []
           rows = []
           for script in candidates:
-              exists_prod = script in prod_names
               exists_dev = script in dev_names
-              if not exists_prod:
-                  rows.append((script, False, 'already-absent-production'))
-                  continue
-
               settings_path = f'/tmp/prod-settings/{script}.json'
               settings = json.load(open(settings_path, encoding='utf-8')).get('result') or {}
               bindings = settings.get('bindings') or []
@@ -148,7 +127,7 @@ jobs:
 
               reasons = []
               if not exists_dev: reasons.append('no-dev-counterpart')
-              if custom_domains: reasons.append('custom-domain')
+              if custom_domains: reasons.append('custom-domain:' + ','.join(custom_domains))
               if worker_routes: reasons.append('route')
               if risky: reasons.append('binding')
               if inbound: reasons.append('inbound-service')
@@ -192,3 +171,6 @@ jobs:
             }
             echo "VERIFIED: $script absent from Production and present in Development."
           done < /tmp/safe.txt
+
+          remain=$(jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/prod-after.json | wc -l | tr -d ' ')
+          echo "REMAINING_AFTER_SAFE_CLEANUP=$remain"
