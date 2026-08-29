@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const [{ adminMenuOrder }, { mountAdminSidebar }] = await Promise.all([
+const [{ adminMenuOrder }, { mountAdminSidebar, renderAdminSidebar }] = await Promise.all([
   import('./admin-menu-registry.js'),
   import('./admin-sidebar.js'),
 ]);
@@ -8,8 +8,9 @@ const sidebar = document.querySelector('.sidebar');
 const nav = sidebar?.querySelector('nav');
 const content = document.querySelector('.content');
 if (!sidebar || !nav || !content) return;
+renderAdminSidebar(nav);
 const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
-const INTERNAL_ONLY_HREFS = new Set(['/legacy#domains', '/legacy#activity']);
+const INTERNAL_ONLY_HREFS = new Set();
 const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
 const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));

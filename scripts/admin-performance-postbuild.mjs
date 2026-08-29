@@ -7,11 +7,6 @@ const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const path = `${dist}control-center.html`;
 let html = await readFile(path, 'utf8');
 
-function mustReplace(search, replacement, label) {
-  if (!html.includes(search)) throw new Error(`admin performance marker missing: ${label}`);
-  html = html.replace(search, replacement);
-}
-
 // Diagnostics never belong to the normal startup graph. They are published as a standalone
 // asset and fetched only when an administrator explicitly adds ?perf=1.
 await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostics.js`);
@@ -54,12 +49,8 @@ html = html
   .replace(/\s*<script src="control-center\.js"><\/script>/g, '')
   .replace('<script src="admin-central-handoff.js"></script>', '<script src="admin-central-handoff.js" defer></script>');
 
-// Only the overview hero participates in first authenticated layout. Operational DOM remains
-// for compatibility but is display:none until its workspace is explicitly selected.
-mustReplace('<section class="metrics" data-panel="overview services"', '<section class="metrics hidden-panel" data-panel="services"', 'services metrics panel');
-mustReplace('<section class="section operations-section" data-panel="overview services"', '<section class="section operations-section hidden-panel" data-panel="services"', 'services operations panel');
-mustReplace('<section class="section" data-panel="overview finance"', '<section class="section hidden-panel" data-panel="finance"', 'finance panel');
-for (const section of ['communication', 'workspace', 'organization']) {
+// The retired overview/services bootstrap DOM no longer exists. Keep surviving workspaces hidden until selected.
+for (const section of ['finance', 'communication', 'workspace', 'organization']) {
   html = html.replace(`<section class="section" data-panel="${section}"`, `<section class="section hidden-panel" data-panel="${section}"`);
 }
 
@@ -167,7 +158,6 @@ for (const [from,to] of [
   ['installSharedAdminLayout','installLayout'],
   ['deactivateMallFreeOps','closeMall'],
   ['installMallFreeOpsIsolation','installMall'],
-  ['repairLegacyLinks','repairLinks'],
   ['startAuthenticatedShell','startShell'],
   ['onStateChange','onState'],
 ]) compactShell = compactShell.replaceAll(from, to);
@@ -234,4 +224,4 @@ if (finalFinance.includes('setInterval(')) throw new Error('Finance monitor stil
 if ((await readFile(`${dist}compact-control-center.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS leaked into startup compact CSS');
 if (!(await readFile(`${dist}ai-ops-admin.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS missing from on-demand AI Ops');
 
-console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, legacy runtime/polling deferred.`);
+console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.`);

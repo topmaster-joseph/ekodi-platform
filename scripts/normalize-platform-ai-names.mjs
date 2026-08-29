@@ -98,9 +98,7 @@ const displayNames = [
 const allowedExtensions = new Set(['.html', '.js', '.mjs', '.json', '.jsx', '.ts', '.tsx', '.yml', '.yaml']);
 const ignoredDirectories = new Set(['.git', '.github', 'node_modules', 'dist', '.wrangler']);
 const adminSurfaceFiles = new Set([
-  'admin.html',
   'control-center.html',
-  'control-center-features.js',
   'campus-actions.js',
   'admin-lazy-features.js',
   'admin-menu-layout.js',
@@ -212,7 +210,6 @@ const adminChecks = {
     "domain:'author.ekodi.kr'", "name:'크리에이터 AI'", "domain:'energy.ekodi.kr'", "name:'에너지 AI'"
   ],
   'control-center.html': ['<strong>에코디 메일</strong>', '<strong>에코디 라이브</strong>', '<strong>에코디 클라우드</strong>', '<strong>마케팅 AI</strong>'],
-  'admin.html': ['<strong>에코디서점</strong><small>books.ekodi.kr</small>', '<strong>마케팅 AI</strong>']
 };
 
 for (const [relative, required] of Object.entries(adminChecks)) {

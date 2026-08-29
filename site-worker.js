@@ -61,10 +61,7 @@ const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
 const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/control-center.css',
-  '/control-center-ops.css',
   '/control-center-finance.css',
-  '/control-center.js',
-  '/control-center-features.js',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-demand-loader.js',

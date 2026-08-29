@@ -151,6 +151,21 @@ export const USER_SERVICES = Object.freeze([
     "homepageOrder": 65
   },
   {
+    "id": "delivery",
+    "name": "배달허브 AI",
+    "nameEn": "Delivery Hub AI",
+    "label": "ekodi.kr/delivery",
+    "url": "https://ekodi.kr/delivery",
+    "domain": "ekodi.kr",
+    "group": "business-growth",
+    "status": "beta",
+    "productionVerified": false,
+    "available": false,
+    "homepageEligible": false,
+    "homepageDefault": false,
+    "homepageOrder": 67
+  },
+  {
     "id": "marketing",
     "name": "마케팅 AI",
     "nameEn": "Marketing AI",
@@ -344,6 +359,21 @@ export const USER_SERVICES = Object.freeze([
     "homepageEligible": true,
     "homepageDefault": false,
     "homepageOrder": 140
+  },
+  {
+    "id": "space",
+    "name": "운영공간",
+    "nameEn": "Operating Space",
+    "label": "space.ekodi.kr",
+    "url": "https://space.ekodi.kr/",
+    "domain": "space.ekodi.kr",
+    "group": "work-life",
+    "status": "live",
+    "productionVerified": true,
+    "available": true,
+    "homepageEligible": true,
+    "homepageDefault": false,
+    "homepageOrder": 145
   },
   {
     "id": "work",
