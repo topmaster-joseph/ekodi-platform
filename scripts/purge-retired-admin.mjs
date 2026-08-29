@@ -1,3 +1,4 @@
+// Physical purge trigger 2026-08-30: remove retired admin implementation from source, build graph and production.
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 const read = path => readFileSync(path, 'utf8');
