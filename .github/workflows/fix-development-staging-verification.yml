@@ -1,0 +1,109 @@
+name: Fix Development Staging Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-development-staging-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Replace Production-account staging host verification with remote Development runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          specs = [
+            {
+              'path': Path('.github/workflows/deploy-control-api.yml'),
+              'old_host': 'https://api-staging.ekodi.kr',
+              'local_host': 'http://127.0.0.1:8791',
+              'step': 'Verify security, AI auth boundary and universal membership',
+              'config': 'wrangler.api.staging.runtime.toml',
+              'log': '/tmp/control-remote-dev.log',
+              'port': '8791',
+            },
+            {
+              'path': Path('.github/workflows/deploy-finance.yml'),
+              'old_host': 'https://finance-api-staging.ekodi.kr',
+              'local_host': 'http://127.0.0.1:8792',
+              'step': 'Verify Finance staging health and auth boundary',
+              'config': 'wrangler.finance.staging.runtime.toml',
+              'log': '/tmp/finance-remote-dev.log',
+              'port': '8792',
+            },
+            {
+              'path': Path('.github/workflows/deploy-marketing-domain-api.yml'),
+              'old_host': 'https://marketing-api-staging.ekodi.kr',
+              'local_host': 'http://127.0.0.1:8793',
+              'step': 'Verify staging boundaries',
+              'config': 'wrangler.marketing-domains.staging.toml',
+              'log': '/tmp/marketing-domain-remote-dev.log',
+              'port': '8793',
+            },
+          ]
+
+          for spec in specs:
+            p = spec['path']
+            text = p.read_text(encoding='utf-8')
+            host_count = text.count(spec['old_host'])
+            if host_count < 1:
+              raise SystemExit(f'{p}: expected old staging hostname is missing')
+
+            marker = f"      - name: {spec['step']}\n        shell: bash\n        run: |\n          set -euo pipefail\n"
+            if text.count(marker) != 1:
+              raise SystemExit(f'{p}: verification marker count was {text.count(marker)}, expected 1')
+
+            prelude = marker + (
+              f"          npx --yes wrangler@${{WRANGLER_VERSION}} deployments status --config {spec['config']} --json > /tmp/staging-deployments.json\n"
+              f"          npx --yes wrangler@${{WRANGLER_VERSION}} dev --remote --config {spec['config']} --ip 127.0.0.1 --port {spec['port']} > {spec['log']} 2>&1 &\n"
+              "          remote_pid=$!\n"
+              f"          trap 'kill $remote_pid 2>/dev/null || true' EXIT\n"
+              "          ready=0\n"
+              "          for attempt in $(seq 1 30); do\n"
+              f"            code=$(curl -sS -o /dev/null -w '%{{http_code}}' --connect-timeout 3 --max-time 8 '{spec['local_host']}/health' || true)\n"
+              "            if [ \"$code\" = '200' ]; then ready=1; break; fi\n"
+              f"            if ! kill -0 $remote_pid 2>/dev/null; then cat {spec['log']}; exit 1; fi\n"
+              "            sleep 2\n"
+              "          done\n"
+              f"          if [ \"$ready\" != '1' ]; then cat {spec['log']}; exit 1; fi\n"
+            )
+            text = text.replace(marker, prelude, 1)
+            text = text.replace(spec['old_host'], spec['local_host'])
+            if spec['old_host'] in text:
+              raise SystemExit(f'{p}: stale Production staging hostname remains')
+            p.write_text(text, encoding='utf-8')
+            print(f'Patched {p}: replaced {host_count} staging URL occurrence(s).')
+          PY
+
+          grep -Fq 'http://127.0.0.1:8791/health' .github/workflows/deploy-control-api.yml
+          grep -Fq 'http://127.0.0.1:8792/health' .github/workflows/deploy-finance.yml
+          grep -Fq 'http://127.0.0.1:8793/health' .github/workflows/deploy-marketing-domain-api.yml
+          ! grep -Fq 'https://api-staging.ekodi.kr' .github/workflows/deploy-control-api.yml
+          ! grep -Fq 'https://finance-api-staging.ekodi.kr' .github/workflows/deploy-finance.yml
+          ! grep -Fq 'https://marketing-api-staging.ekodi.kr' .github/workflows/deploy-marketing-domain-api.yml
+      - name: Commit isolated verification targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/workflows/deploy-control-api.yml .github/workflows/deploy-finance.yml .github/workflows/deploy-marketing-domain-api.yml; then
+            echo 'No change required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/deploy-control-api.yml .github/workflows/deploy-finance.yml .github/workflows/deploy-marketing-domain-api.yml
+          git commit -m 'fix(cloudflare): verify staging only in Development account'
+          git push origin HEAD:main
