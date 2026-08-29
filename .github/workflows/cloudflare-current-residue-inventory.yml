@@ -13,26 +13,80 @@ permissions:
 jobs:
   inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
+    environment: development
     env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
     steps:
-      - name: List remaining Production staging Workers
+      - name: Inventory remaining Production staging Workers
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$PROD_ACCOUNT_ID"
+          test -n "$PROD_TOKEN"
+          test -n "$DEV_TOKEN"
+          test "$PROD_ACCOUNT_ID" != "$DEV_ACCOUNT_ID"
+
           api='https://api.cloudflare.com/client/v4'
-          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          curl -fsS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" -o /tmp/workers.json
-          jq -e '.success == true' /tmp/workers.json >/dev/null
-          jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/workers.json | sort | tee /tmp/remain.txt
+          prod_auth=(-H "Authorization: Bearer $PROD_TOKEN" -H 'Content-Type: application/json')
+          dev_auth=(-H "Authorization: Bearer $DEV_TOKEN" -H 'Content-Type: application/json')
+
+          curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/scripts" -o /tmp/prod-workers.json
+          curl -fsS "${dev_auth[@]}" "$api/accounts/$DEV_ACCOUNT_ID/workers/scripts" -o /tmp/dev-workers.json
+          jq -e '.success == true' /tmp/prod-workers.json >/dev/null
+          jq -e '.success == true' /tmp/dev-workers.json >/dev/null
+
+          jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/prod-workers.json | sort -u > /tmp/remain.txt
+          jq -r '.result[]?.id | select(endswith("-staging") or contains("-staging-"))' /tmp/dev-workers.json | sort -u > /tmp/dev-staging.txt
+
           count=$(wc -l < /tmp/remain.txt | tr -d ' ')
           echo "REMAINING_COUNT=$count"
+          echo 'PRODUCTION_STAGING_WORKERS:'
+          sed 's/^/  - /' /tmp/remain.txt || true
+
+          echo 'COUNTERPART_CHECK:'
+          while IFS= read -r script; do
+            [[ -n "$script" ]] || continue
+            if grep -Fxq "$script" /tmp/dev-staging.txt; then
+              echo "  $script : DEV_COUNTERPART_PRESENT"
+            else
+              echo "  $script : NO_DEV_COUNTERPART"
+            fi
+          done < /tmp/remain.txt
+
+          domains_available=0
+          if curl -fsS "${prod_auth[@]}" "$api/accounts/$PROD_ACCOUNT_ID/workers/domains" -o /tmp/domains.json; then
+            if jq -e '.success == true' /tmp/domains.json >/dev/null 2>&1; then
+              domains_available=1
+            fi
+          fi
+
+          echo 'CUSTOM_DOMAIN_REFERENCES:'
+          if [[ "$domains_available" == '1' ]]; then
+            while IFS= read -r script; do
+              [[ -n "$script" ]] || continue
+              refs=$(jq -r --arg s "$script" '.result[]? | select((.service // .script // .service_name) == $s) | .hostname // empty' /tmp/domains.json | paste -sd ',' -)
+              if [[ -n "$refs" ]]; then echo "  $script : $refs"; else echo "  $script : none"; fi
+            done < /tmp/remain.txt
+          else
+            echo '  unavailable with current token; cleanup workflow will revalidate before deletion'
+          fi
+
           {
-            echo '## Remaining Production staging Workers'
+            echo '## Production staging residue inventory'
             echo
-            echo "Count: **$count**"
+            echo "Remaining staging-named Workers: **$count**"
             echo
-            sed 's/^/- `/' /tmp/remain.txt | sed 's/$/`/'
+            if [[ "$count" == '0' ]]; then
+              echo 'No staging-named Worker remains in Production.'
+            else
+              while IFS= read -r script; do
+                [[ -n "$script" ]] || continue
+                if grep -Fxq "$script" /tmp/dev-staging.txt; then state='Development counterpart present'; else state='NO Development counterpart'; fi
+                echo "- \`$script\` — $state"
+              done < /tmp/remain.txt
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
