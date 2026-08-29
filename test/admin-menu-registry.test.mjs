@@ -12,12 +12,11 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const FIVE_AXES = ['home', 'operations', 'space', 'services', 'system'];
+const WORK_AREAS = ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system'];
 
-test('admin navigation has exactly five global axes', () => {
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), FIVE_AXES);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.ko), ['홈', '운영', '공간', '서비스', '시스템']);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.icon), ['⌂', '◎', '▦', '◇', '⚙']);
+test('admin navigation has exactly eight stable work areas', () => {
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.ko), ['홈', '운영', '사용자·공간', '서비스', 'AI·자동화', '비즈니스', '데이터', '시스템']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -25,21 +24,22 @@ test('admin navigation has exactly five global axes', () => {
   }
 });
 
-test('every public admin subservice belongs to one of the five axes', () => {
+test('every public admin subservice belongs to one work area', () => {
   const ids = ADMIN_MENU_REGISTRY.map(item => item.id);
   assert.equal(new Set(ids).size, ids.length);
   for (const item of ADMIN_MENU_REGISTRY) {
     assert.ok(item.labels?.ko, `${item.id} missing Korean label`);
     assert.ok(item.labels?.en, `${item.id} missing English label`);
-    assert.ok(FIVE_AXES.includes(item.group), `${item.id} is outside five-axis navigation`);
+    assert.ok(WORK_AREAS.includes(item.group), `${item.id} is outside workbench navigation`);
   }
   assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자 · 권한');
   assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrators & Access');
   assert.ok(adminMenuOrder().includes('security'));
   assert.ok(adminMenuOrder().includes('admins'));
-  assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
-  assert.equal(getAdminMenuGroupForSection('finance'), 'operations');
-  assert.equal(getAdminMenuGroupForSection('workspace'), 'space');
+  assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'ai');
+  assert.equal(getAdminMenuGroupForSection('finance'), 'business');
+  assert.equal(getAdminMenuGroupForSection('workspace'), 'people');
+  assert.equal(getAdminMenuGroupForSection('storage'), 'data');
 });
 
 test('admin locale is deliberately limited to Korean and English', () => {
