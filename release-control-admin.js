@@ -114,8 +114,7 @@
       button.dataset.adminLink = 'mall-free-ops';
       button.title = 'EKODI Mall 무료·수동 우선 공급 운영';
       button.append(document.createTextNode('◇ '), el('span', 'Mall · Free Ops'));
-      const domains = Array.from(nav.querySelectorAll('a.nav')).find(item => item.getAttribute('href') === '/legacy#domains');
-      if (domains) nav.insertBefore(button, domains); else nav.append(button);
+      nav.append(button);
     }
 
     let section = document.querySelector('#mallFreeOpsPanel');
@@ -217,8 +216,7 @@
       navButton.dataset.adminAccess = 'super-admin';
       navButton.title = '배포 상태와 운영 반영 이력';
       navButton.append(document.createTextNode('↑ '), el('span', 'Deployments'));
-      const activity = nav.querySelector('a[href="/legacy#activity"]');
-      if (activity) nav.insertBefore(navButton, activity); else nav.append(navButton);
+      nav.append(navButton);
     }
 
     if (document.querySelector('#releaseControl')) return;

@@ -19,8 +19,8 @@ test('admin sidebar renders Mall Free Ops inside the right content panel', () =>
   assert.match(adminJs, /frame\.dataset\.mallFreeOpsFrame = 'true'/);
   assert.match(adminJs, /allow-popups-to-escape-sandbox/);
   assert.doesNotMatch(adminJs, /link\.target = '_blank'[\s\S]{0,180}dataset\.adminLink = 'mall-free-ops'/);
-  assert.match(adminJs, /getAttribute\('href'\) === '\/legacy#domains'/);
-  assert.match(adminJs, /insertBefore\(button, domains\)/);
+  assert.doesNotMatch(adminJs, /\/legacy#/);
+  assert.match(adminJs, /nav\.append\(button\)/);
 });
 
 test('Admin CSP permits only the Mall origin as an additional frame source', () => {

@@ -119,7 +119,7 @@
     button.className = `${className} campus-row-action`;
     button.dataset.campusAction = action;
     button.dataset.campusDomain = site.domain;
-    button.dataset.campusTarget = action === 'status' ? 'overview' : site.section;
+    button.dataset.campusTarget = action === 'status' ? 'health' : site.section;
     button.dataset.campusFallback = site.fallback || '';
     button.textContent = label;
     button.setAttribute('aria-label', `${site.name} ${label}`);
@@ -365,7 +365,7 @@
       const target = button.dataset.campusTarget || 'services';
       const fallback = button.dataset.campusFallback || 'services';
       openSection(target, domain, fallback);
-      if (action === 'status' && location.hash !== '#operations') history.replaceState(null, '', '#operations');
+      if (action === 'status' && location.hash !== '#health') history.replaceState(null, '', '#health');
     });
 
     refreshCampusCounts();
@@ -391,11 +391,6 @@
     }
   }
 
-  function removeDomainsMenu() {
-    const root = nav();
-    if (!root) return;
-    root.querySelectorAll('a[href="/legacy#domains"], [data-section="domains"], [data-lazy-section="domains"]').forEach(item => item.remove());
-  }
 
   function decorateAffiliates() {
     const root = nav();
@@ -413,7 +408,6 @@
   }
 
   function normalizeSidebar() {
-    removeDomainsMenu();
     decorateAffiliates();
   }
 
