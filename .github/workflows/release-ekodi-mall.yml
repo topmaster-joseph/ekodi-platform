@@ -44,6 +44,8 @@ jobs:
           grep -Fq 'id="productDialog"' mall.html
           grep -Fq 'id="productDialogBuy"' mall.html
           grep -Fq '.header-notice{justify-self:center' mall.css
+          grep -Fq 'font-size:12px;line-height:1.45' mall.css
+          grep -Fq 'font-size:10.5px;line-height:1.38' mall.css
           grep -Fq 'function openProductDialog(product)' mall.js
           grep -Fq 'function sortProducts(products)' mall.js
           grep -Fq "detail.textContent = '상품정보 보기'" mall.js
@@ -55,10 +57,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          before_ids="$(gh run list --workflow deploy-site-core.yml --branch main --event workflow_dispatch --limit 30 --json databaseId -q '.[].databaseId' | tr '\n' ' ')"
           gh workflow run deploy-site-core.yml --ref main -f sync_domains=false
           run_id=''
           for attempt in $(seq 1 30); do
-            run_id=$(gh run list --workflow deploy-site-core.yml --branch main --event workflow_dispatch --limit 30 --json databaseId,headSha,createdAt -q ".[] | select(.headSha == \"$GITHUB_SHA\") | .databaseId" | head -n1)
+            while read -r candidate; do
+              [ -n "$candidate" ] || continue
+              case " $before_ids " in
+                *" $candidate "*) ;;
+                *) run_id="$candidate"; break ;;
+              esac
+            done < <(gh run list --workflow deploy-site-core.yml --branch main --event workflow_dispatch --limit 30 --json databaseId -q '.[].databaseId')
             if [ -n "$run_id" ]; then break; fi
             sleep 2
           done
@@ -90,6 +99,8 @@ jobs:
 
           curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall.css?release=$stamp" -o /tmp/mall.css
           grep -Fq '.header-notice{justify-self:center' /tmp/mall.css
+          grep -Fq 'font-size:12px;line-height:1.45' /tmp/mall.css
+          grep -Fq 'font-size:10.5px;line-height:1.38' /tmp/mall.css
           grep -Fq 'text-align:center' /tmp/mall.css
 
           curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall.js?release=$stamp" -o /tmp/mall.js
