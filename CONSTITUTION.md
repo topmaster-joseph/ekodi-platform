@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.0.0
+# EKODI Platform Constitution v1.1.0
 
-Effective: 2026-08-28
+Effective: 2026-08-29
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -11,13 +11,18 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Heavy or retryable work uses queue/worker execution rather than long synchronous requests.
 
 ## 2. Domain Constitution
-- Stable production boundaries are `ekodi.kr`, `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr`, `status.ekodi.kr`.
+- The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
+- Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
 - Development mirrors those boundaries under `*.dev.ekodi.kr`.
-- Subdomains represent security/system boundaries. Paths represent features and content.
-- Public tenant namespaces are `/people/{slug}`, `/org/{slug}`, `/biz/{slug}`, `/project/{slug}`.
-- Private tenant work is under `my.ekodi.kr/w/{workspace}`.
-- Existing feature subdomains are legacy aliases only. No new feature subdomain may be added without a constitutional amendment.
-- Customer-owned domains map to a tenant public surface and never redefine EKODI internal identity or private routing.
+- Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
+- Canonical public user-space namespaces are `ekodi.kr/personal/{slug}`, `ekodi.kr/org/{slug}`, `ekodi.kr/group/{slug}` and `ekodi.kr/project/{slug}`.
+- Business, church, school, nonprofit, association, institution and similar formal entities are organization subtypes under `/org/{slug}` unless a future constitutional amendment defines another universal workspace kind.
+- `space.ekodi.kr`, `user.ekodi.kr` and per-tenant subdomains are not canonical workspace addresses. If such aliases exist, they must redirect to the corresponding `ekodi.kr` path while preserving the remaining path where practical.
+- `my.ekodi.kr` remains the personal authenticated home/control surface and may present workspace participation, switching and private controls without becoming the canonical public workspace address.
+- Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
+- Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
+- Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
+- Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.
@@ -68,7 +73,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Protected constitutional files must not be silently changed as part of unrelated work.
 
 ## 10. Legacy Migration Rule
-Current feature subdomains are not deleted merely to satisfy the new grammar. They are registered legacy aliases and migrate through canonical paths plus redirects/compatibility routes. New feature subdomains are prohibited. Migration may proceed service by service without breaking existing users, OAuth callbacks or external links.
+Existing feature and workspace aliases are not deleted merely to satisfy the canonical grammar. They migrate through canonical paths plus redirects/compatibility routes. In particular, legacy `/people/{slug}` maps to `/personal/{slug}` and legacy `/biz/{slug}` tenant/workspace paths map to `/org/{slug}`. Any deployed `space.ekodi.kr` or `user.ekodi.kr` workspace alias must redirect to the equivalent `ekodi.kr` path. Migration proceeds without breaking existing users, OAuth callbacks or external links, and redirect rules must be verified before an alias is retired.
 
 ## 11. Enforcement
 `npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy and governance records. `npm run check` includes it. GitHub CI runs the same check on constitutional and platform changes.
