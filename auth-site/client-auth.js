@@ -101,6 +101,7 @@ try{
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 let routing=false;
 let handlingCredential=false;
+let lastHandoffError=null;
 
 $('serviceName').textContent=config.name;
 $('serviceBadge').textContent='EKODI';
@@ -157,6 +158,7 @@ function routeTarget(proof){
 async function handoffExistingSession(s){
   if(routing)return true;
   routing=true;
+  lastHandoffError=null;
   $('serviceBadge').textContent='인증 완료';
   show('googleButtonHost',false);show('googleRetry',false);show('cancelSignedOut',false);
   notice('로그인이 확인되었습니다. 서비스로 이동합니다.');
@@ -166,9 +168,24 @@ async function handoffExistingSession(s){
     return true;
   }catch(error){
     routing=false;
+    lastHandoffError=error;
     console.error('central session handoff',error);
     return false;
   }
+}
+function recoverableStaleSession(error){
+  return Boolean(error&&(error.status===401||error.status===409||error.message==='login_required'||error.message==='session_identity_mismatch'));
+}
+async function clearStaleSession(){
+  routing=false;
+  try{
+    await timeout(sb.auth.signOut({scope:'local'}),5000,'stale_session_clear_timeout');
+  }catch(error){
+    console.warn('stale central session signout',error);
+    try{localStorage.removeItem('sb-renzehysxirjilvdxacv-auth-token')}catch{}
+  }
+  lastHandoffError=null;
+  routing=false;
 }
 function showRetry(message){
   routing=false;
@@ -219,7 +236,14 @@ async function prepare(){
   try{existing=await session()}catch(error){console.warn('central session bootstrap',error)}
   if(existing){
     if(await handoffExistingSession(existing))return;
-    showRetry('기존 로그인 연결을 완료하지 못했습니다. 다시 시도해 주세요.');
+    if(recoverableStaleSession(lastHandoffError)){
+      $('serviceBadge').textContent='복구 중';
+      notice('이전 로그인 연결을 새로 고칩니다. Google 계정으로 다시 확인해 주세요.');
+      await clearStaleSession();
+      await renderGoogle();
+      return;
+    }
+    showRetry('기존 로그인 연결을 완료하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
     return;
   }
   await renderGoogle();
