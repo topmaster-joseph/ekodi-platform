@@ -73,7 +73,10 @@ test('shared sidebar ships exactly five global axes and context-first subservice
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.match(sidebar, /admin-context-nav/);
-  assert.match(sidebar, /item\.hidden = getAdminMenuGroupForSection\(id\) !== group/);
+  assert.match(sidebar, /const hidden = getAdminMenuGroupForSection\(id\) !== group/);
+  assert.match(sidebar, /if \(item\.hidden !== hidden\) item\.hidden = hidden/);
+  assert.match(sidebar, /observer\.observe\(nav, \{\s*childList: true,\s*subtree: false,\s*\}\)/);
+  assert.doesNotMatch(sidebar, /subtree: true/);
   assert.match(sidebar, /ekodi-admin-recent-sections/);
   assert.match(sidebar, /ekodi-admin-favorite-sections/);
   assert.match(postbuild, /admin-menu-registry\.js/);
