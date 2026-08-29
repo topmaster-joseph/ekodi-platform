@@ -111,6 +111,16 @@ function purgeCheckInputs() {
   write('package.json', pkg);
 }
 
+function purgeDisplayNameLegacyRequirements() {
+  let source = read('scripts/normalize-platform-ai-names.mjs');
+  source = source.replace("  'admin.html',\n", '');
+  source = source.replace("  'control-center-features.js',\n", '');
+  source = source.replace("  'admin.html': ['<strong>에코디서점</strong><small>books.ekodi.kr</small>', '<strong>마케팅 AI</strong>']\n", '');
+  source = source.replace("  'control-center.html': ['<strong>에코디 메일</strong>', '<strong>에코디 라이브</strong>', '<strong>에코디 클라우드</strong>', '<strong>마케팅 AI</strong>'],\n};", "  'control-center.html': ['<strong>에코디 메일</strong>', '<strong>에코디 라이브</strong>', '<strong>에코디 클라우드</strong>', '<strong>마케팅 AI</strong>']\n};");
+  must(!source.includes("'admin.html': ["), 'retired admin.html canonical requirement survived');
+  write('scripts/normalize-platform-ai-names.mjs', source);
+}
+
 function purgeWorkerRoutes() {
   let worker = read('site-worker.js');
   for (const dead of ["  '/control-center-ops.css',\n", "  '/control-center.js',\n", "  '/control-center-features.js',\n"]) worker = worker.replaceAll(dead, '');
@@ -132,6 +142,7 @@ purgeAuthenticatedShellCompatibility();
 purgeThinPostbuildLegacyGenerator();
 purgeBuildInputs();
 purgeCheckInputs();
+purgeDisplayNameLegacyRequirements();
 purgeWorkerRoutes();
 deleteDeadSources();
 
