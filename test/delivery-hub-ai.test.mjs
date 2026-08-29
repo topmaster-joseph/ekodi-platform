@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { recommendDelivery, calculateSettlement, buildOperationsBrief, calculateSubsidy, capabilitiesForRole, buildWorkspaceModel } from '../delivery/core.js';
+
+const migration=readFileSync(new URL('../supabase/migrations/202608300220_delivery_operations_v2.sql',import.meta.url),'utf8');
 
 test('balanced mode recommends the best cost-time-reliability balance without dispatching',()=>{
   const result=recommendDelivery({order:{amount:32000,priority:'balanced'},providers:[
@@ -90,4 +93,14 @@ test('existing EKODI roles map to delivery capabilities without a parallel role 
   assert.equal(workspace.version,2);
   assert.equal(workspace.executionEnabled,false);
   assert.ok(workspace.capabilities.includes('delivery:recommend'));
+});
+
+test('operations v2 schema is RLS protected and forbids execution state',()=>{
+  for(const table of ['delivery_provider_connections','delivery_policies','delivery_decisions','delivery_settlement_drafts']){
+    assert.match(migration,new RegExp(`alter table public\\.${table} enable row level security`));
+    assert.match(migration,new RegExp(`revoke all on public\\.${table} from anon`));
+  }
+  assert.match(migration,/dispatch_executed boolean not null default false check \(dispatch_executed = false\)/);
+  assert.match(migration,/settlement_executed boolean not null default false check \(settlement_executed = false\)/);
+  assert.match(migration,/No credentials or provider secrets live in these tables/);
 });
