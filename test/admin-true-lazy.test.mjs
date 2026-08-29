@@ -63,13 +63,19 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
-test('shared sidebar menu sources ship the retired Operations cleanup', async () => {
+test('shared sidebar ships exactly five global axes and context-first subservices', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
+  for (const axis of ['home', 'operations', 'space', 'services', 'system']) assert.match(registry, new RegExp(`id: '${axis}'`));
+  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'data']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
-  assert.match(sidebar, /RETIRED_MENU_SECTIONS\.has\(id\)/);
+  assert.match(sidebar, /admin-global-navs/);
+  assert.match(sidebar, /admin-context-nav/);
+  assert.match(sidebar, /item\.hidden = getAdminMenuGroupForSection\(id\) !== group/);
+  assert.match(sidebar, /ekodi-admin-recent-sections/);
+  assert.match(sidebar, /ekodi-admin-favorite-sections/);
   assert.match(postbuild, /admin-menu-registry\.js/);
   assert.match(postbuild, /admin-sidebar\.js/);
 });

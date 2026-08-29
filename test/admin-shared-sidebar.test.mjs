@@ -7,14 +7,17 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('Site Management is the canonical first admin menu and Operations is retired', () => {
-  const campus = registry.indexOf("{ id: 'campus'");
-  assert.ok(campus >= 0);
-  assert.doesNotMatch(registry, /id: 'overview'/);
-  assert.match(registry, /id: 'campus'.*ko: '사이트 관리'.*en: 'Site Management'/);
-  assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
-  assert.match(sidebar, /RETIRED_MENU_SECTIONS\.has\(id\)/);
-  assert.match(sidebar, /item\.remove\(\)/);
+test('five global axes replace the former many-group admin taxonomy', () => {
+  for (const id of ['home', 'operations', 'space', 'services', 'system']) {
+    assert.match(registry, new RegExp(`id: '${id}'`));
+  }
+  for (const retired of ['site-management', 'ai', 'security-audit', 'settings', 'access', 'data']) {
+    assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  }
+  assert.match(sidebar, /admin-global-navs/);
+  assert.match(sidebar, /data-admin-global-group/);
+  assert.match(sidebar, /getAdminMenuGroupDefault/);
+  assert.match(sidebar, /getAdminMenuGroupForSection/);
 });
 
 test('Left navigation is a reusable shared module backed only by the registry', () => {
@@ -28,6 +31,14 @@ test('Left navigation is a reusable shared module backed only by the registry', 
   assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
 });
 
+test('Context-first navigation hides unrelated subservices and keeps recent/favorites shortcuts', () => {
+  assert.match(sidebar, /CONTEXT_CLASS = 'admin-context-nav'/);
+  assert.match(sidebar, /item\.hidden = getAdminMenuGroupForSection\(id\) !== group/);
+  assert.match(sidebar, /RECENT_KEY = 'ekodi-admin-recent-sections'/);
+  assert.match(sidebar, /FAVORITES_KEY = 'ekodi-admin-favorite-sections'/);
+  assert.match(sidebar, /data-admin-quick-section/);
+});
+
 test('Menu labels are repaired after feature scripts or clicks mutate them', () => {
   assert.match(sidebar, /MutationObserver\(schedule\)/);
   assert.match(sidebar, /characterData: true/);
@@ -36,7 +47,7 @@ test('Menu labels are repaired after feature scripts or clicks mutate them', () 
   assert.match(sidebar, /window\.EKODIAdminMenu\?\.locale\?\.\(\)/);
 });
 
-test('Operations remains a public compatibility route even though Site Management is the login home', () => {
+test('Internal operational capabilities stay off the global axes as direct items', () => {
   assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
   assert.match(layout, /#operations:overview/);
   assert.match(layout, /overview:#operations/);

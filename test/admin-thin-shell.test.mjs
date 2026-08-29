@@ -104,25 +104,29 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance is grouped and repairs every sidebar back to one registry', async () => {
+test('admin menu governance uses exactly five global axes and one context registry', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['site-management', 'access', 'operations', 'ai', 'data', 'system', 'security-audit', 'settings']) {
+  for (const group of ['home', 'operations', 'space', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  assert.match(registry, /id: 'campus', group: 'site-management'/);
-  assert.match(registry, /id: 'admins', group: 'access'/);
+  for (const retired of ['site-management', 'access', 'ai', 'data', 'security-audit', 'settings']) {
+    assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  }
+  assert.match(registry, /id: 'campus', group: 'home'/);
   assert.match(registry, /id: 'finance', group: 'operations'/);
-  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
+  assert.match(registry, /id: 'workspace', group: 'space'/);
+  assert.match(registry, /id: 'ai-membership', group: 'services'/);
   assert.match(registry, /id: 'health', group: 'system'/);
-  assert.match(registry, /id: 'security', group: 'security-audit'/);
+  assert.match(registry, /id: 'security', group: 'system'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /if \(!id \|\| RETIRED_MENU_SECTIONS\.has\(id\) \|\| !definition\)/);
-  assert.match(sidebar, /function ensureGroupLabels\(nav, locale, rank\)/);
-  assert.match(sidebar, /getAdminMenuGroupLabel\(groupId, locale\)/);
-  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'registry-v2'/);
+  assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
+  assert.match(sidebar, /CONTEXT_CLASS = 'admin-context-nav'/);
+  assert.match(sidebar, /item\.hidden = getAdminMenuGroupForSection\(id\) !== group/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'five-axis-v1'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
 });
 

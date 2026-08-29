@@ -41,12 +41,14 @@ test('Campus shortcuts cannot reopen hidden operational panels', () => {
   assert.match(layout, /openDemand\('aiops'\)/);
 });
 
-test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
+test('human-facing Admin menu has one canonical order inside the five global axes', () => {
   assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
   const expected = [
-    'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'finance',
-    'communication', 'workspace', 'devices', 'organization', 'clients', 'admins', 'community',
-    'books', 'social', 'affiliates',
+    'campus',
+    'aiops', 'work', 'finance', 'tax', 'communication',
+    'workspace', 'organization', 'clients',
+    'marketing-ai', 'ai-module-spec', 'ai-membership', 'life-ai', 'community', 'books', 'social', 'affiliates',
+    'health', 'security', 'devices', 'architecture', 'admins', 'api-cost', 'storage',
   ];
   let cursor = -1;
   for (const section of expected) {
@@ -55,6 +57,9 @@ test('human-facing Admin menu has one canonical order independent of lazy module
     cursor = next;
   }
   assert.doesNotMatch(registry, /id: 'overview'/);
+  for (const axis of ['home', 'operations', 'space', 'services', 'system']) {
+    assert.match(registry, new RegExp(`id: '${axis}'`));
+  }
   assert.match(layout, /VISIBLE_NAV_RANK/);
   assert.match(layout, /applyStableNavigationOrder/);
   assert.match(layout, /item\.style\.order/);
