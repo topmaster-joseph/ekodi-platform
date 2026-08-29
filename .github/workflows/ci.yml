@@ -33,6 +33,11 @@ jobs:
             .github/workflows/release-messenger-investment-functional.yml \
             .github/workflows/release-invest-personalization.yml \
             .github/workflows/cloud-control-workers-builds.yml
+      - name: Enforce traffic-ready data plane
+        run: |
+          node --check data-plane.js
+          node --check data-plane-adapters.js
+          node --test test/data-plane.test.mjs
       - run: npm run check
       - run: npm run build
       - name: Validate AI provider independence

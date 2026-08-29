@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "status": "enforced-foundation",
+  "principles": {
+    "workspaceIdentityField": "workspace_id",
+    "workspaceIdentityImmutable": true,
+    "workspaceRequiredForTenantData": true,
+    "crossWorkspaceFallback": false,
+    "unknownWorkspaceAction": "deny",
+    "unknownProviderAction": "deny",
+    "providerFallbackDefault": "none",
+    "databaseIsNotFileStorage": true,
+    "fileStorageIsNotDatabase": true
+  },
+  "accountProfiles": {
+    "development": {
+      "physicalBoundary": "cloudflare-development-account",
+      "productionDataAllowed": false,
+      "purpose": "Build, preview, staging and destructive test workloads",
+      "allowedDataClasses": ["workspace-record", "private-document", "public-asset", "hot-metadata"]
+    },
+    "production-core": {
+      "physicalBoundary": "cloudflare-production-account",
+      "logicalBoundary": "core-control-plane",
+      "purpose": "Identity, authorization, billing, audit, workspace registry and protected shared APIs",
+      "allowedDataClasses": ["core-record", "workspace-record", "private-document", "hot-metadata", "audit-record"],
+      "publicAssetOrigin": false
+    },
+    "production-public": {
+      "physicalBoundary": "cloudflare-production-account",
+      "logicalBoundary": "public-delivery-plane",
+      "purpose": "Public sites, static assets, cached public metadata and high-volume delivery",
+      "allowedDataClasses": ["public-asset", "public-metadata"],
+      "coreDatabaseReachable": false
+    },
+    "isolated-workload": {
+      "physicalBoundary": "dedicated-account-or-provider-when-threshold-reached",
+      "purpose": "High-volume, high-risk or independently billed workloads",
+      "allowedDataClasses": ["workspace-record", "private-document", "public-asset", "hot-metadata"],
+      "activation": "explicit-capacity-or-risk-decision"
+    }
+  },
+  "dataClasses": {
+    "core-record": {
+      "adapterKind": "database",
+      "scope": "core",
+      "defaultProvider": "d1-core",
+      "examples": ["identity", "authorization", "billing", "workspace-registry"]
+    },
+    "workspace-record": {
+      "adapterKind": "database",
+      "scope": "workspace",
+      "defaultProvider": "d1-workspace",
+      "examples": ["tenant-state", "relationships", "workflow-state", "document-metadata"]
+    },
+    "audit-record": {
+      "adapterKind": "database",
+      "scope": "workspace",
+      "defaultProvider": "d1-core",
+      "appendOnly": true
+    },
+    "private-document": {
+      "adapterKind": "file",
+      "scope": "workspace",
+      "defaultProvider": "google-drive-workspace",
+      "examples": ["source-documents", "reports", "pdf", "office-documents", "private-media"]
+    },
+    "public-asset": {
+      "adapterKind": "file",
+      "scope": "public",
+      "defaultProvider": "r2-public",
+      "examples": ["public-images", "downloads", "site-assets"]
+    },
+    "public-metadata": {
+      "adapterKind": "cache",
+      "scope": "public",
+      "defaultProvider": "kv-hot"
+    },
+    "hot-metadata": {
+      "adapterKind": "cache",
+      "scope": "workspace",
+      "defaultProvider": "kv-hot",
+      "examples": ["menus", "feature-flags", "service-catalog", "read-mostly-metadata"]
+    }
+  },
+  "providers": {
+    "d1-core": {
+      "adapterKind": "database",
+      "provider": "cloudflare-d1",
+      "scope": "core",
+      "portable": true
+    },
+    "d1-workspace": {
+      "adapterKind": "database",
+      "provider": "cloudflare-d1",
+      "scope": "workspace",
+      "portable": true,
+      "shardingKey": "workspace_id"
+    },
+    "postgres-workspace": {
+      "adapterKind": "database",
+      "provider": "postgres-compatible",
+      "scope": "workspace",
+      "portable": true,
+      "activation": "optional-capacity-provider"
+    },
+    "google-drive-workspace": {
+      "adapterKind": "file",
+      "provider": "google-drive",
+      "scope": "workspace",
+      "portable": true,
+      "activation": "requires-server-side-workspace-credential"
+    },
+    "r2-public": {
+      "adapterKind": "file",
+      "provider": "cloudflare-r2",
+      "scope": "public",
+      "portable": true
+    },
+    "kv-hot": {
+      "adapterKind": "cache",
+      "provider": "cloudflare-kv-or-cache",
+      "scope": "workspace-or-public",
+      "portable": true
+    }
+  },
+  "trafficProtection": {
+    "databaseBypassTargetPercent": 95,
+    "staticAndCacheFirst": true,
+    "publicRequestMayReachCoreDatabase": false,
+    "cacheWorkspaceKeys": true,
+    "queueNonInteractiveWork": true,
+    "avoidFanoutOnInteractivePath": true,
+    "providerTimeoutRequired": true,
+    "providerCircuitBreakerRecommended": true
+  },
+  "migrationRules": {
+    "workspaceProviderMoveMustBeExplicit": true,
+    "dualWriteDefault": false,
+    "cutoverRequiresVerification": true,
+    "rollbackPointerRequired": true,
+    "sourceDeletionAfterCutover": "manual-after-retention-window"
+  }
+}
