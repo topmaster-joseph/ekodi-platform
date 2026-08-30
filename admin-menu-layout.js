@@ -13,12 +13,19 @@ const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
 const INTERNAL_ONLY_HREFS = new Set();
 const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
 const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
+const DEMAND_KEYS = new Map([
+  ['campus','campus'],['aiops','aiops'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
+  ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
+  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
+  ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],
+]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH_SECTIONS = pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
 const CANONICAL_HASH = pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
 let requestedSection = '';
 let activeSectionState = '';
 let sitesLoading = null;
+const demandLoading = new Map();
 function installCompactNavigationStyle() {
   if (document.querySelector('#ekodi-admin-menu-density')) return;
   const style = document.createElement('style');
@@ -125,16 +132,40 @@ async function openSites() {
   navItemFor('campus')?.classList.add('active');
   syncTitle('campus');
 }
-function openDemand(section) {
+function clickDemandFallback(section) {
   const selector = section === 'aiops'
     ? '[data-demand-feature="aiops"], [data-section="aiops"]'
     : `[data-demand-feature="${section}"], [data-lazy-section="${section}"], [data-section="${section}"]`;
   nav.querySelector(selector)?.click();
 }
+function requestDemand(section) {
+  const demandKey = DEMAND_KEYS.get(section);
+  if (!demandKey || !window.EKODIAdminDemand?.activate) {
+    clickDemandFallback(section);
+    return null;
+  }
+  if (demandLoading.has(section)) return demandLoading.get(section);
+  const task = Promise.resolve(window.EKODIAdminDemand.activate(demandKey))
+    .then(() => {
+      applyStableNavigationOrder();
+      if (!activatePanel(section)) {
+        const real = navItemFor(section);
+        if (real && !real.dataset.demandFeature) real.click();
+        queueMicrotask(() => activatePanel(section));
+      }
+    })
+    .catch(error => {
+      console.error(`[EKODI Admin] ${section} demand activation failed`, error);
+      clickDemandFallback(section);
+    })
+    .finally(() => demandLoading.delete(section));
+  demandLoading.set(section, task);
+  return task;
+}
 function routeInternalToAiOps() {
   requestedSection = 'aiops';
   if (location.hash !== '#ai-ops') history.replaceState(null, '', '#ai-ops');
-  openDemand('aiops');
+  requestDemand('aiops');
 }
 function explicitHashSection() {
   return HASH_SECTIONS.get(location.hash.toLowerCase()) || '';
@@ -143,7 +174,7 @@ function reconcileNavigation() {
   enforceInternalNavigationPolicy();
   if (!requestedSection) return;
   if (requestedSection === 'sites' && !hasPanel('sites')) openSites();
-  else if (!activatePanel(requestedSection)) openDemand(requestedSection);
+  else if (!activatePanel(requestedSection)) requestDemand(requestedSection);
 }
 nav.addEventListener('click', event => {
   const item = event.target.closest('.nav[data-section], .nav[data-lazy-section], .nav[data-device-control-nav], a.nav[href]');
@@ -163,7 +194,9 @@ nav.addEventListener('click', event => {
     return;
   }
   requestedSection = section;
-  queueMicrotask(() => activatePanel(section));
+  queueMicrotask(() => {
+    if (!activatePanel(section)) requestDemand(section);
+  });
 }, true);
 content.addEventListener('click', event => {
   const control = event.target.closest('[data-campus-section]');
@@ -181,10 +214,10 @@ window.addEventListener('ekodi-admin-ready', () => {
   else if (explicit === 'sites') openSites();
   else if (explicit) {
     requestedSection = explicit;
-    if (!activatePanel(explicit)) openDemand(explicit);
+    if (!activatePanel(explicit)) requestDemand(explicit);
   } else {
     requestedSection = 'campus';
-    window.EKODIAdminDemand?.activate('campus');
+    requestDemand('campus');
   }
 });
 window.addEventListener('hashchange', () => {
@@ -193,7 +226,7 @@ window.addEventListener('hashchange', () => {
   if (isInternalSection(explicit)) return routeInternalToAiOps();
   if (explicit === 'sites') return openSites();
   requestedSection = explicit;
-  if (!activatePanel(explicit)) openDemand(explicit);
+  if (!activatePanel(explicit)) requestDemand(explicit);
 });
 installCompactNavigationStyle();
 mountAdminSidebar(document);
@@ -208,7 +241,8 @@ window.EKODIAdminPanels = Object.freeze({
     if (isInternalSection(section)) return routeInternalToAiOps();
     if (section === 'sites') return openSites();
     requestedSection = section;
-    if (!activatePanel(section)) openDemand(section);
+    if (!activatePanel(section)) return requestDemand(section);
+    return true;
   },
   current: () => activeSectionState || requestedSection,
   internalSections: Object.freeze([...INTERNAL_ONLY_SECTIONS]),
