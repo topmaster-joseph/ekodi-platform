@@ -36,130 +36,62 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate Church source, footer and media routes
+      - name: Validate Church multilingual source
         shell: bash
         run: |
           set -euo pipefail
-
-          assert_absent() {
-            local needle="$1"
-            local file="$2"
-            if grep -Fq "$needle" "$file"; then
-              echo "Unexpected content found in $file: $needle"
-              exit 1
-            fi
-          }
-
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -f church/index.html
-          test -f church/church-refresh.css
-          test -f church/community-visual.css
-          test -f church/church-footer.css
-          test -f church/script.js
-          test -f church/giving.js
-          test -f church/functions/api/giving/config.js
-          test -f church/functions/api/giving/order.js
-          test -f church/functions/api/giving/confirm.js
+          for file in index.html script.js church-i18n.js giving.js church-footer.css community-visual.css; do test -s "church/$file"; done
           node --check church/script.js
+          node --check church/church-i18n.js
           node --check church/giving.js
 
-          grep -Fq '<title>에코디교회 |' church/index.html
-          grep -Fq 'aria-label="에코디교회 홈"' church/index.html
-          grep -Fq '<strong>에코디교회</strong>' church/index.html
-          grep -Fq 'class="daily-verse"' church/index.html
-          grep -Fq 'class="daily-verse-text"' church/index.html
-          assert_absent 'class="daily-verse-label"' church/index.html
-          grep -Fq 'class="shell-my"' church/index.html
+          grep -Fq 'data-ekodi-footer-mode="service"' church/index.html
+          grep -Fq 'data-ekodi-service-footer' church/index.html
+          grep -Fq 'https://ekodi.kr/privacy' church/index.html
+          grep -Fq 'https://ekodi.kr/terms' church/index.html
+          grep -Fq 'mailto:ekodibiz@gmail.com' church/index.html
+          grep -Fq 'church-footer-legal' church/index.html
+          grep -Fq 'church-i18n.js' church/index.html
+          grep -Fq 'class="daily-verse-ref"' church/index.html
           grep -Fq 'https://my.ekodi.kr/' church/index.html
-          assert_absent 'EKODI교회' church/index.html
-          assert_absent 'class="shell-switch"' church/index.html
-          assert_absent 'data-ekodi-social="true"' church/index.html
-
-          grep -Fq '에클레시아 · 코이노니아 · 디아스포라 · 희년' church/index.html
-          grep -Fq 'class="online-triad"' church/index.html
-          grep -Fq '>유튜브 예배<' church/index.html
-          grep -Fq 'https://www.youtube.com/@ekodichurch/videos' church/index.html
-          grep -Fq 'class="button primary youtube-worship-link"' church/index.html
-          grep -Fq 'referrerpolicy="strict-origin-when-cross-origin"' church/index.html
-          grep -Fq 'origin=https%3A%2F%2Fchurch.ekodi.kr' church/index.html
-          grep -Fq '>묵상<' church/index.html
-          grep -Fq '>실시간 화상<' church/index.html
-          grep -Fq 'class="community-visit"' church/index.html
-          grep -Fq '함께 예배하고,' church/index.html
-          grep -Fq 'id="giving"' church/index.html
-          grep -Fq 'id="giving-dialog"' church/index.html
-          grep -Fq '<footer class="site-footer church-footer">' church/index.html
-          grep -Fq '<strong class="church-footer-brand">EKODI CHURCH</strong>' church/index.html
-          grep -Fq '사업자 소재지 전남 무안군 청계면 백련동1길 17-4, 1층' church/index.html
-          grep -Fq '운영주체 에코디교회' church/index.html
-          grep -Fq '대표 정찬균' church/index.html
-          grep -Fq '고유번호 213-13-01959' church/index.html
-          grep -Fq 'mailto:ekodichurch@gmail.com' church/index.html
-          grep -Fq '© 2026 EKODI CHURCH' church/index.html
-          assert_absent '독립 운영주체 또는 개별 서비스에 별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다.' church/index.html
-          assert_absent 'class="brand footer-brand"' church/index.html
           grep -Fq 'https://community.ekodi.kr' church/index.html
+          grep -Fq 'https://www.youtube.com/@ekodichurch/videos' church/index.html
+          ! grep -Fq 'images.unsplash.com' church/index.html
+          ! grep -Fq 'community-visit-photo' church/index.html
+          ! grep -Fq 'photo-credit' church/index.html
 
-          grep -Fq "headerBrandName.textContent = '에코디교회'" church/script.js
-          grep -Fq 'dailyScriptures' church/script.js
-          grep -Fq 'dailyVerse.innerHTML = '\''<span class="daily-verse-text"></span><span class="daily-verse-ref"></span>'\''' church/script.js
-          grep -Fq "channel.provider !== 'youtube'" church/script.js
-          grep -Fq 'youtubePlaylistUrl' church/script.js
-          grep -Fq 'strict-origin-when-cross-origin' church/script.js
-          grep -Fq 'https://social.ekodi.kr/?org=church' church/script.js
-          grep -Fq 'https://api.ekodi.kr/api/social/registry' church/script.js
-          assert_absent "label: '서비스 전환'" church/script.js
-
-          grep -Fq 'https://js.tosspayments.com/v2/standard' church/giving.js
-          grep -Fq '/api/giving/order' church/giving.js
-          grep -Fq '/api/giving/confirm' church/giving.js
-          grep -Fq 'TOSS_CLIENT_KEY' church/functions/api/giving/config.js
-          grep -Fq 'TOSS_SECRET_KEY' church/functions/api/giving/confirm.js
-          grep -Fq 'api.tosspayments.com/v1/payments/confirm' church/functions/api/giving/confirm.js
-
-          grep -Fq '.daily-verse{' church/community-visual.css
-          grep -Fq 'font-size:16px;' church/community-visual.css
-          grep -Fq '.daily-verse-label,.daily-verse-ref{display:none!important}' church/community-visual.css
-          grep -Fq '.youtube-direct-actions{' church/community-visual.css
-          grep -Fq 'grid-template-columns:auto minmax(220px,1fr) auto' church/community-visual.css
-          grep -Fq 'background:rgba(244,240,229,.96);' church/community-visual.css
-          grep -Fq '.giving-dialog{' church/community-visual.css
-          grep -Fq '.site-footer.church-footer{' church/church-footer.css
-          grep -Fq '.church-footer-inner{' church/church-footer.css
-          grep -Fq 'justify-items:center' church/church-footer.css
-          grep -Fq '.church-footer-info{' church/church-footer.css
+          grep -Fq "'ko-KR','en','zh-CN','ja'" church/church-i18n.js
+          grep -Fq 'EKODIChurchI18n' church/church-i18n.js
+          grep -Fq 'SCRIPTURES' church/church-i18n.js
+          grep -Fq 'formatAmount' church/church-i18n.js
+          grep -Fq 'ekodi:locale-change' church/church-i18n.js
+          grep -Fq 'window.EKODIChurchI18n' church/church-i18n.js
+          grep -Fq 'window.EKODIChurchI18n?.refresh?.()' church/script.js
+          grep -Fq 'window.EKODIChurchI18n?.formatAmount?.' church/giving.js
+          grep -Fq '.church-footer-legal{' church/church-footer.css
+          grep -Fq '.site-header .daily-verse-ref{' church/church-footer.css
 
           python - <<'PY'
           from html.parser import HTMLParser
           from pathlib import Path
-
           class Audit(HTMLParser):
               def __init__(self):
-                  super().__init__()
-                  self.ids = []
-                  self.anchors = []
+                  super().__init__(); self.ids=[]; self.anchors=[]
               def handle_starttag(self, tag, attrs):
-                  attrs = dict(attrs)
-                  if 'id' in attrs:
-                      self.ids.append(attrs['id'])
-                  href = attrs.get('href', '')
-                  if href.startswith('#') and len(href) > 1:
-                      self.anchors.append(href[1:])
-
-          parser = Audit()
-          source = Path('church/index.html').read_text(encoding='utf-8')
-          parser.feed(source)
-          duplicates = sorted({x for x in parser.ids if parser.ids.count(x) > 1})
-          missing = sorted(set(parser.anchors) - set(parser.ids))
-          if duplicates:
-              raise SystemExit(f'duplicate ids: {duplicates}')
-          if missing:
-              raise SystemExit(f'missing anchor targets: {missing}')
-          address_count = source.count('백련동1길 17-4')
-          if address_count != 2:
-              raise SystemExit(f'church address placement unexpected: address_count={address_count}')
-          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets; church footer/media audit ok')
+                  attrs=dict(attrs)
+                  if 'id' in attrs:self.ids.append(attrs['id'])
+                  href=attrs.get('href','')
+                  if href.startswith('#') and len(href)>1:self.anchors.append(href[1:])
+          source=Path('church/index.html').read_text(encoding='utf-8')
+          parser=Audit(); parser.feed(source)
+          duplicates=sorted({x for x in parser.ids if parser.ids.count(x)>1})
+          missing=sorted(set(parser.anchors)-set(parser.ids))
+          if duplicates: raise SystemExit(f'duplicate ids: {duplicates}')
+          if missing: raise SystemExit(f'missing anchor targets: {missing}')
+          if source.count('백련동1길 17-4') != 2: raise SystemExit('church address placement changed unexpectedly')
+          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets')
           PY
 
       - name: Prepare static Pages payload
@@ -169,15 +101,6 @@ jobs:
           rm -rf /tmp/ekodi-church-pages /tmp/ekodi-church-functions
           mkdir -p /tmp/ekodi-church-pages
           rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
-          test -s /tmp/ekodi-church-pages/index.html
-          test -s /tmp/ekodi-church-pages/church-refresh.css
-          test -s /tmp/ekodi-church-pages/community-visual.css
-          test -s /tmp/ekodi-church-pages/church-footer.css
-          test -s /tmp/ekodi-church-pages/script.js
-          test -s /tmp/ekodi-church-pages/giving.js
-          test -s /tmp/ekodi-church-pages/functions/api/giving/config.js
-          test -s /tmp/ekodi-church-pages/functions/api/giving/order.js
-          test -s /tmp/ekodi-church-pages/functions/api/giving/confirm.js
           cd /tmp/ekodi-church-pages
           npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
           test -s /tmp/ekodi-church-functions/index.js
@@ -187,137 +110,45 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/ekodi-church-pages
-          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . \
-            --project-name ekodi-church \
-            --branch main \
-            --commit-dirty=true
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
 
-      - name: Verify production scripture, YouTube route, footer and giving runtime
+      - name: Verify production multilingual footer release
         shell: bash
         run: |
           set -euo pipefail
-          release='church-scripture-youtube-20260830-1'
+          release='church-i18n-footer-20260830-1'
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
-            refresh_code=$(curl -L -sS -o /tmp/church-refresh.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-refresh.css?release=${release}" || true)
-            visual_code=$(curl -L -sS -o /tmp/community-visual.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/community-visual.css?release=${release}" || true)
-            footer_code=$(curl -L -sS -o /tmp/church-footer.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-footer.css?release=${release}" || true)
-            script_code=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/script.js?release=${release}" || true)
-            giving_code=$(curl -L -sS -o /tmp/giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/giving.js?release=${release}" || true)
-            config_code=$(curl -L -sS -o /tmp/giving-config.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/api/giving/config?release=${release}" || true)
-
-            legacy_name=0
-            legacy_switch=0
-            legacy_social=0
-            legacy_footer=0
-            legacy_policy=0
-            verse_label=0
-            grep -Fq 'EKODI교회' /tmp/church.html && legacy_name=1 || true
-            grep -Fq 'class="shell-switch"' /tmp/church.html && legacy_switch=1 || true
-            grep -Fq 'data-ekodi-social="true"' /tmp/church.html && legacy_social=1 || true
-            grep -Fq 'class="brand footer-brand"' /tmp/church.html && legacy_footer=1 || true
-            grep -Fq '독립 운영주체 또는 개별 서비스에 별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다.' /tmp/church.html && legacy_policy=1 || true
-            grep -Fq 'class="daily-verse-label"' /tmp/church.html && verse_label=1 || true
-
-            address_count=$(grep -Fo '백련동1길 17-4' /tmp/church.html | wc -l | tr -d ' ')
-            config_valid=0
-            if [[ "$config_code" == '200' ]]; then
-              node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); if(x.provider==='toss' && typeof x.enabled==='boolean') process.exit(0); process.exit(1)" && config_valid=1 || true
-            fi
-
-            if [[ "$root_code" == '200' && "$refresh_code" == '200' && "$visual_code" == '200' && "$footer_code" == '200' && "$script_code" == '200' && "$giving_code" == '200' && "$config_code" == '200' ]] \
-              && [[ "$legacy_name" == '0' && "$legacy_switch" == '0' && "$legacy_social" == '0' && "$legacy_footer" == '0' && "$legacy_policy" == '0' && "$verse_label" == '0' && "$address_count" == '2' && "$config_valid" == '1' ]] \
-              && grep -Fq '<title>에코디교회 |' /tmp/church.html \
-              && grep -Fq 'aria-label="에코디교회 홈"' /tmp/church.html \
-              && grep -Fq '<strong>에코디교회</strong>' /tmp/church.html \
-              && grep -Fq 'class="daily-verse-text"' /tmp/church.html \
-              && grep -Fq 'https://www.youtube.com/@ekodichurch/videos' /tmp/church.html \
-              && grep -Fq 'referrerpolicy="strict-origin-when-cross-origin"' /tmp/church.html \
-              && grep -Fq 'origin=https%3A%2F%2Fchurch.ekodi.kr' /tmp/church.html \
-              && grep -Fq 'class="online-triad"' /tmp/church.html \
-              && grep -Fq 'class="community-visit"' /tmp/church.html \
-              && grep -Fq 'id="giving-dialog"' /tmp/church.html \
-              && grep -Fq '<footer class="site-footer church-footer">' /tmp/church.html \
-              && grep -Fq '<strong class="church-footer-brand">EKODI CHURCH</strong>' /tmp/church.html \
-              && grep -Fq '운영주체 에코디교회' /tmp/church.html \
-              && grep -Fq '대표 정찬균' /tmp/church.html \
-              && grep -Fq '고유번호 213-13-01959' /tmp/church.html \
-              && grep -Fq 'mailto:ekodichurch@gmail.com' /tmp/church.html \
-              && grep -Fq '© 2026 EKODI CHURCH' /tmp/church.html \
-              && grep -Fq 'class="shell-my"' /tmp/church.html \
-              && grep -Fq '.daily-verse{' /tmp/community-visual.css \
-              && grep -Fq 'font-size:16px;' /tmp/community-visual.css \
-              && grep -Fq '.daily-verse-label,.daily-verse-ref{display:none!important}' /tmp/community-visual.css \
-              && grep -Fq '.youtube-direct-actions{' /tmp/community-visual.css \
-              && grep -Fq 'background:rgba(244,240,229,.96);' /tmp/community-visual.css \
-              && grep -Fq '.site-footer.church-footer{' /tmp/church-footer.css \
-              && grep -Fq '.church-footer-inner{' /tmp/church-footer.css \
-              && grep -Fq 'justify-items:center' /tmp/church-footer.css \
-              && grep -Fq 'https://js.tosspayments.com/v2/standard' /tmp/giving.js \
-              && grep -Fq "channel.provider !== 'youtube'" /tmp/script.js \
-              && grep -Fq 'youtubePlaylistUrl' /tmp/script.js \
-              && grep -Fq "headerBrandName.textContent = '에코디교회'" /tmp/script.js \
-              && grep -Fq 'dailyScriptures' /tmp/script.js; then
-              echo 'Church production scripture, YouTube route, footer and giving runtime verified.'
-              node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/giving-config.json','utf8')); console.log('giving_payment_enabled=' + x.enabled)"
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
+            i18n=$(curl -L -sS -o /tmp/church-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n.js?release=${release}" || true)
+            script=$(curl -L -sS -o /tmp/script.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/script.js?release=${release}" || true)
+            giving=$(curl -L -sS -o /tmp/giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/giving.js?release=${release}" || true)
+            footer=$(curl -L -sS -o /tmp/church-footer.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-footer.css?release=${release}" || true)
+            config=$(curl -L -sS -o /tmp/giving-config.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/api/giving/config?release=${release}" || true)
+            if [[ "$root" == 200 && "$i18n" == 200 && "$script" == 200 && "$giving" == 200 && "$footer" == 200 && "$config" == 200 ]] \
+              && grep -Fq 'https://ekodi.kr/privacy' /tmp/church.html \
+              && grep -Fq 'https://ekodi.kr/terms' /tmp/church.html \
+              && grep -Fq 'mailto:ekodibiz@gmail.com' /tmp/church.html \
+              && grep -Fq 'church-i18n.js' /tmp/church.html \
+              && grep -Fq 'data-ekodi-service-footer' /tmp/church.html \
+              && ! grep -Fq 'community-visit-photo' /tmp/church.html \
+              && grep -Fq 'EKODIChurchI18n' /tmp/church-i18n.js \
+              && grep -Fq "'ko-KR','en','zh-CN','ja'" /tmp/church-i18n.js \
+              && grep -Fq '.church-footer-legal{' /tmp/church-footer.css; then
+              echo 'Church multilingual page, legal footer and media removal verified in production.'
               break
             fi
-
-            if [[ "$attempt" == '18' ]]; then
-              echo "Production did not converge: root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code legacy_name=$legacy_name legacy_switch=$legacy_switch legacy_social=$legacy_social legacy_footer=$legacy_footer legacy_policy=$legacy_policy verse_label=$verse_label address_count=$address_count config_valid=$config_valid"
+            if [[ "$attempt" == 18 ]]; then
+              echo "Production did not converge: root=$root i18n=$i18n script=$script giving=$giving footer=$footer config=$config"
               exit 1
             fi
-            echo "attempt=$attempt root=$root_code refresh=$refresh_code visual=$visual_code footer=$footer_code script=$script_code giving=$giving_code config=$config_code verse_label=$verse_label address_count=$address_count config_valid=$config_valid"
             sleep 5
           done
 
-      - name: Verify YouTube worship destination and embed endpoint
+      - name: Verify linked EKODI services
         shell: bash
         run: |
           set -euo pipefail
-          user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
-          channel='https://www.youtube.com/@ekodichurch/videos'
-          embed='https://www.youtube-nocookie.com/embed/videoseries?list=UUnp_LXmJBcJRX7CgJT9FF7w&rel=0&playsinline=1&origin=https%3A%2F%2Fchurch.ekodi.kr'
-
-          channel_code=$(curl -L -A "$user_agent" -sS -o /tmp/youtube-channel.html -w '%{http_code}' --connect-timeout 8 --max-time 25 "$channel" || true)
-          embed_code=$(curl -L -A "$user_agent" -e 'https://church.ekodi.kr/' -sS -o /tmp/youtube-embed.html -w '%{http_code}' --connect-timeout 8 --max-time 25 "$embed" || true)
-
-          case "$channel_code" in
-            2*|3*) echo "YouTube channel route reachable: $channel_code" ;;
-            429) echo 'YouTube channel route reachable but rate-limited by YouTube (429).' ;;
-            *) echo "YouTube channel route failed: $channel_code"; exit 1 ;;
-          esac
-          case "$embed_code" in
-            2*|3*) echo "YouTube embed endpoint reachable with church referrer: $embed_code" ;;
-            429) echo 'YouTube embed endpoint reachable but rate-limited by YouTube (429).' ;;
-            *) echo "YouTube embed endpoint failed: $embed_code"; exit 1 ;;
-          esac
-
-      - name: Verify every linked first-party EKODI service
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY' > /tmp/ekodi-first-party-targets.txt
-          import re
-          from pathlib import Path
-
-          source = '\n'.join(
-              Path(path).read_text(encoding='utf-8')
-              for path in ('church/index.html', 'church/script.js', 'church/giving.js')
-          )
-          pattern = re.compile(r'https://(?:[A-Za-z0-9-]+\.)?ekodi\.kr(?:/[^\s"\'<>]*)?')
-          targets = sorted(set(match.rstrip('.,;)') for match in pattern.findall(source)))
-          for target in targets:
-              print(target)
-          PY
-
-          test -s /tmp/ekodi-first-party-targets.txt
-          cat /tmp/ekodi-first-party-targets.txt
-
-          while IFS= read -r target; do
+          for target in 'https://church.ekodi.kr/' 'https://my.ekodi.kr/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
-            case "$code" in
-              2*|3*) echo "first-party link ok: $code $target" ;;
-              *) echo "first-party link failed: $code $target"; exit 1 ;;
-            esac
-          done < /tmp/ekodi-first-party-targets.txt
+            case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
+          done
