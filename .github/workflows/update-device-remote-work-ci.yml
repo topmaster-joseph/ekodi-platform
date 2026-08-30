@@ -1,0 +1,34 @@
+name: Update Device Remote Work CI
+
+on:
+  push:
+    branches: [fix/admin-system-remote-work]
+    paths:
+      - 'scripts/update-device-remote-work-ci.mjs'
+      - '.github/workflows/update-device-remote-work-ci.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/admin-system-remote-work
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/update-device-remote-work-ci.mjs
+      - run: |
+          node --test test/device-control-contract.test.mjs test/admin-thin-shell.test.mjs
+          grep -Fq "styles: ['device-control-admin.css', 'remote-power-admin.css']" .github/workflows/device-control-windows.yml
+          grep -Fq "remote_desktop.recovery.enable" .github/workflows/device-control-windows.yml
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/device-control-windows.yml
+          git commit -m 'ci: align Device Control with Remote Work' || exit 0
+          git push origin HEAD:fix/admin-system-remote-work
