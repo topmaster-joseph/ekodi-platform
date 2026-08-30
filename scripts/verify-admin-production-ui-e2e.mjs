@@ -42,9 +42,15 @@ await page.route('https://api.ekodi.kr/api/session', async route => {
   });
 });
 
+async function waitForAdminShell() {
+  await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelectorAll('[data-admin-global-group]').length === 8, null, { timeout: 15000 });
+  await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15000 });
+}
+
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
 if (!response || response.status() !== 200) throw new Error(`Admin entry returned ${response?.status() ?? 'no response'}`);
-await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 20000 });
+await waitForAdminShell();
 
 const shellState = await page.evaluate(() => {
   const app = document.querySelector('#app');
@@ -75,18 +81,16 @@ for (const asset of ['ekodi-message-ui.js', 'google-admin-auth.js']) {
   if (!/javascript|ecmascript|text\/plain/i.test(contentType)) throw new Error(`${asset} has non-script content type: ${contentType || '(missing)'}`);
 }
 
-await page.waitForFunction(() => document.querySelectorAll('[data-admin-global-group]').length === 8, null, { timeout: 15000 });
-await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15000 });
-
 const sourceIds = await page.locator('.admin-context-source .nav').evaluateAll(nodes => nodes.map(node => node.dataset.section || node.dataset.lazySection || '').filter(Boolean));
 const missingSources = menus.map(([id]) => id).filter(id => !sourceIds.includes(id));
 if (missingSources.length) throw new Error(`Missing production menu source(s): ${missingSources.join(', ')}`);
 
 const results = [];
 for (const [id, group] of menus) {
+  console.log(`[PROD-E2E] ${id}: begin`);
   const global = page.locator(`[data-admin-global-group="${group}"]`);
   await global.waitFor({ state: 'visible', timeout: 10000 });
-  await global.click();
+  await global.click({ timeout: 10000 });
 
   const tab = page.locator(`[data-admin-context-section="${id}"]`);
   await tab.waitFor({ state: 'visible', timeout: 10000 });
@@ -95,20 +99,22 @@ for (const [id, group] of menus) {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
     const href = await source.getAttribute('href');
     if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
-    const popupPromise = page.waitForEvent('popup', { timeout: 10000 });
-    await tab.click();
-    const popup = await popupPromise;
-    await popup.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-    const popupUrl = popup.url();
+    await Promise.all([
+      page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 15000 }),
+      tab.click({ timeout: 10000 }),
+    ]);
     const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
-    if (!popupUrl.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax click opened unexpected URL: ${popupUrl}`);
-    await popup.close();
-    results.push({ id, kind: 'handoff', ok: true, detail: popupUrl });
+    const taxUrl = page.url();
+    if (!taxUrl.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax click navigated to unexpected URL: ${taxUrl}`);
+    results.push({ id, kind: 'handoff', ok: true, detail: taxUrl });
+    console.log(`[PROD-E2E] ${id}: ok current-tab ${taxUrl}`);
+    await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await waitForAdminShell();
     continue;
   }
 
-  await tab.click();
+  await tab.click({ timeout: 10000 });
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
   await page.waitForFunction(section => {
     const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
@@ -128,6 +134,7 @@ for (const [id, group] of menus) {
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
   results.push({ id, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
+  console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
 }
 
 const activeCount = results.filter(result => result.ok).length;
