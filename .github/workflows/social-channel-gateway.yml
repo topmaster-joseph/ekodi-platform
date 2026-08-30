@@ -1,0 +1,43 @@
+name: Validate Social Channel Gateway
+
+on:
+  pull_request:
+    paths:
+      - 'social-channel-gateway.js'
+      - 'social-content-ai.js'
+      - 'mission-control-social-entry-worker.js'
+      - 'wrangler.api.toml'
+      - 'migrations/0048_social_channel_gateway.sql'
+      - 'test/social-channel-gateway.test.mjs'
+      - '.github/workflows/social-channel-gateway.yml'
+  push:
+    branches:
+      - 'feat/direct-social-channel-gateway'
+    paths:
+      - 'social-channel-gateway.js'
+      - 'social-content-ai.js'
+      - 'mission-control-social-entry-worker.js'
+      - 'wrangler.api.toml'
+      - 'migrations/0048_social_channel_gateway.sql'
+      - 'test/social-channel-gateway.test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Parse social runtime
+        run: |
+          node --check social-channel-gateway.js
+          node --check social-content-ai.js
+          node --check mission-control-social-entry-worker.js
+      - name: Run social unit tests
+        run: node --test test/social-channel-gateway.test.mjs
+      - name: Validate deployment guardrails
+        run: npm run validate:deployments
