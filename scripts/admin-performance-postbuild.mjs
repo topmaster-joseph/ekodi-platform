@@ -112,7 +112,7 @@ const versionInputs = [
   'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
   'admin-compact.js','admin-compact.css','admin-shell.css','finance-monitor.js',
-  'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css',
+  'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css','remote-power-admin.js','remote-power-admin.css',
   'ai-ops-admin.js','ai-ops-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','life-ai-admin.js','life-ai-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
   'system-health-admin.js','system-health-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css',

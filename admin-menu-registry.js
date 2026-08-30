@@ -47,7 +47,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   // SYSTEM: health, security, devices and architecture.
   { id: 'health', group: 'system', icon: '♥', labels: { ko: '시스템 건강', en: 'System Health' } },
   { id: 'security', group: 'system', icon: 'S', labels: { ko: '보안', en: 'Security' } },
-  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '기기 관리', en: 'Devices' } },
+  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '원격 작업', en: 'Remote Work' } },
   { id: 'architecture', group: 'system', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
 
   // Internal capabilities are invoked from their parent workbench, never as extra global axes.

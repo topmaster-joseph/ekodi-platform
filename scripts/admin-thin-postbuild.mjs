@@ -18,6 +18,8 @@ function mustReplace(source, search, replacement, label) {
 let compactCss = await text(`${dist}admin-compact.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
+const remotePowerJs = (await text(`${root}remote-power-admin.js`)).trim();
+const remotePowerCss = (await text(`${root}remote-power-admin.css`)).trim();
 const hybridExecutionJs = (await text(`${root}hybrid-execution-admin.js`)).trim();
 const assistJs = (await text(`${root}admin-assist-dock.js`)).trim();
 const assistCss = (await text(`${root}admin-assist-dock.css`)).trim();
@@ -28,6 +30,8 @@ new Function(assistJs);
 new Function(assistBootstrapJs);
 await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n${hybridExecutionJs}\n`);
 await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
+await writeFile(`${dist}remote-power-admin.js`, `${remotePowerJs}\n`);
+await writeFile(`${dist}remote-power-admin.css`, `${remotePowerCss}\n`);
 if (compactCss.includes(deviceCss)) compactCss = compactCss.replace(deviceCss, '');
 compactCss = `${compactCss}\n${assistBootstrapCss}\n`;
 await writeFile(`${dist}admin-compact.css`, compactCss);

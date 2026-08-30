@@ -98,9 +98,9 @@
       insert: 'after-work',
     },
     devices: {
-      label: '기기 관리', icon: '⌁',
-      styles: ['device-control-admin.css'],
-      scripts: ['device-control-admin.js'],
+      label: '원격 작업', icon: '⌁',
+      styles: ['device-control-admin.css', 'remote-power-admin.css'],
+      scripts: ['device-control-admin.js', 'remote-power-admin.js'],
       secondaryStyles: ['device-browser-diagnostics.css'],
       secondaryScripts: ['device-browser-diagnostics.js'],
       real: '[data-device-control-nav]',

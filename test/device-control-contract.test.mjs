@@ -186,6 +186,6 @@ test('unified fleet types reduce authority by default', () => {
   assert.match(api, /policyCancelled: true/);
   assert.match(api, /sensor:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
   assert.match(api, /robot:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
-  assert.match(admin, /통합 기기관리/);
+  assert.match(admin, /원격 작업/);
   assert.match(admin, /관찰 인벤토리 등록/);
 });
