@@ -9,6 +9,8 @@ on:
       - 'social-attribution-api.js'
       - 'customer-entry-worker.js'
       - 'social-admin.js'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'admin-menu-registry.js'
       - 'wrangler.api.toml'
       - 'migrations/0048_social_channel_gateway.sql'
       - 'test/social-channel-gateway.test.mjs'
@@ -22,6 +24,8 @@ on:
       - 'social-attribution-api.js'
       - 'customer-entry-worker.js'
       - 'social-admin.js'
+      - 'marketing-ai-admin-live-ops.js'
+      - 'admin-menu-registry.js'
       - 'wrangler.api.toml'
       - 'migrations/0048_social_channel_gateway.sql'
       - 'test/social-channel-gateway.test.mjs'
@@ -37,13 +41,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Parse social runtime
+      - name: Parse social runtime and marketing operations UI
         run: |
           node --check social-channel-gateway.js
           node --check social-content-ai.js
           node --check social-attribution-api.js
           node --check customer-entry-worker.js
           node --check social-admin.js
+          node --check marketing-ai-admin-live-ops.js
+          node --check admin-menu-registry.js
       - name: Run social unit tests
         run: node --test test/social-channel-gateway.test.mjs
       - name: Validate deployment guardrails
