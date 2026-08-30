@@ -82,7 +82,6 @@ jobs:
 
           patch('admin-authenticated-shell.js', source => {
             let next = source;
-            next = next.replace("const criticalPostAuthScripts = ['admin-compact.js','admin-menu-layout.js','admin-demand-loader.js'];", "const criticalPostAuthScripts = ['admin-menu-layout.js','admin-demand-loader.js'];");
             next = next.replace(/function canonicalizeLegacyEntry\(\)\{[^\n]*\}\n/, '');
             next = next.replaceAll('canonicalizeLegacyEntry();', '');
             return next;
@@ -93,13 +92,17 @@ jobs:
             next = next.replaceAll("assetRequest(request, '/control-center')", "assetRequest(request, '/admin-shell')");
             next = next.replaceAll("'admin-control-center'", "'admin-shell'");
             next = next.replace("  '/control-center-ops.css',\n]);", "  '/control-center-ops.css',\n  '/control-center.css',\n  '/control-center-finance.css',\n  '/compact-control-center.css',\n  '/compact-control-center.js',\n]);");
-            next = next.replace("  '/admin-compact.js',\n", '');
             return next;
           });
 
           patch('scripts/build.mjs', source => source
             .replaceAll("asset === 'control-center.html'", "asset === 'admin-shell.html'")
             .replaceAll('minimal pre-auth Control Center', 'minimal pre-auth Admin Shell'));
+
+          // Regex literals in the performance postbuild contain escaped dots, so migrate them explicitly.
+          patch('scripts/admin-performance-postbuild.mjs', source => source
+            .replaceAll('control-center\\.css', 'admin-shell\\.css')
+            .replaceAll('control-center-finance\\.css', 'admin-finance\\.css'));
 
           patch('scripts/validate-admin-source.mjs', source => {
             let next = source;
@@ -122,8 +125,10 @@ jobs:
           if (!shell.includes('admin-shell.css')) throw new Error('canonical shell stylesheet reference missing');
           const auth = read('admin-authenticated-shell.js');
           if (auth.includes('canonicalizeLegacyEntry') || auth.includes('compact-control-center')) throw new Error('legacy authenticated shell residue survived');
+          if (!auth.includes('admin-compact.js')) throw new Error('canonical compact runtime is not attached to authenticated shell');
           const worker = read('site-worker.js');
           if (!worker.includes("assetRequest(request, '/admin-shell')")) throw new Error('admin edge does not serve canonical shell');
+          if (!worker.includes("'/admin-compact.js'")) throw new Error('canonical compact runtime is not an admin asset');
           for (const oldPath of ['/control-center','/control-center.html','/control-center.css','/control-center-finance.css','/compact-control-center.css','/compact-control-center.js']) {
             if (!worker.includes(`'${oldPath}'`)) throw new Error(`retired path is not fail-closed: ${oldPath}`);
           }
@@ -134,6 +139,8 @@ jobs:
           node --check site-worker.js
           node --check admin-authenticated-shell.js
           node --check scripts/build.mjs
+          node --check scripts/admin-thin-postbuild.mjs
+          node --check scripts/admin-performance-postbuild.mjs
           node scripts/validate-admin-source.mjs
           npm run build
           node --test test/admin-central-login-link.test.mjs test/admin-ai-first-navigation.test.mjs test/admin-free-ops-nav.contract.test.mjs
@@ -141,12 +148,15 @@ jobs:
           test -f dist/admin-shell.css
           test -f dist/admin-finance.css
           test -f dist/admin-compact.css
+          test -f dist/admin-compact.js
           test ! -e dist/control-center.html
           test ! -e dist/control-center.css
           test ! -e dist/control-center-finance.css
           test ! -e dist/compact-control-center.css
+          test ! -e dist/compact-control-center.js
           grep -Fq '<title>EKODI Admin</title>' dist/admin-shell.html
-          grep -Fq 'admin-shell.css' dist/admin-shell.html
+          grep -Fq 'admin-shell.css?v=' dist/admin-shell.html
+          grep -Fq 'admin-compact.js' dist/admin-authenticated-shell.js
           ! grep -Fq 'compact-control-center' dist/admin-authenticated-shell.js
       - name: Commit canonical admin source
         run: |
@@ -174,15 +184,17 @@ jobs:
             shell_css=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-shell.css?canonical=${nonce}" || true)
             finance_css=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-finance.css?canonical=${nonce}" || true)
             compact_css=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-compact.css?canonical=${nonce}" || true)
+            compact_js=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-compact.js?canonical=${nonce}" || true)
             old_html=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center.html?canonical=${nonce}" || true)
             old_route=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center?canonical=${nonce}" || true)
             old_css=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center.css?canonical=${nonce}" || true)
             old_finance=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/control-center-finance.css?canonical=${nonce}" || true)
             old_compact=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.css?canonical=${nonce}" || true)
+            old_compact_js=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.js?canonical=${nonce}" || true)
             title=no
             grep -Fq '<title>EKODI Admin</title>' /tmp/admin-root && title=yes || true
-            echo "canonical admin -> root=$root assets=$shell_css/$finance_css/$compact_css retired=$old_html/$old_route/$old_css/$old_finance/$old_compact title=$title"
-            if [ "$root" = '200' ] && [ "$shell_css" = '200' ] && [ "$finance_css" = '200' ] && [ "$compact_css" = '200' ] && [ "$old_html" = '404' ] && [ "$old_route" = '404' ] && [ "$old_css" = '404' ] && [ "$old_finance" = '404' ] && [ "$old_compact" = '404' ] && [ "$title" = yes ]; then exit 0; fi
+            echo "canonical admin -> root=$root assets=$shell_css/$finance_css/$compact_css/$compact_js retired=$old_html/$old_route/$old_css/$old_finance/$old_compact/$old_compact_js title=$title"
+            if [ "$root" = '200' ] && [ "$shell_css" = '200' ] && [ "$finance_css" = '200' ] && [ "$compact_css" = '200' ] && [ "$compact_js" = '200' ] && [ "$old_html" = '404' ] && [ "$old_route" = '404' ] && [ "$old_css" = '404' ] && [ "$old_finance" = '404' ] && [ "$old_compact" = '404' ] && [ "$old_compact_js" = '404' ] && [ "$title" = yes ]; then exit 0; fi
             sleep 4
           done
           exit 1
