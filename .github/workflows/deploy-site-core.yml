@@ -136,7 +136,7 @@ jobs:
           grep -Fq "section.id = 'campusPanel'" dist/campus-actions.js
           grep -Fq "section.dataset.panel = 'campus'" dist/campus-actions.js
           grep -Fq "button.dataset.section = 'campus'" dist/campus-actions.js
-          grep -Fq "requestDemand('campus')" dist/admin-menu-layout.js
+          grep -Fq "demand('campus')" dist/admin-menu-layout.js
           grep -Fq 'position:fixed!important' dist/admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
