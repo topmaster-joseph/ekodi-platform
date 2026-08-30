@@ -283,7 +283,7 @@ export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
   if (item.tagName === 'BUTTON') item.type = 'button';
   else {
     item.href = definition.href;
-    item.target = '_blank';
+    item.target = '_self';
     item.rel = 'noopener';
   }
   item.className = 'nav';
