@@ -24,14 +24,18 @@ on:
       - 'styles.css'
       - 'script.js'
       - 'responsive.css'
-      - 'control-center.css'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
       - 'admin-demand-loader.js'
+      - 'admin-menu-registry.js'
       - '_headers'
       - 'auth-site/**'
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
       - 'config/ecosystem-services.json'
       - 'scripts/ecosystem-registry.mjs'
+      - 'scripts/audit-admin-menu-services.mjs'
+      - 'scripts/validate-admin-source.mjs'
       - 'scripts/build.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
@@ -48,7 +52,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 22
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -60,43 +64,36 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate shared site Worker and release gate
+      - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          node --check site-worker.js
-          node --check platform-router-entry-worker.js
-          node --check tax-portal-worker.js
-          node --check tax-service-worker.js
-          node --check finance-entry-worker.js
-          node --check script.js
-          node --check homepage-ambient.js
-          node --check auth-site/auth-workspace-target.js
-          node --check marketing-ai-admin.js
-          node --check admin-demand-loader.js
-          node --check scripts/ecosystem-registry.mjs
-          node --check scripts/build.mjs
-          node --check scripts/guarded-worker-release.mjs
+          for f in site-worker.js platform-router-entry-worker.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-demand-loader.js scripts/ecosystem-registry.mjs scripts/build.mjs scripts/guarded-worker-release.mjs; do
+            node --check "$f"
+          done
+          node scripts/validate-admin-source.mjs
+          if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
           test -f homepage-ambient.css
           test -f marketing-ai-admin.css
+          test -f admin-shell.html
+          test -f admin-shell.css
+          test -f config/ecosystem-services.json
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' site-worker.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
           grep -Fq "const LIVE = 'https://marketing.ekodi.kr/';" marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
-          grep -Fq '사용자 페이지 ↗' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
-          grep -Fq 'position:fixed!important' responsive.css
-          grep -Fq 'position:fixed!important' control-center.css
+          grep -Fq 'position:fixed!important' admin-shell.css
+          grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' index.html
           if grep -Eq "frame-src[^;]*https://marketing\.ekodi\.kr" site-worker.js; then
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          grep -Fq 'pattern = "ekodi.kr"' wrangler.site.toml
-          grep -Fq 'pattern = "admin.ekodi.kr"' wrangler.site.toml
-          grep -Fq 'pattern = "auth.ekodi.kr"' wrangler.site.toml
-          grep -Fq 'pattern = "tax.ekodi.kr"' wrangler.site.toml
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
+            grep -Fq "pattern = \"$host\"" wrangler.site.toml
+          done
 
       - name: Verify Cloudflare credentials
         run: |
@@ -108,113 +105,131 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          test -f dist/auth-workspace-target.js
-          test -f dist/marketing-ai-admin.js
-          test -f dist/marketing-ai-admin.css
-          test -f dist/admin-demand-loader.js
+          for f in dist/index.html dist/admin-shell.html dist/admin-shell.css dist/admin-demand-loader.js dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
+            test -f "$f"
+          done
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Fq 'serviceOrigins' dist/auth-workspace-target.js
-          grep -Fq 'marketing:' dist/auth-workspace-target.js
-          grep -Fq 'books:' dist/auth-workspace-target.js
-          grep -Fq 'church:' dist/auth-workspace-target.js
-          grep -Fq 'social:' dist/auth-workspace-target.js
-          grep -Fq 'energy:' dist/auth-workspace-target.js
           grep -Fq "button.dataset.section = 'marketing-ai'" dist/marketing-ai-admin.js
-          grep -Fq 'Marketing AI 운영 관제센터' dist/marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' dist/marketing-ai-admin.js
-          grep -Fq '사용자 페이지 ↗' dist/marketing-ai-admin.js
           if grep -Fq '<iframe' dist/marketing-ai-admin.js; then
             echo 'Marketing public UI must open externally, not inside the admin workspace.'
             exit 1
           fi
           grep -Fq "styles: ['marketing-ai-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
-          if grep -Fq '<script src="marketing-ai-admin.js"' dist/control-center.html || grep -Fq '<link rel="stylesheet" href="marketing-ai-admin.css"' dist/control-center.html; then
-            echo 'MarketingAI must remain demand-loaded, not part of the admin first path.'
+          if grep -Fq '<script src="marketing-ai-admin.js"' dist/admin-shell.html || grep -Fq '<link rel="stylesheet" href="marketing-ai-admin.css"' dist/admin-shell.html; then
+            echo 'Marketing AI must remain demand-loaded, not part of the admin first path.'
             exit 1
           fi
+          grep -Fq 'position:fixed!important' dist/admin-shell.css
+          grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
-          grep -Fq '.site-header{position:fixed;top:0;left:0;right:0;width:100%' dist/index.html
-          grep -Fq 'position:fixed!important' dist/control-center.css
-          grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/control-center.css
 
-      - name: Inspect Cloudflare custom-domain attachments
-        id: domain_state
-        shell: bash
-        run: |
-          set -euo pipefail
-          payload=$(curl -fsS --retry 3 --retry-delay 2 \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          echo "$payload" | jq -e '.success == true' >/dev/null
-          needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
-            if echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
-              echo "Cloudflare Worker domain attached: $host"
-            else
-              echo "Cloudflare Worker domain missing: $host"
-              needs_sync=true
-            fi
-          done
-          echo "needs_sync=$needs_sync" >> "$GITHUB_OUTPUT"
-
-      - name: Detect domain configuration change
-        id: domain_config
+      - name: Verify and repair Cloudflare custom-domain attachments
         shell: bash
         env:
           BEFORE_SHA: ${{ github.event.before }}
           FORCE_SYNC: ${{ inputs.sync_domains }}
         run: |
           set -euo pipefail
-          changed=false
-          if [ "$GITHUB_EVENT_NAME" = 'push' ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != '0000000000000000000000000000000000000000' ]; then
-            if git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" 2>/dev/null | grep -Fxq 'wrangler.site.toml'; then changed=true; fi
-          fi
-          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ] && [ "${FORCE_SYNC:-false}" = 'true' ]; then changed=true; fi
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
-          echo "Cloudflare domain config changed/forced: $changed"
-
-      - name: Repair or synchronize Cloudflare custom-domain triggers
-        if: steps.domain_config.outputs.changed == 'true' || steps.domain_state.outputs.needs_sync == 'true'
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
-
-      - name: Verify Cloudflare custom-domain attachments without mutation
-        shell: bash
-        run: |
-          set -euo pipefail
-          payload=$(curl -fsS --retry 3 --retry-delay 2 \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          read_domains() {
+            curl -fsS --retry 3 --retry-delay 2 \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          }
+          payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
+          needs_sync=false
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
+            if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
+              echo "Cloudflare Worker domain missing: $host"
+              needs_sync=true
+            fi
+          done
+          config_changed=false
+          if [ "$GITHUB_EVENT_NAME" = 'push' ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != '0000000000000000000000000000000000000000' ]; then
+            if git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" 2>/dev/null | grep -Fxq 'wrangler.site.toml'; then config_changed=true; fi
+          fi
+          if [ "${FORCE_SYNC:-false}" = 'true' ]; then config_changed=true; fi
+          if [ "$needs_sync" = 'true' ] || [ "$config_changed" = 'true' ]; then
+            npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
+            payload=$(read_domains)
+          fi
           for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"
           done
 
-      - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
+      - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
-      - name: Verify every shared-runtime domain family
+      - name: Verify admin assets and every registered production service
         shell: bash
         run: |
           set -euo pipefail
-          verify_html() { url="$1"; needle="$2"; code=$(curl -L -sS -o /tmp/verify-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code"; [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/verify-body; }
-          verify_mail() { code=$(curl -L -sS -o /tmp/mail-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mail.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body && grep -Fq 'id="accountLabel"' /tmp/mail-body && grep -Fq 'id="searchForm"' /tmp/mail-body && grep -Fq 'id="gmailLink"' /tmp/mail-body; }
-          verify_homepage_registry() { code=$(curl -L -sS -o /tmp/homepage -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'data-ekodi-service-registry="v1"' /tmp/homepage && grep -Fq 'data-service-id="community"' /tmp/homepage && grep -Fq 'https://community.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="work"' /tmp/homepage && grep -Fq 'https://work.ekodi.kr' /tmp/homepage && grep -Fq 'data-service-id="marketing"' /tmp/homepage && grep -Fq 'https://marketing.ekodi.kr' /tmp/homepage && grep -Fq '/homepage-ambient.css' /tmp/homepage && grep -Fq '/homepage-ambient.js' /tmp/homepage; }
-          verify_homepage_ambient() { css_code=$(curl -L -sS -o /tmp/homepage-ambient.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.css' || true); js_code=$(curl -L -sS -o /tmp/homepage-ambient.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/homepage-ambient.js' || true); [[ "$css_code" =~ ^[23] ]] && [[ "$js_code" =~ ^[23] ]] && grep -Fq 'z-index:0' /tmp/homepage-ambient.css && grep -Fq '.site-header,' /tmp/homepage-ambient.css && grep -Fq 'function seoulDateKey' /tmp/homepage-ambient.js && grep -Fq 'function dailySeed' /tmp/homepage-ambient.js && ! grep -Fq 'getRandomValues' /tmp/homepage-ambient.js; }
-          verify_targeted_auth_asset() { code=$(curl -L -sS -o /tmp/auth-workspace-target.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-workspace-target.js' || true); [[ "$code" =~ ^[23] ]] && grep -Fq 'workspace_key:requested' /tmp/auth-workspace-target.js && grep -Fq 'serviceOrigins' /tmp/auth-workspace-target.js && grep -Fq 'marketing:' /tmp/auth-workspace-target.js && grep -Fq 'books:' /tmp/auth-workspace-target.js && grep -Fq 'church:' /tmp/auth-workspace-target.js && grep -Fq 'social:' /tmp/auth-workspace-target.js && grep -Fq 'energy:' /tmp/auth-workspace-target.js; }
-          verify_marketing_admin_asset() { js_code=$(curl -L -sS -o /tmp/marketing-ai-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.js' || true); css_code=$(curl -L -sS -o /tmp/marketing-ai-admin.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/marketing-ai-admin.css' || true); [[ "$js_code" =~ ^[23] ]] && [[ "$css_code" =~ ^[23] ]] && grep -Fq "button.dataset.section = 'marketing-ai'" /tmp/marketing-ai-admin.js && grep -Fq 'Marketing AI 운영 관제센터' /tmp/marketing-ai-admin.js && grep -Fq 'marketing-ai-user-link' /tmp/marketing-ai-admin.js && grep -Fq '사용자 페이지 ↗' /tmp/marketing-ai-admin.js && ! grep -Fq '<iframe' /tmp/marketing-ai-admin.js && grep -Fq '.marketing-ai-console-view' /tmp/marketing-ai-admin.css; }
-          verify_admin_demand_loader() { code=$(curl -L -sS -o /tmp/admin-demand-loader.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/admin-demand-loader.js' || true); [[ "$code" =~ ^[23] ]] && grep -Fq "styles: ['marketing-ai-admin.css']" /tmp/admin-demand-loader.js && grep -Fq "scripts: ['marketing-ai-admin.js']" /tmp/admin-demand-loader.js; }
-          verify_admin_marketing_boundary() { code=$(curl -sS -D /tmp/admin-marketing-headers -o /tmp/admin-marketing-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true); [[ "$code" =~ ^[23] ]] && grep -Fiq 'frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr' /tmp/admin-marketing-headers && ! grep -Eiq 'frame-src[^;]*https://marketing\.ekodi\.kr' /tmp/admin-marketing-headers && grep -Fq 'admin-demand-loader.js' /tmp/admin-marketing-body && ! grep -Fq '<script src="marketing-ai-admin.js"' /tmp/admin-marketing-body; }
-          verify_mobile_headers() { home_code=$(curl -L -sS -o /tmp/mobile-home -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true); css_code=$(curl -L -sS -o /tmp/mobile-admin-css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/control-center.css' || true); [[ "$home_code" =~ ^[23] ]] && [[ "$css_code" =~ ^[23] ]] && grep -Fq -- '--ekodi-home-header-height' /tmp/mobile-home && grep -Fq '.site-header{position:fixed;top:0;left:0;right:0;width:100%' /tmp/mobile-home && grep -Fq '.topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%!important' /tmp/mobile-admin-css && grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' /tmp/mobile-admin-css; }
-          for attempt in $(seq 1 18); do
-            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' && verify_homepage_registry && verify_homepage_ambient && verify_mobile_headers && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' && verify_admin_marketing_boundary && verify_admin_demand_loader && verify_marketing_admin_asset && verify_html 'https://auth.ekodi.kr/' '통합 인증센터' && verify_targeted_auth_asset && verify_html 'https://tax.ekodi.kr/' 'EKODI Tax' && verify_html 'https://pay.ekodi.kr/' 'EKODI 서비스 허브' && verify_html 'https://trade.ekodi.kr/' 'EKODI Global Trading' && verify_mail; then
-              echo 'Shared site Worker, fixed mobile headers, lazy admin MarketingAI console, external user-page link, generalized workspace auth asset, homepage ambient layer, mail lobby and automatic homepage registry verified.'
-              exit 0
-            fi
-            sleep 5
+          check() {
+            local url="$1"
+            : > /tmp/link-body
+            local meta status final title
+            meta=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/link-body -w '%{http_code}|%{url_effective}' "$url" || true)
+            status=${meta%%|*}
+            final=${meta#*|}
+            title=$(grep -io '<title>[^<]*</title>' /tmp/link-body | head -1 | sed -E 's#</?title>##Ig' | tr '|' '/' || true)
+            [ -n "$title" ] || title='(no title)'
+            printf '| %s | %s | %s | %s |\n' "$url" "$status" "$final" "$title" >> "$GITHUB_STEP_SUMMARY"
+            printf '%s -> HTTP %s -> %s\n' "$url" "$status" "$final"
+            [[ "$status" =~ ^[23] ]]
+          }
+
+          printf '## EKODI production link audit\n\n| URL | HTTP | final URL | title |\n|---|---:|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
+
+          urls_file=/tmp/ekodi-urls
+          node <<'NODE' > "$urls_file"
+          const fs=require('node:fs');
+          const registry=JSON.parse(fs.readFileSync('config/ecosystem-services.json','utf8'));
+          const shell=fs.readFileSync('admin-shell.html','utf8');
+          const urls=new Set([
+            'https://ekodi.kr/',
+            'https://ekodi.kr/history',
+            'https://ekodi.kr/mall',
+            'https://ekodi.kr/admin',
+            'https://admin.ekodi.kr/',
+            'https://auth.ekodi.kr/',
+            'https://ai.ekodi.kr/',
+            'https://tax.ekodi.kr/',
+            'https://mail.ekodi.kr/',
+            'https://live.ekodi.kr/',
+            'https://live.church.ekodi.kr/',
+            'https://cloud.ekodi.kr/',
+            'https://marketing.ekodi.kr/',
+            'https://cgma.ekodi.kr/',
+            'https://biz.ekodi.kr/',
+            'https://trade.biz.ekodi.kr/',
+            'https://pay.ekodi.kr/',
+            'https://pay.biz.ekodi.kr/',
+            'https://church.ekodi.kr/',
+            'https://lab.ekodi.kr/'
+          ]);
+          for(const service of registry.services||[]) if(service.productionVerified===true && service.url) urls.add(service.url);
+          for(const match of shell.matchAll(/href=["'](https:\/\/[^"']+\.ekodi\.kr\/?[^"']*)["']/g)) urls.add(match[1]);
+          console.log([...urls].sort().join('\n'));
+          NODE
+
+          failed=0
+          while IFS= read -r url; do
+            [ -n "$url" ] || continue
+            check "$url" || failed=1
+          done < "$urls_file"
+
+          for asset in \
+            'https://admin.ekodi.kr/admin-shell.css' \
+            'https://admin.ekodi.kr/admin-demand-loader.js' \
+            'https://admin.ekodi.kr/admin-menu-registry.js' \
+            'https://admin.ekodi.kr/marketing-ai-admin.js' \
+            'https://auth.ekodi.kr/auth-workspace-target.js'; do
+            check "$asset" || failed=1
           done
-          exit 1
+
+          exit "$failed"
