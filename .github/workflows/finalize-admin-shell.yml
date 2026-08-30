@@ -64,10 +64,11 @@ jobs:
             try { source = read(path); } catch { continue; }
             let next = source
               .replaceAll('control-center-finance.css', 'admin-finance.css')
-              .replaceAll('control-center.css', 'admin-shell.css')
               .replaceAll('compact-control-center.css', 'admin-compact.css')
               .replaceAll('compact-control-center.js', 'admin-compact.js')
               .replaceAll('compact-control-center', 'admin-compact')
+              .replaceAll('control-center.css', 'admin-shell.css')
+              .replaceAll('compact-admin-shell.css', 'admin-compact.css')
               .replace(/(?<!\/)control-center\.html/g, 'admin-shell.html');
             if (next !== source) write(path, next);
           }
