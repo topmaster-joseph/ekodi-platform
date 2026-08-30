@@ -1,0 +1,52 @@
+name: Integrate Admin Remote Work
+
+on:
+  push:
+    branches:
+      - fix/admin-system-remote-work
+    paths:
+      - scripts/integrate-admin-remote-work.mjs
+      - .github/workflows/integrate-admin-remote-work.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/admin-system-remote-work
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply integration
+        run: node scripts/integrate-admin-remote-work.mjs
+      - name: Validate JavaScript
+        run: |
+          node --check admin-menu-registry.js
+          node --check admin-demand-loader.js
+          node --check device-control-admin.js
+          node --check remote-power-admin.js
+          node --check admin-lazy-features.js
+      - name: Verify canonical remote work contract
+        run: |
+          grep -F "ko: '원격 작업'" admin-menu-registry.js
+          grep -F "styles: ['device-control-admin.css', 'remote-power-admin.css']" admin-demand-loader.js
+          grep -F "scripts: ['device-control-admin.js', 'remote-power-admin.js']" admin-demand-loader.js
+          grep -F "#deviceControlPanel" remote-power-admin.js
+          grep -F "REMOTE WORK & DEVICE MANAGEMENT" device-control-admin.js
+          if grep -Fq "'remote-power-admin.js'" admin-lazy-features.js; then echo 'Remote power still coupled to AI Ops' >&2; exit 1; fi
+      - name: Run admin navigation regression tests
+        run: |
+          node --test test/admin-shared-sidebar.test.mjs test/admin-thin-shell.test.mjs test/admin-preauth-shell.test.mjs
+      - name: Commit generated integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-menu-registry.js admin-demand-loader.js device-control-admin.js remote-power-admin.js admin-lazy-features.js
+          if git diff --cached --quiet; then echo 'No generated changes'; exit 0; fi
+          git commit -m 'fix(admin): expose remote work under System'
+          git push origin HEAD:fix/admin-system-remote-work
