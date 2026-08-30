@@ -3,22 +3,32 @@
 if(window.__EKODI_USER_LANGUAGE_BOOTED)return;
 window.__EKODI_USER_LANGUAGE_BOOTED=true;
 
-const VERSION=2;
+const VERSION=3;
 const STORAGE_KEY='ekodi_user_locale';
 const COOKIE_KEY='ekodi_locale';
 const PARAM_KEY='lang';
 const SUPPORTED=Object.freeze([
-  {locale:'ko-KR',short:'KO',label:'한국어'},
-  {locale:'en',short:'EN',label:'English'},
+  {locale:'ko-KR',short:'한국어',label:'한국어'},
+  {locale:'en',short:'English',label:'English'},
   {locale:'zh-CN',short:'中文',label:'中文'},
-  {locale:'ja',short:'日本語',label:'日本語'}
+  {locale:'ja',short:'日本語',label:'日本語'},
+  {locale:'my',short:'မြန်မာ',label:'မြန်မာဘာသာ'},
+  {locale:'kac',short:'Jinghpaw',label:'Jinghpaw (Kachin)'},
+  {locale:'vi',short:'Tiếng Việt',label:'Tiếng Việt'},
+  {locale:'mn',short:'Монгол',label:'Монгол хэл'},
+  {locale:'id',short:'Bahasa',label:'Bahasa Indonesia'}
 ]);
 const LOCALES=new Set(SUPPORTED.map(item=>item.locale));
 const COPY=Object.freeze({
   'ko-KR':{language:'언어',home:'EKODI 홈',account:'사용자 계정',privacy:'개인정보처리방침',terms:'이용약관',contact:'문의',legal:'법적 고지'},
   en:{language:'Language',home:'EKODI Home',account:'User account',privacy:'Privacy Policy',terms:'Terms of Use',contact:'Contact',legal:'Legal information'},
   'zh-CN':{language:'语言',home:'EKODI 首页',account:'用户账户',privacy:'隐私政策',terms:'使用条款',contact:'联系',legal:'法律信息'},
-  ja:{language:'言語',home:'EKODI ホーム',account:'ユーザーアカウント',privacy:'プライバシーポリシー',terms:'利用規約',contact:'お問い合わせ',legal:'法的情報'}
+  ja:{language:'言語',home:'EKODI ホーム',account:'ユーザーアカウント',privacy:'プライバシーポリシー',terms:'利用規約',contact:'お問い合わせ',legal:'法的情報'},
+  my:{language:'ဘာသာစကား',home:'EKODI ပင်မ',account:'အသုံးပြုသူ အကောင့်',privacy:'ကိုယ်ရေးအချက်အလက် မူဝါဒ',terms:'အသုံးပြုမှု စည်းကမ်းများ',contact:'ဆက်သွယ်ရန်',legal:'ဥပဒေဆိုင်ရာ အချက်အလက်'},
+  kac:{language:'Ga',home:'EKODI Home',account:'User account',privacy:'Privacy Policy',terms:'Terms of Use',contact:'Contact',legal:'Legal information'},
+  vi:{language:'Ngôn ngữ',home:'Trang chủ EKODI',account:'Tài khoản người dùng',privacy:'Chính sách quyền riêng tư',terms:'Điều khoản sử dụng',contact:'Liên hệ',legal:'Thông tin pháp lý'},
+  mn:{language:'Хэл',home:'EKODI нүүр',account:'Хэрэглэгчийн бүртгэл',privacy:'Нууцлалын бодлого',terms:'Үйлчилгээний нөхцөл',contact:'Холбоо барих',legal:'Хууль зүйн мэдээлэл'},
+  id:{language:'Bahasa',home:'Beranda EKODI',account:'Akun pengguna',privacy:'Kebijakan Privasi',terms:'Ketentuan Penggunaan',contact:'Kontak',legal:'Informasi hukum'}
 });
 let activeLocale='ko-KR';
 let observer=null;
@@ -32,6 +42,11 @@ function normalize(value){
   if(lower==='en'||lower.startsWith('en-'))return'en';
   if(lower==='zh'||lower.startsWith('zh-'))return'zh-CN';
   if(lower==='ja'||lower.startsWith('ja-'))return'ja';
+  if(lower==='my'||lower.startsWith('my-')||lower==='bur'||lower==='mya')return'my';
+  if(lower==='kac'||lower.startsWith('kac-')||lower==='jinghpaw'||lower==='kachin')return'kac';
+  if(lower==='vi'||lower.startsWith('vi-'))return'vi';
+  if(lower==='mn'||lower.startsWith('mn-'))return'mn';
+  if(lower==='id'||lower.startsWith('id-')||lower==='in')return'id';
   return'';
 }
 function readCookie(){
@@ -90,6 +105,10 @@ function buildControl(){
   wrap.className='ekodi-user-language';
   wrap.setAttribute('data-ekodi-language-control',`v${VERSION}`);
   wrap.setAttribute('data-ekodi-header-side','right');
+  const icon=document.createElement('span');
+  icon.className='ekodi-user-language__icon';
+  icon.setAttribute('aria-hidden','true');
+  icon.textContent='🌐';
   const textNode=document.createElement('span');
   textNode.className='ekodi-user-language__label';
   textNode.textContent=text().language;
@@ -106,7 +125,7 @@ function buildControl(){
   select.value=activeLocale;
   select.title=SUPPORTED.find(item=>item.locale===activeLocale)?.label||text().language;
   select.addEventListener('change',()=>apply(select.value));
-  wrap.append(textNode,select);
+  wrap.append(icon,textNode,select);
   return wrap;
 }
 function isAccountLink(link){
