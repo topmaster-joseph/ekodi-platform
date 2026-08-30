@@ -12,16 +12,16 @@ renderAdminSidebar(nav);
 const INTERNAL=new Set(['services','deployments','policies']);
 const ORDER=Object.freeze(adminMenuOrder());
 const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
-const DEMAND={
-  campus:'campus',aiops:'aiops','ai-module-spec':'ai-module-spec','ai-membership':'aimembers',
-  health:'health','api-cost':'api-cost',storage:'storage',security:'security',work:'work',
-  clients:'clients',community:'community',books:'books',social:'social',affiliates:'affiliates',
-  'marketing-ai':'marketing',devices:'devices','life-ai':'life-ai'
-};
+const DEMAND_KEYS=new Map([
+  ['campus','campus'],['aiops','aiops'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
+  ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
+  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
+  ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']
+]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
 const CANON=pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
-let requested='';
+let requestedSection = '';
 let sitesLoading;
 const demandLoading=new Map();
 
@@ -76,7 +76,7 @@ function syncTitle(section){
 }
 function activatePanel(section){
   if(!section||!hasPanel(section))return false;
-  requested=section;
+  requestedSection=section;
   for(const panel of content.querySelectorAll('[data-panel]')){
     const visible=panelTargets(panel).includes(section);
     panel.classList.toggle('hidden-panel',!visible);
@@ -86,12 +86,12 @@ function activatePanel(section){
   syncTitle(section);
   const hash=CANON.get(section);
   if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
-  if(section==='architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
+  if (section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
   sidebar.classList.remove('open');
   return true;
 }
 async function openSites(){
-  requested='sites';
+  requestedSection='sites';
   if(!sitesLoading)sitesLoading=import('./homepage-admin.js').then(module=>{
     module.mountHomepageAdmin();
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'sites'}}));
@@ -110,10 +110,10 @@ function fallbackDemand(section){
   nav.querySelector(selector)?.click();
 }
 function requestDemand(section){
-  const key=DEMAND[section];
-  if(!key||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
+  const demandKey=DEMAND_KEYS.get(section);
+  if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
-  const task=Promise.resolve(window.EKODIAdminDemand.activate(key)).then(()=>{
+  const task=Promise.resolve(window.EKODIAdminDemand.activate(demandKey)).then(()=>{
     applyOrder();
     if(!activatePanel(section)){
       const real=navItemFor(section);
@@ -128,16 +128,16 @@ function requestDemand(section){
   return task;
 }
 function routeInternal(){
-  requested='aiops';
+  requestedSection='aiops';
   if(location.hash!=='#ai-ops')history.replaceState(null,'','#ai-ops');
   requestDemand('aiops');
 }
-const explicitHash=()=>HASH.get(location.hash.toLowerCase())||'';
-function reconcile(){
+const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
+function reconcileNavigation(){
   enforcePolicy();
-  if(!requested)return;
-  if(requested==='sites'&&!hasPanel('sites'))openSites();
-  else if(!activatePanel(requested))requestDemand(requested);
+  if(!requestedSection)return;
+  if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
+  else if(!activatePanel(requestedSection))requestDemand(requestedSection);
 }
 
 nav.addEventListener('click',event=>{
@@ -147,7 +147,7 @@ nav.addEventListener('click',event=>{
   const section=sectionOf(item);
   if(!section)return;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
-  requested=section;
+  requestedSection=section;
   queueMicrotask(()=>{if(!activatePanel(section))requestDemand(section);});
 },true);
 
@@ -159,41 +159,42 @@ content.addEventListener('click',event=>{
   routeInternal();
 },true);
 
-window.addEventListener('ekodi-nav-changed',reconcile);
-window.addEventListener('ekodi-feature-installed',reconcile);
+window.addEventListener('ekodi-nav-changed',reconcileNavigation);
+window.addEventListener('ekodi-feature-installed',reconcileNavigation);
 window.addEventListener('ekodi-admin-ready',()=>{
   enforcePolicy();
-  const section=explicitHash();
+  const section=explicitHashSection();
   if(section&&isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  requested=section||'campus';
-  if(!activatePanel(requested))requestDemand(requested);
+  if(section){requestedSection=section;if(!activatePanel(section))requestDemand(section);}
+  else {requestedSection = 'campus';requestDemand('campus');}
 });
 window.addEventListener('hashchange',()=>{
-  const section=explicitHash();
+  const section=explicitHashSection();
   if(!section)return;
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  requested=section;
+  requestedSection=section;
   if(!activatePanel(section))requestDemand(section);
 });
 
 installCompactStyle();
 mountAdminSidebar(document);
 enforcePolicy();
-const initial=explicitHash();
-if(initial&&isInternal(initial))routeInternal();
-else if(initial==='sites')openSites();
-else requested=initial||'campus';
+const initialHash = explicitHashSection();
+if(initialHash&&isInternal(initialHash))routeInternal();
+else if(initialHash==='sites')openSites();
+else if (initialHash) requestedSection = initialHash;
+else requestedSection = 'campus';
 
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
     if(isInternal(section))return routeInternal();
     if(section==='sites')return openSites();
-    requested=section;
+    requestedSection=section;
     return activatePanel(section)||requestDemand(section);
   },
-  current:()=>requested,
+  current:()=>requestedSection,
   internalSections:Object.freeze([...INTERNAL]),
   visibleMenuOrder:ORDER
 });
