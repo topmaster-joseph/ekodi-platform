@@ -1,7 +1,8 @@
 # Control API rollout: Google allowlist admin auth + customer tenant authentication + Social registry + Books operations/publishing network + membership billing + Author billing + AI Mission Control
 # 2026-08-26: EKODI Storage Gateway + External AI Module Gateway are integrated inside canonical Mission Control.
+# 2026-08-30: Direct Social Channel Gateway is layered on Mission Control without a third-party scheduler dependency.
 name = "ekodi-auth-api"
-main = "mission-control-entry-worker.js"
+main = "mission-control-social-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
@@ -20,6 +21,10 @@ ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 OPENAI_MODEL = "gpt-5.6-terra"
+SOCIAL_RETURN_HOSTS = "admin.ekodi.kr"
+SOCIAL_EVENT_ORIGINS = "https://mall.ekodi.kr,https://ekodi.kr"
+# META_GRAPH_VERSION is deliberately runtime-configurable. Set it to the currently approved Meta Graph API version during provider onboarding.
+# SOCIAL_AI_MODEL is optional. When absent, social content generation safely falls back to provider-independent rule-based drafts.
 # Storage policy: Google Workspace Shared Drive EKODI is the canonical durable store.
 # Google Drive OAuth credentials stay isolated in the drive.ekodi.kr Storage Worker.
 # API-side server secrets/config required only when the corresponding gateway is activated:
@@ -27,6 +32,10 @@ OPENAI_MODEL = "gpt-5.6-terra"
 #   EKODI_AI_MODULE_GATEWAY_KEY        privileged AI module gateway key
 #   EKODI_AI_MODULE_CALLERS            comma-separated registered EKODI internal caller ids
 #   EKODI_AI_MODULE_REGISTRY_JSON      module manifests without actual provider secrets
+# Direct social publishing secrets required when each provider is activated:
+#   SOCIAL_TOKEN_KEY                   high-entropy AES-GCM master secret for encrypted provider tokens
+#   META_APP_ID / META_APP_SECRET      Meta OAuth application credentials
+#   GOOGLE_CLIENT_SECRET               Google OAuth application secret (GOOGLE_CLIENT_ID is already configured above)
 # Each external AI module manifest references its own secretBinding, which must exist as an API Worker secret.
 # User AI is intentionally seamless: a user does not need to know or configure an AI provider.
 # Personal API remains preferred when connected; otherwise EKODI sponsors a small bounded allowance.
