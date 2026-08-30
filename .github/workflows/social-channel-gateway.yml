@@ -5,7 +5,8 @@ on:
     paths:
       - 'social-channel-gateway.js'
       - 'social-content-ai.js'
-      - 'mission-control-social-entry-worker.js'
+      - 'social-attribution-api.js'
+      - 'customer-entry-worker.js'
       - 'social-admin.js'
       - 'wrangler.api.toml'
       - 'migrations/0048_social_channel_gateway.sql'
@@ -17,7 +18,8 @@ on:
     paths:
       - 'social-channel-gateway.js'
       - 'social-content-ai.js'
-      - 'mission-control-social-entry-worker.js'
+      - 'social-attribution-api.js'
+      - 'customer-entry-worker.js'
       - 'social-admin.js'
       - 'wrangler.api.toml'
       - 'migrations/0048_social_channel_gateway.sql'
@@ -38,7 +40,8 @@ jobs:
         run: |
           node --check social-channel-gateway.js
           node --check social-content-ai.js
-          node --check mission-control-social-entry-worker.js
+          node --check social-attribution-api.js
+          node --check customer-entry-worker.js
           node --check social-admin.js
       - name: Run social unit tests
         run: node --test test/social-channel-gateway.test.mjs
