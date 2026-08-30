@@ -73,9 +73,11 @@ jobs:
           }
 
           patch('admin-shell.html', source => source
+            .replaceAll('control-center.css', 'admin-shell.css')
             .replaceAll('EKODI Control Center', 'EKODI Admin')
             .replaceAll('CONTROL CENTER', 'ADMIN')
             .replaceAll('EKODI 중앙 관제실입니다.', 'EKODI 관리자 운영 화면입니다.'));
+          patch('admin-compact.css', source => source.replaceAll('compact-control-center', 'admin-compact'));
 
           patch('admin-authenticated-shell.js', source => {
             let next = source;
