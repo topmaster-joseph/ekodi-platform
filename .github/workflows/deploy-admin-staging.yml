@@ -7,19 +7,13 @@ on:
       - 'package.json'
       - 'admin-staging-worker.js'
       - 'wrangler.admin.staging.toml'
+      - 'wrangler.site.toml'
       - 'site-worker.js'
-      - 'control-center.html'
-      - 'control-center.js'
-      - 'control-center.css'
-      - 'control-center-ops.css'
-      - 'control-center-finance.css'
-      - 'control-center-features.js'
-      - 'compact-control-center.js'
-      - 'compact-control-center.css'
-      - 'campus-actions.js'
-      - 'campus-actions.css'
-      - 'device-control-admin.js'
-      - 'device-control-admin.css'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
+      - 'admin-finance.css'
+      - 'admin-compact.js'
+      - 'admin-compact.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
@@ -28,6 +22,13 @@ on:
       - 'admin-readable-command.js'
       - 'admin-readable-command.css'
       - 'admin-menu-layout.js'
+      - 'admin-menu-registry.js'
+      - 'admin-sidebar.js'
+      - 'admin-menu-runtime.js'
+      - 'campus-actions.js'
+      - 'campus-actions.css'
+      - 'device-control-admin.js'
+      - 'device-control-admin.css'
       - 'finance-monitor.js'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
@@ -43,6 +44,7 @@ on:
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
+      - 'test/admin-menu-links.test.mjs'
       - 'test/admin-readable-command.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
@@ -87,31 +89,32 @@ jobs:
           node --check admin-perf-diagnostics.js
           node --check admin-readable-command.js
           node --check admin-menu-layout.js
+          node --check admin-menu-runtime.js
           node --check device-control-admin.js
           node --check system-health-admin.js
           node --check scripts/admin-thin-postbuild.mjs
           node --check scripts/admin-readable-command-postbuild.mjs
           node --check scripts/admin-performance-postbuild.mjs
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
+          node --test test/admin-menu-links.test.mjs test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js device-control-admin.js device-control-admin.css ai-ops-admin.css release-control-admin.js system-health-admin.js system-health-admin.css; do
+          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js admin-menu-layout.js admin-menu-registry.js admin-sidebar.js admin-menu-runtime.js admin-compact.js admin-compact.css device-control-admin.js device-control-admin.css ai-ops-admin.css release-control-admin.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
 
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
-          grep -Fq "control-center.css?v=$version" dist/control-center.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
-          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
-          ! grep -Fq '<script src="control-center.js"' dist/control-center.html
-          ! grep -Fq 'control-center-ops.css' dist/control-center.html
-          ! grep -Fq 'control-center-finance.css' dist/control-center.html
-          ! grep -Fq 'ai-ops-admin.js" defer' dist/control-center.html
-          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
-          ! grep -Fq 'CAMPUS_SERVICES' dist/compact-control-center.js
-          ! grep -Fq 'installPolicies' dist/compact-control-center.js
-          ! grep -Fq 'setTimeout(' dist/compact-control-center.js
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
+          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
+          ! grep -Fq '<script src="control-center.js"' dist/admin-shell.html
+          ! grep -Fq 'control-center-ops.css' dist/admin-shell.html
+          ! grep -Fq 'admin-finance.css' dist/admin-shell.html
+          ! grep -Fq 'ai-ops-admin.js" defer' dist/admin-shell.html
+          ! grep -Fq 'WINDOWS_AGENT_URL' dist/admin-compact.js
+          ! grep -Fq 'CAMPUS_SERVICES' dist/admin-compact.js
+          ! grep -Fq 'installPolicies' dist/admin-compact.js
+          ! grep -Fq 'setTimeout(' dist/admin-compact.js
           ! grep -Fq 'setInterval(' dist/finance-monitor.js
           grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
           grep -Fq '.ekodi-device-panel' dist/device-control-admin.css
@@ -129,14 +132,14 @@ jobs:
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
           grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
           ! grep -Fq 'setInterval(' dist/system-health-admin.js
 
-          compact_bytes=$(wc -c < dist/compact-control-center.js)
+          compact_bytes=$(wc -c < dist/admin-compact.js)
           first_js=$(( $(wc -c < dist/admin-central-handoff.js) + $(wc -c < dist/admin-authenticated-shell.js) + compact_bytes + $(wc -c < dist/admin-menu-layout.js) + $(wc -c < dist/admin-demand-loader.js) ))
-          first_css=$(( $(wc -c < dist/control-center.css) + $(wc -c < dist/compact-control-center.css) ))
+          first_css=$(( $(wc -c < dist/admin-shell.css) + $(wc -c < dist/admin-compact.css) ))
           test "$compact_bytes" -le 5000
           test "$first_js" -le 43000
           test "$first_css" -le 40000
@@ -180,7 +183,7 @@ jobs:
             q="?v=$version"
             handoff_code=$(curl -sS -D /tmp/admin-stage-handoff-headers -o /tmp/admin-stage-handoff.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-central-handoff.js$q" || true)
             demand_code=$(curl -sS -D /tmp/admin-stage-demand-headers -o /tmp/admin-stage-demand.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-demand-loader.js$q" || true)
-            compact_code=$(curl -sS -D /tmp/admin-stage-compact-headers -o /tmp/admin-stage-compact.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/compact-control-center.js$q" || true)
+            compact_code=$(curl -sS -D /tmp/admin-stage-compact-headers -o /tmp/admin-stage-compact.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-compact.js$q" || true)
             perf_code=$(curl -sS -o /tmp/admin-stage-perf.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-perf-diagnostics.js$q" || true)
             device_code=$(curl -sS -o /tmp/admin-stage-device.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/device-control-admin.js$q" || true)
             ai_css_code=$(curl -sS -o /tmp/admin-stage-ai.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ai-ops-admin.css$q" || true)
@@ -192,11 +195,11 @@ jobs:
               && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
               && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
               && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
-              && grep -Fq "control-center.css?v=$version" /tmp/admin-stage.html \
+              && grep -Fq "admin-shell.css?v=$version" /tmp/admin-stage.html \
               && grep -Fq "admin-central-handoff.js?v=$version" /tmp/admin-stage.html \
               && ! grep -Fq '<script src="control-center.js"' /tmp/admin-stage.html \
               && ! grep -Fq 'control-center-ops.css' /tmp/admin-stage.html \
-              && ! grep -Fq 'control-center-finance.css' /tmp/admin-stage.html \
+              && ! grep -Fq 'admin-finance.css' /tmp/admin-stage.html \
               && grep -Fq 'AbortController' /tmp/admin-stage-handoff.js \
               && ! grep -Fq 'PerformanceObserver' /tmp/admin-stage-handoff.js \
               && grep -Fq 'PerformanceObserver' /tmp/admin-stage-perf.js \
