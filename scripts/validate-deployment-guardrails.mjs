@@ -47,9 +47,31 @@ forbidText('.github/workflows/deploy-books.yml', ['npm run deploy:books', 'deplo
 forbidText('.github/workflows/deploy-community.yml', ['npm run deploy:community', 'deploy --config wrangler.community.toml']);
 forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.social.toml']);
 
-requireText('.github/workflows/deploy-control-api.yml', ['api-staging.ekodi.kr','ekodi-auth-staging','d1 time-travel info','guarded-worker-release.mjs','control-api.worker.json','validate-additive-migrations.mjs']);
+// Stateful services are allowed to use isolated workers.dev staging rather than a
+// dedicated staging hostname. The guard therefore verifies the real separation
+// contract: development environment, isolated worker/database identity, production
+// dependency on staging, recovery point capture, and guarded candidate promotion.
+requireText('.github/workflows/deploy-control-api.yml', [
+  'environment: development',
+  'ekodi-auth-api-staging',
+  'ekodi-auth-staging',
+  'needs: [validate, staging]',
+  'd1 time-travel info',
+  'guarded-worker-release.mjs',
+  'control-api.worker.json',
+  'validate-additive-migrations.mjs',
+]);
 forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
-requireText('.github/workflows/deploy-finance.yml', ['finance-api-staging.ekodi.kr','d1 time-travel info','guarded-worker-release.mjs','finance-api.worker.json','--secrets-file /tmp/finance-secrets.json']);
+requireText('.github/workflows/deploy-finance.yml', [
+  'environment: development',
+  'ekodi-finance-api-staging',
+  'ekodi-auth-staging',
+  'needs: [validate, staging]',
+  'd1 time-travel info',
+  'guarded-worker-release.mjs',
+  'finance-api.worker.json',
+  '--secrets-file /tmp/finance-secrets.json',
+]);
 forbidText('.github/workflows/deploy-finance.yml', ['npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
 
 requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
@@ -95,4 +117,4 @@ if (failed) {
   console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying.');
+console.log('✅ Deployment policy audit passed: production deploys remain guarded behind real isolated staging/candidate gates while the retired admin compatibility workflow stays manual-only and non-deploying.');
