@@ -70,6 +70,7 @@ jobs:
           grep -Fq 'window.EKODIChurchI18n' church/church-i18n.js
           grep -Fq 'window.EKODIChurchI18n?.refresh?.()' church/script.js
           grep -Fq 'window.EKODIChurchI18n?.formatAmount?.' church/giving.js
+          grep -Fq 'setNodeText' church/giving.js
           grep -Fq '.church-footer-legal{' church/church-footer.css
           grep -Fq '.site-header .daily-verse-ref{' church/church-footer.css
 
@@ -116,7 +117,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release='church-i18n-footer-20260830-1'
+          release='church-i18n-footer-20260830-2'
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             i18n=$(curl -L -sS -o /tmp/church-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n.js?release=${release}" || true)
@@ -133,6 +134,7 @@ jobs:
               && ! grep -Fq 'community-visit-photo' /tmp/church.html \
               && grep -Fq 'EKODIChurchI18n' /tmp/church-i18n.js \
               && grep -Fq "'ko-KR','en','zh-CN','ja'" /tmp/church-i18n.js \
+              && grep -Fq 'setNodeText' /tmp/giving.js \
               && grep -Fq '.church-footer-legal{' /tmp/church-footer.css; then
               echo 'Church multilingual page, legal footer and media removal verified in production.'
               break
@@ -143,6 +145,103 @@ jobs:
             fi
             sleep 5
           done
+
+      - name: Verify rendered locale switching and header placement
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          npm install --no-save --no-package-lock puppeteer-core@24.16.0
+          CHROME_BIN="$CHROME_BIN" node <<'NODE'
+          const puppeteer = require('puppeteer-core');
+          const assert = require('node:assert/strict');
+          const browser = await puppeteer.launch({
+            executablePath: process.env.CHROME_BIN,
+            headless: true,
+            args: ['--no-sandbox','--disable-dev-shm-usage'],
+          });
+          try {
+            const page = await browser.newPage();
+            await page.setViewport({width:1440,height:1000});
+            await page.goto('https://church.ekodi.kr/?lang=en&release=church-i18n-footer-20260830-2', {waitUntil:'domcontentloaded', timeout:30000});
+            await page.waitForFunction(() => window.EKODIChurchI18n && document.querySelector('[data-ekodi-language-control] select'), {timeout:20000});
+
+            async function snapshot(){
+              return page.evaluate(() => {
+                const select=document.querySelector('[data-ekodi-language-control] select');
+                const control=select?.closest('[data-ekodi-language-control]');
+                const my=document.querySelector('#main-nav .shell-my, [data-ekodi-user-header-root] .shell-my, [data-ekodi-user-header-root] a[href*="my.ekodi.kr"]');
+                const visible=(node)=>Boolean(node && node.getClientRects().length && getComputedStyle(node).visibility!=='hidden' && getComputedStyle(node).display!=='none');
+                return {
+                  lang:document.documentElement.lang,
+                  selected:select?.value||'',
+                  controlVisible:visible(control),
+                  afterAccount:Boolean(my&&control&&my.parentElement===control.parentElement&&(my.compareDocumentPosition(control)&Node.DOCUMENT_POSITION_FOLLOWING)),
+                  brand:document.querySelector('.site-header .brand strong')?.textContent?.trim()||'',
+                  hero:document.querySelector('.hero h1')?.innerText?.trim()||'',
+                  body:document.body.innerText,
+                  privacy:document.querySelector('.church-footer-legal a[href="https://ekodi.kr/privacy"]')?.textContent?.trim()||'',
+                  terms:document.querySelector('.church-footer-legal a[href="https://ekodi.kr/terms"]')?.textContent?.trim()||'',
+                  contact:document.querySelector('.church-footer-legal a[href^="mailto:ekodibiz@gmail.com"]')?.textContent?.trim()||'',
+                  verseRef:document.querySelector('.daily-verse-ref')?.textContent?.trim()||'',
+                  photoCount:document.querySelectorAll('.community-visit-photo').length,
+                  sharedFooterCount:document.querySelectorAll('.ekodi-user-ui-footer').length,
+                };
+              });
+            }
+            async function choose(locale){
+              await page.select('[data-ekodi-language-control] select', locale);
+              await page.waitForFunction(expected => document.documentElement.lang===expected && window.EKODIChurchI18n?.getLocale?.()===expected, {}, locale);
+              await new Promise(resolve=>setTimeout(resolve,250));
+              return snapshot();
+            }
+
+            const en=await snapshot();
+            assert.equal(en.lang,'en');
+            assert.equal(en.selected,'en');
+            assert.equal(en.controlVisible,true);
+            assert.equal(en.afterAccount,true);
+            assert.equal(en.brand,'EKODI Church');
+            assert.match(en.hero,/From calling to fellowship/);
+            assert.equal(en.privacy,'Privacy Policy');
+            assert.equal(en.terms,'Terms of Use');
+            assert.equal(en.contact,'Contact');
+            assert.ok(en.verseRef && !/[가-힣]/.test(en.verseRef));
+            assert.equal(en.photoCount,0);
+            assert.equal(en.sharedFooterCount,0);
+            assert.equal(/[가-힣]/.test(en.body),false,'English page still contains visible Korean copy');
+
+            const zh=await choose('zh-CN');
+            assert.equal(zh.selected,'zh-CN');
+            assert.equal(zh.brand,'EKODI教会');
+            assert.match(zh.hero,/从呼召走向团契/);
+            assert.equal(zh.privacy,'隐私政策');
+            assert.equal(zh.terms,'使用条款');
+            assert.equal(zh.contact,'联系');
+            assert.equal(/[가-힣]/.test(zh.body),false,'Chinese page still contains visible Korean copy');
+
+            const ja=await choose('ja');
+            assert.equal(ja.selected,'ja');
+            assert.equal(ja.brand,'EKODI教会');
+            assert.match(ja.hero,/召しから交わりへ/);
+            assert.equal(ja.privacy,'プライバシーポリシー');
+            assert.equal(ja.terms,'利用規約');
+            assert.equal(ja.contact,'お問い合わせ');
+            assert.equal(/[가-힣]/.test(ja.body),false,'Japanese page still contains visible Korean copy');
+
+            const ko=await choose('ko-KR');
+            assert.equal(ko.selected,'ko-KR');
+            assert.equal(ko.brand,'에코디교회');
+            assert.match(ko.hero,/부르심에서 교제로/);
+            assert.equal(ko.privacy,'개인정보처리방침');
+            assert.equal(ko.terms,'이용약관');
+            assert.equal(ko.contact,'문의');
+            console.log('Rendered locale switch verified: KO ↔ EN ↔ 中文 ↔ 日本語; selector follows account link; one church footer; no real-life photo.');
+          } finally {
+            await browser.close();
+          }
+          NODE
 
       - name: Verify linked EKODI services
         shell: bash
