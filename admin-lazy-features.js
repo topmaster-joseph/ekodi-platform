@@ -9,12 +9,14 @@
 
   const styles = [
     'ai-ops-admin.css',
+    'remote-power-admin.css',
     'release-control-admin.css',
     'work-admin.css',
     'marketing-ai-admin.css',
   ];
   const scripts = [
     'ai-ops-admin.js',
+    'remote-power-admin.js',
     'release-control-admin.js',
     'work-admin.js',
     'marketing-ai-admin.js',

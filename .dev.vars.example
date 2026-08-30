@@ -1,3 +1,8 @@
 CF_API_TOKEN=replace-with-a-restricted-cloudflare-api-token
 OPENAI_API_KEY=replace-with-a-server-only-openai-project-key
 OPENAI_MODEL=gpt-5.6-terra
+
+# Remote PC power control. Keep real relay URL and shared secret in Worker secrets.
+REMOTE_POWER_RELAY_URL=https://remote-power-relay.example.invalid
+REMOTE_POWER_SHARED_SECRET=replace-with-long-random-secret
+REMOTE_POWER_DEVICES_JSON=[{"id":"joseph-notebook","label":"JosephNotebook"},{"id":"user3","label":"user3"},{"id":"user2","label":"user2"}]
