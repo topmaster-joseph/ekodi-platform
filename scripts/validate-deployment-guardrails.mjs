@@ -47,9 +47,34 @@ forbidText('.github/workflows/deploy-books.yml', ['npm run deploy:books', 'deplo
 forbidText('.github/workflows/deploy-community.yml', ['npm run deploy:community', 'deploy --config wrangler.community.toml']);
 forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.social.toml']);
 
-requireText('.github/workflows/deploy-control-api.yml', ['api-staging.ekodi.kr','ekodi-auth-staging','d1 time-travel info','guarded-worker-release.mjs','control-api.worker.json','validate-additive-migrations.mjs']);
+// Staging is intentionally isolated in the Cloudflare Development account and verified
+// through the generated staging config plus a local Worker runtime. Public staging
+// hostnames were retired because they can be blocked by Access and can accidentally
+// couple Development verification to Production DNS topology.
+requireText('.github/workflows/deploy-control-api.yml', [
+  'environment: development',
+  '46aad4738793fbaca88574832a2ccc0f',
+  'ekodi-auth-staging',
+  'workers_dev = true',
+  'wrangler@$WRANGLER_VERSION dev --local',
+  'd1 time-travel info',
+  'guarded-worker-release.mjs',
+  'control-api.worker.json',
+  'validate-additive-migrations.mjs',
+]);
 forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
-requireText('.github/workflows/deploy-finance.yml', ['finance-api-staging.ekodi.kr','d1 time-travel info','guarded-worker-release.mjs','finance-api.worker.json','--secrets-file /tmp/finance-secrets.json']);
+
+requireText('.github/workflows/deploy-finance.yml', [
+  'environment: development',
+  '46aad4738793fbaca88574832a2ccc0f',
+  'ekodi-auth-staging',
+  'workers_dev = true',
+  'wrangler@$WRANGLER_VERSION dev --local',
+  'd1 time-travel info',
+  'guarded-worker-release.mjs',
+  'finance-api.worker.json',
+  '--secrets-file /tmp/finance-secrets.json',
+]);
 forbidText('.github/workflows/deploy-finance.yml', ['npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
 
 requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
@@ -95,4 +120,4 @@ if (failed) {
   console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying.');
+console.log('✅ Deployment policy audit passed: production deploys remain guarded while staging stays isolated in the Development account and retired admin compatibility stays manual-only.');
