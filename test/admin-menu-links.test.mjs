@@ -44,11 +44,15 @@ test('communication and life-ai hashes survive reload and deep linking', () => {
   assert.match(source, /life-ai:#life-ai/);
 });
 
-test('authenticated admin shell installs the canonical link enhancement', () => {
+test('existing event-driven menu runtime promotes global and contextual controls to canonical links', () => {
+  const runtime = fs.readFileSync(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
   const shell = fs.readFileSync(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8');
-  const links = fs.readFileSync(new URL('../admin-menu-links.js', import.meta.url), 'utf8');
-  assert.match(shell, /admin-menu-links\.js/);
-  assert.match(links, /data-admin-global-group/);
-  assert.match(links, /data-admin-context-section/);
-  assert.match(links, /adminCanonicalHref/);
+  assert.match(runtime, /getAdminMenuGroupRoute/);
+  assert.match(runtime, /getAdminMenuRoute/);
+  assert.match(runtime, /data-admin-global-group/);
+  assert.match(runtime, /data-admin-context-section/);
+  assert.match(runtime, /adminCanonicalHref/);
+  assert.match(runtime, /ekodi-admin-section-changed/);
+  assert.doesNotMatch(runtime, /MutationObserver/);
+  assert.doesNotMatch(shell, /admin-menu-links\.js/);
 });
