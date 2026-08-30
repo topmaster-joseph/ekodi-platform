@@ -1,0 +1,50 @@
+name: Verify Admin Production UI E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-admin-production-ui-e2e.yml'
+      - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
+      - 'admin-central-handoff.js'
+      - 'admin-authenticated-shell.js'
+      - 'admin-menu-layout.js'
+      - 'admin-menu-registry.js'
+      - 'admin-sidebar.js'
+      - 'admin-menu-runtime.js'
+      - 'admin-demand-loader.js'
+      - 'campus-actions.js'
+      - 'campus-actions.css'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-admin-production-ui-e2e
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated Chromium test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Verify all 24 production Admin menu paths
+        shell: bash
+        env:
+          ADMIN_URL: https://admin.ekodi.kr/
+        run: |
+          set -euo pipefail
+          node scripts/verify-admin-production-ui-e2e.mjs
