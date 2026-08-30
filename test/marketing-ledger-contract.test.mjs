@@ -59,9 +59,14 @@ test('Marketing ledger mutations are routed and rate-limited before shared custo
   assert.match(security, /path\.startsWith\('\/api\/marketing\/ledger\/'\)/);
 });
 
-test('Admin live ops renders connected Campaign and CRM ledgers', () => {
-  assert.match(liveOps, /LIVE_TABS = new Set\(\['campaigns','crm','channels','automation','approvals'\]\)/);
-  assert.match(liveOps, /renderCampaigns/);
-  assert.match(liveOps, /renderCrm/);
-  assert.match(liveOps, /customer_key조차 포함하지 않습니다/);
+test('Marketing operations keeps ledger privacy while exposing the canonical social execution tabs', () => {
+  assert.match(liveOps, /\['overview','개요'\]/);
+  assert.match(liveOps, /\['content','콘텐츠'\]/);
+  assert.match(liveOps, /\['channels','채널 연결'\]/);
+  assert.match(liveOps, /\['publishing','예약·게시'\]/);
+  assert.match(liveOps, /\['performance','성과'\]/);
+  assert.match(liveOps, /\['improvement','AI 개선'\]/);
+  assert.match(liveOps, /\/api\/control\/social\/posts/);
+  assert.match(liveOps, /\/api\/control\/social\/performance/);
+  assert.doesNotMatch(liveOps, /customer_key|META_APP_SECRET|GOOGLE_CLIENT_SECRET|SOCIAL_TOKEN_KEY/);
 });
