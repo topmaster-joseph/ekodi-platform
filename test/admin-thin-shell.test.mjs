@@ -98,7 +98,9 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialHash = explicitHashSection\(\)/);
   assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.match(menu, /requestedSection = 'campus';[\s\S]*EKODIAdminDemand\?\.activate\('campus'\)/);
+  assert.match(menu, /requestedSection = 'campus';[\s\S]*requestDemand\('campus'\)/);
+  assert.match(menu, /\['campus','campus'\]/);
+  assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
   assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
