@@ -117,7 +117,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release='church-i18n-footer-20260830-2'
+          release='church-i18n-footer-20260830-3'
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             i18n=$(curl -L -sS -o /tmp/church-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n.js?release=${release}" || true)
@@ -153,9 +153,9 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$CHROME_BIN"
           npm install --no-save --no-package-lock puppeteer-core@24.16.0
-          CHROME_BIN="$CHROME_BIN" node <<'NODE'
-          const puppeteer = require('puppeteer-core');
-          const assert = require('node:assert/strict');
+          CHROME_BIN="$CHROME_BIN" node --input-type=module <<'NODE'
+          import puppeteer from 'puppeteer-core';
+          import assert from 'node:assert/strict';
           const browser = await puppeteer.launch({
             executablePath: process.env.CHROME_BIN,
             headless: true,
@@ -164,7 +164,7 @@ jobs:
           try {
             const page = await browser.newPage();
             await page.setViewport({width:1440,height:1000});
-            await page.goto('https://church.ekodi.kr/?lang=en&release=church-i18n-footer-20260830-2', {waitUntil:'domcontentloaded', timeout:30000});
+            await page.goto('https://church.ekodi.kr/?lang=en&release=church-i18n-footer-20260830-3', {waitUntil:'domcontentloaded', timeout:30000});
             await page.waitForFunction(() => window.EKODIChurchI18n && document.querySelector('[data-ekodi-language-control] select'), {timeout:20000});
 
             async function snapshot(){
@@ -190,10 +190,15 @@ jobs:
                 };
               });
             }
+            function assertNoHangul(snapshot,label){
+              const match=snapshot.body.match(/.{0,30}[가-힣].{0,30}/);
+              if(match) console.error(`${label} residual Hangul: ${match[0]}`);
+              assert.equal(Boolean(match),false,`${label} page still contains visible Korean copy`);
+            }
             async function choose(locale){
               await page.select('[data-ekodi-language-control] select', locale);
               await page.waitForFunction(expected => document.documentElement.lang===expected && window.EKODIChurchI18n?.getLocale?.()===expected, {}, locale);
-              await new Promise(resolve=>setTimeout(resolve,250));
+              await new Promise(resolve=>setTimeout(resolve,300));
               return snapshot();
             }
 
@@ -210,7 +215,7 @@ jobs:
             assert.ok(en.verseRef && !/[가-힣]/.test(en.verseRef));
             assert.equal(en.photoCount,0);
             assert.equal(en.sharedFooterCount,0);
-            assert.equal(/[가-힣]/.test(en.body),false,'English page still contains visible Korean copy');
+            assertNoHangul(en,'English');
 
             const zh=await choose('zh-CN');
             assert.equal(zh.selected,'zh-CN');
@@ -219,7 +224,7 @@ jobs:
             assert.equal(zh.privacy,'隐私政策');
             assert.equal(zh.terms,'使用条款');
             assert.equal(zh.contact,'联系');
-            assert.equal(/[가-힣]/.test(zh.body),false,'Chinese page still contains visible Korean copy');
+            assertNoHangul(zh,'Chinese');
 
             const ja=await choose('ja');
             assert.equal(ja.selected,'ja');
@@ -228,7 +233,7 @@ jobs:
             assert.equal(ja.privacy,'プライバシーポリシー');
             assert.equal(ja.terms,'利用規約');
             assert.equal(ja.contact,'お問い合わせ');
-            assert.equal(/[가-힣]/.test(ja.body),false,'Japanese page still contains visible Korean copy');
+            assertNoHangul(ja,'Japanese');
 
             const ko=await choose('ko-KR');
             assert.equal(ko.selected,'ko-KR');
