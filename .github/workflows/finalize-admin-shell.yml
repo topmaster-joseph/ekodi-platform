@@ -130,7 +130,10 @@ jobs:
       - name: Validate canonical admin source
         run: |
           set -euo pipefail
-          npm run check
+          node --check site-worker.js
+          node --check admin-authenticated-shell.js
+          node --check scripts/build.mjs
+          node scripts/validate-admin-source.mjs
           npm run build
           node --test test/admin-central-login-link.test.mjs test/admin-ai-first-navigation.test.mjs test/admin-free-ops-nav.contract.test.mjs
           test -f dist/admin-shell.html
