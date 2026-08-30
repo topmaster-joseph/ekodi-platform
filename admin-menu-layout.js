@@ -13,7 +13,7 @@ const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
 const INTERNAL_ONLY_HREFS = new Set();
 const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
 const VISIBLE_NAV_RANK = new Map(VISIBLE_NAV_ORDER.map((section, index) => [section, index + 1]));
-const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
+const pairMap=v=>new Map(v.split(' ').map(x=>x.split(':')));
 const HASH_SECTIONS = pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #communication:communication #life-ai:life-ai #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
 const CANONICAL_HASH = pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work communication:#communication life-ai:#life-ai marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
 let requestedSection = '';
@@ -32,12 +32,8 @@ function sectionOf(item) {
   const raw = String(item?.dataset?.section || item?.dataset?.lazySection || '').trim();
   return raw === 'marketing' ? 'marketing-ai' : raw;
 }
-function panelTargets(panel) {
-  return String(panel?.dataset?.panel || '').split(/\s+/).filter(Boolean);
-}
-function hasPanel(section) {
-  return Boolean(section && Array.from(content.querySelectorAll('[data-panel]')).some(panel => panelTargets(panel).includes(section)));
-}
+function panelTargets(p){return String(p?.dataset?.panel||'').split(/\s+/).filter(Boolean)}
+function hasPanel(s){return Boolean(s&&Array.from(content.querySelectorAll('[data-panel]')).some(p=>panelTargets(p).includes(s)))}
 function isInternalSection(section) {
   return INTERNAL_ONLY_SECTIONS.has(String(section || '').trim());
 }
@@ -136,9 +132,7 @@ function routeInternalToAiOps() {
   if (location.hash !== '#ai-ops') history.replaceState(null, '', '#ai-ops');
   openDemand('aiops');
 }
-function explicitHashSection() {
-  return HASH_SECTIONS.get(location.hash.toLowerCase()) || '';
-}
+function explicitHashSection(){return HASH_SECTIONS.get(location.hash.toLowerCase())||''}
 function reconcileNavigation() {
   enforceInternalNavigationPolicy();
   if (!requestedSection) return;
