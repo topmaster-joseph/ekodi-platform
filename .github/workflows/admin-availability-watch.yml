@@ -11,7 +11,7 @@ on:
       - 'test/admin-availability-watch.test.mjs'
       - 'wrangler.site.toml'
       - 'site-worker.js'
-      - 'control-center.html'
+      - 'admin-shell.html'
       - 'auth-site/**'
 
 permissions:
@@ -105,7 +105,7 @@ jobs:
               status=$(curl -sS -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
                 --connect-timeout 5 --max-time 15 "$url" || true)
               if [ "$status" = 200 ] \
-                && grep -Fq 'EKODI Control Center' /tmp/${label}.body \
+                && grep -Fq '<title>EKODI Admin</title>' /tmp/${label}.body \
                 && grep -Fiq "x-ekodi-route: $route" /tmp/${label}.headers; then
                 echo "$label=ok" >> "$GITHUB_OUTPUT"
                 echo "$url -> 200 ($route)"
@@ -119,8 +119,8 @@ jobs:
           }
 
           failed=0
-          probe canonical_root 'https://admin.ekodi.kr/' 'admin-control-center' || failed=1
-          probe canonical_admin 'https://admin.ekodi.kr/admin' 'admin-control-center' || failed=1
+          probe canonical_root 'https://admin.ekodi.kr/' 'admin-shell' || failed=1
+          probe canonical_admin 'https://admin.ekodi.kr/admin' 'admin-shell' || failed=1
           probe apex_fallback 'https://ekodi.kr/admin' 'admin-fallback' || failed=1
           exit "$failed"
 
