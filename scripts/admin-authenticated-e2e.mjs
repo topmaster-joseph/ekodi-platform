@@ -28,7 +28,11 @@ const failedAdminAssets = [];
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+context.setDefaultTimeout(5_000);
+context.setDefaultNavigationTimeout(15_000);
 const page = await context.newPage();
+page.setDefaultTimeout(5_000);
+page.setDefaultNavigationTimeout(15_000);
 
 page.on('pageerror', error => pageErrors.push(String(error?.stack || error?.message || error)));
 page.on('console', message => {
@@ -62,7 +66,7 @@ async function waitForVisiblePanel(id) {
       const style = getComputedStyle(panel);
       return !panel.hidden && !panel.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
     });
-  }, id, { timeout: 12_000 });
+  }, id, { timeout: 5_000 });
 }
 
 async function menuDiagnostics(id) {
@@ -95,14 +99,15 @@ async function menuDiagnostics(id) {
 async function clickMenu(id) {
   const started = Date.now();
   const group = groups[id];
+  console.log(`[E2E] ${id}: begin`);
   try {
     const global = globalButton(group);
-    await global.waitFor({ state: 'visible', timeout: 12_000 });
-    await global.click();
+    await global.waitFor({ state: 'visible', timeout: 5_000 });
+    await global.click({ timeout: 5_000 });
 
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
-    await tab.waitFor({ state: 'visible', timeout: 12_000 });
-    await tab.click();
+    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await tab.click({ timeout: 5_000 });
     await waitForVisiblePanel(id);
 
     let state = await menuDiagnostics(id);
@@ -116,7 +121,9 @@ async function clickMenu(id) {
       if (state.busy) throw new Error('loading indicator remained active');
     }
 
-    results.push({ id, group, ok: true, durationMs: Date.now() - started, ...state });
+    const result = { id, group, ok: true, durationMs: Date.now() - started, ...state };
+    results.push(result);
+    console.log(`[E2E] ${id}: ok ${result.durationMs}ms`);
   } catch (error) {
     const state = await menuDiagnostics(id).catch(() => ({}));
     throw new Error(`${id}: ${error?.message || error}; diagnostics=${JSON.stringify(state)}`);
@@ -125,26 +132,29 @@ async function clickMenu(id) {
 
 async function clickTaxHandoff() {
   const started = Date.now();
+  console.log('[E2E] tax: begin');
   const global = globalButton('business');
-  await global.waitFor({ state: 'visible', timeout: 12_000 });
-  await global.click();
+  await global.waitFor({ state: 'visible', timeout: 5_000 });
+  await global.click({ timeout: 5_000 });
   const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
-  await taxTab.waitFor({ state: 'visible', timeout: 12_000 });
+  await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
   const [response] = await Promise.all([
-    page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15_000 }).catch(() => null),
-    page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 15_000 }),
-    taxTab.click(),
+    page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 10_000 }).catch(() => null),
+    page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 }),
+    taxTab.click({ timeout: 5_000 }),
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
-  results.push({ id: 'tax', group: 'business', ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' });
-  await page.goto(`${baseUrl}#ekodi_admin_token=${token}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  const result = { id: 'tax', group: 'business', ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' };
+  results.push(result);
+  console.log(`[E2E] tax: ok ${result.durationMs}ms`);
+  await page.goto(`${baseUrl}#ekodi_admin_token=${token}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
   await waitForAdminReady();
 }
 
 let fatal = null;
 try {
-  await page.goto(`${baseUrl}#ekodi_admin_token=${token}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.goto(`${baseUrl}#ekodi_admin_token=${token}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
   await waitForAdminReady();
 
   const productionOrder = await page.evaluate(() => window.EKODIAdminPanels?.visibleMenuOrder || []);
