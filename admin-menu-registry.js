@@ -56,6 +56,36 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'policies', group: 'system', icon: '⚙', labels: { ko: '정책', en: 'Policies' }, internal: true },
 ]);
 
+// Canonical deep links are an explicit admin contract. Global work areas point to
+// their first workbench; contextual tabs own the detailed destinations. Separate
+// services use an absolute handoff URL instead of pretending to be an in-shell panel.
+export const ADMIN_MENU_ROUTES = Object.freeze({
+  campus: '#campus',
+  work: '#work',
+  communication: '#communication',
+  workspace: '#workspace',
+  organization: '#organization',
+  clients: '#clients',
+  admins: '#admins',
+  'life-ai': '#life-ai',
+  community: '#community',
+  books: '#books',
+  social: '#social',
+  aiops: '#ai-ops',
+  'marketing-ai': '#marketing-ai',
+  'ai-module-spec': '#ai-module-spec',
+  'ai-membership': '#ai-membership',
+  finance: '#finance',
+  tax: 'https://tax.ekodi.kr/',
+  affiliates: '#affiliates',
+  storage: '#storage',
+  'api-cost': '#api-cost',
+  health: '#health',
+  security: '#security',
+  devices: '#devices',
+  architecture: '#architecture',
+});
+
 const BY_ID = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
 const GROUP_BY_ID = new Map(ADMIN_MENU_GROUPS.map(group => [group.id, group]));
 
@@ -92,6 +122,16 @@ export function getAdminMenuGroupDefault(id) {
   if (!group) return 'campus';
   const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal);
   return firstVisibleChild?.id || group.defaultSection || 'campus';
+}
+
+export function getAdminMenuRoute(id) {
+  const item = getAdminMenuItem(id);
+  if (!item || item.internal) return '';
+  return item.href || ADMIN_MENU_ROUTES[item.id] || '';
+}
+
+export function getAdminMenuGroupRoute(id) {
+  return getAdminMenuRoute(getAdminMenuGroupDefault(id));
 }
 
 export function adminMenuGroups() {
