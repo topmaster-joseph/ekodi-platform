@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const worker = fs.readFileSync(new URL('../ekodibiz-worker.js', import.meta.url), 'utf8');
+const adapter = fs.readFileSync(new URL('../ekodibiz-payment-architecture.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../ekodibiz/index.html', import.meta.url), 'utf8');
 const app = fs.readFileSync(new URL('../ekodibiz/app.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../ekodibiz/style.css', import.meta.url), 'utf8');
@@ -12,7 +13,8 @@ const staging = fs.readFileSync(new URL('../wrangler.ekodibiz-staging.toml', imp
 test('EKODIBIZ stays separate from common Business OS', () => {
   assert.match(config, /pattern = "biz\.ekodi\.kr"/);
   assert.doesNotMatch(config, /pattern = "business\.ekodi\.kr"/);
-  assert.match(config, /main = "ekodibiz-worker\.js"/);
+  assert.match(config, /main = "ekodibiz-payment-architecture\.js"/);
+  assert.match(adapter, /from '\.\/ekodibiz-worker\.js'/);
 });
 
 test('conversation-first UI exposes the revenue loop', () => {
@@ -59,6 +61,7 @@ test('high impact actions are approval-gated and prices are not invented', () =>
   assert.match(worker, /quote_required/);
   assert.match(worker, /amount: null/);
   assert.match(worker, /https:\/\/pay\.ekodi\.kr/);
+  assert.match(adapter, /https:\/\/ekodi\.kr\/ekodibiz\/pay/);
 });
 
 test('worker exposes operational APIs and persistent AI staff queue', () => {
