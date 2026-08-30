@@ -26,8 +26,14 @@ on:
       - 'responsive.css'
       - 'admin-shell.html'
       - 'admin-shell.css'
+      - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
       - 'admin-menu-registry.js'
+      - 'admin-menu-layout.js'
+      - 'admin-sidebar.js'
+      - 'admin-menu-runtime.js'
+      - 'campus-actions.js'
+      - 'campus-actions.css'
       - '_headers'
       - 'auth-site/**'
       - 'marketing-ai-admin.js'
@@ -37,6 +43,7 @@ on:
       - 'scripts/audit-admin-menu-services.mjs'
       - 'scripts/validate-admin-source.mjs'
       - 'scripts/admin-authenticated-e2e.mjs'
+      - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/build.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
@@ -68,13 +75,14 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-demand-loader.js scripts/ecosystem-registry.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs; do
+          for f in site-worker.js platform-router-entry-worker.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs; do
             node --check "$f"
           done
           node scripts/validate-admin-source.mjs
           if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
           test -f homepage-ambient.css
           test -f marketing-ai-admin.css
+          test -f campus-actions.css
           test -f admin-shell.html
           test -f admin-shell.css
           test -f config/ecosystem-services.json
@@ -85,6 +93,8 @@ jobs:
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
+          grep -Fq "['campus','campus']" admin-menu-layout.js
+          grep -Fq "requestDemand('campus')" admin-menu-layout.js
           grep -Fq 'position:fixed!important' admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' index.html
@@ -106,7 +116,7 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/admin-shell.html dist/admin-shell.css dist/admin-demand-loader.js dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
+          for f in dist/index.html dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
             test -f "$f"
           done
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
@@ -123,6 +133,10 @@ jobs:
             echo 'Marketing AI must remain demand-loaded, not part of the admin first path.'
             exit 1
           fi
+          grep -Fq "section.id = 'campusPanel'" dist/campus-actions.js
+          grep -Fq "section.dataset.panel = 'campus'" dist/campus-actions.js
+          grep -Fq "button.dataset.section = 'campus'" dist/campus-actions.js
+          grep -Fq "requestDemand('campus')" dist/admin-menu-layout.js
           grep -Fq 'position:fixed!important' dist/admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
@@ -228,6 +242,9 @@ jobs:
             'https://admin.ekodi.kr/admin-shell.css' \
             'https://admin.ekodi.kr/admin-demand-loader.js' \
             'https://admin.ekodi.kr/admin-menu-registry.js' \
+            'https://admin.ekodi.kr/admin-menu-layout.js' \
+            'https://admin.ekodi.kr/admin-sidebar.js' \
+            'https://admin.ekodi.kr/campus-actions.js' \
             'https://admin.ekodi.kr/marketing-ai-admin.js' \
             'https://auth.ekodi.kr/auth-workspace-target.js'; do
             check "$asset" || failed=1
