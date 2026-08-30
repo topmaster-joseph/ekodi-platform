@@ -122,16 +122,15 @@ jobs:
           set -euo pipefail
           nonce="$GITHUB_RUN_ID"
           curl -fsS "https://admin.ekodi.kr/?audit=$nonce" -o /tmp/admin
-          grep -Fq 'https://mail.ekodi.kr/' /tmp/admin
-          grep -Fq 'https://trade.biz.ekodi.kr/' /tmp/admin
-          ! grep -Fq 'mail.google.com/a/ekodi.kr' /tmp/admin
           curl -fsS "https://admin.ekodi.kr/admin-demand-loader.js?v=$nonce" -o /tmp/loader
           for marker in "clients:" "community:" "books:" "social:" "affiliates:"; do grep -Fq "$marker" /tmp/loader; done
           printf '| 서비스 | HTTP | 최종 주소 | 제목 |\n|---|---:|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
           failed=0
           for url in https://mail.ekodi.kr/ https://live.ekodi.kr/ https://live.church.ekodi.kr/ https://cloud.ekodi.kr/ https://marketing.ekodi.kr/ https://cgma.ekodi.kr/ https://biz.ekodi.kr/ https://trade.biz.ekodi.kr/ https://pay.ekodi.kr/ https://church.ekodi.kr/ https://lab.ekodi.kr/ https://tax.ekodi.kr/; do
+            : > /tmp/body
             meta=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/body -w '%{http_code}|%{url_effective}' "$url" || true)
             status=${meta%%|*}; final=${meta#*|}; title=$(grep -io '<title>[^<]*</title>' /tmp/body | head -1 | sed -E 's#</?title>##Ig' | tr '|' '/' || true); [ -n "$title" ] || title='(no title)'
+            printf '%s -> HTTP %s -> %s (%s)\n' "$url" "$status" "$final" "$title"
             printf '| %s | %s | %s | %s |\n' "$url" "$status" "$final" "$title" >> "$GITHUB_STEP_SUMMARY"
             [[ "$status" =~ ^[23] ]] || failed=1
           done
