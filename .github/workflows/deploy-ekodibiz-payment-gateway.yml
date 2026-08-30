@@ -1,0 +1,92 @@
+name: Deploy EKODIBIZ Payment Gateway
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ekodibiz-payment-architecture.js'
+      - 'ekodibiz-pay-gateway-worker.js'
+      - 'wrangler.ekodibiz.toml'
+      - 'wrangler.ekodibiz-staging.toml'
+      - 'wrangler.ekodibiz-pay-gateway.toml'
+      - 'test/ekodibiz-payment-architecture.test.mjs'
+      - '.github/workflows/deploy-ekodibiz-payment-gateway.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ekodibiz-payment-architecture.js'
+      - 'ekodibiz-pay-gateway-worker.js'
+      - 'wrangler.ekodibiz.toml'
+      - 'wrangler.ekodibiz-staging.toml'
+      - 'wrangler.ekodibiz-pay-gateway.toml'
+      - 'test/ekodibiz-payment-architecture.test.mjs'
+      - '.github/workflows/deploy-ekodibiz-payment-gateway.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodibiz-payment-gateway-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate payment architecture
+        run: |
+          set -euo pipefail
+          node --check ekodibiz-payment-architecture.js
+          node --check ekodibiz-pay-gateway-worker.js
+          node --test test/ekodibiz-payment-architecture.test.mjs
+          ! grep -R -Fq 'pay.biz.ekodi.kr' ekodibiz-payment-architecture.js ekodibiz-pay-gateway-worker.js wrangler.ekodibiz.toml wrangler.ekodibiz-staging.toml wrangler.ekodibiz-pay-gateway.toml
+          grep -Fq 'PAYMENT_CORE_URL = "https://pay.ekodi.kr"' wrangler.ekodibiz.toml
+          grep -Fq 'PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"' wrangler.ekodibiz.toml
+          grep -Fq 'pattern = "ekodi.kr/ekodibiz/pay*"' wrangler.ekodibiz-pay-gateway.toml
+      - name: Validate Cloudflare bundles
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodibiz.toml --outdir /tmp/ekodibiz-revenue-os-dry
+          npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodibiz-pay-gateway.toml --outdir /tmp/ekodibiz-pay-gateway-dry
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy canonical EKODIBIZ gateway route
+        run: npx --yes wrangler@4.127.1 deploy --config wrangler.ekodibiz-pay-gateway.toml
+      - name: Verify canonical gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 18); do
+            body=$(curl -L -sS --max-time 15 'https://ekodi.kr/ekodibiz/pay' || true)
+            code=$(curl -sS -o /tmp/ekodibiz-pay-invalid.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/ekodibiz/pay?amount=100' || true)
+            if grep -Fq '견적 승인 후 결제가 가능합니다' <<<"$body" \
+              && grep -Fq 'pay.ekodi.kr' <<<"$body" \
+              && [[ "$code" == "400" ]] \
+              && grep -Fq '금액 입력이 차단되었습니다' /tmp/ekodibiz-pay-invalid.html; then
+              echo 'EKODIBIZ canonical payment gateway verified.'
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          [[ "$ok" == "1" ]]
