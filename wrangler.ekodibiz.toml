@@ -1,5 +1,5 @@
 name = "ekodibiz-revenue-os"
-main = "ekodibiz-worker.js"
+main = "ekodibiz-payment-architecture.js"
 compatibility_date = "2026-08-28"
 workers_dev = true
 preview_urls = false
@@ -11,7 +11,8 @@ custom_domain = true
 
 [vars]
 EKODIBIZ_MODE = "operational-mvp"
-PAYMENT_SERVICE_URL = "https://pay.ekodi.kr"
+PAYMENT_CORE_URL = "https://pay.ekodi.kr"
+PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 HIGH_IMPACT_APPROVAL = "required"
 AI_OPERATIONS_MODE = "rules-first-event-driven"
 
