@@ -1,5 +1,6 @@
 name: Validate Social Channel Gateway
 
+# Canonical integration lives in customer-entry-worker.js; Mission Control remains the protected production entry.
 on:
   pull_request:
     paths:
