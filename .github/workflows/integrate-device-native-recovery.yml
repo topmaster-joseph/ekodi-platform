@@ -1,0 +1,53 @@
+name: Integrate Device Native Recovery
+
+on:
+  push:
+    branches:
+      - feat/device-agent-native-recovery
+    paths:
+      - scripts/integrate-device-native-recovery.mjs
+      - .github/workflows/integrate-device-native-recovery.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/device-agent-native-recovery
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply integration
+        shell: pwsh
+        run: node scripts/integrate-device-native-recovery.mjs
+      - name: Validate JavaScript
+        shell: pwsh
+        run: |
+          node --check device-control.js
+          node --check remote-power-admin.js
+      - name: Validate PowerShell
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'), [ref]$null, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error; exit 1 }
+      - name: Verify recovery contract
+        shell: pwsh
+        run: |
+          Select-String -Path device-control.js -SimpleMatch "'remote_desktop.recovery.enable'" | Out-Null
+          Select-String -Path tools/ekodi-device-agent/windows/ekodi-device-agent.ps1 -SimpleMatch 'Reconcile-DesktopCommanderRecovery' | Out-Null
+          Select-String -Path remote-power-admin.js -SimpleMatch 'data-rp-recovery' | Out-Null
+      - name: Commit generated integration
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add device-control.js remote-power-admin.js remote-power-admin.css tools/ekodi-device-agent/windows/ekodi-device-agent.ps1
+          if (git diff --cached --quiet) { Write-Host 'No generated changes'; exit 0 }
+          git commit -m 'feat: make Device Agent supervise Remote Desktop Commander'
+          git push origin HEAD:feat/device-agent-native-recovery
