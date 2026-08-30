@@ -8,6 +8,7 @@ on:
       - 'marketing-ai-admin-live-ops.js'
       - 'marketing-ai-admin-live-ops.css'
       - 'marketing-admin-control.js'
+      - 'admin-menu-registry.js'
       - 'admin-demand-loader.js'
       - 'mission-control-entry-worker.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
@@ -24,6 +25,7 @@ on:
       - 'marketing-ai-admin-live-ops.js'
       - 'marketing-ai-admin-live-ops.css'
       - 'marketing-admin-control.js'
+      - 'admin-menu-registry.js'
       - 'admin-demand-loader.js'
       - 'mission-control-entry-worker.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
@@ -45,35 +47,40 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate MarketingAI admin operations modules
+      - name: Validate Marketing operations modules
         run: |
           set -euo pipefail
           node --check marketing-ai-admin.js
           node --check marketing-ai-admin-live-ops.js
           node --check marketing-admin-control.js
+          node --check admin-menu-registry.js
           node --check admin-demand-loader.js
           node --check mission-control-entry-worker.js
           node --check site-worker.js
           node --check scripts/build.mjs
           node --test test/marketing-ai-admin-layout.test.mjs test/marketing-ai-admin-live-ops.test.mjs test/marketing-admin-control-contract.test.mjs
           grep -Fq "button.dataset.section = 'marketing-ai'" marketing-ai-admin.js
-          grep -Fq 'Marketing AI 운영 관제센터' marketing-ai-admin.js
-          grep -Fq 'OPERATIONS CONSOLE' marketing-ai-admin.js
           grep -Fq '/api/marketing/admin/overview' marketing-ai-admin.js
-          grep -Fq 'DATA CONTRACT NOT CONNECTED' marketing-ai-admin.js
-          grep -Fq 'READ-ONLY OPS · 외부 자동실행 없음' marketing-ai-admin.js
-          grep -Fq "['overview','Overview']" marketing-ai-admin.js
-          grep -Fq "['workspaces','Workspaces']" marketing-ai-admin.js
-          grep -Fq "['approvals','Approvals']" marketing-ai-admin.js
+          grep -Fq "labels: { ko: '마케팅 운영', en: 'Marketing Operations' }" admin-menu-registry.js
+          grep -Fq "['overview','개요']" marketing-ai-admin-live-ops.js
+          grep -Fq "['content','콘텐츠']" marketing-ai-admin-live-ops.js
+          grep -Fq "['channels','채널 연결']" marketing-ai-admin-live-ops.js
+          grep -Fq "['publishing','예약·게시']" marketing-ai-admin-live-ops.js
+          grep -Fq "['performance','성과']" marketing-ai-admin-live-ops.js
+          grep -Fq "['improvement','AI 개선']" marketing-ai-admin-live-ops.js
+          grep -Fq '/api/control/social/content/generate' marketing-ai-admin-live-ops.js
+          grep -Fq '/api/control/social/oauth/' marketing-ai-admin-live-ops.js
+          grep -Fq '/api/control/social/posts' marketing-ai-admin-live-ops.js
+          grep -Fq '/api/control/social/performance' marketing-ai-admin-live-ops.js
+          grep -Fq '/api/control/social/metrics/sync' marketing-ai-admin-live-ops.js
+          ! grep -Fq 'META_APP_SECRET' marketing-ai-admin-live-ops.js
+          ! grep -Fq 'GOOGLE_CLIENT_SECRET' marketing-ai-admin-live-ops.js
+          ! grep -Fq 'SOCIAL_TOKEN_KEY' marketing-ai-admin-live-ops.js
+          ! grep -Fq 'customer_key' marketing-ai-admin-live-ops.js
           ! grep -Fq 'marketingAiAdminFrame' marketing-ai-admin.js
           ! grep -Fq '<iframe' marketing-ai-admin.js
           grep -Fq '.marketing-ai-console-tabs' marketing-ai-admin.css
           grep -Fq '.marketing-ai-console-view' marketing-ai-admin.css
-          grep -Fq 'grid-template-columns:repeat(6,minmax(0,1fr))' marketing-ai-admin.css
-          grep -Fq 'CHANNEL REGISTRY' marketing-ai-admin-live-ops.js
-          grep -Fq 'AI AUTOMATION' marketing-ai-admin-live-ops.js
-          grep -Fq 'HUMAN GATE' marketing-ai-admin-live-ops.js
-          grep -Fq '.marketing-ai-approval-layout' marketing-ai-admin-live-ops.css
           grep -Fq 'service_subscriptions' marketing-admin-control.js
           grep -Fq 'billing_charge_events' marketing-admin-control.js
           grep -Fq 'marketing_store_workspaces' marketing-admin-control.js
@@ -98,10 +105,10 @@ jobs:
           ! grep -Fq '<link rel="stylesheet" href="marketing-ai-admin.css"' dist/control-center.html
           grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
           grep -Fq "styles: ['marketing-ai-admin.css']" dist/admin-demand-loader.js
-          grep -Fq 'Marketing AI 운영 관제센터' dist/marketing-ai-admin.js
-          grep -Fq 'DATA CONTRACT NOT CONNECTED' dist/marketing-ai-admin.js
-          grep -Fq 'CHANNEL REGISTRY' dist/marketing-ai-admin.js
-          grep -Fq 'AI AUTOMATION' dist/marketing-ai-admin.js
-          grep -Fq 'HUMAN GATE' dist/marketing-ai-admin.js
-          grep -Fq '.marketing-ai-approval-layout' dist/marketing-ai-admin.css
+          grep -Fq '마케팅 운영' dist/marketing-ai-admin.js
+          grep -Fq '채널 연결' dist/marketing-ai-admin.js
+          grep -Fq '예약·게시' dist/marketing-ai-admin.js
+          grep -Fq 'AI 개선' dist/marketing-ai-admin.js
+          grep -Fq '/api/control/social/posts' dist/marketing-ai-admin.js
+          grep -Fq '/api/control/social/oauth/' dist/marketing-ai-admin.js
           ! grep -Fq 'marketingAiAdminFrame' dist/marketing-ai-admin.js
