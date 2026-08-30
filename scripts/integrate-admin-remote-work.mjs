@@ -54,4 +54,26 @@ patch('admin-lazy-features.js', source => {
   return source;
 });
 
+patch('scripts/admin-thin-postbuild.mjs', source => {
+  const readAnchor = "const deviceCss = (await text(`${root}device-control-admin.css`)).trim();";
+  if (!source.includes(readAnchor)) throw new Error('postbuild device asset anchor not found');
+  source = source.replace(readAnchor, `${readAnchor}\nconst remotePowerJs = (await text(\`${'${root}'}remote-power-admin.js\`)).trim();\nconst remotePowerCss = (await text(\`${'${root}'}remote-power-admin.css\`)).trim();`);
+  const writeAnchor = "await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\\n`);";
+  if (!source.includes(writeAnchor)) throw new Error('postbuild device write anchor not found');
+  source = source.replace(writeAnchor, `${writeAnchor}\nawait writeFile(\`${'${dist}'}remote-power-admin.js\`, \`${'${remotePowerJs}'}\\n\`);\nawait writeFile(\`${'${dist}'}remote-power-admin.css\`, \`${'${remotePowerCss}'}\\n\`);`);
+  return source;
+});
+
+patch('test/admin-thin-shell.test.mjs', source => {
+  const cssBefore = "assert.match(loader, /styles: \\['device-control-admin\\.css'\\]/);";
+  const cssAfter = "assert.match(loader, /styles: \\['device-control-admin\\.css', 'remote-power-admin\\.css'\\]/);";
+  const jsBefore = "assert.match(loader, /scripts: \\['device-control-admin\\.js'\\]/);";
+  const jsAfter = "assert.match(loader, /scripts: \\['device-control-admin\\.js', 'remote-power-admin\\.js'\\]/);";
+  if (!source.includes(cssBefore) || !source.includes(jsBefore)) throw new Error('admin thin-shell device assertions not found');
+  source = source.replace(cssBefore, cssAfter).replace(jsBefore, jsAfter);
+  const postbuildAnchor = "assert.match(postbuild, /writeFile\\(`\\$\\{dist\\}device-control-admin\\.css`/);";
+  if (!source.includes(postbuildAnchor)) throw new Error('admin thin-shell postbuild assertion anchor missing');
+  return source.replace(postbuildAnchor, `${postbuildAnchor}\n  assert.match(postbuild, /writeFile\\(\`\\$\\{dist\\}remote-power-admin\\.js\`/);\n  assert.match(postbuild, /writeFile\\(\`\\$\\{dist\\}remote-power-admin\\.css\`/);`);
+});
+
 console.log('Admin System > Remote Work integrated.');
