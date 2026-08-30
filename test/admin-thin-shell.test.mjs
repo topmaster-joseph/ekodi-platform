@@ -143,6 +143,7 @@ test('admin menu governance uses eight work areas and one contextual top-tab reg
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');
+  const shellHtml = await read('control-center.html');
   assert.match(pkg.scripts.build, /admin-thin-postbuild\.mjs/);
   assert.match(postbuild, /const minimalCompactJs =/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}compact-control-center\.js`, minimalCompactJs\)/);
@@ -150,7 +151,7 @@ test('postbuild emits a purpose-built minimal compact runtime and strips legacy 
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
-  assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
+  assert.match(shellHtml, /data-ekodi-postauth="compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.match(postbuild, /brand side-brand/);
   assert.match(postbuild, /scopeBadge/);
   assert.match(postbuild, /Legacy Admin sidebar header or scope badge survived postbuild/);

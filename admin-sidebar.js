@@ -58,18 +58,20 @@ function ensureStyle() {
 body.compact-control-center{--admin-readable:#f4f8fc;--admin-secondary:#aebed0;--admin-border:rgba(148,163,184,.18);--admin-soft:rgba(148,163,184,.07);--admin-active:rgba(56,189,248,.13)}
 body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important}
 body.compact-control-center .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 8px}
-body.compact-control-center .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:7px 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:rgba(226,232,240,.78);font:inherit;font-size:13px;font-weight:760;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important}
-body.compact-control-center .admin-global-nav:hover{background:var(--admin-soft);color:#fff}
-body.compact-control-center .admin-global-nav.active{border-color:rgba(56,189,248,.22);background:var(--admin-active);color:#fff}
-body.compact-control-center .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;font-size:11px;letter-spacing:-.03em}
+body.compact-control-center .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:40px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
+body.compact-control-center .admin-global-nav span{color:inherit!important;opacity:1!important}
+body.compact-control-center .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7fb;color:#123c58!important}
+body.compact-control-center .admin-global-nav.active{border-color:#a8d7e9;background:#dff3fb;color:#07344f!important}
+body.compact-control-center .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
+body.compact-control-center .admin-global-nav.active b{color:#0876a8!important}
 body.compact-control-center .${SOURCE_CLASS}{display:none!important}
 body.compact-control-center .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:50px;padding:7px 16px;border-bottom:1px solid var(--admin-border);background:rgba(7,21,34,.97);box-shadow:none!important;backdrop-filter:none!important}
-body.compact-control-center .admin-context-title{flex:0 0 auto;color:var(--admin-secondary);font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+body.compact-control-center .admin-context-title{flex:0 0 auto;color:#b9c9d7;font-size:11px;font-weight:820;letter-spacing:.02em;white-space:nowrap}
 body.compact-control-center .${TABS_CLASS}{display:flex;align-items:center;gap:3px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.compact-control-center .${TABS_CLASS}::-webkit-scrollbar{display:none}
-body.compact-control-center .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--admin-secondary);font:inherit;font-size:12px;font-weight:740;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
-body.compact-control-center .admin-context-tab:hover{background:var(--admin-soft);color:var(--admin-readable)}
-body.compact-control-center .admin-context-tab.active{border-color:rgba(56,189,248,.18);background:var(--admin-active);color:#fff}
+body.compact-control-center .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#c6d4df;font:inherit;font-size:13px;font-weight:760;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
+body.compact-control-center .admin-context-tab:hover{background:var(--admin-soft);color:#fff}
+body.compact-control-center .admin-context-tab.active{border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.16);color:#fff}
 body.compact-control-center .content{padding:14px 16px 28px!important}
 body.compact-control-center .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.compact-control-center .content .section,body.compact-control-center .content .module,body.compact-control-center .content .architecture,body.compact-control-center .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
@@ -106,7 +108,7 @@ body.compact-control-center #campusPanel .campus-homepage-notice{margin-bottom:9
 body.compact-control-center #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
 body.compact-control-center #campusPanel .campus-homepage-notice strong{font-size:11px!important}body.compact-control-center #campusPanel .campus-homepage-notice small{font-size:10px!important;line-height:1.35!important}
 @media(max-width:1480px){body.compact-control-center #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){body.compact-control-center .admin-global-nav{min-height:40px;font-size:13px}body.compact-control-center .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:6px 10px;gap:7px}body.compact-control-center .admin-context-title{display:none}body.compact-control-center .admin-context-tab{min-height:34px;padding:0 9px}body.compact-control-center .content{padding:10px 10px 24px!important}body.compact-control-center #campusPanel .campus-toolbar{padding:11px!important}body.compact-control-center #campusSiteGroups .campus-site-item{padding:10px!important}body.compact-control-center #campusSiteGroups .campus-row-action{min-height:40px!important;font-size:12px!important}}
+@media(max-width:760px){body.compact-control-center .admin-global-nav{min-height:42px;font-size:14px}body.compact-control-center .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:6px 10px;gap:7px}body.compact-control-center .admin-context-title{display:none}body.compact-control-center .admin-context-tab{min-height:34px;padding:0 9px}body.compact-control-center .content{padding:10px 10px 24px!important}body.compact-control-center #campusPanel .campus-toolbar{padding:11px!important}body.compact-control-center #campusSiteGroups .campus-site-item{padding:10px!important}body.compact-control-center #campusSiteGroups .campus-row-action{min-height:40px!important;font-size:12px!important}}
 `;
   document.head.append(style);
 }
@@ -197,10 +199,12 @@ function globalButtons(globals, locale) {
 }
 
 function activeSection(nav) {
+  const active = [...navItems(nav)].find(item => item.classList.contains('active'));
+  const activeId = adminSidebarSectionOf(active);
+  if (activeId && getAdminMenuItem(activeId)) return activeId;
   const panelSection = window.EKODIAdminPanels?.current?.();
   if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
-  const active = [...navItems(nav)].find(item => item.classList.contains('active'));
-  return adminSidebarSectionOf(active) || 'campus';
+  return 'campus';
 }
 
 function availableIds(nav, group) {
@@ -254,19 +258,22 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
 }
 
 function activateSection(nav, section) {
-  if (!section) return;
-  syncWorkbenchState(nav, readAdminSidebarLocale(), section);
+  if (!section) return false;
   const definition = getAdminMenuItem(section);
   const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
   if (definition?.href && fallback) {
     fallback.click();
-    return;
+    return true;
   }
   if (window.EKODIAdminPanels?.activate) {
     window.EKODIAdminPanels.activate(section);
-    return;
+    return true;
   }
-  fallback?.click?.();
+  if (fallback?.click) {
+    fallback.click();
+    return true;
+  }
+  return false;
 }
 
 export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
