@@ -3,36 +3,45 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const js = readFileSync(new URL('../marketing-ai-admin-live-ops.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../marketing-ai-admin-live-ops.css', import.meta.url), 'utf8');
 const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 
-test('live Marketing admin views reuse the authenticated overview endpoint', () => {
-  assert.match(js, /\/api\/marketing\/admin\/overview/);
-  assert.match(js, /new Set\(\['campaigns','crm','channels','automation','approvals'\]\)/);
-  assert.match(js, /CAMPAIGN LEDGER/);
-  assert.match(js, /CRM RELATIONSHIP LEDGER/);
-  assert.match(js, /CHANNEL REGISTRY/);
-  assert.match(js, /AI AUTOMATION/);
-  assert.match(js, /HUMAN GATE/);
-  assert.match(js, /'tenant:ekodibiz':'EKODIBIZ'/);
+test('Marketing operations exposes the six canonical execution tabs', () => {
+  for (const marker of [
+    "['overview','개요']",
+    "['content','콘텐츠']",
+    "['channels','채널 연결']",
+    "['publishing','예약·게시']",
+    "['performance','성과']",
+    "['improvement','AI 개선']",
+  ]) assert.match(js, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(js, /마케팅 운영/);
+  assert.match(js, /MARKETING OPERATIONS/);
 });
 
-test('live Marketing admin views remain observation-only and do not expose customer keys', () => {
-  assert.doesNotMatch(js, /method\s*:\s*['"]POST['"]/);
-  assert.doesNotMatch(js, /method\s*:\s*['"]PUT['"]/);
-  assert.doesNotMatch(js, /\/decision/);
-  assert.match(js, /승인 현황만 보여줍니다/);
-  assert.match(js, /감사·관찰용/);
-  assert.match(js, /customer_key조차 포함하지 않습니다/);
+test('Marketing operations uses authenticated direct social gateway actions', () => {
+  assert.match(js, /\/api\/control\/social\/registry/);
+  assert.match(js, /\/api\/control\/social\/content\/generate/);
+  assert.match(js, /\/api\/control\/social\/oauth\//);
+  assert.match(js, /\/api\/control\/social\/connections/);
+  assert.match(js, /\/api\/control\/social\/posts/);
+  assert.match(js, /\/api\/control\/social\/performance/);
+  assert.match(js, /\/api\/control\/social\/metrics\/sync/);
+  assert.match(js, /method:'POST'/);
+  assert.match(js, /method:'DELETE'/);
+  assert.match(js, /플랫폼의 실제 응답을 확인해 게시 결과를 기록했습니다/);
 });
 
-test('build bundles live ops into existing authenticated Marketing admin assets', () => {
+test('Marketing operations never embeds provider secrets or customer PII keys', () => {
+  for (const secret of ['META_APP_SECRET','GOOGLE_CLIENT_SECRET','SOCIAL_TOKEN_KEY','customer_key']) {
+    assert.doesNotMatch(js, new RegExp(secret));
+  }
+  assert.match(js, /Bearer \$\{token\(\)\}/);
+  assert.match(js, /Access Token이나 Page ID를 복사해 넣지 않습니다/);
+});
+
+test('build bundles Marketing operations into the authenticated Marketing admin asset', () => {
   assert.match(build, /marketing-ai-admin-live-ops\.js/);
   assert.match(build, /marketing-ai-admin-live-ops\.css/);
   assert.match(build, /writeFile\(`\$\{output\}marketing-ai-admin\.js`/);
   assert.match(build, /writeFile\(`\$\{output\}marketing-ai-admin\.css`/);
-  assert.match(css, /\.marketing-ai-approval-layout/);
-  assert.match(css, /\.marketing-ai-channel-groups/);
-  assert.match(css, /\.marketing-ai-campaign-list/);
-  assert.match(css, /\.marketing-ai-crm-grid/);
 });
