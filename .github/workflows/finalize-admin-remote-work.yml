@@ -1,0 +1,41 @@
+name: Finalize Admin Remote Work
+
+on:
+  push:
+    branches:
+      - fix/admin-system-remote-work
+    paths:
+      - scripts/finalize-admin-remote-work.mjs
+      - .github/workflows/finalize-admin-remote-work.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/admin-system-remote-work
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply final integration
+        run: node scripts/finalize-admin-remote-work.mjs
+      - name: Validate scope
+        run: |
+          node --check scripts/admin-performance-postbuild.mjs
+          node --check device-control-admin.js
+          node --check remote-power-admin.js
+          node --test test/device-control-contract.test.mjs test/admin-shared-sidebar.test.mjs test/admin-thin-shell.test.mjs
+          grep -F "'remote-power-admin.js','remote-power-admin.css'" scripts/admin-performance-postbuild.mjs
+      - name: Commit final integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/admin-performance-postbuild.mjs test/device-control-contract.test.mjs test/admin-thin-shell.test.mjs
+          if git diff --cached --quiet; then echo 'No generated changes'; exit 0; fi
+          git commit -m 'fix(admin): complete remote work release contract'
+          git push origin HEAD:fix/admin-system-remote-work
