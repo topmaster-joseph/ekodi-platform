@@ -9,7 +9,8 @@ test('admin availability watch runs continuously and verifies canonical plus fal
   assert.match(workflow, /https:\/\/admin\.ekodi\.kr\//);
   assert.match(workflow, /https:\/\/admin\.ekodi\.kr\/admin/);
   assert.match(workflow, /https:\/\/ekodi\.kr\/admin/);
-  assert.match(workflow, /admin-control-center/);
+  assert.match(workflow, /<title>EKODI Admin<\/title>/);
+  assert.match(workflow, /admin-shell/);
   assert.match(workflow, /admin-fallback/);
 });
 
