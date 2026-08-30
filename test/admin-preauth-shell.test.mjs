@@ -8,6 +8,7 @@ const shell = await readFile(`${root}admin-authenticated-shell.js`, 'utf8');
 const build = await readFile(`${root}scripts/build.mjs`, 'utf8');
 const postbuild = await readFile(`${root}scripts/admin-thin-postbuild.mjs`, 'utf8');
 const performancePostbuild = await readFile(`${root}scripts/admin-performance-postbuild.mjs`, 'utf8');
+const shellHtml = await readFile(`${root}control-center.html`, 'utf8');
 
 function scriptTag(name) {
   return `<script src="${name}"`;
@@ -20,7 +21,7 @@ test('generated admin HTML ends with content-fingerprinted first-path assets', (
   assert.match(performancePostbuild, /const assetVersion = hash\.digest\('hex'\)\.slice\(0, 16\)/);
   assert.match(performancePostbuild, /control-center\.css\?v=\$\{assetVersion\}/);
   assert.match(performancePostbuild, /admin-central-handoff\.js\?v=\$\{assetVersion\}/);
-  assert.match(postbuild, /compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js/);
+  assert.match(shellHtml, /data-ekodi-postauth="compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="compact-control-center\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
 });
