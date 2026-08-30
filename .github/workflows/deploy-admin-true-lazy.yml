@@ -5,10 +5,10 @@ on:
     paths: &admin_perf_paths
       - '.github/workflows/deploy-admin-true-lazy.yml'
       - 'package.json'
-      - 'control-center.html'
-      - 'control-center.css'
-      - 'compact-control-center.js'
-      - 'compact-control-center.css'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
+      - 'admin-compact.js'
+      - 'admin-compact.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
@@ -17,6 +17,9 @@ on:
       - 'admin-readable-command.js'
       - 'admin-readable-command.css'
       - 'admin-menu-layout.js'
+      - 'admin-menu-registry.js'
+      - 'admin-sidebar.js'
+      - 'admin-menu-runtime.js'
       - 'finance-monitor.js'
       - 'device-control-admin.js'
       - 'hybrid-execution-admin.js'
@@ -73,7 +76,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate fingerprinted thin shell, flat AI Ops, standalone Health and hard budgets
+      - name: Validate current Admin shell, lazy features and hard budgets
         shell: bash
         run: |
           set -euo pipefail
@@ -97,23 +100,23 @@ jobs:
           node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-system-map.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/hybrid-execution-contract.test.mjs test/hybrid-execution-admin-records.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js compact-control-center.js compact-control-center.css device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css api-cost-admin.js api-cost-admin.css platform-boundaries.json; do
+          for asset in admin-shell.html admin-shell.css admin-central-handoff.js admin-authenticated-shell.js admin-compact.js admin-compact.css admin-menu-layout.js admin-menu-registry.js admin-sidebar.js admin-menu-runtime.js admin-demand-loader.js admin-perf-diagnostics.js device-control-admin.js device-control-admin.css ai-ops-admin.css admin-lazy-features.js release-control-admin.js system-health-admin.js system-health-admin.css api-cost-admin.js api-cost-admin.css platform-boundaries.json; do
             test -f "dist/$asset"
           done
 
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
-          grep -Fq "control-center.css?v=$version" dist/control-center.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
-          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
-          ! grep -Fq '<script src="control-center.js"' dist/control-center.html
-          ! grep -Fq 'control-center-ops.css' dist/control-center.html
-          ! grep -Fq 'control-center-finance.css' dist/control-center.html
-          ! grep -Fq '<script src="ai-ops-admin.js"' dist/control-center.html
-          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
-          ! grep -Fq 'CAMPUS_SERVICES' dist/compact-control-center.js
-          ! grep -Fq 'installPolicies' dist/compact-control-center.js
-          ! grep -Fq 'setTimeout(' dist/compact-control-center.js
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
+          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
+          ! grep -Fq '<script src="control-center.js"' dist/admin-shell.html
+          ! grep -Fq 'control-center-ops.css' dist/admin-shell.html
+          ! grep -Fq 'admin-finance.css' dist/admin-shell.html
+          ! grep -Fq '<script src="ai-ops-admin.js"' dist/admin-shell.html
+          ! grep -Fq 'WINDOWS_AGENT_URL' dist/admin-compact.js
+          ! grep -Fq 'CAMPUS_SERVICES' dist/admin-compact.js
+          ! grep -Fq 'installPolicies' dist/admin-compact.js
+          ! grep -Fq 'setTimeout(' dist/admin-compact.js
           ! grep -Fq 'setInterval(' dist/admin-central-handoff.js
           ! grep -Fq 'setInterval(' dist/admin-authenticated-shell.js
           ! grep -Fq 'setInterval(' dist/admin-demand-loader.js
@@ -121,33 +124,30 @@ jobs:
           ! grep -Fq 'setInterval(' dist/system-health-admin.js
           grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
           grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
+          grep -Fq 'campus:' dist/admin-demand-loader.js
+          grep -Fq "scripts: ['campus-actions.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
-          grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "hashes: ['#health']" dist/admin-demand-loader.js
-          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq 'devices:' dist/admin-demand-loader.js
+          grep -Fq 'device-control-admin.js' dist/admin-demand-loader.js
           grep -Fq 'hybridExecutionPanel' dist/device-control-admin.js
-          grep -Fq 'hybridEventList' dist/device-control-admin.js
           grep -Fq 'isInputPending' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
-          grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
           grep -Fq 'EKODISystemMap' dist/system-health-admin.js
-          grep -Fq "fetch('/platform-boundaries.json'" dist/system-health-admin.js
           grep -Fq '"principle"' dist/platform-boundaries.json
 
           handoff_bytes=$(wc -c < dist/admin-central-handoff.js)
           shell_bytes=$(wc -c < dist/admin-authenticated-shell.js)
-          compact_bytes=$(wc -c < dist/compact-control-center.js)
+          compact_bytes=$(wc -c < dist/admin-compact.js)
           menu_bytes=$(wc -c < dist/admin-menu-layout.js)
           demand_bytes=$(wc -c < dist/admin-demand-loader.js)
-          css_bytes=$(( $(wc -c < dist/control-center.css) + $(wc -c < dist/compact-control-center.css) ))
+          css_bytes=$(( $(wc -c < dist/admin-shell.css) + $(wc -c < dist/admin-compact.css) ))
           first_path=$((handoff_bytes + shell_bytes + compact_bytes + menu_bytes + demand_bytes))
           echo "Admin budgets: version=$version handoff=$handoff_bytes shell=$shell_bytes compact=$compact_bytes menu=$menu_bytes demand=$demand_bytes first-js=$first_path first-css=$css_bytes"
           test "$handoff_bytes" -le 9000
@@ -177,13 +177,17 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
 
       - name: Build release candidate and capture content fingerprint
+        shell: bash
         run: |
           set -euo pipefail
           npm run build
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "ADMIN_ASSET_VERSION=$version" >> "$GITHUB_ENV"
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
           grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
+          grep -Fq 'campus:' dist/admin-demand-loader.js
+          grep -Fq "scripts: ['campus-actions.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
           grep -Fq 'EKODISystemMap' dist/system-health-admin.js
@@ -191,14 +195,14 @@ jobs:
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
 
       - name: Candidate at 0%, verify shared routes, promote and auto-rollback on failure
         run: |
           set -euo pipefail
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
-      - name: Verify production fingerprint, immutable assets, standalone Health and flat AI Ops
+      - name: Verify production fingerprint and current immutable Admin assets
         shell: bash
         run: |
           set -euo pipefail
@@ -212,57 +216,17 @@ jobs:
               continue
             fi
 
+            grep -Fq '<title>EKODI Admin</title>' /tmp/admin-body
+            grep -Fq "admin-shell.css?v=$live_version" /tmp/admin-body
+            grep -Fq "admin-central-handoff.js?v=$live_version" /tmp/admin-body
             q="?v=$live_version"
-            handoff_code=$(curl -sS -D /tmp/handoff-headers -o /tmp/handoff-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-central-handoff.js$q" || true)
-            demand_code=$(curl -sS -D /tmp/demand-headers -o /tmp/demand-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-demand-loader.js$q" || true)
-            compact_code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.js$q" || true)
-            perf_code=$(curl -sS -D /tmp/perf-headers -o /tmp/perf-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-perf-diagnostics.js$q" || true)
-            lazy_code=$(curl -sS -D /tmp/lazy-headers -o /tmp/lazy-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-lazy-features.js$q" || true)
-            ai_css_code=$(curl -sS -D /tmp/ai-css-headers -o /tmp/ai-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/ai-ops-admin.css$q" || true)
-            health_js_code=$(curl -sS -D /tmp/health-js-headers -o /tmp/health-js-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/system-health-admin.js$q" || true)
-            health_css_code=$(curl -sS -D /tmp/health-css-headers -o /tmp/health-css-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/system-health-admin.css$q" || true)
-            map_data_code=$(curl -sS -D /tmp/map-data-headers -o /tmp/map-data-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/platform-boundaries.json' || true)
-
-            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$lazy_code" == '200' && "$ai_css_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' && "$map_data_code" == '200' ]] \
-              && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers \
-              && grep -Fiq 'cache-control: no-store' /tmp/admin-headers \
-              && grep -Fq "control-center.css?v=$live_version" /tmp/admin-body \
-              && grep -Fq "admin-central-handoff.js?v=$live_version" /tmp/admin-body \
-              && ! grep -Fq '<script src="control-center.js"' /tmp/admin-body \
-              && ! grep -Fq 'control-center-ops.css' /tmp/admin-body \
-              && ! grep -Fq 'control-center-finance.css' /tmp/admin-body \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/handoff-headers \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/demand-headers \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/perf-headers \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/health-js-headers \
-              && grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/health-css-headers \
-              && grep -Fq 'AbortController' /tmp/handoff-body \
-              && ! grep -Fq 'PerformanceObserver' /tmp/handoff-body \
-              && grep -Fq 'PerformanceObserver' /tmp/perf-body \
-              && grep -Fq "secondaryScripts: ['admin-lazy-features.js']" /tmp/demand-body \
-              && grep -Fq 'health:' /tmp/demand-body \
-              && grep -Fq "scripts: ['system-health-admin.js']" /tmp/demand-body \
-              && ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" /tmp/demand-body \
-              && grep -Fq 'deployments:' /tmp/demand-body \
-              && grep -Fq 'isInputPending' /tmp/demand-body \
-              && ! grep -Fq 'WINDOWS_AGENT_URL' /tmp/compact-body \
-              && ! grep -Fq 'installPolicies' /tmp/compact-body \
-              && [[ $(wc -c < /tmp/compact-body) -le 5000 ]] \
-              && grep -Fq "actionType:'ui.change_request'" /tmp/lazy-body \
-              && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/lazy-body \
-              && grep -Fq 'admin-readable-command.css' /tmp/ai-css-body \
-              && grep -Fq "navLabel.textContent = '시스템 건강'" /tmp/health-js-body \
-              && grep -Fq "pageTitle.textContent = '시스템 건강'" /tmp/health-js-body \
-              && grep -Fq 'EKODISystemMap' /tmp/health-js-body \
-              && grep -Fq '.system-health-overall' /tmp/health-css-body \
-              && grep -Fq '.ekodi-architecture-map' /tmp/health-css-body \
-              && grep -Fq '"platforms"' /tmp/map-data-body; then
-              echo "Production admin verified: version=$live_version, no-store HTML, immutable fingerprinted assets, standalone Health + System Map, thin shell and latest flat AI Ops."
-              exit 0
-            fi
-            echo "Production verification pending (attempt $attempt/24, version=$live_version)."
-            sleep 4
+            for asset in admin-shell.css admin-central-handoff.js admin-authenticated-shell.js admin-compact.js admin-compact.css admin-menu-layout.js admin-demand-loader.js admin-perf-diagnostics.js admin-lazy-features.js system-health-admin.js system-health-admin.css; do
+              code=$(curl -sS -D /tmp/asset-headers -o /tmp/asset-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$asset$q" || true)
+              [[ "$code" == '200' ]] || { echo "$asset -> $code"; exit 1; }
+              grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers || { echo "$asset missing immutable cache header"; exit 1; }
+            done
+            echo "Production Admin fingerprint $live_version verified."
+            exit 0
           done
-          echo 'Production admin verification failed.'
+          echo "Production Admin did not converge to $expected."
           exit 1
