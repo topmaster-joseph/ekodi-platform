@@ -50,14 +50,18 @@ async function waitForAdminReady() {
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
 }
 
+function globalButton(group) {
+  return page.locator(`button.admin-global-nav[data-admin-global-group="${group}"]`);
+}
+
 async function clickMenu(id) {
   const started = Date.now();
   const group = groups[id];
-  const global = page.locator(`[data-admin-global-group="${group}"]`);
+  const global = globalButton(group);
   await global.waitFor({ state: 'visible', timeout: 12_000 });
   await global.click();
 
-  const tab = page.locator(`[data-admin-context-section="${id}"]`);
+  const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
   await tab.waitFor({ state: 'visible', timeout: 12_000 });
   await tab.click();
 
@@ -73,7 +77,7 @@ async function clickMenu(id) {
 
   const state = await page.evaluate(section => {
     const panel = [...document.querySelectorAll('[data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
-    const selected = document.querySelector(`[data-admin-context-section="${section}"]`);
+    const selected = document.querySelector(`button.admin-context-tab[data-admin-context-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const busy = panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
       const style = getComputedStyle(node);
@@ -109,16 +113,16 @@ async function clickMenu(id) {
 
 async function clickTaxHandoff() {
   const started = Date.now();
-  const global = page.locator('[data-admin-global-group="business"]');
+  const global = globalButton('business');
   await global.waitFor({ state: 'visible', timeout: 12_000 });
   await global.click();
-  const taxTab = page.locator('[data-admin-context-section="tax"]');
+  const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
   await taxTab.waitFor({ state: 'visible', timeout: 12_000 });
-  await Promise.all([
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15_000 }).catch(() => null),
     page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 15_000 }),
     taxTab.click(),
   ]);
-  const response = await page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15_000 }).catch(() => null);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
   results.push({ id: 'tax', group: 'business', ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' });
