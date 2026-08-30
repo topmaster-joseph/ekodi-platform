@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const shell = await readFile(`${root}admin-authenticated-shell.js`, 'utf8');
+const handoff = await readFile(`${root}admin-central-handoff.js`, 'utf8');
 const build = await readFile(`${root}scripts/build.mjs`, 'utf8');
 const postbuild = await readFile(`${root}scripts/admin-thin-postbuild.mjs`, 'utf8');
 const performancePostbuild = await readFile(`${root}scripts/admin-performance-postbuild.mjs`, 'utf8');
@@ -19,7 +20,7 @@ test('generated admin HTML ends with content-fingerprinted first-path assets', (
   assert.match(postbuild, /20260819-thin-shell-2/);
   assert.match(performancePostbuild, /createHash\('sha256'\)/);
   assert.match(performancePostbuild, /const assetVersion = hash\.digest\('hex'\)\.slice\(0, 16\)/);
-  assert.match(performancePostbuild, /control-center\.css\?v=\$\{assetVersion\}/);
+  assert.match(performancePostbuild, /admin-shell\.css\?v=\$\{assetVersion\}/);
   assert.match(performancePostbuild, /admin-central-handoff\.js\?v=\$\{assetVersion\}/);
   assert.match(shellHtml, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="admin-compact\.js"/);
@@ -35,8 +36,8 @@ test('post-auth loader starts only when the authenticated app is visible and use
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',onStateChange\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.doesNotMatch(shell, /new MutationObserver/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /history\.replaceState/);
+  assert.match(handoff, /function normalizeEntryRoute\(\)/);
+  assert.match(handoff, /history\.replaceState/);
 });
 
 test('minimal login shell keeps the central auth link interactive while app is hidden', () => {
@@ -59,7 +60,8 @@ test('authenticated route stays on the current thin shell and defers optional he
   for (const noncritical of ['control-center-features.js','campus-actions.js','device-control-admin.js','ai-ops-admin.js','admin-lazy-features.js','release-control-admin.js','work-admin.js','marketing-ai-admin.js']) {
     assert.doesNotMatch(shell, new RegExp(`'${noncritical.replaceAll('.', '\\.')}'`));
   }
-  assert.match(shell, /canonicalizeLegacyEntry\(\)/);
+  assert.match(handoff, /normalizeEntryRoute\(\)/);
+  assert.match(handoff, /centralAdminAuthUrl\(route\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
   assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
