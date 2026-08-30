@@ -33,15 +33,21 @@ test('detailed diagnostics are standalone and only observe when explicitly loade
   assert.doesNotMatch(diagnostics, /setInterval\(/);
 });
 
-test('authenticated startup is observer-free and legacy URLs converge into the current shell', async () => {
-  const shell = await read('admin-authenticated-shell.js');
+test('authenticated startup is observer-free while the central handoff canonicalizes admin routes', async () => {
+  const [shell, handoff] = await Promise.all([
+    read('admin-authenticated-shell.js'),
+    read('admin-central-handoff.js'),
+  ]);
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',\s*onStateChange\)/);
   assert.doesNotMatch(shell, /new MutationObserver/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
-  assert.match(shell, /history\.replaceState/);
+  assert.match(handoff, /function normalizeEntryRoute\(\)/);
+  assert.match(handoff, /function cleanRouteUrl\(v\)/);
+  assert.match(handoff, /function centralAdminAuthUrl\(v\)/);
+  assert.match(handoff, /history\.replaceState/);
+  assert.match(handoff, /window\.addEventListener\('hashchange'/);
+  assert.match(handoff, /return_to=/);
   assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
-  assert.doesNotMatch(shell, /loadStyle\('control-center-finance\.css'\)/);
+  assert.doesNotMatch(shell, /loadStyle\('admin-finance\.css'\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
@@ -70,7 +76,7 @@ test('demand loader uses transient observation, background priority and input-aw
   assert.match(loader, /navigator\.scheduling\?\.isInputPending/);
   assert.match(loader, /requestIdleCallback\(callback\)/);
   assert.doesNotMatch(loader, /requestIdleCallback\(callback, \{ timeout/);
-  assert.match(loader, /control-center-finance\.css/);
+  assert.match(loader, /admin-finance\.css/);
   assert.match(loader, /finance-monitor\.js/);
   assert.match(loader, /author-billing-admin\.js/);
   assert.match(loader, /ekodi-nav-changed/);
@@ -81,7 +87,7 @@ test('demand loader uses transient observation, background priority and input-aw
 test('postbuild removes old first-path assets, versions the final graph and enforces final JS/CSS budgets', async () => {
   const perf = await read('scripts/admin-performance-postbuild.mjs');
   assert.match(perf, /control-center-ops\\\.css/);
-  assert.match(perf, /control-center-finance\\\.css/);
+  assert.match(perf, /admin-finance\\\.css/);
   assert.match(perf, /control-center\\\.js/);
   assert.match(perf, /createHash\('sha256'\)/);
   assert.match(perf, /assetVersion/);
@@ -89,6 +95,7 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
   assert.match(perf, /admin-menu-registry\.js/);
   assert.match(perf, /admin-sidebar\.js/);
   assert.match(perf, /admin-menu-runtime\.js/);
+  assert.match(perf, /admin-shell\.css/);
   assert.match(perf, /first-path JavaScript budget exceeded/);
   assert.match(perf, /first-path CSS budget exceeded/);
   assert.match(perf, /AI command CSS leaked into startup compact CSS/);
@@ -104,7 +111,7 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
 test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
   const readable = await read('scripts/admin-readable-command-postbuild.mjs');
   assert.match(readable, /admin-readability-base\.css/);
-  assert.match(readable, /appendFile\(`\$\{output\}control-center\.css`/);
+  assert.match(readable, /appendFile\(`\$\{output\}admin-shell\.css`/);
   assert.doesNotMatch(readable, /appendFile\(`\$\{output\}admin-compact\.css`/);
   assert.match(readable, /appendFile\(`\$\{output\}ai-ops-admin\.css`/);
   assert.match(readable, /admin-readable-command\.css/);
