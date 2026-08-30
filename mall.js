@@ -3,6 +3,9 @@
 
   const API = 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100';
   const DEFAULT_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
+  const ATTRIBUTION_KEY = 'ekodi-mall-attribution-v1';
+  const ATTRIBUTION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const ATTRIBUTION_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
   const SORT_LABELS = {
     registered: '등록순',
     popular: '인기순',
@@ -34,8 +37,57 @@
     } catch { return ''; }
   }
 
+  function cleanAttribution(value, max = 120) {
+    return String(value || '').trim().slice(0, max);
+  }
+
+  function landingAttribution() {
+    const params = new URLSearchParams(location.search);
+    const values = {};
+    for (const key of ATTRIBUTION_PARAMS) {
+      const value = cleanAttribution(params.get(key));
+      if (value) values[key] = value;
+    }
+    return values;
+  }
+
+  function readAttribution() {
+    const landing = landingAttribution();
+    if (Object.keys(landing).length) {
+      const record = { values: landing, capturedAt: Date.now() };
+      try { localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(record)); } catch {}
+      return landing;
+    }
+    try {
+      const record = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || 'null');
+      const capturedAt = Number(record?.capturedAt || 0);
+      if (!capturedAt || Date.now() - capturedAt > ATTRIBUTION_TTL_MS || !record?.values) {
+        localStorage.removeItem(ATTRIBUTION_KEY);
+        return {};
+      }
+      const values = {};
+      for (const key of ATTRIBUTION_PARAMS) {
+        const value = cleanAttribution(record.values[key]);
+        if (value) values[key] = value;
+      }
+      return values;
+    } catch { return {}; }
+  }
+
+  const attribution = readAttribution();
+
+  function withAttribution(value) {
+    const target = safeUrl(value);
+    if (!target || !Object.keys(attribution).length) return target;
+    const url = new URL(target);
+    for (const [key, item] of Object.entries(attribution)) {
+      if (!url.searchParams.has(key)) url.searchParams.set(key, item);
+    }
+    return url.toString();
+  }
+
   function normalize(product, popularityRank = 0) {
-    const clickUrl = safeUrl(product?.clickUrl);
+    const clickUrl = withAttribution(product?.clickUrl);
     if (!clickUrl) return null;
     const price = Number(product?.priceKrw || 0);
     const selectedAt = String(product?.selectedAt || '').trim();
