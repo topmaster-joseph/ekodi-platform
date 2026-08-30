@@ -143,6 +143,7 @@ test('admin menu governance uses eight work areas and one contextual top-tab reg
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');
+  const perfPostbuild = await read('scripts/admin-performance-postbuild.mjs');
   const shellHtml = await read('admin-shell.html');
   assert.match(pkg.scripts.build, /admin-thin-postbuild\.mjs/);
   assert.match(postbuild, /const minimalCompactJs =/);
@@ -151,6 +152,8 @@ test('postbuild emits a purpose-built minimal compact runtime and strips legacy 
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}remote-power-admin\.js`/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}remote-power-admin\.css`/);
+  assert.match(perfPostbuild, /remote-power-admin\.js/);
+  assert.match(perfPostbuild, /remote-power-admin\.css/);
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
   assert.match(shellHtml, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
