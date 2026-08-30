@@ -1,5 +1,6 @@
 import authWorker from './auth-worker.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
+import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -419,6 +420,19 @@ async function handleControl(request, env) {
     const snapshot = await cloudflareAccountSnapshot(env, true);
     await writeAudit(env, auth.session, 'cloudflare.accounts.check', 'platform', 'manual account and subservice health check');
     return controlJson(snapshot, 200, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/remote/devices`) {
+    await writeAudit(env, auth.session, 'remote.devices.list', 'remote-power', 'remote power inventory viewed');
+    return controlJson({ ok: true, ...remotePowerSnapshot(env) }, 200, auth.response.headers);
+  }
+
+  const remoteWakeMatch = path.match(/^\/api\/control\/remote\/devices\/([a-z0-9-]+)\/wake$/);
+  if (remoteWakeMatch && request.method === 'POST') {
+    const deviceId = remoteWakeMatch[1];
+    const result = await requestRemoteWake(env, deviceId);
+    await writeAudit(env, auth.session, 'remote.device.wake', `remote-power:${deviceId}`, JSON.stringify({ status: result.status, code: result.body?.code || '', ok: Boolean(result.body?.ok) }));
+    return controlJson(result.body, result.status, auth.response.headers);
   }
 
   if (request.method === 'POST' && path === `${CONTROL_PREFIX}/check`) {
