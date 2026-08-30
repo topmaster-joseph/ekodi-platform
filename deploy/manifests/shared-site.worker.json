@@ -1,5 +1,5 @@
 {
-  "version": 31,
+  "version": 32,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -7,8 +7,8 @@
       {"url":"https://ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디의 모든 길을 한눈에","One ecosystem. Many ways to connect."]},
       {"url":"https://ekodi.kr/history","statuses":[200],"redirect":"follow","expect":["EKODI HISTORY","Ecclesia","Koinonia","Diaspora","Jubilee"]},
       {"url":"https://ekodi.kr/mall","statuses":[200],"redirect":"follow","expect":["EKODI MALL","SMART SHOPPING","오늘 필요한 것","오늘의 상품","상품 둘러보기"],"headerExpect":["x-content-type-options: nosniff"]},
-      {"url":"https://ekodi.kr/admin","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","return_to=https%3A%2F%2Fekodi.kr%2Fadmin"],"headerExpect":["x-ekodi-route: admin-fallback","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
-      {"url":"https://admin.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Control Center","admin-authenticated-shell.js?v=","admin-compact.js admin-menu-layout.js admin-demand-loader.js","https://auth.ekodi.kr/?site=admin"],"headerExpect":["x-ekodi-route: admin-control-center","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
+      {"url":"https://ekodi.kr/admin","statuses":[200],"redirect":"manual","expect":["EKODI Admin","return_to=https%3A%2F%2Fekodi.kr%2Fadmin"],"headerExpect":["x-ekodi-route: admin-fallback","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
+      {"url":"https://admin.ekodi.kr/","statuses":[200],"redirect":"manual","expect":["EKODI Admin","admin-authenticated-shell.js?v=","admin-compact.js admin-menu-layout.js admin-demand-loader.js","https://auth.ekodi.kr/?site=admin"],"headerExpect":["x-ekodi-route: admin-shell","cross-origin-opener-policy: same-origin-allow-popups","cache-control: no-store"]},
       {"url":"https://admin.ekodi.kr/admin-demand-loader.js?device=v28","statuses":[200],"redirect":"manual","expect":["label: '기기 관리'","device-browser-diagnostics.js","device-browser-diagnostics.css"],"headerExpect":["x-content-type-options: nosniff"]},
       {"url":"https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28","statuses":[200],"redirect":"manual","expect":["현재 관리자 브라우저 진단","서버로 업로드하지 않습니다","CACHE_ALLOWLIST","registration.update()"],"headerExpect":["x-ekodi-route: admin-asset","cache-control: public, max-age=31536000, immutable","x-content-type-options: nosniff"]},
       {"url":"https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28","statuses":[200],"redirect":"manual","expect":[".admin-browser-diagnostic","@media(max-width:720px)"],"headerExpect":["x-ekodi-route: admin-asset","cache-control: public, max-age=31536000, immutable","x-content-type-options: nosniff"]},
