@@ -73,6 +73,9 @@ const COMMAND_POLICIES = Object.freeze({
   'profile.workstation.apply': { risk: 'maintain', confirm: true },
   'profile.workstation.restore': { risk: 'maintain', confirm: true },
   'agent.self_update': { risk: 'maintain', confirm: true },
+  'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
+  'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
+  'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
 });
 
 const DIAGNOSTIC_SECTIONS = Object.freeze({
