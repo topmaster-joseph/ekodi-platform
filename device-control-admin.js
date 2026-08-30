@@ -72,7 +72,7 @@
     document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
     document.querySelector('[data-device-control-nav]')?.classList.add('active');
     document.querySelector('.sidebar')?.classList.remove('open');
-    setPageTitle('통합 기기관리');
+    setPageTitle('원격 작업');
     if (location.hash !== '#devices') history.replaceState(null, '', '#devices');
     loadDevices();
   }
@@ -434,13 +434,13 @@
     const nav = document.querySelector('.sidebar nav'), content = document.querySelector('.content');
     if (!nav || !content || document.querySelector('#deviceControlPanel')) return;
     const button = document.createElement('button'); button.type = 'button'; button.className = 'nav'; button.dataset.deviceControlNav = 'true'; button.append(document.createTextNode('⌁ '));
-    const label = document.createElement('span'); label.textContent = 'Devices'; button.append(label);
+    const label = document.createElement('span'); label.textContent = '원격 작업'; button.append(label);
     const workspace = nav.querySelector('[data-section="workspace"]'); if (workspace) workspace.insertAdjacentElement('afterend', button); else nav.append(button);
 
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">EKODI DEVICE MANAGEMENT</p><h2>통합 기기관리</h2><p>PC·POS·키오스크·태블릿·센서·서비스로봇을 하나의 목록에서 보되, 기기 유형마다 권한을 다르게 적용합니다. 센서와 로봇은 기본 관찰 전용이며 검증된 어댑터 전에는 원격행동을 허용하지 않습니다.</p></div>
+        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT</p><h2>원격 작업</h2><p>원격 PC의 연결·복구·작업배정과 기기 진단을 한곳에서 관리합니다. PC는 허용된 원격 작업만 실행하며 POS·키오스크·센서·서비스로봇은 기기 유형별 안전정책을 그대로 적용합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
       <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>

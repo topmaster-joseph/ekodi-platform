@@ -59,8 +59,8 @@ test('Campus, Health and Device Control are explicit versioned demand-loaded fea
   assert.match(loader, /hashes: \['#health'\]/);
   assert.match(loader, /insert: 'after-aiops'/);
   assert.match(loader, /devices:\s*\{/);
-  assert.match(loader, /styles: \['device-control-admin\.css'\]/);
-  assert.match(loader, /scripts: \['device-control-admin\.js'\]/);
+  assert.match(loader, /styles: \['device-control-admin\.css', 'remote-power-admin\.css'\]/);
+  assert.match(loader, /scripts: \['device-control-admin\.js', 'remote-power-admin\.js'\]/);
   assert.match(loader, /hashes: \['#devices'\]/);
   assert.match(loader, /assetUrl\(src\)/);
   const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
@@ -149,6 +149,8 @@ test('postbuild emits a purpose-built minimal compact runtime and strips legacy 
   assert.match(postbuild, /writeFile\(`\$\{dist\}admin-compact\.js`, minimalCompactJs\)/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.js`/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}remote-power-admin\.js`/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}remote-power-admin\.css`/);
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
   assert.match(shellHtml, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);

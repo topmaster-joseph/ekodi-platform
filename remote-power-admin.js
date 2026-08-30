@@ -10,7 +10,7 @@
   function headers(json=false){ const h=token()?{authorization:`Bearer ${token()}`}:{ }; if(json)h['content-type']='application/json'; return h; }
   function esc(v){ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  function host(){ return document.querySelector('#aiOpsPanel') || document.querySelector('main') || document.body; }
+  function host(){ return document.querySelector('#deviceControlPanel') || document.querySelector('[data-panel~="devices"]'); }
   function statusLabel(status){ return status==='online'?'온라인':status==='offline'?'오프라인':status==='wake_requested'?'기동 요청':'상태 확인 전'; }
 
   function render(){
@@ -83,5 +83,5 @@
   }
 
   window.EKODIRemotePowerAdmin={load,wake,recovery};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(host())load()},{once:true}); else if(host())load();
 })();
