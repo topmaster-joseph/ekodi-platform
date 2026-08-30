@@ -54,18 +54,7 @@ function globalButton(group) {
   return page.locator(`button.admin-global-nav[data-admin-global-group="${group}"]`);
 }
 
-async function clickMenu(id) {
-  const started = Date.now();
-  const group = groups[id];
-  const global = globalButton(group);
-  await global.waitFor({ state: 'visible', timeout: 12_000 });
-  await global.click();
-
-  const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
-  await tab.waitFor({ state: 'visible', timeout: 12_000 });
-  await tab.click();
-
-  await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12_000 });
+async function waitForVisiblePanel(id) {
   await page.waitForFunction(section => {
     return [...document.querySelectorAll('[data-panel]')].some(panel => {
       const ids = String(panel.dataset.panel || '').split(/\s+/).filter(Boolean);
@@ -74,9 +63,17 @@ async function clickMenu(id) {
       return !panel.hidden && !panel.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
     });
   }, id, { timeout: 12_000 });
+}
 
-  const state = await page.evaluate(section => {
-    const panel = [...document.querySelectorAll('[data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
+async function menuDiagnostics(id) {
+  return page.evaluate(section => {
+    const panels = [...document.querySelectorAll('[data-panel]')];
+    const panel = panels.find(node => {
+      const ids = String(node.dataset.panel || '').split(/\s+/).filter(Boolean);
+      if (!ids.includes(section)) return false;
+      const style = getComputedStyle(node);
+      return !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
+    });
     const selected = document.querySelector(`button.admin-context-tab[data-admin-context-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const busy = panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
@@ -88,27 +85,42 @@ async function clickMenu(id) {
       textLength: text.length,
       selected: selected?.getAttribute('aria-selected') === 'true' || selected?.classList.contains('active') || false,
       pageTitle: document.querySelector('#pageTitle')?.textContent?.trim() || '',
+      currentSection: window.EKODIAdminPanels?.current?.() || '',
+      hash: location.hash,
       busy,
     };
   }, id);
+}
 
-  if (!state.panelFound) throw new Error(`${id}: visible panel not found`);
-  if (!state.selected) throw new Error(`${id}: context tab did not become active`);
-  if (state.textLength < 4) throw new Error(`${id}: rendered panel is effectively empty`);
+async function clickMenu(id) {
+  const started = Date.now();
+  const group = groups[id];
+  try {
+    const global = globalButton(group);
+    await global.waitFor({ state: 'visible', timeout: 12_000 });
+    await global.click();
 
-  if (state.busy) {
-    await page.waitForTimeout(2_000);
-    const stillBusy = await page.evaluate(section => {
-      const panel = [...document.querySelectorAll('[data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
-      return panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
-        const style = getComputedStyle(node);
-        return !node.hidden && style.display !== 'none' && style.visibility !== 'hidden';
-      }).length : 0;
-    }, id);
-    if (stillBusy) throw new Error(`${id}: loading indicator remained active`);
+    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
+    await tab.waitFor({ state: 'visible', timeout: 12_000 });
+    await tab.click();
+    await waitForVisiblePanel(id);
+
+    let state = await menuDiagnostics(id);
+    if (!state.panelFound) throw new Error('visible panel not found');
+    if (!state.selected) throw new Error('context tab did not become active');
+    if (state.textLength < 4) throw new Error('rendered panel is effectively empty');
+
+    if (state.busy) {
+      await page.waitForTimeout(2_000);
+      state = await menuDiagnostics(id);
+      if (state.busy) throw new Error('loading indicator remained active');
+    }
+
+    results.push({ id, group, ok: true, durationMs: Date.now() - started, ...state });
+  } catch (error) {
+    const state = await menuDiagnostics(id).catch(() => ({}));
+    throw new Error(`${id}: ${error?.message || error}; diagnostics=${JSON.stringify(state)}`);
   }
-
-  results.push({ id, group, ok: true, durationMs: Date.now() - started, ...state });
 }
 
 async function clickTaxHandoff() {
