@@ -5,7 +5,7 @@ import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.m
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const assets = [
-  'index.html','privacy.html','terms.html','history.html','mall.html','mall.css','mall.js','homepage-ambient.css','homepage-ambient.js','control-center.html','control-center.css','control-center-finance.css','admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','admin-menu-registry.js','admin-sidebar.js','admin-menu-runtime.js','device-control-admin.css','device-control-admin.js','storage-admin.css','storage-admin.js','homepage-admin.js','admin-secret-generator.css','admin-secret-generator.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','compact-control-center.css','admin-readable-command.css','admin-readable-command.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','ai-module-spec-admin.css','ai-module-spec-admin.js','life-ai-admin.css','life-ai-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','author-billing-admin.css','author-billing-admin.js','system-health-admin.css','system-health-admin.js','api-cost-admin.css','api-cost-admin.js','device-browser-diagnostics.css','device-browser-diagnostics.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
+  'index.html','privacy.html','terms.html','history.html','mall.html','mall.css','mall.js','homepage-ambient.css','homepage-ambient.js','admin-shell.html','admin-shell.css','admin-finance.css','admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','admin-menu-registry.js','admin-sidebar.js','admin-menu-runtime.js','device-control-admin.css','device-control-admin.js','storage-admin.css','storage-admin.js','homepage-admin.js','admin-secret-generator.css','admin-secret-generator.js','finance-monitor.js','client-access.css','client-access.js','marketing-funnel-admin.css','marketing-funnel-admin.js','marketing-ai-admin.css','marketing-ai-admin.js','google-admin-auth.css','google-admin-auth.js','domains-hub.css','domains-hub.js','social-admin.css','social-admin.js','release-control-admin.css','release-control-admin.js','community-reports-admin.css','community-reports-admin.js','books-admin.css','books-admin.js','books-finance-admin.css','books-finance-admin.js','admin-compact.css','admin-readable-command.css','admin-readable-command.js','campus-actions.css','campus-actions.js','ai-ops-admin.css','ai-ops-admin.js','ai-module-spec-admin.css','ai-module-spec-admin.js','life-ai-admin.css','life-ai-admin.js','mission-control-admin.css','mission-control-admin.js','work-admin.css','work-admin.js','admin-lazy-features.js','author-billing-admin.css','author-billing-admin.js','system-health-admin.css','system-health-admin.js','api-cost-admin.css','api-cost-admin.js','device-browser-diagnostics.css','device-browser-diagnostics.js','ekodi-device-bootstrap.cmd','hub.html','trade.html','styles.css','script.js','monitor-status.json','_headers',
 ];
 
 await rm(output, { recursive: true, force: true });
@@ -46,10 +46,10 @@ await Promise.all([
 ]);
 
 const [financeBaseCss, financeBaseJs, taxInvoiceCss, taxInvoiceJs] = await Promise.all([
-  readFile(`${output}control-center-finance.css`, 'utf8'), readFile(`${output}finance-monitor.js`, 'utf8'),
+  readFile(`${output}admin-finance.css`, 'utf8'), readFile(`${output}finance-monitor.js`, 'utf8'),
   readFile(`${root}tax-invoice-admin.css`, 'utf8'), readFile(`${root}tax-invoice-admin.js`, 'utf8'),
 ]);
-await writeFile(`${output}control-center-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
+await writeFile(`${output}admin-finance.css`, `${financeBaseCss}\n${taxInvoiceCss}\n`);
 await writeFile(`${output}finance-monitor.js`, `${financeBaseJs}\n${taxInvoiceJs}\n`);
 
 const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs, marketingPostingStatusJs, marketingChannelManagerJs] = await Promise.all([
@@ -99,10 +99,10 @@ for (const asset of htmlAssets) {
     if (!html.includes('homepage-ambient.js')) html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');
   }
   if (!html.includes('data-ekodi-responsive')) html = html.replace('</head>', `<style data-ekodi-responsive>\n${responsiveCss}\n</style>\n</head>`);
-  if (asset === 'control-center.html') {
+  if (asset === 'admin-shell.html') {
     html = html.replace(/\s*<script src="finance-monitor\.js"><\/script>\s*/g, '\n');
-    html = html.replace(/\s*<link rel="stylesheet" href="(?:compact-control-center|campus-actions)\.css">\s*/g, '\n');
-    html = html.replace(/\s*<script src="(?:compact-control-center|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
+    html = html.replace(/\s*<link rel="stylesheet" href="(?:admin-compact|campus-actions)\.css">\s*/g, '\n');
+    html = html.replace(/\s*<script src="(?:admin-compact|control-center-features|campus-actions|admin-lazy-features)\.js"[^>]*><\/script>\s*/g, '\n');
     if (!html.includes('admin-authenticated-shell.js')) html = html.replace('</body>', '<script src="admin-authenticated-shell.js?v=20260819-true-lazy-1" defer data-ekodi-postauth="admin-menu-layout.js admin-demand-loader.js"></script>\n</body>');
   }
   await writeFile(path, html);
@@ -115,4 +115,4 @@ const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
 await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
 await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
 
-console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Control Center, true on-demand AI Ops/External AI Spec/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, posting status and channel connection console, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
+console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Admin Shell, true on-demand AI Ops/External AI Spec/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, posting status and channel connection console, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);

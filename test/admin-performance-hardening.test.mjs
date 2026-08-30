@@ -46,7 +46,7 @@ test('authenticated startup is observer-free and legacy URLs converge into the c
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['admin-compact.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js', 'control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js']) assert.match(deferred, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
   assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
@@ -105,7 +105,7 @@ test('admin readability is first-path without consuming the compact CSS budget, 
   const readable = await read('scripts/admin-readable-command-postbuild.mjs');
   assert.match(readable, /admin-readability-base\.css/);
   assert.match(readable, /appendFile\(`\$\{output\}control-center\.css`/);
-  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
+  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}admin-compact\.css`/);
   assert.match(readable, /appendFile\(`\$\{output\}ai-ops-admin\.css`/);
   assert.match(readable, /admin-readable-command\.css/);
 });
@@ -130,11 +130,11 @@ test('shared admin menu modules use the secured immutable admin asset route', as
 test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
   const wrangler = await read('wrangler.site.toml');
   for (const asset of [
-    '/control-center.css',
+    '/admin-shell.css',
     '/admin-central-handoff.js',
     '/admin-authenticated-shell.js',
-    '/compact-control-center.js',
-    '/compact-control-center.css',
+    '/admin-compact.js',
+    '/admin-compact.css',
     '/admin-menu-layout.js',
     '/admin-menu-registry.js',
     '/admin-sidebar.js',

@@ -40,7 +40,7 @@ test('root portal stays zero-JavaScript while verified public links remain regis
 });
 
 test('production build and Control Center retain required assets and APIs', () => {
-  for (const asset of ['admin.html','control-center.html','control-center.css','control-center-ops.css','control-center-finance.css','control-center.js','finance-monitor.js','hub.html','styles.css','script.js','monitor-status.json']) {
+  for (const asset of ['admin.html','admin-shell.html','admin-shell.css','control-center-ops.css','admin-finance.css','control-center.js','finance-monitor.js','hub.html','styles.css','script.js','monitor-status.json']) {
     assert.match(build, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
   }
   uniqueIds(control, 'Control Center');

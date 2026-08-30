@@ -8,7 +8,7 @@ const shell = await readFile(`${root}admin-authenticated-shell.js`, 'utf8');
 const build = await readFile(`${root}scripts/build.mjs`, 'utf8');
 const postbuild = await readFile(`${root}scripts/admin-thin-postbuild.mjs`, 'utf8');
 const performancePostbuild = await readFile(`${root}scripts/admin-performance-postbuild.mjs`, 'utf8');
-const shellHtml = await readFile(`${root}control-center.html`, 'utf8');
+const shellHtml = await readFile(`${root}admin-shell.html`, 'utf8');
 
 function scriptTag(name) {
   return `<script src="${name}"`;
@@ -21,8 +21,8 @@ test('generated admin HTML ends with content-fingerprinted first-path assets', (
   assert.match(performancePostbuild, /const assetVersion = hash\.digest\('hex'\)\.slice\(0, 16\)/);
   assert.match(performancePostbuild, /control-center\.css\?v=\$\{assetVersion\}/);
   assert.match(performancePostbuild, /admin-central-handoff\.js\?v=\$\{assetVersion\}/);
-  assert.match(shellHtml, /data-ekodi-postauth="compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js"/);
-  assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="compact-control-center\.js"/);
+  assert.match(shellHtml, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
+  assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="admin-compact\.js"/);
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
 });
 
@@ -43,13 +43,13 @@ test('minimal login shell keeps the central auth link interactive while app is h
   assert.match(shell, /loginLink\.style\.pointerEvents='auto'/);
   assert.match(shell, /loginScreen\.style\.pointerEvents='auto'/);
   assert.match(shell, /loginScreen\.style\.zIndex='1000'/);
-  assert.equal(scriptTag('compact-control-center.js'), '<script src="compact-control-center.js"');
+  assert.equal(scriptTag('admin-compact.js'), '<script src="admin-compact.js"');
 });
 
 test('authenticated route stays on the current thin shell and defers optional helpers until ready', () => {
   const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js']) {
+  for (const asset of ['admin-compact.js','admin-menu-layout.js','admin-demand-loader.js']) {
     assert.match(critical, new RegExp(`'${asset.replaceAll('.', '\\.')}'`));
   }
   for (const asset of ['google-admin-auth.js','ekodi-message-ui.js']) {

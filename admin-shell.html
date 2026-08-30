@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="EKODI 통합 운영 허브: 서비스 상태, 결제, 회계, 조직, 메일, 라이브, 클라우드, 도메인을 한곳에서 관리합니다.">
   <meta name="theme-color" content="#07111f">
-  <title>EKODI Control Center</title>
-  <link rel="stylesheet" href="control-center.css">
+  <title>EKODI Admin</title>
+  <link rel="stylesheet" href="admin-shell.css">
 </head>
 <body>
   <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
     <div class="login-card">
       <a class="brand" href="https://ekodi.kr"><span>E</span><strong>EKODI</strong></a>
-      <p class="kicker">CONTROL CENTER</p>
+      <p class="kicker">ADMIN</p>
       <h1 id="loginTitle">한곳에서 모든 운영을 봅니다.</h1>
-      <p class="login-copy">서비스 상태와 통계, 결제·회계, 조직, 메일, 방송, 자료, 도메인을 한 화면에서 연결하는 EKODI 중앙 관제실입니다.</p>
+      <p class="login-copy">서비스 상태와 통계, 결제·회계, 조직, 메일, 방송, 자료, 도메인을 한 화면에서 연결하는 EKODI 관리자 운영 화면입니다.</p>
       <p class="login-copy" id="centralAdminLoginCopy">관리자 계정은 통합인증센터에서 Google 관리자 허용목록을 별도로 확인합니다.</p>
       <a id="centralAdminLogin" class="primary full" href="https://auth.ekodi.kr/?site=admin&amp;return_to=https%3A%2F%2Fadmin.ekodi.kr%2F">EKODI 통합인증센터로 관리자 로그인</a>
       <form id="loginForm" hidden>
@@ -135,6 +135,6 @@
     </main>
   </div>
   <script src="admin-central-handoff.js"></script>
-  <script src="admin-authenticated-shell.js?v=20260819-true-lazy-1" defer data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"></script>
+  <script src="admin-authenticated-shell.js?v=20260819-true-lazy-1" defer data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"></script>
 </body>
 </html>

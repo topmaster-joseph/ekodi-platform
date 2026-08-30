@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const ui = await readFile(new URL('../compact-control-center.js', import.meta.url), 'utf8');
+const ui = await readFile(new URL('../admin-compact.js', import.meta.url), 'utf8');
 
 test('Policies is a separate Control Center panel', () => {
   assert.match(ui, /section\.id = 'policiesPanel'/);

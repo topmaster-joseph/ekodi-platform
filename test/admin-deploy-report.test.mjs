@@ -36,7 +36,7 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /#aiOpsPanel \.ai-chief-chat\{order:1!important;position:static!important/);
   assert.match(workflow, /verify_compact_without_readable_css/);
   assert.match(workflow, /! grep -Fq 'admin-readable-command\.css' \/tmp\/compact-css/);
-  assert.doesNotMatch(workflow, /grep -Fq '#aiOpsPanel \.ai-chief-chat[^\n]*dist\/compact-control-center\.css/);
+  assert.doesNotMatch(workflow, /grep -Fq '#aiOpsPanel \.ai-chief-chat[^\n]*dist\/admin-compact\.css/);
 });
 
 test('shared-site guarded release accepts any valid content fingerprint instead of a stale fixed version', async () => {
@@ -46,7 +46,7 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   assert.ok(admin.expect.includes('EKODI Control Center'));
   assert.ok(admin.expect.includes('admin-authenticated-shell.js?v='));
   assert.equal(admin.expect.some(value => value.includes('20260819-e2e-perf-1')), false);
-  assert.ok(admin.expect.includes('compact-control-center.js admin-menu-layout.js admin-demand-loader.js'));
+  assert.ok(admin.expect.includes('admin-compact.js admin-menu-layout.js admin-demand-loader.js'));
   assert.equal(admin.expect.includes('control-center-features.js'), false);
   assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-control-center'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));

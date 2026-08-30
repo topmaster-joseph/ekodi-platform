@@ -343,7 +343,7 @@
     finance.addEventListener('click', () => {
       if (finance.dataset.financeAssetsRequested === 'true') return;
       finance.dataset.financeAssetsRequested = 'true';
-      loadStyle('control-center-finance.css').then(() => loadScript('finance-monitor.js')).catch(error => {
+      loadStyle('admin-finance.css').then(() => loadScript('finance-monitor.js')).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
       });

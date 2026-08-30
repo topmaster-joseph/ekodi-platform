@@ -72,14 +72,14 @@ test('Assist first path is launcher-only and upgrades through existing secured l
   assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
   assert.match(bootstrapCss,/\.ekodi-assist-bootstrap/);
   assert.doesNotMatch(bootstrap,/\/api\/control\/messenger\/inbox/);
-  assert.match(shell,/compact-control-center\.js/);
+  assert.match(shell,/admin-compact\.js/);
   assert.doesNotMatch(shell,/admin-assist-dock\.js/);
   assert.doesNotMatch(shell,/admin-assist-dock\.css/);
 });
 
 test('guarded shared-site release verifies bootstrap and full Assist lazy assets separately',async()=>{
   const manifest=await read('deploy/manifests/shared-site.worker.json');
-  assert.match(manifest,/admin\.ekodi\.kr\/compact-control-center\.js\?assist=v2/);
+  assert.match(manifest,/admin\.ekodi\.kr\/admin-compact\.js\?assist=v2/);
   assert.match(manifest,/ekodiAssistBootstrap/);
   assert.match(manifest,/admin\.ekodi\.kr\/admin-lazy-features\.js\?assist=v2/);
   assert.match(manifest,/ekodi-chief-ai-chat-v1/);

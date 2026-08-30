@@ -8,6 +8,10 @@ const retiredFiles = [
   'control-center.js',
   'control-center-features.js',
   'control-center-ops.css',
+  'control-center.html',
+  'control-center.css',
+  'control-center-finance.css',
+  'compact-control-center.css',
 ];
 const forbiddenCompatibility = [
   '/legacy#domains',

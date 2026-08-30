@@ -15,7 +15,7 @@ function mustReplace(source, search, replacement, label) {
 
 // Device Control and Hybrid Execution are published only as one standalone demand asset.
 // EKODI Assist keeps only a tiny launcher in the first path; its full panel rides on already secured AI Ops assets.
-let compactCss = await text(`${dist}compact-control-center.css`);
+let compactCss = await text(`${dist}admin-compact.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
 const hybridExecutionJs = (await text(`${root}hybrid-execution-admin.js`)).trim();
@@ -30,7 +30,7 @@ await writeFile(`${dist}device-control-admin.js`, `${deviceJs}\n${hybridExecutio
 await writeFile(`${dist}device-control-admin.css`, `${deviceCss}\n`);
 if (compactCss.includes(deviceCss)) compactCss = compactCss.replace(deviceCss, '');
 compactCss = `${compactCss}\n${assistBootstrapCss}\n`;
-await writeFile(`${dist}compact-control-center.css`, compactCss);
+await writeFile(`${dist}admin-compact.css`, compactCss);
 
 let lazyFeatures = await text(`${dist}admin-lazy-features.js`);
 lazyFeatures = `${lazyFeatures}\n${assistJs}\n`;
@@ -42,9 +42,9 @@ await writeFile(`${dist}ai-ops-admin.css`, aiOpsCss);
 // Rebuild the startup JavaScript from the actual first-login responsibility instead of
 // carrying historical Campus/Policies/Device constructors and zero-delay routing timers.
 // The tiny Assist launcher upgrades itself through the existing demand loader.
-const minimalCompactJs = `(() => {\n  'use strict';\n  function normalizeShell() {\n    document.body.classList.add('compact-control-center');\n    const logout = document.querySelector('#logoutButton');\n    if (logout && logout.textContent !== 'Logout') logout.textContent = 'Logout';\n  }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeShell, { once:true });\n  else normalizeShell();\n})();\n${assistBootstrapJs}\n`;
+const minimalCompactJs = `(() => {\n  'use strict';\n  function normalizeShell() {\n    document.body.classList.add('admin-compact');\n    const logout = document.querySelector('#logoutButton');\n    if (logout && logout.textContent !== 'Logout') logout.textContent = 'Logout';\n  }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeShell, { once:true });\n  else normalizeShell();\n})();\n${assistBootstrapJs}\n`;
 new Function(minimalCompactJs);
-await writeFile(`${dist}compact-control-center.js`, minimalCompactJs);
+await writeFile(`${dist}admin-compact.js`, minimalCompactJs);
 
 // Inject a minimal Campus shell into the standalone Campus asset. The full Campus renderer
 // upgrades it only after the Campus placeholder is explicitly opened.
@@ -54,17 +54,17 @@ await writeFile(`${dist}campus-actions.js`, `${campusPrelude}${campusSource}`);
 
 // Keep generated HTML metadata aligned with the three-file first-login contract and the
 // shared Admin Shell: navigation begins immediately, while account identity sits above logout.
-let html = await text(`${dist}control-center.html`);
+let html = await text(`${dist}admin-shell.html`);
 html = html.replaceAll('20260819-true-lazy-1', '20260819-thin-shell-2');
 html = html.replace(/\s*<a class="brand side-brand"[\s\S]*?<\/a>\s*<small class="side-caption">[\s\S]*?<\/small>/, '');
 html = html.replace(/\s*<span id="scopeBadge">ALL<\/span>/, '');
 if (html.includes('class="brand side-brand"') || html.includes('class="side-caption"') || html.includes('id="scopeBadge"')) {
   throw new Error('Legacy Admin sidebar header or scope badge survived postbuild.');
 }
-await writeFile(`${dist}control-center.html`, html);
+await writeFile(`${dist}admin-shell.html`, html);
 
-const finalCompactJs = await text(`${dist}compact-control-center.js`);
-const finalCompactCss = await text(`${dist}compact-control-center.css`);
+const finalCompactJs = await text(`${dist}admin-compact.js`);
+const finalCompactCss = await text(`${dist}admin-compact.css`);
 const finalLazyFeatures = await text(`${dist}admin-lazy-features.js`);
 const finalAiOpsCss = await text(`${dist}ai-ops-admin.css`);
 const finalCampus = await text(`${dist}campus-actions.js`);
@@ -74,7 +74,7 @@ for (const forbidden of ['WINDOWS_AGENT_URL', 'ekodiDevicePanel', 'CAMPUS_SERVIC
   if (finalCompactJs.includes(forbidden)) throw new Error(`Startup compact JS contains historical runtime: ${forbidden}`);
 }
 if (finalCompactCss.includes('.ekodi-device-panel') || finalCompactCss.includes('.ekodi-device-card')) {
-  throw new Error('Device Control CSS leaked into compact-control-center.css');
+  throw new Error('Device Control CSS leaked into admin-compact.css');
 }
 if (!finalCompactJs.includes('ekodiAssistBootstrap') || finalCompactJs.includes('/api/control/messenger/inbox')) {
   throw new Error('EKODI Assist bootstrap is not thin or full runtime leaked into first-path JS');

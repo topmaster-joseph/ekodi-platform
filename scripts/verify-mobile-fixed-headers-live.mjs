@@ -31,14 +31,14 @@ async function audit(){
   const errors=[];
   const [root,adminCss,shell,liveManifest]=await Promise.all([
     get('https://ekodi.kr/'),
-    get('https://admin.ekodi.kr/control-center.css'),
+    get('https://admin.ekodi.kr/admin-shell.css'),
     get('https://shell.ekodi.kr/shell.js'),
     get('https://shell.ekodi.kr/manifest.json'),
   ]);
   http(root,'ekodi.kr',errors);
   need(root,'ekodi.kr','.site-header{position:fixed;top:0;left:0;right:0;width:100%',errors);
   need(root,'ekodi.kr','--ekodi-home-header-height',errors);
-  http(adminCss,'admin.ekodi.kr/control-center.css',errors);
+  http(adminCss,'admin.ekodi.kr/admin-shell.css',errors);
   need(adminCss,'admin','position:fixed!important',errors);
   need(adminCss,'admin','.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}',errors);
   http(shell,'shell.ekodi.kr/shell.js',errors);

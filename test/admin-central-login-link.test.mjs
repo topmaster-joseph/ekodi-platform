@@ -5,13 +5,13 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('current admin shell ships the central-admin link before JavaScript runs', async () => {
-  const html = await read('control-center.html');
+  const html = await read('admin-shell.html');
   assert.match(html, /id="centralAdminLogin"/);
   assert.match(html, /href="https:\/\/auth\.ekodi\.kr\/\?site=admin&amp;return_to=https%3A%2F%2Fadmin\.ekodi\.kr%2F"/);
   assert.match(html, /<form id="loginForm" hidden>/);
   assert.match(html, /<script src="admin-central-handoff\.js"><\/script>/);
   assert.match(html, /<script src="admin-authenticated-shell\.js(?:\?v=[^"]+)?"[^>]*><\/script>/);
-  assert.match(html, /data-ekodi-postauth="compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js"/);
+  assert.match(html, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.doesNotMatch(html, /control-center-features\.js|control-center\.js/);
 });
 

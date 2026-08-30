@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const js = await readFile(new URL('../compact-control-center.js', import.meta.url), 'utf8');
-const css = await readFile(new URL('../compact-control-center.css', import.meta.url), 'utf8');
+const js = await readFile(new URL('../admin-compact.js', import.meta.url), 'utf8');
+const css = await readFile(new URL('../admin-compact.css', import.meta.url), 'utf8');
 
 test('compact control center keeps site management as the first screen and renders a simple site table', () => {
   assert.match(js, /dataset\.section = 'campus'/);

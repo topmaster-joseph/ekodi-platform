@@ -8,10 +8,10 @@ const routePair = (source, hash, section) => source.includes(`['${hash}', '${sec
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /const postAuthStyles = \['compact-control-center\.css','google-admin-auth\.css'\]/);
+  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','google-admin-auth\.css'\]/);
   const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  assert.match(criticalBlock, /'compact-control-center\.js'/);
+  assert.match(criticalBlock, /'admin-compact\.js'/);
   assert.match(criticalBlock, /'admin-menu-layout\.js'/);
   assert.match(criticalBlock, /'admin-demand-loader\.js'/);
   assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
@@ -143,15 +143,15 @@ test('admin menu governance uses eight work areas and one contextual top-tab reg
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');
-  const shellHtml = await read('control-center.html');
+  const shellHtml = await read('admin-shell.html');
   assert.match(pkg.scripts.build, /admin-thin-postbuild\.mjs/);
   assert.match(postbuild, /const minimalCompactJs =/);
-  assert.match(postbuild, /writeFile\(`\$\{dist\}compact-control-center\.js`, minimalCompactJs\)/);
+  assert.match(postbuild, /writeFile\(`\$\{dist\}admin-compact\.js`, minimalCompactJs\)/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.js`/);
   assert.match(postbuild, /writeFile\(`\$\{dist\}device-control-admin\.css`/);
   assert.match(postbuild, /Startup compact JS contains historical runtime/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
-  assert.match(shellHtml, /data-ekodi-postauth="compact-control-center\.js admin-menu-layout\.js admin-demand-loader\.js"/);
+  assert.match(shellHtml, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.match(postbuild, /brand side-brand/);
   assert.match(postbuild, /scopeBadge/);
   assert.match(postbuild, /Legacy Admin sidebar header or scope badge survived postbuild/);

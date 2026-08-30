@@ -17,7 +17,7 @@ const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shel
   readFile(new URL('../shell/workspace.css',import.meta.url),'utf8'),
   readFile(new URL('../responsive.css',import.meta.url),'utf8'),
   readFile(new URL('../index.html',import.meta.url),'utf8'),
-  readFile(new URL('../control-center.css',import.meta.url),'utf8'),
+  readFile(new URL('../admin-shell.css',import.meta.url),'utf8'),
 ]);
 const manifest=EKODI_SERVICE_MANIFEST;
 const allowedKinds=new Set(['person','business','organization','church','community','project']);

@@ -132,7 +132,7 @@ test('admin Device Control is lazy-loaded from authenticated production assets',
   assert.match(assets, /storage-admin\.js/);
   assert.match(build, /ekodi-device-bootstrap\.cmd/);
   assert.match(build, /admin-demand-loader\.js/);
-  assert.doesNotMatch(build, /data-ekodi-postauth=\"compact-control-center\.js/);
+  assert.doesNotMatch(build, /data-ekodi-postauth=\"admin-compact\.js/);
 });
 
 test('Windows agent preserves reversible state before privileged changes', () => {

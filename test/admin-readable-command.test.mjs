@@ -6,7 +6,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('all authenticated Admin surfaces inherit the EKODI readability base', async () => {
   const css = await read('admin-readability-base.css');
-  assert.match(css, /body\.compact-control-center\{/);
+  assert.match(css, /body\.admin-compact\{/);
   assert.match(css, /font-size:16px!important/);
   assert.match(css, /\.content \[data-panel\] th\{font-size:13px!important/);
   assert.match(css, /\.content \[data-panel\] td\{font-size:14px!important/);

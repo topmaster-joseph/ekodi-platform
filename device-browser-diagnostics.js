@@ -39,7 +39,7 @@
     for (let i = 0; i < samples; i += 1) {
       const started = performance.now();
       try {
-        const response = await fetch(`/compact-control-center.js?device-self-check=${Date.now()}-${i}`, {
+        const response = await fetch(`/admin-compact.js?device-self-check=${Date.now()}-${i}`, {
           cache:'no-store', credentials:'same-origin',
         });
         if (response.ok) values.push(performance.now() - started);

@@ -64,11 +64,15 @@ const RETIRED_ADMIN_PATHS = new Set([
   '/control-center.js',
   '/control-center-features.js',
   '/control-center-ops.css',
+  '/control-center.css',
+  '/control-center-finance.css',
+  '/compact-control-center.css',
+  '/compact-control-center.js',
 ]);
 const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
-  '/control-center.css',
-  '/control-center-finance.css',
+  '/admin-shell.css',
+  '/admin-finance.css',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-demand-loader.js',
@@ -80,8 +84,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-menu-runtime.js',
   '/homepage-admin.js',
   '/finance-monitor.js',
-  '/compact-control-center.css',
-  '/compact-control-center.js',
+  '/admin-compact.css',
+  '/admin-compact.js',
   '/ekodi-device-bootstrap.cmd',
   '/campus-actions.css',
   '/campus-actions.js',
@@ -322,7 +326,7 @@ export default {
         return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
       }
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
         const rewritten = rewriteAdminApexLogin(response);
         return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-fallback');
       }
@@ -356,8 +360,8 @@ export default {
         return adminAuthRedirect(url.searchParams.get('return_to'));
       }
       if (ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-shell');
       }
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);

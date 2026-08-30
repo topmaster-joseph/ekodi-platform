@@ -26,7 +26,7 @@ test('Governance technical asset keeps decision and council information without 
 
 test('Primary AI Ops does not auto-hydrate Governance, Health or Deployments',async()=>{
   const [build,html,worker,demand,shell]=await Promise.all([
-    read('scripts/build.mjs'),read('control-center.html'),read('site-worker.js'),read('admin-demand-loader.js'),read('admin-authenticated-shell.js')
+    read('scripts/build.mjs'),read('admin-shell.html'),read('site-worker.js'),read('admin-demand-loader.js'),read('admin-authenticated-shell.js')
   ]);
   assert.match(build,/'mission-control-admin\.css'/);
   assert.match(build,/'mission-control-admin\.js'/);

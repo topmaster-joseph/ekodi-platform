@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const [features, compact, handoff, finance, billing, loader, build] = await Promise.all([
   readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
-  readFile(new URL('../compact-control-center.js', import.meta.url), 'utf8'),
+  readFile(new URL('../admin-compact.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
   readFile(new URL('../finance-monitor.js', import.meta.url), 'utf8'),
   readFile(new URL('../author-billing-admin.js', import.meta.url), 'utf8'),

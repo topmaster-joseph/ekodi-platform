@@ -23,7 +23,7 @@ function installCompactNavigationStyle() {
   if (document.querySelector('#ekodi-admin-menu-density')) return;
   const style = document.createElement('style');
   style.id = 'ekodi-admin-menu-density';
-  style.textContent = `body.compact-control-center .side-caption{margin-bottom:10px!important}body.compact-control-center .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.compact-control-center .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.compact-control-center .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.compact-control-center .side-bottom{padding-top:8px!important}`;
+  style.textContent = `body.admin-compact .side-caption{margin-bottom:10px!important}body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.admin-compact .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.admin-compact .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.admin-compact .side-bottom{padding-top:8px!important}`;
   document.head.append(style);
 }
 function sectionOf(item) {

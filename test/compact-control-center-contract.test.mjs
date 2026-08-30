@@ -4,8 +4,8 @@ import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 const [ui, css, build] = await Promise.all([
-  read('../compact-control-center.js'),
-  read('../compact-control-center.css'),
+  read('../admin-compact.js'),
+  read('../admin-compact.css'),
   read('../scripts/build.mjs'),
 ]);
 
@@ -36,7 +36,7 @@ test('compact layer reduces dashboard spacing without altering core auth', () =>
 });
 
 test('production build injects compact assets after existing access modules', () => {
-  assert.match(build, /compact-control-center\.css/);
-  assert.match(build, /compact-control-center\.js/);
-  assert.ok(build.indexOf('google-admin-auth.js') < build.lastIndexOf('compact-control-center.js'));
+  assert.match(build, /admin-compact\.css/);
+  assert.match(build, /admin-compact\.js/);
+  assert.ok(build.indexOf('google-admin-auth.js') < build.lastIndexOf('admin-compact.js'));
 });

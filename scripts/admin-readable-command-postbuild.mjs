@@ -14,7 +14,7 @@ new Function(js);
 
 const baseCssMarkers = [
   'EKODI Admin readability base',
-  'body.compact-control-center{',
+  'body.admin-compact{',
   '.content [data-panel] th',
   '#userAiMembershipPanel .uam-head h2',
   ':focus-visible',
@@ -60,7 +60,7 @@ for (const marker of jsMarkers) {
 // Marketing-specific visual normalization rides only with the already-lazy Marketing AI stylesheet,
 // so improving readability does not tax every admin page at startup.
 await Promise.all([
-  appendFile(`${output}control-center.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
+  appendFile(`${output}admin-shell.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
   appendFile(`${output}marketing-ai-admin.css`, `\n/* admin-ui-principles.css */\n${principlesCss}\n`),
   appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
