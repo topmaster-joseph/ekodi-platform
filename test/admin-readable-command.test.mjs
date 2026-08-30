@@ -66,7 +66,7 @@ test('base readability is first-path while AI orchestration stays lazy and perfo
   const performanceIndex = build.indexOf('admin-performance-postbuild.mjs');
   assert.ok(readableIndex >= 0 && performanceIndex > readableIndex);
   assert.match(postbuild, /admin-readability-base\.css/);
-  assert.match(postbuild, /control-center\.css/);
+  assert.match(postbuild, /admin-shell\.css/);
   assert.match(postbuild, /ai-ops-admin\.css/);
   assert.match(postbuild, /admin-lazy-features\.js/);
   assert.doesNotMatch(postbuild, /control-center\.html/);
