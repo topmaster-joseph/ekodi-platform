@@ -15,6 +15,9 @@ import { handleCommunityReportsRequest, runCommunityReportSchedule } from './com
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { runAffiliateAutomation } from './coupang-partners-automation.js';
 import { handleSocialRegistry } from './social-registry-api.js';
+import { handleSocialChannelGateway, processScheduledSocialPosts } from './social-channel-gateway.js';
+import { handleSocialContentAi } from './social-content-ai.js';
+import { handleSocialAttribution } from './social-attribution-api.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
   '/api/setup',
@@ -41,6 +44,24 @@ function disabledPasswordResponse(kind = 'admin') {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
       'x-content-type-options': 'nosniff',
+    },
+  });
+}
+
+function socialError(request, env, error, code = 'SOCIAL_CHANNEL_GATEWAY_ERROR') {
+  console.error(code, error);
+  const origin = request.headers.get('origin') || '';
+  const allowed = String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(origin);
+  return new Response(JSON.stringify({
+    error: '소셜 채널 운영 API 처리 중 오류가 발생했습니다.',
+    code,
+  }), {
+    status: 500,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+      ...(allowed ? { 'access-control-allow-origin': origin, vary: 'Origin' } : {}),
     },
   });
 }
@@ -90,8 +111,26 @@ export default {
       }
     }
 
-    if (path === '/api/social/registry' || path.startsWith('/api/control/social/')
-      || (request.method === 'OPTIONS' && (path.startsWith('/api/social/') || path.startsWith('/api/control/social/')))) {
+    if (path === '/api/social/attribution') {
+      try {
+        const response = await handleSocialAttribution(request, env);
+        if (response) return response;
+      } catch (error) {
+        return socialError(request, env, error, 'SOCIAL_ATTRIBUTION_ERROR');
+      }
+    }
+
+    if (path === '/api/control/social/content/generate') {
+      try {
+        const response = await handleSocialContentAi(request, env);
+        if (response) return response;
+      } catch (error) {
+        return socialError(request, env, error, 'SOCIAL_CONTENT_AI_ERROR');
+      }
+    }
+
+    if (path === '/api/social/registry' || path === '/api/control/social/registry'
+      || (request.method === 'OPTIONS' && path === '/api/social/registry')) {
       try {
         const response = await handleSocialRegistry(request, env);
         if (response) return response;
@@ -108,6 +147,16 @@ export default {
             'x-content-type-options': 'nosniff',
           },
         });
+      }
+    }
+
+    if (path.startsWith('/api/control/social/') || path.startsWith('/api/social/oauth/') || path === '/api/social/events'
+      || (request.method === 'OPTIONS' && (path.startsWith('/api/social/') || path.startsWith('/api/control/social/')))) {
+      try {
+        const response = await handleSocialChannelGateway(request, env);
+        if (response) return response;
+      } catch (error) {
+        return socialError(request, env, error);
       }
     }
 
@@ -245,6 +294,7 @@ export default {
     ctx.waitUntil(runCommunityReportSchedule(env).catch(error => console.error('Community report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
     ctx.waitUntil(runAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));
+    ctx.waitUntil(processScheduledSocialPosts(env, 8).catch(error => console.error('Direct social publishing schedule failed', error)));
     return apiWorker.scheduled(controller, env, ctx);
   },
 };
