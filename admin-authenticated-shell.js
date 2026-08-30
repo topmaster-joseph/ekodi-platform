@@ -6,13 +6,14 @@ const app=document.querySelector('#app');
 const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
 const postAuthStyles = ['compact-control-center.css','google-admin-auth.css'];
-const criticalPostAuthScripts = ['admin-menu-layout.js','admin-demand-loader.js'];
+const criticalPostAuthScripts = ['compact-control-center.js','admin-menu-layout.js','admin-demand-loader.js'];
 const deferredPostAuthScripts = ['ekodi-message-ui.js','google-admin-auth.js'];
 let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
 function assetUrl(path){return`${path}${path.includes('?')?'&':'?'}v=${encodeURIComponent(ASSET_VERSION)}`}
 function s(node,styles,priority=''){if(node)for(const[name,value]of Object.entries(styles))node.style.setProperty(name,value,priority)}
+function canonicalizeLegacyEntry(){if(!location.pathname.startsWith('/legacy'))return;history.replaceState({},document.title,`/${location.search}${location.hash}`)}
 function applyOfficialAdminSurface(){const root=document.documentElement;root.dataset.ekodiShellSurface = 'admin';root.dataset.ekodiAdminUi = 'official';const tokens={'--ekodi-ui-bg': '#071522','--ekodi-ui-surface': '#0B1D2E','--ekodi-ui-surface-raised': '#10263A','--ekodi-ui-border': '#24425E','--ekodi-ui-text': '#F4F7FB','--ekodi-ui-muted': '#9FB1C3','--ekodi-ui-accent': '#8EC8FF','--ekodi-ui-radius': '16px'};for(const[name,value]of Object.entries(tokens))if(!root.style.getPropertyValue(name))root.style.setProperty(name,value)}
 function keepLoginInteractive(){if(!loginScreen||authenticated())return;loginScreen.style.position='relative';loginScreen.style.zIndex='1000';loginScreen.style.pointerEvents='auto';if(loginLink){loginLink.style.position='relative';loginLink.style.zIndex='1';loginLink.style.pointerEvents='auto'}}
 function loadStyle(href){if(document.querySelector(`link[data-ekodi-postauth-style="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=assetUrl(href);link.dataset.ekodiPostauthStyle=href;document.head.appendChild(link)}
@@ -24,6 +25,6 @@ function installMallFreeOpsIsolation(){const nav=document.querySelector('.sideba
 function announceReady(){if(app)app.style.visibility='';document.documentElement.dataset.ekodiAdminReady='true';try{performance.mark('ekodi-admin-ready')}catch{}window.dispatchEvent(new CustomEvent('ekodi-admin-ready'))}
 async function startAuthenticatedShell(){if (started || !authenticated()) return;started=true;const requestedHash=location.hash;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';for(const href of postAuthStyles)loadStyle(href);await Promise.all(criticalPostAuthScripts.map(loadScript));if(requestedHash&&location.hash!==requestedHash)history.replaceState({},document.title,`${location.pathname}${location.search}${requestedHash}`);for(let i=0;i<8&&!window.EKODIAdminPanels;i++)await new Promise(r=>setTimeout(r,25));installSharedAdminLayout();installMallFreeOpsIsolation();announceReady();loadDeferredEnhancements()}
 function onStateChange(){if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&location.hash)document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
-keepLoginInteractive();onStateChange();
+canonicalizeLegacyEntry();keepLoginInteractive();onStateChange();
 window.addEventListener('ekodi-authenticated',onStateChange);window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
 })();
