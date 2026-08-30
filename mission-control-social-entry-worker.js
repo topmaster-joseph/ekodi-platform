@@ -1,12 +1,14 @@
 import missionControlWorker from './mission-control-entry-worker.js';
 import { handleSocialChannelGateway, processScheduledSocialPosts } from './social-channel-gateway.js';
 import { handleSocialContentAi } from './social-content-ai.js';
+import { handleSocialAttribution } from './social-attribution-api.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function socialPath(path) {
   return path.startsWith('/api/control/social/') ||
     path.startsWith('/api/social/oauth/') ||
-    path === '/api/social/events';
+    path === '/api/social/events' ||
+    path === '/api/social/attribution';
 }
 
 function allowedOrigin(request, env = {}) {
@@ -19,7 +21,7 @@ function allowedOrigin(request, env = {}) {
 function preflight(request, env) {
   if (request.method !== 'OPTIONS') return null;
   const path = new URL(request.url).pathname;
-  if (!socialPath(path)) return null;
+  if (!socialPath(path) || path === '/api/social/attribution') return null;
   const origin = allowedOrigin(request, env);
   if (!origin) {
     return applyApiSecurityHeaders(new Response(JSON.stringify({ error: '허용되지 않은 Origin입니다.', code: 'ORIGIN_FORBIDDEN' }), {
@@ -58,10 +60,16 @@ export default {
 
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
-    const cors = preflight(request, env);
-    if (cors) return cors;
 
     try {
+      if (path === '/api/social/attribution') {
+        const attribution = await handleSocialAttribution(request, env);
+        if (attribution) return applyApiSecurityHeaders(attribution);
+      }
+
+      const cors = preflight(request, env);
+      if (cors) return cors;
+
       if (path === '/api/control/social/content/generate') {
         const ai = await handleSocialContentAi(request, env);
         if (ai) return applyApiSecurityHeaders(ai);
