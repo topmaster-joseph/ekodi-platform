@@ -106,6 +106,41 @@ const compactJsPath = `${dist}admin-compact.js`;
 const compactJsSource = (await readFile(compactJsPath, 'utf8')).replace(/^[ \t]+/gm, '');
 await writeFile(compactJsPath, compactJsSource);
 
+// Keep the readable menu source in Git, but compact private identifiers in the generated
+// first-path module. Public globals, data attributes, hashes and event names remain untouched.
+const menuRuntimePath = `${dist}admin-menu-layout.js`;
+let menuRuntimeSource = await readFile(menuRuntimePath, 'utf8');
+for (const [from,to] of [
+  ['INTERNAL_ONLY_SECTIONS','INTERNAL'],
+  ['INTERNAL_ONLY_HREFS','IHREFS'],
+  ['VISIBLE_NAV_ORDER','ORDER'],
+  ['VISIBLE_NAV_RANK','RANK'],
+  ['DEMAND_KEYS','DKEYS'],
+  ['HASH_SECTIONS','HASHES'],
+  ['CANONICAL_HASH','CANON'],
+  ['requestedSection','req'],
+  ['activeSectionState','activeState'],
+  ['sitesLoading','siteTask'],
+  ['demandLoading','demandTasks'],
+  ['installCompactNavigationStyle','installNav'],
+  ['panelTargets','targets'],
+  ['isInternalSection','internalSection'],
+  ['isInternalNav','internalNav'],
+  ['allNavItems','navItems'],
+  ['applyStableNavigationOrder','orderNav'],
+  ['enforceInternalNavigationPolicy','enforceNav'],
+  ['navItemFor','navFor'],
+  ['syncTitle','syncHeading'],
+  ['activatePanel','showPanel'],
+  ['clickDemandFallback','demandFallback'],
+  ['requestDemand','demand'],
+  ['routeInternalToAiOps','internalToAi'],
+  ['explicitHashSection','hashSection'],
+  ['reconcileNavigation','reconcile'],
+]) menuRuntimeSource = menuRuntimeSource.replaceAll(from, to);
+menuRuntimeSource = menuRuntimeSource.replace(/\r\n/g, '\n').replace(/^[ \t]+/gm, '').split('\n').filter(Boolean).join('\n') + '\n';
+await writeFile(menuRuntimePath, menuRuntimeSource);
+
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
 const versionInputs = [
@@ -186,9 +221,6 @@ html = html
 await writeFile(path, html);
 
 // Final budgets run after every postbuild layer so later CSS/JS cannot sneak past the guard.
-const menuBudgetPath = `${dist}admin-menu-layout.js`;
-const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/\r\n/g, '\n').replace(/^[ \t]+/gm, '');
-await writeFile(menuBudgetPath, compactMenuForBudget);
 const files = {
   handoff: await readFile(`${dist}admin-central-handoff.js`, 'utf8'),
   shell: await readFile(`${dist}admin-authenticated-shell.js`, 'utf8'),
