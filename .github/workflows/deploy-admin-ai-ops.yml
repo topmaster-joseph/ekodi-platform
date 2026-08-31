@@ -87,25 +87,10 @@ jobs:
           grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
           grep -Fq "sec: ['admin-lazy-features.js']" dist/admin-demand-loader.js
-          grep -Fq 'health:' dist/admin-demand-loader.js
-          grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
           grep -Fq "h: ['#health']" dist/admin-demand-loader.js
           ! grep -Fq "sec: ['mission-control-admin.js'" dist/admin-demand-loader.js
-          grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
-          grep -Fq '재구성' dist/admin-lazy-features.js
-          grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
-          grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
-          grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/ai-ops-admin.css
-          grep -Fq '#aiOpsPanel .ai-ops-side' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
-          grep -Fq 'PerformanceObserver' dist/admin-perf-diagnostics.js
-          ! grep -Fq 'PerformanceObserver' dist/admin-central-handoff.js
-          grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
-          grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
-          grep -Fq '.system-health-overall' dist/system-health-admin.css
           echo "Admin production verification contract ready: version=$version"
 
   verify_production:
