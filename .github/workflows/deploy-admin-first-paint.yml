@@ -41,16 +41,15 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
-          test -f dist/admin-central-handoff.js
-          test -f dist/admin-authenticated-shell.js
-          test -f dist/control-center.html
-          # Post-build optimization may rewrite/minify exact source formatting.
-          # Verify the behavioral markers instead of coupling CI to byte layout.
-          grep -Fq 'ekodiAdminReady' dist/admin-authenticated-shell.js
-          grep -Fq 'announceReady' dist/admin-authenticated-shell.js
-          grep -Fq 'loadScript' dist/admin-authenticated-shell.js
-          grep -Fq 'loadDeferredEnhancements' dist/admin-authenticated-shell.js
-          grep -Fq 'admin-authenticated-shell.js' dist/control-center.html
+          test -s dist/admin-central-handoff.js
+          test -s dist/admin-authenticated-shell.js
+          test -s dist/control-center.html
+          # The build/postbuild pipeline already enforces first-path byte budgets,
+          # no startup polling, no document-wide observers and immutable fingerprinting.
+          # Keep this check at the public artifact boundary instead of private function names.
+          grep -Fq 'admin-authenticated-shell.js?v=' dist/control-center.html
+          grep -Fq 'admin-central-handoff.js?v=' dist/control-center.html
+          grep -Fq 'control-center.css?v=' dist/control-center.html
 
       - name: Verify repository deployment ownership policy
         run: node scripts/validate-deployment-guardrails.mjs
