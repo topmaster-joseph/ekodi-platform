@@ -28,6 +28,7 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
     aimembers: {
@@ -181,41 +182,17 @@
     });
   }
 
-  function insertPlaceholder(button, feature) {
-    if (!nav) return;
-    if (feature.insert === 'first') return nav.prepend(button);
-    if (feature.insert === 'after-campus') {
-      const anchor = nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-aiops') {
-      const anchor = nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-health') {
-      const anchor = nav.querySelector('[data-demand-feature="health"], [data-section="health"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-security') {
-      const anchor = nav.querySelector('[data-demand-feature="security"], [data-section="security"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-deployments') {
-      const anchor = nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-services') {
-      const anchor = nav.querySelector('[data-section="services"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-work') {
-      const anchor = nav.querySelector('[data-demand-feature="work"], [data-section="work"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-workspace') {
-      const anchor = nav.querySelector('[data-section="workspace"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
+  function insertPlaceholder(button,feature){
+    if(!nav)return;
+    if(feature.insert==='first')return nav.prepend(button);
+    if(feature.insert==='after-campus'){const a=nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-aiops'){const a=nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-health'){const a=nav.querySelector('[data-demand-feature="health"], [data-section="health"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-security'){const a=nav.querySelector('[data-demand-feature="security"], [data-section="security"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-deployments'){const a=nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-services'){const a=nav.querySelector('[data-section="services"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-work'){const a=nav.querySelector('[data-demand-feature="work"], [data-section="work"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-workspace'){const a=nav.querySelector('[data-section="workspace"]');if(a)return a.insertAdjacentElement('afterend',button);}
     nav.append(button);
   }
 

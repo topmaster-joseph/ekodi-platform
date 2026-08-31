@@ -25,6 +25,7 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { handleDevotionalControl } from './devotional-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -160,6 +161,11 @@ export default {
     if (path === '/api/control/api-cost') {
       try { const response = await handleApiCostControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('API cost control error', error); return errorResponse('API 비용 관리 처리 중 오류가 발생했습니다.', 'API_COST_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/devotional')) {
+      try { const response = await handleDevotionalControl(request, env, ctx); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Devotional automation control error', error); return errorResponse('매일묵상 자동화 처리 중 오류가 발생했습니다.', 'DEVOTIONAL_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/user-ai')) {
