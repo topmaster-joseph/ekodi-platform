@@ -84,7 +84,7 @@ jobs:
           version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          grep -Fq "control-center.css?v=$version" dist/control-center.html
+          grep -Fq "admin-shell.css?v=$version" dist/control-center.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
           grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
@@ -134,7 +134,7 @@ jobs:
             LIVE_VERSION=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-body | head -1 | sed 's/.*?v=//')
             [ -n "$LIVE_VERSION" ] || return 1
             [ "$LIVE_VERSION" = "$EXPECTED_VERSION" ] || return 1
-            grep -Fq "control-center.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
+            grep -Fq "admin-shell.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
             grep -Fq "admin-central-handoff.js?v=$LIVE_VERSION" /tmp/admin-body || return 1
             ! grep -Fq '<script src="control-center.js"' /tmp/admin-body || return 1
             ! grep -Fq 'control-center-ops.css' /tmp/admin-body || return 1
