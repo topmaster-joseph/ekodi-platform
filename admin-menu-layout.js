@@ -23,6 +23,10 @@ const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-m
 const CANON=pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
 let requestedSection = '';
 let sitesLoading;
+let lastAnnouncedSection='';
+let reconcileScheduled=false;
+let reconciling=false;
+let reconcileAgain=false;
 const demandLoading=new Map();
 
 function installCompactStyle(){
@@ -72,6 +76,8 @@ function syncTitle(section){
   const item=navItemFor(section);
   const label=item?.querySelector('span')?.textContent?.trim()||item?.textContent?.trim();
   if(title&&label&&title.textContent!==label)title.textContent=label;
+  if(lastAnnouncedSection===section)return;
+  lastAnnouncedSection=section;
   window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section}}));
 }
 function activatePanel(section){
@@ -134,10 +140,25 @@ function routeInternal(){
 }
 const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
 function reconcileNavigation(){
-  enforcePolicy();
-  if(!requestedSection)return;
-  if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
-  else if(!activatePanel(requestedSection))requestDemand(requestedSection);
+  if(reconciling){reconcileAgain=true;return;}
+  reconciling=true;
+  try{
+    enforcePolicy();
+    if(!requestedSection)return;
+    if(requestedSection==='sites'&&!hasPanel('sites'))void openSites();
+    else if(!activatePanel(requestedSection))requestDemand(requestedSection);
+  }finally{
+    reconciling=false;
+    if(reconcileAgain){reconcileAgain=false;scheduleReconcile();}
+  }
+}
+function scheduleReconcile(){
+  if(reconcileScheduled)return;
+  reconcileScheduled=true;
+  queueMicrotask(()=>{
+    reconcileScheduled=false;
+    reconcileNavigation();
+  });
 }
 
 nav.addEventListener('click',event=>{
@@ -159,8 +180,8 @@ content.addEventListener('click',event=>{
   routeInternal();
 },true);
 
-window.addEventListener('ekodi-nav-changed',reconcileNavigation);
-window.addEventListener('ekodi-feature-installed',reconcileNavigation);
+window.addEventListener('ekodi-nav-changed',scheduleReconcile);
+window.addEventListener('ekodi-feature-installed',scheduleReconcile);
 window.addEventListener('ekodi-admin-ready',()=>{
   enforcePolicy();
   const section=explicitHashSection();
