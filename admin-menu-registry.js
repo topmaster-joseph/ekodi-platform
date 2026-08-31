@@ -31,6 +31,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
 
   // AI & AUTOMATION: autonomous operation, AI products and provider contracts.
   { id: 'aiops', group: 'ai', icon: 'AI', labels: { ko: '운영 AI', en: 'AI Operations' } },
+  { id: 'devotional', group: 'ai', icon: 'V', labels: { ko: '콘텐츠 자동화', en: 'Content Automation' } },
   { id: 'marketing-ai', group: 'ai', icon: 'M', labels: { ko: '마케팅 AI', en: 'Marketing AI' } },
   { id: 'ai-module-spec', group: 'ai', icon: 'API', labels: { ko: '외부 AI 연동규격', en: 'External AI Spec' } },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
