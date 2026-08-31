@@ -41,15 +41,19 @@
     if (!token()) return;
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
-    if (!nav || !content || document.querySelector('[data-section="devotional"]')) return;
+    if (!nav || !content || document.querySelector('[data-panel~="devotional"]')) return;
 
-    const navButton = el('button', '', 'nav');
-    navButton.type = 'button';
-    navButton.dataset.section = 'devotional';
-    navButton.append(document.createTextNode('V '), el('span', '콘텐츠 자동화'));
-    const placeholder = nav.querySelector('[data-lazy-section="devotional"]');
-    if (placeholder) placeholder.insertAdjacentElement('beforebegin', navButton);
-    else nav.append(navButton);
+    let navButton = nav.querySelector('[data-section="devotional"],[data-lazy-section="devotional"]');
+    if (!navButton) {
+      navButton = el('button', '', 'nav');
+      navButton.type = 'button';
+      navButton.dataset.section = 'devotional';
+      navButton.append(document.createTextNode('V '), el('span', '콘텐츠 자동화'));
+      nav.append(navButton);
+    } else {
+      navButton.dataset.section = 'devotional';
+      navButton.removeAttribute('data-lazy-section');
+    }
 
     const section = el('section', '', 'section devotional-admin hidden-panel');
     section.dataset.panel = 'devotional';
@@ -232,10 +236,13 @@
       document.querySelectorAll('[data-panel]').forEach(panel => {
         const targets = String(panel.dataset.panel || '').split(' ');
         panel.classList.toggle('hidden-panel', !targets.includes('devotional'));
+        panel.hidden = !targets.includes('devotional');
       });
+      section.hidden = false;
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'devotional'));
       const pageTitle = document.querySelector('#pageTitle'); if (pageTitle) pageTitle.textContent='콘텐츠 자동화';
       document.querySelector('.sidebar')?.classList.remove('open');
+      window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail:{ section:'devotional' } }));
       if (!model) await load();
     }
 
