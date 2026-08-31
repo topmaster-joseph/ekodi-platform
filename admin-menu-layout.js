@@ -79,7 +79,6 @@ function syncTitle(section){
   if(title&&label&&title.textContent!==label)title.textContent=label;
   if(last===section)return;
   last=section;
-  document.documentElement.dataset.ekodiAdminSection=section;
   window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section}}));
 }
 function activatePanel(section){
@@ -215,11 +214,11 @@ window.addEventListener('hashchange',()=>{
 installCompactStyle();
 mountAdminSidebar(document);
 enforcePolicy();
-const initialHash = explicitHashSection();
+const initialHash=explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
-else if(initialHash){dc=false;requestedSection = initialHash;}
-else {requestedSection = 'campus';dc=true;}
+else if(initialHash){dc=false;requestedSection=initialHash;}
+else {requestedSection='campus';dc=true;}
 
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
