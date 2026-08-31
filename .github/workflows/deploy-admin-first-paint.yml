@@ -6,8 +6,9 @@ on:
     paths: &first_paint_paths
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
-      - 'control-center.html'
-      - 'compact-control-center.js'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
+      - 'admin-compact.js'
       - '.github/workflows/deploy-admin-first-paint.yml'
   push:
     branches: [main]
@@ -43,13 +44,13 @@ jobs:
           npm run build
           test -s dist/admin-central-handoff.js
           test -s dist/admin-authenticated-shell.js
-          test -s dist/control-center.html
+          test -s dist/admin-shell.html
           # The build/postbuild pipeline already enforces first-path byte budgets,
           # no startup polling, no document-wide observers and immutable fingerprinting.
-          # Keep this check at the public artifact boundary instead of private function names.
-          grep -Fq 'admin-authenticated-shell.js?v=' dist/control-center.html
-          grep -Fq 'admin-central-handoff.js?v=' dist/control-center.html
-          grep -Fq 'control-center.css?v=' dist/control-center.html
+          # Keep this check at the canonical generated Admin shell boundary.
+          grep -Fq 'admin-authenticated-shell.js?v=' dist/admin-shell.html
+          grep -Fq 'admin-central-handoff.js?v=' dist/admin-shell.html
+          grep -Fq 'admin-shell.css?v=' dist/admin-shell.html
 
       - name: Verify repository deployment ownership policy
         run: node scripts/validate-deployment-guardrails.mjs

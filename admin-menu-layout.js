@@ -1,6 +1,6 @@
 (async()=>{
 'use strict';
-const [{adminMenuOrder},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([
+const [{adminMenuOrder,getAdminMenuItem},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([
   import('./admin-menu-registry.js'),import('./admin-sidebar.js')
 ]);
 const sidebar=document.querySelector('.sidebar');
@@ -10,7 +10,6 @@ if(!sidebar||!nav||!content)return;
 renderAdminSidebar(nav);
 const INTERNAL=new Set(['services','deployments','policies']);
 const ORDER=Object.freeze(adminMenuOrder());
-const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
@@ -18,8 +17,8 @@ const DEMAND_KEYS=new Map([
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites aiops:#ai-ops devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#mall-ai-sales');
+const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #communication:communication #life-ai:life-ai #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites aiops:#ai-ops devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work communication:#communication life-ai:#life-ai marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#mall-ai-sales');
 let requestedSection = '';
 let sitesLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
@@ -41,17 +40,7 @@ const allNav=()=>nav.querySelectorAll('.nav[data-section],.nav[data-lazy-section
 const isInternal=section=>INTERNAL.has(String(section||'').trim());
 const isInternalNav=item=>isInternal(sectionOf(item));
 const hasPanel=section=>Boolean(section&&[...content.querySelectorAll('[data-panel]')].some(panel=>panelTargets(panel).includes(section)));
-function applyOrder(){
-  if(window.EKODIAdminSidebar?.sync)return window.EKODIAdminSidebar.sync(document);
-  let unknown=500;
-  for(const item of allNav()){
-    if(isInternalNav(item)){item.style.order='9999';continue;}
-    const rank=RANK.get(sectionOf(item))??unknown++;
-    if(item.style.order!==String(rank))item.style.order=String(rank);
-    if(item.dataset.menuOrder!==String(rank))item.dataset.menuOrder=String(rank);
-  }
-  nav.dataset.stableMenuOrder='true';
-}
+function applyOrder(){window.EKODIAdminSidebar?.sync?.(document);nav.dataset.stableMenuOrder='true';}
 function enforcePolicy(){
   for(const item of allNav()){
     if(!isInternalNav(item))continue;
@@ -139,7 +128,9 @@ nav.addEventListener('click',event=>{
   const item=event.target.closest('.nav[data-section],.nav[data-lazy-section],.nav[data-device-control-nav],a.nav[href]');
   if(!item)return;
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
-  const section=sectionOf(item);if(!section)return;dc=false;
+  const section=sectionOf(item);if(!section)return;
+  if(getAdminMenuItem(section)?.href)return;
+  dc=false;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
   requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
 },true);
