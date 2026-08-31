@@ -34,5 +34,5 @@ test('system structure is a visible routed system tab', () => {
   assert.doesNotMatch(menuRegistry, /id: 'architecture'[^\n]*internal: true/);
   assert.ok(routePair(menuLayout, '#architecture', 'architecture'));
   assert.ok(canonicalPair(menuLayout, 'architecture', '#architecture'));
-  assert.match(menuLayout, /section === 'architecture'[\s\S]*?system-health-admin\.js/);
+  assert.match(menuLayout, /section\s*===\s*'architecture'[\s\S]*?system-health-admin\.js/);
 });
