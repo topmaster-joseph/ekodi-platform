@@ -141,13 +141,25 @@ const PUBLIC_CSP = [
   "object-src 'none'",
 ].join('; ');
 
+const MALL_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline'",
+  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co",
+  "img-src 'self' data: https:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ');
+
 const ADMIN_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
   "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
-  "frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr",
+  "frame-src https://accounts.google.com/gsi/",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -323,7 +335,7 @@ export default {
       }
       if (url.pathname === '/mall' || url.pathname === '/mall/' || url.pathname === '/mall.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/mall'));
-        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
+        return withHostSecurity(response, MALL_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
       }
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
