@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [features, adminJs, adminCss, domainsJs, build, worker] = await Promise.all([
+const [features, adminJs, adminCss, domainsJs, domainsCss, build, worker] = await Promise.all([
   readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
   readFile(new URL('../google-admin-auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../google-admin-auth.css', import.meta.url), 'utf8'),
   readFile(new URL('../domains-hub.js', import.meta.url), 'utf8'),
+  readFile(new URL('../domains-hub.css', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
 ]);
@@ -32,10 +33,27 @@ test('Admin screen uses top preregistration toolbar, two-column account cards an
 
 test('Domains is a read-first service control hub, not a browser DNS editor', () => {
   assert.ok(domainsJs.includes("api('/api/control/overview')"));
+  assert.ok(domainsJs.includes("api('/api/control/cloudflare-accounts')"));
   assert.ok(domainsJs.includes('Services에서 관리 →'));
   assert.equal(domainsJs.includes('/api/dns'), false);
   assert.equal(domainsJs.includes("method: 'PUT'"), false);
   assert.equal(domainsJs.includes("method: 'POST'"), false);
+});
+
+test('Domains separates Development and Production without exposing Cloudflare account identifiers', () => {
+  assert.ok(domainsJs.includes('개발 Development'));
+  assert.ok(domainsJs.includes('운영 Production'));
+  assert.ok(domainsJs.includes("branch: 'development'"));
+  assert.ok(domainsJs.includes("branch: 'main'"));
+  assert.ok(domainsJs.includes('workers.dev · 격리 스테이징'));
+  assert.ok(domainsJs.includes('*.ekodi.kr · canonical'));
+  assert.ok(domainsJs.includes('운영 승격은 guarded release를 통해서만 수행합니다.'));
+  assert.equal(domainsJs.includes('accountId'), false);
+  assert.equal(domainsJs.includes('CLOUDFLARE_ACCOUNT_ID'), false);
+  assert.equal(domainsJs.includes('CLOUDFLARE_API_TOKEN'), false);
+  assert.ok(domainsCss.includes('.domains-environment-grid'));
+  assert.ok(domainsCss.includes('.environment-card.development'));
+  assert.ok(domainsCss.includes('.environment-card.production'));
 });
 
 test('Domains assets are built and receive admin edge security headers', () => {
