@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildCampaignPlan, normalizeBusinessType, summarizeRevenueReport } from '../business-revenue-control.js';
+import { buildCampaignPlan, normalizeBusinessType, normalizeWorkspaceKey, summarizeRevenueReport } from '../business-revenue-control.js';
 import { evaluateMissionAction } from '../ai-governance-runtime.js';
 
 test('buildCampaignPlan creates an approval-gated food campaign', () => {
@@ -21,6 +21,12 @@ test('buildCampaignPlan creates an approval-gated food campaign', () => {
 test('normalizeBusinessType safely falls back to service_b2b', () => {
   assert.equal(normalizeBusinessType('affiliate_commerce'), 'affiliate_commerce');
   assert.equal(normalizeBusinessType('unknown'), 'service_b2b');
+});
+
+test('workspace keys are normalized and bounded before database access', () => {
+  assert.equal(normalizeWorkspaceKey('  ekodibiz   main  '), 'ekodibiz main');
+  assert.equal(normalizeWorkspaceKey('x'.repeat(200)).length, 120);
+  assert.equal(normalizeWorkspaceKey(null), '');
 });
 
 test('summarizeRevenueReport calculates measurable revenue and ROI', () => {
