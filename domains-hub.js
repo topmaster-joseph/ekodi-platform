@@ -53,19 +53,35 @@
 
     const head = element('div', '', 'domains-head');
     const heading = element('div');
-    heading.append(element('p', 'SERVICE ROUTING MAP', 'kicker'), element('h2', 'Domains'));
-    heading.append(element('p', 'EKODI 서비스 주소와 실제 운영 상태를 한 화면에서 확인합니다. DNS 원문 편집은 노출하지 않습니다.', 'operations-copy'));
-    const refresh = element('button', '↻ 새로고침', 'secondary domains-refresh');
+    heading.append(element('p', 'SERVICE ROUTING & RELEASE', 'kicker'), element('h2', 'Domains · Deployments'));
+    heading.append(element('p', '개발과 운영을 분리해 주소, 배포 경로, 실제 서비스 상태를 함께 확인합니다. DNS 원문 편집은 노출하지 않습니다.', 'operations-copy'));
+    const refresh = element('button', '↻ 상태 새로고침', 'secondary domains-refresh');
     refresh.type = 'button';
     head.append(heading, refresh);
+
+    const environmentShell = element('section', '', 'domains-environments');
+    const environmentHead = element('div', '', 'domains-environment-head');
+    const environmentTitle = element('div');
+    environmentTitle.append(element('strong', '배포 환경'), element('small', 'Development와 Production을 서로 다른 경계로 운영합니다.'));
+    const environmentCheckedAt = element('small', '환경 상태 대기');
+    environmentHead.append(environmentTitle, environmentCheckedAt);
+    const environmentGrid = element('div', '', 'domains-environment-grid');
+    const promotionFlow = element('div', '', 'domains-promotion-flow');
+    promotionFlow.append(
+      element('span', 'Development', 'flow-stage development'),
+      element('span', '→ 자동 검증 →', 'flow-gate'),
+      element('span', 'Production', 'flow-stage production')
+    );
+    const promotionNote = element('small', '운영 승격은 guarded release를 통해서만 수행합니다. 관리자 화면에서 운영 경계를 우회하지 않습니다.');
+    environmentShell.append(environmentHead, environmentGrid, promotionFlow, promotionNote);
 
     const summary = element('div', '', 'domains-summary');
 
     const toolbar = element('div', '', 'domains-toolbar');
     const search = document.createElement('input');
     search.type = 'search';
-    search.placeholder = '도메인, 서비스 검색';
-    search.setAttribute('aria-label', '도메인 검색');
+    search.placeholder = '운영 도메인, 서비스 검색';
+    search.setAttribute('aria-label', '운영 도메인 검색');
     const healthFilter = document.createElement('select');
     healthFilter.setAttribute('aria-label', '서비스 상태 필터');
     for (const [value, label] of [['all', '상태 전체'], ['online', '정상'], ['degraded', '지연'], ['offline', '장애'], ['pending', '점검 전']]) {
@@ -85,7 +101,7 @@
     toolbar.append(search, healthFilter, stateFilter, monitorFilter, reset);
 
     const resultBar = element('div', '', 'domains-result-bar');
-    const resultCount = element('span', '0개 도메인');
+    const resultCount = element('span', '0개 운영 도메인');
     const checkedAt = element('small', '실시간 운영정보 대기');
     resultBar.append(resultCount, checkedAt);
 
@@ -95,15 +111,17 @@
 
     const guard = element('aside', '', 'domains-release-guard');
     const guardCopy = element('div');
-    guardCopy.append(element('strong', 'Release Guard'), element('span', 'Staging → 자동 검증 → 운영 전환'));
-    const guardNote = element('small', 'DNS 변경 자체보다 서비스가 실제 주소에서 정상 동작하는지 확인하는 것을 우선합니다.');
+    guardCopy.append(element('strong', 'Release Guard'), element('span', 'Development → 자동 검증 → Production'));
+    const guardNote = element('small', '개발은 격리된 workers.dev 경계에서 검증하고, 운영은 canonical ekodi.kr 주소에서만 서비스합니다.');
     guard.append(guardCopy, guardNote);
 
-    section.append(head, summary, toolbar, resultBar, stateMessage, grid, guard);
+    section.append(head, environmentShell, summary, toolbar, resultBar, stateMessage, grid, guard);
     content.append(section);
 
     let servicesCache = [];
     let generatedAt = '';
+    let environmentsCache = [];
+    let environmentGeneratedAt = '';
 
     function domainServices() {
       return servicesCache.filter(service => service.domain && String(service.domain).includes('.'));
@@ -125,6 +143,85 @@
         card.append(element('small', label), element('strong', String(value)), element('span', note));
         summary.append(card);
       }
+    }
+
+    function environmentPolicy(environment) {
+      if (environment.id === 'development') {
+        return {
+          label: '개발 Development',
+          role: '격리 스테이징',
+          branch: 'development',
+          route: 'workers.dev · 격리 스테이징',
+          deploy: 'Development Cloudflare 계정',
+        };
+      }
+      return {
+        label: '운영 Production',
+        role: '실서비스',
+        branch: 'main',
+        route: '*.ekodi.kr · canonical',
+        deploy: 'Production Cloudflare 계정',
+      };
+    }
+
+    function environmentCard(environment) {
+      const policy = environmentPolicy(environment);
+      const card = element('article', '', `environment-card ${environment.id}`);
+      card.dataset.environment = environment.id;
+
+      const top = element('div', '', 'environment-card-head');
+      const identity = element('div');
+      identity.append(element('small', policy.role), element('strong', policy.label));
+      top.append(identity, element('span', healthLabel(environment.status), `domain-health ${environment.status || 'pending'}`));
+
+      const facts = element('dl', '', 'environment-facts');
+      for (const [label, value] of [
+        ['Git 브랜치', environment.deploymentBranch || policy.branch],
+        ['주소 정책', policy.route],
+        ['배포 경계', policy.deploy],
+      ]) {
+        const row = element('div');
+        row.append(element('dt', label), element('dd', value));
+        facts.append(row);
+      }
+
+      const counts = element('div', '', 'environment-counts');
+      const snapshot = environment.summary || {};
+      for (const [label, value, state] of [
+        ['전체', snapshot.total ?? 0, 'total'],
+        ['정상', snapshot.online ?? 0, 'online'],
+        ['지연', snapshot.degraded ?? 0, 'degraded'],
+        ['장애', snapshot.offline ?? 0, 'offline'],
+      ]) {
+        const metric = element('div', '', state);
+        metric.append(element('small', label), element('strong', String(value)));
+        counts.append(metric);
+      }
+
+      const problemServices = (environment.services || []).filter(service => service.status !== 'online');
+      const serviceState = element('div', '', 'environment-service-state');
+      if (!problemServices.length) {
+        serviceState.append(element('span', '● 모든 대상 서비스 정상', 'environment-all-good'));
+      } else {
+        serviceState.append(element('span', `${problemServices.length}개 서비스 확인 필요`, 'environment-warning'));
+        const names = problemServices.slice(0, 3).map(service => service.name || service.id).join(' · ');
+        serviceState.append(element('small', names + (problemServices.length > 3 ? ` 외 ${problemServices.length - 3}개` : '')));
+      }
+
+      card.append(top, facts, counts, serviceState);
+      return card;
+    }
+
+    function renderEnvironments() {
+      environmentGrid.replaceChildren();
+      const byId = new Map(environmentsCache.map(environment => [environment.id, environment]));
+      for (const id of ['development', 'production']) {
+        const environment = byId.get(id) || { id, status: 'pending', summary: {}, services: [] };
+        environmentGrid.append(environmentCard(environment));
+      }
+      environmentCheckedAt.textContent = environmentGeneratedAt
+        ? `최근 환경 확인 ${new Date(environmentGeneratedAt).toLocaleString('ko-KR')}`
+        : '환경 상태 집계 완료';
     }
 
     function filteredServices() {
@@ -204,13 +301,13 @@
 
     function renderDomains() {
       const services = filteredServices();
-      resultCount.textContent = `${services.length}개 도메인`;
+      resultCount.textContent = `${services.length}개 운영 도메인`;
       checkedAt.textContent = generatedAt
         ? `최근 확인 ${new Date(generatedAt).toLocaleString('ko-KR')}`
         : '운영정보 집계 완료';
       grid.replaceChildren();
       if (!services.length) {
-        grid.append(element('p', '조건에 맞는 도메인이 없습니다.', 'operations-loading'));
+        grid.append(element('p', '조건에 맞는 운영 도메인이 없습니다.', 'operations-loading'));
         return;
       }
       services.forEach(service => grid.append(domainCard(service)));
@@ -219,16 +316,24 @@
     async function loadDomains() {
       refresh.disabled = true;
       stateMessage.textContent = '';
-      grid.replaceChildren(element('p', 'api.ekodi.kr에서 도메인 운영 상태를 확인하는 중입니다.', 'operations-loading'));
+      environmentGrid.replaceChildren(element('p', '개발·운영 환경 상태를 확인하는 중입니다.', 'operations-loading'));
+      grid.replaceChildren(element('p', 'api.ekodi.kr에서 운영 도메인 상태를 확인하는 중입니다.', 'operations-loading'));
       try {
-        const data = await api('/api/control/overview');
-        servicesCache = data.services || [];
-        generatedAt = data.generatedAt || '';
+        const [domainData, environmentData] = await Promise.all([
+          api('/api/control/overview'),
+          api('/api/control/cloudflare-accounts'),
+        ]);
+        servicesCache = domainData.services || [];
+        generatedAt = domainData.generatedAt || '';
+        environmentsCache = environmentData.accounts || [];
+        environmentGeneratedAt = environmentData.generatedAt || '';
+        renderEnvironments();
         renderSummary();
         renderDomains();
       } catch (error) {
-        stateMessage.textContent = error.message || '도메인 정보를 불러오지 못했습니다.';
-        grid.replaceChildren(element('p', '도메인 운영정보를 불러오지 못했습니다.', 'operations-loading'));
+        stateMessage.textContent = error.message || '도메인·배포 환경 정보를 불러오지 못했습니다.';
+        environmentGrid.replaceChildren(element('p', '배포 환경 정보를 불러오지 못했습니다.', 'operations-loading'));
+        grid.replaceChildren(element('p', '운영 도메인 정보를 불러오지 못했습니다.', 'operations-loading'));
       } finally {
         refresh.disabled = false;
       }
@@ -241,7 +346,7 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'domains'));
       const pageTitle = document.querySelector('#pageTitle');
-      if (pageTitle) pageTitle.textContent = 'Domains';
+      if (pageTitle) pageTitle.textContent = 'Domains · Deployments';
       document.querySelector('.sidebar')?.classList.remove('open');
       await loadDomains();
     }
