@@ -165,7 +165,7 @@ window.addEventListener('hashchange',()=>{
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
 installCompactStyle();mountAdminSidebar(document);enforcePolicy();
-const initialHash=explicitHashSection();
+const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
 else if(initialHash)requestedSection=initialHash;
