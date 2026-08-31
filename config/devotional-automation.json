@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "service": "devotional-automation",
+  "series": "2026-09",
+  "timezone": "Asia/Seoul",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "targetSeconds": 30,
+    "videoCodec": "h264",
+    "audioCodec": "aac",
+    "renderer": "ffmpeg"
+  },
+  "storage": {
+    "canonical": "google-workspace-shared-drive",
+    "gateway": "https://api.ekodi.kr/api/storage/v1",
+    "pathTemplate": "EKODI/콘텐츠/매일묵상/{yyyy}/{mm}/{dd}/"
+  },
+  "channels": {
+    "church": {
+      "label": "에코디교회",
+      "defaultPublishTime": "06:00"
+    },
+    "mission": {
+      "label": "에코디선교회",
+      "defaultPublishTime": "07:00"
+    }
+  },
+  "youtube": {
+    "mode": "preupload-private-then-schedule",
+    "credentials": "server-side-only",
+    "humanGate": "channel OAuth connection and initial publishing approval"
+  },
+  "executors": {
+    "render": {
+      "endpointEnv": "DEVOTIONAL_RENDERER_URL",
+      "tokenEnv": "DEVOTIONAL_RENDERER_TOKEN"
+    },
+    "publish": {
+      "endpointEnv": "DEVOTIONAL_PUBLISHER_URL",
+      "tokenEnv": "DEVOTIONAL_PUBLISHER_TOKEN"
+    }
+  }
+}
