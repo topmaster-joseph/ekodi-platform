@@ -6,7 +6,7 @@ if(!document.querySelector('link[data-ekodi-devotional-style]')){const link=docu
 const content=document.querySelector('.content');
 const nav=document.querySelector('.sidebar nav');
 if(!content||!nav)return;
-const passages=['신명기 14:22-29','신명기 15:1-11','신명기 15:12-23','신명기 16:1-12','신명기 16:13-22','신명기 17:1-13','신명기 17:14-20','신명기 18:1-14','신명기 18:15-22','신명기 19:1-13','신명기 19:14-21','신명기 20:1-9','신명기 20:10-20','신명기 21:1-9','신명기 21:10-21','신명기 21:22-22:12','신명기 22:13-21','신명기 22:22-30','신명기 23:1-14','신명기 23:15-25','신명기 24:1-9','신명기 24:10-22','신명기 25:1-10','신명기 25:11-19','신명기 26:1-11','신명기 26:12-19','신명기 27:1-10','신명기 27:11-26','신명기 28:1-14','신명기 28:15-26'];
+const passages=['신명기 14:22-29','신명기 15:1-11','신명기 15:12-23','신명기 16:1-12','신명기 16:13-22','신명기 17:1-13','신명기 17:14-20','신명기 18:1-14','신명기 18:15-22','신명기 19:1-13','신명기 19:14-21','신명기 20:1-9','신명기 20:10-20','신명기 21:1-9','신명기 21:10-21','신명기 21:22-22:12','신명기 22:13-21','신명기 22:22-30','신명기 23:1-8','신명기 23:9-14','신명기 23:15-25','신명기 24:1-13','신명기 24:14-22','신명기 25:1-12','신명기 25:13-19','신명기 26:1-11','신명기 26:12-19','신명기 27:1-10','신명기 27:11-26','신명기 28:1-14'];
 let panel=document.querySelector('[data-panel~="devotional"]');
 if(!panel){panel=document.createElement('section');panel.className='section devotional-panel hidden-panel';panel.hidden=true;panel.dataset.panel='devotional';content.append(panel);}
 let button=nav.querySelector('[data-section="devotional"],[data-lazy-section="devotional"]');
