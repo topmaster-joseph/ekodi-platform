@@ -22,12 +22,11 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Switch live service links to ekodi.kr
+      - name: Switch remaining live service links to ekodi.kr
         run: |
           python - <<'PY'
           from pathlib import Path
           replacements = {
-              'ekodimall.kr': 'mall.ekodi.kr',
               'ekodibook.kr': 'books.ekodi.kr',
               'ekodichurch.kr': 'church.ekodi.kr',
               'ekodilab.kr': 'lab.ekodi.kr',
@@ -39,6 +38,10 @@ jobs:
                   text = text.replace(old, new)
               path.write_text(text, encoding='utf-8')
           PY
+
+      - name: Verify mall canonical service URL
+        run: |
+          grep -Fq "id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/mall'" ekodi-service-manifest.js
 
       - name: Verify application
         run: |
@@ -53,7 +56,7 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add index.html scripts/monitor-lib.mjs
-            git commit -m 'Use ekodi.kr subdomains for live services'
+            git commit -m 'Use canonical live service links'
             git push
           fi
 
