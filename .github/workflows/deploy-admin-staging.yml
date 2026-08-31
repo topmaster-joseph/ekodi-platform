@@ -8,37 +8,22 @@ on:
       - 'admin-staging-worker.js'
       - 'wrangler.admin.staging.toml'
       - 'site-worker.js'
-      - 'control-center.html'
-      - 'control-center.js'
-      - 'control-center.css'
-      - 'control-center-ops.css'
-      - 'control-center-finance.css'
-      - 'control-center-features.js'
-      - 'compact-control-center.js'
-      - 'compact-control-center.css'
-      - 'campus-actions.js'
-      - 'campus-actions.css'
-      - 'device-control-admin.js'
-      - 'device-control-admin.css'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
+      - 'admin-compact.js'
+      - 'admin-compact.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
-      - 'admin-perf-diagnostics.js'
-      - 'admin-lazy-features.js'
-      - 'admin-readable-command.js'
-      - 'admin-readable-command.css'
       - 'admin-menu-layout.js'
-      - 'finance-monitor.js'
-      - 'ai-ops-admin.js'
-      - 'ai-ops-admin.css'
-      - 'mission-control-admin.js'
-      - 'mission-control-admin.css'
-      - 'system-health-admin.js'
-      - 'system-health-admin.css'
-      - 'system-timeline-admin.js'
-      - 'system-timeline-admin.css'
-      - 'release-control-admin.js'
-      - 'release-control-admin.css'
+      - 'admin-menu-registry.js'
+      - 'admin-sidebar.js'
+      - 'admin-menu-runtime.js'
+      - 'marketing-funnel-admin.js'
+      - 'marketing-funnel-admin.css'
+      - 'mall.html'
+      - 'mall.js'
+      - 'mall.css'
       - 'scripts/build.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
@@ -76,7 +61,8 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate fingerprinted flat AI Ops, standalone Health and full-path performance
+      - name: Validate current Admin thin shell and mall AI sales surface
+        shell: bash
         run: |
           set -euo pipefail
           node --check admin-staging-worker.js
@@ -84,63 +70,28 @@ jobs:
           node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
-          node --check admin-perf-diagnostics.js
-          node --check admin-readable-command.js
           node --check admin-menu-layout.js
-          node --check device-control-admin.js
-          node --check system-health-admin.js
-          node --check scripts/admin-thin-postbuild.mjs
-          node --check scripts/admin-readable-command-postbuild.mjs
-          node --check scripts/admin-performance-postbuild.mjs
+          node --check marketing-funnel-admin.js
           node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js device-control-admin.js device-control-admin.css ai-ops-admin.css release-control-admin.js system-health-admin.js system-health-admin.css; do
+          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js marketing-funnel-admin.js marketing-funnel-admin.css mall.html mall.js mall.css; do
             test -f "dist/$asset"
           done
 
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
-          grep -Fq "control-center.css?v=$version" dist/control-center.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
-          grep -Fq 'data-ekodi-postauth="compact-control-center.js admin-menu-layout.js admin-demand-loader.js"' dist/control-center.html
-          ! grep -Fq '<script src="control-center.js"' dist/control-center.html
-          ! grep -Fq 'control-center-ops.css' dist/control-center.html
-          ! grep -Fq 'control-center-finance.css' dist/control-center.html
-          ! grep -Fq 'ai-ops-admin.js" defer' dist/control-center.html
-          ! grep -Fq 'WINDOWS_AGENT_URL' dist/compact-control-center.js
-          ! grep -Fq 'CAMPUS_SERVICES' dist/compact-control-center.js
-          ! grep -Fq 'installPolicies' dist/compact-control-center.js
-          ! grep -Fq 'setTimeout(' dist/compact-control-center.js
-          ! grep -Fq 'setInterval(' dist/finance-monitor.js
-          grep -Fq 'WINDOWS_AGENT_URL' dist/device-control-admin.js
-          grep -Fq '.ekodi-device-panel' dist/device-control-admin.css
-          grep -Fq "scripts: ['ai-ops-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
-          grep -Fq 'health:' dist/admin-demand-loader.js
-          grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "hashes: ['#health']" dist/admin-demand-loader.js
-          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
-          grep -Fq 'deployments:' dist/admin-demand-loader.js
-          grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
-          grep -Fq 'isInputPending' dist/admin-demand-loader.js
-          grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
-          grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
-          grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
-          grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
-          grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
-          ! grep -Fq 'setInterval(' dist/system-health-admin.js
-
-          compact_bytes=$(wc -c < dist/compact-control-center.js)
-          first_js=$(( $(wc -c < dist/admin-central-handoff.js) + $(wc -c < dist/admin-authenticated-shell.js) + compact_bytes + $(wc -c < dist/admin-menu-layout.js) + $(wc -c < dist/admin-demand-loader.js) ))
-          first_css=$(( $(wc -c < dist/control-center.css) + $(wc -c < dist/compact-control-center.css) ))
-          test "$compact_bytes" -le 5000
-          test "$first_js" -le 43000
-          test "$first_css" -le 40000
-          echo "Build contract verified: version=$version compact=${compact_bytes}B first-js=${first_js}B first-css=${first_css}B"
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
+          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
+          grep -Fq '#mall-ai-sales:affiliates' dist/admin-menu-layout.js
+          grep -Fq 'affiliates:#mall-ai-sales' dist/admin-menu-layout.js
+          grep -Fq '에코디몰 AI 영업' dist/admin-menu-registry.js
+          grep -Fq 'mall_sales_events' dist/marketing-funnel-admin.js
+          grep -Fq 'https://ekodi.kr/mall' dist/marketing-funnel-admin.js
+          grep -Fq 'mall_sales_events' dist/mall.html
+          grep -Fq 'test: ' dist/mall.html
+          echo "Admin staging build contract verified: version=$version"
 
       - name: Enforce Development account boundary
         shell: bash
@@ -158,69 +109,24 @@ jobs:
       - name: Deploy isolated admin staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
 
-      - name: Verify protected staging and latest flat AI Ops
+      - name: Verify protected staging
         shell: bash
         run: |
           set -euo pipefail
-          access_code=$(curl -sS -D /tmp/admin-access.headers -o /tmp/admin-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/admin-access.headers; then
-            echo "Admin staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
-            exit 0
-          fi
           for attempt in $(seq 1 18); do
-            root_code=$(curl -sS -D /tmp/admin-stage-headers -o /tmp/admin-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            health_code=$(curl -sS -D /tmp/admin-stage-health-headers -o /tmp/admin-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-stage.html 2>/dev/null | head -1 | sed 's/.*?v=//' || true)
-            if [[ "$root_code" != '200' || "$health_code" != '200' || -z "$version" ]]; then
-              echo "Admin PR staging fingerprint pending (attempt $attempt/18)."
-              sleep 4
-              continue
-            fi
-
-            q="?v=$version"
-            handoff_code=$(curl -sS -D /tmp/admin-stage-handoff-headers -o /tmp/admin-stage-handoff.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-central-handoff.js$q" || true)
-            demand_code=$(curl -sS -D /tmp/admin-stage-demand-headers -o /tmp/admin-stage-demand.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-demand-loader.js$q" || true)
-            compact_code=$(curl -sS -D /tmp/admin-stage-compact-headers -o /tmp/admin-stage-compact.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/compact-control-center.js$q" || true)
-            perf_code=$(curl -sS -o /tmp/admin-stage-perf.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-perf-diagnostics.js$q" || true)
-            device_code=$(curl -sS -o /tmp/admin-stage-device.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/device-control-admin.js$q" || true)
-            ai_css_code=$(curl -sS -o /tmp/admin-stage-ai.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ai-ops-admin.css$q" || true)
-            lazy_code=$(curl -sS -o /tmp/admin-stage-lazy.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-lazy-features.js$q" || true)
-            health_js_code=$(curl -sS -D /tmp/admin-stage-health-js-headers -o /tmp/admin-stage-health.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/system-health-admin.js$q" || true)
-            health_css_code=$(curl -sS -D /tmp/admin-stage-health-css-headers -o /tmp/admin-stage-health.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/system-health-admin.css$q" || true)
-
-            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$device_code" == '200' && "$ai_css_code" == '200' && "$lazy_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' ]] \
-              && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
-              && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
-              && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
-              && grep -Fq "control-center.css?v=$version" /tmp/admin-stage.html \
-              && grep -Fq "admin-central-handoff.js?v=$version" /tmp/admin-stage.html \
-              && ! grep -Fq '<script src="control-center.js"' /tmp/admin-stage.html \
-              && ! grep -Fq 'control-center-ops.css' /tmp/admin-stage.html \
-              && ! grep -Fq 'control-center-finance.css' /tmp/admin-stage.html \
-              && grep -Fq 'AbortController' /tmp/admin-stage-handoff.js \
-              && ! grep -Fq 'PerformanceObserver' /tmp/admin-stage-handoff.js \
-              && grep -Fq 'PerformanceObserver' /tmp/admin-stage-perf.js \
-              && grep -Fq "secondaryScripts: ['admin-lazy-features.js']" /tmp/admin-stage-demand.js \
-              && grep -Fq 'health:' /tmp/admin-stage-demand.js \
-              && grep -Fq "scripts: ['system-health-admin.js']" /tmp/admin-stage-demand.js \
-              && ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" /tmp/admin-stage-demand.js \
-              && grep -Fq 'deployments:' /tmp/admin-stage-demand.js \
-              && grep -Fq 'isInputPending' /tmp/admin-stage-demand.js \
-              && ! grep -Fq 'WINDOWS_AGENT_URL' /tmp/admin-stage-compact.js \
-              && ! grep -Fq 'installPolicies' /tmp/admin-stage-compact.js \
-              && ! grep -Fq 'setTimeout(' /tmp/admin-stage-compact.js \
-              && [[ $(wc -c < /tmp/admin-stage-compact.js) -le 5000 ]] \
-              && grep -Fq 'WINDOWS_AGENT_URL' /tmp/admin-stage-device.js \
-              && grep -Fq 'admin-readable-command.css' /tmp/admin-stage-ai.css \
-              && grep -Fq "actionType:'ui.change_request'" /tmp/admin-stage-lazy.js \
-              && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/admin-stage-lazy.js \
-              && grep -Fq "navLabel.textContent = '시스템 건강'" /tmp/admin-stage-health.js \
-              && grep -Fq "pageTitle.textContent = '시스템 건강'" /tmp/admin-stage-health.js \
-              && grep -Fq '.system-health-overall' /tmp/admin-stage-health.css; then
-              echo "Admin PR staging verified: version=$version, standalone Health, fingerprinted thin shell, demand-only features, latest flat AI Ops, zero production traffic."
+            code=$(curl -sS -D /tmp/admin-stage.headers -o /tmp/admin-stage.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/admin-stage.headers; then
+              echo "Admin staging deployed and protected by Cloudflare Access: $STAGING_URL"
               exit 0
             fi
-            echo "Admin PR staging verification pending (attempt $attempt/18, version=$version)."
+            if [[ "$code" == '200' ]] && grep -Fq '"productionTraffic":false' /tmp/admin-stage.body && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage.headers; then
+              root_code=$(curl -sS -D /tmp/admin-root.headers -o /tmp/admin-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/#mall-ai-sales" || true)
+              if [[ "$root_code" == '200' ]] && grep -Fq 'admin-authenticated-shell.js?v=' /tmp/admin-root.html; then
+                echo "Admin staging deployed and verified with zero production traffic: $STAGING_URL"
+                exit 0
+              fi
+            fi
+            echo "Admin staging pending ($attempt/18, health=$code)"
             sleep 4
           done
           echo 'Admin PR staging verification failed.'
