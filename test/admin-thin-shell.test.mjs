@@ -95,18 +95,19 @@ test('secondary hydration never has a forced requestIdleCallback deadline', asyn
 test('normal login opens Site Management without auto-opening AI or internal workspaces', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
-  assert.match(menu, /let requestedSection = ''/);
-  assert.match(menu, /const initialHash = explicitHashSection\(\)/);
-  assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.match(menu, /requestedSection = 'campus';[\s\S]*requestDemand\('campus'\)/);
+  assert.match(menu, /let requestedSection\s*=\s*''/);
+  assert.match(menu, /const initialHash\s*=\s*explicitHashSection\(\)/);
+  assert.match(menu, /else if\s*\(initialHash\)\{[^}]*requestedSection\s*=\s*initialHash/);
+  assert.match(menu, /else\s*\{requestedSection\s*=\s*'campus';dc\s*=\s*true;\}/);
+  assert.match(menu, /function afterAuth\(\)[\s\S]*requestDemand\('campus'\)/);
   assert.match(menu, /\['campus','campus'\]/);
   assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
-  assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
+  assert.doesNotMatch(menu, /requestedSection\s*=\s*'overview';[\s\S]*activatePanel\('overview'\)/);
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
   assert.match(registry, /id: 'storage'.*ko: '저장소'.*en: 'Storage'/);
   assert.ok(routePair(menu, '#health', 'health'));
-  assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
+  assert.doesNotMatch(menu, /requestedSection\s*=\s*'aiops';\s*\n\s*preferAiOpsOnReady\s*=\s*true/);
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 

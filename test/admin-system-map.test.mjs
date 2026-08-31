@@ -8,7 +8,6 @@ const postbuild = await readFile(new URL('../scripts/admin-system-map-postbuild.
 const menuLayout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const menuRegistry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
-const canonicalPair = (source, section, hash) => source.includes(`['${section}', '${hash}']`) || source.includes(`${section}:${hash}`);
 
 test('admin system structure overview reads canonical structure, services and monitor status', () => {
   assert.match(mapJs, /\.architecture\[data-panel~="architecture"\]/);
@@ -33,6 +32,7 @@ test('system structure is a visible routed system tab', () => {
   assert.match(menuRegistry, /id: 'architecture'[\s\S]*?group: 'system'[\s\S]*?ko: '시스템 구조'/);
   assert.doesNotMatch(menuRegistry, /id: 'architecture'[^\n]*internal: true/);
   assert.ok(routePair(menuLayout, '#architecture', 'architecture'));
-  assert.ok(canonicalPair(menuLayout, 'architecture', '#architecture'));
-  assert.match(menuLayout, /section === 'architecture'[\s\S]*?system-health-admin\.js/);
+  assert.match(menuRegistry, /architecture: '#architecture'/);
+  assert.match(menuLayout, /CANON\.get\(section\)\|\|'#'\+section/);
+  assert.match(menuLayout, /section==='architecture'[\s\S]*?system-health-admin\.js/);
 });

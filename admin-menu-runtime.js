@@ -1,4 +1,4 @@
-import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuGroupRoute, getAdminMenuItem, getAdminMenuLabel, getAdminMenuRoute, normalizeAdminLocale } from './admin-menu-registry.js';
 
 const API = 'https://api.ekodi.kr';
 const LOCALE_KEY = 'ekodi-admin-locale';
@@ -67,6 +67,31 @@ async function api(path, options = {}) {
 function navItems() {
   return document.querySelectorAll('.sidebar nav .nav[data-section],.sidebar nav .nav[data-lazy-section],.sidebar nav .nav[data-device-control-nav]');
 }
+function promoteToCanonicalLink(node, href, kind) {
+  if (!node || !href) return node;
+  let link = node;
+  if (node.tagName !== 'A') {
+    link = document.createElement('a');
+    for (const { name, value } of [...node.attributes]) if (name !== 'type') link.setAttribute(name, value);
+    while (node.firstChild) link.append(node.firstChild);
+    node.replaceWith(link);
+  }
+  link.setAttribute('href', href);
+  link.dataset.adminCanonicalHref = href;
+  link.dataset.adminLinkContract = kind;
+  link.style.textDecoration = 'none';
+  return link;
+}
+function applyCanonicalLinks() {
+  for (const node of document.querySelectorAll('[data-admin-global-group]')) {
+    promoteToCanonicalLink(node, getAdminMenuGroupRoute(node.dataset.adminGlobalGroup), 'group');
+  }
+  for (const node of document.querySelectorAll('[data-admin-context-section]')) {
+    promoteToCanonicalLink(node, getAdminMenuRoute(node.dataset.adminContextSection), 'section');
+  }
+  const nav = document.querySelector('.sidebar nav');
+  if (nav) nav.dataset.adminLinkGovernance = 'canonical-v1';
+}
 function applyMenuLabels() {
   document.documentElement.lang = locale;
   for (const item of navItems()) {
@@ -85,6 +110,7 @@ function applyMenuLabels() {
   if (logout) logout.textContent = t('로그아웃', 'Logout');
   const menuButton = document.querySelector('#menuButton');
   if (menuButton) menuButton.setAttribute('aria-label', t('메뉴 열기', 'Open menu'));
+  applyCanonicalLinks();
 }
 function installLocaleControl() {
   if (document.querySelector('#ekodiAdminLocale')) return;
