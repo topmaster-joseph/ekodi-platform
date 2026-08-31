@@ -38,9 +38,9 @@ jobs:
             exit 1
           fi
 
-          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr&account.id=$CF_ACCOUNT_ID")
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=ekodi.kr")
           zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
-          test -n "$zone_id"
+          test -n "$zone_id" || (echo 'ekodi.kr zone not accessible' && exit 1)
 
           records=$(curl -fsS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$old_domain")
           ids=$(printf '%s' "$records" | python -c "import sys,json; d=json.load(sys.stdin); print(' '.join(r['id'] for r in d.get('result',[])))")
