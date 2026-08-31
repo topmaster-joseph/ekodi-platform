@@ -19,10 +19,11 @@ const DEMAND_KEYS=new Map([
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#mall-ai-sales');
+const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites aiops:#ai-ops devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#mall-ai-sales');
 let requestedSection = '';
 let sitesLoading;
+let devotionalLoading;
 let last='';
 let queued=false;
 let running=false;
@@ -111,6 +112,18 @@ async function openSites(){
   navItemFor('campus')?.classList.add('active');
   syncTitle('campus');
 }
+function openDevotional(){
+  if(devotionalLoading)return devotionalLoading;
+  devotionalLoading=import('./devotional-admin.js').then(()=>{
+    applyOrder();
+    if(!activatePanel('devotional'))throw new Error('매일묵상 패널을 준비하지 못했습니다.');
+  }).catch(error=>{
+    devotionalLoading=null;
+    console.error('[EKODI Admin] devotional load failed',error);
+    throw error;
+  });
+  return devotionalLoading;
+}
 function fallbackDemand(section){
   const selector=section==='aiops'
     ?'[data-demand-feature="aiops"],[data-section="aiops"]'
@@ -119,6 +132,7 @@ function fallbackDemand(section){
 }
 function requestDemand(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
+  if(section==='devotional')return openDevotional();
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
