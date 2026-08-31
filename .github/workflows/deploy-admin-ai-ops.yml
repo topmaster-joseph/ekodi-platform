@@ -81,11 +81,11 @@ jobs:
           for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js compact-control-center.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          grep -Fq "admin-shell.css?v=$version" dist/control-center.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
           grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
           grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
