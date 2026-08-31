@@ -168,8 +168,8 @@ installCompactStyle();mountAdminSidebar(document);enforcePolicy();
 const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
-else if(initialHash)requestedSection=initialHash;
-else{requestedSection='campus';dc=true;requestDemand('campus');}
+else if (initialHash) requestedSection = initialHash;
+else{requestedSection = 'campus';dc=true;requestDemand('campus');}
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
     dc=false;
