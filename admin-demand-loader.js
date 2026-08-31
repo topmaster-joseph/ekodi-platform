@@ -318,8 +318,9 @@
   }
 
   function placeholder(key, feature) {
-    if (!nav || loadedScripts.has(feature.scripts?.[0]) || nav.querySelector(`[data-demand-feature="${key}"]`)) return;
+    if (!nav || loadedScripts.has(feature.scripts?.[0]) || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
     let button = nav.querySelector(feature.real);
+    let changed = false;
     if (!button) {
       button = document.createElement('button');
       button.type = 'button';
@@ -330,8 +331,12 @@
       label.textContent = feature.label;
       button.append(label);
       insertPlaceholder(button, feature);
+      changed = true;
     }
-    button.dataset.demandFeature = key;
+    if (button.dataset.demandFeature !== key) {
+      button.dataset.demandFeature = key;
+      changed = true;
+    }
     const handler = event => {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -339,11 +344,12 @@
     };
     button.__ekodiDemandHandler = handler;
     button.addEventListener('click', handler, true);
+    return changed;
   }
 
   function bindBaseEnhancements() {
     const finance = nav?.querySelector('[data-section="finance"]');
-    if (!finance || finance.dataset.financeDemandBound === 'true') return;
+    if (!finance || finance.dataset.financeDemandBound === 'true') return false;
     finance.dataset.financeDemandBound = 'true';
     finance.addEventListener('click', () => {
       if (finance.dataset.financeAssetsRequested === 'true') return;
@@ -353,6 +359,7 @@
         console.warn('[EKODI Admin] Finance lazy load failed', error);
       });
     }, true);
+    return true;
   }
 
   function requestedFeature() {
@@ -363,10 +370,11 @@
 
   function install() {
     if (!authenticated() || !nav) return;
-    Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
-    bindBaseEnhancements();
-    if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);}
-    window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
+    let changed = false;
+    Object.entries(FEATURES).forEach(([key, feature]) => { if (placeholder(key, feature)) changed = true; });
+    if (bindBaseEnhancements()) changed = true;
+    if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);changed=true;}
+    if (changed) window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
     if (requested) {
       const button = nav.querySelector(`[data-demand-feature="${requested}"]`);
