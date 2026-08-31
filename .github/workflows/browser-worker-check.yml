@@ -1,0 +1,41 @@
+name: Browser Worker Check
+
+on:
+  pull_request:
+    paths:
+      - 'services/browser-worker/**'
+      - '.github/workflows/browser-worker-check.yml'
+  push:
+    branches:
+      - 'feat/dedicated-browser-worker'
+    paths:
+      - 'services/browser-worker/**'
+      - '.github/workflows/browser-worker-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install pinned worker dependencies
+        working-directory: services/browser-worker
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Syntax check
+        working-directory: services/browser-worker
+        run: npm run check
+      - name: Security contract check
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'EKODI_BROWSER_WORKER_TOKEN' services/browser-worker/server.mjs
+          grep -q 'EKODI_BROWSER_ALLOWED_HOSTS' services/browser-worker/server.mjs
+          grep -q "adapter !== 'navigate-snapshot'" services/browser-worker/server.mjs
+          grep -q '127.0.0.1:8788:8788' services/browser-worker/compose.yaml
