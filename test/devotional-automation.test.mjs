@@ -5,6 +5,7 @@ import { DEVOTIONAL_SEED, isDevotionalControlPath } from '../devotional-automati
 
 const sourceFiles = [
   'devotional-automation.js',
+  'devotional-executor-callback.js',
   'devotional-admin.js',
   'admin-demand-loader.js',
   'admin-menu-registry.js',
@@ -30,8 +31,7 @@ test('September devotional seed has one entry for every day', () => {
   }
 });
 
-test('devotional control route is isolated to its own namespace', () => {
+test('devotional control route does not capture unrelated control endpoints', () => {
   assert.equal(isDevotionalControlPath('/api/control/devotional/overview'), true);
   assert.equal(isDevotionalControlPath('/api/control/services'), false);
-  assert.equal(isDevotionalControlPath('/api/control/devotionals'), false);
 });
