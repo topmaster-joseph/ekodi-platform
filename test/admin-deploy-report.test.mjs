@@ -4,19 +4,23 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Admin production verifier runs after the canonical true-lazy release and publishes a durable checkpoint', async () => {
+test('Admin production verifier runs after successful canonical true-lazy releases and publishes failures only', async () => {
   const workflow = await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \['Deploy Admin True Lazy Gate'\]/);
   assert.match(workflow, /types: \[completed\]/);
   assert.match(workflow, /branches: \[main\]/);
   assert.match(workflow, /issues: write/);
+  assert.match(workflow, /cancel-in-progress: true/);
   assert.match(workflow, /id: production_verify/);
-  assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(workflow, /Publish Admin deployment failure checkpoint/);
+  assert.match(workflow, /needs\.validate\.result != 'success'/);
+  assert.match(workflow, /steps\.production_verify\.outcome != 'success'/);
   assert.match(workflow, /VERIFY_OUTCOME: \$\{\{ steps\.production_verify\.outcome \}\}/);
   assert.match(workflow, /gh issue comment 333/);
-  assert.match(workflow, /PRODUCTION VERIFIED/);
   assert.match(workflow, /PRODUCTION NOT VERIFIED/);
+  assert.doesNotMatch(workflow, /PRODUCTION VERIFIED/);
   assert.match(workflow, /fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing/);
   assert.doesNotMatch(workflow, /guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
