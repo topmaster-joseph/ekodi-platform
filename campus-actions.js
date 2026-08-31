@@ -1,7 +1,7 @@
 (() => {
   const ALL_SITES = [
     { type: 'Core', name: 'EKODI Home', domain: 'ekodi.kr', section: 'services', group: 'core' },
-    { type: 'Control', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
+    { type: 'Control', name: 'EKODI Admin', domain: 'admin.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
     { type: 'Auth', name: 'EKODI Auth', domain: 'auth.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
     { type: '교회', name: '에코디교회', domain: 'church.ekodi.kr', section: 'services', group: 'community' },
     { type: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
@@ -391,44 +391,9 @@
     }
   }
 
-
-  function decorateAffiliates() {
-    const root = nav();
-    if (!root) return;
-    const item = root.querySelector('[data-section="affiliates"], [data-lazy-section="affiliates"]');
-    if (!item) return;
-    const span = item.querySelector('span');
-    if (span) {
-      if (span.textContent !== '🤝 Affiliates') span.textContent = '🤝 Affiliates';
-      const first = item.firstChild;
-      if (first && first.nodeType === Node.TEXT_NODE && first.textContent) first.textContent = '';
-      return;
-    }
-    if (item.textContent !== '🤝 Affiliates') item.textContent = '🤝 Affiliates';
-  }
-
-  function normalizeSidebar() {
-    decorateAffiliates();
-  }
-
   function init() {
     renderCampus();
-    normalizeSidebar();
     normalizeServiceOpenLinks();
-
-    const sidebarNav = nav();
-    if (sidebarNav) {
-      let sidebarQueued = false;
-      const observer = new MutationObserver(() => {
-        if (sidebarQueued) return;
-        sidebarQueued = true;
-        queueMicrotask(() => {
-          sidebarQueued = false;
-          normalizeSidebar();
-        });
-      });
-      observer.observe(sidebarNav, { childList: true, subtree: true });
-    }
 
     const serviceGrid = document.querySelector('#serviceControlGrid');
     if (serviceGrid) {
@@ -443,8 +408,6 @@
       });
       observer.observe(content, { childList: true, subtree: true });
     }
-
-    window.addEventListener('ekodi-feature-installed', normalizeSidebar);
   }
 
   window.EKODICampus = Object.freeze({
