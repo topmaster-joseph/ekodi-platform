@@ -34,13 +34,15 @@ test('every visible contextual admin section has a route or explicit service han
     assert.ok(route.startsWith('#') || route.startsWith('https://'), `invalid route: ${item.id} -> ${route}`);
   }
   assert.equal(getAdminMenuRoute('tax'), 'https://tax.ekodi.kr/');
+  assert.equal(getAdminMenuRoute('affiliates'), '#mall-ai-sales');
 });
 
 test('communication and life-ai hashes survive reload and deep linking', () => {
   const source = fs.readFileSync(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
   assert.match(source, /#communication:communication/);
   assert.match(source, /#life-ai:life-ai/);
-  assert.match(source, /const CANON=pairMap\('aiops:#ai-ops'\)/);
+  assert.match(source, /const CANON=pairMap\('[^']*aiops:#ai-ops[^']*'\)/);
+  assert.match(source, /const CANON=pairMap\('[^']*affiliates:#mall-ai-sales[^']*'\)/);
   assert.match(source, /CANON\.get\(section\)\|\|'#'\+section/);
 });
 
