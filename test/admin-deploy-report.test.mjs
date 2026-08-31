@@ -47,11 +47,11 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   const admin = manifest.worker.requests.find(item => item.url === 'https://admin.ekodi.kr/');
   assert.ok(admin, 'admin.ekodi.kr smoke request must exist');
-  assert.ok(admin.expect.includes('EKODI Control Center'));
+  assert.ok(admin.expect.includes('EKODI Admin'));
   assert.ok(admin.expect.includes('admin-authenticated-shell.js?v='));
   assert.equal(admin.expect.some(value => value.includes('20260819-e2e-perf-1')), false);
   assert.ok(admin.expect.includes('admin-compact.js admin-menu-layout.js admin-demand-loader.js'));
   assert.equal(admin.expect.includes('control-center-features.js'), false);
-  assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-control-center'));
+  assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-shell'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
 });
