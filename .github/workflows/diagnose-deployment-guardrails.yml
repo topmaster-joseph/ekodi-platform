@@ -1,0 +1,42 @@
+name: Diagnose Deployment Guardrails
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['fix/single-production-gate-20260901']
+    paths:
+      - '.github/workflows/diagnose-deployment-guardrails.yml'
+      - 'scripts/validate-deployment-guardrails.mjs'
+      - '.github/workflows/**'
+      - 'config/cloudflare-access-profiles.json'
+      - 'release-control-admin.js'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Capture deployment guardrail output
+        shell: bash
+        run: |
+          set +e
+          node scripts/validate-deployment-guardrails.mjs > deployment-guardrails.log 2>&1
+          status=$?
+          cat deployment-guardrails.log
+          echo "$status" > deployment-guardrails.status
+          exit 0
+      - name: Upload diagnostic output
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-guardrails-diagnostic
+          path: |
+            deployment-guardrails.log
+            deployment-guardrails.status
+          if-no-files-found: error
