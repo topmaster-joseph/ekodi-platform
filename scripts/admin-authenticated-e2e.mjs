@@ -30,6 +30,7 @@ const hardStop = setTimeout(() => {
 hardStop.unref?.();
 
 const baseUrl = 'https://admin.ekodi.kr/';
+const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
 
@@ -203,14 +204,14 @@ async function clickTaxHandoff() {
   results.push(result);
   console.log(`[E2E] tax: ok ${result.durationMs}ms`);
   stage('tax-return-admin');
-  await page.goto(`${baseUrl}#ekodi_admin_token=${token}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
   await waitForAdminReady();
 }
 
 let fatal = null;
 try {
   stage('initial-navigation');
-  await page.goto(`${baseUrl}#ekodi_admin_token=${token}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
   console.log(`[E2E] domcontentloaded url=${page.url()}`);
   await waitForAdminReady();
 
