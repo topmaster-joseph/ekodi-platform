@@ -1,4 +1,4 @@
-import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuGroupRoute, getAdminMenuItem, getAdminMenuLabel, getAdminMenuRoute, normalizeAdminLocale } from './admin-menu-registry.js';
 
 const API = 'https://api.ekodi.kr';
 const LOCALE_KEY = 'ekodi-admin-locale';
@@ -67,6 +67,31 @@ async function api(path, options = {}) {
 function navItems() {
   return document.querySelectorAll('.sidebar nav .nav[data-section],.sidebar nav .nav[data-lazy-section],.sidebar nav .nav[data-device-control-nav]');
 }
+function promoteToCanonicalLink(node, href, kind) {
+  if (!node || !href) return node;
+  let link = node;
+  if (node.tagName !== 'A') {
+    link = document.createElement('a');
+    for (const { name, value } of [...node.attributes]) if (name !== 'type') link.setAttribute(name, value);
+    while (node.firstChild) link.append(node.firstChild);
+    node.replaceWith(link);
+  }
+  link.setAttribute('href', href);
+  link.dataset.adminCanonicalHref = href;
+  link.dataset.adminLinkContract = kind;
+  link.style.textDecoration = 'none';
+  return link;
+}
+function applyCanonicalLinks() {
+  for (const node of document.querySelectorAll('[data-admin-global-group]')) {
+    promoteToCanonicalLink(node, getAdminMenuGroupRoute(node.dataset.adminGlobalGroup), 'group');
+  }
+  for (const node of document.querySelectorAll('[data-admin-context-section]')) {
+    promoteToCanonicalLink(node, getAdminMenuRoute(node.dataset.adminContextSection), 'section');
+  }
+  const nav = document.querySelector('.sidebar nav');
+  if (nav) nav.dataset.adminLinkGovernance = 'canonical-v1';
+}
 function applyMenuLabels() {
   document.documentElement.lang = locale;
   for (const item of navItems()) {
@@ -85,6 +110,7 @@ function applyMenuLabels() {
   if (logout) logout.textContent = t('로그아웃', 'Logout');
   const menuButton = document.querySelector('#menuButton');
   if (menuButton) menuButton.setAttribute('aria-label', t('메뉴 열기', 'Open menu'));
+  applyCanonicalLinks();
 }
 function installLocaleControl() {
   if (document.querySelector('#ekodiAdminLocale')) return;
@@ -126,31 +152,46 @@ function installStyle() {
   style.textContent = '.ekodi-admin-access{display:grid;gap:18px}.ekodi-admin-add{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:10px;align-items:end}.ekodi-admin-add label{display:grid;gap:6px}.ekodi-admin-add input,.ekodi-admin-add select,.ekodi-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-admin-add button,.ekodi-admin-row button{min-height:38px;border-radius:9px;padding:7px 12px}.ekodi-admin-list{display:grid;gap:9px}.ekodi-admin-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 170px 150px auto;gap:10px;align-items:center;padding:13px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-admin-id{display:grid;gap:4px}.ekodi-admin-id small{opacity:.65}.ekodi-admin-msg.error{color:#fca5a5}@media(max-width:760px){.ekodi-admin-add,.ekodi-admin-row{grid-template-columns:1fr}}';
   document.head.append(style);
 }
+function bindAdminHandoff(link, definition) {
+  if (!link || definition?.adminHandoff !== true) return false;
+  link.dataset.adminHandoff = 'true';
+  link.target = '_self';
+  link.rel = 'noopener';
+  if (link.dataset.adminHandoffBound === 'true') return true;
+  link.dataset.adminHandoffBound = 'true';
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    const destination = adminSubserviceDestination(definition);
+    if (!destination) {
+      console.error(`Blocked untrusted admin handoff target: ${definition.href}`);
+      return;
+    }
+    window.location.assign(destination);
+  });
+  return true;
+}
 function ensureExternalMenuItems() {
   const nav = document.querySelector('.sidebar nav');
   if (!nav) return;
   for (const id of adminMenuOrder()) {
     const definition = getAdminMenuItem(id);
-    if (!definition?.href || nav.querySelector('.nav[data-section="'+id+'"]')) continue;
-    const link = document.createElement('a');
-    link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.rel = 'noopener';
-    if (definition.adminHandoff === true) {
-      link.dataset.adminHandoff = 'true';
-      link.addEventListener('click', event => {
-        event.preventDefault();
-        const destination = adminSubserviceDestination(definition);
-        if (!destination) {
-          console.error(`Blocked untrusted admin handoff target: ${definition.href}`);
-          return;
-        }
-        window.location.assign(destination);
-      });
-    } else {
-      link.target = '_blank';
+    if (!definition?.href) continue;
+    let link = nav.querySelector('.nav[data-section="'+id+'"]');
+    if (!link) {
+      link = document.createElement('a');
+      link.className = 'nav';
+      link.dataset.section = id;
+      link.append(document.createTextNode((definition.icon || '·')+' '));
+      const label = document.createElement('span');
+      label.textContent = getAdminMenuLabel(id, locale);
+      link.append(label);
+      nav.append(link);
     }
-    link.append(document.createTextNode((definition.icon || '·')+' '));
-    const label = document.createElement('span'); label.textContent = getAdminMenuLabel(id, locale); link.append(label);
-    nav.append(link);
+    if (link.tagName !== 'A') continue;
+    link.href = definition.href;
+    link.rel = 'noopener';
+    if (definition.adminHandoff === true) bindAdminHandoff(link, definition);
+    else link.target = '_blank';
   }
   window.dispatchEvent(new Event('ekodi-nav-changed'));
 }
