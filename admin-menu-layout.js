@@ -20,7 +20,7 @@ const DEMAND_KEYS=new Map([
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #communication:communication #life-ai:life-ai #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work communication:#communication life-ai:#life-ai marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
+const CANON=pairMap('aiops:#ai-ops');
 let requestedSection = '';
 let sitesLoading;
 let last='';
@@ -91,8 +91,8 @@ function activatePanel(section){
   }
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   syncTitle(section);
-  const hash=CANON.get(section);
-  if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
+  const hash=CANON.get(section)||'#'+section;
+  if(location.hash!==hash)history.replaceState(null,'',hash);
   if(section==='architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
   sidebar.classList.remove('open');
   return true;
