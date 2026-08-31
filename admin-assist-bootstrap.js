@@ -6,7 +6,6 @@
   function ready(){return Boolean(token()&&!document.querySelector('#app')?.hidden)}
   function installButton(){
     if(!ready())return;
-    loadControlPlane();
     if(document.querySelector('#ekodiAssistDock')||document.querySelector('#ekodiAssistBootstrap'))return;
     const button=document.createElement('button');
     button.id='ekodiAssistBootstrap';
@@ -16,7 +15,6 @@
     button.textContent='✦';
     button.addEventListener('click',async()=>{button.disabled=true;try{await loadAssist(true)}finally{button.disabled=false}});
     document.body.appendChild(button);
-    if('requestIdleCallback'in window)window.requestIdleCallback(()=>loadAssist(false));
   }
   async function loadControlPlane(){
     if(window.EKODIAdminAIControlPlane)return;
@@ -26,7 +24,7 @@
   }
   async function loadAssist(open){
     const existing=document.querySelector('#ekodiAssistLauncher');
-    if(existing){document.querySelector('#ekodiAssistBootstrap')?.remove();if(open)existing.click();loadControlPlane();return}
+    if(existing){document.querySelector('#ekodiAssistBootstrap')?.remove();if(open)existing.click();void loadControlPlane();return}
     if(!loading){
       const demand=window.EKODIAdminDemand;
       if(!demand?.loadStyle||!demand?.loadScript)return;
