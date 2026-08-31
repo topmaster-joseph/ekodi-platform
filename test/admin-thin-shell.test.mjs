@@ -96,9 +96,10 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   assert.match(menu, /let requestedSection = ''/);
-  assert.match(menu, /const initialHash = explicitHashSection\(\)/);
-  assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.match(menu, /requestedSection = 'campus';[\s\S]*requestDemand\('campus'\)/);
+  assert.match(menu, /const initialHash\s*=\s*explicitHashSection\(\)/);
+  assert.match(menu, /else if\s*\(initialHash\)[\s\S]{0,80}?requestedSection\s*=\s*initialHash/);
+  assert.match(menu, /else\s*\{\s*requestedSection\s*=\s*'campus';\s*dc\s*=\s*true;\s*\}/);
+  assert.match(menu, /requestedSection\s*!==\s*'campus'[\s\S]*?requestDemand\('campus'\)/);
   assert.match(menu, /\['campus','campus'\]/);
   assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
   assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
@@ -140,6 +141,18 @@ test('admin menu governance uses eight work areas and one contextual top-tab reg
   assert.doesNotMatch(sidebar, /subtree: true/);
   assert.doesNotMatch(sidebar, /innerHTML\s*=/);
   assert.match(sidebar, /tabs\.dataset\.renderSignature/);
+});
+
+test('pre-rendered admin handoff links are bound instead of being skipped', async () => {
+  const runtime = await read('admin-menu-runtime.js');
+  const sidebar = await read('admin-sidebar.js');
+  const registry = await read('admin-menu-registry.js');
+  assert.match(registry, /id: 'tax'[\s\S]*?href: 'https:\/\/tax\.ekodi\.kr\/'[\s\S]*?adminHandoff: true/);
+  assert.match(sidebar, /definition\.href \? document\.createElement\('a'\)/);
+  assert.match(runtime, /function bindAdminHandoff\(/);
+  assert.match(runtime, /let link = nav\.querySelector/);
+  assert.match(runtime, /if \(definition\.adminHandoff === true\) bindAdminHandoff\(link, definition\)/);
+  assert.doesNotMatch(runtime, /!definition\?\.href \|\| nav\.querySelector/);
 });
 
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
