@@ -119,6 +119,7 @@ function fallbackDemand(section){
   nav.querySelector(selector)?.click();
 }
 function requestDemand(section){
+  for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
