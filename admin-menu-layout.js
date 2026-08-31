@@ -19,8 +19,8 @@ const DEMAND_KEYS=new Map([
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#affiliates');
+const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites aiops:#ai-ops ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social affiliates:#mall-ai-sales');
 let requestedSection = '';
 let sitesLoading;
 let last='';
@@ -214,11 +214,11 @@ window.addEventListener('hashchange',()=>{
 installCompactStyle();
 mountAdminSidebar(document);
 enforcePolicy();
-const initialHash=explicitHashSection();
+const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
-else if(initialHash){dc=false;requestedSection=initialHash;}
-else {requestedSection='campus';dc=true;}
+else if (initialHash) requestedSection = initialHash;
+else { requestedSection = 'campus'; dc=true; requestDemand('campus'); }
 
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
