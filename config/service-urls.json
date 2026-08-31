@@ -1,0 +1,14 @@
+{
+  "mall": {
+    "publicCanonical": "https://ekodi.kr/mall",
+    "internalDeploymentAliases": [
+      "https://mall.ekodi.kr",
+      "https://ekodi-mall.pages.dev"
+    ],
+    "outboundPolicy": {
+      "allowCanonicalOnly": true,
+      "appendUtm": true,
+      "forbidDeploymentAliasInPublicPosts": true
+    }
+  }
+}
