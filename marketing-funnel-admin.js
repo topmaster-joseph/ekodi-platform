@@ -1,6 +1,9 @@
 (() => {
   const API = 'https://api.ekodi.kr';
   const ACCOUNT = 'coupang-ekodibiz';
+  const MALL = 'https://ekodi.kr/mall';
+  const TRACKING_URL = 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/mall_sales_events';
+  const TRACKING_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';
   const api = async (path, options = {}) => {
     const headers = new Headers(options.headers || {});
@@ -11,6 +14,25 @@
     if (!response.ok) throw new Error(data.error || `요청 실패 (${response.status})`);
     return data;
   };
+
+  async function mallEvents() {
+    if (!token()) throw new Error('관리자 인증이 필요합니다.');
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const query = new URLSearchParams({
+      select: 'created_at,event_type,campaign,source,medium,content,product_id,target_host,test',
+      test: 'eq.false',
+      created_at: `gte.${since}`,
+      order: 'created_at.desc',
+      limit: '2000',
+    });
+    const response = await fetch(`${TRACKING_URL}?${query}`, {
+      headers: { apikey: TRACKING_KEY, authorization: `Bearer ${token()}` },
+      cache: 'no-store',
+    });
+    const data = await response.json().catch(() => []);
+    if (!response.ok) throw new Error(data?.message || `몰 영업 이벤트 요청 실패 (${response.status})`);
+    return Array.isArray(data) ? data : [];
+  }
 
   function keepMarketingReview() {
     const section = document.querySelector('#clientAccessSection');
@@ -39,7 +61,7 @@
     button.className = 'nav';
     button.dataset.section = 'affiliates';
     const label = document.createElement('span');
-    label.textContent = '⛓ Integrations';
+    label.textContent = '🛒 에코디몰 AI 영업';
     button.append(label);
     const policies = nav.querySelector('[data-section="policies"]');
     if (policies) nav.insertBefore(button, policies); else nav.append(button);
@@ -51,11 +73,27 @@
     panel.innerHTML = `
       <div class="section-head integration-head">
         <div>
-          <p class="kicker">INTEGRATIONS</p>
-          <h2>외부 서비스 연결</h2>
-          <p>에코디몰 상품을 자동으로 찾고 연결하는 외부 서비스 상태를 관리합니다.</p>
+          <p class="kicker">EKODI MALL · AI SALES</p>
+          <h2>에코디몰 AI 영업</h2>
+          <p>상품 운영 → 몰 유입 → 상품 확인 → 제휴 클릭 → 주문·수익 연결 상태를 실제 원장 기준으로 관리합니다.</p>
         </div>
+        <a class="secondary compact" href="${MALL}" target="_blank" rel="noopener">에코디몰 열기 ↗</a>
       </div>
+
+      <article class="integration-provider" aria-labelledby="mallFunnelTitle">
+        <div class="integration-provider-top">
+          <div class="integration-provider-brand"><span class="integration-provider-logo">AI</span><div><small>CANONICAL SALES FUNNEL</small><strong id="mallFunnelTitle">핵심 영업 퍼널</strong><p>${MALL}</p></div></div>
+          <span class="integration-status connected">실데이터 원장</span>
+        </div>
+        <div class="integration-summary-grid" aria-label="최근 30일 에코디몰 실제 영업 이벤트">
+          <article><small>몰 유입</small><strong id="mallVisits30d">—</strong></article>
+          <article><small>상품 확인</small><strong id="mallProductViews30d">—</strong></article>
+          <article><small>제휴 클릭</small><strong id="mallAffiliateClicks30d">—</strong></article>
+          <article><small>추적 캠페인</small><strong id="mallCampaigns30d">—</strong></article>
+        </div>
+        <p class="integration-message" id="mallTrackingMessage">실제 방문·상품확인·제휴클릭 이벤트를 불러오는 중입니다.</p>
+        <div class="integration-security-note"><strong>측정 원칙</strong><span>테스트 이벤트는 실제 성과에서 제외합니다. 쿠팡 주문·수익은 제휴사 보고 원장이 연결된 값만 별도로 표시하며 추정하지 않습니다.</span></div>
+      </article>
 
       <article class="integration-provider" aria-labelledby="coupangProviderTitle">
         <div class="integration-provider-top">
@@ -103,15 +141,16 @@
 
       <div class="integration-summary-grid" aria-label="에코디몰 최근 운영 현황">
         <article><small>운영 상품</small><strong id="affiliateProducts30d">—</strong></article>
-        <article><small>상품 클릭</small><strong id="affiliateClicks30d">—</strong></article>
-        <article><small>주문</small><strong id="affiliateOrders30d">—</strong></article>
-        <article><small>수익</small><strong id="affiliateRevenue30d">—</strong></article>
+        <article><small>제휴 원장 클릭</small><strong id="affiliateClicks30d">—</strong></article>
+        <article><small>주문 원장</small><strong id="affiliateOrders30d">—</strong></article>
+        <article><small>수익 원장</small><strong id="affiliateRevenue30d">—</strong></article>
       </div>
       <p class="integration-message" id="affiliateMessage" role="status" aria-live="polite"></p>`;
     content.append(panel);
 
     const accountForm = document.querySelector('#affiliateAccountForm');
     const message = document.querySelector('#affiliateMessage');
+    const trackingMessage = document.querySelector('#mallTrackingMessage');
     const runButton = document.querySelector('#affiliateAutomationRun');
     let accountLoaded = false;
 
@@ -144,6 +183,18 @@
       document.querySelector('#affiliateLastRun').textContent = formatRunTime(automation.lastRunAt);
       const detail = document.querySelector('#affiliateAutomationState');
       if (detail) detail.textContent = automation.configured ? (automation.needsRefresh ? '갱신 준비' : '자동 운영 중') : 'API 자격정보 연결 필요';
+    }
+
+    function renderMallEvents(rows) {
+      const visits = rows.filter(row => row.event_type === 'mall_visit').length;
+      const views = rows.filter(row => row.event_type === 'product_view').length;
+      const clicks = rows.filter(row => row.event_type === 'affiliate_click').length;
+      const campaigns = new Set(rows.map(row => String(row.campaign || '')).filter(Boolean)).size;
+      document.querySelector('#mallVisits30d').textContent = visits.toLocaleString('ko-KR');
+      document.querySelector('#mallProductViews30d').textContent = views.toLocaleString('ko-KR');
+      document.querySelector('#mallAffiliateClicks30d').textContent = clicks.toLocaleString('ko-KR');
+      document.querySelector('#mallCampaigns30d').textContent = campaigns.toLocaleString('ko-KR');
+      if (trackingMessage) trackingMessage.textContent = `최근 30일 실제 원장 ${rows.length.toLocaleString('ko-KR')}건 · 테스트 제외 · 마지막 확인 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
     }
 
     function renderOverview(data) {
@@ -180,21 +231,24 @@
     }
 
     async function loadOverview() {
-      const data = await api('/api/affiliate/overview');
-      renderOverview(data);
-      return data;
+      const [affiliate, events] = await Promise.all([api('/api/affiliate/overview'), mallEvents()]);
+      renderOverview(affiliate);
+      renderMallEvents(events);
+      return affiliate;
     }
 
     const show = async () => {
       document.querySelectorAll('[data-panel]').forEach(item => item.classList.toggle('hidden-panel', !String(item.dataset.panel || '').split(' ').includes('affiliates')));
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'affiliates'));
-      const title = document.querySelector('#pageTitle'); if (title) title.textContent = 'Integrations';
-      history.replaceState(null, '', '#affiliates');
+      const title = document.querySelector('#pageTitle'); if (title) title.textContent = '에코디몰 AI 영업';
+      history.replaceState(null, '', '#mall-ai-sales');
       try {
         setMessage('');
+        if (trackingMessage) trackingMessage.textContent = '실제 영업 이벤트 원장을 확인하는 중입니다.';
         await loadOverview();
       } catch (error) {
         setMessage(error.message, true);
+        if (trackingMessage) trackingMessage.textContent = `영업 이벤트 원장 확인 필요 · ${error.message}`;
       }
     };
 
@@ -244,7 +298,7 @@
       }
     });
 
-    if (location.hash === '#affiliates') setTimeout(show, 0);
+    if (location.hash === '#affiliates' || location.hash === '#mall-ai-sales') setTimeout(show, 0);
     return true;
   }
 
