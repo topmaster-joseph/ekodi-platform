@@ -76,7 +76,7 @@
     list.replaceChildren();
     const box=node('div','approval-empty');
     box.append(node('strong','', '로그인 후 승인함을 확인할 수 있습니다.'));
-    const p=node('p','', '승인은 워크스페이스 권한과 함께 확인합니다.');p.style.margin='6px 0 0';box.append(p);
+    box.append(node('p','approval-empty-note','승인은 워크스페이스 권한과 함께 확인합니다.'));
     const auth=document.getElementById('authLink');
     if(auth?.href){const link=node('a','approval-login','로그인하기');link.href=auth.href;box.append(link)}
     list.append(box);setCount(0);
