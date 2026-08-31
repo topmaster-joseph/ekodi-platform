@@ -46,6 +46,10 @@ export function normalizeBusinessType(value) {
   return BUSINESS_TYPES.has(type) ? type : 'service_b2b';
 }
 
+export function normalizeWorkspaceKey(value) {
+  return text(value, 120);
+}
+
 function defaultChannel(type) {
   if (type === 'food_b2c') return 'local_social';
   if (type === 'affiliate_commerce') return 'content_commerce';
@@ -65,7 +69,7 @@ function defaultOffer(type, goal) {
 }
 
 export function buildCampaignPlan(input = {}) {
-  const workspaceKey = text(input.workspaceKey || input.workspaceId, 120);
+  const workspaceKey = normalizeWorkspaceKey(input.workspaceKey || input.workspaceId);
   const businessType = normalizeBusinessType(input.businessType);
   const goal = text(input.goal);
   if (!workspaceKey) throw new Error('workspace_required');
@@ -198,10 +202,12 @@ async function createPlan(request, env, session) {
 async function executePlan(request, env, session) {
   const body = await readJson(request);
   if (!body) return json({ error: '유효한 JSON 요청이 필요합니다.', code: 'INVALID_JSON' }, 400, request, env);
+  const workspaceKey = normalizeWorkspaceKey(body.workspaceKey || body.workspaceId);
+  if (!workspaceKey) return json({ error: 'workspaceKey가 필요합니다.', code: 'WORKSPACE_REQUIRED' }, 400, request, env);
   const campaignId = Number(body.campaignId);
   if (!Number.isInteger(campaignId) || campaignId < 1) return json({ error: '유효한 campaignId가 필요합니다.', code: 'CAMPAIGN_ID_REQUIRED' }, 400, request, env);
 
-  const campaign = await env.DB.prepare('SELECT * FROM business_revenue_campaigns WHERE id = ?').bind(campaignId).first();
+  const campaign = await env.DB.prepare('SELECT * FROM business_revenue_campaigns WHERE id = ? AND workspace_key = ?').bind(campaignId, workspaceKey).first();
   if (!campaign) return json({ error: '캠페인을 찾을 수 없습니다.', code: 'CAMPAIGN_NOT_FOUND' }, 404, request, env);
   if (['awaiting_human', 'approved_pending_executor', 'running', 'completed', 'measured'].includes(String(campaign.status || ''))) {
     return json({ ok: true, campaign: publicCampaign(campaign), idempotent: true }, 200, request, env);
@@ -242,18 +248,20 @@ async function executePlan(request, env, session) {
 
   const status = String(mission?.status || 'awaiting_human');
   const now = new Date().toISOString();
-  await env.DB.prepare(`UPDATE business_revenue_campaigns SET status=?,approval_action_id=?,updated_at=? WHERE id=?`)
-    .bind(status, mission?.id || null, now, campaignId).run();
+  await env.DB.prepare(`UPDATE business_revenue_campaigns SET status=?,approval_action_id=?,updated_at=? WHERE id=? AND workspace_key=?`)
+    .bind(status, mission?.id || null, now, campaignId, workspaceKey).run();
 
-  return json({ ok: true, campaignId, status, approvalActionId: mission?.id || null, decision: mission?.decision || null, requestedBy: String(session.email || 'unknown') }, 202, request, env);
+  return json({ ok: true, campaignId, workspaceKey, status, approvalActionId: mission?.id || null, decision: mission?.decision || null, requestedBy: String(session.email || 'unknown') }, 202, request, env);
 }
 
 async function recordOutcome(request, env, session) {
   const body = await readJson(request);
   if (!body) return json({ error: '유효한 JSON 요청이 필요합니다.', code: 'INVALID_JSON' }, 400, request, env);
+  const workspaceKey = normalizeWorkspaceKey(body.workspaceKey || body.workspaceId);
+  if (!workspaceKey) return json({ error: 'workspaceKey가 필요합니다.', code: 'WORKSPACE_REQUIRED' }, 400, request, env);
   const campaignId = Number(body.campaignId);
   if (!Number.isInteger(campaignId) || campaignId < 1) return json({ error: '유효한 campaignId가 필요합니다.', code: 'CAMPAIGN_ID_REQUIRED' }, 400, request, env);
-  const campaign = await env.DB.prepare('SELECT id,workspace_key FROM business_revenue_campaigns WHERE id=?').bind(campaignId).first();
+  const campaign = await env.DB.prepare('SELECT id,workspace_key FROM business_revenue_campaigns WHERE id=? AND workspace_key=?').bind(campaignId, workspaceKey).first();
   if (!campaign) return json({ error: '캠페인을 찾을 수 없습니다.', code: 'CAMPAIGN_NOT_FOUND' }, 404, request, env);
 
   const inquiries = Math.max(0, Number.parseInt(body.inquiries || 0, 10) || 0);
@@ -270,21 +278,17 @@ async function recordOutcome(request, env, session) {
     (campaign_id,workspace_key,inquiries,conversions,revenue_krw,cost_krw,metric_type,note,occurred_at,recorded_by,created_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id`)
     .bind(campaignId, campaign.workspace_key, inquiries, conversions, revenueKrw, costKrw, metricType, note, occurredAt, String(session.email || 'unknown'), now).first();
-  await env.DB.prepare(`UPDATE business_revenue_campaigns SET status='measured',updated_at=? WHERE id=?`).bind(now, campaignId).run();
+  await env.DB.prepare(`UPDATE business_revenue_campaigns SET status='measured',updated_at=? WHERE id=? AND workspace_key=?`).bind(now, campaignId, workspaceKey).run();
 
   return json({ ok: true, outcome: { id: Number(row?.id), campaignId, workspaceKey: campaign.workspace_key, inquiries, conversions, revenueKrw, costKrw, metricType, note, occurredAt } }, 201, request, env);
 }
 
 async function report(request, env) {
   const url = new URL(request.url);
-  const workspaceKey = text(url.searchParams.get('workspaceKey'), 120);
-  const where = workspaceKey ? 'WHERE workspace_key = ?' : '';
-  const campaignsResult = workspaceKey
-    ? await env.DB.prepare(`SELECT * FROM business_revenue_campaigns ${where} ORDER BY updated_at DESC LIMIT 200`).bind(workspaceKey).all()
-    : await env.DB.prepare('SELECT * FROM business_revenue_campaigns ORDER BY updated_at DESC LIMIT 200').all();
-  const outcomesResult = workspaceKey
-    ? await env.DB.prepare(`SELECT * FROM business_revenue_outcomes ${where} ORDER BY occurred_at DESC LIMIT 2000`).bind(workspaceKey).all()
-    : await env.DB.prepare('SELECT * FROM business_revenue_outcomes ORDER BY occurred_at DESC LIMIT 2000').all();
+  const workspaceKey = normalizeWorkspaceKey(url.searchParams.get('workspaceKey'));
+  if (!workspaceKey) return json({ error: 'workspaceKey가 필요합니다.', code: 'WORKSPACE_REQUIRED' }, 400, request, env);
+  const campaignsResult = await env.DB.prepare('SELECT * FROM business_revenue_campaigns WHERE workspace_key = ? ORDER BY updated_at DESC LIMIT 200').bind(workspaceKey).all();
+  const outcomesResult = await env.DB.prepare('SELECT * FROM business_revenue_outcomes WHERE workspace_key = ? ORDER BY occurred_at DESC LIMIT 2000').bind(workspaceKey).all();
   const campaigns = campaignsResult.results || [];
   const outcomes = outcomesResult.results || [];
   const summary = summarizeRevenueReport(campaigns, outcomes);
@@ -298,7 +302,7 @@ async function report(request, env) {
     ...publicCampaign(row),
     summary: summarizeRevenueReport([row], byCampaign.get(Number(row.id)) || []),
   }));
-  return json({ ok: true, workspaceKey: workspaceKey || null, summary, campaigns: items }, 200, request, env);
+  return json({ ok: true, workspaceKey, summary, campaigns: items }, 200, request, env);
 }
 
 export async function handleBusinessRevenueControl(request, env) {
