@@ -6,8 +6,15 @@ on:
     branches: [main]
     paths:
       - 'marketing-growth-worker.js'
+      - 'marketing-growth-entry.js'
+      - 'mall-promotion-automation.js'
+      - 'mall-sales-intelligence.js'
       - 'wrangler.marketing-growth.toml'
       - 'migrations/0028_marketing_growth_connectors.sql'
+      - 'migrations/0048_ekodi_mall_promotion_automation.sql'
+      - 'migrations/0049_ekodi_mall_active_sales_ai.sql'
+      - 'test/ekodi-mall-promotion-automation.test.mjs'
+      - 'test/ekodi-mall-active-sales-ai.test.mjs'
       - '.github/workflows/deploy-marketing-growth.yml'
 
 permissions:
@@ -31,21 +38,35 @@ jobs:
       META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
       THREADS_APP_ID: ${{ secrets.THREADS_APP_ID }}
       THREADS_APP_SECRET: ${{ secrets.THREADS_APP_SECRET }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
+      NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Validate central OAuth growth engine
+      - name: Validate central OAuth, promotion and active sales engines
         run: |
           set -euo pipefail
           node --check marketing-growth-worker.js
+          node --check marketing-growth-entry.js
+          node --check mall-promotion-automation.js
+          node --check mall-sales-intelligence.js
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'paidActivation:false' marketing-growth-worker.js
+          grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
+          grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
+          grep -Fq "const SUBJECT_KEY = 'ekodibiz'" mall-promotion-automation.js
+          grep -Fq "strategy:'opportunity_first'" mall-promotion-automation.js
+          grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql
+          grep -Fq 'affiliate_growth_opportunities' migrations/0049_ekodi_mall_active_sales_ai.sql
+          grep -Fq 'affiliate_product_performance_daily' migrations/0049_ekodi_mall_active_sales_ai.sql
           grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
-          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql; then
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql; then
             echo 'Plain provider token columns are forbidden.'
             exit 1
           fi
@@ -55,23 +76,23 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
 
-      - name: Apply encrypted connector schema
+      - name: Apply encrypted connector, promotion and sales intelligence schemas
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-growth.toml
 
-      - name: Verify connector schema
+      - name: Verify growth schemas
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
-            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns') ORDER BY name;" \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs') ORDER BY name;" \
             --json > /tmp/growth-schema.json
-          grep -Fq 'marketing_oauth_states' /tmp/growth-schema.json
-          grep -Fq 'marketing_oauth_connections' /tmp/growth-schema.json
-          grep -Fq 'marketing_growth_campaigns' /tmp/growth-schema.json
+          for table in marketing_oauth_states marketing_oauth_connections marketing_growth_campaigns affiliate_promotion_runs affiliate_promotion_visits affiliate_demand_signals affiliate_product_performance_daily affiliate_growth_opportunities affiliate_growth_strategy_runs; do
+            grep -Fq "$table" /tmp/growth-schema.json
+          done
 
       - name: Deploy growth connector worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml
 
-      - name: Install central provider app credentials when available
+      - name: Install provider and intelligence credentials when available
         shell: bash
         run: |
           set -euo pipefail
@@ -81,15 +102,18 @@ jobs:
               printf '%s' "$value" | npx --yes wrangler@${WRANGLER_VERSION} secret put "$key" --config wrangler.marketing-growth.toml >/dev/null
               echo "$key installed."
             else
-              echo "$key not supplied; connector stays safely disabled for that provider."
+              echo "$key not supplied; related capability stays safely disabled or uses first-party fallback signals."
             fi
           }
           put_secret META_APP_ID "$META_APP_ID"
           put_secret META_APP_SECRET "$META_APP_SECRET"
           put_secret THREADS_APP_ID "$THREADS_APP_ID"
           put_secret THREADS_APP_SECRET "$THREADS_APP_SECRET"
+          put_secret OPENAI_API_KEY "$OPENAI_API_KEY"
+          put_secret NAVER_API_HUB_CLIENT_ID "$NAVER_API_HUB_CLIENT_ID"
+          put_secret NAVER_API_HUB_CLIENT_SECRET "$NAVER_API_HUB_CLIENT_SECRET"
 
-      - name: Verify production growth gateway
+      - name: Verify production growth gateway and active sales scheduler
         shell: bash
         run: |
           set -euo pipefail
@@ -101,9 +125,14 @@ jobs:
               && grep -Fq '"oauthBroker":true' /tmp/growth-health.json \
               && grep -Fq '"encryptedVault":true' /tmp/growth-health.json \
               && grep -Fq '"organicPublishing":true' /tmp/growth-health.json \
-              && grep -Fq '"paidActivation":false' /tmp/growth-health.json; then
+              && grep -Fq '"paidActivation":false' /tmp/growth-health.json \
+              && grep -Fq '"mallPromotionAutomation"' /tmp/growth-health.json \
+              && grep -Fq '"strategy":"opportunity_first"' /tmp/growth-health.json \
+              && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
+              && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
+              && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
               cat /tmp/growth-health.json
-              echo 'Marketing growth connector verified in production.'
+              echo 'Marketing growth connector, promotion and active sales intelligence verified in production.'
               exit 0
             fi
             sleep 5
