@@ -101,7 +101,7 @@ jobs:
           node --test test/admin-menu-links.test.mjs test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
           npm run build
 
-          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js admin-menu-layout.js admin-menu-registry.js admin-sidebar.js admin-menu-runtime.js admin-compact.js admin-compact.css device-control-admin.js device-control-admin.css remote-power-admin.js remote-power-admin.css ai-ops-admin.css release-control-admin.js system-health-admin.js system-health-admin.css; do
+          for asset in admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-perf-diagnostics.js admin-menu-layout.js admin-menu-registry.js admin-sidebar.js admin-menu-runtime.js admin-compact.js admin-compact.css device-control-admin.js device-control-admin.css remote-power-admin.js remote-power-admin.css ai-ops-admin.css admin-readable-command.js release-control-admin.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
 
@@ -133,8 +133,8 @@ jobs:
           grep -Fq "device-control-admin.js" dist/admin-demand-loader.js
           grep -Fq "remote-power-admin.js" dist/admin-demand-loader.js
           grep -Fq 'isInputPending' dist/admin-demand-loader.js
-          grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
-          grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
+          grep -Fq "actionType:'ui.change_request'" dist/admin-readable-command.js
+          grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-readable-command.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
@@ -191,12 +191,12 @@ jobs:
             perf_code=$(curl -sS -o /tmp/admin-stage-perf.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-perf-diagnostics.js$q" || true)
             device_code=$(curl -sS -o /tmp/admin-stage-device.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/device-control-admin.js$q" || true)
             ai_css_code=$(curl -sS -o /tmp/admin-stage-ai.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ai-ops-admin.css$q" || true)
-            lazy_code=$(curl -sS -o /tmp/admin-stage-lazy.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-lazy-features.js$q" || true)
+            readable_code=$(curl -sS -o /tmp/admin-stage-readable.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin-readable-command.js$q" || true)
             health_js_code=$(curl -sS -D /tmp/admin-stage-health-js-headers -o /tmp/admin-stage-health.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/system-health-admin.js$q" || true)
             health_css_code=$(curl -sS -D /tmp/admin-stage-health-css-headers -o /tmp/admin-stage-health.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/system-health-admin.css$q" || true)
 
-            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$device_code" == '200' && "$ai_css_code" == '200' && "$lazy_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' ]] \
-              && grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-stage-headers \
+            if [[ "$handoff_code" == '200' && "$demand_code" == '200' && "$compact_code" == '200' && "$perf_code" == '200' && "$device_code" == '200' && "$ai_css_code" == '200' && "$readable_code" == '200' && "$health_js_code" == '200' && "$health_css_code" == '200' ]] \
+              && grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-stage-headers \
               && grep -Fiq 'x-ekodi-staging: ekodi-admin-staging' /tmp/admin-stage-headers \
               && grep -Fq '"productionTraffic":false' /tmp/admin-stage-health.json \
               && grep -Fq "admin-shell.css?v=$version" /tmp/admin-stage.html \
@@ -219,8 +219,8 @@ jobs:
               && [[ $(wc -c < /tmp/admin-stage-compact.js) -le 5000 ]] \
               && grep -Fq 'WINDOWS_AGENT_URL' /tmp/admin-stage-device.js \
               && grep -Fq 'admin-readable-command.css' /tmp/admin-stage-ai.css \
-              && grep -Fq "actionType:'ui.change_request'" /tmp/admin-stage-lazy.js \
-              && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/admin-stage-lazy.js \
+              && grep -Fq "actionType:'ui.change_request'" /tmp/admin-stage-readable.js \
+              && grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' /tmp/admin-stage-readable.js \
               && grep -Fq "navLabel.textContent = '시스템 건강'" /tmp/admin-stage-health.js \
               && grep -Fq "pageTitle.textContent = '시스템 건강'" /tmp/admin-stage-health.js \
               && grep -Fq '.system-health-overall' /tmp/admin-stage-health.css; then
