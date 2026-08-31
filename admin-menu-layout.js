@@ -129,7 +129,7 @@ function reconcileNavigation(){
   try{
     enforcePolicy();
     if(!requestedSection||dc)return;
-    if(requestedSection==='sites'&&!hasPanel('sites'))void openSites();
+    if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
     else if(!activatePanel(requestedSection))requestDemand(requestedSection);
   }finally{running=false;if(again){again=false;scheduleNav();}}
 }
