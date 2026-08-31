@@ -39,6 +39,14 @@ for (const [from,to] of [
   ['loadedScripts','jsCache'],
   ['loadedStyles','cssCache'],
   ['stylesLoaded','cssReady'],
+  ['TOKEN_KEY','TK'],
+  ['ASSET_VERSION','AV'],
+  ['secondaryScripts','secJs'],
+  ['secondaryStyles','secCss'],
+  ['waitFor','wait'],
+  ['pending','pnd'],
+  ['hashes','h'],
+  ['paths','p'],
 ]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
 await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
