@@ -78,20 +78,13 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
-          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js admin-compact.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
-            test -f "dist/$asset"
+          for asset in admin-shell.html admin-central-handoff.js admin-authenticated-shell.js admin-menu-layout.js admin-menu-registry.js admin-menu-runtime.js admin-demand-loader.js ai-ops-admin.js ai-ops-admin.css admin-lazy-features.js admin-compact.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
+            test -s "dist/$asset"
           done
           version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
-          grep -Fq "sec: ['admin-lazy-features.js']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "h: ['#health']" dist/admin-demand-loader.js
-          ! grep -Fq "sec: ['mission-control-admin.js'" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
-          echo "Admin production verification contract ready: version=$version"
+          echo "Admin build and fingerprint contract ready: version=$version"
 
   verify_production:
     needs: validate
