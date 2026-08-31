@@ -1,5 +1,5 @@
 name = "ekodi-marketing-growth"
-main = "marketing-growth-worker.js"
+main = "marketing-growth-entry.js"
 compatibility_date = "2026-08-29"
 workers_dev = false
 route = { pattern = "marketing-connect-api.ekodi.kr", custom_domain = true }
@@ -10,6 +10,9 @@ PUBLIC_BASE_URL = "https://marketing-connect-api.ekodi.kr"
 META_GRAPH_VERSION = "v25.0"
 MAX_DAILY_AD_BUDGET_KRW = "100000"
 MAX_TOTAL_AD_BUDGET_KRW = "1000000"
+
+[triggers]
+crons = ["5 * * * *"]
 
 [[d1_databases]]
 binding = "DB"
