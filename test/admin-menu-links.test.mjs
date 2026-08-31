@@ -40,8 +40,8 @@ test('communication and life-ai hashes survive reload and deep linking', () => {
   const source = fs.readFileSync(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
   assert.match(source, /#communication:communication/);
   assert.match(source, /#life-ai:life-ai/);
-  assert.match(source, /communication:#communication/);
-  assert.match(source, /life-ai:#life-ai/);
+  assert.match(source, /const CANON=pairMap\('aiops:#ai-ops'\)/);
+  assert.match(source, /CANON\.get\(section\)\|\|'#'\+section/);
 });
 
 test('central login preserves contextual deep links', () => {
