@@ -1,8 +1,8 @@
-name: Release EKODI Invest Personalization
+name: Release EKODI Invest Personalization API
 
 on:
   pull_request:
-    paths:
+    paths: &invest_paths
       - 'profile-official-data-adapter.js'
       - 'invest-personalization-runtime.js'
       - 'invest-user-page.js'
@@ -11,35 +11,19 @@ on:
       - 'platform-router-entry-worker.js'
       - 'my/user-ai-ui.js'
       - 'deploy/manifests/workspace-platform.worker.json'
-      - 'deploy/manifests/shared-site.worker.json'
       - 'test/invest-personalization-contract.test.mjs'
       - '.github/workflows/release-invest-personalization.yml'
   push:
     branches: [main]
-    paths:
-      - 'profile-official-data-adapter.js'
-      - 'invest-personalization-runtime.js'
-      - 'invest-user-page.js'
-      - 'invest-subject-ui.js'
-      - 'workspace-platform-entry-worker.js'
-      - 'platform-router-entry-worker.js'
-      - 'my/user-ai-ui.js'
-      - 'deploy/manifests/workspace-platform.worker.json'
-      - 'deploy/manifests/shared-site.worker.json'
-      - 'test/invest-personalization-contract.test.mjs'
-      - '.github/workflows/release-invest-personalization.yml'
+    paths: *invest_paths
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ekodi-conversation-release
-  cancel-in-progress: false
-
 env:
   WRANGLER_VERSION: '4.119.0'
   API_STAGING_URL: https://ekodi-workspace-platform-api-staging.ekodi-development.workers.dev
-  SITE_STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
 
 jobs:
   validate:
@@ -56,8 +40,10 @@ jobs:
           for file in profile-official-data-adapter.js invest-personalization-runtime.js invest-user-page.js invest-subject-ui.js workspace-platform-entry-worker.js platform-router-entry-worker.js my/user-ai-ui.js; do node --check "$file"; done
           node --test test/invest-personalization-contract.test.mjs
           npm run build
+          node scripts/validate-deployment-guardrails.mjs
 
   workspace-staging:
+    if: github.event_name != 'pull_request'
     environment: development
     needs: validate
     runs-on: ubuntu-latest
@@ -75,14 +61,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          list_db() {
-            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-workspace-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
-          }
+          list_db() { npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-workspace-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"; }
           DB_ID=$(list_db)
           if [ -z "$DB_ID" ]; then npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-workspace-staging --location apac; DB_ID=$(list_db); fi
           test -n "$DB_ID"
           echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
-      - name: Build isolated Workspace config
+      - name: Build and deploy isolated Workspace staging
         env:
           DB_ID: ${{ steps.staging_d1.outputs.database_id }}
         run: |
@@ -102,56 +86,20 @@ jobs:
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
-      - name: Apply migrations and deploy isolated Workspace staging
-        run: |
           npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.invest.runtime.toml
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.invest.runtime.toml
-      - name: Verify personalized Invest health
+      - name: Verify isolated Workspace staging
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
             code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$API_STAGING_URL/health" || true)
-            if [[ "$code" == '200' ]] \
-              && grep -Fq '"profileSchemaReady":true' /tmp/health.json \
-              && grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/health.json \
-              && grep -Fq '"investPersonalization":"v1"' /tmp/health.json \
-              && grep -Fq '"transactionExecution":false' /tmp/health.json; then exit 0; fi
+            if [ "$code" = '200' ] && grep -Fq '"investPersonalization":"v1"' /tmp/health.json && grep -Fq '"transactionExecution":false' /tmp/health.json; then exit 0; fi
             sleep 4
           done
-          cat /tmp/health.json || true
           exit 1
-      - name: Cleanup runtime config
-        if: always()
-        run: rm -f wrangler.invest.runtime.toml
-
-  site-staging:
-    environment: development
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 14
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
-    steps:
-      - uses: actions/checkout@v7
-      - name: Build and deploy shared site staging
-        run: |
-          npm run build
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
-      - name: Verify personalized Invest staging surface
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o /tmp/invest.html -w '%{http_code}' -H 'x-ekodi-staging-host: invest.ekodi.kr' "$SITE_STAGING_URL/")
-          ui=$(curl -sS -o /tmp/invest-ui.js -w '%{http_code}' -H 'x-ekodi-staging-host: invest.ekodi.kr' "$SITE_STAGING_URL/invest-ui.js")
-          subject=$(curl -sS -o /tmp/invest-subject.js -w '%{http_code}' -H 'x-ekodi-staging-host: invest.ekodi.kr' "$SITE_STAGING_URL/invest-subject-ui.js")
-          [[ "$code" == '200' && "$ui" == '200' && "$subject" == '200' ]]
-          grep -Fq 'EVIDENCE FIRST' /tmp/invest.html
-          grep -Fq 'investConnections' /tmp/invest.html
-          grep -Fq '/v1/invest/context' /tmp/invest-ui.js
-          grep -Fq '/v1/invest/subjects' /tmp/invest-subject.js
 
   production-workspace:
-    needs: [workspace-staging,site-staging]
+    needs: workspace-staging
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -163,7 +111,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Guarded Workspace candidate then promote
+      - name: Guarded Workspace API candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
       - name: Verify production personalized Invest API
         run: |
@@ -171,27 +119,5 @@ jobs:
           grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/health.json
           grep -Fq '"investPersonalization":"v1"' /tmp/health.json
 
-  production-ui:
-    needs: production-workspace
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - run: npm run build
-      - name: Guarded shared-site candidate then promote
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify production personalized Invest surface
-        run: |
-          curl -fsS 'https://invest.ekodi.kr/?verify=${{ github.sha }}' > /tmp/invest.html
-          curl -fsS 'https://invest.ekodi.kr/invest-ui.js?verify=${{ github.sha }}' > /tmp/invest-ui.js
-          curl -fsS 'https://invest.ekodi.kr/invest-subject-ui.js?verify=${{ github.sha }}' > /tmp/invest-subject.js
-          grep -Fq 'EVIDENCE FIRST' /tmp/invest.html
-          grep -Fq '/v1/invest/context' /tmp/invest-ui.js
-          grep -Fq '/v1/invest/subjects' /tmp/invest-subject.js
+# Shared Invest UI is intentionally not deployed here. It is part of the shared
+# ekodi.kr runtime and is promoted only by Deploy EKODI Shared Site Core.
