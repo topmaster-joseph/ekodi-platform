@@ -49,7 +49,7 @@ jobs:
           # Keep this check at the public artifact boundary instead of private function names.
           grep -Fq 'admin-authenticated-shell.js?v=' dist/control-center.html
           grep -Fq 'admin-central-handoff.js?v=' dist/control-center.html
-          grep -Fq 'control-center.css?v=' dist/control-center.html
+          grep -Fq 'admin-shell.css?v=' dist/control-center.html
 
       - name: Verify repository deployment ownership policy
         run: node scripts/validate-deployment-guardrails.mjs
