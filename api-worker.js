@@ -2,6 +2,7 @@ import authWorker from './auth-worker.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 import { handleDevotionalControl, isDevotionalControlPath } from './devotional-automation.js';
+import { handleDevotionalExecutorCallback, isDevotionalExecutorCallback } from './devotional-executor-callback.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -401,6 +402,9 @@ async function overview(env) {
 }
 
 async function handleControl(request, env) {
+  if (isDevotionalExecutorCallback(request)) {
+    return handleDevotionalExecutorCallback(request, env);
+  }
   if (!env.DB) return controlJson({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
