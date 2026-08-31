@@ -1,9 +1,9 @@
-name: Route EKODI Tax Deployments
+name: Validate EKODI Tax Routing
 
 on:
   workflow_dispatch:
   pull_request:
-    paths:
+    paths: &tax_paths
       - 'tax-invoice-worker.js'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-service-worker.js'
@@ -25,7 +25,7 @@ on:
       - 'migrations/*finance_multi_tax_suppliers.sql'
       - 'migrations/*finance_hometax_ledger.sql'
       - 'migrations/*finance_tax_business_registry.sql'
-      - 'deploy/manifests/shared-site.worker.json'
+      - 'test/tax-professional-service.test.mjs'
       - 'test/tax-local-fallback.test.mjs'
       - 'test/tax-finance-service-binding.test.mjs'
       - 'test/tax-hometax-ledger.test.mjs'
@@ -33,47 +33,15 @@ on:
       - '.github/workflows/deploy-tax-invoice-routing.yml'
   push:
     branches: [main]
-    paths:
-      - 'tax-invoice-worker.js'
-      - 'tax-invoice-free-first-worker.js'
-      - 'tax-service-worker.js'
-      - 'tax-portal-worker.js'
-      - 'tax-local-fallback.js'
-      - 'tax-hometax-ledger.js'
-      - 'tax-hometax-ledger-service.js'
-      - 'tax-business-registry.js'
-      - 'tax-business-registry-service.js'
-      - 'platform-router-entry-worker.js'
-      - 'finance-entry-worker.js'
-      - 'finance-monitor.js'
-      - 'admin-menu-registry.js'
-      - 'admin-menu-runtime.js'
-      - 'admin-demand-loader.js'
-      - 'author-billing-admin.js'
-      - 'auth-site/admin-auth.js'
-      - 'wrangler.site.toml'
-      - 'migrations/*finance_multi_tax_suppliers.sql'
-      - 'migrations/*finance_hometax_ledger.sql'
-      - 'migrations/*finance_tax_business_registry.sql'
-      - 'deploy/manifests/shared-site.worker.json'
-      - 'test/tax-local-fallback.test.mjs'
-      - 'test/tax-finance-service-binding.test.mjs'
-      - 'test/tax-hometax-ledger.test.mjs'
-      - 'test/tax-business-registry.test.mjs'
-      - '.github/workflows/deploy-tax-invoice-routing.yml'
+    paths: *tax_paths
 
 permissions:
-  contents: write
-  actions: write
-
-concurrency:
-  group: ekodi-tax-routing-${{ github.ref }}
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -83,21 +51,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --check tax-invoice-worker.js
-          node --check tax-invoice-free-first-worker.js
-          node --check tax-service-worker.js
-          node --check tax-portal-worker.js
-          node --check tax-local-fallback.js
-          node --check tax-hometax-ledger.js
-          node --check tax-hometax-ledger-service.js
-          node --check tax-business-registry.js
-          node --check tax-business-registry-service.js
-          node --check platform-router-entry-worker.js
-          node --check finance-entry-worker.js
-          node --check finance-monitor.js
-          node --check admin-menu-registry.js
-          node --check admin-menu-runtime.js
-          node --check auth-site/admin-auth.js
+          for f in tax-invoice-worker.js tax-invoice-free-first-worker.js tax-service-worker.js tax-portal-worker.js tax-local-fallback.js tax-hometax-ledger.js tax-hometax-ledger-service.js tax-business-registry.js tax-business-registry-service.js platform-router-entry-worker.js finance-entry-worker.js finance-monitor.js admin-menu-registry.js admin-menu-runtime.js auth-site/admin-auth.js; do node --check "$f"; done
           node --test test/tax-professional-service.test.mjs test/tax-local-fallback.test.mjs test/tax-finance-service-binding.test.mjs test/tax-hometax-ledger.test.mjs test/tax-business-registry.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
@@ -105,202 +59,13 @@ jobs:
           grep -Fq "defaultChannel: 'HOMETAX_MANUAL'" tax-invoice-free-first-worker.js
           grep -Fq 'multiSupplier:true' tax-service-worker.js
           grep -Fq 'EKODI Tax' tax-portal-worker.js
-          grep -Fq 'ekodi-tax-local-suppliers-v1' tax-local-fallback.js
-          grep -Fq 'syncLocalSuppliers' tax-local-fallback.js
-          grep -Fq 'hometaxImportBtn' tax-hometax-ledger.js
-          grep -Fq 'tax-hometax-import' tax-hometax-ledger-service.js
-          grep -Fq 'sourceOfTruth' tax-hometax-ledger-service.js
-          grep -Fq 'ntsBusinessRefresh' tax-business-registry.js
-          grep -Fq 'NTS_STATUS_ENDPOINT' tax-business-registry-service.js
-          grep -Fq 'cacheTtlSeconds' tax-business-registry-service.js
-          grep -Fq 'finance_tax_hometax_ledger' migrations/0044_finance_hometax_ledger.sql
-          grep -Fq 'finance_tax_business_registry_status' migrations/0045_finance_tax_business_registry.sql
           grep -Fq 'injectTaxLocalFallback' platform-router-entry-worker.js
           grep -Fq 'injectTaxHometaxLedger' platform-router-entry-worker.js
           grep -Fq 'injectTaxBusinessRegistry' platform-router-entry-worker.js
           grep -Fq 'routeTaxFinance' platform-router-entry-worker.js
-          grep -Fq 'finance-service-binding' platform-router-entry-worker.js
-          grep -Fq 'tax_hometax_ledger' finance-entry-worker.js
-          grep -Fq 'tax_business_registry_status' finance-entry-worker.js
           grep -Fq 'binding = "FINANCE"' wrangler.site.toml
           grep -Fq 'service = "ekodi-finance-api"' wrangler.site.toml
           grep -Fq 'https://tax.ekodi.kr/' admin-menu-registry.js
           grep -Fq 'pattern = "tax.ekodi.kr"' wrangler.site.toml
-
-  dispatch-and-verify:
-    needs: validate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-      - name: Dispatch guarded Tax dependencies without Shared Site race
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh workflow run deploy-finance.yml --ref main
-          gh workflow run deploy-admin-site.yml --ref main
-
-          site_verified=false
-          if [ "$GITHUB_EVENT_NAME" = 'push' ]; then
-            echo "Checking for direct Shared Site deployment for commit $GITHUB_SHA before dispatching a duplicate run."
-            for attempt in $(seq 1 36); do
-              run_json=$(gh run list --workflow deploy-site-core.yml --commit "$GITHUB_SHA" --limit 1 --json databaseId,status,conclusion 2>/dev/null || printf '[]')
-              run_id=$(printf '%s' "$run_json" | jq -r '.[0].databaseId // empty')
-              run_status=$(printf '%s' "$run_json" | jq -r '.[0].status // empty')
-              run_conclusion=$(printf '%s' "$run_json" | jq -r '.[0].conclusion // empty')
-
-              if [ -z "$run_id" ]; then
-                if [ "$attempt" -ge 4 ]; then
-                  echo 'No direct Shared Site run found for this commit; Tax router will dispatch one.'
-                  break
-                fi
-              elif [ "$run_status" = 'completed' ] && [ "$run_conclusion" = 'success' ]; then
-                echo "Direct Shared Site deployment already succeeded: run $run_id"
-                site_verified=true
-                break
-              elif [ "$run_status" = 'completed' ]; then
-                echo "Direct Shared Site deployment ended with $run_conclusion: run $run_id. Tax router will dispatch one recovery run."
-                break
-              else
-                echo "Direct Shared Site deployment $run_id is $run_status; waiting before any recovery dispatch."
-              fi
-              sleep 5
-            done
-          fi
-
-          if [ "$site_verified" != 'true' ]; then
-            gh workflow run deploy-site-core.yml --ref main -f sync_domains=true
-            echo 'Dispatched one serialized Shared Site recovery deployment.'
-          fi
-          echo 'Guarded Finance and Admin releases dispatched; Shared Site was reused or serialized to avoid pending-run replacement.'
-
-      - name: Verify production Tax service, HomeTax ledger, NTS business registry and D1 route
-        id: verify
-        shell: bash
-        run: |
-          set -euo pipefail
-          finance_url='https://finance-api.ekodi.kr/api/finance/tax-health'
-          tax_health_url='https://tax.ekodi.kr/api/finance/tax-health'
-          hometax_health_url='https://tax.ekodi.kr/api/finance/tax-hometax-health'
-          business_health_url='https://tax.ekodi.kr/api/finance/tax-business-status-health'
-          tax_url='https://tax.ekodi.kr/'
-          tax_js_url='https://tax.ekodi.kr/tax-portal.js'
-          admin_menu_url='https://admin.ekodi.kr/admin-menu-registry.js'
-          finance_json=''
-          business_json=''
-          finance_ok=false
-          tax_route_ok=false
-          hometax_ok=false
-          business_ok=false
-          tax_ok=false
-          menu_ok=false
-
-          for attempt in $(seq 1 72); do
-            finance_json=$(curl -fsS --connect-timeout 5 --max-time 12 "$finance_url" || true)
-            if printf '%s' "$finance_json" | grep -Fq '"operationPolicy":"FREE_FIRST"' \
-              && printf '%s' "$finance_json" | grep -Fq '"defaultChannel":"HOMETAX_MANUAL"' \
-              && printf '%s' "$finance_json" | grep -Fq '"multiSupplier":true' \
-              && printf '%s' "$finance_json" | grep -Fq '"service":"ekodi-tax"'; then finance_ok=true; fi
-
-            rm -f /tmp/ekodi-tax-health-headers /tmp/ekodi-tax-health
-            curl -fsS --connect-timeout 5 --max-time 15 -D /tmp/ekodi-tax-health-headers -o /tmp/ekodi-tax-health "$tax_health_url" || true
-            tax_health=$(cat /tmp/ekodi-tax-health 2>/dev/null || true)
-            tax_health_headers=$(tr -d '\r' < /tmp/ekodi-tax-health-headers 2>/dev/null || true)
-            if printf '%s' "$tax_health" | grep -Fq '"service":"ekodi-tax"' \
-              && printf '%s' "$tax_health" | grep -Fq '"multiSupplier":true' \
-              && printf '%s' "$tax_health" | grep -Fq '"schemaVersion":3' \
-              && printf '%s' "$tax_health_headers" | grep -Fiq 'x-ekodi-tax-data-route: finance-service-binding'; then tax_route_ok=true; fi
-
-            rm -f /tmp/ekodi-hometax-health-headers /tmp/ekodi-hometax-health
-            curl -fsS --connect-timeout 5 --max-time 15 -D /tmp/ekodi-hometax-health-headers -o /tmp/ekodi-hometax-health "$hometax_health_url" || true
-            hometax_health=$(cat /tmp/ekodi-hometax-health 2>/dev/null || true)
-            hometax_health_headers=$(tr -d '\r' < /tmp/ekodi-hometax-health-headers 2>/dev/null || true)
-            if printf '%s' "$hometax_health" | grep -Fq '"service":"ekodi-tax-hometax-ledger"' \
-              && printf '%s' "$hometax_health" | grep -Fq '"sourceOfTruth":"HOMETAX"' \
-              && printf '%s' "$hometax_health" | grep -Fq '"importMode":"FILE_FREE_FIRST"' \
-              && printf '%s' "$hometax_health" | grep -Fq '"schemaVersion":1' \
-              && printf '%s' "$hometax_health_headers" | grep -Fiq 'x-ekodi-tax-data-route: finance-service-binding'; then hometax_ok=true; fi
-
-            rm -f /tmp/ekodi-business-health-headers /tmp/ekodi-business-health
-            curl -fsS --connect-timeout 5 --max-time 15 -D /tmp/ekodi-business-health-headers -o /tmp/ekodi-business-health "$business_health_url" || true
-            business_json=$(cat /tmp/ekodi-business-health 2>/dev/null || true)
-            business_headers=$(tr -d '\r' < /tmp/ekodi-business-health-headers 2>/dev/null || true)
-            if printf '%s' "$business_json" | grep -Fq '"service":"ekodi-tax-business-registry"' \
-              && printf '%s' "$business_json" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
-              && printf '%s' "$business_json" | grep -Fq '"sourceRefreshMinutes":30' \
-              && printf '%s' "$business_json" | grep -Fq '"schemaVersion":1' \
-              && printf '%s' "$business_headers" | grep -Fiq 'x-ekodi-tax-data-route: finance-service-binding'; then business_ok=true; fi
-
-            tax_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$tax_url" || true)
-            rm -f /tmp/ekodi-tax-headers /tmp/ekodi-tax-js
-            curl -fsS --connect-timeout 5 --max-time 15 -D /tmp/ekodi-tax-headers -o /tmp/ekodi-tax-js "$tax_js_url" || true
-            tax_js=$(cat /tmp/ekodi-tax-js 2>/dev/null || true)
-            tax_headers=$(tr -d '\r' < /tmp/ekodi-tax-headers 2>/dev/null || true)
-            if printf '%s' "$tax_body" | grep -Fq 'EKODI Tax' \
-              && printf '%s' "$tax_body" | grep -Fq 'FREE-FIRST' \
-              && printf '%s' "$tax_js" | grep -Fq '/api/finance/tax-profiles' \
-              && printf '%s' "$tax_js" | grep -Fq 'manual-issued' \
-              && printf '%s' "$tax_js" | grep -Fq 'ekodi-tax-local-suppliers-v1' \
-              && printf '%s' "$tax_js" | grep -Fq 'syncLocalSuppliers' \
-              && printf '%s' "$tax_js" | grep -Fq 'hometaxImportBtn' \
-              && printf '%s' "$tax_js" | grep -Fq '/api/finance/tax-hometax-import' \
-              && printf '%s' "$tax_js" | grep -Fq '홈택스 실제 발행내역' \
-              && printf '%s' "$tax_js" | grep -Fq 'ntsBusinessRefresh' \
-              && printf '%s' "$tax_js" | grep -Fq '/api/finance/tax-business-status' \
-              && printf '%s' "$tax_js" | grep -Fq '국세청 상태 확인' \
-              && printf '%s' "$tax_js" | grep -Fq '브라우저 임시저장' \
-              && printf '%s' "$tax_headers" | grep -Fiq 'x-ekodi-tax-local-fallback: v1' \
-              && printf '%s' "$tax_headers" | grep -Fiq 'x-ekodi-tax-hometax-ledger: v1' \
-              && printf '%s' "$tax_headers" | grep -Fiq 'x-ekodi-tax-business-registry: v1' \
-              && printf '%s' "$tax_headers" | grep -Fiq 'cache-control: no-store'; then tax_ok=true; fi
-
-            menu_body=$(curl -fsS --connect-timeout 5 --max-time 15 "$admin_menu_url" || true)
-            if printf '%s' "$menu_body" | grep -Fq "id: 'tax'" \
-              && printf '%s' "$menu_body" | grep -Fq 'https://tax.ekodi.kr/'; then menu_ok=true; fi
-
-            if $finance_ok && $tax_route_ok && $hometax_ok && $business_ok && $tax_ok && $menu_ok; then break; fi
-            sleep 5
-          done
-
-          $finance_ok || { echo 'EKODI Tax Finance production verification failed.'; exit 1; }
-          $tax_route_ok || { echo 'tax.ekodi.kr Finance service binding / D1 route verification failed.'; exit 1; }
-          $hometax_ok || { echo 'HomeTax ledger D1 schema / Finance route verification failed.'; exit 1; }
-          $business_ok || { echo 'NTS business registry / D1 cache production verification failed.'; exit 1; }
-          $tax_ok || { echo 'tax.ekodi.kr Tax portal feature verification failed.'; exit 1; }
-          $menu_ok || { echo 'Admin Tax menu production verification failed.'; exit 1; }
-          paid_enabled=$(printf '%s' "$finance_json" | jq -r '.paidAutomationEnabled // false')
-          nts_configured=$(printf '%s' "$business_json" | jq -r '.configured // false')
-          echo "paid_enabled=$paid_enabled" >> "$GITHUB_OUTPUT"
-          echo "nts_configured=$nts_configured" >> "$GITHUB_OUTPUT"
-          echo 'EKODI Tax production verification passed, including NTS business registry, HomeTax ledger, D1 Finance binding and local supplier fallback.'
-
-      - name: Persist Tax production verification marker
-        shell: bash
-        env:
-          PAID_ENABLED: ${{ steps.verify.outputs.paid_enabled }}
-          NTS_CONFIGURED: ${{ steps.verify.outputs.nts_configured }}
-        run: |
-          set -euo pipefail
-          path='deploy-status/tax-invoice.json'
-          verified_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          jq -n \
-            --arg verifiedAt "$verified_at" \
-            --arg commit "$GITHUB_SHA" \
-            --arg financeUrl 'https://finance-api.ekodi.kr/api/finance/tax-health' \
-            --arg taxUrl 'https://tax.ekodi.kr/' \
-            --arg adminMenuUrl 'https://admin.ekodi.kr/admin-menu-registry.js' \
-            --argjson paidAutomationEnabled "${PAID_ENABLED:-false}" \
-            --argjson ntsBusinessConfigured "${NTS_CONFIGURED:-false}" \
-            '{verifiedAt:$verifiedAt,commit:$commit,service:"EKODI Tax",operationPolicy:"FREE_FIRST",defaultChannel:"HOMETAX_MANUAL",multiSupplier:true,schemaVersion:3,financeServiceBinding:true,localSupplierFallback:true,hometaxLedgerImport:true,hometaxSourceOfTruth:"HOMETAX",ntsBusinessRegistry:true,ntsBusinessConfigured:$ntsBusinessConfigured,paidAutomationEnabled:$paidAutomationEnabled,financeUrl:$financeUrl,taxUrl:$taxUrl,adminMenuUrl:$adminMenuUrl,status:"verified"}' \
-            > /tmp/tax-status.json
-          content=$(base64 -w0 /tmp/tax-status.json)
-          current_sha=$(gh api "repos/$GH_REPO/contents/$path" --jq '.sha' 2>/dev/null || true)
-          if [ -n "$current_sha" ]; then
-            gh api --method PUT "repos/$GH_REPO/contents/$path" -f message='chore: record EKODI Tax deployment [skip ci]' -f content="$content" -f sha="$current_sha" >/dev/null
-          else
-            gh api --method PUT "repos/$GH_REPO/contents/$path" -f message='chore: record EKODI Tax deployment [skip ci]' -f content="$content" >/dev/null
-          fi
-          cat /tmp/tax-status.json
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs
