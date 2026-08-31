@@ -97,8 +97,8 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   const registry = await read('admin-menu-registry.js');
   assert.match(menu, /let requestedSection\s*=\s*''/);
   assert.match(menu, /const initialHash\s*=\s*explicitHashSection\(\)/);
-  assert.match(menu, /else if\s*\(initialHash\)\{[^}]*requestedSection\s*=\s*initialHash/);
-  assert.match(menu, /else\s*\{requestedSection\s*=\s*'campus';dc\s*=\s*true;\}/);
+  assert.match(menu, /else if\s*\(initialHash\)\s*(?:\{[^}]*requestedSection\s*=\s*initialHash|requestedSection\s*=\s*initialHash)/);
+  assert.match(menu, /else\s*\{\s*requestedSection\s*=\s*'campus';\s*dc\s*=\s*true;\s*(?:requestDemand\('campus'\);\s*)?\}/);
   assert.match(menu, /function afterAuth\(\)[\s\S]*requestDemand\('campus'\)/);
   assert.match(menu, /\['campus','campus'\]/);
   assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
