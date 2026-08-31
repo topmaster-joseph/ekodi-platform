@@ -88,9 +88,10 @@ jobs:
           grep -Fq 'affiliates:#mall-ai-sales' dist/admin-menu-layout.js
           grep -Fq '에코디몰 AI 영업' dist/admin-menu-registry.js
           grep -Fq 'mall_sales_events' dist/marketing-funnel-admin.js
+          grep -Fq 'test=eq.false' dist/marketing-funnel-admin.js
           grep -Fq 'https://ekodi.kr/mall' dist/marketing-funnel-admin.js
           grep -Fq 'mall_sales_events' dist/mall.html
-          grep -Fq 'test: ' dist/mall.html
+          grep -Fq "const test=params.get('ekodi_test')==='1'" dist/mall.html
           echo "Admin staging build contract verified: version=$version"
 
       - name: Enforce Development account boundary
