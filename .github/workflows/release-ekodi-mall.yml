@@ -1,4 +1,4 @@
-name: Release EKODI Mall to Shared Site
+name: Request EKODI Mall Shared Site Deployment
 
 on:
   workflow_dispatch:
@@ -8,20 +8,21 @@ on:
       - 'mall.html'
       - 'mall.css'
       - 'mall.js'
+      - 'config/ekodi-service-urls.json'
       - '.github/workflows/release-ekodi-mall.yml'
 
 permissions:
-  contents: write
   actions: write
+  contents: read
 
 concurrency:
-  group: ekodi-mall-shared-site-release
-  cancel-in-progress: false
+  group: request-ekodi-mall-shared-site-deployment
+  cancel-in-progress: true
 
 jobs:
-  release-and-verify:
+  request:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -33,122 +34,17 @@ jobs:
         run: |
           set -euo pipefail
           node --check mall.js
-          grep -Fq 'class="header-notice"' mall.html
-          grep -Fq '상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다.' mall.html
-          grep -Fq '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.' mall.html
-          grep -Fq 'id="productSort"' mall.html
-          grep -Fq 'value="registered"' mall.html
-          grep -Fq 'value="popular"' mall.html
-          grep -Fq 'value="price-asc"' mall.html
-          grep -Fq 'value="price-desc"' mall.html
-          grep -Fq 'id="productDialog"' mall.html
-          grep -Fq 'id="productDialogBuy"' mall.html
-          grep -Fq '.header-notice{justify-self:center' mall.css
-          grep -Fq 'font-size:12px;line-height:1.45' mall.css
-          grep -Fq 'font-size:10.5px;line-height:1.38' mall.css
-          grep -Fq 'function openProductDialog(product)' mall.js
-          grep -Fq 'function sortProducts(products)' mall.js
-          grep -Fq "detail.textContent = '상품정보 보기'" mall.js
+          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
+            echo 'Legacy Mall public URL detected in release source.'
+            exit 1
+          fi
 
-      - name: Dispatch guarded shared-site production deployment
-        id: dispatch
+      - name: Request canonical shared-site deployment
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          before_ids="$(gh run list --workflow deploy-site-core.yml --branch main --event workflow_dispatch --limit 30 --json databaseId -q '.[].databaseId' | tr '\n' ' ')"
           gh workflow run deploy-site-core.yml --ref main -f sync_domains=false
-          run_id=''
-          for attempt in $(seq 1 30); do
-            while read -r candidate; do
-              [ -n "$candidate" ] || continue
-              case " $before_ids " in
-                *" $candidate "*) ;;
-                *) run_id="$candidate"; break ;;
-              esac
-            done < <(gh run list --workflow deploy-site-core.yml --branch main --event workflow_dispatch --limit 30 --json databaseId -q '.[].databaseId')
-            if [ -n "$run_id" ]; then break; fi
-            sleep 2
-          done
-          test -n "$run_id" || { echo 'Shared-site deployment run was not found.'; exit 1; }
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-          echo "Shared-site deployment run: $run_id"
-
-      - name: Wait for guarded shared-site deployment
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
-        run: |
-          set -euo pipefail
-          gh run watch "$RUN_ID" --exit-status
-
-      - name: Verify Mall production UI and product feed
-        shell: bash
-        run: |
-          set -euo pipefail
-          stamp="${GITHUB_SHA:0:12}"
-          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall?release=$stamp" -o /tmp/mall.html
-          grep -Fq 'class="header-notice"' /tmp/mall.html
-          grep -Fq '상품의 판매·주문·결제·배송·교환·환불은 연결된 판매처의 정책에 따릅니다.' /tmp/mall.html
-          grep -Fq '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.' /tmp/mall.html
-          grep -Fq 'id="productSort"' /tmp/mall.html
-          grep -Fq 'id="productDialog"' /tmp/mall.html
-          grep -Fq 'id="productDialogBuy"' /tmp/mall.html
-
-          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall.css?release=$stamp" -o /tmp/mall.css
-          grep -Fq '.header-notice{justify-self:center' /tmp/mall.css
-          grep -Fq 'font-size:12px;line-height:1.45' /tmp/mall.css
-          grep -Fq 'font-size:10.5px;line-height:1.38' /tmp/mall.css
-          grep -Fq 'text-align:center' /tmp/mall.css
-
-          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 "https://ekodi.kr/mall.js?release=$stamp" -o /tmp/mall.js
-          grep -Fq 'function openProductDialog(product)' /tmp/mall.js
-          grep -Fq 'function sortProducts(products)' /tmp/mall.js
-          grep -Fq "detail.textContent = '상품정보 보기'" /tmp/mall.js
-
-          curl -fsS --retry 5 --retry-delay 3 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=5' -o /tmp/products.json
-          node <<'NODE'
-          const fs = require('node:fs');
-          const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
-          if (payload.storefront !== 'ekodi-mall') throw new Error(`unexpected storefront: ${payload.storefront}`);
-          if (payload.providerKey !== 'coupang_partners') throw new Error(`unexpected provider: ${payload.providerKey}`);
-          if (!Array.isArray(payload.products) || payload.products.length < 1) throw new Error('live Mall product feed is empty');
-          const first = payload.products[0];
-          if (!String(first.productName || '').trim()) throw new Error('productName missing');
-          if (!(Number(first.priceKrw) > 0)) throw new Error('priceKrw invalid');
-          if (!/^https:\/\//.test(String(first.clickUrl || ''))) throw new Error('clickUrl invalid');
-          console.log(`EKODI Mall verified: ${payload.products.length} live products sampled.`);
-          NODE
-
-      - name: Record verified production receipt
-        shell: bash
-        run: |
-          set -euo pipefail
-          receipt="deploy/receipts/mall/${GITHUB_SHA}.json"
-          mkdir -p "$(dirname "$receipt")"
-          cat > "$receipt" <<EOF
-          {
-            "service": "ekodi-mall",
-            "canonicalUrl": "https://ekodi.kr/mall",
-            "sourceSha": "$GITHUB_SHA",
-            "deploymentRunId": "${{ steps.dispatch.outputs.run_id }}",
-            "verified": true,
-            "verifiedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$receipt"
-          git commit -m "chore(mall): record verified production ${GITHUB_SHA:0:12}"
-          for attempt in $(seq 1 6); do
-            git fetch --deepen=100 origin main
-            git rebase origin/main
-            if git push origin HEAD:main; then
-              exit 0
-            fi
-            sleep $((attempt * 2))
-          done
-          echo 'Failed to record verified production receipt after retries.'
-          exit 1
+          echo 'Deployment requested. deploy-site-core.yml is the only production owner.'
