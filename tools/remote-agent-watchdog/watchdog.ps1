@@ -1,80 +1,74 @@
 param(
-  [string]$RunnerPath = "$env:ProgramData\EKODI\RemoteAgentWatchdog\remote-agent-runner.cmd",
-  [int]$MaxRestartsPerHour = 6,
-  [string]$StatePath = "$env:ProgramData\EKODI\remote-agent-watchdog.json",
-  [string]$LogPath = "$env:ProgramData\EKODI\remote-agent-watchdog.log"
+  [Parameter(Mandatory = $true)][string]$NpxPath,
+  [Parameter(Mandatory = $true)][string]$AgentHome,
+  [string]$AgentPackage = '@wonderwhy-er/desktop-commander@latest',
+  [int]$MinBackoffSeconds = 10,
+  [int]$MaxBackoffSeconds = 300,
+  [string]$LogPath = "$env:ProgramData\EKODI\remote-agent-watchdog.log",
+  [string]$StdoutPath = "$env:ProgramData\EKODI\remote-agent-console.log",
+  [string]$StderrPath = "$env:ProgramData\EKODI\remote-agent-error.log"
 )
 
 $ErrorActionPreference = 'Stop'
-$dir = Split-Path -Parent $StatePath
-New-Item -ItemType Directory -Force -Path $dir | Out-Null
+$logDir = Split-Path -Parent $LogPath
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 function Write-WatchdogLog([string]$Message) {
   $line = "$(Get-Date -Format o) $Message"
   Add-Content -Path $LogPath -Value $line -Encoding UTF8
 }
 
-function Load-State {
-  if (!(Test-Path $StatePath)) {
-    return [pscustomobject]@{ restarts = @() }
-  }
+if (!(Test-Path $NpxPath)) {
+  Write-WatchdogLog "fatal: npx not found at $NpxPath"
+  exit 10
+}
+if (!(Test-Path $AgentHome)) {
+  Write-WatchdogLog "fatal: agent home not found at $AgentHome"
+  exit 11
+}
 
+$deviceConfig = Join-Path $AgentHome '.desktop-commander-device\device.json'
+if (!(Test-Path $deviceConfig)) {
+  Write-WatchdogLog "fatal: paired device config missing at $deviceConfig"
+  exit 12
+}
+
+$env:USERPROFILE = $AgentHome
+$env:HOME = $AgentHome
+$drive = [IO.Path]::GetPathRoot($AgentHome).TrimEnd('\')
+$env:HOMEDRIVE = $drive
+$env:HOMEPATH = $AgentHome.Substring($drive.Length)
+
+$backoff = [Math]::Max(5, $MinBackoffSeconds)
+Write-WatchdogLog "supervisor started for $env:USERNAME; home=$AgentHome; npx=$NpxPath"
+
+while ($true) {
+  $startedAt = Get-Date
   try {
-    $state = Get-Content $StatePath -Raw | ConvertFrom-Json
-    if ($null -eq $state.restarts) {
-      $state | Add-Member -NotePropertyName restarts -NotePropertyValue @()
+    Write-WatchdogLog "starting remote agent: $AgentPackage remote"
+    $process = Start-Process `
+      -FilePath $NpxPath `
+      -ArgumentList @('-y', $AgentPackage, 'remote') `
+      -WorkingDirectory $AgentHome `
+      -RedirectStandardOutput $StdoutPath `
+      -RedirectStandardError $StderrPath `
+      -NoNewWindow `
+      -PassThru `
+      -Wait
+
+    $runtime = [int]((Get-Date) - $startedAt).TotalSeconds
+    Write-WatchdogLog "remote agent exited: code=$($process.ExitCode), runtime=${runtime}s"
+
+    if ($runtime -ge 900) {
+      $backoff = [Math]::Max(5, $MinBackoffSeconds)
+    } else {
+      $backoff = [Math]::Min($MaxBackoffSeconds, [Math]::Max($MinBackoffSeconds, $backoff * 2))
     }
-    return $state
   } catch {
-    Write-WatchdogLog "state reset: $($_.Exception.Message)"
-    return [pscustomobject]@{ restarts = @() }
-  }
-}
-
-function Save-State($State) {
-  $State | ConvertTo-Json -Depth 5 | Set-Content -Path $StatePath -Encoding UTF8
-}
-
-function Test-AgentRunning {
-  $marker = [regex]::Escape($RunnerPath)
-  $processes = Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" -ErrorAction SilentlyContinue
-  return [bool]($processes | Where-Object { $_.CommandLine -and $_.CommandLine -match $marker } | Select-Object -First 1)
-}
-
-if (Test-AgentRunning) { exit 0 }
-
-if (!(Test-Path $RunnerPath)) {
-  Write-WatchdogLog "runner not found: $RunnerPath"
-  exit 3
-}
-
-$state = Load-State
-$cutoff = (Get-Date).AddHours(-1)
-$recent = @($state.restarts | ForEach-Object { try { [datetime]$_ } catch {} } | Where-Object { $_ -gt $cutoff })
-
-if ($recent.Count -ge $MaxRestartsPerHour) {
-  Write-WatchdogLog "restart suppressed: rate limit reached ($($recent.Count)/hour)"
-  $state.restarts = @($recent | ForEach-Object { $_.ToString('o') })
-  Save-State $state
-  exit 2
-}
-
-try {
-  $arguments = "/d /s /c `"$RunnerPath`""
-  Start-Process -FilePath $env:ComSpec -ArgumentList $arguments -WindowStyle Hidden
-  Start-Sleep -Seconds 3
-
-  if (!(Test-AgentRunning)) {
-    Write-WatchdogLog "agent launch returned but runner is not persistent"
-    exit 4
+    Write-WatchdogLog "remote agent launch failed: $($_.Exception.Message)"
+    $backoff = [Math]::Min($MaxBackoffSeconds, [Math]::Max($MinBackoffSeconds, $backoff * 2))
   }
 
-  $recent += Get-Date
-  $state.restarts = @($recent | ForEach-Object { $_.ToString('o') })
-  Save-State $state
-  Write-WatchdogLog "remote agent restarted for user $env:USERNAME"
-  exit 0
-} catch {
-  Write-WatchdogLog "agent restart failed: $($_.Exception.Message)"
-  exit 4
+  Write-WatchdogLog "retrying in ${backoff}s"
+  Start-Sleep -Seconds $backoff
 }
