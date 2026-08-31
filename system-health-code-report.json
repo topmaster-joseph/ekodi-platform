@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T10:51:51.886Z",
-  "startedAt": "2026-08-27T10:51:32.299Z",
+  "generatedAt": "2026-08-31T05:21:34.039Z",
+  "startedAt": "2026-08-31T05:21:27.190Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "b4f68426b0fcc3fc655d0da738c2a66f9f5191e0",
-  "overallScore": 91,
-  "status": "healthy",
+  "head": "5a82414d7fc916477b239ba95af94df1761d5153",
+  "overallScore": 69.7,
+  "status": "restricted",
   "thresholds": {
     "healthy": 90,
     "watch": 80,
@@ -16,15 +16,15 @@
   "dimensions": {
     "tests": {
       "weight": 25,
-      "score": 25,
-      "status": "ok",
-      "detail": "176개 테스트 파일 · 전체 테스트 통과"
+      "score": 5,
+      "status": "error",
+      "detail": "전체 테스트 실패 또는 시간 초과"
     },
     "duplication": {
       "weight": 15,
-      "score": 6,
+      "score": 4.7,
       "status": "error",
-      "detail": "교차 파일 중복 군집 20개 · 겹침 창 42개 정규화"
+      "detail": "교차 파일 중복 군집 23개 · 겹침 창 53개 정규화"
     },
     "complexity": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "109개 Workflow · 배포 가드 검증 통과"
+      "detail": "149개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,17 +58,26 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 338,
-    "runtimeLines": 57372,
-    "testFiles": 176,
-    "workflows": 109,
+    "runtimeFiles": 389,
+    "runtimeLines": 66647,
+    "testFiles": 199,
+    "workflows": 149,
     "largeFiles": 0,
     "veryLargeFiles": 0,
     "todoMarkers": 5,
-    "duplicateGroups": 20,
-    "duplicateWindows": 42
+    "duplicateGroups": 23,
+    "duplicateWindows": 53
   },
   "technicalDebt": [
+    {
+      "id": "tests-failing",
+      "severity": "critical",
+      "category": "tests",
+      "title": "전체 테스트 점검 필요",
+      "detail": "정기 코드 건강검사에서 전체 테스트가 통과하지 않았습니다.",
+      "recommendation": "신규 기능 반영보다 실패 테스트의 원인을 먼저 분리하고 회귀 범위를 확인하세요.",
+      "evidence": []
+    },
     {
       "id": "duplicate-0",
       "severity": "medium",
@@ -90,9 +99,9 @@
       "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "customer-google-prereg.js:44",
-        "customer-member-directory.js:26",
-        "marketing-admin-control.js:11"
+        "tax-invoice-free-first-worker.js:21",
+        "tax-invoice-worker.js:19",
+        "tax-service-worker.js:18"
       ]
     },
     {
@@ -103,8 +112,8 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "affiliate-control.js:39",
-        "device-control.js:169"
+        "affiliate-control.js:54",
+        "device-control.js:247"
       ]
     },
     {
@@ -170,10 +179,10 @@
   ],
   "checks": {
     "tests": {
-      "ok": true,
-      "status": 0,
+      "ok": false,
+      "status": 1,
       "timedOut": false,
-      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.85374ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.524775ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (0.974831ms)\n✔ Conversation release is additive, isolated, ordered and guarded (0.847124ms)\nℹ tests 862\nℹ suites 0\nℹ pass 862\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 18867.666281"
+      "summary": "      at async TestContext.<anonymous> (file:///home/runner/work/ekodi-platform/ekodi-platform/test/social-registry-control.test.mjs:46:67)\n      at async Test.run (node:internal/test_runner/test:1389:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {\n    errno: -2,\n    code: 'ENOENT',\n    syscall: 'open',\n    path: '/home/runner/work/ekodi-platform/ekodi-platform/control-center-features.js'\n  }\n\ntest at test/static-app.test.mjs:1:1\n✖ test/static-app.test.mjs (51.238397ms)\n  'test failed'"
     },
     "security": {
       "ok": true,
@@ -185,13 +194,13 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.0 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 24 platform/service boundaries"
+      "summary": "> ekodi-platform@4.3.0 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 27 platform/service boundaries"
     },
     "deployment": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.0 validate:deployments\n> node scripts/validate-deployment-guardrails.mjs\n\n✅ Deployment policy audit passed: production deploys remain guarded while the retired admin compatibility workflow stays manual-only and non-deploying."
+      "summary": "> ekodi-platform@4.3.0 validate:deployments\n> node scripts/validate-deployment-guardrails.mjs\n\n✅ Deployment policy audit passed: production deploys remain guarded behind real isolated staging/candidate gates while the retired admin compatibility workflow stays manual-only and non-deploying."
     }
   },
   "cadence": {
