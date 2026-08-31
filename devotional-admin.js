@@ -2,7 +2,6 @@
 'use strict';
 const API='https://api.ekodi.kr/api/control/devotional';
 const TOKEN_KEY='ekodi-auth-token';
-if(!document.querySelector('link[data-ekodi-devotional-style]')){const link=document.createElement('link');link.rel='stylesheet';link.href='devotional-admin.css';link.dataset.ekodiDevotionalStyle='true';document.head.append(link);}
 const content=document.querySelector('.content');
 const nav=document.querySelector('.sidebar nav');
 if(!content||!nav)return;
