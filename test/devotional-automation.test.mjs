@@ -9,7 +9,9 @@ const sourceFiles = [
   'devotional-admin.js',
   'admin-demand-loader.js',
   'admin-menu-registry.js',
-  'api-worker.js'
+  'api-worker.js',
+  'services/devotional-executor/server.mjs',
+  'services/devotional-executor/youtube-oauth.mjs'
 ];
 
 test('devotional source files pass Node syntax validation', () => {
