@@ -5,6 +5,12 @@ import { chromium } from 'playwright';
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
 
+const hardStop = setTimeout(() => {
+  console.error('[E2E] hard timeout: authenticated admin browser verification exceeded 4 minutes');
+  process.exit(124);
+}, 240_000);
+hardStop.unref?.();
+
 const baseUrl = 'https://admin.ekodi.kr/';
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -190,5 +196,6 @@ try {
   await browser.close();
 }
 
+clearTimeout(hardStop);
 if (fatal) throw fatal;
 console.log(`Authenticated admin E2E passed: ${results.length}/24 menus clicked and rendered.`);
