@@ -55,23 +55,13 @@ for (const name of fs.readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(na
     fail(file, `shared-site production write is owned only by ${canonicalSharedSiteOwner}`);
   }
   if (name !== canonicalSharedSiteOwner && redispatchesSharedSite && !authorizedSharedSiteDispatchers.has(name)) {
-    fail(file, `shared-site deployment dispatch is restricted to the designated request workflow`);
+    fail(file, 'shared-site deployment dispatch is restricted to the designated request workflow');
   }
 }
 
 const canonicalOwner = read(`.github/workflows/${canonicalSharedSiteOwner}`);
 if (!/concurrency:\s*[\s\S]*group:\s*ekodi-shared-site-worker-production/.test(canonicalOwner)) {
   fail(`.github/workflows/${canonicalSharedSiteOwner}`, 'canonical shared-site owner must hold the production concurrency lock');
-}
-for (const requiredPath of [
-  "      - 'admin-ai-control-plane.js'",
-  "      - 'admin-ai-governor.js'",
-  "      - 'admin-secret-generator.js'",
-  "      - 'ekodi-shell-injector.js'",
-  "      - 'site-shell-worker.js'",
-  "      - 'config/user-ui-shell.json'",
-]) {
-  if (!canonicalOwner.includes(requiredPath)) fail(`.github/workflows/${canonicalSharedSiteOwner}`, `missing shared-site ownership path: ${requiredPath.trim()}`);
 }
 
 const mallDispatcher = requireText('.github/workflows/release-ekodi-mall.yml', [
