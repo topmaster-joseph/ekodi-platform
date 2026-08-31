@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "canonical": {
+    "root": "https://ekodi.kr/",
+    "mall": "https://ekodi.kr/mall",
+    "admin": "https://admin.ekodi.kr/",
+    "auth": "https://auth.ekodi.kr/"
+  },
+  "policy": {
+    "mallPublicUrl": "https://ekodi.kr/mall",
+    "legacyMallUrlsAllowed": false,
+    "sharedSiteProductionOwner": "deploy-site-core.yml"
+  }
+}
