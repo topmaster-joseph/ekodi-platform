@@ -1,28 +1,25 @@
-name: Request EKODI Mall Shared Site Deployment
+name: Validate EKODI Mall Shared Site Contract
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
+  pull_request:
+    paths: &mall_paths
       - 'mall.html'
       - 'mall.css'
       - 'mall.js'
       - 'config/ekodi-service-urls.json'
       - '.github/workflows/release-ekodi-mall.yml'
+  push:
+    branches: [main]
+    paths: *mall_paths
 
 permissions:
-  actions: write
   contents: read
 
-concurrency:
-  group: request-ekodi-mall-shared-site-deployment
-  cancel-in-progress: true
-
 jobs:
-  request:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -40,11 +37,9 @@ jobs:
             exit 1
           fi
 
-      - name: Request canonical shared-site deployment
+      - name: Enforce validation-only ownership
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh workflow run deploy-site-core.yml --ref main -f sync_domains=false
-          echo 'Deployment requested. deploy-site-core.yml is the only production owner.'
+          ! grep -Eq 'gh +workflow +run +deploy-site-core\.yml|guarded-worker-release\.mjs|wrangler(@[^ ]+)? +deploy|npm +run +deploy:site' .github/workflows/release-ekodi-mall.yml
+          echo 'Mall changes are deployed directly by deploy-site-core.yml; no redispatch is permitted.'
