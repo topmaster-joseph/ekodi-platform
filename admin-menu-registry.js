@@ -22,6 +22,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'books', group: 'services', icon: 'B', labels: { ko: '출판 · 도서', en: 'Books & Publishing' } },
   { id: 'social', group: 'services', icon: 'S', labels: { ko: '소셜', en: 'Social' } },
   { id: 'aiops', group: 'ai', icon: 'AI', labels: { ko: '운영 AI', en: 'AI Operations' } },
+  { id: 'devotional', group: 'ai', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
   { id: 'marketing-ai', group: 'ai', icon: 'M', labels: { ko: '마케팅 AI', en: 'Marketing AI' } },
   { id: 'ai-module-spec', group: 'ai', icon: 'API', labels: { ko: '외부 AI 연동규격', en: 'External AI Spec' } },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
@@ -42,25 +43,12 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
 const BY_ID = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
 const GROUP_BY_ID = new Map(ADMIN_MENU_GROUPS.map(group => [group.id, group]));
 
-export function normalizeAdminLocale(value) {
-  return String(value || '').toLowerCase().startsWith('en') ? 'en' : 'ko';
-}
+export function normalizeAdminLocale(value) { return String(value || '').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
 export function getAdminMenuItem(id) { return BY_ID.get(String(id || '').trim()) || null; }
-export function getAdminMenuLabel(id, locale = 'ko') {
-  const item = getAdminMenuItem(id); const language = normalizeAdminLocale(locale);
-  return item?.labels?.[language] || item?.labels?.ko || String(id || '');
-}
+export function getAdminMenuLabel(id, locale = 'ko') { const item = getAdminMenuItem(id); const language = normalizeAdminLocale(locale); return item?.labels?.[language] || item?.labels?.ko || String(id || ''); }
 export function getAdminMenuGroup(id) { return GROUP_BY_ID.get(String(id || '').trim()) || null; }
-export function getAdminMenuGroupLabel(id, locale = 'ko') {
-  const group = getAdminMenuGroup(id); const language = normalizeAdminLocale(locale);
-  return group?.labels?.[language] || group?.labels?.ko || String(id || '');
-}
+export function getAdminMenuGroupLabel(id, locale = 'ko') { const group = getAdminMenuGroup(id); const language = normalizeAdminLocale(locale); return group?.labels?.[language] || group?.labels?.ko || String(id || ''); }
 export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'home'; }
-export function getAdminMenuGroupDefault(id) {
-  const group = getAdminMenuGroup(id);
-  if (!group) return 'campus';
-  const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal);
-  return firstVisibleChild?.id || group.defaultSection || 'campus';
-}
+export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal); return firstVisibleChild?.id || group.defaultSection || 'campus'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }
 export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id); }
