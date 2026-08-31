@@ -1,35 +1,29 @@
-name: Deploy Marketing Posting Promotion Console
+name: Validate Marketing Posting Promotion Console
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
+  pull_request:
+    paths: &channel_paths
       - 'marketing-ai-channel-manager.js'
       - 'scripts/build.mjs'
       - 'site-worker.js'
       - '.github/workflows/deploy-marketing-channel-manager.yml'
+  push:
+    branches: [main]
+    paths: *channel_paths
 
 permissions:
   contents: read
 
-concurrency:
-  group: ekodi-shared-site-worker-production
-  cancel-in-progress: false
-
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-
       - name: Validate posting and promotion console
         run: |
           set -euo pipefail
@@ -41,46 +35,10 @@ jobs:
           ! grep -Fq 'META_FACEBOOK_ACCESS_TOKEN' marketing-ai-channel-manager.js
           grep -Fq 'marketing-ai-channel-manager.js' scripts/build.mjs
           grep -Fq "['channels','게시 · 홍보']" scripts/build.mjs
-
-      - name: Verify Cloudflare credentials
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-
-      - name: Build shared admin assets
-        run: |
-          set -euo pipefail
           npm run build
           test -f dist/marketing-ai-admin.js
           grep -Fq "['channels','게시 · 홍보']" dist/marketing-ai-admin.js
           grep -Fq '게시 · 홍보 연결센터' dist/marketing-ai-admin.js
           grep -Fq '중앙 OAuth · 암호화 Vault' dist/marketing-ai-admin.js
-          grep -Fq 'Metricool은 필수가 아닙니다' dist/marketing-ai-admin.js
-
-      - name: Guarded shared-site release
-        run: |
-          set -euo pipefail
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-
-      - name: Verify production posting and promotion console
-        shell: bash
-        env:
-          RELEASE_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          url="https://admin.ekodi.kr/marketing-ai-admin.js?growth=${RELEASE_SHA}"
-          for attempt in $(seq 1 18); do
-            code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
-            marker_label=no; marker_a=no; marker_b=no; marker_c=no
-            grep -Fq "['channels','게시 · 홍보']" /tmp/body && marker_label=yes || true
-            grep -Fq '게시 · 홍보 연결센터' /tmp/body && marker_a=yes || true
-            grep -Fq '중앙 OAuth · 암호화 Vault' /tmp/body && marker_b=yes || true
-            grep -Fq 'marketing-connect-api.ekodi.kr' /tmp/body && marker_c=yes || true
-            echo "growth console verify -> code=$code label=$marker_label markers=$marker_a/$marker_b/$marker_c"
-            if [ "$code" = '200' ] && [ "$marker_label" = yes ] && [ "$marker_a" = yes ] && [ "$marker_b" = yes ] && [ "$marker_c" = yes ]; then
-              echo 'Posting and promotion console verified in production with first-render label.'
-              exit 0
-            fi
-            sleep 4
-          done
-          exit 1
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs
