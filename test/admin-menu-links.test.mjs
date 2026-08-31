@@ -64,3 +64,13 @@ test('event-driven menu runtime promotes global and contextual controls to canon
   assert.match(layout, /ekodi-admin-section-changed/);
   assert.doesNotMatch(runtime, /MutationObserver/);
 });
+
+test('pre-rendered external admin handoff links are bound instead of skipped', () => {
+  const runtime = fs.readFileSync(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
+  const sidebar = fs.readFileSync(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
+  assert.match(sidebar, /definition\.href \? document\.createElement\('a'\) : document\.createElement\('button'\)/);
+  assert.match(runtime, /function bindAdminHandoff\(link, definition\)/);
+  assert.match(runtime, /let link = nav\.querySelector\('\.nav\[data-section="'\+id\+'"\]'/);
+  assert.match(runtime, /if \(definition\.adminHandoff === true\) bindAdminHandoff\(link, definition\)/);
+  assert.doesNotMatch(runtime, /!definition\?\.href \|\| nav\.querySelector/);
+});
