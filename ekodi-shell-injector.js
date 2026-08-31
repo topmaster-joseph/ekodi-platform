@@ -8,6 +8,7 @@ const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set(['church']);
+const SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set(['mall']);
 const MY_SERVICE_ID='my';
 const USER_UI_VERSION='v1';
 const USER_LAYOUT_VERSION='centered-v1';
@@ -46,6 +47,7 @@ function cleanServiceId(value){return String(value||'').trim().toLowerCase().rep
 function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
 function isMyEkodi(serviceId){return cleanServiceId(serviceId)===MY_SERVICE_ID;}
 function serviceOwnsFooter(serviceId){return SERVICE_OWNED_FOOTER_SERVICES.has(cleanServiceId(serviceId));}
+function sharedFooterReplacesLocalFooter(serviceId){return SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES.has(cleanServiceId(serviceId));}
 function defaultSurface(serviceId){return cleanSurface(serviceForId(serviceId)?.defaultSurface)||'public';}
 function resolvedSurface(serviceId,surface=''){return cleanSurface(surface)||defaultSurface(serviceId);}
 function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurface(serviceId));}
@@ -106,6 +108,14 @@ class UserCanvasAdopter{
     element.setAttribute('data-ekodi-user-canvas',USER_LAYOUT_VERSION);
   }
 }
+class LocalFooterDeduplicator{
+  constructor(serviceId){this.serviceId=cleanServiceId(serviceId);}
+  element(element){
+    if(!sharedFooterReplacesLocalFooter(this.serviceId))return;
+    const classes=String(element.getAttribute('class')||'').split(/\s+/).filter(Boolean);
+    if(!classes.includes('ekodi-user-ui-footer'))element.remove();
+  }
+}
 class UserChromeInjector{
   constructor(serviceId){this.serviceId=serviceId;}
   element(element){
@@ -139,6 +149,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
     .on('.app-header',headerAdopter)
     .on('.main-header',headerAdopter)
     .on('[data-ekodi-fixed-header]',headerAdopter)
+    .on('footer',new LocalFooterDeduplicator(serviceId))
     .on('body',new UserChromeInjector(serviceId))
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
