@@ -24,14 +24,28 @@ on:
       - 'styles.css'
       - 'script.js'
       - 'responsive.css'
+      - 'mall.html'
+      - 'mall.css'
+      - 'mall.js'
+      - 'config/ekodi-service-urls.json'
       - 'admin-shell.html'
       - 'admin-shell.css'
       - 'admin-authenticated-shell.js'
+      - 'admin-central-handoff.js'
+      - 'compact-control-center.js'
+      - 'admin-ai-control-plane.js'
+      - 'admin-ai-governor.js'
+      - 'admin-secret-generator.js'
       - 'admin-demand-loader.js'
       - 'admin-menu-registry.js'
       - 'admin-menu-layout.js'
       - 'admin-sidebar.js'
       - 'admin-menu-runtime.js'
+      - 'ekodi-shell-injector.js'
+      - 'site-shell-worker.js'
+      - 'shell/ccm-mr-player.js'
+      - 'config/user-footer.js'
+      - 'config/user-ui-shell.json'
       - 'campus-actions.js'
       - 'campus-actions.css'
       - '_headers'
@@ -42,13 +56,21 @@ on:
       - 'scripts/ecosystem-registry.mjs'
       - 'scripts/audit-admin-menu-services.mjs'
       - 'scripts/validate-admin-source.mjs'
+      - 'scripts/validate-deployment-guardrails.mjs'
+      - 'scripts/validate-user-ui-dna.mjs'
+      - 'scripts/ccm-mr-postbuild.mjs'
       - 'scripts/admin-authenticated-e2e.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/build.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'wrangler.site.toml'
+      - 'package.json'
       - '.github/workflows/deploy-site-core.yml'
+      - '.github/workflows/deploy-admin-control-plane.yml'
+      - '.github/workflows/deploy-admin-first-paint.yml'
+      - '.github/workflows/release-ekodi-mall.yml'
+      - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
 
 permissions:
   contents: read
@@ -72,15 +94,29 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Enforce single production ownership before release
+        run: |
+          set -euo pipefail
+          node scripts/validate-deployment-guardrails.mjs
+
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs; do
+          for f in site-worker.js platform-router-entry-worker.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js admin-demand-loader.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/validate-user-ui-dna.mjs; do
             node --check "$f"
           done
           node scripts/validate-admin-source.mjs
+          node scripts/validate-user-ui-dna.mjs
           if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
           test -f homepage-ambient.css
+          test -f mall.html
+          test -f mall.css
+          test -f config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
+            echo 'Legacy Mall public URL detected in shared-site source.'
+            exit 1
+          fi
           test -f marketing-ai-admin.css
           test -f campus-actions.css
           test -f admin-shell.html
@@ -116,7 +152,7 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
+          for f in dist/index.html dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
             test -f "$f"
           done
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
