@@ -1,5 +1,5 @@
 export const AI_MISSION_RUNTIME = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   authorityModel: Object.freeze({
     humanRole: 'steward_delegate',
     chiefAiRole: 'orchestrator_not_sovereign',
@@ -42,6 +42,7 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     'repository_force_push',
     'repository_delete',
     'production_rollback',
+    'external_publication',
   ]),
   forbiddenAreas: Object.freeze([
     'deceptive_impersonation_of_human_or_divine_authority',
