@@ -27,6 +27,7 @@ let lastAnnouncedSection='';
 let reconcileScheduled=false;
 let reconciling=false;
 let reconcileAgain=false;
+let defaultCampusPending=false;
 const demandLoading=new Map();
 
 function installCompactStyle(){
@@ -78,6 +79,7 @@ function syncTitle(section){
   if(title&&label&&title.textContent!==label)title.textContent=label;
   if(lastAnnouncedSection===section)return;
   lastAnnouncedSection=section;
+  document.documentElement.dataset.ekodiAdminSection=section;
   window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section}}));
 }
 function activatePanel(section){
@@ -92,11 +94,12 @@ function activatePanel(section){
   syncTitle(section);
   const hash=CANON.get(section);
   if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
-  if (section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
+  if(section==='architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
   sidebar.classList.remove('open');
   return true;
 }
 async function openSites(){
+  defaultCampusPending=false;
   requestedSection='sites';
   if(!sitesLoading)sitesLoading=import('./homepage-admin.js').then(module=>{
     module.mountHomepageAdmin();
@@ -134,6 +137,7 @@ function requestDemand(section){
   return task;
 }
 function routeInternal(){
+  defaultCampusPending=false;
   requestedSection='aiops';
   if(location.hash!=='#ai-ops')history.replaceState(null,'','#ai-ops');
   requestDemand('aiops');
@@ -144,7 +148,7 @@ function reconcileNavigation(){
   reconciling=true;
   try{
     enforcePolicy();
-    if(!requestedSection)return;
+    if(!requestedSection||defaultCampusPending)return;
     if(requestedSection==='sites'&&!hasPanel('sites'))void openSites();
     else if(!activatePanel(requestedSection))requestDemand(requestedSection);
   }finally{
@@ -155,10 +159,15 @@ function reconcileNavigation(){
 function scheduleReconcile(){
   if(reconcileScheduled)return;
   reconcileScheduled=true;
-  queueMicrotask(()=>{
+  window.setTimeout(()=>{
     reconcileScheduled=false;
     reconcileNavigation();
-  });
+  },0);
+}
+function loadDefaultCampusAfterSession(){
+  if(!defaultCampusPending||requestedSection!=='campus')return;
+  defaultCampusPending=false;
+  window.setTimeout(()=>{if(!activatePanel('campus'))requestDemand('campus');},0);
 }
 
 nav.addEventListener('click',event=>{
@@ -167,9 +176,10 @@ nav.addEventListener('click',event=>{
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
   const section=sectionOf(item);
   if(!section)return;
+  defaultCampusPending=false;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
   requestedSection=section;
-  queueMicrotask(()=>{if(!activatePanel(section))requestDemand(section);});
+  window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
 },true);
 
 content.addEventListener('click',event=>{
@@ -182,17 +192,19 @@ content.addEventListener('click',event=>{
 
 window.addEventListener('ekodi-nav-changed',scheduleReconcile);
 window.addEventListener('ekodi-feature-installed',scheduleReconcile);
+window.addEventListener('ekodi-session-validated',loadDefaultCampusAfterSession,{once:true});
 window.addEventListener('ekodi-admin-ready',()=>{
   enforcePolicy();
   const section=explicitHashSection();
   if(section&&isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  if(section){requestedSection=section;if(!activatePanel(section))requestDemand(section);}
-  else {requestedSection = 'campus';requestDemand('campus');}
+  if(section){defaultCampusPending=false;requestedSection=section;if(!activatePanel(section))requestDemand(section);}
+  else {requestedSection='campus';defaultCampusPending=true;}
 });
 window.addEventListener('hashchange',()=>{
   const section=explicitHashSection();
   if(!section)return;
+  defaultCampusPending=false;
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
   requestedSection=section;
@@ -202,14 +214,15 @@ window.addEventListener('hashchange',()=>{
 installCompactStyle();
 mountAdminSidebar(document);
 enforcePolicy();
-const initialHash = explicitHashSection();
+const initialHash=explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
-else if (initialHash) requestedSection = initialHash;
-else requestedSection = 'campus';
+else if(initialHash){defaultCampusPending=false;requestedSection=initialHash;}
+else {requestedSection='campus';defaultCampusPending=true;}
 
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
+    defaultCampusPending=false;
     if(isInternal(section))return routeInternal();
     if(section==='sites')return openSites();
     requestedSection=section;
