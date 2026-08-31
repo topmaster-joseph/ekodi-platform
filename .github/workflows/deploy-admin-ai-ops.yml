@@ -86,12 +86,12 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
-          grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
+          grep -Fq "sec: ['admin-lazy-features.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
           grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "hashes: ['#health']" dist/admin-demand-loader.js
-          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
+          grep -Fq "h: ['#health']" dist/admin-demand-loader.js
+          ! grep -Fq "sec: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
@@ -162,7 +162,7 @@ jobs:
           for attempt in $(seq 1 24); do
             LIVE_VERSION=''
             if verify_root \
-              && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js']" \
+              && verify_asset 'admin-demand-loader.js' "sec: ['admin-lazy-features.js']" \
               && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '시스템 건강'" \
