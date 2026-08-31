@@ -1,6 +1,7 @@
 import authWorker from './auth-worker.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
+import { handleDevotionalControl, isDevotionalControlPath } from './devotional-automation.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -407,6 +408,10 @@ async function handleControl(request, env) {
 
   const url = new URL(request.url);
   const path = url.pathname;
+
+  if (isDevotionalControlPath(path)) {
+    return handleDevotionalControl(request, env, auth.session, auth.response.headers, writeAudit);
+  }
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
