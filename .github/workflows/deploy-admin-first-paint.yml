@@ -26,30 +26,29 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate admin first-paint guard
+      - name: Validate admin first-paint contract
         run: |
           set -euo pipefail
           node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
-          grep -Fq "if(becameVisible)app.style.visibility='hidden'" admin-central-handoff.js
           grep -Fq "function announceReady(){if(app)app.style.visibility=''" admin-authenticated-shell.js
-          grep -Fq 'await new Promise(resolve=>setTimeout(resolve,0));announceReady()' admin-authenticated-shell.js
+          grep -Fq "document.documentElement.dataset.ekodiAdminReady='loading'" admin-authenticated-shell.js
+          grep -Fq 'for(const src of criticalPostAuthScripts)' admin-authenticated-shell.js
+          grep -Fq 'await loadScript(src)' admin-authenticated-shell.js
+          grep -Fq 'announceReady();loadDeferredEnhancements()' admin-authenticated-shell.js
 
-      - name: Build and verify guarded admin assets
+      - name: Build and verify first-paint assets
         run: |
           set -euo pipefail
           npm run build
           test -f dist/admin-central-handoff.js
           test -f dist/admin-authenticated-shell.js
           test -f dist/control-center.html
-          grep -Fq "if(becameVisible)app.style.visibility='hidden'" dist/admin-central-handoff.js
           grep -Fq "function announceReady(){if(app)app.style.visibility=''" dist/admin-authenticated-shell.js
-          grep -Fq 'await new Promise(resolve=>setTimeout(resolve,0));announceReady()' dist/admin-authenticated-shell.js
+          grep -Fq "document.documentElement.dataset.ekodiAdminReady='loading'" dist/admin-authenticated-shell.js
+          grep -Fq 'await loadScript(src)' dist/admin-authenticated-shell.js
+          grep -Fq 'announceReady();loadDeferredEnhancements()' dist/admin-authenticated-shell.js
           grep -Fq 'admin-authenticated-shell.js' dist/control-center.html
 
-      - name: Enforce validation-only ownership
-        run: |
-          set -euo pipefail
-          test -z "${CLOUDFLARE_API_TOKEN:-}"
-          ! grep -Eq 'guarded-worker-release\.mjs|wrangler(@[^ ]+)? +deploy|npm +run +deploy:site|gh +workflow +run +deploy-site-core\.yml' .github/workflows/deploy-admin-first-paint.yml
-          echo 'Shared-site production ownership remains with deploy-site-core.yml.'
+      - name: Verify repository deployment ownership policy
+        run: node scripts/validate-deployment-guardrails.mjs
