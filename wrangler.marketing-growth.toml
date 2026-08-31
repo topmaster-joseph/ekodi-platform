@@ -11,8 +11,9 @@ META_GRAPH_VERSION = "v25.0"
 MAX_DAILY_AD_BUDGET_KRW = "100000"
 MAX_TOTAL_AD_BUDGET_KRW = "1000000"
 
-[triggers]
-crons = ["5 * * * *"]
+# Cloudflare Free accounts allow only five Cron Triggers per account.
+# Active sales scheduling is intentionally handled by the public repository's
+# authenticated GitHub Actions scheduler instead of consuming another trigger.
 
 [[d1_databases]]
 binding = "DB"
