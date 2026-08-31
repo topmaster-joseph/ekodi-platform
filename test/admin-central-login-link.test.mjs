@@ -55,7 +55,7 @@ test('central handoff preserves current admin destinations without retired route
 test('authenticated shell restores requested hash and contains no retired path normalizer', async () => {
   const source = await read('admin-authenticated-shell.js');
   assert.ok(source.includes("const requestedHash=location.hash"));
-  assert.ok(source.includes("await Promise.all(criticalPostAuthScripts.map(loadScript))"));
+  assert.match(source, /for\(const src of criticalPostAuthScripts\)[^{]*\{[^}]*await loadScript\(src\)/);
   assert.ok(source.includes("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
   assert.doesNotMatch(source, /canonicalizeLegacyEntry|\/legacy/);
 });
