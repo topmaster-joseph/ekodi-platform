@@ -214,7 +214,7 @@ function translateAdminPanel() {
   panel.querySelector('[data-admin-copy]').textContent = t('플랫폼 전역 관리자만 관리합니다. 고객사이트의 목사·대표·직원 등 로컬 역할은 각 테넌트에서 별도로 관리합니다.', 'Manage platform-wide administrators only. Tenant-local roles remain inside each customer site.');
   panel.querySelector('[data-admin-email-label]').textContent = t('Google 관리자 이메일', 'Google admin email');
   panel.querySelector('[data-admin-role-label]').textContent = t('플랫폼 권한', 'Platform role');
-  panel.querySelector('[data-admin-add-label]').textContent = t('관리자를 추가했습니다.','Add administrator');
+  panel.querySelector('[data-admin-add-label]').textContent = t('관리자 추가', 'Add administrator');
   const addRole = panel.querySelector('select[name="role"]'); if (addRole) fillRoles(addRole, addRole.value || 'operator');
   if (panel.dataset.accounts) renderAccounts(JSON.parse(panel.dataset.accounts));
 }
