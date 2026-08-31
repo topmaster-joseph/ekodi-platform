@@ -52,3 +52,7 @@ export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(s
 export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal); return firstVisibleChild?.id || group.defaultSection || 'campus'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }
 export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id); }
+
+if (typeof document !== 'undefined') {
+  import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
+}
