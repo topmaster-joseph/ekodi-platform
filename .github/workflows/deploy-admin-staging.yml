@@ -28,13 +28,13 @@ on:
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
+      - 'test/admin-menu-links.test.mjs'
       - 'test/admin-readable-command.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
       - 'test/admin-health-menu.test.mjs'
       - 'test/admin-preauth-shell.test.mjs'
       - 'test/admin-performance-hardening.test.mjs'
-      - 'test/admin-readable-command.test.mjs'
       - 'test/mission-control-admin.test.mjs'
 
 permissions:
@@ -72,11 +72,12 @@ jobs:
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
           node --check admin-menu-layout.js
+          node --check admin-menu-runtime.js
           node --check marketing-funnel-admin.js
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
+          node --test test/admin-menu-links.test.mjs test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
           npm run build
 
-          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js marketing-funnel-admin.js marketing-funnel-admin.css mall.html mall.js mall.css; do
+          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js admin-menu-runtime.js marketing-funnel-admin.js marketing-funnel-admin.css mall.html mall.js mall.css; do
             test -f "dist/$asset"
           done
 
@@ -87,7 +88,10 @@ jobs:
           grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
           grep -Fq '#mall-ai-sales:affiliates' dist/admin-menu-layout.js
           grep -Fq 'affiliates:#mall-ai-sales' dist/admin-menu-layout.js
+          grep -Fq '#communication:communication' dist/admin-menu-layout.js
+          grep -Fq '#life-ai:life-ai' dist/admin-menu-layout.js
           grep -Fq '에코디몰 AI 영업' dist/admin-menu-registry.js
+          grep -Fq "affiliates: '#mall-ai-sales'" dist/admin-menu-registry.js
           grep -Fq 'mall_sales_events' dist/marketing-funnel-admin.js
           grep -Fq "test: 'eq.false'" dist/marketing-funnel-admin.js
           grep -Fq 'https://ekodi.kr/mall' dist/marketing-funnel-admin.js
