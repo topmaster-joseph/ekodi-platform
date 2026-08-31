@@ -15,20 +15,25 @@ test('operator and workspace entry modules import without side effects',()=>{
   assert.equal(typeof drainMessengerOutbox,'function');
 });
 
-test('Conversation release is one ordered orchestrator from staging through production',async()=>{
+test('Conversation release owns only Conversation APIs, never the shared-site Worker',async()=>{
   const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
-  assert.match(workflow,/name: Release EKODI Conversation Foundation/);
+  assert.match(workflow,/name: Release EKODI Conversation Foundation APIs/);
   assert.match(workflow,/group: ekodi-conversation-release/);
   assert.match(workflow,/workspace-staging:/);
   assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
-  assert.match(workflow,/production-workspace:/);
+  assert.match(workflow,/production-workspace:\n\s+needs: control-staging/);
   assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
-  assert.match(workflow,/production-ui:\n\s+needs: production-control/);
-  assert.match(workflow,/Apply production migration once after both staging gates/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
+  assert.doesNotMatch(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.doesNotMatch(workflow,/gh workflow run deploy-site-core\.yml/);
+});
+
+test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
+  const workflow=await read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow,/name: Deploy EKODI Shared Site Core/);
+  assert.match(workflow,/group: ekodi-shared-site-worker-production/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
-  assert.doesNotMatch(workflow,/triggers deploy --config wrangler\.workspace-platform\.toml/);
 });
 
 test('generic Control workflow no longer owns Conversation-specific release triggers',async()=>{
@@ -43,14 +48,14 @@ test('generic Control workflow no longer owns Conversation-specific release trig
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
 });
 
-test('production Conversation release is main-only, recoverable and health-gated',async()=>{
+test('production Conversation API release is main-only, recoverable and health-gated',async()=>{
   const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
   assert.match(workflow,/github\.event_name == 'push'/);
   assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow,/d1 time-travel info ekodi-auth/);
   assert.match(workflow,/conversationSchemaReady/);
   assert.match(workflow,/api\/control\/messenger\/inbox/);
-  assert.match(workflow,/refreshAssistantUntilSettled/);
+  assert.match(workflow,/Apply production migration once after both staging gates/);
 });
 
 test('Outbox recovery reuses existing Control cron and opportunistic Messenger traffic',async()=>{
@@ -77,7 +82,7 @@ test('Conversation staging uses separate isolated Workspace and Control database
   assert.match(workflow,/Verify Operator authentication boundary/);
 });
 
-test('CI actionlint checks the release workflows without legacy shellcheck noise',async()=>{
+test('CI actionlint checks release workflows without legacy shellcheck noise',async()=>{
   const workflow=await read('.github/workflows/ci.yml');
   assert.match(workflow,/actionlint@v1\.7\.12/);
   assert.match(workflow,/-shellcheck= -pyflakes=/);

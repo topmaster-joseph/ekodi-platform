@@ -4,10 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Admin production verifier runs after successful canonical true-lazy releases and publishes failures only', async () => {
+test('Admin production verifier runs after successful canonical shared-site releases and publishes failures only', async () => {
   const workflow = await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \['Deploy Admin True Lazy Gate'\]/);
+  assert.match(workflow, /workflows: \['Deploy EKODI Shared Site Core'\]/);
   assert.match(workflow, /types: \[completed\]/);
   assert.match(workflow, /branches: \[main\]/);
   assert.match(workflow, /issues: write/);
@@ -47,11 +47,12 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   const admin = manifest.worker.requests.find(item => item.url === 'https://admin.ekodi.kr/');
   assert.ok(admin, 'admin.ekodi.kr smoke request must exist');
-  assert.ok(admin.expect.includes('EKODI Control Center'));
+  assert.ok(admin.expect.includes('EKODI Admin'));
   assert.ok(admin.expect.includes('admin-authenticated-shell.js?v='));
+  assert.ok(admin.expect.includes('https://auth.ekodi.kr/?site=admin'));
   assert.equal(admin.expect.some(value => value.includes('20260819-e2e-perf-1')), false);
   assert.ok(admin.expect.includes('admin-compact.js admin-menu-layout.js admin-demand-loader.js'));
   assert.equal(admin.expect.includes('control-center-features.js'), false);
-  assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-control-center'));
+  assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-shell'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
 });

@@ -29,9 +29,54 @@ const workerGuarded = {
 };
 for (const [file, needles] of Object.entries(workerGuarded)) requireText(file, needles);
 
-// Legacy admin compatibility is intentionally manual-only. It must never become an
-// automatic production deploy again, but because it performs no production write it
-// must not be forced to contain the guarded release controller or Worker manifest.
+// The shared ekodi.kr/admin/auth/mall runtime has exactly one production owner.
+// Any workflow may validate it, but only deploy-site-core.yml may write it or
+// dispatch a second deployment. This prevents the historical deploy -> verify ->
+// redeploy ping-pong from ever being reintroduced under another workflow name.
+const workflowDir = path.join(root, '.github', 'workflows');
+const canonicalSharedSiteOwner = 'deploy-site-core.yml';
+const sharedSiteWritePatterns = [
+  /guarded-worker-release\.mjs\s+--manifest\s+deploy\/manifests\/shared-site\.worker\.json/,
+  /wrangler(?:@[^\s]+)?\s+deploy\s+--config\s+wrangler\.site\.toml/,
+  /npm\s+run\s+deploy:site/,
+];
+const sharedSiteRedispatchPatterns = [
+  /gh\s+workflow\s+run\s+deploy-site-core\.yml/,
+  /workflow_dispatch[^\n]*deploy-site-core\.yml/,
+];
+for (const name of fs.readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(name))) {
+  const file = `.github/workflows/${name}`;
+  const text = read(file);
+  const writesSharedSite = sharedSiteWritePatterns.some(pattern => pattern.test(text));
+  const redispatchesSharedSite = sharedSiteRedispatchPatterns.some(pattern => pattern.test(text));
+  if (name !== canonicalSharedSiteOwner && writesSharedSite) {
+    fail(file, `shared-site production write is owned only by ${canonicalSharedSiteOwner}`);
+  }
+  if (name !== canonicalSharedSiteOwner && redispatchesSharedSite) {
+    fail(file, `shared-site redeploy dispatch is forbidden; add the source path to ${canonicalSharedSiteOwner} instead`);
+  }
+}
+
+const canonicalOwner = read(`.github/workflows/${canonicalSharedSiteOwner}`);
+if (!/concurrency:\s*[\s\S]*group:\s*ekodi-shared-site-worker-production/.test(canonicalOwner)) {
+  fail(`.github/workflows/${canonicalSharedSiteOwner}`, 'canonical shared-site owner must hold the production concurrency lock');
+}
+for (const requiredPath of [
+  "      - 'mall.html'",
+  "      - 'mall.css'",
+  "      - 'mall.js'",
+  "      - 'config/ekodi-service-urls.json'",
+  "      - 'admin-ai-control-plane.js'",
+  "      - 'admin-ai-governor.js'",
+  "      - 'admin-secret-generator.js'",
+  "      - 'ekodi-shell-injector.js'",
+  "      - 'site-shell-worker.js'",
+  "      - 'config/user-ui-shell.json'",
+]) {
+  if (!canonicalOwner.includes(requiredPath)) fail(`.github/workflows/${canonicalSharedSiteOwner}`, `missing shared-site ownership path: ${requiredPath.trim()}`);
+}
+
+// Legacy admin compatibility is intentionally manual-only and validation-only.
 const legacyAdmin = requireText('.github/workflows/deploy-admin-site.yml', [
   'workflow_dispatch:',
   'Legacy Admin & Auth Compatibility Check',
@@ -47,10 +92,8 @@ forbidText('.github/workflows/deploy-books.yml', ['npm run deploy:books', 'deplo
 forbidText('.github/workflows/deploy-community.yml', ['npm run deploy:community', 'deploy --config wrangler.community.toml']);
 forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.social.toml']);
 
-// Stateful services are allowed to use isolated workers.dev staging rather than a
-// dedicated staging hostname. The guard therefore verifies the real separation
-// contract: development environment, isolated worker/database identity, production
-// dependency on staging, recovery point capture, and guarded candidate promotion.
+// Stateful services are allowed isolated workers.dev staging; their production
+// artifacts remain independently owned and must not write the shared-site runtime.
 requireText('.github/workflows/deploy-control-api.yml', [
   'environment: development',
   'ekodi-auth-api-staging',
@@ -114,7 +157,7 @@ for (const name of ['deploy:site', 'deploy:books', 'deploy:community']) {
 }
 
 if (failed) {
-  console.error('Deployment policy audit failed. Production must stay behind staging/candidate gates.');
+  console.error('Deployment policy audit failed. Production must have one owner per artifact and no redeploy ping-pong.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: production deploys remain guarded behind real isolated staging/candidate gates while the retired admin compatibility workflow stays manual-only and non-deploying.');
+console.log('✅ Deployment policy audit passed: shared-site has one production owner, no redispatch loops, and independent services remain behind their own guarded release boundaries.');

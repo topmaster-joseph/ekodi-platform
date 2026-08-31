@@ -1,4 +1,4 @@
-name: Deploy Admin AI Ops
+name: Verify Admin AI Ops
 
 on:
   pull_request:
@@ -29,7 +29,7 @@ on:
       - 'test/admin-health-menu.test.mjs'
       - 'test/admin-deploy-report.test.mjs'
   workflow_run:
-    workflows: ['Deploy Admin True Lazy Gate']
+    workflows: ['Deploy EKODI Shared Site Core']
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -202,7 +202,7 @@ jobs:
 
           - commit: \`$COMMIT_SHA\`
           - production check: \`$outcome\`
-          - upstream true-lazy gate: \`$UPSTREAM_OUTCOME\`
+          - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
           - canonical: https://admin.ekodi.kr/
           - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
           - verification workflow: $RUN_URL

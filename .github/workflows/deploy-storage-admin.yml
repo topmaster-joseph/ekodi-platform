@@ -1,4 +1,4 @@
-name: Deploy Admin Storage Workspace
+name: Validate Admin Storage Workspace
 
 on:
   pull_request:
@@ -8,20 +8,16 @@ on:
       - 'admin-demand-loader.js'
       - 'site-worker.js'
       - 'wrangler.site.toml'
-      - 'deploy/manifests/shared-site.worker.json'
       - 'scripts/admin-system-map-postbuild.mjs'
       - 'test/google-drive-storage.test.mjs'
       - '.github/workflows/deploy-storage-admin.yml'
   push:
     branches: [main]
     paths: *storage_admin_paths
+  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ekodi-shared-site-worker-production
-  cancel-in-progress: false
 
 jobs:
   validate:
@@ -51,36 +47,6 @@ jobs:
           grep -Fq 'binding = "STORAGE"' wrangler.site.toml
           grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
           demand_bytes=$(wc -c < dist/admin-demand-loader.js)
-          echo "Storage demand-loader budget: ${demand_bytes}B"
           test "$demand_bytes" -le 14000
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Build and guarded shared-site release
-        run: |
-          set -euo pipefail
-          npm run build
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-      - name: Verify Storage assets and same-origin proxy in production
-        run: |
-          set -euo pipefail
-          curl -fsS --retry 6 --retry-delay 3 https://admin.ekodi.kr/storage-admin.js -o /tmp/storage.js
-          curl -fsS --retry 6 --retry-delay 3 https://admin.ekodi.kr/storage-admin.css -o /tmp/storage.css
-          grep -Fq "const API='/api/control/storage/google'" /tmp/storage.js
-          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' /tmp/storage.js
-          grep -Fq '.storage-admin' /tmp/storage.css
-          curl -sS -D /tmp/storage.headers -o /tmp/storage.body https://admin.ekodi.kr/api/control/storage/google/status || true
-          grep -Fiq 'x-ekodi-storage-proxy: service-binding-v1' /tmp/storage.headers
-          status=$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code}' /tmp/storage.headers)
-          test "$status" = "401" -o "$status" = "403"
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs
