@@ -30,9 +30,11 @@ test('generated admin HTML ends with content-fingerprinted first-path assets', (
 test('post-auth loader starts only when the authenticated app is visible and uses auth events instead of a persistent observer', () => {
   assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
   const guard = shell.indexOf('if (started || !authenticated()) return');
-  const criticalLoad = shell.indexOf('await Promise.all(criticalPostAuthScripts.map(loadScript))');
+  const criticalLoad = shell.indexOf('for(const src of criticalPostAuthScripts)');
   assert.ok(guard >= 0, 'authenticated shell guard must exist');
   assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
+  assert.match(shell, /await loadScript\(src\)/);
+  assert.match(shell, /dataset\.ekodiAdminBootAsset=src/);
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',onStateChange\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.doesNotMatch(shell, /new MutationObserver/);
@@ -63,7 +65,8 @@ test('authenticated route stays on the current thin shell and defers optional he
   }
   assert.match(handoff, /normalizeEntryRoute\(\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
-  assert.match(shell, /await Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
+  assert.match(shell, /for\(const src of criticalPostAuthScripts\)/);
+  assert.match(shell, /await loadScript\(src\)/);
   assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
   assert.match(shell, /requestAnimationFrame\(\(\)=>requestAnimationFrame/);
 });
