@@ -14,6 +14,7 @@ import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybri
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
+import { handleBusinessRevenueControl } from './business-revenue-control.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
@@ -128,6 +129,11 @@ export default {
     if (path.startsWith('/api/author/billing/')) {
       try { const response = await handleAuthorBillingControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Author billing control error', error); return errorResponse('Creator AI 결제 처리 중 오류가 발생했습니다.', 'AUTHOR_BILLING_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/business/v1')) {
+      try { const response = await handleBusinessRevenueControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Business Revenue Engine error', error); return errorResponse('Business Revenue Engine 처리 중 오류가 발생했습니다.', 'BUSINESS_REVENUE_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/marketing/admin/')) {
