@@ -2,17 +2,9 @@ name: Verify EKODI Mall Production
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'mall.html'
-      - 'mall.css'
-      - 'mall.js'
-      - 'coupang-partners-automation.js'
-      - 'affiliate-control.js'
-      - 'deploy/manifests/control-api.worker.json'
-      - 'deploy/manifests/shared-site.worker.json'
-      - '.github/workflows/verify-ekodi-mall-production.yml'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
 
 permissions:
   contents: read
@@ -23,6 +15,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
