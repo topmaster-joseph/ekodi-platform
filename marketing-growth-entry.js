@@ -1,5 +1,6 @@
 import growthWorker from './marketing-growth-worker.js';
 import { getMallPromotionStatus, handleMallPromotionRequest, runMallPromotionAutomation } from './mall-promotion-automation.js';
+import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {status, headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -14,12 +15,21 @@ export default {
       const baseResponse = await growthWorker.fetch(request, env, ctx);
       let base = {};
       try { base = await baseResponse.clone().json(); } catch {}
-      const mallPromotionAutomation = await getMallPromotionStatus(env);
-      return json({...base, mallPromotionAutomation}, baseResponse.status);
+      const [mallPromotionAutomation, mallSalesIntelligence] = await Promise.all([
+        getMallPromotionStatus(env),
+        getMallSalesIntelligenceStatus(env),
+      ]);
+      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status);
     }
     return growthWorker.fetch(request, env, ctx);
   },
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runMallPromotionAutomation(env, {reason:'cron'}));
+    ctx.waitUntil((async () => {
+      const intelligence = await runMallSalesIntelligence(env, {reason:'cron'});
+      if (!intelligence.ok && intelligence.status !== 'schema_required') {
+        console.error('EKODI Mall sales intelligence failed', intelligence.error || intelligence.status);
+      }
+      await runMallPromotionAutomation(env, {reason:'cron'});
+    })());
   },
 };
