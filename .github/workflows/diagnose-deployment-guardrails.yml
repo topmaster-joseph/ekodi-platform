@@ -40,3 +40,5 @@ jobs:
             deployment-guardrails.log
             deployment-guardrails.status
           if-no-files-found: error
+
+# Temporary PR-only diagnostic. Remove before merge.
