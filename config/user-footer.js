@@ -1,3 +1,4 @@
+// Shared user footer. Mall local-footer deduplication is handled by ekodi-shell-injector.js.
 const link=(label,href,i18n='')=>Object.freeze({label,href,i18n});
 
 export const EKODI_USER_FOOTER=Object.freeze({
