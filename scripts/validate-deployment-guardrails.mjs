@@ -29,14 +29,12 @@ const workerGuarded = {
 };
 for (const [file, needles] of Object.entries(workerGuarded)) requireText(file, needles);
 
-// The shared ekodi.kr/admin/auth/mall runtime has exactly one production writer.
-// deploy-site-core.yml is the only workflow allowed to write the shared Worker.
-// A narrowly designated request workflow may dispatch that canonical owner, but
-// it must never deploy the Worker itself. This preserves a single deployment path
-// while allowing Mall source changes to request the canonical release explicitly.
+// The shared ekodi.kr/admin/auth/mall runtime has exactly one production owner.
+// Any workflow may validate it, but only deploy-site-core.yml may write it or
+// dispatch a second deployment. This prevents the historical deploy -> verify ->
+// redeploy ping-pong from ever being reintroduced under another workflow name.
 const workflowDir = path.join(root, '.github', 'workflows');
 const canonicalSharedSiteOwner = 'deploy-site-core.yml';
-const authorizedSharedSiteDispatchers = new Set(['release-ekodi-mall.yml']);
 const sharedSiteWritePatterns = [
   /guarded-worker-release\.mjs\s+--manifest\s+deploy\/manifests\/shared-site\.worker\.json/,
   /wrangler(?:@[^\s]+)?\s+deploy\s+--config\s+wrangler\.site\.toml/,
@@ -54,8 +52,8 @@ for (const name of fs.readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(na
   if (name !== canonicalSharedSiteOwner && writesSharedSite) {
     fail(file, `shared-site production write is owned only by ${canonicalSharedSiteOwner}`);
   }
-  if (name !== canonicalSharedSiteOwner && redispatchesSharedSite && !authorizedSharedSiteDispatchers.has(name)) {
-    fail(file, 'shared-site deployment dispatch is restricted to the designated request workflow');
+  if (name !== canonicalSharedSiteOwner && redispatchesSharedSite) {
+    fail(file, `shared-site redeploy dispatch is forbidden; add the source path to ${canonicalSharedSiteOwner} instead`);
   }
 }
 
@@ -63,20 +61,20 @@ const canonicalOwner = read(`.github/workflows/${canonicalSharedSiteOwner}`);
 if (!/concurrency:\s*[\s\S]*group:\s*ekodi-shared-site-worker-production/.test(canonicalOwner)) {
   fail(`.github/workflows/${canonicalSharedSiteOwner}`, 'canonical shared-site owner must hold the production concurrency lock');
 }
-
-const mallDispatcher = requireText('.github/workflows/release-ekodi-mall.yml', [
-  'gh workflow run deploy-site-core.yml',
-  'Deployment requested. deploy-site-core.yml is the only production owner.',
-]);
-if (!/permissions:\s*[\s\S]*actions:\s*write/.test(mallDispatcher)) {
-  fail('.github/workflows/release-ekodi-mall.yml', 'Mall deployment requester needs actions: write only to dispatch the canonical owner');
+for (const requiredPath of [
+  "      - 'mall.html'",
+  "      - 'mall.css'",
+  "      - 'mall.js'",
+  "      - 'config/ekodi-service-urls.json'",
+  "      - 'admin-ai-control-plane.js'",
+  "      - 'admin-ai-governor.js'",
+  "      - 'admin-secret-generator.js'",
+  "      - 'ekodi-shell-injector.js'",
+  "      - 'site-shell-worker.js'",
+  "      - 'config/user-ui-shell.json'",
+]) {
+  if (!canonicalOwner.includes(requiredPath)) fail(`.github/workflows/${canonicalSharedSiteOwner}`, `missing shared-site ownership path: ${requiredPath.trim()}`);
 }
-forbidText('.github/workflows/release-ekodi-mall.yml', [
-  'guarded-worker-release.mjs',
-  'npm run deploy:site',
-  'npx wrangler',
-  'wrangler@',
-]);
 
 // Legacy admin compatibility is intentionally manual-only and validation-only.
 const legacyAdmin = requireText('.github/workflows/deploy-admin-site.yml', [
@@ -159,7 +157,7 @@ for (const name of ['deploy:site', 'deploy:books', 'deploy:community']) {
 }
 
 if (failed) {
-  console.error('Deployment policy audit failed. Production must have one writer per artifact and no unauthorized deployment dispatch loops.');
+  console.error('Deployment policy audit failed. Production must have one owner per artifact and no redeploy ping-pong.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: shared-site has one production writer, one authorized Mall requester, and independent services remain behind their own guarded release boundaries.');
+console.log('✅ Deployment policy audit passed: shared-site has one production owner, no redispatch loops, and independent services remain behind their own guarded release boundaries.');
