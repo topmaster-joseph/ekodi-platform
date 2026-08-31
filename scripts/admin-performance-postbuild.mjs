@@ -40,8 +40,6 @@ for (const [from,to] of [
   ['loadedStyles','cssCache'],
   ['stylesLoaded','cssReady'],
   ['TOKEN_KEY','TK'],
-  ['ASSET_VERSION','AV'],
-  ['secondaryScripts','secJs'],
   ['secondaryStyles','secCss'],
   ['waitFor','wait'],
   ['pending','pnd'],
