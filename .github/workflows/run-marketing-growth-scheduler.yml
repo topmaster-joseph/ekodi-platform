@@ -1,0 +1,51 @@
+name: Run EKODI Mall Active Sales
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/20 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-mall-active-sales-scheduler
+  cancel-in-progress: false
+
+env:
+  SCHEDULER_DERIVATION_LABEL: 'ekodi-marketing-growth-scheduler-v1'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Run authenticated active-sales cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          scheduler_token="$(python - <<'PY'
+          import hashlib, hmac, os
+          key = os.environ['CLOUDFLARE_API_TOKEN'].encode()
+          label = os.environ['SCHEDULER_DERIVATION_LABEL'].encode()
+          print(hmac.new(key, label, hashlib.sha256).hexdigest(), end='')
+          PY
+          )"
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /tmp/active-sales.json -w '%{http_code}' \
+              --connect-timeout 5 --max-time 90 \
+              -X POST \
+              -H "x-ekodi-scheduler-token: ${scheduler_token}" \
+              'https://marketing-connect-api.ekodi.kr/internal/active-sales/run' || true)
+            if [ "$code" = '200' ] && grep -Fq '"reason":"github_schedule"' /tmp/active-sales.json; then
+              cat /tmp/active-sales.json
+              echo 'EKODI Mall active-sales cycle executed.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/active-sales.json || true
+          exit 1
