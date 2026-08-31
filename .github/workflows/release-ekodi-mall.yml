@@ -1,4 +1,4 @@
-name: Request EKODI Mall Shared Site Deployment
+name: Validate EKODI Mall Shared Site Contract
 
 on:
   workflow_dispatch:
@@ -7,18 +7,14 @@ on:
       - 'mall.html'
       - 'mall.css'
       - 'mall.js'
+      - 'config/ekodi-service-urls.json'
       - '.github/workflows/release-ekodi-mall.yml'
   push:
     branches: [main]
     paths: *mall_paths
 
 permissions:
-  actions: write
   contents: read
-
-concurrency:
-  group: request-ekodi-mall-shared-site-deployment-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:
@@ -35,33 +31,17 @@ jobs:
         run: |
           set -euo pipefail
           node --check mall.js
+          test -f config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
           grep -Fq '<link rel="canonical" href="https://ekodi.kr/mall">' mall.html
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in release source.'
             exit 1
           fi
 
-      - name: Enforce request-only ownership
+      - name: Enforce validation-only ownership
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq 'guarded-worker-release\.mjs|wrangler(@[^ ]+)? +deploy|npm +run +deploy:site' .github/workflows/release-ekodi-mall.yml
-          grep -Fq 'gh workflow run deploy-site-core.yml' .github/workflows/release-ekodi-mall.yml
-          echo 'Mall workflow validates and requests only; deploy-site-core.yml remains the sole production writer.'
-
-  request:
-    if: github.event_name != 'pull_request'
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Request canonical shared-site deployment
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh workflow run deploy-site-core.yml --ref main -f sync_domains=false
-          echo 'Deployment requested. deploy-site-core.yml is the only production owner.'
+          ! grep -Eq 'gh +workflow +run +deploy-site-core\.yml|guarded-worker-release\.mjs|wrangler(@[^ ]+)? +deploy|npm +run +deploy:site' .github/workflows/release-ekodi-mall.yml
+          echo 'Mall changes are deployed directly by deploy-site-core.yml; no redispatch is permitted.'
