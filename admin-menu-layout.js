@@ -10,7 +10,6 @@ if(!sidebar||!nav||!content)return;
 renderAdminSidebar(nav);
 const INTERNAL=new Set(['services','deployments','policies']);
 const ORDER=Object.freeze(adminMenuOrder());
-const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
@@ -41,17 +40,7 @@ const allNav=()=>nav.querySelectorAll('.nav[data-section],.nav[data-lazy-section
 const isInternal=section=>INTERNAL.has(String(section||'').trim());
 const isInternalNav=item=>isInternal(sectionOf(item));
 const hasPanel=section=>Boolean(section&&[...content.querySelectorAll('[data-panel]')].some(panel=>panelTargets(panel).includes(section)));
-function applyOrder(){
-  if(window.EKODIAdminSidebar?.sync)return window.EKODIAdminSidebar.sync(document);
-  let unknown=500;
-  for(const item of allNav()){
-    if(isInternalNav(item)){item.style.order='9999';continue;}
-    const rank=RANK.get(sectionOf(item))??unknown++;
-    if(item.style.order!==String(rank))item.style.order=String(rank);
-    if(item.dataset.menuOrder!==String(rank))item.dataset.menuOrder=String(rank);
-  }
-  nav.dataset.stableMenuOrder='true';
-}
+function applyOrder(){window.EKODIAdminSidebar?.sync?.(document);nav.dataset.stableMenuOrder='true';}
 function enforcePolicy(){
   for(const item of allNav()){
     if(!isInternalNav(item))continue;
