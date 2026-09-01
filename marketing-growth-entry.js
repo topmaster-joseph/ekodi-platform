@@ -1,6 +1,7 @@
 import growthWorker from './marketing-growth-worker.js';
 import { getMallPromotionStatus, handleMallPromotionRequest, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
+import { getYoutubeGrowthStatus, handleYoutubeGrowthRequest } from './youtube-growth-adapter.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {status, headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -8,6 +9,8 @@ function json(data, status = 200) {
 
 export default {
   async fetch(request, env, ctx) {
+    const youtubeResponse = await handleYoutubeGrowthRequest(request, env);
+    if (youtubeResponse) return youtubeResponse;
     const redirect = await handleMallPromotionRequest(request, env);
     if (redirect) return redirect;
     const url = new URL(request.url);
@@ -19,7 +22,7 @@ export default {
         getMallPromotionStatus(env),
         getMallSalesIntelligenceStatus(env),
       ]);
-      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status);
+      return json({...base, youtube:getYoutubeGrowthStatus(env), mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status);
     }
     return growthWorker.fetch(request, env, ctx);
   },
