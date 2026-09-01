@@ -1,0 +1,41 @@
+name: Devotion Renderer CI
+
+on:
+  pull_request:
+    paths:
+      - 'services/devotion-renderer/**'
+      - '.github/workflows/devotion-renderer-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/devotion-renderer/**'
+      - '.github/workflows/devotion-renderer-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  renderer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install FFmpeg and caption fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+      - name: Validate renderer code
+        run: |
+          set -euo pipefail
+          node --check services/devotion-renderer/src/render.js
+          node --check services/devotion-renderer/src/server.js
+          node --test services/devotion-renderer/test/*.test.mjs
+      - name: Inspect rendered media tooling
+        run: |
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+      - name: Build independent renderer container
+        run: docker build -t ekodi-devotion-renderer:ci services/devotion-renderer

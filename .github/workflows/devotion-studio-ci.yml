@@ -1,0 +1,49 @@
+name: Devotion Studio CI
+
+on:
+  pull_request:
+    paths:
+      - 'services/devotion-studio/**'
+      - 'integrations/devotion-studio/**'
+      - 'devotional-control.js'
+      - 'devotional-admin.js'
+      - 'test/devotional-control.test.mjs'
+      - '.github/workflows/devotion-studio-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/devotion-studio/**'
+      - 'integrations/devotion-studio/**'
+      - 'devotional-control.js'
+      - 'devotional-admin.js'
+      - 'test/devotional-control.test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  module:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate standalone module
+        run: |
+          set -euo pipefail
+          node --check services/devotion-studio/src/service.js
+          node --check services/devotion-studio/src/http-handler.js
+          node --check services/devotion-studio/src/worker.js
+          node --check services/devotion-studio/src/adapters/memory-repository.js
+          node --check services/devotion-studio/src/adapters/d1-repository.js
+          node --check services/devotion-studio/src/adapters/http-renderer.js
+          node --check services/devotion-studio/src/adapters/http-publisher.js
+          test -s services/devotion-studio/migrations/0001_init.sql
+          node --test services/devotion-studio/test/*.test.mjs
+      - name: Validate platform adapter boundary
+        run: |
+          set -euo pipefail
+          node --check devotional-control.js
+          node --test test/devotional-control.test.mjs

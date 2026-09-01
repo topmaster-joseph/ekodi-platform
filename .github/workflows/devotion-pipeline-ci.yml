@@ -1,0 +1,56 @@
+name: Devotion Pipeline CI
+
+on:
+  pull_request:
+    paths:
+      - 'services/devotion-pipeline/**'
+      - 'services/devotion-assets/**'
+      - 'services/devotion-voice/**'
+      - 'services/devotion-renderer/**'
+      - 'services/devotion-studio/**'
+      - 'integrations/devotion-studio/**'
+      - '.github/workflows/devotion-pipeline-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/devotion-pipeline/**'
+      - 'services/devotion-assets/**'
+      - 'services/devotion-voice/**'
+      - 'services/devotion-renderer/**'
+      - 'services/devotion-studio/**'
+      - 'integrations/devotion-studio/**'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate independent devotional stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            services/devotion-pipeline/src/*.js \
+            services/devotion-pipeline/src/adapters/*.js \
+            services/devotion-assets/src/*.js \
+            services/devotion-assets/src/adapters/*.js \
+            services/devotion-voice/src/*.js \
+            services/devotion-voice/src/providers/*.js \
+            services/devotion-renderer/src/*.js \
+            services/devotion-studio/src/*.js \
+            services/devotion-studio/src/adapters/*.js; do
+            node --check "$file"
+          done
+          node --test \
+            services/devotion-pipeline/test/*.test.mjs \
+            services/devotion-assets/test/*.test.mjs \
+            services/devotion-voice/test/*.test.mjs \
+            services/devotion-renderer/test/*.test.mjs \
+            services/devotion-studio/test/*.test.mjs

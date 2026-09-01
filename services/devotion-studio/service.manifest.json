@@ -1,0 +1,41 @@
+{
+  "service_id": "ekodi.devotion-studio",
+  "display_name": "EKODI Devotion Studio",
+  "version": "0.1.0",
+  "scope": "shared-independent-service",
+  "tenant_neutral": true,
+  "deployment": {
+    "independent": true,
+    "health_path": "/v1/health"
+  },
+  "interfaces": {
+    "http": [
+      "GET /v1/health",
+      "GET /v1/batches/:batchKey",
+      "PUT /v1/batches/:batchKey",
+      "POST /v1/batches/:batchKey/render",
+      "POST /v1/batches/:batchKey/publications/:targetId/schedule"
+    ],
+    "events": [
+      "devotion.batch.updated",
+      "devotion.render.queued",
+      "devotion.render.completed",
+      "devotion.publication.scheduled",
+      "devotion.publication.published",
+      "devotion.job.failed"
+    ]
+  },
+  "adapters": {
+    "repository": "replaceable",
+    "renderer": "replaceable",
+    "publisher": "replaceable",
+    "asset_store": "replaceable"
+  },
+  "forbidden_core_dependencies": [
+    "specific workspace names",
+    "specific YouTube channel IDs",
+    "specific Google Drive folders",
+    "EKODI admin session implementation",
+    "Cloudflare D1 business logic"
+  ]
+}
