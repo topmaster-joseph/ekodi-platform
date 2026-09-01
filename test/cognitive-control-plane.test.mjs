@@ -6,6 +6,12 @@ import {
   getControlPlaneSummary,
   isImmutableArtifactId,
 } from '../cognitive-control-plane.js';
+import {
+  getWorkloadIngressContract,
+  normalizeWorkloadEvent,
+  planWorkloadEvent,
+  validateWorkloadEvent,
+} from '../ai-control-workload-ingress.js';
 
 const verifiedArtifact = Object.freeze({
   id: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -14,6 +20,22 @@ const verifiedArtifact = Object.freeze({
 });
 const fullGates = [...COGNITIVE_CONTROL_POLICY.requiredPromotionGates];
 const fullMigrationGates = [...COGNITIVE_CONTROL_POLICY.requiredMigrationGates];
+
+function mallWorkload(overrides = {}) {
+  return normalizeWorkloadEvent({
+    event_id: 'evt-mall-001',
+    event_type: 'mall.product.promotion.requested',
+    event_version: 1,
+    occurred_at: '2026-09-02T00:00:00.000Z',
+    workspace_id: 'workspace-mall-proof',
+    source: { service_id: 'ekodi-mall', adapter_id: 'mall.growth-loop' },
+    actor: { type: 'system', id: 'growth-loop' },
+    subject: { type: 'product', id: 'product-001' },
+    correlation_id: 'campaign-001',
+    payload: { product_name: '테스트 상품', tracked_url: 'https://ekodi.kr/mall' },
+    ...overrides,
+  }, '2026-09-02T00:00:01.000Z');
+}
 
 test('control plane cannot directly mutate production', () => {
   const result = evaluateControlIntent({
@@ -188,4 +210,43 @@ test('summary exposes four-plane path and governed data schema mode', () => {
   assert.equal(summary.productionMutationMode, 'promotion-only');
   assert.equal(summary.productionDataSchemaMode, 'governed-additive-migration-only');
   assert.equal(summary.rebuildOnPromotion, false);
+});
+
+test('workload ingress exposes an independent service-to-control-plane contract', () => {
+  const contract = getWorkloadIngressContract();
+  assert.equal(contract.authentication, 'independent_service_caller');
+  assert.equal(contract.credentialsInPayload, false);
+  assert.ok(contract.supportedEvents.includes('mall.product.promotion.requested'));
+});
+
+test('Mall workload requires workspace identity and validates event v1', () => {
+  const event = mallWorkload();
+  assert.equal(validateWorkloadEvent(event).ok, true);
+  assert.equal(event.workspaceId, 'workspace-mall-proof');
+  assert.equal(event.source.serviceId, 'ekodi-mall');
+  const invalid = mallWorkload({ workspace_id: '' });
+  assert.equal(validateWorkloadEvent(invalid).code, 'workload_fields_required');
+});
+
+test('workload ingress rejects credentials from business payloads', () => {
+  const event = mallWorkload({ payload: { nested: { refresh_token: 'never-store-this' } } });
+  const validation = validateWorkloadEvent(event);
+  assert.equal(validation.ok, false);
+  assert.equal(validation.code, 'workload_secret_forbidden');
+});
+
+test('Mall promotion plan keeps public YouTube publication behind a human gate', () => {
+  const plan = planWorkloadEvent(mallWorkload());
+  assert.equal(plan.goal, 'promote_product');
+  assert.equal(plan.executionBoundary, 'capability_adapters_only');
+  assert.equal(plan.executionReady, false);
+  assert.deepEqual(plan.steps.map(step => step.capability), [
+    'campaign.compose',
+    'media.render.short_video',
+    'publisher.youtube.private',
+    'analytics.observe',
+    'publisher.youtube.public',
+  ]);
+  assert.equal(plan.steps.at(-1).approvalRequired, true);
+  assert.equal(plan.steps.at(-1).status, 'awaiting_human');
 });
