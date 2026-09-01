@@ -10,6 +10,7 @@ on:
       - 'config/cognitive-control-plane.json'
       - 'config/data-plane-contract.json'
       - 'scripts/ai-account-node.mjs'
+      - 'scripts/build-ai-control-release.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
       - 'test/cognitive-control-plane.test.mjs'
@@ -31,6 +32,7 @@ on:
       - 'config/cognitive-control-plane.json'
       - 'config/data-plane-contract.json'
       - 'scripts/ai-account-node.mjs'
+      - 'scripts/build-ai-control-release.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
       - 'test/cognitive-control-plane.test.mjs'
@@ -57,7 +59,9 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
+    outputs:
+      artifact_digest: ${{ steps.build_artifact.outputs.artifact_digest }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -73,6 +77,7 @@ jobs:
           node --check ai-control-worker.js
           node --check ai-control/app.js
           node --check scripts/ai-account-node.mjs
+          node --check scripts/build-ai-control-release.mjs
           node --check scripts/validate-cognitive-control-plane.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/guarded-worker-release.mjs
@@ -80,8 +85,10 @@ jobs:
           node scripts/validate-additive-migrations.mjs migrations
           node --test test/ai-control-platform.test.mjs test/cognitive-control-plane.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
-          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.toml
-          grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.toml
+          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
+          grep -Fq 'no_bundle = true' wrangler.ai.release.toml
+          grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
@@ -89,12 +96,25 @@ jobs:
           test -f migrations/0050_ai_control_plane.sql
           test -f migrations/0051_ai_account_nodes.sql
           test -f deploy/manifests/ai-control.worker.json
+      - name: Build one immutable AI Control application artifact
+        id: build_artifact
+        run: node scripts/build-ai-control-release.mjs
+      - name: Upload immutable AI Control artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-ai-control-release
+          path: .release/ai-control
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
 
   deploy-staging:
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     environment: development
+    outputs:
+      artifact_digest: ${{ steps.verify_artifact.outputs.artifact_digest }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
@@ -103,16 +123,26 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Download immutable AI Control artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ekodi-ai-control-release
+          path: .release/ai-control
+      - name: Verify immutable artifact from validation
+        id: verify_artifact
+        env:
+          EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.validate.outputs.artifact_digest }}
+        run: node scripts/build-ai-control-release.mjs --verify
       - name: Verify Development boundary
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
-      - name: Deploy isolated staging Worker
+      - name: Deploy immutable artifact to isolated staging Worker
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
-          output=$(npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.ai.staging.toml 2>&1)
+          output=$(npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.ai.staging.release.toml 2>&1)
           printf '%s\n' "$output"
           staging_url=$(printf '%s\n' "$output" | grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' | tail -n 1 || true)
           if [[ -z "$staging_url" ]]; then
@@ -146,9 +176,9 @@ jobs:
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: deploy-staging
+    needs: [validate, deploy-staging]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 22
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -164,6 +194,17 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Download the same immutable artifact verified in staging
+        uses: actions/download-artifact@v5
+        with:
+          name: ekodi-ai-control-release
+          path: .release/ai-control
+      - name: Verify exact promotion digest
+        env:
+          EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.deploy-staging.outputs.artifact_digest }}
+        run: |
+          test '${{ needs.validate.outputs.artifact_digest }}' = '${{ needs.deploy-staging.outputs.artifact_digest }}'
+          node scripts/build-ai-control-release.mjs --verify
       - name: Verify production credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -173,13 +214,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.ai.toml --json > /tmp/ai-control-d1-bookmark.json
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.ai.release.toml --json > /tmp/ai-control-d1-bookmark.json
           BOOKMARK=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/ai-control-d1-bookmark.json','utf8'));const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
           test -n "$BOOKMARK"
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
       - name: Apply additive AI ledger migrations after staging success
-        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.toml "$WRANGLER_VERSION"
-      - name: Build secret-safe candidate, verify at 0%, then promote
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.release.toml "$WRANGLER_VERSION"
+      - name: Attach secrets to immutable candidate, verify at 0%, then promote
         shell: bash
         run: |
           set -euo pipefail
@@ -198,14 +239,16 @@ jobs:
           NODE
           trap 'rm -f /tmp/ai-control-secrets.json' EXIT
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
-      - name: Record governed recovery point
+      - name: Record governed recovery and artifact identity
         shell: bash
         env:
           BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+          ARTIFACT_DIGEST: ${{ needs.deploy-staging.outputs.artifact_digest }}
         run: |
           {
             echo '## EKODI Cognitive Control Plane production release'
             echo
+            echo "- Application artifact promoted unchanged: \`$ARTIFACT_DIGEST\`"
             echo "- D1 recovery bookmark before additive migrations: \`$BOOKMARK\`"
             echo '- Production Worker mutation is owned only by the guarded release controller.'
             echo '- Secrets are attached to the immutable candidate and are not changed by a separate secret-put path.'
