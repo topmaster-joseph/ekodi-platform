@@ -53,5 +53,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'central validation' AI_DEVELOPMENT_POLICY.md
-          grep -q 'guarded deployment' AI_DEVELOPMENT_POLICY.md
+          grep -q 'central pipeline' AI_DEVELOPMENT_POLICY.md
+          grep -q 'guarded deployment workflow' AI_DEVELOPMENT_POLICY.md
