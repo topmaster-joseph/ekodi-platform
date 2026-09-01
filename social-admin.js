@@ -247,8 +247,8 @@
 
     const historyHead=el('div','','kakao-history-head');historyHead.append(el('h4','최근 발송 이력'));
     const refreshHistory=el('button','↻ 이력 새로고침','ghost');refreshHistory.type='button';historyHead.append(refreshHistory);
-    const history=el('div','','kakao-history');history.append(el('div','아직 이력이 없습니다.','kakao-history-empty'));
-    root.append(head,grid,approval,status,historyHead,history);
+    const historyList=el('div','','kakao-history');historyList.append(el('div','아직 이력이 없습니다.','kakao-history-empty'));
+    root.append(head,grid,approval,status,historyHead,historyList);
     const summary=section.querySelector('.social-admin-summary');
     if(summary)section.insertBefore(root,summary);else section.append(root);
 
@@ -281,13 +281,13 @@
       });
     }
     function renderHistory(){
-      history.replaceChildren();
-      if(!state.history.length){history.append(el('div','아직 발송 이력이 없습니다.','kakao-history-empty'));return;}
+      historyList.replaceChildren();
+      if(!state.history.length){historyList.append(el('div','아직 발송 이력이 없습니다.','kakao-history-empty'));return;}
       state.history.forEach(item=>{
         const row=el('div','','kakao-history-row');
         const when=item.sent_at||item.created_at;
         row.append(el('strong',item.status||'-'),el('span',`대상 ${item.recipient_count||0}`),el('span',`성공 ${item.success_count||0}`),el('span',`실패 ${item.failure_count||0}`),el('span',`${item.link_host||'-'} · ${when?new Date(when).toLocaleString('ko-KR'):'-'}`));
-        history.append(row);
+        historyList.append(row);
       });
     }
     async function loadStatus(){
@@ -342,7 +342,7 @@
     const oauthResult=query.get('kakao');
     if(oauthResult){
       if(oauthResult==='connected')setStatus('카카오 연결이 완료되었습니다.','success');else if(oauthResult==='cancelled')setStatus('카카오 연결이 취소되었습니다.');else setStatus(`카카오 연결 결과: ${oauthResult}`,'error');
-      query.delete('kakao');const next=`${location.pathname}${query.toString()?`?${query}`:''}${location.hash}`;history.replaceState(null,'',next);
+      query.delete('kakao');const next=`${location.pathname}${query.toString()?`?${query}`:''}${location.hash}`;window.history.replaceState(null,'',next);
     }
     const incoming=new URLSearchParams(location.search);
     if(incoming.get('link'))link.value=incoming.get('link').slice(0,1000);
