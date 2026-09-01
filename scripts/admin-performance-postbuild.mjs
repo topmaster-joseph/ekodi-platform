@@ -116,11 +116,11 @@ await writeFile(compactJsPath, compactJsSource);
 // The source hash makes stale generated runtime fail closed whenever the readable source changes.
 const menuRuntimePath = `${dist}admin-menu-layout.js`;
 const menuReadableSource = await readFile(`${root}admin-menu-layout.js`, 'utf8');
-const menuReadableHash = createHash('sha256').update(menuReadableSource).digest('hex');
+const menuReadableHash = createHash('sha256').update(menuReadableSource.replace(/\r\n/g, '\n')).digest('hex');
 const menuCompactSource = await readFile(`${root}admin-menu-layout.compact.js`, 'utf8');
-const menuCompactHeader = `// source-sha256:${menuReadableHash}\n`;
-if (!menuCompactSource.startsWith(menuCompactHeader)) throw new Error('Admin menu compact runtime is stale; regenerate it from admin-menu-layout.js');
-await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader.length));
+const menuCompactHeader = menuCompactSource.match(/^\/\/ source-sha256:([a-f0-9]{64})\r?\n/);
+if (!menuCompactHeader || menuCompactHeader[1] !== menuReadableHash) throw new Error('Admin menu compact runtime is stale; regenerate it from admin-menu-layout.js');
+await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].length));
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
