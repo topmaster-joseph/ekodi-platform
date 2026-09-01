@@ -10,9 +10,11 @@ test('admin startup keeps only shell, navigation and demand loader on the critic
   const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   assert.match(criticalBlock, /admin-demand-loader\.js/);
   assert.match(criticalBlock, /admin-menu-layout\.js/);
-  assert.doesNotMatch(criticalBlock, /ekodi-message-ui\.js|google-admin-auth\.js/);
+  assert.doesNotMatch(criticalBlock, /ekodi-message-ui\.js|google-admin-auth\.js|agentic-bootstrap\.js/);
   assert.match(deferredBlock, /ekodi-message-ui\.js/);
   assert.match(deferredBlock, /google-admin-auth\.js/);
+  assert.match(deferredBlock, /agentic-bootstrap\.js/);
+  assert.doesNotMatch(deferredBlock, /cheonggye-members-admin/);
   assert.match(shell, /requestAnimationFrame\(\(\)=>requestAnimationFrame/);
   assert.match(shell, /for\(let i=0;i<8/);
   for (const heavy of ['ai-ops-admin.js', 'admin-lazy-features.js', 'release-control-admin.js', 'work-admin.js', 'marketing-ai-admin.js']) {
@@ -40,6 +42,9 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.match(build, /'admin-demand-loader\.js'/);
   assert.match(build, /'author-billing-admin\.js'/);
   assert.match(build, /'system-health-admin\.js'/);
+  assert.match(build, /'agentic-bootstrap\.js'/);
+  assert.match(build, /'agentic-control-runtime\.js'/);
+  assert.match(build, /'agentic-admin-shell\.js'/);
   assert.doesNotMatch(build, /releaseJs.*systemHealthJs/);
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
@@ -70,13 +75,17 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
-test('shared admin navigation exposes eight work areas with top contextual tabs', async () => {
+test('shared admin navigation exposes five stable work areas with top contextual tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
-  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'space']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  for (const area of ['home', 'operations', 'spaces', 'services', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const retired of ['people', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access', 'space']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  assert.match(registry, /id: 'workspace', group: 'spaces'/);
+  assert.match(registry, /id: 'finance', group: 'operations'/);
+  assert.match(registry, /id: 'storage', group: 'system'/);
+  assert.match(registry, /id: 'cheonggye-members'[\s\S]*internal: true/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.match(sidebar, /admin-context-tabs-shell/);
