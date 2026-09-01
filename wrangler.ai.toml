@@ -1,0 +1,40 @@
+name = "ekodi-ai-control"
+main = "ai-control-worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "ai.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+ENVIRONMENT = "production"
+AI_CONTROL_MODE = "free-first"
+AI_TASK_EXECUTION_ENABLED = "true"
+AI_GITHUB_ORCHESTRATION_ENABLED = "true"
+GITHUB_REPOSITORY = "topmaster-joseph/ekodi-platform"
+AUTH_URL = "https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+GEMINI_MODEL = "gemini-2.5-flash"
+AI_WORKER_PROVIDERS = ""
+
+# Optional production secrets, provisioned outside source control:
+# ADMIN_EMAILS, GEMINI_API_KEY, GITHUB_TASK_TOKEN, AI_WORKER_URL, AI_WORKER_TOKEN
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
+
+[assets]
+directory = "./ai-control"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
