@@ -8,13 +8,17 @@ const routePair = (source, hash, section) => source.includes(`['${hash}', '${sec
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','google-admin-auth\.css'\]/);
+  const styleBlock = shell.match(/const postAuthStyles\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  for (const asset of ['admin-compact.css','google-admin-auth.css']) {
+    assert.match(styleBlock, new RegExp(`'${asset.replaceAll('.', '\\.')}''?`.replace("''?", "'")));
+  }
+  assert.doesNotMatch(styleBlock, /ai-ops-admin\.css|system-health-admin\.css|device-control-admin\.css|release-control-admin\.css/);
   assert.match(criticalBlock, /'admin-compact\.js'/);
   assert.match(criticalBlock, /'admin-menu-layout\.js'/);
   assert.match(criticalBlock, /'admin-demand-loader\.js'/);
-  assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
+  assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js|cheonggye-members-admin\.js/);
   assert.match(deferredBlock, /'google-admin-auth\.js'/);
   assert.match(deferredBlock, /'ekodi-message-ui\.js'/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
