@@ -1,0 +1,13 @@
+{
+  "name": "@ekodi/devotion-voice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-neutral devotional voice generation service.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
