@@ -23,6 +23,18 @@ const normalizeTargets = targets => (Array.isArray(targets) ? targets : []).map(
 export function createDevotionStudio({ repository, renderer, publisher, clock = () => new Date(), idFactory = () => crypto.randomUUID() }) {
   if (!repository) throw new Error('repository adapter is required');
 
+  function decorateSnapshot(snapshot) {
+    if (!snapshot) return null;
+    const targets = snapshot.publication_targets || [];
+    return {
+      ...snapshot,
+      capabilities: {
+        renderer: Boolean(renderer?.ready?.()),
+        publication_targets: Object.fromEntries(targets.map(target => [target.id, Boolean(publisher?.ready?.(target))]))
+      }
+    };
+  }
+
   async function putBatch(input) {
     const workspaceId = required(input.workspace_id, 'workspace_id');
     const batchKey = required(input.batch_key, 'batch_key');
@@ -35,11 +47,11 @@ export function createDevotionStudio({ repository, renderer, publisher, clock = 
       updated_at: nowIso(clock)
     };
     await repository.upsertBatch(batch);
-    return repository.getSnapshot(workspaceId, batchKey);
+    return decorateSnapshot(await repository.getSnapshot(workspaceId, batchKey));
   }
 
   async function getBatch({ workspace_id, batch_key }) {
-    return repository.getSnapshot(required(workspace_id, 'workspace_id'), required(batch_key, 'batch_key'));
+    return decorateSnapshot(await repository.getSnapshot(required(workspace_id, 'workspace_id'), required(batch_key, 'batch_key')));
   }
 
   async function queueRender({ workspace_id, batch_key, format = {} }) {
