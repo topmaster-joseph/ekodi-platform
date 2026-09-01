@@ -123,8 +123,6 @@
     return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
   }
 
-  function mark(name) { try { performance.mark(name); } catch {} }
-
   function loadStyle(href) {
     if (loadedStyles.has(href)) return loadedStyles.get(href);
     const existing = document.querySelector(`link[data-ekodi-demand-style="${href}"]`);
@@ -253,7 +251,6 @@
     if (pending.has(key)) return pending.get(key);
 
     const task = (async () => {
-      mark(`ekodi-feature-${key}-start`);
       if (placeholder) {
         placeholder.disabled = true;
         placeholder.setAttribute('aria-busy', 'true');
@@ -277,7 +274,6 @@
         if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
           queueMicrotask(() => real.click());
         }
-        mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
         console.warn(`[EKODI Admin] ${key} demand load failed`, error);
