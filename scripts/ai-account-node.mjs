@@ -13,6 +13,7 @@ const win=process.platform==='win32';
 const bin=name=>win?`${name}.cmd`:name;
 
 function arg(name){const index=process.argv.indexOf(name);return index>=0?clean(process.argv[index+1]):''}
+function hasArg(name){return process.argv.includes(name)}
 function nodeId(){return clean(process.env.EKODI_AI_NODE_ID)||os.hostname().toLowerCase().replace(/[^a-z0-9._-]+/g,'-').slice(0,64)||'ekodi-node'}
 async function run(command,args,{cwd,stdin='',timeoutMs=10*60*1000}={}){
   return await new Promise((resolve,reject)=>{
@@ -78,4 +79,4 @@ async function loop(config){
   console.log(`EKODI AI account node ${config.nodeId} connected to ${CONTROL}`);for(;;){try{const providers=await detectProviders();const leased=await api('/api/node/lease',{token:config.nodeToken,node:config.nodeId,body:{providers}});if(!leased.job){await sleep(5000);continue}console.log(`leased ${leased.job.id} ${leased.job.providerId}`);const result=await executeJob(leased.job);await api(`/api/node/jobs/${encodeURIComponent(leased.job.id)}/complete`,{token:config.nodeToken,node:config.nodeId,body:result});console.log(`${leased.job.id} ${result.ok?'completed':'failed'}`)}catch(error){console.error(new Date().toISOString(),clean(error?.message||error));await sleep(10000)}}
 }
 
-await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ai.ekodi.kr and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}await loop(config);
+await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ai.ekodi.kr and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}if(pairCode&&hasArg('--pair-only')){console.log(`EKODI AI account node ${config.nodeId} paired with ${config.providers.join(', ')}`);process.exit(0)}await loop(config);
