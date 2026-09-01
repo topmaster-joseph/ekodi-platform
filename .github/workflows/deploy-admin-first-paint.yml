@@ -4,10 +4,16 @@ on:
   workflow_dispatch:
   pull_request:
     paths: &first_paint_paths
+      - 'admin-shell.html'
+      - 'admin-shell.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
-      - 'control-center.html'
-      - 'compact-control-center.js'
+      - 'admin-menu-layout.js'
+      - 'admin-menu-registry.js'
+      - 'admin-sidebar.js'
+      - 'admin-menu-runtime.js'
+      - 'admin-demand-loader.js'
+      - 'scripts/admin-performance-postbuild.mjs'
       - '.github/workflows/deploy-admin-first-paint.yml'
   push:
     branches: [main]
@@ -31,6 +37,8 @@ jobs:
           set -euo pipefail
           node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
+          node --check admin-menu-layout.js
+          node --check admin-menu-runtime.js
           grep -Fq "function announceReady(){if(app)app.style.visibility=''" admin-authenticated-shell.js
           grep -Fq "document.documentElement.dataset.ekodiAdminReady='loading'" admin-authenticated-shell.js
           grep -Fq 'for(const src of criticalPostAuthScripts)' admin-authenticated-shell.js
@@ -41,15 +49,20 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
-          test -s dist/admin-central-handoff.js
-          test -s dist/admin-authenticated-shell.js
-          test -s dist/control-center.html
-          # The build/postbuild pipeline already enforces first-path byte budgets,
-          # no startup polling, no document-wide observers and immutable fingerprinting.
-          # Keep this check at the public artifact boundary instead of private function names.
-          grep -Fq 'admin-authenticated-shell.js?v=' dist/control-center.html
-          grep -Fq 'admin-central-handoff.js?v=' dist/control-center.html
-          grep -Fq 'control-center.css?v=' dist/control-center.html
+          for asset in admin-shell.html admin-shell.css admin-central-handoff.js admin-authenticated-shell.js admin-menu-layout.js admin-menu-registry.js admin-sidebar.js admin-menu-runtime.js admin-demand-loader.js; do
+            test -s "dist/$asset"
+          done
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
+          test -n "$version"
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
+          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
+          # The build/postbuild pipeline enforces first-path byte budgets,
+          # startup observer limits and immutable fingerprinting. Retired control-center
+          # artifacts must never be restored just to satisfy this gate.
+          test ! -e dist/control-center.html
+          test ! -e dist/control-center.js
+          test ! -e dist/control-center.css
 
       - name: Verify repository deployment ownership policy
         run: node scripts/validate-deployment-guardrails.mjs
