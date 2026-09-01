@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   validate:
@@ -32,7 +33,11 @@ jobs:
           grep -Fq '중앙 OAuth · 암호화 Vault' marketing-ai-channel-manager.js
           grep -Fq 'marketing-connect-api.ekodi.kr' marketing-ai-channel-manager.js
           grep -Fq 'Metricool은 필수가 아닙니다' marketing-ai-channel-manager.js
+          grep -Fq 'data-connect="youtube"' marketing-ai-channel-manager.js
+          grep -Fq 'data-youtube-comment-form' marketing-ai-channel-manager.js
+          grep -Fq 'https://ekodi.kr/mall/...' marketing-ai-channel-manager.js
           ! grep -Fq 'META_FACEBOOK_ACCESS_TOKEN' marketing-ai-channel-manager.js
+          ! grep -Fq 'mall.ekodi.kr' marketing-ai-channel-manager.js
           grep -Fq 'marketing-ai-channel-manager.js' scripts/build.mjs
           grep -Fq "['channels','게시 · 홍보']" scripts/build.mjs
           npm run build
@@ -40,5 +45,12 @@ jobs:
           grep -Fq "['channels','게시 · 홍보']" dist/marketing-ai-admin.js
           grep -Fq '게시 · 홍보 연결센터' dist/marketing-ai-admin.js
           grep -Fq '중앙 OAuth · 암호화 Vault' dist/marketing-ai-admin.js
+          grep -Fq 'data-connect="youtube"' dist/marketing-ai-admin.js
+          grep -Fq 'data-youtube-comment-form' dist/marketing-ai-admin.js
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs
+      - name: Dispatch validated shared-site release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-site-core.yml --ref main
