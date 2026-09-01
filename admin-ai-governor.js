@@ -2,7 +2,7 @@
   'use strict';
   if (window.EKODIAdminAIGovernor) return;
 
-  const VERSION='2.0.0';
+  const VERSION='2.0.1';
   const RISK={LOW:'low',MEDIUM:'medium',HIGH:'high',CRITICAL:'critical'};
   const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','high_cost_ai']);
   const FREE_FIRST=Object.freeze(['deterministic_rule','internal_api','cached_context','free_ai','low_cost_ai','premium_ai']);
@@ -35,21 +35,23 @@
   function declaredPolicy(actionType){
     const control=globalThis.EKODIAgenticControl;
     if(!actionType||!control?.policy)return null;
-    const policy=control.policy(actionType);
-    return policy?.known?policy:null;
+    return control.policy(actionType)||null;
   }
 
   function assessRisk(request,action={}){
     const declared=declaredPolicy(action.type);
     if(declared){
+      const blocked=declared.allowed===false;
       return {
         risk:declared.risk,
-        humanApprovalRequired:declared.approval!=='none',
-        gate:declared.approval==='none'?null:`action:${declared.action}`,
-        source:'action_registry',
+        humanApprovalRequired:blocked||declared.approval!=='none',
+        gate:blocked?'unregistered_action':(declared.approval==='none'?null:`action:${declared.action}`),
+        source:declared.known?'action_registry':'action_registry_fail_closed',
         autonomy:declared.autonomy,
         evidence:declared.evidence,
         rollback:declared.rollback||null,
+        blocked,
+        reason:declared.reason||null,
       };
     }
 
@@ -63,7 +65,7 @@
     for(const [candidate,words] of checks){if(containsAny(text,words)){risk=RISK.CRITICAL;gate=candidate;break}}
     if(!gate&&containsAny(text,['deploy','배포','write','update','수정','재실행','rerun']))risk=RISK.MEDIUM;
     if(action.estimatedCostKrw>=1000){risk=risk===RISK.CRITICAL?risk:RISK.HIGH;gate=gate||'high_cost_ai'}
-    return {risk,humanApprovalRequired:Boolean(gate&&HUMAN_GATE.has(gate)),gate,source:'legacy_intent_fallback'};
+    return {risk,humanApprovalRequired:Boolean(gate&&HUMAN_GATE.has(gate)),gate,source:'legacy_intent_fallback',blocked:false};
   }
 
   function chooseExecutionTier(task={}){
@@ -82,9 +84,9 @@
     const operation=options.actionType&&globalThis.EKODIAgenticControl?.createOperation
       ?globalThis.EKODIAgenticControl.createOperation({actionId:options.actionType,target:options.target||null,requestedBy:options.requestedBy||null,input:options.input||null})
       :null;
+    const next=risk.blocked?'block_unregistered_action':(risk.humanApprovalRequired?'request_human_approval':'execute_then_verify');
     return Object.freeze({version:VERSION,request:String(request||''),context,execution,risk,operation,
-      policy:{freeFirst:FREE_FIRST,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true,evidenceRequired:true},
-      next:risk.humanApprovalRequired?'request_human_approval':'execute_then_verify'});
+      policy:{freeFirst:FREE_FIRST,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true,evidenceRequired:true},next});
   }
 
   function verify(result={}){
@@ -97,7 +99,7 @@
   function report({request='',plan:planned,result={},verification={},relatedFindings=[]}={}){
     return {request,judgment:planned?.context||{},collaboration:planned?.context?.specialists||[],execution:planned?.execution||{},risk:planned?.risk||{},operation:planned?.operation||null,
       actions:Array.isArray(result.actions)?result.actions:[],verification,relatedFindings,
-      outcome:verification.verified?'verified_complete':(planned?.risk?.humanApprovalRequired?'waiting_approval':'needs_followup')};
+      outcome:planned?.risk?.blocked?'blocked':(verification.verified?'verified_complete':(planned?.risk?.humanApprovalRequired?'waiting_approval':'needs_followup'))};
   }
 
   window.EKODIAdminAIGovernor=Object.freeze({VERSION,RISK,HUMAN_GATE,FREE_FIRST,classifyIntent,expandContext,assessRisk,chooseExecutionTier,plan,verify,report});
