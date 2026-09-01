@@ -72,7 +72,7 @@ test('AI Ops production workflow verifies the canonical shared-site release inst
   const workflow=await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow,/admin-readable-command\.js/);
   assert.match(workflow,/admin-readable-command\.css/);
-  assert.match(workflow,/secondaryScripts: \['admin-lazy-features\.js'\]/);
+  assert.match(workflow,/sec: \['admin-lazy-features\.js'\]/);
   assert.match(workflow,/health:/);
   assert.match(workflow,/system-health-admin\.js/);
   assert.match(workflow,/actionType:'ui\.change_request'/);
