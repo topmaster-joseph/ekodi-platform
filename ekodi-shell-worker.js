@@ -2,6 +2,7 @@ import { EKODI_SERVICE_MANIFEST, serviceForHost, serviceForId, serviceForUrl } f
 import { EKODI_USER_FOOTER } from './config/user-footer.js';
 
 const USER_SHORTCUT_GUARD=`(()=>{try{if(typeof document==='undefined')return;const current=document.currentScript;const serviceId=String(current?.dataset?.ekodiService||'').trim().toLowerCase();if(serviceId!=='my'){if(current)current.dataset.ekodiShell='off';document.documentElement.dataset.ekodiGlobalNav='off';}}catch{}})();`;
+const USER_UI_STATIC_BOOTSTRAP=`(()=>{try{if(typeof document==='undefined')return;const current=document.currentScript;const serviceId=String(current?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'').trim().toLowerCase();const requested=String(current?.dataset?.ekodiSurface||document.documentElement.dataset.ekodiUserSurface||'').trim().toLowerCase();const blockedHost=/^(admin|auth)\\./.test(String(location.hostname||'').toLowerCase());const blockedSurface=new Set(['admin','form','document','data']);if(blockedHost||blockedSurface.has(requested))return;const surface=requested||'public';const html=document.documentElement;if(serviceId&&!html.dataset.ekodiService)html.dataset.ekodiService=serviceId;if(!html.dataset.ekodiUserUi)html.dataset.ekodiUserUi='v1';if(!html.dataset.ekodiUserSurface)html.dataset.ekodiUserSurface=surface;if(!html.dataset.ekodiUserLayout)html.dataset.ekodiUserLayout='centered-v1';if(current&&!current.dataset.ekodiSurface)current.dataset.ekodiSurface=surface;if(!document.querySelector('[data-ekodi-user-ui-style]')){const link=document.createElement('link');link.rel='stylesheet';link.href='https://shell.ekodi.kr/user-ui-shell.css';link.dataset.ekodiUserUiStyle='v1';(document.head||html).append(link);}}catch{}})();`;
 const USER_FOOTER_BOOTSTRAP=`window.__EKODI_USER_FOOTER_CONFIG__=${JSON.stringify(EKODI_USER_FOOTER).replace(/</g,'\\u003c')};`;
 
 function corsHeaders(){return {'access-control-allow-origin':'*','access-control-allow-methods':'GET,HEAD,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','x-content-type-options':'nosniff'};}
@@ -63,7 +64,7 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
-  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_UI_STATIC_BOOTSTRAP}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
 }
 
 export default {
