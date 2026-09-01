@@ -1,0 +1,10 @@
+{
+  "service_id":"ekodi.devotion-assets",
+  "display_name":"EKODI Devotion Assets",
+  "version":"0.1.0",
+  "scope":"shared-independent-service",
+  "tenant_neutral":true,
+  "interfaces":{"http":["GET /health","PUT /v1/assets/:assetKey","GET /v1/assets/:assetKey"]},
+  "adapters":{"store":"replaceable"},
+  "forbidden_core_dependencies":["specific workspace names","Google Drive folder IDs","YouTube channels","FFmpeg rendering","EKODI admin authentication"]
+}
