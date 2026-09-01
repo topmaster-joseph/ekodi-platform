@@ -13,8 +13,22 @@ const dataContractFile = 'config/data-plane-contract.json';
 const runtimeFile = 'cognitive-control-plane.js';
 const workflowFile = '.github/workflows/deploy-ai-control.yml';
 const manifestFile = 'deploy/manifests/ai-control.worker.json';
+const buildScriptFile = 'scripts/build-ai-control-release.mjs';
+const buildConfigFile = 'wrangler.ai.build.toml';
+const stagingReleaseConfigFile = 'wrangler.ai.staging.release.toml';
+const productionReleaseConfigFile = 'wrangler.ai.release.toml';
 
-for (const file of [contractFile, dataContractFile, runtimeFile, workflowFile, manifestFile]) {
+for (const file of [
+  contractFile,
+  dataContractFile,
+  runtimeFile,
+  workflowFile,
+  manifestFile,
+  buildScriptFile,
+  buildConfigFile,
+  stagingReleaseConfigFile,
+  productionReleaseConfigFile,
+]) {
   if (!fs.existsSync(path.join(root, file))) fail(`required file is missing: ${file}`);
 }
 if (process.exitCode) process.exit(process.exitCode);
@@ -24,6 +38,9 @@ const dataContract = JSON.parse(read(dataContractFile));
 const manifest = JSON.parse(read(manifestFile));
 const runtime = read(runtimeFile);
 const workflow = read(workflowFile);
+const buildScript = read(buildScriptFile);
+const stagingReleaseConfig = read(stagingReleaseConfigFile);
+const productionReleaseConfig = read(productionReleaseConfigFile);
 
 if (contract.status !== 'enforced-foundation') fail('contract status must be enforced-foundation');
 for (const plane of ['control', 'governance', 'execution', 'data']) {
@@ -34,7 +51,7 @@ for (const environment of ['development', 'verification', 'production']) {
 }
 if (contract.environments?.development?.productionData !== false) fail('development must explicitly forbid production data');
 if (contract.environments?.production?.directMutation !== false) fail('production directMutation must remain false');
-if (contract.environments?.production?.promotionOnly !== true) fail('production must be promotion-only');
+if (contract.environments?.production?.promotionOnly !== true) fail('production application runtime must be promotion-only');
 if (contract.promotion?.rebuildOnPromotion !== false) fail('production promotion must not rebuild the verified artifact');
 if (contract.promotion?.immutableArtifactRequired !== true) fail('immutable artifact identity must be required');
 if (contract.planes?.data?.contract !== dataContractFile) fail('data plane must delegate storage/traffic boundaries to config/data-plane-contract.json');
@@ -67,7 +84,12 @@ for (const marker of [
 for (const marker of [
   'deploy-staging:',
   'environment: development',
-  'needs: deploy-staging',
+  'needs: [validate, deploy-staging]',
+  'Build one immutable AI Control application artifact',
+  'actions/upload-artifact@v4',
+  'actions/download-artifact@v5',
+  'EXPECTED_AI_ARTIFACT_DIGEST',
+  'wrangler.ai.staging.release.toml',
   'guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json',
   'validate-cognitive-control-plane.mjs',
   'test/cognitive-control-plane.test.mjs',
@@ -75,19 +97,32 @@ for (const marker of [
   if (!workflow.includes(marker)) fail(`AI Control workflow is missing governance marker: ${marker}`);
 }
 for (const forbidden of [
-  'wrangler@4.119.0 deploy --config wrangler.ai.toml',
+  'deploy --config wrangler.ai.toml',
+  'deploy --config wrangler.ai.staging.toml',
   'secret put "$name" --config wrangler.ai.toml',
   'npm run deploy:ai-control',
 ]) {
-  if (workflow.includes(forbidden)) fail(`AI Control workflow contains a direct production bypass: ${forbidden}`);
+  if (workflow.includes(forbidden)) fail(`AI Control workflow contains a source-rebuild or direct-production bypass: ${forbidden}`);
 }
 
+for (const [label, config] of [
+  ['staging release', stagingReleaseConfig],
+  ['production release', productionReleaseConfig],
+]) {
+  if (!config.includes('main = ".release/ai-control/worker.js"')) fail(`${label} config must point at the prebuilt Worker bundle`);
+  if (!config.includes('no_bundle = true')) fail(`${label} config must disable deployment-time rebundling`);
+  if (!config.includes('directory = "./.release/ai-control/assets"')) fail(`${label} config must use the promoted static asset directory`);
+}
+if (!buildScript.includes("'deploy',\n    '--dry-run',\n    '--outdir'")) fail('artifact builder must use Wrangler dry-run output rather than deploying source');
+if (!buildScript.includes('artifactDigest')) fail('artifact builder must record an aggregate artifact digest');
+if (!buildScript.includes('EXPECTED_AI_ARTIFACT_DIGEST')) fail('artifact verification must compare the expected promotion digest');
+
 if (manifest.worker?.allowFirstDeploy !== true) fail('first production bootstrap must be owned by the guarded release controller');
-if (manifest.worker?.config !== 'wrangler.ai.toml') fail('AI Control production artifact must have one canonical Worker config');
+if (manifest.worker?.config !== productionReleaseConfigFile) fail('AI Control production manifest must consume the immutable release config');
 if (!Array.isArray(manifest.worker?.requests) || manifest.worker.requests.length < 3) fail('AI Control manifest must verify UI, config and API status');
 
 if (process.exitCode) {
   console.error('Cognitive Control Plane policy audit failed closed.');
   process.exit(process.exitCode);
 }
-console.log('✅ Cognitive Control Plane policy audit passed: four planes, isolated environments and immutable guarded production promotion are enforced.');
+console.log('✅ Cognitive Control Plane policy audit passed: four planes, isolated environments and one immutable application artifact are enforced.');
