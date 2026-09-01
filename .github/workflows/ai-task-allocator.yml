@@ -1,0 +1,171 @@
+name: EKODI AI Task Allocator
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'Worker identity'
+        required: true
+        type: choice
+        default: chatgpt
+        options:
+          - chatgpt
+          - claude
+          - codex
+          - gemini
+          - copilot
+          - human
+          - generic
+      task_id:
+        description: 'Unique task id or short task name'
+        required: true
+        type: string
+      base_ref:
+        description: 'Base branch'
+        required: true
+        default: main
+        type: string
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: ekodi-ai-task-allocator
+  cancel-in-progress: false
+
+jobs:
+  allocate:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-task'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      DISPATCH_AGENT: ${{ inputs.agent }}
+      DISPATCH_TASK_ID: ${{ inputs.task_id }}
+      DISPATCH_BASE_REF: ${{ inputs.base_ref }}
+    steps:
+      - name: Resolve task identity
+        id: task
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          slugify() {
+            printf '%s' "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-+/-/g' \
+              | cut -c1-64
+          }
+
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]]; then
+            agent=$(slugify "${DISPATCH_AGENT:-generic}")
+            task=$(slugify "${DISPATCH_TASK_ID}")
+            base_ref="${DISPATCH_BASE_REF:-main}"
+          else
+            labels=$(jq -r '.issue.labels[].name' "$GITHUB_EVENT_PATH")
+            agent='generic'
+            for candidate in chatgpt claude codex gemini copilot human; do
+              if grep -Fxq "agent:${candidate}" <<<"$labels"; then
+                agent="$candidate"
+                break
+              fi
+            done
+            issue_number=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
+            issue_title=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+            task=$(slugify "issue-${issue_number}-${issue_title}")
+            base_ref='main'
+          fi
+
+          test -n "$agent"
+          test -n "$task"
+          [[ "$base_ref" != refs/* ]]
+          [[ "$base_ref" != *'..'* ]]
+          [[ "$base_ref" != *' '* ]]
+
+          branch="ai/${agent}/${task}"
+          git check-ref-format --branch "$branch" >/dev/null
+
+          {
+            echo "agent=$agent"
+            echo "task_id=$task"
+            echo "base_ref=$base_ref"
+            echo "branch=$branch"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create or reuse isolated branch
+        id: branch
+        shell: bash
+        env:
+          BASE_REF: ${{ steps.task.outputs.base_ref }}
+          BRANCH: ${{ steps.task.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          base_sha=$(gh api "repos/${REPOSITORY}/git/ref/heads/${BASE_REF}" --jq '.object.sha')
+          test -n "$base_sha"
+
+          if gh api "repos/${REPOSITORY}/git/ref/heads/${BRANCH}" >/dev/null 2>&1; then
+            branch_sha=$(gh api "repos/${REPOSITORY}/git/ref/heads/${BRANCH}" --jq '.object.sha')
+            created='false'
+          else
+            gh api --method POST "repos/${REPOSITORY}/git/refs" \
+              -f ref="refs/heads/${BRANCH}" \
+              -f sha="$base_sha" >/dev/null
+            branch_sha="$base_sha"
+            created='true'
+          fi
+
+          {
+            echo "base_sha=$base_sha"
+            echo "branch_sha=$branch_sha"
+            echo "created=$created"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish allocation
+        shell: bash
+        env:
+          AGENT: ${{ steps.task.outputs.agent }}
+          TASK_ID: ${{ steps.task.outputs.task_id }}
+          BASE_REF: ${{ steps.task.outputs.base_ref }}
+          BRANCH: ${{ steps.task.outputs.branch }}
+          BASE_SHA: ${{ steps.branch.outputs.base_sha }}
+          BRANCH_SHA: ${{ steps.branch.outputs.branch_sha }}
+          CREATED: ${{ steps.branch.outputs.created }}
+        run: |
+          {
+            echo '## EKODI isolated task allocation'
+            echo "- Agent: \`${AGENT}\`"
+            echo "- Task: \`${TASK_ID}\`"
+            echo "- Base: \`${BASE_REF}\` @ \`${BASE_SHA}\`"
+            echo "- Branch: \`${BRANCH}\` @ \`${BRANCH_SHA}\`"
+            echo "- Newly created: \`${CREATED}\`"
+            echo ''
+            echo 'Local/remote workers should create an isolated worktree with:'
+            echo "\`bash scripts/ai-task-start.sh ${AGENT} ${TASK_ID} ${BASE_REF}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment branch on issue
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          BRANCH: ${{ steps.task.outputs.branch }}
+          AGENT: ${{ steps.task.outputs.agent }}
+          TASK_ID: ${{ steps.task.outputs.task_id }}
+        run: |
+          set -euo pipefail
+          body=$(cat <<EOF
+          EKODI isolated task branch allocated.
+
+          - agent: \`${AGENT}\`
+          - task: \`${TASK_ID}\`
+          - branch: \`${BRANCH}\`
+
+          Create an isolated workspace with \`bash scripts/ai-task-start.sh ${AGENT} ${TASK_ID} main\`. Do not work from a shared mutable checkout.
+          EOF
+          )
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPOSITORY" --body "$body"
