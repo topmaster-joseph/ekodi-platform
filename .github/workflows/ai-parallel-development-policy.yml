@@ -14,6 +14,7 @@ on:
       - 'governance/constitution/**'
       - 'governance/amendments/**'
       - 'scripts/ai-task-start.sh'
+      - 'scripts/ekodi-task-start.mjs'
       - '.github/workflows/ai-task-allocator.yml'
       - '.github/workflows/ai-conflict-guard.yml'
       - '.github/workflows/ai-parallel-development-policy.yml'
@@ -37,6 +38,7 @@ jobs:
           test -s GEMINI.md
           test -s .github/copilot-instructions.md
           test -s scripts/ai-task-start.sh
+          test -s scripts/ekodi-task-start.mjs
           test -s .github/workflows/ai-task-allocator.yml
           test -s .github/workflows/ai-conflict-guard.yml
           grep -q 'AI_DEVELOPMENT_POLICY.md' AGENTS.override.md
@@ -46,8 +48,9 @@ jobs:
           grep -q 'Direct production deployment from an agent workspace is forbidden' AI_DEVELOPMENT_POLICY.md
           grep -q 'ai-task-allocator.yml' AI_DEVELOPMENT_POLICY.md
           grep -q 'ai-conflict-guard.yml' AI_DEVELOPMENT_POLICY.md
-          grep -q 'ai-task-start.sh' AGENTS.override.md
+          grep -q 'ekodi-task-start.mjs' AGENTS.override.md
           bash -n scripts/ai-task-start.sh
+          node --check scripts/ekodi-task-start.mjs
       - name: Enforce AI branch naming
         if: startsWith(github.head_ref, 'ai/')
         shell: bash
