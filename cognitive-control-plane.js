@@ -1,5 +1,5 @@
 export const COGNITIVE_CONTROL_POLICY = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   planes: Object.freeze(['control', 'governance', 'execution', 'data']),
   environments: Object.freeze(['development', 'verification', 'production']),
   promotionPath: Object.freeze(['development', 'verification', 'production']),
@@ -22,6 +22,14 @@ export const COGNITIVE_CONTROL_POLICY = Object.freeze({
     'policy',
     'artifact-identity',
   ]),
+  requiredMigrationGates: Object.freeze([
+    'additive-schema-validation',
+    'verification',
+    'staging-smoke',
+    'recovery-point',
+    'release-authorization',
+    'audit',
+  ]),
   highImpactOperations: Object.freeze([
     'rollback',
     'production-secret-change',
@@ -31,12 +39,14 @@ export const COGNITIVE_CONTROL_POLICY = Object.freeze({
     'repository-delete',
   ]),
   productionMutationMode: 'promotion-only',
+  productionDataSchemaMode: 'governed-additive-migration-only',
   rebuildOnPromotion: false,
 });
 
 const MUTATING_OPERATIONS = new Set([
   'execute',
   'promote',
+  'migrate-additive',
   'rollback',
   'data-write',
   'policy-change',
@@ -127,6 +137,10 @@ export function evaluateControlIntent(input = {}) {
   const mutating = MUTATING_OPERATIONS.has(intent.operation);
   const highImpact = intent.highImpact || HIGH_IMPACT.has(intent.operation);
 
+  if (highImpact) {
+    return result('human_gate', 'high_impact_change', 'High-impact changes require an explicit human stewardship decision regardless of the requesting agent or environment.', { intent });
+  }
+
   if (intent.targetEnvironment === 'production' && intent.operation === 'observe') {
     if (!intent.readOnly || !intent.audited) {
       return result('deny', 'production_observation_not_bounded', 'Production observation must be read-only and auditable.', { intent });
@@ -134,8 +148,25 @@ export function evaluateControlIntent(input = {}) {
     return result('allow', 'production_observation', 'Read-only audited production observation is allowed.', { intent });
   }
 
-  if (intent.targetEnvironment === 'production' && highImpact) {
-    return result('human_gate', 'high_impact_production_change', 'High-impact production changes require an explicit human stewardship decision.', { intent });
+  if (intent.targetEnvironment === 'production' && intent.operation === 'migrate-additive') {
+    if (intent.sourceEnvironment !== 'verification') {
+      return result('deny', 'verification_required', 'Production schema migration must originate from the verification environment.', { intent });
+    }
+    if (!intent.governanceAuthorized) {
+      return result('deny', 'governance_authorization_required', 'Production schema migration requires independent Governance Plane authorization.', { intent });
+    }
+    if (!intent.audited) {
+      return result('deny', 'audit_required', 'Production schema migration must create durable audit evidence.', { intent });
+    }
+    const issue = artifactIssue(intent);
+    if (issue) {
+      return result('deny', issue, 'The additive migration set must have a verified immutable source identity.', { intent });
+    }
+    const missing = missingGates(intent, COGNITIVE_CONTROL_POLICY.requiredMigrationGates);
+    if (missing.length) {
+      return result('deny', 'migration_gates_incomplete', 'Every governed additive migration gate must be satisfied before production schema change.', { intent, missingGates: missing });
+    }
+    return result('allow', 'governed_additive_migration', 'A verified additive migration may run through the dedicated governed data-schema lane.', { intent });
   }
 
   if (intent.targetEnvironment === 'production') {
@@ -143,7 +174,7 @@ export function evaluateControlIntent(input = {}) {
       return result('allow', 'production_non_mutating', 'Non-mutating production analysis is allowed when no execution authority is implied.', { intent });
     }
     if (intent.operation !== 'promote') {
-      return result('deny', 'direct_production_mutation_forbidden', 'Production mutation is allowed only through artifact promotion.', { intent });
+      return result('deny', 'direct_production_mutation_forbidden', 'Production application runtime mutation is allowed only through artifact promotion.', { intent });
     }
     if (intent.sourceEnvironment !== 'verification') {
       return result('deny', 'verification_required', 'Production promotion must originate from the verification environment.', { intent });
@@ -197,7 +228,9 @@ export function getControlPlaneSummary() {
     environments: COGNITIVE_CONTROL_POLICY.environments,
     promotionPath: COGNITIVE_CONTROL_POLICY.promotionPath,
     productionMutationMode: COGNITIVE_CONTROL_POLICY.productionMutationMode,
+    productionDataSchemaMode: COGNITIVE_CONTROL_POLICY.productionDataSchemaMode,
     rebuildOnPromotion: COGNITIVE_CONTROL_POLICY.rebuildOnPromotion,
     requiredPromotionGates: COGNITIVE_CONTROL_POLICY.requiredPromotionGates,
+    requiredMigrationGates: COGNITIVE_CONTROL_POLICY.requiredMigrationGates,
   });
 }
