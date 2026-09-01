@@ -57,5 +57,7 @@ export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !it
 
 if (typeof document !== 'undefined') {
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
-  import('./agentic-admin-shell.js').catch(error => console.warn('[EKODI Agentic Admin] bootstrap failed', error));
+  import('./agentic-control-runtime.js')
+    .then(() => import('./agentic-admin-shell.js'))
+    .catch(error => console.warn('[EKODI Agentic Admin] bootstrap failed', error));
 }
