@@ -1,0 +1,29 @@
+name: Validate Admin Access Broker
+
+on:
+  pull_request:
+    paths:
+      - 'external-provider-control.js'
+      - 'mission-control-entry-worker.js'
+      - 'test/admin-access-broker.test.mjs'
+      - '.github/workflows/validate-admin-access-broker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Syntax check broker and mission router
+        run: |
+          node --check external-provider-control.js
+          node --check mission-control-entry-worker.js
+      - name: Verify provider isolation and secret redaction
+        run: node --test test/admin-access-broker.test.mjs
