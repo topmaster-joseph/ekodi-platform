@@ -1,8 +1,20 @@
 export const AI_CONTROL_POLICY = Object.freeze({
-  version: '0.1.0',
+  version: '0.2.0',
   defaultMode: 'primary-review',
   modes: Object.freeze(['single', 'primary-review', 'parallel']),
-  providerOrder: Object.freeze(['gemini-free', 'worker:claude', 'worker:chatgpt', 'worker:gemini', 'worker:notebooklm', 'worker:aistudio']),
+  providerOrder: Object.freeze([
+    'gemini-free',
+    'node:codex',
+    'node:gemini-cli',
+    'node:claude-code',
+    'openai-api',
+    'anthropic-api',
+    'worker:claude',
+    'worker:chatgpt',
+    'worker:gemini',
+    'worker:notebooklm',
+    'worker:aistudio',
+  ]),
   maxPromptLength: 24000,
   maxParallelProviders: 3,
 });
@@ -31,6 +43,9 @@ export function normalizeTaskInput(input = {}) {
 export function availableProviderIds(capabilities = {}) {
   const ids = [];
   if (capabilities.geminiFree) ids.push('gemini-free');
+  for (const id of capabilities.nodeProviders || []) ids.push(`node:${clean(id).toLowerCase()}`);
+  if (capabilities.openaiApi) ids.push('openai-api');
+  if (capabilities.anthropicApi) ids.push('anthropic-api');
   for (const id of capabilities.workerProviders || []) ids.push(`worker:${clean(id).toLowerCase()}`);
   return unique(ids);
 }
