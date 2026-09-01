@@ -20,7 +20,7 @@
     <div>
       <p class="eyebrow">MULTI-AI ORCHESTRATION</p>
       <h1>명령은 한 번.<br>AI는 서로 보완해서 움직입니다.</h1>
-      <p>무료 공식 AI를 우선 사용하고, 승인된 외부 AI Worker를 다음 순위로 연결합니다. 코드 작업은 독립 브랜치로 격리되고 운영 반영은 승인 뒤에만 진행됩니다.</p>
+      <p>무료 공식 API와 로그인된 계정형 작업노드를 우선 사용하고, 필요한 경우에만 선택형 유료 API로 내려갑니다. 코드 작업은 독립 브랜치에서 실행되고 운영 반영은 승인 뒤에만 진행됩니다.</p>
     </div>
     <aside class="status-card">
       <span id="healthDot" class="dot"></span>
@@ -33,7 +33,7 @@
     </aside>
   </section>
   <section id="loginPanel" class="panel login-panel">
-    <div><h2>관리자 로그인 필요</h2><p>AI 실행과 Git 작업 상태는 관리자에게만 보입니다.</p></div>
+    <div><h2>관리자 로그인 필요</h2><p>AI 실행과 계정형 작업노드 연결은 관리자에게만 보입니다.</p></div>
     <a id="loginButton" class="button" href="#">Google로 로그인</a>
   </section>
   <section id="appPanel" class="workspace" hidden>
@@ -56,6 +56,13 @@
     <section class="panel">
       <div class="section-head"><div><p class="eyebrow">PROVIDERS</p><h2>현재 연결</h2></div><button id="refresh" class="button secondary small">새로고침</button></div>
       <div id="providers" class="provider-grid"></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><p class="eyebrow">ACCOUNT NODES</p><h2>무료계정 작업노드</h2><p class="muted compact">ChatGPT·Gemini·Claude 계정 로그인은 각 컴퓨터 안에만 보관합니다.</p></div><button id="pairNode" class="button small">연결코드 만들기</button></div>
+      <div id="pairing" class="pairing" hidden>
+        <span>10분 안에 작업노드에서 입력</span><strong id="pairCode"></strong><small id="pairExpiry"></small>
+      </div>
+      <div id="nodes" class="provider-grid"><p class="muted">연결된 작업노드를 확인하는 중입니다.</p></div>
     </section>
     <section class="panel">
       <div class="section-head"><div><p class="eyebrow">TASKS</p><h2>작업 흐름</h2></div></div>
