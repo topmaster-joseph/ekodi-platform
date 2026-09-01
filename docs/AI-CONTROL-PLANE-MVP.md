@@ -38,3 +38,17 @@ Browser-session or account-backed workers are optional execution nodes and must 
 ## Audit and reconciliation
 
 Every mutation path is expected to leave durable decision evidence: request, actor, intent, target, policy version, decision, artifact identity and timestamp. Desired state comes from versioned policy and release manifests. Drift is detected and reconciled through the guarded path rather than repaired by an untracked emergency mutation.
+
+## Connection classes and free-first execution
+
+The provider-neutral worker layer distinguishes four connection classes. Gemini official API is the preferred direct cloud path when a free-tier `GEMINI_API_KEY` is configured. User-authorized account nodes keep provider authentication on the node itself and poll `ai.ekodi.kr` outbound. Optional paid OpenAI and Anthropic APIs remain fallback adapters, while `AI_WORKER_URL/TOKEN` is the provider-neutral extension point.
+
+The default cost-aware order is Gemini free API, a ChatGPT-plan Codex node, a Gemini CLI node, an explicitly enabled Claude Code node, then optional paid APIs or approved external adapters. Availability and an explicit task provider choice may narrow this plan.
+
+`node:codex` executes the official Codex CLI with the ChatGPT login that remains on that computer. `node:gemini-cli` executes the officially authenticated Gemini CLI with read-only `plan` mode for non-coding tasks and bounded `auto_edit` mode inside an isolated coding worktree. Claude Code is enabled only when its official account/subscription authentication is present. Consumer web interfaces are not scraped to bypass API or plan boundaries.
+
+## Account-node pairing
+
+An authenticated EKODI administrator creates a short-lived one-time pairing code. The node exchanges it for a node-specific secret, advertises only providers it can currently execute, and polls for leased jobs. Pairing codes and node secrets are stored in D1 as SHA-256 hashes. Provider passwords, browser cookies and CLI credential files never leave the provider node.
+
+Account nodes are outbound-only. They require no router port forwarding or public PC endpoint. Code tasks still receive the same isolated branch/worktree, central validation and Governance promotion gates as cloud API workers.

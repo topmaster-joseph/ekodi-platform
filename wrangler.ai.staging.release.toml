@@ -11,7 +11,7 @@ AI_CONTROL_MODE = "free-first-staging"
 AI_TASK_EXECUTION_ENABLED = "false"
 AI_GITHUB_ORCHESTRATION_ENABLED = "false"
 AUTH_URL = "https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.7-flash"
 AI_WORKER_PROVIDERS = ""
 
 [assets]

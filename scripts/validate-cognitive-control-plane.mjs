@@ -134,7 +134,7 @@ for (const [label, config] of [
   if (!config.includes('no_bundle = true')) fail(`${label} config must disable deployment-time rebundling`);
   if (!config.includes('directory = "./.release/ai-control/assets"')) fail(`${label} config must use the promoted static asset directory`);
 }
-if (!buildScript.includes("'deploy',\n    '--dry-run',\n    '--outdir'")) fail('artifact builder must use Wrangler dry-run output rather than deploying source');
+if (!/["']deploy["']\s*,[\s\S]{0,160}?["']--dry-run["']\s*,[\s\S]{0,160}?["']--outdir["']/.test(buildScript)) fail('artifact builder must use Wrangler dry-run output rather than deploying source');
 if (!buildScript.includes('artifactDigest')) fail('artifact builder must record an aggregate artifact digest');
 if (!buildScript.includes('EXPECTED_AI_ARTIFACT_DIGEST')) fail('artifact verification must compare the expected promotion digest');
 

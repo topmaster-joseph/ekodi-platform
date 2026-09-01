@@ -8,7 +8,7 @@ const releaseRoot = path.join(root, '.release', 'ai-control');
 const bundleRoot = path.join(root, '.release', 'ai-control-bundle');
 const manifestPath = path.join(releaseRoot, 'artifact-manifest.json');
 const verifyOnly = process.argv.includes('--verify');
-const wranglerVersion = process.env.WRANGLER_VERSION || '4.119.0';
+const wranglerVersion = process.env.WRANGLER_VERSION || '4.127.1';
 
 const normalize = value => String(value || '').replaceAll('\\', '/');
 const sha256 = buffer => `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
