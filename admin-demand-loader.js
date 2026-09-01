@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const TOKEN_KEY='ekodi-auth-token';
-  const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
+  const V='__EKODI_ADMIN_ASSET_VERSION__';
   const app=document.querySelector('#app');
   const nav=document.querySelector('.sidebar nav');
   const loadedScripts=new Map();
@@ -119,7 +119,7 @@ const TOKEN_KEY='ekodi-auth-token';
 
   function assetUrl(path) {
     const separator = path.includes('?') ? '&' : '?';
-    return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
+    return `${path}${separator}v=${encodeURIComponent(V)}`;
   }
 
   function loadStyle(href) {
