@@ -1,7 +1,6 @@
 (() => {
-  'use strict';
-
-  const TOKEN_KEY='ekodi-auth-token';
+'use strict';
+const TOKEN_KEY='ekodi-auth-token';
   const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
   const app=document.querySelector('#app');
   const nav=document.querySelector('.sidebar nav');
