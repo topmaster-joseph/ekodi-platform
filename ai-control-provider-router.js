@@ -1,11 +1,16 @@
 import {buildExecutionPlan,rolePrompt,summarizeRuns} from './ai-control-core.js';
 
 const clean=value=>String(value??'').trim();
+const DEFAULT_WORKER_PROVIDERS=Object.freeze(['claude','chatgpt','gemini','notebooklm','aistudio']);
 
 export function providerCapabilities(env={}){
+  const workerReady=Boolean(clean(env.AI_WORKER_URL)&&clean(env.AI_WORKER_TOKEN));
+  const configuredWorkers=clean(env.AI_WORKER_PROVIDERS)
+    ? clean(env.AI_WORKER_PROVIDERS).split(',').map(v=>v.trim().toLowerCase()).filter(Boolean)
+    : DEFAULT_WORKER_PROVIDERS;
   return {
     geminiFree:Boolean(clean(env.GEMINI_API_KEY)),
-    workerProviders:clean(env.AI_WORKER_PROVIDERS).split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),
+    workerProviders:workerReady?configuredWorkers:[],
   };
 }
 
@@ -13,7 +18,7 @@ export function providerStatus(env={}){
   const capabilities=providerCapabilities(env);
   const providers=[];
   if(capabilities.geminiFree)providers.push({id:'gemini-free',kind:'official-api',costClass:'free-preferred',available:true});
-  for(const id of capabilities.workerProviders)providers.push({id:`worker:${id}`,kind:'external-worker',costClass:'account-or-provider-managed',available:Boolean(clean(env.AI_WORKER_URL))});
+  for(const id of capabilities.workerProviders)providers.push({id:`worker:${id}`,kind:'external-worker',costClass:'account-or-provider-managed',available:true});
   return providers;
 }
 
@@ -31,8 +36,7 @@ async function invokeGemini(env,prompt){
 async function invokeWorker(env,provider,prompt,task,role){
   const base=clean(env.AI_WORKER_URL).replace(/\/+$/,'');
   const token=clean(env.AI_WORKER_TOKEN);
-  if(!base)throw new Error('worker_unavailable');
-  if(!token)throw new Error('worker_token_missing');
+  if(!base||!token)throw new Error('worker_unavailable');
   const response=await fetch(`${base}/v1/execute`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json','x-ekodi-task-id':task.id},body:JSON.stringify({task_id:task.id,provider,role,prompt})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok||data?.ok===false)throw new Error(data?.error||`worker_${response.status}`);
