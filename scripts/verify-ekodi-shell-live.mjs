@@ -87,7 +87,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
-    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json',
+    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','ekodi-user-language-style','suppressLegacyCommonFooters','data-ekodi-floating',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',

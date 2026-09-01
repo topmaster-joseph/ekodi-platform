@@ -66,6 +66,7 @@ jobs:
           node --check shell/user-ui-header.js
           node --check shell/user-ui-footer.js
           node --check shell/user-language.js
+          node --check shell/ccm-mr-player.js
           node --check shell/admin-ui-shell.js
           node --check shell/mobile-fixed-header.js
           node --check shell/illustration-system.js
@@ -100,6 +101,9 @@ jobs:
           grep -Fq 'window.EKODIUserUIHeader' shell/user-ui-header.js
           grep -Fq 'window.EKODIUserUIFooter' shell/user-ui-footer.js
           grep -Fq 'window.EKODIUserLanguage' shell/user-language.js
+          grep -Fq 'ekodi-user-language-style' shell/user-language.js
+          grep -Fq 'data-ekodi-floating' shell/ccm-mr-player.js
+          grep -Fq 'suppressLegacyCommonFooters' shell/user-ui-footer.js
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js
           grep -Fq '.side-brand' shell/admin-ui-shell.js
