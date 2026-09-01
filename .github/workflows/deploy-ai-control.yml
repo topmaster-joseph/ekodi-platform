@@ -51,7 +51,7 @@ permissions:
 
 concurrency:
   group: ekodi-ai-control-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   WRANGLER_VERSION: '4.119.0'
