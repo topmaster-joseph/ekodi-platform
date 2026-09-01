@@ -1,0 +1,45 @@
+name: Validate YouTube OAuth Control Plane
+
+on:
+  push:
+    branches:
+      - feat/youtube-oauth-control-plane
+    paths:
+      - 'youtube-growth-adapter.js'
+      - 'marketing-growth-entry.js'
+      - 'test/youtube-growth-adapter.test.mjs'
+      - '.github/workflows/youtube-oauth-control-plane-ci.yml'
+  pull_request:
+    paths:
+      - 'youtube-growth-adapter.js'
+      - 'marketing-growth-entry.js'
+      - 'test/youtube-growth-adapter.test.mjs'
+      - '.github/workflows/deploy-marketing-growth.yml'
+      - '.github/workflows/youtube-oauth-control-plane-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Syntax and contract tests
+        run: |
+          set -euo pipefail
+          node --check youtube-growth-adapter.js
+          node --check marketing-growth-entry.js
+          node --test test/youtube-growth-adapter.test.mjs
+          grep -Fq "'/v1/connect/youtube/start'" youtube-growth-adapter.js
+          grep -Fq "'/oauth/youtube/callback'" youtube-growth-adapter.js
+          grep -Fq "'/v1/youtube/comments'" youtube-growth-adapter.js
+          grep -Fq 'getYoutubeGrowthStatus' marketing-growth-entry.js
+          if grep -Fq 'mall.ekodi.kr' youtube-growth-adapter.js; then
+            echo 'Legacy Mall host is forbidden.'
+            exit 1
+          fi
