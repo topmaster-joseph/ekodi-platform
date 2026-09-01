@@ -52,10 +52,14 @@ for (const environment of ['development', 'verification', 'production']) {
 if (contract.environments?.development?.productionData !== false) fail('development must explicitly forbid production data');
 if (contract.environments?.production?.directMutation !== false) fail('production directMutation must remain false');
 if (contract.environments?.production?.promotionOnly !== true) fail('production application runtime must be promotion-only');
+if (contract.environments?.production?.dataSchemaMutation !== 'governed-additive-migration-only') fail('production data schema mutation must use the governed additive migration lane');
+if (contract.promotion?.buildOnce !== true) fail('application artifact must be built exactly once per release run');
 if (contract.promotion?.rebuildOnPromotion !== false) fail('production promotion must not rebuild the verified artifact');
 if (contract.promotion?.immutableArtifactRequired !== true) fail('immutable artifact identity must be required');
 if (contract.planes?.data?.contract !== dataContractFile) fail('data plane must delegate storage/traffic boundaries to config/data-plane-contract.json');
+if (contract.planes?.data?.productionSchemaMutation !== 'governed-additive-migration-only') fail('data plane must explicitly constrain production schema mutation');
 if (dataContract.accountProfiles?.development?.productionDataAllowed !== false) fail('data-plane development profile must forbid production data');
+if (contract.migration?.productionDataCopyToDevelopment !== false) fail('production data copy to development must remain forbidden by default');
 
 const requiredGates = [
   'source-isolation',
@@ -71,12 +75,26 @@ const requiredGates = [
 const configuredGates = new Set(contract.promotion?.requiredGates || []);
 for (const gate of requiredGates) if (!configuredGates.has(gate)) fail(`missing production promotion gate: ${gate}`);
 
+const requiredMigrationGates = [
+  'additive-schema-validation',
+  'verification',
+  'staging-smoke',
+  'recovery-point',
+  'release-authorization',
+  'audit',
+];
+const configuredMigrationGates = new Set(contract.migration?.requiredGates || []);
+for (const gate of requiredMigrationGates) if (!configuredMigrationGates.has(gate)) fail(`missing production migration gate: ${gate}`);
+
 for (const marker of [
   "productionMutationMode: 'promotion-only'",
+  "productionDataSchemaMode: 'governed-additive-migration-only'",
   "rebuildOnPromotion: false",
   "'direct_production_mutation_forbidden'",
   "'governance_authorization_required'",
   "'promotion_gates_incomplete'",
+  "'governed_additive_migration'",
+  "'migration_gates_incomplete'",
 ]) {
   if (!runtime.includes(marker)) fail(`runtime is missing enforcement marker: ${marker}`);
 }
@@ -90,6 +108,9 @@ for (const marker of [
   'actions/download-artifact@v5',
   'EXPECTED_AI_ARTIFACT_DIGEST',
   'wrangler.ai.staging.release.toml',
+  'Capture production D1 recovery bookmark',
+  'validate-additive-migrations.mjs migrations',
+  'apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.release.toml',
   'guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json',
   'validate-cognitive-control-plane.mjs',
   'test/cognitive-control-plane.test.mjs',
@@ -125,4 +146,4 @@ if (process.exitCode) {
   console.error('Cognitive Control Plane policy audit failed closed.');
   process.exit(process.exitCode);
 }
-console.log('✅ Cognitive Control Plane policy audit passed: four planes, isolated environments and one immutable application artifact are enforced.');
+console.log('✅ Cognitive Control Plane policy audit passed: four planes, one immutable application artifact and governed additive production migrations are enforced.');
