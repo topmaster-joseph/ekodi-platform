@@ -35,9 +35,12 @@ jobs:
           set -euo pipefail
           node --check services/devotion-studio/src/service.js
           node --check services/devotion-studio/src/http-handler.js
+          node --check services/devotion-studio/src/worker.js
           node --check services/devotion-studio/src/adapters/memory-repository.js
+          node --check services/devotion-studio/src/adapters/d1-repository.js
           node --check services/devotion-studio/src/adapters/http-renderer.js
           node --check services/devotion-studio/src/adapters/http-publisher.js
+          test -s services/devotion-studio/migrations/0001_init.sql
           node --test services/devotion-studio/test/*.test.mjs
       - name: Validate platform adapter boundary
         run: |
