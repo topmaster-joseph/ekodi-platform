@@ -6,9 +6,11 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'scripts/ai-account-node.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
+      - 'migrations/0051_ai_account_nodes.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'docs/AI-CONTROL-PLANE-MVP.md'
       - '.github/workflows/deploy-ai-control.yml'
@@ -17,9 +19,11 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'scripts/ai-account-node.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
+      - 'migrations/0051_ai_account_nodes.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'docs/AI-CONTROL-PLANE-MVP.md'
       - '.github/workflows/deploy-ai-control.yml'
@@ -48,12 +52,16 @@ jobs:
           node --check ai-control-provider-router.js
           node --check ai-control-worker.js
           node --check ai-control/app.js
+          node --check scripts/ai-account-node.mjs
           node --test test/ai-control-platform.test.mjs
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
+          grep -Fq '/api/node/lease' ai-control-worker.js
+          grep -Fq 'codex login status' scripts/ai-account-node.mjs
           test -f migrations/0050_ai_control_plane.sql
+          test -f migrations/0051_ai_account_nodes.sql
           test -f deploy/manifests/ai-control.worker.json
 
   deploy-staging:
@@ -120,6 +128,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       AI_ADMIN_EMAILS: ${{ secrets.AI_CONTROL_ADMIN_EMAILS }}
       AI_GEMINI_API_KEY: ${{ secrets.AI_CONTROL_GEMINI_API_KEY }}
+      AI_OPENAI_API_KEY: ${{ secrets.AI_CONTROL_OPENAI_API_KEY }}
+      AI_ANTHROPIC_API_KEY: ${{ secrets.AI_CONTROL_ANTHROPIC_API_KEY }}
       AI_GITHUB_TASK_TOKEN: ${{ secrets.AI_CONTROL_GITHUB_TASK_TOKEN }}
       AI_EXTERNAL_WORKER_URL: ${{ secrets.AI_CONTROL_WORKER_URL }}
       AI_EXTERNAL_WORKER_TOKEN: ${{ secrets.AI_CONTROL_WORKER_TOKEN }}
@@ -132,7 +142,7 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Apply additive AI ledger migration
+      - name: Apply additive AI ledger migrations
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.ai.toml
       - name: Bootstrap Worker when absent
         shell: bash
@@ -152,6 +162,8 @@ jobs:
           put_secret(){ local name="$1" value="$2"; if [[ -n "$value" ]]; then printf '%s' "$value" | npx --yes wrangler@4.119.0 secret put "$name" --config wrangler.ai.toml; fi; }
           put_secret ADMIN_EMAILS "$AI_ADMIN_EMAILS"
           put_secret GEMINI_API_KEY "$AI_GEMINI_API_KEY"
+          put_secret OPENAI_API_KEY "$AI_OPENAI_API_KEY"
+          put_secret ANTHROPIC_API_KEY "$AI_ANTHROPIC_API_KEY"
           put_secret GITHUB_TASK_TOKEN "$AI_GITHUB_TASK_TOKEN"
           put_secret AI_WORKER_URL "$AI_EXTERNAL_WORKER_URL"
           put_secret AI_WORKER_TOKEN "$AI_EXTERNAL_WORKER_TOKEN"
