@@ -13,7 +13,7 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 - every task requires a unique `task_id`;
 - use an isolated task branch, preferably `ai/<agent>/<task-id>`;
 - use an isolated Git worktree or equivalent sandbox for concurrent work;
-- when operating in a Git checkout and no already-isolated sandbox was provisioned, bootstrap the task with `bash scripts/ai-task-start.sh <agent> <task-id> [base-ref]` rather than editing the shared checkout;
+- when operating in a Git checkout and no already-isolated sandbox was provisioned, bootstrap the task with `node scripts/ekodi-task-start.mjs --agent <agent> [--task-id <task-id>] [--base main] <description>` rather than editing the shared checkout;
 - central/cloud task creation should use `.github/workflows/ai-task-allocator.yml` or its contract so branch naming and allocation are consistent across providers;
 - never share a mutable working directory with another active agent/developer task;
 - never write or force-push directly to `main` or production branches;
