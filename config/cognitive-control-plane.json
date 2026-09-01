@@ -18,13 +18,13 @@
     },
     "governance": {
       "purpose": "Policy-as-code, approval, security gates, artifact identity, audit and promotion authorization",
-      "productionMutation": "promotion-controller-only",
+      "productionMutation": "guarded-controllers-only",
       "independentFromModelProvider": true,
       "failClosedForUnknownPolicy": true
     },
     "execution": {
       "purpose": "Human and AI work in isolated branches, worktrees, staging and bounded runtime executors",
-      "productionMutation": "promotion-only",
+      "productionMutation": "application-promotion-only",
       "isolatedBranchRequiredForSourceChange": true,
       "isolatedRuntimeRequiredForUntrustedExecution": true
     },
@@ -32,7 +32,8 @@
       "purpose": "Identity, records, files, cache, queues and public delivery behind portable adapters",
       "contract": "config/data-plane-contract.json",
       "crossWorkspaceDefault": "deny",
-      "productionDataInDevelopment": false
+      "productionDataInDevelopment": false,
+      "productionSchemaMutation": "governed-additive-migration-only"
     }
   },
   "environments": {
@@ -57,13 +58,18 @@
       "realUserTraffic": true,
       "directMutation": false,
       "promotionOnly": true,
+      "runtimeMutation": "immutable-application-promotion-only",
+      "dataSchemaMutation": "governed-additive-migration-only",
       "rebuildOnPromotion": false
     }
   },
   "promotion": {
     "canonicalPath": ["development", "verification", "production"],
+    "buildOnce": true,
     "rebuildOnPromotion": false,
     "immutableArtifactRequired": true,
+    "artifactScope": "application-bundle-and-static-assets",
+    "environmentBindingsExcluded": ["secrets", "database-bindings", "routes", "runtime-vars"],
     "artifactIdentity": ["sha256", "git-commit", "provider-version-id"],
     "requiredGates": [
       "source-isolation",
@@ -78,6 +84,20 @@
     ],
     "rollback": "previous-verified-artifact-only",
     "rollbackRequiresHumanGate": true
+  },
+  "migration": {
+    "productionSchema": "additive-only-by-default",
+    "destructiveSchema": "human-gate-separate-plan",
+    "requiredGates": [
+      "additive-schema-validation",
+      "verification",
+      "staging-smoke",
+      "recovery-point",
+      "release-authorization",
+      "audit"
+    ],
+    "recovery": "capture-before-production-migration",
+    "productionDataCopyToDevelopment": false
   },
   "authority": {
     "aiMaySelfExpandAuthority": false,
