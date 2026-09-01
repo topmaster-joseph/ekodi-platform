@@ -52,3 +52,22 @@ test('only bounded actions can be emitted', () => {
   ];
   for (const action of actions) assert.ok(['scale','test','observe','hold'].includes(action));
 });
+
+test('active sales scheduler stays free, authenticated and outside Cloudflare cron quota', async () => {
+  const entry = await read('marketing-growth-entry.js');
+  const wrangler = await read('wrangler.marketing-growth.toml');
+  const scheduler = await read('.github/workflows/run-marketing-growth-scheduler.yml');
+  const deploy = await read('.github/workflows/deploy-marketing-growth.yml');
+
+  assert.match(entry,/\/internal\/active-sales\/run/);
+  assert.match(entry,/MARKETING_GROWTH_SCHEDULER_TOKEN/);
+  assert.match(entry,/secureEqual\(expected, supplied\)/);
+  assert.match(entry,/runActiveSalesCycle\(env, 'github_schedule'\)/);
+  assert.doesNotMatch(wrangler,/^\[triggers\]/m);
+  assert.doesNotMatch(wrangler,/^crons\s*=/m);
+  assert.match(scheduler,/cron: '\*\/20 \* \* \* \*'/);
+  assert.match(scheduler,/x-ekodi-scheduler-token/);
+  assert.match(scheduler,/hmac\.new\(key, label, hashlib\.sha256\)/);
+  assert.match(deploy,/secret put MARKETING_GROWTH_SCHEDULER_TOKEN/);
+  assert.match(deploy,/SCHEDULER_DERIVATION_LABEL: 'ekodi-marketing-growth-scheduler-v1'/);
+});
