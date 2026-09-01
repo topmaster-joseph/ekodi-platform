@@ -61,3 +61,16 @@ test('renderer supports generic inline WAV input and versioned output names', as
   assert.match(source, /render_version/);
   assert.match(source, /-\$\{version\}\.mp4/);
 });
+
+test('renderer keeps the public-quality fallback contract', async () => {
+  const source = await import('node:fs/promises').then(fs => fs.readFile(new URL('../src/render.js', import.meta.url), 'utf8'));
+  assert.match(source, /gradients=s=/);
+  assert.match(source, /type=linear/);
+  assert.match(source, /splitForCaptions/);
+  assert.match(source, /Malgun Gothic/);
+  assert.match(source, /Noto Sans CJK KR/);
+  assert.match(source, /loudnorm=I=-16/);
+  assert.match(source, /preset \|\| 'medium'/);
+  assert.match(source, /crf \|\| 18/);
+  assert.match(source, /enable='between\(t,4\.0,27\.15\)'/);
+});
