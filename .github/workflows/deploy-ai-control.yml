@@ -59,7 +59,7 @@ jobs:
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
-          grep -Fq 'codex login status' scripts/ai-account-node.mjs
+          grep -Fq "['login','status']" scripts/ai-account-node.mjs
           test -f migrations/0050_ai_control_plane.sql
           test -f migrations/0051_ai_account_nodes.sql
           test -f deploy/manifests/ai-control.worker.json
