@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "EKODI Agentic Platform OS Control Model",
+  "principle": "AI proposes and coordinates; policy authorizes; deterministic executors act; verifiers prove completion.",
+  "objects": ["resource", "action", "policy", "operation", "evidence"],
+  "adminAxes": [
+    {"id": "home", "labelKo": "홈", "purpose": "attention, approvals, recent outcomes"},
+    {"id": "operations", "labelKo": "운영", "purpose": "work, automation, deployments, finance and communication"},
+    {"id": "spaces", "labelKo": "공간", "purpose": "people, organizations, customers, projects and files"},
+    {"id": "services", "labelKo": "서비스", "purpose": "business and mission services"},
+    {"id": "system", "labelKo": "시스템", "purpose": "health, security, AI, data, cost, connectors and infrastructure"}
+  ],
+  "autonomy": {
+    "A0": {"name": "observe", "approval": "none", "description": "read, inspect, explain"},
+    "A1": {"name": "safe_act", "approval": "none", "description": "low-risk, reversible, idempotent action with evidence"},
+    "A2": {"name": "controlled_act", "approval": "human", "description": "production-impacting or externally visible action"},
+    "A3": {"name": "critical_act", "approval": "explicit_human", "description": "destructive, financial, identity, DNS, secret or irreversible action"}
+  },
+  "invariants": [
+    "core service remains usable without an external AI provider",
+    "AI never bypasses policy or capability checks",
+    "every mutating action creates an operation record before execution",
+    "completion requires evidence, not an agent assertion",
+    "production-impacting actions expose preview or diff when technically possible",
+    "high-risk and critical actions require deterministic approval gates",
+    "all executions are traceable by operation_id and trace_id",
+    "service-specific logic remains outside the admin shell",
+    "provider-specific details stay behind adapters or gateways",
+    "the five global admin axes remain stable"
+  ],
+  "operationStates": ["planned", "awaiting_approval", "approved", "running", "verifying", "succeeded", "failed", "rolled_back", "cancelled"],
+  "evidenceKinds": ["health", "http", "fingerprint", "workflow", "trace", "audit", "artifact", "cost", "backup", "permission", "external_receipt"],
+  "resourceContract": {
+    "required": ["apiVersion", "kind", "metadata", "spec", "status", "capabilities"],
+    "identity": "metadata.id",
+    "desiredState": "spec",
+    "observedState": "status"
+  },
+  "actionContract": {
+    "required": ["id", "targetKinds", "risk", "autonomy", "idempotent", "executor", "evidence"]
+  }
+}
