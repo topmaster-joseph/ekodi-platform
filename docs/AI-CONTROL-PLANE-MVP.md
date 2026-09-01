@@ -15,11 +15,19 @@ The executable contract is split between `config/cognitive-control-plane.json`, 
 
 ## Production invariant
 
-Production is **promotion-only**. AI, people and CI jobs may observe production within authorized read-only scope, but they do not directly mutate the production runtime. A production code release must originate in verification and promote the same verified immutable artifact through the guarded release controller. Rebuilding the artifact during production promotion is forbidden.
+Production application runtime is **promotion-only**. AI, people and CI jobs may observe production within authorized read-only scope, but they do not directly mutate the production runtime. A production code release must originate in verification and promote the same verified immutable application artifact through the guarded release controller. Rebuilding the application artifact during production promotion is forbidden.
 
-Required promotion evidence is source isolation, build, tests, security, policy, staging smoke verification, artifact identity, release authorization and audit evidence. High-impact operations such as rollback, production secret/DNS changes, destructive data changes, repository force-push and repository deletion remain human-gated.
+The application artifact is built exactly once per release run. Wrangler performs a dry-run bundle into a release directory; static assets are copied into the same artifact; every file receives a SHA-256 digest and an aggregate artifact digest is written to `artifact-manifest.json`. GitHub Actions stores this immutable release artifact. Development-account staging downloads and verifies that digest before deployment. Production later downloads the same Actions artifact, requires the same digest, and uses release configs with `no_bundle = true`, so production does not recompile the Worker.
 
-The AI Control workflow uses the separate Cloudflare Development account for staging. On the production path it first records a D1 Time Travel recovery bookmark, applies only validated additive migrations after staging succeeds, then uploads a secret-safe 0% Worker candidate through the guarded controller, verifies it, and promotes that same candidate. First deployment is owned by the same guarded manifest. There is no separate production `wrangler deploy` bootstrap or post-promotion `secret put` bypass.
+Environment-specific secrets, database bindings, routes and runtime variables are intentionally outside the application artifact. They are Governance/Runtime bindings rather than reasons to rebuild application code.
+
+Required application promotion evidence is source isolation, build, tests, security, policy, staging smoke verification, artifact identity, release authorization and audit evidence. High-impact operations such as rollback, production secret/DNS changes, destructive data changes, repository force-push and repository deletion remain human-gated.
+
+## Governed data migration lane
+
+Production database schema evolution is not disguised as application promotion. It has its own constrained Governance lane. The default is additive-only migration. The migration set must pass the additive-schema validator, originate after verification, pass staging smoke checks, have an explicit production recovery point, carry release authorization and leave audit evidence. Destructive schema or data changes are not automatic and require a separate human-gated plan.
+
+The AI Control workflow uses the separate Cloudflare Development account for staging. On the production path it verifies the exact application artifact digest that staging used, records a D1 Time Travel recovery bookmark, applies only validated additive migrations, then uploads the prebuilt secret-safe Worker candidate through the guarded controller, verifies it at 0% when an existing production version is present, and promotes that candidate. First deployment is owned by the same guarded manifest. There is no separate production source rebuild or post-promotion `secret put` bypass.
 
 ## Provider and worker independence
 
