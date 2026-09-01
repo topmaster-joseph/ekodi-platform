@@ -64,7 +64,6 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
-      STAGING_URL: https://ekodi-ai-control-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -75,11 +74,25 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
       - name: Deploy isolated staging Worker
-        run: npx --yes wrangler@4.119.0 deploy --config wrangler.ai.staging.toml
-      - name: Verify staging is non-executing
+        id: deploy
         shell: bash
         run: |
           set -euo pipefail
+          output=$(npx --yes wrangler@4.119.0 deploy --config wrangler.ai.staging.toml 2>&1)
+          printf '%s\n' "$output"
+          staging_url=$(printf '%s\n' "$output" | grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' | tail -n 1 || true)
+          if [[ -z "$staging_url" ]]; then
+            echo 'Unable to discover the deployed workers.dev URL from Wrangler output.' >&2
+            exit 1
+          fi
+          echo "url=$staging_url" >> "$GITHUB_OUTPUT"
+      - name: Verify staging is non-executing
+        shell: bash
+        env:
+          STAGING_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_URL"
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             config_code=$(curl -sS -o /tmp/ai-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
@@ -89,11 +102,12 @@ jobs:
               && grep -Fq '"taskExecutionEnabled":false' /tmp/ai-config.js \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-status.json \
               && grep -Fq '"stateStore":"unavailable"' /tmp/ai-status.json; then
-              echo 'AI Control Plane staging verified with execution disabled.'
+              echo "AI Control Plane staging verified at $STAGING_URL with execution disabled."
               exit 0
             fi
             sleep 5
           done
+          echo "Staging verification failed at $STAGING_URL" >&2
           exit 1
 
   deploy-production:
