@@ -1,0 +1,57 @@
+name: AI Parallel Development Policy
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'AI_DEVELOPMENT_POLICY.md'
+      - 'AGENTS.md'
+      - 'AGENTS.override.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - '.github/copilot-instructions.md'
+      - 'CONSTITUTION.md'
+      - 'governance/constitution/**'
+      - 'governance/amendments/**'
+      - '.github/workflows/ai-parallel-development-policy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify canonical policy bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s AI_DEVELOPMENT_POLICY.md
+          test -s AGENTS.override.md
+          test -s CLAUDE.md
+          test -s GEMINI.md
+          test -s .github/copilot-instructions.md
+          grep -q 'AI_DEVELOPMENT_POLICY.md' AGENTS.override.md
+          grep -q 'AI_DEVELOPMENT_POLICY.md' CLAUDE.md
+          grep -q 'AI_DEVELOPMENT_POLICY.md' GEMINI.md
+          grep -q 'AI_DEVELOPMENT_POLICY.md' .github/copilot-instructions.md
+          grep -q 'Direct production deployment from an agent workspace is forbidden' AI_DEVELOPMENT_POLICY.md
+      - name: Enforce AI branch naming
+        if: startsWith(github.head_ref, 'ai/')
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$HEAD_REF" =~ ^ai/[a-zA-Z0-9._-]+/[a-zA-Z0-9._/-]+$ ]]; then
+            echo "AI branches must match ai/<agent-or-purpose>/<task-id>. Got: $HEAD_REF" >&2
+            exit 1
+          fi
+      - name: Reaffirm guarded release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'central validation' AI_DEVELOPMENT_POLICY.md
+          grep -q 'guarded deployment' AI_DEVELOPMENT_POLICY.md
