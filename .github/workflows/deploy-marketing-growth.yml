@@ -7,6 +7,7 @@ on:
     paths:
       - 'marketing-growth-worker.js'
       - 'marketing-growth-entry.js'
+      - 'youtube-growth-adapter.js'
       - 'mall-promotion-automation.js'
       - 'mall-sales-intelligence.js'
       - 'wrangler.marketing-growth.toml'
@@ -15,6 +16,7 @@ on:
       - 'migrations/0049_ekodi_mall_active_sales_ai.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/ekodi-mall-active-sales-ai.test.mjs'
+      - 'test/youtube-growth-adapter.test.mjs'
       - '.github/workflows/deploy-marketing-growth.yml'
 
 permissions:
@@ -38,6 +40,9 @@ jobs:
       META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
       THREADS_APP_ID: ${{ secrets.THREADS_APP_ID }}
       THREADS_APP_SECRET: ${{ secrets.THREADS_APP_SECRET }}
+      GOOGLE_YOUTUBE_CLIENT_ID: ${{ secrets.GOOGLE_YOUTUBE_CLIENT_ID }}
+      GOOGLE_YOUTUBE_CLIENT_SECRET: ${{ secrets.GOOGLE_YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_TOKEN_VAULT_SECRET: ${{ secrets.YOUTUBE_TOKEN_VAULT_SECRET }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
       NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
@@ -47,17 +52,28 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate central OAuth, promotion and active sales engines
+      - name: Validate central OAuth, YouTube, promotion and active sales engines
         run: |
           set -euo pipefail
           node --check marketing-growth-worker.js
           node --check marketing-growth-entry.js
+          node --check youtube-growth-adapter.js
           node --check mall-promotion-automation.js
           node --check mall-sales-intelligence.js
-          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/youtube-growth-adapter.test.mjs
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'paidActivation:false' marketing-growth-worker.js
+          grep -Fq 'getYoutubeGrowthStatus' marketing-growth-entry.js
+          grep -Fq 'handleYoutubeGrowthRequest' marketing-growth-entry.js
+          grep -Fq 'https://www.googleapis.com/auth/youtube.force-ssl' youtube-growth-adapter.js
+          grep -Fq 'https://www.googleapis.com/auth/youtube.upload' youtube-growth-adapter.js
+          grep -Fq "url.hostname !== 'ekodi.kr'" youtube-growth-adapter.js
+          grep -Fq "url.pathname === '/mall' || url.pathname.startsWith('/mall/')" youtube-growth-adapter.js
+          if grep -Fq 'mall.ekodi.kr' youtube-growth-adapter.js; then
+            echo 'Legacy Mall host is forbidden in YouTube adapter.'
+            exit 1
+          fi
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
           grep -Fq "const SUBJECT_KEY = 'ekodibiz'" mall-promotion-automation.js
@@ -109,6 +125,9 @@ jobs:
           put_secret META_APP_SECRET "$META_APP_SECRET"
           put_secret THREADS_APP_ID "$THREADS_APP_ID"
           put_secret THREADS_APP_SECRET "$THREADS_APP_SECRET"
+          put_secret GOOGLE_YOUTUBE_CLIENT_ID "$GOOGLE_YOUTUBE_CLIENT_ID"
+          put_secret GOOGLE_YOUTUBE_CLIENT_SECRET "$GOOGLE_YOUTUBE_CLIENT_SECRET"
+          put_secret YOUTUBE_TOKEN_VAULT_SECRET "$YOUTUBE_TOKEN_VAULT_SECRET"
           put_secret OPENAI_API_KEY "$OPENAI_API_KEY"
           put_secret NAVER_API_HUB_CLIENT_ID "$NAVER_API_HUB_CLIENT_ID"
           put_secret NAVER_API_HUB_CLIENT_SECRET "$NAVER_API_HUB_CLIENT_SECRET"
@@ -126,13 +145,16 @@ jobs:
               && grep -Fq '"encryptedVault":true' /tmp/growth-health.json \
               && grep -Fq '"organicPublishing":true' /tmp/growth-health.json \
               && grep -Fq '"paidActivation":false' /tmp/growth-health.json \
+              && grep -Fq '"youtube"' /tmp/growth-health.json \
+              && grep -Fq '"encryptedRefreshTokenVault":true' /tmp/growth-health.json \
+              && grep -Fq '"commentPublishing":true' /tmp/growth-health.json \
               && grep -Fq '"mallPromotionAutomation"' /tmp/growth-health.json \
               && grep -Fq '"strategy":"opportunity_first"' /tmp/growth-health.json \
               && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
               && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
               && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
               cat /tmp/growth-health.json
-              echo 'Marketing growth connector, promotion and active sales intelligence verified in production.'
+              echo 'Marketing growth connector, YouTube adapter, promotion and active sales intelligence verified in production.'
               exit 0
             fi
             sleep 5
