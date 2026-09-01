@@ -13,6 +13,9 @@ on:
       - 'CONSTITUTION.md'
       - 'governance/constitution/**'
       - 'governance/amendments/**'
+      - 'scripts/ai-task-start.sh'
+      - '.github/workflows/ai-task-allocator.yml'
+      - '.github/workflows/ai-conflict-guard.yml'
       - '.github/workflows/ai-parallel-development-policy.yml'
 
 permissions:
@@ -33,11 +36,18 @@ jobs:
           test -s CLAUDE.md
           test -s GEMINI.md
           test -s .github/copilot-instructions.md
+          test -s scripts/ai-task-start.sh
+          test -s .github/workflows/ai-task-allocator.yml
+          test -s .github/workflows/ai-conflict-guard.yml
           grep -q 'AI_DEVELOPMENT_POLICY.md' AGENTS.override.md
           grep -q 'AI_DEVELOPMENT_POLICY.md' CLAUDE.md
           grep -q 'AI_DEVELOPMENT_POLICY.md' GEMINI.md
           grep -q 'AI_DEVELOPMENT_POLICY.md' .github/copilot-instructions.md
           grep -q 'Direct production deployment from an agent workspace is forbidden' AI_DEVELOPMENT_POLICY.md
+          grep -q 'ai-task-allocator.yml' AI_DEVELOPMENT_POLICY.md
+          grep -q 'ai-conflict-guard.yml' AI_DEVELOPMENT_POLICY.md
+          grep -q 'ai-task-start.sh' AGENTS.override.md
+          bash -n scripts/ai-task-start.sh
       - name: Enforce AI branch naming
         if: startsWith(github.head_ref, 'ai/')
         shell: bash
