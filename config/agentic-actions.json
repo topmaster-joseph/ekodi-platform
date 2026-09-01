@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "actions": [
+    {"id":"resource.inspect","targetKinds":["*"],"risk":"low","autonomy":"A0","idempotent":true,"executor":"internal.read","approval":"none","evidence":["trace"]},
+    {"id":"service.reconcile","targetKinds":["Service"],"risk":"low","autonomy":"A1","idempotent":true,"executor":"workflow.service-reconcile","approval":"none","evidence":["health","trace"]},
+    {"id":"automation.retry","targetKinds":["Automation","Operation"],"risk":"low","autonomy":"A1","idempotent":true,"executor":"workflow.retry","approval":"none","evidence":["workflow","trace"]},
+    {"id":"service.preview","targetKinds":["Service"],"risk":"low","autonomy":"A1","idempotent":true,"executor":"workflow.preview","approval":"none","evidence":["http","health","fingerprint","trace"]},
+    {"id":"service.promote","targetKinds":["Service"],"risk":"high","autonomy":"A2","idempotent":true,"executor":"workflow.promote","approval":"human","evidence":["workflow","http","health","fingerprint","audit","trace"],"rollback":"service.rollback"},
+    {"id":"service.rollback","targetKinds":["Service"],"risk":"high","autonomy":"A2","idempotent":true,"executor":"workflow.rollback","approval":"human","evidence":["workflow","http","health","fingerprint","audit","trace"]},
+    {"id":"connector.reauthorize","targetKinds":["Connector"],"risk":"medium","autonomy":"A2","idempotent":true,"executor":"handoff.reauthorize","approval":"human","evidence":["permission","audit","trace"]},
+    {"id":"access.change","targetKinds":["Person","Space","Service"],"risk":"critical","autonomy":"A3","idempotent":true,"executor":"policy.access-change","approval":"explicit_human","evidence":["permission","audit","trace"]},
+    {"id":"dns.change","targetKinds":["Domain"],"risk":"critical","autonomy":"A3","idempotent":true,"executor":"adapter.dns","approval":"explicit_human","evidence":["http","audit","trace"],"rollback":"dns.restore"},
+    {"id":"dns.restore","targetKinds":["Domain"],"risk":"critical","autonomy":"A3","idempotent":true,"executor":"adapter.dns","approval":"explicit_human","evidence":["http","audit","trace"]},
+    {"id":"secret.rotate","targetKinds":["Secret","Connector","Service"],"risk":"critical","autonomy":"A3","idempotent":false,"executor":"adapter.secrets","approval":"explicit_human","evidence":["health","audit","trace"]},
+    {"id":"data.delete","targetKinds":["DataResource"],"risk":"critical","autonomy":"A3","idempotent":true,"executor":"gateway.data-delete","approval":"explicit_human","irreversible":true,"evidence":["backup","audit","trace"]},
+    {"id":"payment.execute","targetKinds":["Payment"],"risk":"critical","autonomy":"A3","idempotent":false,"executor":"adapter.payment","approval":"explicit_human","evidence":["external_receipt","audit","trace"]}
+  ]
+}
