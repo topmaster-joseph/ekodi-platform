@@ -17,6 +17,29 @@ function footerMode(){return String(document.body?.dataset.ekodiFooterMode||docu
 function serviceOwnsFooter(){return SERVICE_OWNED_FOOTER_SERVICES.has(serviceId())||['service','custom','off'].includes(footerMode())||Boolean(document.querySelector('[data-ekodi-service-footer]'));}
 function enabled(){return USER_SURFACES.has(surface())&&!serviceOwnsFooter();}
 function removeSharedFooter(){document.querySelectorAll(`[${FOOTER_ATTR}]`).forEach(node=>node.remove());}
+function legalPath(href){
+  try{
+    const url=new URL(String(href||''),location.href);
+    const host=String(url.hostname||'').toLowerCase();
+    if(!(host==='ekodi.kr'||host.endsWith('.ekodi.kr')))return'';
+    return String(url.pathname||'').replace(/\/+$/,'').toLowerCase();
+  }catch{return'';}
+}
+function legacyLegalFooter(node){
+  if(!(node instanceof HTMLElement)||node.hasAttribute(FOOTER_ATTR)||node.hasAttribute('data-ekodi-service-footer')||node.classList.contains('ekodi-user-ui-footer'))return false;
+  if(node.hasAttribute('data-ekodi-legal-footer'))return true;
+  const paths=[...node.querySelectorAll('a[href]')].map(link=>legalPath(link.getAttribute('href')));
+  const hasPrivacy=paths.some(path=>path==='/privacy'||path.endsWith('/privacy'));
+  const hasTerms=paths.some(path=>path==='/terms'||path.endsWith('/terms'));
+  const text=String(node.textContent||'').replace(/\s+/g,' ').trim();
+  const hasBrand=/\bEKODI\b/i.test(text);
+  const hasLegalCopy=/(개인정보처리방침|privacy\s*policy)/i.test(text)&&/(이용약관|terms(?:\s*of\s*use)?)/i.test(text);
+  return hasBrand&&((hasPrivacy&&hasTerms)||hasLegalCopy);
+}
+function removeLegacyLegalFooters(){
+  if(serviceOwnsFooter())return;
+  document.querySelectorAll('footer').forEach(node=>{if(legacyLegalFooter(node))node.remove();});
+}
 function installStyle(){
   if(document.getElementById(STYLE_ID)||document.querySelector('[data-ekodi-user-ui-style]'))return;
   const style=document.createElement('style');
@@ -88,6 +111,7 @@ async function reconcile(){
     removeSharedFooter();
     return;
   }
+  removeLegacyLegalFooters();
   if(!enabled()||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
   installStyle();
   const config=await loadConfig();
@@ -95,6 +119,7 @@ async function reconcile(){
     removeSharedFooter();
     return;
   }
+  removeLegacyLegalFooters();
   if(!config||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
   document.body.append(createFooter(config));
   window.EKODIUserLanguage?.refresh?.();
