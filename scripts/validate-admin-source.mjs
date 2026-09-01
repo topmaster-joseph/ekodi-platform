@@ -12,6 +12,8 @@ const retiredFiles = [
   'control-center.css',
   'control-center-finance.css',
   'compact-control-center.css',
+  'compact-control-center.js',
+  'admin-performance.js',
 ];
 const forbiddenCompatibility = [
   '/legacy#domains',
