@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {AI_CONTROL_POLICY,availableProviderIds,buildExecutionPlan,createTaskId,normalizeTaskInput,rolePrompt,summarizeRuns} from '../ai-control-core.js';
 import {providerCapabilities,providerStatus} from '../ai-control-provider-router.js';
 
-test('coding work requests an isolated branch',()=>{
+test('coding work requests an isolated branch and stays in development',()=>{
   const task=normalizeTaskInput({prompt:'관리자 페이지 코딩을 수정하고 Git 브랜치에서 검증해',mode:'primary-review'});
   assert.equal(task.needsCodeBranch,true);
   assert.equal(task.mode,'primary-review');
+  assert.equal(task.executionEnvironment,'development');
 });
 
 test('free API and account nodes stay ahead of paid API fallbacks',()=>{
@@ -40,11 +41,14 @@ test('provider capability status labels plan-included account execution',()=>{
   assert.equal(status.find(item=>item.id==='openai-api')?.costClass,'paid-opt-in');
 });
 
-test('role prompt carries branch and central gate context',()=>{
+test('role prompt carries branch, development boundary and immutable promotion context',()=>{
   const task=normalizeTaskInput({prompt:'코드를 수정해'});
   const prompt=rolePrompt(task,'reviewer',{branch:'ai/generic/task-1'});
   assert.match(prompt,/ai\/generic\/task-1/);
+  assert.match(prompt,/Execution environment: development/);
   assert.match(prompt,/central review, merge, and deployment gate/);
+  assert.match(prompt,/Never mutate production directly/);
+  assert.match(prompt,/verified immutable artifact/);
 });
 
 test('successful AI work still needs human approval',()=>{
