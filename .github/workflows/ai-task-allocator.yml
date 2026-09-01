@@ -144,8 +144,8 @@ jobs:
             echo "- Branch: \`${BRANCH}\` @ \`${BRANCH_SHA}\`"
             echo "- Newly created: \`${CREATED}\`"
             echo ''
-            echo 'Local/remote workers should create an isolated worktree with:'
-            echo "\`bash scripts/ai-task-start.sh ${AGENT} ${TASK_ID} ${BASE_REF}\`"
+            echo 'Windows/Linux/macOS local or remote workers should create an isolated worktree with:'
+            echo "\`node scripts/ekodi-task-start.mjs --agent ${AGENT} --task-id ${TASK_ID} --base ${BASE_REF}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment branch on issue
@@ -165,7 +165,7 @@ jobs:
           - task: \`${TASK_ID}\`
           - branch: \`${BRANCH}\`
 
-          Create an isolated workspace with \`bash scripts/ai-task-start.sh ${AGENT} ${TASK_ID} main\`. Do not work from a shared mutable checkout.
+          Create an isolated workspace with \`node scripts/ekodi-task-start.mjs --agent ${AGENT} --task-id ${TASK_ID} --base main\`. Do not work from a shared mutable checkout.
           EOF
           )
           gh issue comment "$ISSUE_NUMBER" --repo "$REPOSITORY" --body "$body"
