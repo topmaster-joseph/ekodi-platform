@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "effectiveDate": "2026-08-29",
+  "version": "1.2.0",
+  "effectiveDate": "2026-09-01",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -12,7 +12,8 @@
     "queue-first-for-heavy-work",
     "no-public-origin",
     "one-domain-grammar",
-    "modular-monolith-first"
+    "modular-monolith-first",
+    "isolated-parallel-development"
   ],
   "systemBoundaries": {
     "production": ["ekodi.kr", "my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "status.ekodi.kr"],
@@ -75,6 +76,17 @@
     "heavyWorkUsesQueue": true,
     "publicCachePreferred": true,
     "privateAndAdminCacheRestricted": true
+  },
+  "parallelDevelopmentPolicy": {
+    "appliesTo": ["Claude Code", "ChatGPT", "GPT", "Codex", "Gemini", "GitHub Copilot", "other AI development agents", "human developers"],
+    "uniqueTaskIdRequired": true,
+    "independentBranchPerTask": true,
+    "independentWorktreeOrSandboxPerTask": true,
+    "sharedMutableWorkingDirectoryForbidden": true,
+    "directProtectedBranchWritesForbidden": true,
+    "directAgentProductionDeploymentForbidden": true,
+    "centralPipeline": ["validation", "review", "merge", "guarded-deployment", "production-verification"],
+    "productionCredentialsOutsideAgentWorktrees": true
   },
   "changeControl": {
     "C0": "operational parameter change; no constitutional impact; automated validation allowed",

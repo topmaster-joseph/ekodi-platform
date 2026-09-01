@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.1.0
+# EKODI Platform Constitution v1.2.0
 
-Effective: 2026-08-29
+Effective: 2026-09-01
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -57,6 +57,16 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - AI never owns EKODI identity, authorization, payment or irreversible high-impact decisions.
 - Expensive AI work has quota, timeout, retry, circuit-breaker and fallback behavior.
 - Provider unavailability must retain a safe degraded or non-AI path where the service permits it.
+
+## 7A. Parallel Development Constitution
+- Claude Code, ChatGPT/GPT, Codex, Gemini, Copilot, future AI development agents and human developers follow the same provider-neutral development contract.
+- Every task has a unique task ID, independent branch and independent Git worktree or equivalent isolated sandbox.
+- Concurrent tasks must not share one mutable working directory.
+- AI agents and ordinary development workers must not directly write or force-push to main, release or production branches.
+- Production deployment must not originate directly from an agent task workspace.
+- All production-bound changes pass the central validation, review, merge and guarded deployment pipeline.
+- Agent/provider identity never grants bypass authority. Production credentials remain outside ordinary agent worktrees.
+- Conflicts and failures are isolated to the task branch/worktree; central integration decides merge order and revalidation.
 
 ## 8. Deployment and Operations Constitution
 - Production writes stay behind guarded release controllers, staging/candidate validation and rollback capability.
