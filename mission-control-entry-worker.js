@@ -1,6 +1,7 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
+import { handleCognitiveControlPlane } from './cognitive-control-plane-handler.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
 import { AI_ACCESS_POLICY } from './ai-access-orchestration.js';
@@ -224,6 +225,11 @@ export default {
         if (response) return applyApiSecurityHeaders(response);
       }
       catch (error) { console.error('Device Control error', error); return errorResponse('Device Control 처리 중 오류가 발생했습니다.', 'DEVICE_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/ai/control-plane')) {
+      try { const response = await handleCognitiveControlPlane(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Cognitive Control Plane error', error); return errorResponse('Cognitive Control Plane 처리 중 오류가 발생했습니다.', 'COGNITIVE_CONTROL_PLANE_ERROR'); }
     }
 
     if (path.startsWith('/api/control/ai/')) {
