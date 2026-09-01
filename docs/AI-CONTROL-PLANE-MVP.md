@@ -14,3 +14,10 @@ Initial providers are replaceable adapters. Browser-session workers are optional
 - Only read-only observation or delegated, reversible, logged, preflight-verified action qualifies for autonomous action.
 - The task ledger records policy version, tier, reason, explanation, and analysis-only state for auditability.
 - CI validates both the EKODI Constitution and AI mission-governance contract.
+## Cognitive control topology
+- Control Plane interprets intent and routes specialist/model work.
+- Governance Plane evaluates mission policy, release policy, artifact identity, and human gates.
+- Execution Plane runs source-changing work only in isolated branches/worktrees or paired account nodes.
+- Data Plane remains bounded by portable data contracts and separate development/production accounts.
+- Codex, Gemini CLI, Claude Code, official APIs, and replaceable external workers are provider adapters, not sources of platform authority.
+- Production mutation is promotion-only: the verified immutable artifact is promoted unchanged through the guarded release controller.

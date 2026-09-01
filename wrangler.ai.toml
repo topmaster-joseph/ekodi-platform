@@ -18,11 +18,17 @@ GITHUB_REPOSITORY = "topmaster-joseph/ekodi-platform"
 AUTH_URL = "https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.7-flash"
+OPENAI_MODEL = "gpt-5.6-luna"
+ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 AI_WORKER_PROVIDERS = ""
 
-# Optional production secrets, provisioned outside source control:
-# ADMIN_EMAILS, GEMINI_API_KEY, GITHUB_TASK_TOKEN, AI_WORKER_URL, AI_WORKER_TOKEN
+# Production secrets are provisioned outside source control.
+# Required for admin/orchestration: ADMIN_EMAILS, GITHUB_TASK_TOKEN
+# Free-first direct API: GEMINI_API_KEY
+# Optional paid fallbacks: OPENAI_API_KEY, ANTHROPIC_API_KEY
+# Optional legacy/external adapters: AI_WORKER_URL, AI_WORKER_TOKEN
+# Account CLI nodes (Codex/Gemini CLI/Claude Code) keep their account auth only on each node.
 
 [[d1_databases]]
 binding = "DB"
