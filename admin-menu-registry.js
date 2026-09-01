@@ -15,6 +15,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'communication', group: 'operations', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' } },
   { id: 'workspace', group: 'people', icon: '▣', labels: { ko: '공간 · 자료', en: 'Spaces & Files' } },
   { id: 'organization', group: 'people', icon: '◫', labels: { ko: '조직 · 사업', en: 'Organizations' } },
+  { id: 'cheonggye-members', group: 'people', icon: '名', labels: { ko: '청계면상인회 정회원', en: 'Cheonggye Members' } },
   { id: 'clients', group: 'people', icon: 'C', labels: { ko: '고객 사이트', en: 'Customer Sites' } },
   { id: 'admins', group: 'people', icon: '♜', labels: { ko: '관리자 · 권한', en: 'Administrators & Access' }, superAdminOnly: true },
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
