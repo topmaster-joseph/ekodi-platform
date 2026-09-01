@@ -7,12 +7,14 @@ on:
     paths:
       - 'youtube-growth-adapter.js'
       - 'marketing-growth-entry.js'
+      - 'marketing-ai-channel-manager.js'
       - 'test/youtube-growth-adapter.test.mjs'
       - '.github/workflows/youtube-oauth-control-plane-ci.yml'
   pull_request:
     paths:
       - 'youtube-growth-adapter.js'
       - 'marketing-growth-entry.js'
+      - 'marketing-ai-channel-manager.js'
       - 'test/youtube-growth-adapter.test.mjs'
       - '.github/workflows/deploy-marketing-growth.yml'
       - '.github/workflows/youtube-oauth-control-plane-ci.yml'
@@ -34,12 +36,16 @@ jobs:
           set -euo pipefail
           node --check youtube-growth-adapter.js
           node --check marketing-growth-entry.js
+          node --check marketing-ai-channel-manager.js
           node --test test/youtube-growth-adapter.test.mjs
           grep -Fq "'/v1/connect/youtube/start'" youtube-growth-adapter.js
           grep -Fq "'/oauth/youtube/callback'" youtube-growth-adapter.js
           grep -Fq "'/v1/youtube/comments'" youtube-growth-adapter.js
           grep -Fq 'getYoutubeGrowthStatus' marketing-growth-entry.js
-          if grep -Fq 'mall.ekodi.kr' youtube-growth-adapter.js; then
+          grep -Fq 'data-connect="youtube"' marketing-ai-channel-manager.js
+          grep -Fq 'data-youtube-comment-form' marketing-ai-channel-manager.js
+          grep -Fq 'https://ekodi.kr/mall/...' marketing-ai-channel-manager.js
+          if grep -Fq 'mall.ekodi.kr' youtube-growth-adapter.js marketing-ai-channel-manager.js; then
             echo 'Legacy Mall host is forbidden.'
             exit 1
           fi
