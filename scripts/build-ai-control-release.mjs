@@ -32,6 +32,10 @@ function digestManifestEntries(files) {
   return sha256(Buffer.from(canonical, 'utf8'));
 }
 
+function emitDigest(digest) {
+  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `artifact_digest=${digest}\n`);
+}
+
 function verifyArtifact() {
   if (!fs.existsSync(manifestPath)) throw new Error('AI Control artifact manifest is missing.');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -105,9 +109,9 @@ function runWranglerBuild() {
   };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o644 });
   const verified = verifyArtifact();
-  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `artifact_digest=${verified}\n`);
+  emitDigest(verified);
   console.log(`Built one AI Control application artifact from ${files.length} file(s).`);
 }
 
-if (verifyOnly) verifyArtifact();
+if (verifyOnly) emitDigest(verifyArtifact());
 else runWranglerBuild();
