@@ -21,7 +21,9 @@ test('Admin production verifier runs after successful canonical shared-site rele
   assert.match(workflow, /gh issue comment 333/);
   assert.match(workflow, /PRODUCTION NOT VERIFIED/);
   assert.doesNotMatch(workflow, /PRODUCTION VERIFIED/);
-  assert.match(workflow, /fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing/);
+  for (const contract of ['canonical Agentic shell','fingerprinted thin shell','immutable assets','standalone Health','flat AI Ops','retired Control Center 404']) {
+    assert.ok(workflow.includes(contract), `production checkpoint must name ${contract}`);
+  }
   assert.doesNotMatch(workflow, /guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
 });
@@ -40,6 +42,8 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /#aiOpsPanel \.ai-chief-chat\{order:1!important;position:static!important/);
   assert.match(workflow, /verify_compact_without_readable_css/);
   assert.match(workflow, /! grep -Fq 'admin-readable-command\.css' \/tmp\/compact-css/);
+  assert.match(workflow, /verify_retired_paths/);
+  assert.match(workflow, /control-center\.html control-center\.css control-center\.js compact-control-center\.css compact-control-center\.js/);
   assert.doesNotMatch(workflow, /grep -Fq '#aiOpsPanel \.ai-chief-chat[^\n]*dist\/admin-compact\.css/);
 });
 
