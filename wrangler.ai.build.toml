@@ -1,5 +1,5 @@
 name = "ekodi-ai-control-build"
-main = "ai-control-worker.js"
+main = "ai-control-entry-worker.js"
 compatibility_date = "2026-09-01"
 workers_dev = false
 preview_urls = false
