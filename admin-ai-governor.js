@@ -2,7 +2,7 @@
   'use strict';
   if (window.EKODIAdminAIGovernor) return;
 
-  const VERSION='2.0.1';
+  const VERSION='2.0.2';
   const RISK={LOW:'low',MEDIUM:'medium',HIGH:'high',CRITICAL:'critical'};
   const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','high_cost_ai']);
   const FREE_FIRST=Object.freeze(['deterministic_rule','internal_api','cached_context','free_ai','low_cost_ai','premium_ai']);
@@ -33,9 +33,16 @@
   }
 
   function declaredPolicy(actionType){
+    if(!actionType)return null;
     const control=globalThis.EKODIAgenticControl;
-    if(!actionType||!control?.policy)return null;
-    return control.policy(actionType)||null;
+    if(!control?.policy)return {
+      known:false,allowed:false,action:String(actionType),risk:RISK.CRITICAL,autonomy:'A3',approval:'explicit_human',
+      evidence:['audit','trace'],rollback:null,reason:'control_registry_unavailable'
+    };
+    return control.policy(actionType)||{
+      known:false,allowed:false,action:String(actionType),risk:RISK.CRITICAL,autonomy:'A3',approval:'explicit_human',
+      evidence:['audit','trace'],rollback:null,reason:'control_registry_unavailable'
+    };
   }
 
   function assessRisk(request,action={}){
@@ -45,7 +52,7 @@
       return {
         risk:declared.risk,
         humanApprovalRequired:blocked||declared.approval!=='none',
-        gate:blocked?'unregistered_action':(declared.approval==='none'?null:`action:${declared.action}`),
+        gate:blocked?(declared.reason||'unregistered_action'):(declared.approval==='none'?null:`action:${declared.action}`),
         source:declared.known?'action_registry':'action_registry_fail_closed',
         autonomy:declared.autonomy,
         evidence:declared.evidence,
@@ -91,7 +98,10 @@
 
   function verify(result={}){
     const checks=Array.isArray(result.checks)?result.checks:[];const failed=checks.filter(check=>check&&check.ok===false);
-    const evidence=result.actionType&&globalThis.EKODIAgenticControl?.verify?globalThis.EKODIAgenticControl.verify(result.actionType,result.evidence||[]):null;
+    const control=globalThis.EKODIAgenticControl;
+    const evidence=result.actionType
+      ?(control?.verify?control.verify(result.actionType,result.evidence||[]):{verified:false,required:['audit','trace'],missing:['audit','trace'],reason:'control_registry_unavailable'})
+      :null;
     const verified=checks.length>0&&failed.length===0&&(!evidence||evidence.verified);
     return {verified,checks,failed,evidence,requiresFollowup:failed.length>0||Boolean(evidence&&!evidence.verified)};
   }
