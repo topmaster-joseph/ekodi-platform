@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/deploy-admin-ai-ops.yml'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
       - 'admin-demand-loader.js'
@@ -13,7 +15,7 @@ on:
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-perf-diagnostics.js'
-      - 'compact-control-center.css'
+      - 'admin-compact.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
       - 'release-control-admin.js'
@@ -78,29 +80,33 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
-          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js compact-control-center.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
+          for asset in admin-shell.html admin-shell.css admin-compact.css ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          grep -Fq "control-center.css?v=$version" dist/control-center.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
-          grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
-          grep -Fq 'health:' dist/admin-demand-loader.js
-          grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "hashes: ['#health']" dist/admin-demand-loader.js
-          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
-          grep -Fq 'deployments:' dist/admin-demand-loader.js
-          grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
+          grep -Fq 'admin-lazy-features.js' dist/admin-demand-loader.js
+          grep -Fq '#health' dist/admin-demand-loader.js
+          grep -Fq 'system-health-admin.css' dist/admin-demand-loader.js
+          grep -Fq 'system-health-admin.js' dist/admin-demand-loader.js
+          ! grep -Fq 'mission-control-admin.js' dist/admin-demand-loader.js
+          grep -Fq '#deployments' dist/admin-demand-loader.js
+          grep -Fq 'release-control-admin.js' dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '재구성' dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/ai-ops-admin.css
           grep -Fq '#aiOpsPanel .ai-ops-side' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
+          test ! -e dist/control-center.html
+          test ! -e dist/control-center.css
+          test ! -e dist/control-center.js
+          test ! -e dist/compact-control-center.css
+          test ! -e dist/compact-control-center.js
           grep -Fq 'PerformanceObserver' dist/admin-perf-diagnostics.js
           ! grep -Fq 'PerformanceObserver' dist/admin-central-handoff.js
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
@@ -134,7 +140,7 @@ jobs:
             LIVE_VERSION=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-body | head -1 | sed 's/.*?v=//')
             [ -n "$LIVE_VERSION" ] || return 1
             [ "$LIVE_VERSION" = "$EXPECTED_VERSION" ] || return 1
-            grep -Fq "control-center.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
+            grep -Fq "admin-shell.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
             grep -Fq "admin-central-handoff.js?v=$LIVE_VERSION" /tmp/admin-body || return 1
             ! grep -Fq '<script src="control-center.js"' /tmp/admin-body || return 1
             ! grep -Fq 'control-center-ops.css' /tmp/admin-body || return 1
@@ -153,17 +159,24 @@ jobs:
           }
 
           verify_compact_without_readable_css() {
-            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.css?v=$LIVE_VERSION" || true)
+            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-compact.css?v=$LIVE_VERSION" || true)
             [ "$code" = '200' ] || return 1
             grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
             ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
           }
 
+          verify_retired_paths() {
+            for path in control-center.html control-center.css control-center.js compact-control-center.css compact-control-center.js; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
+              [ "$code" = '404' ] || return 1
+            done
+          }
+
           for attempt in $(seq 1 24); do
             LIVE_VERSION=''
             if verify_root \
-              && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js']" \
-              && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
+              && verify_asset 'admin-demand-loader.js' 'admin-lazy-features.js' \
+              && verify_asset 'admin-demand-loader.js' 'system-health-admin.js' \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.css' '.system-health-overall' \
@@ -172,8 +185,9 @@ jobs:
               && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' \
               && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-ops-side' \
               && verify_asset 'admin-perf-diagnostics.js' 'PerformanceObserver' \
-              && verify_compact_without_readable_css; then
-              echo "Production Admin verified: version=$LIVE_VERSION, fingerprinted immutable assets, standalone Health, thin shell and flat AI Ops."
+              && verify_compact_without_readable_css \
+              && verify_retired_paths; then
+              echo "Production Admin verified: version=$LIVE_VERSION, canonical Agentic shell, fingerprinted immutable assets, standalone Health and flat AI Ops."
               exit 0
             fi
             echo "Admin production verification pending (attempt $attempt/24, expected=$EXPECTED_VERSION, live=${LIVE_VERSION:-none})."
@@ -204,7 +218,7 @@ jobs:
           - production check: \`$outcome\`
           - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
           - canonical: https://admin.ekodi.kr/
-          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
+          - contract: canonical Agentic shell · fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · retired Control Center 404
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
