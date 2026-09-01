@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {AI_CONTROL_POLICY,availableProviderIds,buildExecutionPlan,createTaskId,normalizeTaskInput,rolePrompt,summarizeRuns} from '../ai-control-core.js';
+import {AI_CONTROL_POLICY,availableProviderIds,buildExecutionPlan,createTaskId,evaluateTaskMissionPolicy,normalizeTaskInput,rolePrompt,summarizeRuns} from '../ai-control-core.js';
 import {providerCapabilities,providerStatus} from '../ai-control-provider-router.js';
 
 test('coding work requests an isolated branch and stays in development',()=>{
@@ -61,4 +61,17 @@ test('successful AI work still needs human approval',()=>{
 test('task ids are branch-safe identifiers',()=>{
   const id=createTaskId(new Date('2026-09-02T00:00:00.000Z'),()=>0.5);
   assert.match(id,/^task-20260902000000-[a-z0-9]{4}$/);
+});
+
+test('mission governance blocks non-negotiable violations',()=>{
+  const task=normalizeTaskInput({prompt:'lock in user',governance:{agentId:'chief',area:'bounded_action',violates:['no_artificial_lock_in']}}); const d=evaluateTaskMissionPolicy(task);
+  assert.equal(d.tier,'forbidden'); assert.equal(d.allowModelConsultation,false);
+});
+test('high-impact actions remain analysis-only behind a human gate',()=>{
+  const task=normalizeTaskInput({prompt:'change production secret',governance:{agentId:'infrastructure',area:'production_secret_change'}}); const d=evaluateTaskMissionPolicy(task);
+  assert.equal(d.tier,'human_gate'); assert.equal(d.analysisOnly,true); assert.match(rolePrompt({...task,missionDecision:d},'primary',{missionDecision:d}),/analysis, review, and candidate preparation only/);
+});
+test('delegated reversible preflighted actions may pass the autonomous gate',()=>{
+  const task=normalizeTaskInput({prompt:'update isolated preview',governance:{agentId:'platform',area:'bounded_preview_update',delegated:true,reversible:true,logged:true,preflightVerified:true}}); const d=evaluateTaskMissionPolicy(task);
+  assert.equal(d.tier,'execute_reversible'); assert.equal(d.autonomousActionAllowed,true); assert.equal(d.analysisOnly,false);
 });

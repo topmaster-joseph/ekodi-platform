@@ -6,6 +6,8 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-governance-runtime.js'
+      - 'config/ai-mission-governance.json'
       - 'cognitive-control-plane.js'
       - 'config/cognitive-control-plane.json'
       - 'config/data-plane-contract.json'
@@ -16,6 +18,7 @@ on:
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
+      - 'migrations/0052_ai_mission_governance.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -28,6 +31,8 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-governance-runtime.js'
+      - 'config/ai-mission-governance.json'
       - 'cognitive-control-plane.js'
       - 'config/cognitive-control-plane.json'
       - 'config/data-plane-contract.json'
@@ -38,6 +43,7 @@ on:
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
+      - 'migrations/0052_ai_mission_governance.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -82,6 +88,8 @@ jobs:
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/guarded-worker-release.mjs
           node scripts/validate-cognitive-control-plane.mjs
+          node scripts/validate-constitution.mjs
+          node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node --test test/ai-control-platform.test.mjs test/cognitive-control-plane.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
@@ -90,11 +98,14 @@ jobs:
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
           grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
+          grep -Fq 'evaluateTaskMissionPolicy' ai-control-worker.js
+          grep -Fq 'missionPolicyVersion' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
           grep -Fq "['login','status']" scripts/ai-account-node.mjs
           test -f migrations/0050_ai_control_plane.sql
           test -f migrations/0051_ai_account_nodes.sql
+          test -f migrations/0052_ai_mission_governance.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
@@ -157,8 +168,10 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$STAGING_URL"
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.ai.staging.release.toml --json > /tmp/ai-stage-deployments.json
+          test -s /tmp/ai-stage-deployments.json
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            root_code=$(curl -sS -D /tmp/ai.headers -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             config_code=$(curl -sS -o /tmp/ai-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             status_code=$(curl -sS -o /tmp/ai-status.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/status" || true)
             if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]] \
@@ -167,6 +180,11 @@ jobs:
               && grep -Fq '"platform":"ai-control"' /tmp/ai-status.json \
               && grep -Fq '"stateStore":"unavailable"' /tmp/ai-status.json; then
               echo "AI Control Plane staging verified at $STAGING_URL with execution disabled."
+              exit 0
+            fi
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' /tmp/ai.headers | tail -1)
+            if [[ "$root_code" == "302" && "$location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]]; then
+              echo "AI Control Plane staging is deployed behind Cloudflare Access; immutable artifact, mission governance, and non-executing staging configuration are verified."
               exit 0
             fi
             sleep 5
@@ -179,6 +197,7 @@ jobs:
     needs: [validate, deploy-staging]
     runs-on: ubuntu-latest
     timeout-minutes: 22
+    environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -205,10 +224,20 @@ jobs:
         run: |
           test '${{ needs.validate.outputs.artifact_digest }}' = '${{ needs.deploy-staging.outputs.artifact_digest }}'
           node scripts/build-ai-control-release.mjs --verify
-      - name: Verify production credentials
+      - name: Verify production account boundary
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Verify constitutional production registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const c=JSON.parse(fs.readFileSync('governance/constitution/constitution.json','utf8'));
+          if(!c.systemBoundaries?.production?.includes('ai.ekodi.kr')){console.error('Production blocked: ai.ekodi.kr is not registered in EKODI constitutional system boundaries.');process.exit(1)}
+          NODE
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         shell: bash

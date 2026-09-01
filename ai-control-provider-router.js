@@ -92,7 +92,7 @@ export async function runExecutionPlan(env,task,onRun=async()=>{},nodeProviders=
   const execute=async entry=>{
     const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'running',output:'',error:'',startedAt:new Date().toISOString(),finishedAt:''};
     await onRun(run,'start');
-    try{run.output=await invokeProvider(env,entry.providerId,rolePrompt(task,entry.role,{branch:task.branch}),task,entry.role);run.state='completed'}catch(error){run.state='failed';run.error=clean(error?.message||error)}
+    try{run.output=await invokeProvider(env,entry.providerId,rolePrompt(task,entry.role,{branch:task.branch,missionDecision:task.missionDecision}),task,entry.role);run.state='completed'}catch(error){run.state='failed';run.error=clean(error?.message||error)}
     run.finishedAt=new Date().toISOString();
     await onRun(run,'finish');
     return{...run,ok:run.state==='completed'};
