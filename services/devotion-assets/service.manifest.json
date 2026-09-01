@@ -5,6 +5,10 @@
   "scope":"shared-independent-service",
   "tenant_neutral":true,
   "interfaces":{"http":["GET /health","PUT /v1/assets/:assetKey","GET /v1/assets/:assetKey"]},
-  "adapters":{"store":"replaceable"},
-  "forbidden_core_dependencies":["specific workspace names","Google Drive folder IDs","YouTube channels","FFmpeg rendering","EKODI admin authentication"]
+  "adapters":{
+    "store":"replaceable",
+    "available":["filesystem (local/dev)","http-storage-gateway (generic remote contract)"]
+  },
+  "topology_note":"Consumed by the Devotion Pipeline orchestrator, never called for tenant-specific YouTube/Drive logic directly.",
+  "forbidden_core_dependencies":["specific workspace names","Google Drive folder IDs","Google Drive SDK","YouTube channels","FFmpeg rendering","EKODI admin authentication"]
 }

@@ -89,13 +89,21 @@ export function buildFfmpegArgs({ item, outputPath, subtitlePath, format = {} })
 export async function renderItem({ item, workspaceId, batchKey, format, outputDir, ffmpegPath = 'ffmpeg', fontName }) {
   const tempDir = await mkdtemp(join(tmpdir(), 'ekodi-devotion-render-'));
   try {
-    const duration = Math.max(1, Number(item.metadata?.duration_seconds || 30));
+    let effectiveItem = item;
+    const inlineAudio = String(item.metadata?.audio_base64 || '').trim();
+    if (inlineAudio && !item.metadata?.audio_path) {
+      const audioPath = join(tempDir, 'voice.wav');
+      await writeFile(audioPath, Buffer.from(inlineAudio, 'base64'));
+      effectiveItem = { ...item, metadata: { ...item.metadata, audio_path: audioPath } };
+    }
+    const duration = Math.max(1, Number(effectiveItem.metadata?.duration_seconds || 30));
     const subtitlePath = join(tempDir, 'captions.ass');
-    await writeFile(subtitlePath, createAss(item, duration, fontName), 'utf8');
+    await writeFile(subtitlePath, createAss(effectiveItem, duration, fontName), 'utf8');
     await mkdir(outputDir, { recursive: true });
-    const filename = `${safeName(workspaceId)}-${safeName(batchKey)}-${safeName(item.id)}.mp4`;
+    const version = safeName(effectiveItem.metadata?.render_version || 'v1');
+    const filename = `${safeName(workspaceId)}-${safeName(batchKey)}-${safeName(item.id)}-${version}.mp4`;
     const outputPath = resolve(outputDir, filename);
-    const args = buildFfmpegArgs({ item, outputPath, subtitlePath, format });
+    const args = buildFfmpegArgs({ item: effectiveItem, outputPath, subtitlePath, format });
     await runProcess(ffmpegPath, args);
     return { item_id: String(item.id), path: outputPath, filename, duration_seconds: duration };
   } finally {

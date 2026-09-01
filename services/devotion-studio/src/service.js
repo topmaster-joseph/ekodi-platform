@@ -54,7 +54,7 @@ export function createDevotionStudio({ repository, renderer, publisher, clock = 
     return decorateSnapshot(await repository.getSnapshot(required(workspace_id, 'workspace_id'), required(batch_key, 'batch_key')));
   }
 
-  async function queueRender({ workspace_id, batch_key, format = {} }) {
+  async function queueRender({ workspace_id, batch_key, format = {}, render_version = 'v1' }) {
     const workspaceId = required(workspace_id, 'workspace_id');
     const batchKey = required(batch_key, 'batch_key');
     const snapshot = await repository.getSnapshot(workspaceId, batchKey);
@@ -71,6 +71,7 @@ export function createDevotionStudio({ repository, renderer, publisher, clock = 
       kind: 'render',
       status: 'queued',
       payload: {
+        render_version: required(render_version, 'render_version'),
         format: {
           width: Number(format.width || 1080),
           height: Number(format.height || 1920),

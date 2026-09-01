@@ -12,7 +12,7 @@ const send = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
-async function readJson(req, maxBytes = 2 * 1024 * 1024) {
+async function readJson(req, maxBytes = 8 * 1024 * 1024) {
   const chunks = [];
   let total = 0;
   for await (const chunk of req) {

@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Provider-neutral asset storage and resolution service for devotional production.",
-  "scripts": {"test":"node --test test/*.test.mjs"},
+  "scripts": {"start":"node src/server.js","test":"node --test test/*.test.mjs"},
   "engines": {"node":">=20"}
 }

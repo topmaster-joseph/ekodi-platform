@@ -52,3 +52,23 @@ Provider credentials belong to the provider adapter/deployment environment, neve
 ## Deployment rule
 
 Devotion Studio must be deployable, replaceable, scaled, failed, and upgraded without redeploying EKODI Church or EKODI Mission. A workspace disconnect must not stop the service or affect other workspaces.
+
+## Current render topology
+
+When `PIPELINE_ENDPOINT` is configured, Studio uses the independent Devotion Pipeline rather than calling FFmpeg directly:
+
+```text
+EKODI Admin adapter
+       |
+Devotion Studio
+       |
+Devotion Pipeline
+  |       |       |
+Voice   Assets  Renderer
+                  |
+                 MP4
+       |
+separate Publisher adapter
+```
+
+`render_version` is part of the render contract so retries are stable and intentional template changes can create a new logical output without colliding with an earlier render.

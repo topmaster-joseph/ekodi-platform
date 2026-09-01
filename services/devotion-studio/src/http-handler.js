@@ -28,7 +28,7 @@ export function createDevotionStudioHttpHandler({ service, serviceKey = '' }) {
       }
       if (request.method === 'POST' && parts[3] === 'render') {
         const body = await request.json().catch(() => ({}));
-        return json(await service.queueRender({ workspace_id: body.workspace_id || workspaceId, batch_key: batchKey, format: body.format }), 202);
+        return json(await service.queueRender({ workspace_id: body.workspace_id || workspaceId, batch_key: batchKey, format: body.format, render_version: body.render_version }), 202);
       }
       if (request.method === 'POST' && parts[3] === 'publications' && parts[4] && parts[5] === 'schedule') {
         const body = await request.json();

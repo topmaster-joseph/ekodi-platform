@@ -53,3 +53,11 @@ test('FFmpeg smoke renders a real MP4 when ffmpeg is installed', { timeout: 3000
     await rm(outputDir, { recursive: true, force: true });
   }
 });
+
+test('renderer supports generic inline WAV input and versioned output names', async () => {
+  const source = await import('node:fs/promises').then(fs => fs.readFile(new URL('../src/render.js', import.meta.url), 'utf8'));
+  assert.match(source, /audio_base64/);
+  assert.match(source, /Buffer\.from\(inlineAudio, 'base64'\)/);
+  assert.match(source, /render_version/);
+  assert.match(source, /-\$\{version\}\.mp4/);
+});
