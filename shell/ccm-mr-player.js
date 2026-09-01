@@ -161,6 +161,28 @@
     button.setAttribute('aria-label',active?'배경 CCM MR 끄기':'배경 CCM MR 재생');
     button.title=active?'배경 CCM MR 끄기':'배경 CCM MR 재생';
   }
+  function header(){
+    return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-language-ignore])')||
+      document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header');
+  }
+  function actionContainer(target){
+    return target?.querySelector('.ekodi-user-ui-fallback-header__nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions,#main-nav,nav')||target;
+  }
+  function placeButton(){
+    const button=document.getElementById(buttonId);
+    if(!button)return;
+    const target=header();
+    if(!target)return;
+    const parent=actionContainer(target);
+    if(!parent)return;
+    button.setAttribute('data-ekodi-header-side','right');
+    const language=parent.querySelector('[data-ekodi-language-control]');
+    if(language){
+      if(button.parentElement!==parent||button.previousElementSibling!==language)language.insertAdjacentElement('afterend',button);
+      return;
+    }
+    if(button.parentElement!==parent)parent.append(button);
+  }
   function armGesture(){
     if(gestureArmed||!wanted)return;
     gestureArmed=true;
@@ -177,15 +199,16 @@
     document.addEventListener('keydown',resume,true);
   }
   function installButton(){
-    if(document.getElementById(buttonId))return;
+    if(document.getElementById(buttonId)){placeButton();return;}
     const style=document.createElement('style');
-    style.dataset.ekodiCcmMr='v1';
-    style.textContent=`#${buttonId}{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:2147482500;min-width:102px;min-height:44px;padding:10px 14px;border:1px solid rgba(15,23,42,.14);border-radius:999px;background:rgba(255,255,255,.94);color:#0f172a;font:600 13px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 8px 24px rgba(15,23,42,.12);backdrop-filter:blur(12px);cursor:pointer;touch-action:manipulation}#${buttonId}:hover{background:#fff}#${buttonId}:focus-visible{outline:3px solid rgba(37,99,235,.3);outline-offset:2px}@media(max-width:480px){#${buttonId}{right:10px;bottom:10px;min-width:96px;padding:9px 12px}}`;
+    style.dataset.ekodiCcmMr='v2';
+    style.textContent=`#${buttonId}{position:static;z-index:auto;flex:0 0 auto;min-width:92px;min-height:34px;margin-inline-start:2px;padding:7px 10px;border:1px solid var(--ekodi-user-chrome-line,rgba(15,23,42,.14));border-radius:999px;background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 92%,transparent);color:var(--ekodi-user-chrome-text,#0f172a);font:650 12px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:none;backdrop-filter:blur(12px);cursor:pointer;touch-action:manipulation;white-space:nowrap}#${buttonId}:hover{filter:brightness(1.03)}#${buttonId}:focus-visible{outline:2px solid var(--ekodi-user-chrome-link,#2563eb);outline-offset:2px}body>#${buttonId}{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:2147482500;min-height:44px;padding:10px 14px;box-shadow:0 8px 24px rgba(15,23,42,.12)}@media(max-width:640px){#${buttonId}{min-width:0;padding-inline:8px}body>#${buttonId}{right:10px;bottom:10px;min-width:96px;padding:9px 12px}}`;
     document.head.append(style);
     const button=document.createElement('button');
     button.type='button';
     button.id=buttonId;
-    button.dataset.ekodiCcmMr='v1';
+    button.dataset.ekodiCcmMr='v2';
+    button.setAttribute('data-ekodi-header-side','right');
     button.addEventListener('click',async()=>{
       if(wanted&&started){
         wanted=false;
@@ -200,6 +223,7 @@
       updateButton();
     });
     document.body.append(button);
+    placeButton();
     updateButton();
   }
   async function boot(){
@@ -209,6 +233,9 @@
     if(!ok)armGesture();
   }
 
+  window.addEventListener('ekodi:user-header-ready',placeButton);
+  window.addEventListener('ekodi:shell-theme',placeButton);
+  window.addEventListener('resize',placeButton,{passive:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 
