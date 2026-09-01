@@ -1,0 +1,51 @@
+name: Claude Code Install Proof
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/claude-code-install-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install Claude Code using official native installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Claude Code installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          claude --version
+          command -v claude
+
+      - name: Run read-only diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          claude doctor || true
+
+      - name: Publish installation proof
+        if: always()
+        shell: bash
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          {
+            echo '## Claude Code cloud installation proof'
+            echo
+            echo "- Runner: ${RUNNER_OS} / ${RUNNER_ARCH}"
+            echo "- Installed path: $(command -v claude 2>/dev/null || echo not-found)"
+            echo "- Version: $(claude --version 2>/dev/null || echo unavailable)"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
