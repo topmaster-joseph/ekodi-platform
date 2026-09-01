@@ -11,12 +11,19 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.1.0') fail('constitution version must be 1.1.0 after the approved 2026-08-29 workspace-path amendment');
+if (constitution.version !== '1.2.0') fail('constitution version must be 1.2.0 after the approved 2026-09-01 parallel-development amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
+const parallel = constitution.parallelDevelopmentPolicy || {};
+if (parallel.uniqueTaskIdRequired !== true) fail('parallel development requires unique task IDs');
+if (parallel.independentBranchPerTask !== true) fail('parallel development requires an independent branch per task');
+if (parallel.independentWorktreeOrSandboxPerTask !== true) fail('parallel development requires an independent worktree or sandbox per task');
+if (parallel.sharedMutableWorkingDirectoryForbidden !== true) fail('concurrent tasks must not share a mutable working directory');
+if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protected-branch writes must be forbidden');
+if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const targets = constitution.legacyDomainTargets || {};
