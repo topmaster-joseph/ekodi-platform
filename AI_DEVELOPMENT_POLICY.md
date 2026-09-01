@@ -29,10 +29,11 @@ Rules:
 
 ## Automatic task allocation
 
-EKODI provides a repository-level allocator and a local/remote worktree starter so branch/workspace isolation does not depend on a human remembering Git commands.
+EKODI provides a repository-level allocator and cross-platform local/remote worktree starter so branch/workspace isolation does not depend on a human remembering Git commands.
 
 - `.github/workflows/ai-task-allocator.yml` creates or reuses `ai/<agent>/<task-id>` from an approved base ref. It can be invoked directly or by labeling an issue `ai-task`; optional `agent:<name>` labels select the worker identity.
-- `scripts/ai-task-start.sh <agent> <task-id> [base-ref]` creates or reuses the matching branch and a dedicated sibling worktree under `.ekodi-worktrees`.
+- `node scripts/ekodi-task-start.mjs --agent <agent> [--task-id <task-id>] [--base main] <description>` is the canonical Windows/Linux/macOS bootstrap. It generates a unique task id when one is not supplied and creates a dedicated sibling worktree by default.
+- `scripts/ai-task-start.sh` remains a POSIX helper for environments where shell automation is convenient.
 - Existing task branches are reused rather than silently replaced. Shared mutable workspaces remain forbidden.
 - Central orchestrators and future admin UI actions should call this allocator contract rather than inventing provider-specific branch logic.
 
