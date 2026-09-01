@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T05:21:34.039Z",
-  "startedAt": "2026-08-31T05:21:27.190Z",
+  "generatedAt": "2026-09-01T05:20:18.998Z",
+  "startedAt": "2026-09-01T05:20:11.706Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "5a82414d7fc916477b239ba95af94df1761d5153",
+  "head": "0daa73fc91295c09fa45e0b564379edad447646a",
   "overallScore": 69.7,
   "status": "restricted",
   "thresholds": {
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "149개 Workflow · 배포 가드 검증 통과"
+      "detail": "144개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,10 +58,10 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 389,
-    "runtimeLines": 66647,
-    "testFiles": 199,
-    "workflows": 149,
+    "runtimeFiles": 396,
+    "runtimeLines": 67517,
+    "testFiles": 202,
+    "workflows": 144,
     "largeFiles": 0,
     "veryLargeFiles": 0,
     "todoMarkers": 5,
@@ -182,25 +182,25 @@
       "ok": false,
       "status": 1,
       "timedOut": false,
-      "summary": "      at async TestContext.<anonymous> (file:///home/runner/work/ekodi-platform/ekodi-platform/test/social-registry-control.test.mjs:46:67)\n      at async Test.run (node:internal/test_runner/test:1389:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {\n    errno: -2,\n    code: 'ENOENT',\n    syscall: 'open',\n    path: '/home/runner/work/ekodi-platform/ekodi-platform/control-center-features.js'\n  }\n\ntest at test/static-app.test.mjs:1:1\n✖ test/static-app.test.mjs (51.238397ms)\n  'test failed'"
+      "summary": "meout-minutes: 24\\n    env:\\n      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\\n      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\\n    steps:\\n      - uses: actions/checkout@v7\\n      - uses: actions/setup-node@v7\\n        with:\\n          node-version: \\'24\\'\\n      - name: Capture D1 recovery bookmark\\n        run: npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json\\n      - name: Apply production migration once after both staging gates\\n        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml \"$WRANGLER_VERSION\"\\n      - name: Guarded Workspace API release\\n        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json\\n      - name: Verify production Conversation foundation\\n        run: |\\n          curl -fsS \\'https://workspace-api.ekodi.kr/health\\' > /tmp/live-health.json\\n          grep -Fq \\'\"schemaReady\":true\\' /tmp/live-health.json\\n          grep -Fq \\'\"conversationSchemaReady\":true\\' /tmp/live-health.json\\n          grep -Fq \\'\"profileEvidenceFoundation\":\"v1\"\\' /tmp/live-health.json\\n\\n  production-control:\\n    needs: production-workspace\\n    if: github.event_name == \\'push\\' && github.ref == \\'refs/heads/main\\'\\n    runs-on: ubuntu-latest\\n    timeout-minutes: 20\\n    env:\\n      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\\n      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\\n    steps:\\n      - uses: actions/checkout@v7\\n      - uses: actions/setup-node@v7\\n        with:\\n          nod'... 549 more characters,\n    expected: /production-ui:\\n\\s+needs: production-control/,\n    operator: 'match',\n    diff: 'simple'\n  }"
     },
     "security": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.0 validate:security\n> node scripts/validate-security-baseline.mjs\n\nSecurity baseline valid: fail-closed edge throttling, browser headers, Google allowlist, session revocation and password shutdown enforced."
+      "summary": "> ekodi-platform@4.3.1 validate:security\n> node scripts/validate-security-baseline.mjs\n\nSecurity baseline valid: fail-closed edge throttling, browser headers, Google allowlist, session revocation and password shutdown enforced."
     },
     "architecture": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.0 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 27 platform/service boundaries"
+      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 27 platform/service boundaries"
     },
     "deployment": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.0 validate:deployments\n> node scripts/validate-deployment-guardrails.mjs\n\n✅ Deployment policy audit passed: production deploys remain guarded behind real isolated staging/candidate gates while the retired admin compatibility workflow stays manual-only and non-deploying."
+      "summary": "> ekodi-platform@4.3.1 validate:deployments\n> node scripts/validate-deployment-guardrails.mjs\n\n✅ Deployment policy audit passed: shared-site has one production owner, no redispatch loops, and independent services remain behind their own guarded release boundaries."
     }
   },
   "cadence": {
