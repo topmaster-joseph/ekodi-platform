@@ -14,9 +14,11 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.match(criticalBlock, /'admin-compact\.js'/);
   assert.match(criticalBlock, /'admin-menu-layout\.js'/);
   assert.match(criticalBlock, /'admin-demand-loader\.js'/);
-  assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
+  assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js|agentic-bootstrap\.js/);
   assert.match(deferredBlock, /'google-admin-auth\.js'/);
   assert.match(deferredBlock, /'ekodi-message-ui\.js'/);
+  assert.match(deferredBlock, /'agentic-bootstrap\.js'/);
+  assert.doesNotMatch(deferredBlock, /cheonggye-members-admin/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.match(shell, /assetUrl\(src\)/);
   assert.doesNotMatch(shell, /'campus-actions\.js'/);
@@ -95,38 +97,36 @@ test('secondary hydration never has a forced requestIdleCallback deadline', asyn
 test('normal login opens Site Management without auto-opening AI or internal workspaces', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
-  assert.match(menu, /let requestedSection = ''/);
-  assert.match(menu, /const initialHash = explicitHashSection\(\)/);
-  assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.match(menu, /requestedSection = 'campus';[\s\S]*requestDemand\('campus'\)/);
+  assert.match(menu, /let requestedSection\s*=\s*''/);
+  assert.match(menu, /const initialHash\s*=\s*explicitHashSection\(\)/);
+  assert.match(menu, /else if\s*\(initialHash\)\s*requestedSection\s*=\s*initialHash/);
+  assert.match(menu, /requestedSection\s*=\s*'campus';[\s\S]*requestDemand\('campus'\)/);
   assert.match(menu, /\['campus','campus'\]/);
   assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
-  assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
+  assert.doesNotMatch(menu, /requestedSection\s*=\s*'overview';[\s\S]*activatePanel\('overview'\)/);
   assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
   assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
+  assert.match(registry, /id: 'campus'.*ko: '사이트 관리'.*en: 'Site Management'/);
   assert.match(registry, /id: 'storage'.*ko: '저장소'.*en: 'Storage'/);
   assert.ok(routePair(menu, '#health', 'health'));
-  assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
+  assert.doesNotMatch(menu, /requestedSection\s*=\s*'aiops';\s*\n\s*preferAiOpsOnReady\s*=\s*true/);
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses eight work areas and one contextual top-tab registry', async () => {
+test('admin menu governance enforces five stable work areas and contextual tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
-    assert.match(registry, new RegExp(`id: '${group}'`));
-  }
-  for (const retired of ['site-management', 'access', 'space', 'security-audit', 'settings']) {
-    assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
-  }
+  for (const group of ['home', 'operations', 'spaces', 'services', 'system']) assert.match(registry, new RegExp(`id: '${group}'`));
+  for (const retired of ['people', 'ai', 'business', 'data', 'site-management', 'access', 'space', 'security-audit', 'settings']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   assert.match(registry, /id: 'campus', group: 'home'/);
   assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'workspace', group: 'people'/);
-  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
-  assert.match(registry, /id: 'finance', group: 'business'/);
-  assert.match(registry, /id: 'storage', group: 'data'/);
+  assert.match(registry, /id: 'workspace', group: 'spaces'/);
+  assert.match(registry, /id: 'finance', group: 'operations'/);
+  assert.match(registry, /id: 'ai-membership', group: 'system'/);
+  assert.match(registry, /id: 'storage', group: 'system'/);
   assert.match(registry, /id: 'health', group: 'system'/);
+  assert.match(registry, /id: 'cheonggye-members'[\s\S]*internal: true/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
