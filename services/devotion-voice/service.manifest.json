@@ -1,0 +1,28 @@
+{
+  "service_id": "ekodi.devotion-voice",
+  "display_name": "EKODI Devotion Voice",
+  "version": "0.1.0",
+  "scope": "shared-independent-service",
+  "tenant_neutral": true,
+  "interfaces": {
+    "http": ["GET /health", "POST /v1/speech"]
+  },
+  "providers": {
+    "default_adapter": "gemini",
+    "replaceable": true
+  },
+  "output": {
+    "container": "wav",
+    "sample_rate": 24000,
+    "channels": 1,
+    "sample_width_bytes": 2
+  },
+  "forbidden_core_dependencies": [
+    "specific workspace names",
+    "specific church or mission names",
+    "FFmpeg rendering",
+    "YouTube publishing",
+    "EKODI admin authentication",
+    "specific asset storage vendor"
+  ]
+}
