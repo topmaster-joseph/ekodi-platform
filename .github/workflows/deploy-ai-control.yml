@@ -56,6 +56,7 @@ jobs:
           node --test test/ai-control-platform.test.mjs
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.toml
+          grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
@@ -81,6 +82,32 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Verify staging behavior locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 dev --local --config wrangler.ai.staging.toml --port 8787 > /tmp/ai-staging-local.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -sS -o /tmp/ai-local.html -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/ || true)
+            config_code=$(curl -sS -o /tmp/ai-local-config.js -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/config.js || true)
+            status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
+            if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]] \
+              && grep -Fq 'AI Control Plane' /tmp/ai-local.html \
+              && grep -Fq '"taskExecutionEnabled":false' /tmp/ai-local-config.js \
+              && grep -Fq '"platform":"ai-control"' /tmp/ai-local-status.json \
+              && grep -Fq '"stateStore":"unavailable"' /tmp/ai-local-status.json; then
+              echo 'Local staging behavior verified with execution disabled.'
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ai-staging-local.log || true
+          printf 'root=%s config=%s status=%s\n' "$root_code" "$config_code" "$status_code" >&2
+          cat /tmp/ai-local-config.js 2>/dev/null || true
+          cat /tmp/ai-local-status.json 2>/dev/null || true
+          exit 1
       - name: Deploy isolated staging Worker
         id: deploy
         shell: bash
@@ -94,28 +121,27 @@ jobs:
             exit 1
           fi
           echo "url=$staging_url" >> "$GITHUB_OUTPUT"
-      - name: Verify staging is non-executing
+      - name: Verify protected staging edge
         shell: bash
         env:
           STAGING_URL: ${{ steps.deploy.outputs.url }}
         run: |
           set -euo pipefail
           test -n "$STAGING_URL"
-          for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            config_code=$(curl -sS -o /tmp/ai-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
-            status_code=$(curl -sS -o /tmp/ai-status.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/status" || true)
-            if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]] \
-              && grep -Fq 'AI Control Plane' /tmp/ai.html \
-              && grep -Fq '"taskExecutionEnabled":false' /tmp/ai-config.js \
-              && grep -Fq '"platform":"ai-control"' /tmp/ai-status.json \
-              && grep -Fq '"stateStore":"unavailable"' /tmp/ai-status.json; then
-              echo "AI Control Plane staging verified at $STAGING_URL with execution disabled."
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Staging verification failed at $STAGING_URL" >&2
+          headers=/tmp/ai-edge-headers.txt
+          body=/tmp/ai-edge-body.txt
+          code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/" || true)
+          if [[ "$code" == "200" ]] && grep -Fq 'AI Control Plane' "$body"; then
+            echo "AI Control Plane staging is directly reachable at $STAGING_URL."
+            exit 0
+          fi
+          if [[ "$code" == "302" ]] && grep -Eqi '^www-authenticate:[[:space:]]*Cloudflare-Access' "$headers"; then
+            echo "AI Control Plane staging deployed at $STAGING_URL and remains protected by Cloudflare Access."
+            exit 0
+          fi
+          printf 'Unexpected staging edge response: HTTP %s\n' "$code" >&2
+          cat "$headers" >&2 || true
+          cat "$body" >&2 || true
           exit 1
 
   deploy-production:
