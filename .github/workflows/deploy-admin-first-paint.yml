@@ -4,10 +4,16 @@ on:
   workflow_dispatch:
   pull_request:
     paths: &first_paint_paths
+      - 'admin-shell.html'
+      - 'admin-shell.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
-      - 'control-center.html'
-      - 'compact-control-center.js'
+      - 'admin-demand-loader.js'
+      - 'admin-compact.css'
+      - 'admin-compact.js'
+      - 'scripts/admin-performance-postbuild.mjs'
+      - 'scripts/build.mjs'
+      - 'test/admin-first-paint.test.mjs'
       - '.github/workflows/deploy-admin-first-paint.yml'
   push:
     branches: [main]
@@ -41,15 +47,17 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
+          test -s dist/admin-shell.html
+          test -s dist/admin-shell.css
           test -s dist/admin-central-handoff.js
           test -s dist/admin-authenticated-shell.js
-          test -s dist/control-center.html
-          # The build/postbuild pipeline already enforces first-path byte budgets,
-          # no startup polling, no document-wide observers and immutable fingerprinting.
-          # Keep this check at the public artifact boundary instead of private function names.
-          grep -Fq 'admin-authenticated-shell.js?v=' dist/control-center.html
-          grep -Fq 'admin-central-handoff.js?v=' dist/control-center.html
-          grep -Fq 'control-center.css?v=' dist/control-center.html
+          # The build/postbuild pipeline owns byte budgets, immutable fingerprinting,
+          # startup polling guards and the canonical Agentic Admin entry point.
+          grep -Fq 'admin-authenticated-shell.js?v=' dist/admin-shell.html
+          grep -Fq 'admin-central-handoff.js?v=' dist/admin-shell.html
+          grep -Fq 'admin-shell.css?v=' dist/admin-shell.html
+          test ! -e dist/control-center.html
+          test ! -e dist/control-center.css
 
       - name: Verify repository deployment ownership policy
         run: node scripts/validate-deployment-guardrails.mjs
