@@ -15,7 +15,8 @@
     "fallbackHeaderWhenMissing": true,
     "legacyCommonFooterSuppressed": true,
     "rootInternalPathsExcluded": true,
-    "languageChoiceEverywhere": true
+    "languageChoiceEverywhere": true,
+    "globalUtilitiesInHeader": true
   },
   "header": {
     "owner": "shared-shell",
@@ -45,6 +46,13 @@
     "default": "ko-KR",
     "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
     "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
+    "adminExcluded": true
+  },
+  "ambientAudio": {
+    "owner": "shared-shell",
+    "runtime": "shell/ccm-mr-player.js",
+    "placement": "inside the adopted or fallback user header; floating only when no header exists",
+    "contentOverlapForbidden": true,
     "adminExcluded": true
   },
   "inheritance": {
