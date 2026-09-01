@@ -8,7 +8,7 @@ on:
       - 'ai-control-*.js'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
-      - 'migrations/0042_ai_control_plane.sql'
+      - 'migrations/0050_ai_control_plane.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'docs/AI-CONTROL-PLANE-MVP.md'
       - '.github/workflows/deploy-ai-control.yml'
@@ -19,7 +19,7 @@ on:
       - 'ai-control-*.js'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
-      - 'migrations/0042_ai_control_plane.sql'
+      - 'migrations/0050_ai_control_plane.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'docs/AI-CONTROL-PLANE-MVP.md'
       - '.github/workflows/deploy-ai-control.yml'
@@ -53,6 +53,7 @@ jobs:
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
+          test -f migrations/0050_ai_control_plane.sql
           test -f deploy/manifests/ai-control.worker.json
 
   deploy-staging:
