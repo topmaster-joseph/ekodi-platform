@@ -1,4 +1,4 @@
-import {AI_CONTROL_POLICY,createTaskId,normalizeTaskInput} from './ai-control-core.js';
+import {AI_CONTROL_POLICY,createTaskId,evaluateTaskMissionPolicy,normalizeTaskInput} from './ai-control-core.js';
 import {providerStatus,runExecutionPlan} from './ai-control-provider-router.js';
 
 const clean=value=>String(value??'').trim();
@@ -6,7 +6,7 @@ const now=()=>new Date().toISOString();
 function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
-function config(env={}){return{platform:'ai-control',mode:env.AI_CONTROL_MODE||'free-first',policyVersion:AI_CONTROL_POLICY.version,authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true}}
+function config(env={}){return{platform:'ai-control',mode:env.AI_CONTROL_MODE||'free-first',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true}}
 function dbReady(env){return Boolean(env.DB&&typeof env.DB.prepare==='function')}
 function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SUPABASE_PUBLISHABLE_KEY))}
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
@@ -30,9 +30,10 @@ async function requireAdmin(request,env){
 }
 async function insertTask(env,task){
   if(!dbReady(env))throw new Error('state_store_unavailable');
-  await env.DB.prepare('INSERT INTO ai_control_tasks (id,title,prompt,mode,state,requested_providers,needs_code_branch,branch,created_by,created_at,updated_at,approval_state,result_summary,error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(task.id,task.title,task.prompt,task.mode,task.state,JSON.stringify(task.requestedProviders),task.needsCodeBranch?1:0,'',task.createdBy,task.createdAt,task.updatedAt,'pending','','').run();
+  const m=task.missionDecision||{};
+  await env.DB.prepare('INSERT INTO ai_control_tasks (id,title,prompt,mode,state,requested_providers,needs_code_branch,branch,governance_json,mission_policy_version,mission_tier,mission_reason,mission_explanation,analysis_only,created_by,created_at,updated_at,approval_state,result_summary,error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(task.id,task.title,task.prompt,task.mode,task.state,JSON.stringify(task.requestedProviders),task.needsCodeBranch?1:0,'',JSON.stringify(task.governance||{}),m.policyVersion||'',m.tier||'',m.reason||'',m.explanation||'',m.analysisOnly?1:0,task.createdBy,task.createdAt,task.updatedAt,'pending','','').run();
 }
-function taskRow(row){if(!row)return null;return{id:row.id,title:row.title,prompt:row.prompt,mode:row.mode,state:row.state,requestedProviders:JSON.parse(row.requested_providers||'[]'),needsCodeBranch:Boolean(row.needs_code_branch),branch:row.branch||'',createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at,approvalState:row.approval_state||'pending',resultSummary:row.result_summary?JSON.parse(row.result_summary):null,error:row.error||''}}
+function taskRow(row){if(!row)return null;const tier=row.mission_tier||'';return{id:row.id,title:row.title,prompt:row.prompt,mode:row.mode,state:row.state,requestedProviders:JSON.parse(row.requested_providers||'[]'),needsCodeBranch:Boolean(row.needs_code_branch),branch:row.branch||'',governance:JSON.parse(row.governance_json||'{}'),missionDecision:{policyVersion:row.mission_policy_version||'',tier,reason:row.mission_reason||'',explanation:row.mission_explanation||'',analysisOnly:Boolean(row.analysis_only),forbidden:tier==='forbidden',humanGate:tier==='human_gate',allowModelConsultation:tier!=='forbidden',autonomousActionAllowed:['observe','execute_reversible'].includes(tier),humanApprovalRequired:tier!=='forbidden'},createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at,approvalState:row.approval_state||'pending',resultSummary:row.result_summary?JSON.parse(row.result_summary):null,error:row.error||''}}
 async function getTask(env,id){return dbReady(env)?taskRow(await env.DB.prepare('SELECT * FROM ai_control_tasks WHERE id=?').bind(id).first()):null}
 async function listTasks(env){if(!dbReady(env))throw new Error('state_store_unavailable');const data=await env.DB.prepare('SELECT * FROM ai_control_tasks ORDER BY created_at DESC LIMIT 100').all();return(data.results||[]).map(taskRow)}
 async function patchTask(env,id,fields){const entries=Object.entries(fields);if(!entries.length)return;await env.DB.prepare(`UPDATE ai_control_tasks SET ${entries.map(([key])=>`${key}=?`).join(',')} WHERE id=?`).bind(...entries.map(([,value])=>typeof value==='object'?JSON.stringify(value):value),id).run()}
@@ -48,6 +49,9 @@ async function allocateBranch(env,task){
 }
 async function execute(env,id){
   let task=await getTask(env,id);if(!task)throw new Error('task_not_found');
+  const currentMission=evaluateTaskMissionPolicy(task);
+  if(currentMission.forbidden){await patchTask(env,id,{state:'blocked_policy',updated_at:now(),error:`mission_policy:${currentMission.reason}`});throw new Error('mission_policy_forbidden')}
+  task={...task,missionDecision:currentMission};
   await patchTask(env,id,{state:'allocating',updated_at:now(),error:''});
   try{const branch=await allocateBranch(env,task);if(branch){await patchTask(env,id,{branch,updated_at:now()});task={...task,branch}}await patchTask(env,id,{state:'running',updated_at:now()});const result=await runExecutionPlan(env,task,(run,phase)=>saveRun(env,run,phase));const next=result.summary.successful?'approval_required':'failed';await patchTask(env,id,{state:next,updated_at:now(),result_summary:result.summary,error:result.summary.successful?'':'all_providers_failed'})}catch(error){await patchTask(env,id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});throw error}
 }
@@ -64,9 +68,9 @@ export default{async fetch(request,env,ctx){
     if(request.method==='GET'&&url.pathname==='/api/tasks'){try{return json({tasks:await listTasks(env)})}catch(error){return json({error:error.message},503)}}
     if(request.method==='POST'&&url.pathname==='/api/tasks'){
       if(env.AI_TASK_EXECUTION_ENABLED!=='true')return json({error:'task_execution_disabled'},503);
-      try{const input=normalizeTaskInput(await body(request)||{});const stamp=now();const task={...input,id:createTaskId(),state:'queued',createdBy:auth.user.email,createdAt:stamp,updatedAt:stamp};await insertTask(env,task);return json({task},201)}catch(error){return json({error:error.message},error.message==='state_store_unavailable'?503:400)}
+      try{const input=normalizeTaskInput(await body(request)||{});const missionDecision=evaluateTaskMissionPolicy(input);const stamp=now();const task={...input,missionDecision,id:createTaskId(),state:missionDecision.forbidden?'blocked_policy':'queued',createdBy:auth.user.email,createdAt:stamp,updatedAt:stamp};await insertTask(env,task);return json({task},201)}catch(error){return json({error:error.message},error.message==='state_store_unavailable'?503:400)}
     }
-    const runId=taskId(url.pathname,'/run');if(request.method==='POST'&&runId){if(!await getTask(env,runId))return json({error:'task_not_found'},404);await patchTask(env,runId,{state:'allocating',updated_at:now()});ctx.waitUntil(execute(env,runId).catch(()=>{}));return json({ok:true,taskId:runId,state:'allocating'},202)}
+    const runId=taskId(url.pathname,'/run');if(request.method==='POST'&&runId){const task=await getTask(env,runId);if(!task)return json({error:'task_not_found'},404);const missionDecision=evaluateTaskMissionPolicy(task);if(!missionDecision.allowModelConsultation)return json({error:'mission_policy_forbidden',reason:missionDecision.reason},409);await patchTask(env,runId,{state:'allocating',updated_at:now()});ctx.waitUntil(execute(env,runId).catch(()=>{}));return json({ok:true,taskId:runId,state:'allocating',missionDecision},202)}
     const approveId=taskId(url.pathname,'/approve');if(request.method==='POST'&&approveId){const task=await getTask(env,approveId);if(!task)return json({error:'task_not_found'},404);if(task.state!=='approval_required')return json({error:'task_not_ready_for_approval'},409);await patchTask(env,approveId,{approval_state:'approved',state:'completed',updated_at:now()});return json({ok:true,task:await getTask(env,approveId)})}
     const id=taskId(url.pathname);if(request.method==='GET'&&id){const task=await getTask(env,id);return task?json({task,runs:await runs(env,id)}):json({error:'task_not_found'},404)}
     return json({error:'not_found'},404);

@@ -2,6 +2,12 @@ name: Deploy EKODI AI Control Plane
 
 on:
   workflow_dispatch:
+    inputs:
+      promote_production:
+        description: Explicitly request production promotion after constitutional registration
+        required: false
+        default: false
+        type: boolean
   pull_request:
     paths:
       - 'ai-control/**'
@@ -49,6 +55,10 @@ jobs:
           node --check ai-control-worker.js
           node --check ai-control/app.js
           node --test test/ai-control-platform.test.mjs
+          node scripts/validate-constitution.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          grep -Fq 'evaluateTaskMissionPolicy' ai-control-worker.js
+          grep -Fq 'missionPolicyVersion' ai-control-worker.js
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
@@ -93,8 +103,10 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$STAGING_URL"
+          npx --yes wrangler@4.119.0 deployments status --config wrangler.ai.staging.toml --json > /tmp/ai-stage-deployments.json
+          test -s /tmp/ai-stage-deployments.json
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            root_code=$(curl -sS -D /tmp/ai.headers -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             config_code=$(curl -sS -o /tmp/ai-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             status_code=$(curl -sS -o /tmp/ai-status.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/status" || true)
             if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]] \
@@ -105,13 +117,18 @@ jobs:
               echo "AI Control Plane staging verified at $STAGING_URL with execution disabled."
               exit 0
             fi
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' /tmp/ai.headers | tail -1)
+            if [[ "$root_code" == "302" && "$location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]]; then
+              echo "AI Control Plane staging is deployed behind Cloudflare Access; source contracts, mission governance, and non-executing staging configuration are verified."
+              exit 0
+            fi
             sleep 5
           done
           echo "Staging verification failed at $STAGING_URL" >&2
           exit 1
 
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_production == true
     needs: deploy-staging
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -132,6 +149,18 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Verify constitutional production registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const constitution=JSON.parse(fs.readFileSync('governance/constitution/constitution.json','utf8'));
+          if(!constitution.systemBoundaries?.production?.includes('ai.ekodi.kr')){
+            console.error('Production blocked: ai.ekodi.kr is not registered in EKODI constitutional system boundaries.');
+            process.exit(1);
+          }
+          NODE
       - name: Apply additive AI ledger migration
         run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.ai.toml
       - name: Bootstrap Worker when absent

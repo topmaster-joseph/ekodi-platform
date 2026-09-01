@@ -1,10 +1,13 @@
+import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
+
 export const AI_CONTROL_POLICY = Object.freeze({
-  version: '0.1.0',
+  version: '0.2.0',
   defaultMode: 'primary-review',
   modes: Object.freeze(['single', 'primary-review', 'parallel']),
   providerOrder: Object.freeze(['gemini-free', 'worker:claude', 'worker:chatgpt', 'worker:gemini', 'worker:notebooklm', 'worker:aistudio']),
   maxPromptLength: 24000,
   maxParallelProviders: 3,
+  missionPolicyVersion: AI_MISSION_RUNTIME.version,
 });
 
 const clean = value => String(value ?? '').trim();
@@ -25,7 +28,15 @@ export function normalizeTaskInput(input = {}) {
   const title = clean(input.title).slice(0, 160) || prompt.replace(/\s+/g, ' ').slice(0, 80);
   const requestedProviders = unique(Array.isArray(input.providers) ? input.providers.map(clean) : []);
   const needsCodeBranch = input.needsCodeBranch === true || /\b(code|coding|git|github|branch|deploy|worker|repository|repo)\b/i.test(prompt) || /코드|코딩|깃|브랜치|배포|저장소/.test(prompt);
-  return Object.freeze({ title, prompt, mode, requestedProviders, needsCodeBranch });
+  const g = input.governance && typeof input.governance === 'object' ? input.governance : {};
+  const governance = Object.freeze({agentId:clean(g.agentId||input.agentId||'chief')||'chief',area:clean(g.area||input.actionArea||(needsCodeBranch?'software_change':'general_assistance'))||'general_assistance',delegated:g.delegated===true,reversible:g.reversible===true,logged:g.logged===true,preflightVerified:g.preflightVerified===true,reducesUserRights:g.reducesUserRights===true,crossTenantPrivateData:g.crossTenantPrivateData===true,violates:unique(Array.isArray(g.violates)?g.violates.map(clean):[])});
+  return Object.freeze({ title, prompt, mode, requestedProviders, needsCodeBranch, governance });
+}
+
+export function evaluateTaskMissionPolicy(task = {}) {
+  const decision=evaluateMissionAction(task.governance||{agentId:'chief'});
+  const autonomousActionAllowed=['observe','execute_reversible'].includes(decision.tier);
+  return Object.freeze({...decision,forbidden:decision.tier==='forbidden',humanGate:decision.tier==='human_gate',analysisOnly:!autonomousActionAllowed,allowModelConsultation:decision.tier!=='forbidden',autonomousActionAllowed,humanApprovalRequired:decision.tier!=='forbidden'});
 }
 
 export function availableProviderIds(capabilities = {}) {
@@ -51,11 +62,14 @@ export function buildExecutionPlan(task, capabilities = {}) {
 
 export function rolePrompt(task, role, context = {}) {
   const branch = clean(context.branch);
+  const mission = context.missionDecision || task.missionDecision || null;
   return [
     `EKODI task: ${task.title}`,
     `Role: ${role}`,
     branch ? `Isolated branch: ${branch}` : 'No source branch has been allocated for this task.',
     'Respect least privilege and the central review, merge, and deployment gate.',
+    mission ? `Mission gate: ${mission.tier} (${mission.reason}); policy ${mission.policyVersion}.` : '',
+    mission?.analysisOnly ? 'Mission governance permits analysis, review, and candidate preparation only. Do not perform the underlying high-impact action.' : '',
     role === 'reviewer' ? 'Review independently and identify risks, missing tests, conflicts, and simpler alternatives.' : '',
     '',
     task.prompt,
