@@ -27,6 +27,15 @@ Rules:
 7. Credentials must be task-scoped and least-privilege. Production credentials are not placed in agent worktrees.
 8. A task may prepare a change, tests, migration, rollback, PR, or deployment candidate, but may not bypass the central release gate.
 
+## Automatic task allocation
+
+EKODI provides a repository-level allocator and a local/remote worktree starter so branch/workspace isolation does not depend on a human remembering Git commands.
+
+- `.github/workflows/ai-task-allocator.yml` creates or reuses `ai/<agent>/<task-id>` from an approved base ref. It can be invoked directly or by labeling an issue `ai-task`; optional `agent:<name>` labels select the worker identity.
+- `scripts/ai-task-start.sh <agent> <task-id> [base-ref]` creates or reuses the matching branch and a dedicated sibling worktree under `.ekodi-worktrees`.
+- Existing task branches are reused rather than silently replaced. Shared mutable workspaces remain forbidden.
+- Central orchestrators and future admin UI actions should call this allocator contract rather than inventing provider-specific branch logic.
+
 ## Central merge and release gate
 
 All production-bound changes must pass through the same central pipeline regardless of who or what authored them.
@@ -66,6 +75,8 @@ Recommended metadata:
 An agent conflict or failed experiment must remain inside its branch/worktree. Agents must not solve conflicts by overwriting another active worktree or force-updating a shared branch.
 
 When two tasks overlap, the central integration stage decides merge order. A losing branch rebases or regenerates against the accepted state and is revalidated.
+
+`.github/workflows/ai-conflict-guard.yml` enforces this at pull-request time. If another open PR targeting the same base modifies any of the same files, the overlapping PR is blocked until central integration chooses the winning order. The guard also rejects a PR when GitHub reports an actual merge conflict with the base branch.
 
 ## Provider independence
 
