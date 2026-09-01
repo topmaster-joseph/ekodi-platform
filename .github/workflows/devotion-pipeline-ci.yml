@@ -54,3 +54,10 @@ jobs:
             services/devotion-voice/test/*.test.mjs \
             services/devotion-renderer/test/*.test.mjs \
             services/devotion-studio/test/*.test.mjs
+      - name: Build independent service containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build -t ekodi-devotion-pipeline:test services/devotion-pipeline
+          docker build -t ekodi-devotion-assets:test services/devotion-assets
+          docker build -t ekodi-devotion-voice:test services/devotion-voice
