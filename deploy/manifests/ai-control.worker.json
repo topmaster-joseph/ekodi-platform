@@ -2,7 +2,7 @@
   "version": 1,
   "worker": {
     "name": "ekodi-ai-control",
-    "config": "wrangler.ai.toml",
+    "config": "wrangler.ai.release.toml",
     "allowFirstDeploy": true,
     "requests": [
       {"url":"https://ai.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["AI Control Plane","명령은 한 번","Google 로그인"]},
