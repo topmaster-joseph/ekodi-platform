@@ -1,0 +1,144 @@
+name: Deploy EKODI AI Control Plane
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ai-control/**'
+      - 'ai-control-*.js'
+      - 'wrangler.ai*.toml'
+      - 'test/ai-control-platform.test.mjs'
+      - 'migrations/0042_ai_control_plane.sql'
+      - 'deploy/manifests/ai-control.worker.json'
+      - 'docs/AI-CONTROL-PLANE-MVP.md'
+      - '.github/workflows/deploy-ai-control.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ai-control/**'
+      - 'ai-control-*.js'
+      - 'wrangler.ai*.toml'
+      - 'test/ai-control-platform.test.mjs'
+      - 'migrations/0042_ai_control_plane.sql'
+      - 'deploy/manifests/ai-control.worker.json'
+      - 'docs/AI-CONTROL-PLANE-MVP.md'
+      - '.github/workflows/deploy-ai-control.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-ai-control-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate AI control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ai-control-core.js
+          node --check ai-control-provider-router.js
+          node --check ai-control-worker.js
+          node --check ai-control/app.js
+          node --test test/ai-control-platform.test.mjs
+          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.toml
+          grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.toml
+          grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
+          grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
+          test -f deploy/manifests/ai-control.worker.json
+
+  deploy-staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-ai-control-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Development boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Deploy isolated staging Worker
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.ai.staging.toml
+      - name: Verify staging is non-executing
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root_code=$(curl -L -sS -o /tmp/ai.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            config_code=$(curl -sS -o /tmp/ai-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
+            status_code=$(curl -sS -o /tmp/ai-status.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/status" || true)
+            if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]] \
+              && grep -Fq 'AI Control Plane' /tmp/ai.html \
+              && grep -Fq '"taskExecutionEnabled":false' /tmp/ai-config.js \
+              && grep -Fq '"platform":"ai-control"' /tmp/ai-status.json \
+              && grep -Fq '"stateStore":"unavailable"' /tmp/ai-status.json; then
+              echo 'AI Control Plane staging verified with execution disabled.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AI_ADMIN_EMAILS: ${{ secrets.AI_CONTROL_ADMIN_EMAILS }}
+      AI_GEMINI_API_KEY: ${{ secrets.AI_CONTROL_GEMINI_API_KEY }}
+      AI_GITHUB_TASK_TOKEN: ${{ secrets.AI_CONTROL_GITHUB_TASK_TOKEN }}
+      AI_EXTERNAL_WORKER_URL: ${{ secrets.AI_CONTROL_WORKER_URL }}
+      AI_EXTERNAL_WORKER_TOKEN: ${{ secrets.AI_CONTROL_WORKER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Apply additive AI ledger migration
+        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.ai.toml
+      - name: Bootstrap Worker when absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output=$(npx --yes wrangler@4.119.0 deployments status --config wrangler.ai.toml --json 2>&1)
+          code=$?
+          set -e
+          if [[ "$code" == "0" ]]; then exit 0; fi
+          if ! grep -Fq 'does not exist' <<<"$output"; then printf '%s\n' "$output"; exit "$code"; fi
+          npx --yes wrangler@4.119.0 deploy --config wrangler.ai.toml
+      - name: Provision optional AI Control secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          put_secret(){ local name="$1" value="$2"; if [[ -n "$value" ]]; then printf '%s' "$value" | npx --yes wrangler@4.119.0 secret put "$name" --config wrangler.ai.toml; fi; }
+          put_secret ADMIN_EMAILS "$AI_ADMIN_EMAILS"
+          put_secret GEMINI_API_KEY "$AI_GEMINI_API_KEY"
+          put_secret GITHUB_TASK_TOKEN "$AI_GITHUB_TASK_TOKEN"
+          put_secret AI_WORKER_URL "$AI_EXTERNAL_WORKER_URL"
+          put_secret AI_WORKER_TOKEN "$AI_EXTERNAL_WORKER_TOKEN"
+      - name: Guarded production promotion
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json
