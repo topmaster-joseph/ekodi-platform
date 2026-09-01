@@ -86,7 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.119.0 dev --local --config wrangler.ai.staging.toml --port 8787 > /tmp/ai-staging-local.log 2>&1 &
+          npx --yes wrangler@4.127.1 dev --local --config wrangler.ai.staging.toml --port 8787 > /tmp/ai-staging-local.log 2>&1 &
           worker_pid=$!
           trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 24); do
@@ -113,7 +113,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          output=$(npx --yes wrangler@4.119.0 deploy --config wrangler.ai.staging.toml 2>&1)
+          output=$(npx --yes wrangler@4.127.1 deploy --config wrangler.ai.staging.toml 2>&1)
           printf '%s\n' "$output"
           staging_url=$(printf '%s\n' "$output" | grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' | tail -n 1 || true)
           if [[ -z "$staging_url" ]]; then
@@ -169,23 +169,23 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Apply additive AI ledger migrations
-        run: npx --yes wrangler@4.119.0 d1 migrations apply ekodi-auth --remote --config wrangler.ai.toml
+        run: npx --yes wrangler@4.127.1 d1 migrations apply ekodi-auth --remote --config wrangler.ai.toml
       - name: Bootstrap Worker when absent
         shell: bash
         run: |
           set -euo pipefail
           set +e
-          output=$(npx --yes wrangler@4.119.0 deployments status --config wrangler.ai.toml --json 2>&1)
+          output=$(npx --yes wrangler@4.127.1 deployments status --config wrangler.ai.toml --json 2>&1)
           code=$?
           set -e
           if [[ "$code" == "0" ]]; then exit 0; fi
           if ! grep -Fq 'does not exist' <<<"$output"; then printf '%s\n' "$output"; exit "$code"; fi
-          npx --yes wrangler@4.119.0 deploy --config wrangler.ai.toml
+          npx --yes wrangler@4.127.1 deploy --config wrangler.ai.toml
       - name: Provision optional AI Control secrets
         shell: bash
         run: |
           set -euo pipefail
-          put_secret(){ local name="$1" value="$2"; if [[ -n "$value" ]]; then printf '%s' "$value" | npx --yes wrangler@4.119.0 secret put "$name" --config wrangler.ai.toml; fi; }
+          put_secret(){ local name="$1" value="$2"; if [[ -n "$value" ]]; then printf '%s' "$value" | npx --yes wrangler@4.127.1 secret put "$name" --config wrangler.ai.toml; fi; }
           put_secret ADMIN_EMAILS "$AI_ADMIN_EMAILS"
           put_secret GEMINI_API_KEY "$AI_GEMINI_API_KEY"
           put_secret OPENAI_API_KEY "$AI_OPENAI_API_KEY"
