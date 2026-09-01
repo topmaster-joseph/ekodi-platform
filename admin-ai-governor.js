@@ -2,7 +2,7 @@
   'use strict';
   if (window.EKODIAdminAIGovernor) return;
 
-  const VERSION='1.0.0';
+  const VERSION='2.0.0';
   const RISK={LOW:'low',MEDIUM:'medium',HIGH:'high',CRITICAL:'critical'};
   const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','high_cost_ai']);
   const FREE_FIRST=Object.freeze(['deterministic_rule','internal_api','cached_context','free_ai','low_cost_ai','premium_ai']);
@@ -11,8 +11,7 @@
   function containsAny(text,words){return words.some(word=>text.includes(word))}
 
   function classifyIntent(request){
-    const text=normalize(request);
-    const dimensions=[];
+    const text=normalize(request);const dimensions=[];
     if(containsAny(text,['worker','cloudflare','domain','도메인','dns','route']))dimensions.push('infrastructure');
     if(containsAny(text,['github','repository','repo','branch','commit','코드','actions']))dimensions.push('development');
     if(containsAny(text,['deploy','배포','rollback','롤백','build','빌드']))dimensions.push('devops');
@@ -23,8 +22,7 @@
   }
 
   function expandContext(request){
-    const specialists=classifyIntent(request);
-    const related=new Set(['service_registry','health','recent_changes']);
+    const specialists=classifyIntent(request);const related=new Set(['service_registry','health','recent_changes']);
     if(specialists.includes('infrastructure'))['routes','custom_domains','workers','deployment_manifest'].forEach(x=>related.add(x));
     if(specialists.includes('development'))['repository','branch','actions','deployment_manifest'].forEach(x=>related.add(x));
     if(specialists.includes('devops'))['build','deployment','health','rollback_point'].forEach(x=>related.add(x));
@@ -34,27 +32,42 @@
     return {specialists,related:[...related]};
   }
 
+  function declaredPolicy(actionType){
+    const control=globalThis.EKODIAgenticControl;
+    if(!actionType||!control?.policy)return null;
+    const policy=control.policy(actionType);
+    return policy?.known?policy:null;
+  }
+
   function assessRisk(request,action={}){
-    const text=normalize(`${request} ${action.type||''} ${action.target||''}`);
-    let risk=RISK.LOW;let gate=null;
+    const declared=declaredPolicy(action.type);
+    if(declared){
+      return {
+        risk:declared.risk,
+        humanApprovalRequired:declared.approval!=='none',
+        gate:declared.approval==='none'?null:`action:${declared.action}`,
+        source:'action_registry',
+        autonomy:declared.autonomy,
+        evidence:declared.evidence,
+        rollback:declared.rollback||null,
+      };
+    }
+
+    const text=normalize(`${request} ${action.type||''} ${action.target||''}`);let risk=RISK.LOW;let gate=null;
     const checks=[
-      ['repository_delete',['repository delete','repo delete','저장소 삭제']],
-      ['force_push',['force push','강제 push','강제푸시']],
-      ['production_secret',['production secret','프로덕션 secret','secret 변경']],
-      ['dns_change',['dns change','dns 변경','도메인 변경']],
-      ['data_delete',['data delete','데이터 삭제','db delete']],
-      ['permission_change',['permission change','권한 변경']],
+      ['repository_delete',['repository delete','repo delete','저장소 삭제']],['force_push',['force push','강제 push','강제푸시']],
+      ['production_secret',['production secret','프로덕션 secret','secret 변경']],['dns_change',['dns change','dns 변경','도메인 변경']],
+      ['data_delete',['data delete','데이터 삭제','db delete']],['permission_change',['permission change','권한 변경']],
       ['production_rollback',['production rollback','프로덕션 rollback','운영 롤백']],
     ];
     for(const [candidate,words] of checks){if(containsAny(text,words)){risk=RISK.CRITICAL;gate=candidate;break}}
     if(!gate&&containsAny(text,['deploy','배포','write','update','수정','재실행','rerun']))risk=RISK.MEDIUM;
     if(action.estimatedCostKrw>=1000){risk=risk===RISK.CRITICAL?risk:RISK.HIGH;gate=gate||'high_cost_ai'}
-    return {risk,humanApprovalRequired:Boolean(gate&&HUMAN_GATE.has(gate)),gate};
+    return {risk,humanApprovalRequired:Boolean(gate&&HUMAN_GATE.has(gate)),gate,source:'legacy_intent_fallback'};
   }
 
   function chooseExecutionTier(task={}){
-    const deterministic=task.deterministic!==false;
-    if(deterministic)return {tier:'deterministic_rule',reason:'AI 호출 없이 규칙/API로 처리 가능'};
+    if(task.deterministic!==false)return {tier:'deterministic_rule',reason:'AI 호출 없이 규칙/API로 처리 가능'};
     if(task.internalApi)return {tier:'internal_api',reason:'EKODI 내부 API로 처리 가능'};
     if(task.cachedContext)return {tier:'cached_context',reason:'기존 검증 컨텍스트 재사용 가능'};
     if((task.complexity||'low')==='low')return {tier:'free_ai',reason:'무료 AI로 충분한 저복잡도 작업'};
@@ -64,34 +77,27 @@
 
   function plan(request,options={}){
     const context=expandContext(request);
-    const task={deterministic:options.deterministic,internalApi:options.internalApi,cachedContext:options.cachedContext,complexity:options.complexity};
-    const execution=chooseExecutionTier(task);
+    const execution=chooseExecutionTier({deterministic:options.deterministic,internalApi:options.internalApi,cachedContext:options.cachedContext,complexity:options.complexity});
     const risk=assessRisk(request,{type:options.actionType,target:options.target,estimatedCostKrw:Number(options.estimatedCostKrw||0)});
-    return Object.freeze({
-      version:VERSION,request:String(request||''),context,execution,risk,
-      policy:{freeFirst:FREE_FIRST,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true},
-      next:risk.humanApprovalRequired?'request_human_approval':'execute_then_verify'
-    });
+    const operation=options.actionType&&globalThis.EKODIAgenticControl?.createOperation
+      ?globalThis.EKODIAgenticControl.createOperation({actionId:options.actionType,target:options.target||null,requestedBy:options.requestedBy||null,input:options.input||null})
+      :null;
+    return Object.freeze({version:VERSION,request:String(request||''),context,execution,risk,operation,
+      policy:{freeFirst:FREE_FIRST,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true,evidenceRequired:true},
+      next:risk.humanApprovalRequired?'request_human_approval':'execute_then_verify'});
   }
 
   function verify(result={}){
-    const checks=Array.isArray(result.checks)?result.checks:[];
-    const failed=checks.filter(check=>check&&check.ok===false);
-    return {verified:checks.length>0&&failed.length===0,checks,failed,requiresFollowup:failed.length>0};
+    const checks=Array.isArray(result.checks)?result.checks:[];const failed=checks.filter(check=>check&&check.ok===false);
+    const evidence=result.actionType&&globalThis.EKODIAgenticControl?.verify?globalThis.EKODIAgenticControl.verify(result.actionType,result.evidence||[]):null;
+    const verified=checks.length>0&&failed.length===0&&(!evidence||evidence.verified);
+    return {verified,checks,failed,evidence,requiresFollowup:failed.length>0||Boolean(evidence&&!evidence.verified)};
   }
 
   function report({request='',plan:planned,result={},verification={},relatedFindings=[]}={}){
-    return {
-      request,
-      judgment:planned?.context||{},
-      collaboration:planned?.context?.specialists||[],
-      execution:planned?.execution||{},
-      risk:planned?.risk||{},
-      actions:Array.isArray(result.actions)?result.actions:[],
-      verification,
-      relatedFindings,
-      outcome:verification.verified?'verified_complete':(planned?.risk?.humanApprovalRequired?'waiting_approval':'needs_followup')
-    };
+    return {request,judgment:planned?.context||{},collaboration:planned?.context?.specialists||[],execution:planned?.execution||{},risk:planned?.risk||{},operation:planned?.operation||null,
+      actions:Array.isArray(result.actions)?result.actions:[],verification,relatedFindings,
+      outcome:verification.verified?'verified_complete':(planned?.risk?.humanApprovalRequired?'waiting_approval':'needs_followup')};
   }
 
   window.EKODIAdminAIGovernor=Object.freeze({VERSION,RISK,HUMAN_GATE,FREE_FIRST,classifyIntent,expandContext,assessRisk,chooseExecutionTier,plan,verify,report});
