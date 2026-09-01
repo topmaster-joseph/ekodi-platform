@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "status": "enforced-foundation",
+  "architecture": {
+    "controlPlane": "cognitive-control",
+    "governancePlane": "policy-and-promotion",
+    "executionPlane": "isolated-work-and-runtime",
+    "dataPlane": "portable-data-and-traffic",
+    "principle": "control-decides-governance-authorizes-execution-acts-data-remains-bounded"
+  },
+  "planes": {
+    "control": {
+      "purpose": "Intent interpretation, planning, agent routing, reconciliation and observation",
+      "productionMutation": "forbidden-directly",
+      "providerNeutral": true,
+      "mayRequestPromotion": true,
+      "mayAuthorizeOwnRequest": false
+    },
+    "governance": {
+      "purpose": "Policy-as-code, approval, security gates, artifact identity, audit and promotion authorization",
+      "productionMutation": "promotion-controller-only",
+      "independentFromModelProvider": true,
+      "failClosedForUnknownPolicy": true
+    },
+    "execution": {
+      "purpose": "Human and AI work in isolated branches, worktrees, staging and bounded runtime executors",
+      "productionMutation": "promotion-only",
+      "isolatedBranchRequiredForSourceChange": true,
+      "isolatedRuntimeRequiredForUntrustedExecution": true
+    },
+    "data": {
+      "purpose": "Identity, records, files, cache, queues and public delivery behind portable adapters",
+      "contract": "config/data-plane-contract.json",
+      "crossWorkspaceDefault": "deny",
+      "productionDataInDevelopment": false
+    }
+  },
+  "environments": {
+    "development": {
+      "accountProfile": "development",
+      "physicalBoundary": "separate-development-account",
+      "productionTraffic": false,
+      "productionData": false,
+      "sourceMutation": "isolated-branch-only"
+    },
+    "verification": {
+      "accountProfile": "development",
+      "physicalBoundary": "separate-development-account",
+      "logicalBoundary": "staging-preview",
+      "productionTraffic": false,
+      "immutableCandidateRequired": true,
+      "destructiveTestingAllowedOnlyOnIsolatedState": true
+    },
+    "production": {
+      "accountProfile": "production",
+      "physicalBoundary": "separate-production-account",
+      "realUserTraffic": true,
+      "directMutation": false,
+      "promotionOnly": true,
+      "rebuildOnPromotion": false
+    }
+  },
+  "promotion": {
+    "canonicalPath": ["development", "verification", "production"],
+    "rebuildOnPromotion": false,
+    "immutableArtifactRequired": true,
+    "artifactIdentity": ["sha256", "git-commit", "provider-version-id"],
+    "requiredGates": [
+      "source-isolation",
+      "build",
+      "tests",
+      "security",
+      "policy",
+      "staging-smoke",
+      "artifact-identity",
+      "release-authorization",
+      "audit"
+    ],
+    "rollback": "previous-verified-artifact-only",
+    "rollbackRequiresHumanGate": true
+  },
+  "authority": {
+    "aiMaySelfExpandAuthority": false,
+    "unknownActorAuthority": "deny",
+    "unknownEnvironment": "deny",
+    "unknownPlane": "deny",
+    "productionSecretChange": "human-gate",
+    "productionDnsChange": "human-gate",
+    "destructiveProductionDataChange": "human-gate",
+    "repositoryForcePush": "human-gate",
+    "repositoryDelete": "human-gate"
+  },
+  "audit": {
+    "requiredForMutation": true,
+    "appendOnlyPreferred": true,
+    "minimumFields": ["request_id", "actor", "intent", "target", "policy_version", "decision", "artifact_id", "timestamp"],
+    "retainDecisionEvidence": true
+  },
+  "reconciliation": {
+    "enabled": true,
+    "desiredStateSource": "versioned-policy-and-release-manifests",
+    "driftAction": "detect-report-and-reconcile-through-guarded-path",
+    "directEmergencyMutation": false
+  }
+}
