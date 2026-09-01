@@ -1,14 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { ADMIN_MENU_REGISTRY, adminMenuGroups } from '../admin-menu-registry.js';
 
 const model = JSON.parse(fs.readFileSync(new URL('../config/agentic-control-model.json', import.meta.url), 'utf8'));
 const registry = JSON.parse(fs.readFileSync(new URL('../config/agentic-actions.json', import.meta.url), 'utf8'));
 const menuSource = fs.readFileSync(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
 test('agentic control model keeps five stable admin axes', () => {
-  assert.deepEqual(model.adminAxes.map(axis => axis.id), ['home', 'operations', 'spaces', 'services', 'system']);
+  const expected = ['home', 'operations', 'spaces', 'services', 'system'];
+  assert.deepEqual(model.adminAxes.map(axis => axis.id), expected);
+  assert.deepEqual(adminMenuGroups(), expected);
   assert.deepEqual(model.objects, ['resource', 'action', 'policy', 'operation', 'evidence']);
+  for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.internal)) assert.ok(expected.includes(item.group), `${item.id} must belong to a stable global axis`);
 });
 
 test('every action is machine-governable', () => {
