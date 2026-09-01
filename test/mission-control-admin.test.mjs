@@ -68,7 +68,7 @@ test('Flat AI Ops keeps decision safety while current conversation owns normal r
   assert.match(patch,/actionType:'ui\.change_request'/);
 });
 
-test('AI Ops production workflow verifies the canonical true-lazy release instead of deploying it twice',async()=>{
+test('AI Ops production workflow verifies the canonical shared-site release instead of deploying it twice',async()=>{
   const workflow=await read('.github/workflows/deploy-admin-ai-ops.yml');
   assert.match(workflow,/admin-readable-command\.js/);
   assert.match(workflow,/admin-readable-command\.css/);
@@ -76,8 +76,11 @@ test('AI Ops production workflow verifies the canonical true-lazy release instea
   assert.match(workflow,/health:/);
   assert.match(workflow,/system-health-admin\.js/);
   assert.match(workflow,/actionType:'ui\.change_request'/);
-  assert.match(workflow,/workflows: \['Deploy Admin True Lazy Gate'\]/);
+  assert.match(workflow,/workflows: \['Deploy EKODI Shared Site Core'\]/);
   assert.match(workflow,/Verify production fingerprinted thin shell and flat AI Ops/);
+  assert.match(workflow,/admin-shell\.html/);
+  assert.match(workflow,/admin-compact\.css/);
+  assert.match(workflow,/x-ekodi-route: admin-shell/);
   assert.match(workflow,/ai-ops-admin\.css/);
   assert.match(workflow,/max-age=31536000, immutable/);
   assert.doesNotMatch(workflow,/guarded-worker-release\.mjs/);
