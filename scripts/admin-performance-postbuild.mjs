@@ -47,7 +47,7 @@ for (const [from,to] of [
   ['paths','p'],
 ]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
 for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph']]) {
-  demandLoaderSource = demandLoaderSource.replace(new RegExp(`\b${from}\b`, 'g'), to);
+  demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
 }
 await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
