@@ -13,6 +13,7 @@ const verifiedArtifact = Object.freeze({
   verified: true,
 });
 const fullGates = [...COGNITIVE_CONTROL_POLICY.requiredPromotionGates];
+const fullMigrationGates = [...COGNITIVE_CONTROL_POLICY.requiredMigrationGates];
 
 test('control plane cannot directly mutate production', () => {
   const result = evaluateControlIntent({
@@ -88,6 +89,39 @@ test('production rebuild is forbidden even after successful verification', () =>
   assert.equal(result.reason, 'production_rebuild_forbidden');
 });
 
+test('governed additive migration is a separate production data lane', () => {
+  const result = evaluateControlIntent({
+    actor: 'Migration Controller',
+    actorPlane: 'governance',
+    operation: 'migrate-additive',
+    sourceEnvironment: 'verification',
+    targetEnvironment: 'production',
+    governanceAuthorized: true,
+    audited: true,
+    artifact: verifiedArtifact,
+    gates: fullMigrationGates,
+  });
+  assert.equal(result.decision, 'allow');
+  assert.equal(result.reason, 'governed_additive_migration');
+});
+
+test('additive migration fails closed without a recovery point', () => {
+  const result = evaluateControlIntent({
+    actor: 'Migration Controller',
+    actorPlane: 'governance',
+    operation: 'migrate-additive',
+    sourceEnvironment: 'verification',
+    targetEnvironment: 'production',
+    governanceAuthorized: true,
+    audited: true,
+    artifact: verifiedArtifact,
+    gates: fullMigrationGates.filter(gate => gate !== 'recovery-point'),
+  });
+  assert.equal(result.decision, 'deny');
+  assert.equal(result.reason, 'migration_gates_incomplete');
+  assert.deepEqual(result.missingGates, ['recovery-point']);
+});
+
 test('production rollback is a human gate', () => {
   const result = evaluateControlIntent({
     actor: 'DevOps AI',
@@ -98,7 +132,19 @@ test('production rollback is a human gate', () => {
     audited: true,
   });
   assert.equal(result.decision, 'human_gate');
-  assert.equal(result.reason, 'high_impact_production_change');
+  assert.equal(result.reason, 'high_impact_change');
+});
+
+test('repository force push stays human-gated even outside production', () => {
+  const result = evaluateControlIntent({
+    actor: 'Development AI',
+    actorPlane: 'execution',
+    operation: 'repository-force-push',
+    sourceEnvironment: 'development',
+    targetEnvironment: 'development',
+  });
+  assert.equal(result.decision, 'human_gate');
+  assert.equal(result.reason, 'high_impact_change');
 });
 
 test('read-only audited production observation stays available', () => {
@@ -135,10 +181,11 @@ test('artifact identities are immutable identifiers, not mutable tags', () => {
   assert.equal(isImmutableArtifactId('main'), false);
 });
 
-test('summary exposes four-plane path', () => {
+test('summary exposes four-plane path and governed data schema mode', () => {
   const summary = getControlPlaneSummary();
   assert.deepEqual(summary.planes, ['control', 'governance', 'execution', 'data']);
   assert.deepEqual(summary.promotionPath, ['development', 'verification', 'production']);
   assert.equal(summary.productionMutationMode, 'promotion-only');
+  assert.equal(summary.productionDataSchemaMode, 'governed-additive-migration-only');
   assert.equal(summary.rebuildOnPromotion, false);
 });
