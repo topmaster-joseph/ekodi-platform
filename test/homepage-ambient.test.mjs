@@ -18,51 +18,53 @@ test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(js, /--ambient-a/);
   assert.doesNotMatch(js, /crypto\.getRandomValues\(/);
   assert.doesNotMatch(js, /Math\.random\(/);
-  assert.match(deploySiteCore, /grep -Fq 'function seoulDateKey'/);
-  assert.match(deploySiteCore, /grep -Fq 'function dailySeed'/);
+  assert.match(deploySiteCore, /'homepage-ambient\.js'/);
+  assert.match(deploySiteCore, /'homepage-ambient\.css'/);
+  assert.match(deploySiteCore, /npm run build/);
 });
 
-test('public homepage is hook-first and routes intent instead of leading with a directory', () => {
+test('public homepage is intent-first and does not lead with the full directory', () => {
   assert.match(js, /원하는 일, 바로 시작하세요/);
   assert.match(js, /오늘 무엇을 하시나요\?/);
   assert.match(js, /intentSets/);
-  assert.match(js, /quickPaths/);
   assert.match(js, /function rankServices/);
   assert.match(js, /slice\(0, limit\)/);
-  assert.match(js, /dataset\.livingGateway = 'v4-hook-first'/);
+  assert.match(js, /dataset\.livingGateway = 'v5-intent-journey'/);
   assert.match(js, /daily-connect intent-panel/);
+  assert.match(js, /function arrangeHomepageJourney/);
   assert.match(css, /\.daily-connect\{/);
   assert.match(css, /\.intent-results/);
-  assert.match(css, /\.quick-paths/);
-  assert.match(css, /grid-template-columns:minmax\(0,1\.08fr\) minmax\(340px,\.92fr\)/);
+  assert.match(css, /EKODI homepage intent journey v5/);
+  assert.match(css, /body\[data-living-gateway="v5-intent-journey"\] #ecosystem\{display:none!important\}/);
+  assert.match(css, /\.about-grid\{grid-template-columns:1fr!important/);
+  assert.match(css, /\.hero\{display:flex!important;flex-direction:column!important/);
 });
 
-test('hook-first gateway keeps recommendations compact and expands only after user intent', () => {
+test('intent gateway reveals services only after category selection or search', () => {
   assert.match(js, /data-service-status|dataset\.serviceStatus/);
   assert.match(js, /renderRecommendations/);
-  assert.match(js, /limit = 3/);
+  assert.match(js, /limit = 5/);
+  assert.match(js, /id:'all'/);
   assert.match(js, /results\.hidden = true/);
   assert.match(js, /results\.hidden = false/);
-  assert.match(js, /buildQuickLinks/);
+  assert.match(js, /intent\.id === 'all'/);
+  assert.doesNotMatch(js, /buildQuickLinks/);
+  assert.doesNotMatch(js, /quickPaths/);
   assert.match(js, /무료로 시작/);
   assert.doesNotMatch(js, /data-status-filter/);
   assert.doesNotMatch(js, /function applyFilter/);
 });
 
-test('homepage language selector supports and persists Korean English Chinese and Japanese', () => {
+test('homepage locale handling keeps Korean English Chinese and Japanese paths', () => {
+  assert.match(js, /ekodi_user_locale/);
   assert.match(js, /ekodi\.locale/);
-  assert.match(js, /localStorage\.setItem\('ekodi\.locale'/);
   assert.match(js, /'ko-KR'/);
   assert.match(js, /'zh-CN'/);
-  assert.match(js, /code:'en'/);
-  assert.match(js, /code:'ja'/);
-  assert.match(js, /한국어/);
-  assert.match(js, /English/);
-  assert.match(js, /中文\(简体\)/);
-  assert.match(js, /日本語/);
-  assert.match(js, /data\.ekodiLanguage|dataset\.ekodiLanguage/);
-  assert.match(js, /document\.documentElement\.lang = locale/);
-  assert.match(js, /@media\(max-width:640px\)/);
+  assert.match(js, /en:/);
+  assert.match(js, /ja:/);
+  assert.match(js, /document\.documentElement\.lang=locale|document\.documentElement\.lang = locale/);
+  assert.match(js, /ekodi:locale-change/);
+  assert.match(css, /@media\(max-width:640px\)/);
 });
 
 test('ambient layer stays visible above the body background and below content', () => {

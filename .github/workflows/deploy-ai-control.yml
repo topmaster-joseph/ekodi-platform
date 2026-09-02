@@ -1,0 +1,299 @@
+name: Deploy EKODI AI Control Plane
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ai-control/**'
+      - 'ai-control-*.js'
+      - 'ai-governance-runtime.js'
+      - 'config/ai-mission-governance.json'
+      - 'cognitive-control-plane.js'
+      - 'config/cognitive-control-plane.json'
+      - 'config/data-plane-contract.json'
+      - 'scripts/ai-account-node.mjs'
+      - 'scripts/build-ai-control-release.mjs'
+      - 'wrangler.ai*.toml'
+      - 'test/ai-control-platform.test.mjs'
+      - 'test/cognitive-control-plane.test.mjs'
+      - 'migrations/0050_ai_control_plane.sql'
+      - 'migrations/0051_ai_account_nodes.sql'
+      - 'migrations/0052_ai_mission_governance.sql'
+      - 'deploy/manifests/ai-control.worker.json'
+      - 'scripts/validate-cognitive-control-plane.mjs'
+      - 'scripts/validate-additive-migrations.mjs'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'docs/AI-CONTROL-PLANE-MVP.md'
+      - '.github/workflows/deploy-ai-control.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ai-control/**'
+      - 'ai-control-*.js'
+      - 'ai-governance-runtime.js'
+      - 'config/ai-mission-governance.json'
+      - 'cognitive-control-plane.js'
+      - 'config/cognitive-control-plane.json'
+      - 'config/data-plane-contract.json'
+      - 'scripts/ai-account-node.mjs'
+      - 'scripts/build-ai-control-release.mjs'
+      - 'wrangler.ai*.toml'
+      - 'test/ai-control-platform.test.mjs'
+      - 'test/cognitive-control-plane.test.mjs'
+      - 'migrations/0050_ai_control_plane.sql'
+      - 'migrations/0051_ai_account_nodes.sql'
+      - 'migrations/0052_ai_mission_governance.sql'
+      - 'deploy/manifests/ai-control.worker.json'
+      - 'scripts/validate-cognitive-control-plane.mjs'
+      - 'scripts/validate-additive-migrations.mjs'
+      - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'scripts/guarded-worker-release.mjs'
+      - 'docs/AI-CONTROL-PLANE-MVP.md'
+      - '.github/workflows/deploy-ai-control.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-ai-control-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      artifact_digest: ${{ steps.build_artifact.outputs.artifact_digest }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate AI control and Cognitive Control Plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check cognitive-control-plane.js
+          node --check ai-control-core.js
+          node --check ai-control-provider-router.js
+          node --check ai-control-worker.js
+          node --check ai-control/app.js
+          node --check scripts/ai-account-node.mjs
+          node --check scripts/build-ai-control-release.mjs
+          node --check scripts/validate-cognitive-control-plane.mjs
+          node --check scripts/validate-additive-migrations.mjs
+          node --check scripts/guarded-worker-release.mjs
+          node scripts/validate-cognitive-control-plane.mjs
+          node scripts/validate-constitution.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          node --test test/ai-control-platform.test.mjs test/cognitive-control-plane.test.mjs
+          bash -n scripts/apply-d1-migrations-with-retry.sh
+          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
+          grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
+          grep -Fq 'no_bundle = true' wrangler.ai.release.toml
+          grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
+          grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
+          grep -Fq 'evaluateTaskMissionPolicy' ai-control-worker.js
+          grep -Fq 'missionPolicyVersion' ai-control-worker.js
+          grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
+          grep -Fq '/api/node/lease' ai-control-worker.js
+          grep -Fq "['login','status']" scripts/ai-account-node.mjs
+          test -f migrations/0050_ai_control_plane.sql
+          test -f migrations/0051_ai_account_nodes.sql
+          test -f migrations/0052_ai_mission_governance.sql
+          test -f deploy/manifests/ai-control.worker.json
+      - name: Build one immutable AI Control application artifact
+        id: build_artifact
+        run: node scripts/build-ai-control-release.mjs
+      - name: Upload immutable AI Control artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-ai-control-release
+          path: .release/ai-control
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
+  deploy-staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: development
+    outputs:
+      artifact_digest: ${{ steps.verify_artifact.outputs.artifact_digest }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Download immutable AI Control artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ekodi-ai-control-release
+          path: .release/ai-control
+      - name: Verify immutable artifact from validation
+        id: verify_artifact
+        env:
+          EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.validate.outputs.artifact_digest }}
+        run: node scripts/build-ai-control-release.mjs --verify
+      - name: Verify Development boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Verify the same immutable staging artifact locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} dev --local --config wrangler.ai.staging.release.toml --port 8787 > /tmp/ai-staging-local.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -sS -o /tmp/ai-local.html -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/ || true)
+            config_code=$(curl -sS -o /tmp/ai-local-config.js -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/config.js || true)
+            status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
+            if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]]               && grep -Fq 'AI Control Plane' /tmp/ai-local.html               && grep -Fq '"taskExecutionEnabled":false' /tmp/ai-local-config.js               && grep -Fq '"platform":"ai-control"' /tmp/ai-local-status.json               && grep -Fq '"stateStore":"unavailable"' /tmp/ai-local-status.json; then
+              echo 'Immutable AI Control staging artifact verified locally with execution disabled.'
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ai-staging-local.log || true
+          exit 1
+      - name: Deploy immutable artifact to isolated staging Worker
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=$(npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.ai.staging.release.toml 2>&1)
+          printf '%s\n' "$output"
+          staging_url=$(printf '%s\n' "$output" | grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' | tail -n 1 || true)
+          if [[ -z "$staging_url" ]]; then
+            echo 'Unable to discover the deployed workers.dev URL from Wrangler output.' >&2
+            exit 1
+          fi
+          echo "url=$staging_url" >> "$GITHUB_OUTPUT"
+      - name: Verify protected staging edge
+        shell: bash
+        env:
+          STAGING_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_URL"
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.ai.staging.release.toml --json > /tmp/ai-stage-deployments.json
+          test -s /tmp/ai-stage-deployments.json
+          headers=/tmp/ai-edge-headers.txt
+          body=/tmp/ai-edge-body.txt
+          code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/" || true)
+          if [[ "$code" == "200" ]] && grep -Fq 'AI Control Plane' "$body"; then
+            echo "AI Control Plane staging is directly reachable at $STAGING_URL."
+            exit 0
+          fi
+          if [[ "$code" == "302" ]] && grep -Eqi '^www-authenticate:[[:space:]]*Cloudflare-Access' "$headers"; then
+            echo "AI Control Plane staging deployed at $STAGING_URL and remains protected by Cloudflare Access."
+            exit 0
+          fi
+          printf 'Unexpected staging edge response: HTTP %s\n' "$code" >&2
+          cat "$headers" >&2 || true
+          cat "$body" >&2 || true
+          exit 1
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate, deploy-staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AI_ADMIN_EMAILS: ${{ secrets.AI_CONTROL_ADMIN_EMAILS }}
+      AI_GEMINI_API_KEY: ${{ secrets.AI_CONTROL_GEMINI_API_KEY }}
+      AI_OPENAI_API_KEY: ${{ secrets.AI_CONTROL_OPENAI_API_KEY }}
+      AI_ANTHROPIC_API_KEY: ${{ secrets.AI_CONTROL_ANTHROPIC_API_KEY }}
+      AI_GITHUB_TASK_TOKEN: ${{ secrets.AI_CONTROL_GITHUB_TASK_TOKEN }}
+      AI_EXTERNAL_WORKER_URL: ${{ secrets.AI_CONTROL_WORKER_URL }}
+      AI_EXTERNAL_WORKER_TOKEN: ${{ secrets.AI_CONTROL_WORKER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Download the same immutable artifact verified in staging
+        uses: actions/download-artifact@v5
+        with:
+          name: ekodi-ai-control-release
+          path: .release/ai-control
+      - name: Verify exact promotion digest
+        env:
+          EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.deploy-staging.outputs.artifact_digest }}
+        run: |
+          test '${{ needs.validate.outputs.artifact_digest }}' = '${{ needs.deploy-staging.outputs.artifact_digest }}'
+          node scripts/build-ai-control-release.mjs --verify
+      - name: Verify production account boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Verify constitutional production registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const c=JSON.parse(fs.readFileSync('governance/constitution/constitution.json','utf8'));
+          if(!c.systemBoundaries?.production?.includes('ai.ekodi.kr')){console.error('Production blocked: ai.ekodi.kr is not registered in EKODI constitutional system boundaries.');process.exit(1)}
+          NODE
+      - name: Capture production D1 recovery bookmark
+        id: d1_bookmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.ai.release.toml --json > /tmp/ai-control-d1-bookmark.json
+          BOOKMARK=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/ai-control-d1-bookmark.json','utf8'));const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          test -n "$BOOKMARK"
+          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
+      - name: Apply additive AI ledger migrations after staging success
+        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.release.toml "$WRANGLER_VERSION"
+      - name: Attach secrets to immutable candidate, verify at 0%, then promote
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const secrets = {};
+          if (process.env.AI_ADMIN_EMAILS) secrets.ADMIN_EMAILS = process.env.AI_ADMIN_EMAILS;
+          if (process.env.AI_GEMINI_API_KEY) secrets.GEMINI_API_KEY = process.env.AI_GEMINI_API_KEY;
+          if (process.env.AI_OPENAI_API_KEY) secrets.OPENAI_API_KEY = process.env.AI_OPENAI_API_KEY;
+          if (process.env.AI_ANTHROPIC_API_KEY) secrets.ANTHROPIC_API_KEY = process.env.AI_ANTHROPIC_API_KEY;
+          if (process.env.AI_GITHUB_TASK_TOKEN) secrets.GITHUB_TASK_TOKEN = process.env.AI_GITHUB_TASK_TOKEN;
+          if (process.env.AI_EXTERNAL_WORKER_URL) secrets.AI_WORKER_URL = process.env.AI_EXTERNAL_WORKER_URL;
+          if (process.env.AI_EXTERNAL_WORKER_TOKEN) secrets.AI_WORKER_TOKEN = process.env.AI_EXTERNAL_WORKER_TOKEN;
+          fs.writeFileSync('/tmp/ai-control-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
+          console.log(`Prepared guarded AI Control candidate with ${Object.keys(secrets).length} secret key(s); values remain hidden.`);
+          NODE
+          trap 'rm -f /tmp/ai-control-secrets.json' EXIT
+          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
+      - name: Record governed recovery and artifact identity
+        shell: bash
+        env:
+          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+          ARTIFACT_DIGEST: ${{ needs.deploy-staging.outputs.artifact_digest }}
+        run: |
+          {
+            echo '## EKODI Cognitive Control Plane production release'
+            echo
+            echo "- Application artifact promoted unchanged: \`$ARTIFACT_DIGEST\`"
+            echo "- D1 recovery bookmark before additive migrations: \`$BOOKMARK\`"
+            echo '- Production Worker mutation is owned only by the guarded release controller.'
+            echo '- Secrets are attached to the immutable candidate and are not changed by a separate secret-put path.'
+            echo '- First deployment, when needed, is explicitly owned by the same guarded manifest.'
+          } >> "$GITHUB_STEP_SUMMARY"

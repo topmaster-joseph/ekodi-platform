@@ -8,6 +8,7 @@ on:
       - 'ekodibiz-worker.js'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
+      - 'test/ekodibiz-trade-partner.test.mjs'
       - 'deploy/manifests/ekodibiz.worker.json'
       - '.github/workflows/deploy-ekodibiz.yml'
   push:
@@ -17,6 +18,7 @@ on:
       - 'ekodibiz-worker.js'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
+      - 'test/ekodibiz-trade-partner.test.mjs'
       - 'deploy/manifests/ekodibiz.worker.json'
       - '.github/workflows/deploy-ekodibiz.yml'
 
@@ -42,6 +44,7 @@ jobs:
           node --check ekodibiz-worker.js
           node --check ekodibiz/app.js
           node --test test/ekodibiz-revenue-os.test.mjs
+          node --test test/ekodibiz-trade-partner.test.mjs
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
@@ -115,7 +118,8 @@ jobs:
           checkout=$(curl -sS --max-time 15 -H 'content-type: application/json' -d "{\"orderId\":\"$order_id\"}" 'http://127.0.0.1:8787/api/checkout-intent' || true)
 
           printf 'HEALTH=%s\nCONSULT=%s\nOFFER=%s\nOPS=%s\nCHECKOUT=%s\n' "${health:0:700}" "${consult:0:700}" "${offer:0:700}" "${ops:0:700}" "${checkout:0:700}"
-          grep -Fq '무엇을 이루고 싶으세요?' <<<"$root"
+          grep -Fq 'WHAT WE DO' <<<"$root"
+          grep -Fq '관계자 로그인' <<<"$root"
           grep -Fq 'operational-mvp' <<<"$health"
           grep -Fq 'durable-object-sqlite' <<<"$health"
           grep -Fq '30일 자동홍보팩' <<<"$catalog"
@@ -168,7 +172,8 @@ jobs:
             health=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/health' || true)
             catalog=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/catalog' || true)
             ops=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/ops/status' || true)
-            if grep -Fq '무엇을 이루고 싶으세요?' <<<"$root" \
+            if grep -Fq 'WHAT WE DO' <<<"$root" \
+              && grep -Fq '관계자 로그인' <<<"$root" \
               && grep -Fq 'operational-mvp' <<<"$health" \
               && grep -Fq 'approval-gated' <<<"$health" \
               && grep -Fq 'durable-object-sqlite' <<<"$health" \
