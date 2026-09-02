@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-trade",
+    "config": "wrangler.trade.toml",
+    "requests": [
+      {"url":"https://trade.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI Trade","SHARED TRADE OPERATING MODULE","거래상대 회사"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://trade.ekodi.kr/health","statuses":[200],"expect":["\"service\":\"trade\"","\"canonicalHost\":\"trade.ekodi.kr\"","\"counterpartyIsolation\":true","\"humanGates\":true","\"platformAdminImplicitTenantAccess\":false"]},
+      {"url":"https://trade.ekodi.kr/admin","statuses":[200],"redirect":"follow","expect":["고객사 Tenant","거래상대 Counterparty"]}
+    ]
+  }
+}
