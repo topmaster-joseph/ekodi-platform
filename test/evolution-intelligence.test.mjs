@@ -123,7 +123,7 @@ test('technology maturity index exposes weakest areas first', () => {
 
 test('schema changes use the governed additive migration lane', () => {
   const store = fs.readFileSync(new URL('../evolution-intelligence-store.js', import.meta.url), 'utf8');
-  const migration = fs.readFileSync(new URL('../migrations/0053_evolution_intelligence.sql', import.meta.url), 'utf8');
+  const migration = fs.readFileSync(new URL('../migrations/0054_evolution_intelligence.sql', import.meta.url), 'utf8');
   assert.doesNotMatch(store, /CREATE\s+TABLE/i);
   assert.match(store, /sqlite_master/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS evolution_recommendations/);
