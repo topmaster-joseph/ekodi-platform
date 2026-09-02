@@ -1,5 +1,5 @@
 {
-  "version": 39,
+  "version": 40,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -668,6 +668,13 @@
           "/api/finance/tax-invoices",
           "manual-issued"
         ]
+      },
+      {
+        "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EVOLUTION INTELLIGENCE", "/api/control/evolution", "플랫폼 진화 제안"],
+        "headerExpect": ["x-content-type-options: nosniff"]
       }
     ]
   }
