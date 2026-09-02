@@ -30,7 +30,7 @@ jobs:
           grep -Fq '46aad4738793fbaca88574832a2ccc0f' "$file"
           grep -Fq 'ekodi-marketing-pages-shell-staging' "$file"
           grep -Fq 'ekodi-development.workers.dev' "$file"
-          grep -Fq 'wrangler@$WRANGLER_VERSION deploy' "$file"
+          grep -Fq 'wrangler@4.127.0 deploy' "$file"
           ! grep -Fq 'secrets.CLOUDFLARE_API_TOKEN' "$file"
           ! grep -Fq 'secrets.CLOUDFLARE_ACCOUNT_ID' "$file"
           ! grep -Fq 'pages deploy' "$file"

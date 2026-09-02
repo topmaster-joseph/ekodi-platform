@@ -105,7 +105,7 @@ jobs:
             "name": "ekodi-marketing-pages-shell-staging",
             "main": ".tmp-marketing-shell-worker.mjs",
             "account_id": "46aad4738793fbaca88574832a2ccc0f",
-            "compatibility_date": "2026-09-03",
+            "compatibility_date": "2026-09-02",
             "workers_dev": true,
             "preview_urls": true,
             "assets": {
@@ -115,7 +115,7 @@ jobs:
           }
           EOF
           trap 'rm -f .tmp-marketing-shell-worker.mjs .tmp-marketing-shell-wrangler.jsonc' EXIT
-          npx --yes wrangler@$WRANGLER_VERSION deploy \
+          npx --yes wrangler@4.127.0 deploy \
             --config .tmp-marketing-shell-wrangler.jsonc \
             --experimental-provision=false
           echo "STAGING_URL=https://ekodi-marketing-pages-shell-staging.ekodi-development.workers.dev" >> "$GITHUB_ENV"
