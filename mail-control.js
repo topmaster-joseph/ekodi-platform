@@ -1,3 +1,5 @@
+import { decryptMailCredential, encryptMailCredential, mailCredentialReady, mailNonceHash, readMailState, signMailState } from './mail-credential-vault.js';
+import { exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const MAIL_PREFIX = '/api/mail/control';
@@ -5,7 +7,7 @@ const WRITE_ROLES = new Set(['tenant_admin', 'owner', 'admin', 'manager', 'store
 const ALLOWED_ORIGINS = new Set(['https://ekodi.kr', 'https://mail.ekodi.kr', 'https://my.ekodi.kr']);
 const DEFAULT_PROVIDER = 'forward-email';
 const ACCOUNT_PROVIDERS = Object.freeze({
-  gmail: { label: 'Gmail', connectorMode: 'google-oauth', auth: 'oauth', read: true, send: true },
+  gmail: { label: 'Gmail', connectorMode: 'google-oauth', auth: 'oauth', read: true, send: true, externalVerification: 'google-restricted-scope-review' },
   outlook: { label: 'Outlook / Microsoft', connectorMode: 'microsoft-oauth', auth: 'oauth', read: true, send: true },
   naver: { label: 'Naver Mail', connectorMode: 'imap-adapter', auth: 'provider-app-password-or-oauth', read: true, send: true },
   daum: { label: 'Daum Mail', connectorMode: 'imap-adapter', auth: 'provider-app-password-or-oauth', read: true, send: true },
@@ -17,7 +19,7 @@ const ACCOUNT_PROVIDERS = Object.freeze({
 function cors(origin) {
   const headers = {
     'access-control-allow-headers': 'authorization, content-type',
-    'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
@@ -130,6 +132,25 @@ function publicAccount(r){return{id:Number(r.id),ownerType:r.owner_type,ownerKey
 async function accountsForActor(db,actor){const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key=? ORDER BY display_name,email_address`).bind(actor.userId).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
 
 async function accountsVisibleForActor(db,actor){const rows=await accountsForActor(db,actor);return Promise.all(rows.map(async a=>{if(a.ownerType==='person')return{...a,permissions:{read:true,send:true,manage:true}};const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(a.id,actor.userId).first();const context=actor.contexts.find(c=>c.workspaceId===a.ownerKey);return{...a,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context?.canManage)}}}))}
+async function accountAccess(db, actor, accountId) {
+  const id=Number(accountId||0); if(!Number.isInteger(id)||id<1)return null;
+  const row=await db.prepare('SELECT * FROM mail_accounts WHERE id=? AND enabled=1').bind(id).first(); if(!row)return null;
+  if(row.owner_type==='person'){if(row.owner_key!==actor.userId)return null;return{row,permissions:{read:true,send:true,manage:true}}}
+  const context=actor.contexts.find(c=>c.workspaceId===row.owner_key); if(!context)return null;
+  const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(id,actor.userId).first();
+  return{row,context,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context.canManage)}};
+}
+async function credentialForAccount(db, accountId){return db.prepare('SELECT * FROM mail_credentials WHERE account_id=?').bind(Number(accountId)).first()}
+async function googleAccessForAccount(env, db, account){
+  if(!googleMailConfigured(env)||!mailCredentialReady(env))throw Object.assign(new Error('Google Mail OAuth 구성이 아직 준비되지 않았습니다.'),{code:'MAIL_GOOGLE_NOT_CONFIGURED',status:503});
+  const row=await credentialForAccount(db,account.id); if(!row)throw Object.assign(new Error('메일 계정 인증이 필요합니다.'),{code:'MAIL_ACCOUNT_NOT_CONNECTED',status:409});
+  const credential=await decryptMailCredential(env,row); if(!credential.refreshToken)throw Object.assign(new Error('메일 계정 재연결이 필요합니다.'),{code:'MAIL_REFRESH_TOKEN_MISSING',status:409});
+  const token=await refreshGoogleMailToken(env,credential.refreshToken);
+  await db.prepare('UPDATE mail_credentials SET last_refreshed_at=?,updated_at=? WHERE account_id=?').bind(new Date().toISOString(),new Date().toISOString(),account.id).run();
+  return{accessToken:token.access_token,scopes:row.scopes||'',credentialRow:row};
+}
+function callbackHtml(message,ok=false){const title=ok?'EKODI Mail 연결 완료':'EKODI Mail 연결 확인 필요';return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${String(message).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</p><p><a href="https://mail.ekodi.kr/admin">메일 관리로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}})}
+
 async function ensureSchema(db) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS mail_domains (
@@ -175,6 +196,15 @@ async function ensureSchema(db) {
       created_by_email TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       PRIMARY KEY(account_id, principal_type, principal_key), FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS mail_credentials (
+      id TEXT PRIMARY KEY, account_id INTEGER NOT NULL UNIQUE, provider TEXT NOT NULL, credential_ciphertext TEXT NOT NULL,
+      credential_iv TEXT NOT NULL, scopes TEXT NOT NULL DEFAULT '', token_type TEXT NOT NULL DEFAULT 'Bearer',
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_refreshed_at TEXT, FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS mail_oauth_states (
+      nonce_hash TEXT PRIMARY KEY, account_id INTEGER NOT NULL, actor_user_id TEXT NOT NULL, actor_email TEXT NOT NULL,
+      capability TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS mail_account_audit (
       id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER, subject_type TEXT NOT NULL, subject_key TEXT NOT NULL,
       actor_email TEXT NOT NULL, action TEXT NOT NULL, resource TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL
@@ -194,6 +224,8 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_accounts_owner ON mail_accounts(owner_type, owner_key, enabled)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_accounts_email ON mail_accounts(email_address)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_account_grants_principal ON mail_account_grants(principal_type, principal_key)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_credentials_account ON mail_credentials(account_id)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_oauth_states_expiry ON mail_oauth_states(expires_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_account_audit_subject ON mail_account_audit(subject_type, subject_key, created_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_audit_workspace_time ON mail_control_audit(workspace_id, created_at DESC)'),
   ]);
@@ -376,9 +408,121 @@ export async function handleMailControl(request, env) {
   if (!env.DB) return json({ error: '메일 관리 데이터베이스가 연결되지 않았습니다.', code: 'DB_UNAVAILABLE' }, 503, request);
   await ensureSchema(env.DB);
 
+  const googleConnectMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/connect\/google$/);
+  if(googleConnectMatch&&request.method==='POST'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,googleConnectMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    if(!access.permissions.manage)return json({error:'이 메일 계정을 연결할 권한이 없습니다.',code:'MAIL_MANAGE_FORBIDDEN'},403,request);
+    if(access.row.provider!=='gmail')return json({error:'이 공급자는 Google OAuth 연결 대상이 아닙니다.',code:'PROVIDER_NOT_GOOGLE'},409,request);
+    if(!googleMailConfigured(env)||!mailCredentialReady(env))return json({error:'Google Mail OAuth 비밀설정이 아직 준비되지 않았습니다.',code:'MAIL_GOOGLE_NOT_CONFIGURED'},503,request);
+    const body=await readJson(request);const capability=['read','send','read_send'].includes(String(body?.capability||''))?String(body.capability):'read';
+    const nonce=crypto.randomUUID();const now=new Date();const expires=new Date(now.getTime()+10*60*1000);
+    await env.DB.prepare('DELETE FROM mail_oauth_states WHERE expires_at<=?').bind(now.toISOString()).run();
+    await env.DB.prepare('INSERT INTO mail_oauth_states(nonce_hash,account_id,actor_user_id,actor_email,capability,expires_at,created_at) VALUES(?,?,?,?,?,?,?)').bind(await mailNonceHash(nonce),access.row.id,actor.userId,actor.email,capability,expires.toISOString(),now.toISOString()).run();
+    const state=await signMailState(env,{nonce,accountId:Number(access.row.id),actorUserId:actor.userId,capability,exp:expires.getTime()});
+    const authorizeUrl=googleMailAuthorizeUrl(env,{state,loginHint:access.row.email_address,capability});
+    await env.DB.prepare("UPDATE mail_accounts SET connection_status='pending_oauth',last_error='',updated_at=? WHERE id=?").bind(now.toISOString(),access.row.id).run();
+    await auditAccount(env.DB,actor,access.row.owner_type,access.row.owner_key,access.row.id,'mail.oauth.start',access.row.email_address,JSON.stringify({provider:'gmail',capability}));
+    return json({ok:true,authorizeUrl,capability,verification:{gmailReadonly:'restricted',gmailSend:'sensitive',externalUsersMayRequireGoogleVerification:true}},200,request);
+  }
+  if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/oauth/google/callback`){
+    if(!googleMailConfigured(env)||!mailCredentialReady(env))return callbackHtml('Google Mail OAuth 환경설정이 아직 준비되지 않았습니다.');
+    const state=await readMailState(env,url.searchParams.get('state'));const code=String(url.searchParams.get('code')||'');
+    if(!state||!code||Number(state.exp||0)<Date.now())return callbackHtml('연결 요청이 만료되었거나 올바르지 않습니다.');
+    const stateRow=await env.DB.prepare('SELECT * FROM mail_oauth_states WHERE nonce_hash=? AND account_id=? AND actor_user_id=? AND expires_at>?').bind(await mailNonceHash(state.nonce),Number(state.accountId),String(state.actorUserId),new Date().toISOString()).first();
+    if(!stateRow)return callbackHtml('이미 사용되었거나 만료된 연결 요청입니다.');
+    await env.DB.prepare('DELETE FROM mail_oauth_states WHERE nonce_hash=?').bind(await mailNonceHash(state.nonce)).run();
+    const account=await env.DB.prepare('SELECT * FROM mail_accounts WHERE id=? AND enabled=1').bind(Number(state.accountId)).first();
+    if(!account||account.provider!=='gmail')return callbackHtml('연결할 Gmail 계정을 찾을 수 없습니다.');
+    try{
+      const token=await exchangeGoogleMailCode(env,code);const profile=await googleMailProfile(token.access_token);const connectedEmail=String(profile.emailAddress||'').trim().toLowerCase();
+      if(connectedEmail!==String(account.email_address).toLowerCase())return callbackHtml(`선택한 Google 계정(${connectedEmail||'확인 불가'})이 등록된 메일 주소와 다릅니다.`);
+      const existing=await credentialForAccount(env.DB,account.id);let refreshToken=String(token.refresh_token||'');
+      if(!refreshToken&&existing){try{const prior=await decryptMailCredential(env,existing);refreshToken=String(prior.refreshToken||'')}catch{}}
+      if(!refreshToken)return callbackHtml('Google에서 장기 연결용 refresh token을 받지 못했습니다. 다시 연결해 주세요.');
+      const priorScopes=String(existing?.scopes||'');const scopes=String(token.scope||priorScopes).trim();
+      if((stateRow.capability==='read'||stateRow.capability==='read_send')&&!hasGoogleReadScope(scopes))return callbackHtml('Gmail 읽기 권한이 승인되지 않았습니다.');
+      if((stateRow.capability==='send'||stateRow.capability==='read_send')&&!hasGoogleSendScope(scopes))return callbackHtml('Gmail 발송 권한이 승인되지 않았습니다.');
+      const encrypted=await encryptMailCredential(env,{refreshToken});const credentialId=String(existing?.id||crypto.randomUUID());const now=new Date().toISOString();
+      await env.DB.prepare(`INSERT INTO mail_credentials(id,account_id,provider,credential_ciphertext,credential_iv,scopes,token_type,created_at,updated_at,last_refreshed_at) VALUES(?,?,?,?,?,?,?, ?,?,?) ON CONFLICT(account_id) DO UPDATE SET credential_ciphertext=excluded.credential_ciphertext,credential_iv=excluded.credential_iv,scopes=excluded.scopes,token_type=excluded.token_type,updated_at=excluded.updated_at,last_refreshed_at=excluded.last_refreshed_at`).bind(credentialId,account.id,'gmail',encrypted.ciphertext,encrypted.iv,scopes,String(token.token_type||'Bearer'),String(existing?.created_at||now),now,now).run();
+      await env.DB.prepare("UPDATE mail_accounts SET connection_status='connected',credential_ref=?,last_sync_at=?,last_error='',updated_at=? WHERE id=?").bind(credentialId,now,now,account.id).run();
+      await auditAccount(env.DB,{email:stateRow.actor_email},account.owner_type,account.owner_key,account.id,'mail.oauth.connected',account.email_address,JSON.stringify({provider:'gmail',capability:stateRow.capability,scopes:scopes.split(/\s+/).length}));
+      return callbackHtml(`${account.email_address} 계정이 EKODI Mail에 안전하게 연결되었습니다.`,true);
+    }catch(error){console.error('EKODI Mail Google callback',error);await env.DB.prepare("UPDATE mail_accounts SET connection_status='error',last_error=?,updated_at=? WHERE id=?").bind(String(error?.code||error?.message||'oauth_error').slice(0,300),new Date().toISOString(),account.id).run();return callbackHtml('Google Mail 계정 연결 중 오류가 발생했습니다.');}
+  }
+  const accountStatusMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/status$/);
+  if(accountStatusMatch&&request.method==='GET'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,accountStatusMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    const credential=await credentialForAccount(env.DB,access.row.id);const aliases=access.row.owner_type==='workspace'?(await env.DB.prepare(`SELECT r.local_part,d.hostname,r.send_enabled FROM mail_routes r JOIN mail_domains d ON d.id=r.domain_id WHERE r.workspace_id=? AND lower(r.destination_email)=lower(?) AND r.enabled=1 ORDER BY d.hostname,r.local_part`).bind(access.row.owner_key,access.row.email_address).all()).results.map(r=>({address:`${r.local_part}@${r.hostname}`,sendEnabled:Boolean(r.send_enabled)})):[];
+    return json({account:{...publicAccount(access.row),permissions:access.permissions,aliases},connector:{configured:access.row.provider==='gmail'?googleMailConfigured(env)&&mailCredentialReady(env):false,credentialStored:Boolean(credential),scopes:String(credential?.scopes||''),readScope:Boolean(credential&&hasGoogleReadScope(credential.scopes)),sendScope:Boolean(credential&&hasGoogleSendScope(credential.scopes)),providerStatus:access.row.provider==='gmail'?'implemented':'adapter_pending'}},200,request);
+  }
+
+  const selfGrantMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/grants\/self$/);
+  if(selfGrantMatch&&request.method==='PUT'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,selfGrantMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    if(!access.permissions.manage)return json({error:'메일 권한을 변경할 권한이 없습니다.',code:'MAIL_MANAGE_FORBIDDEN'},403,request);
+    if(access.row.owner_type==='person')return json({ok:true,permissions:{read:true,send:true,manage:true}},200,request);
+    const body=await readJson(request);const canRead=Boolean(body?.read),canSend=Boolean(body?.send),now=new Date().toISOString();
+    await env.DB.prepare(`INSERT INTO mail_account_grants(account_id,principal_type,principal_key,can_read,can_send,can_manage,created_by_email,created_at,updated_at) VALUES(?,'person',?,?,?,1,?,?,?) ON CONFLICT(account_id,principal_type,principal_key) DO UPDATE SET can_read=excluded.can_read,can_send=excluded.can_send,can_manage=1,updated_at=excluded.updated_at`).bind(access.row.id,actor.userId,canRead?1:0,canSend?1:0,actor.email,now,now).run();
+    await auditAccount(env.DB,actor,access.row.owner_type,access.row.owner_key,access.row.id,'mail.grant.self',access.row.email_address,JSON.stringify({read:canRead,send:canSend}));
+    return json({ok:true,permissions:{read:canRead,send:canSend,manage:true}},200,request);
+  }
+  const messagesMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/messages$/);
+  if(messagesMatch&&request.method==='GET'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,messagesMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    if(!access.permissions.read)return json({error:'이 계정의 메일을 읽을 권한이 없습니다.',code:'MAIL_READ_FORBIDDEN'},403,request);
+    if(access.row.connection_status!=='connected')return json({error:'메일 계정을 먼저 연결해 주세요.',code:'MAIL_ACCOUNT_NOT_CONNECTED'},409,request);
+    if(access.row.provider!=='gmail')return json({error:'이 공급자의 실제 읽기 어댑터는 아직 활성화되지 않았습니다.',code:'PROVIDER_ADAPTER_PENDING'},501,request);
+    try{const auth=await googleAccessForAccount(env,env.DB,access.row);if(!hasGoogleReadScope(auth.scopes))return json({error:'Gmail 읽기 권한을 추가로 승인해 주세요.',code:'MAIL_READ_SCOPE_REQUIRED'},409,request);const data=await listGoogleMailMessages(auth.accessToken,{q:url.searchParams.get('q')||'',pageToken:url.searchParams.get('pageToken')||'',maxResults:url.searchParams.get('maxResults')||30});const now=new Date().toISOString();await env.DB.prepare("UPDATE mail_accounts SET last_sync_at=?,last_error='',updated_at=? WHERE id=?").bind(now,now,access.row.id).run();return json({account:{id:Number(access.row.id),emailAddress:access.row.email_address,displayName:access.row.display_name,provider:'gmail'},...data},200,request)}catch(error){console.error('EKODI Mail list',error);await env.DB.prepare('UPDATE mail_accounts SET last_error=?,updated_at=? WHERE id=?').bind(String(error?.code||error?.message||'mail_read_error').slice(0,300),new Date().toISOString(),access.row.id).run();return json({error:'메일을 불러오지 못했습니다.',code:String(error?.code||'MAIL_READ_FAILED')},Number(error?.status)||502,request)}
+  }
+
+  const messageMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/messages\/([A-Za-z0-9_-]+)$/);
+  if(messageMatch&&request.method==='GET'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,messageMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    if(!access.permissions.read)return json({error:'이 계정의 메일을 읽을 권한이 없습니다.',code:'MAIL_READ_FORBIDDEN'},403,request);
+    if(access.row.connection_status!=='connected'||access.row.provider!=='gmail')return json({error:'연결된 Gmail 계정이 아닙니다.',code:'MAIL_ACCOUNT_NOT_CONNECTED'},409,request);
+    try{const auth=await googleAccessForAccount(env,env.DB,access.row);if(!hasGoogleReadScope(auth.scopes))return json({error:'Gmail 읽기 권한을 승인해 주세요.',code:'MAIL_READ_SCOPE_REQUIRED'},409,request);const message=await getGoogleMailMessage(auth.accessToken,messageMatch[2]);return json({account:{id:Number(access.row.id),emailAddress:access.row.email_address},message},200,request)}catch(error){console.error('EKODI Mail detail',error);return json({error:'메일 본문을 불러오지 못했습니다.',code:String(error?.code||'MAIL_DETAIL_FAILED')},Number(error?.status)||502,request)}
+  }
+  const sendMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/send$/);
+  if(sendMatch&&request.method==='POST'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,sendMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    if(!access.permissions.send)return json({error:'이 계정으로 메일을 보낼 권한이 없습니다.',code:'MAIL_SEND_FORBIDDEN'},403,request);
+    if(access.row.connection_status!=='connected'||access.row.provider!=='gmail')return json({error:'연결된 Gmail 계정이 아닙니다.',code:'MAIL_ACCOUNT_NOT_CONNECTED'},409,request);
+    const body=await readJson(request);const to=String(body?.to||'').trim();const subject=String(body?.subject||'').slice(0,500);const text=String(body?.body||'').slice(0,200000);
+    if(!to||/[\r\n]/.test(to))return json({error:'받는 사람 주소를 확인해 주세요.',code:'INVALID_RECIPIENT'},400,request);
+    try{const auth=await googleAccessForAccount(env,env.DB,access.row);if(!hasGoogleSendScope(auth.scopes))return json({error:'Gmail 발송 권한을 추가로 승인해 주세요.',code:'MAIL_SEND_SCOPE_REQUIRED'},409,request);const sent=await sendGoogleMailMessage(auth.accessToken,{to,cc:String(body?.cc||''),bcc:String(body?.bcc||''),subject,body:text});await auditAccount(env.DB,actor,access.row.owner_type,access.row.owner_key,access.row.id,'mail.message.send',access.row.email_address,JSON.stringify({messageId:sent.id||'',to:to.slice(0,200),subject:subject.slice(0,120)}));return json({ok:true,id:sent.id||null,threadId:sent.threadId||null},200,request)}catch(error){console.error('EKODI Mail send',error);return json({error:'메일 발송에 실패했습니다.',code:String(error?.code||'MAIL_SEND_FAILED')},Number(error?.status)||502,request)}
+  }
+
+  const disconnectMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/disconnect$/);
+  if(disconnectMatch&&request.method==='POST'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const access=await accountAccess(env.DB,actor,disconnectMatch[1]);if(!access)return json({error:'메일 계정을 찾을 수 없습니다.',code:'ACCOUNT_NOT_FOUND'},404,request);
+    if(!access.permissions.manage)return json({error:'이 메일 계정을 해제할 권한이 없습니다.',code:'MAIL_MANAGE_FORBIDDEN'},403,request);
+    await env.DB.prepare('DELETE FROM mail_credentials WHERE account_id=?').bind(access.row.id).run();const now=new Date().toISOString();
+    await env.DB.prepare("UPDATE mail_accounts SET connection_status=?,credential_ref='',last_sync_at=NULL,last_error='',updated_at=? WHERE id=?").bind(access.row.provider==='gmail'?'pending_oauth':'pending_connection',now,access.row.id).run();
+    await auditAccount(env.DB,actor,access.row.owner_type,access.row.owner_key,access.row.id,'mail.account.disconnect',access.row.email_address,'');
+    return json({ok:true},200,request);
+  }
   if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/contexts`){const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);for(const c of actor.contexts)await bootstrapEkodiChurch(env.DB,{...c,userId:actor.userId,email:actor.email,workspaceName:c.workspaceName,workspaceKind:c.workspaceKind});return json({person:{id:actor.userId,email:actor.email,canManage:true},workspaces:actor.contexts,providers:ACCOUNT_PROVIDERS,accounts:await accountsVisibleForActor(env.DB,actor),authorityModel:'mail-admin-projects-existing-person-and-workspace-authority'},200,request)}
   if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/accounts`){const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);return json({accounts:await accountsVisibleForActor(env.DB,actor),providers:ACCOUNT_PROVIDERS},200,request)}
-  if(request.method==='POST'&&url.pathname===`${MAIL_PREFIX}/accounts`){const body=await readJson(request),actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);const email=normalizeEmail(body?.emailAddress),scope=String(body?.scope||'person').trim().toLowerCase(),provider=providerForEmail(email,body?.provider);if(!email||!ACCOUNT_PROVIDERS[provider])return json({error:'연결할 메일 계정을 확인해 주세요.',code:'INVALID_ACCOUNT'},400,request);let ownerType='person',ownerKey=actor.userId,workspaceSlug='';if(scope==='workspace'){const slug=normalizeSlug(body?.workspace),context=actor.contexts.find(x=>x.workspaceSlug===slug);if(!context)return json({error:'이 운영공간에 접근할 수 없습니다.',code:'WORKSPACE_ACCESS_REQUIRED'},403,request);if(!context.canManage)return json({error:'이 운영공간의 메일 계정을 변경할 권한이 없습니다.',code:'WRITE_FORBIDDEN'},403,request);ownerType='workspace';ownerKey=context.workspaceId;workspaceSlug=context.workspaceSlug}const config=ACCOUNT_PROVIDERS[provider],status=config.auth==='service-account'?'pending_service_connection':config.auth==='oauth'?'pending_oauth':'pending_connection',displayName=String(body?.displayName||email).trim().slice(0,100),now=new Date().toISOString();await env.DB.prepare(`INSERT INTO mail_accounts (owner_type,owner_key,workspace_slug,provider,email_address,display_name,connector_mode,connection_status,credential_ref,enabled,created_by_email,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'',1,?,?,?) ON CONFLICT(owner_type,owner_key,email_address) DO UPDATE SET provider=excluded.provider,display_name=excluded.display_name,connector_mode=excluded.connector_mode,enabled=1,updated_at=excluded.updated_at`).bind(ownerType,ownerKey,workspaceSlug,provider,email,displayName,config.connectorMode,status,actor.email,now,now).run();const account=await env.DB.prepare('SELECT id FROM mail_accounts WHERE owner_type=? AND owner_key=? AND email_address=?').bind(ownerType,ownerKey,email).first();if(account?.id){await env.DB.prepare(`INSERT INTO mail_account_grants (account_id,principal_type,principal_key,can_read,can_send,can_manage,created_by_email,created_at,updated_at) VALUES (?,'person',?,1,1,1,?,?,?) ON CONFLICT(account_id,principal_type,principal_key) DO UPDATE SET can_read=1,can_send=1,can_manage=1,updated_at=excluded.updated_at`).bind(account.id,actor.userId,actor.email,now,now).run();await auditAccount(env.DB,actor,ownerType,ownerKey,account.id,'mail.account.register',email,JSON.stringify({provider,connectorMode:config.connectorMode}))}return json({ok:true,accounts:await accountsVisibleForActor(env.DB,actor)},200,request)}
+  if(request.method==='POST'&&url.pathname===`${MAIL_PREFIX}/accounts`){
+    const body=await readJson(request),actor=await mailActor(request,env);
+    if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const email=normalizeEmail(body?.emailAddress),scope=String(body?.scope||'person').trim().toLowerCase(),provider=providerForEmail(email,body?.provider);
+    if(!email||!ACCOUNT_PROVIDERS[provider])return json({error:'연결할 메일 계정을 확인해 주세요.',code:'INVALID_ACCOUNT'},400,request);
+    let ownerType='person',ownerKey=actor.userId,workspaceSlug='';
+    if(scope==='workspace'){const slug=normalizeSlug(body?.workspace),context=actor.contexts.find(x=>x.workspaceSlug===slug);if(!context)return json({error:'이 운영공간에 접근할 수 없습니다.',code:'WORKSPACE_ACCESS_REQUIRED'},403,request);if(!context.canManage)return json({error:'이 운영공간의 메일 계정을 변경할 권한이 없습니다.',code:'WRITE_FORBIDDEN'},403,request);ownerType='workspace';ownerKey=context.workspaceId;workspaceSlug=context.workspaceSlug}
+    const config=ACCOUNT_PROVIDERS[provider],status=config.auth==='service-account'?'pending_service_connection':config.auth==='oauth'?'pending_oauth':'pending_connection',displayName=String(body?.displayName||email).trim().slice(0,100),now=new Date().toISOString();
+    await env.DB.prepare(`INSERT INTO mail_accounts (owner_type,owner_key,workspace_slug,provider,email_address,display_name,connector_mode,connection_status,credential_ref,enabled,created_by_email,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'',1,?,?,?) ON CONFLICT(owner_type,owner_key,email_address) DO UPDATE SET provider=excluded.provider,display_name=excluded.display_name,connector_mode=excluded.connector_mode,enabled=1,updated_at=excluded.updated_at`).bind(ownerType,ownerKey,workspaceSlug,provider,email,displayName,config.connectorMode,status,actor.email,now,now).run();
+    const account=await env.DB.prepare('SELECT id FROM mail_accounts WHERE owner_type=? AND owner_key=? AND email_address=?').bind(ownerType,ownerKey,email).first();
+    if(account?.id){const canRead=ownerType==='person'?1:(body?.grantSelfRead?1:0),canSend=ownerType==='person'?1:(body?.grantSelfSend?1:0);await env.DB.prepare(`INSERT INTO mail_account_grants (account_id,principal_type,principal_key,can_read,can_send,can_manage,created_by_email,created_at,updated_at) VALUES (?,'person',?,?,?,?,?,?,?) ON CONFLICT(account_id,principal_type,principal_key) DO UPDATE SET can_read=excluded.can_read,can_send=excluded.can_send,can_manage=excluded.can_manage,updated_at=excluded.updated_at`).bind(account.id,actor.userId,canRead,canSend,1,actor.email,now,now).run();await auditAccount(env.DB,actor,ownerType,ownerKey,account.id,'mail.account.register',email,JSON.stringify({provider,connectorMode:config.connectorMode,grantSelfRead:Boolean(canRead),grantSelfSend:Boolean(canSend)}))}
+    return json({ok:true,accounts:await accountsVisibleForActor(env.DB,actor)},200,request);
+  }
 
   if (request.method === 'GET' && url.pathname === `${MAIL_PREFIX}/workspace`) {
     const slug = normalizeSlug(url.searchParams.get('slug'));

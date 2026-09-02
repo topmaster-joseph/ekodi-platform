@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -59,7 +59,7 @@ test('Mail admin is a central projection of personal and workspace authority', a
   assert.match(page, /통합 메일 관리/);
   assert.match(page, /내 개인 메일/);
   assert.match(page, /기관 메일 도메인·주소 상세설정/);
-  assert.match(page, /비밀번호는 이 화면이나 D1에 평문 저장하지 않습니다/);
+  assert.match(page, /refresh token은 이 화면이나 계정 레지스트리에 평문 저장하지 않습니다/);
   assert.match(router, /url\.pathname==='\/admin'\)return mailAdminPage\(\)/);
 });
 
@@ -73,4 +73,29 @@ test('Mail account content rights are separate from workspace administration', a
   assert.match(control, /mail_account_audit/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS mail_account_grants/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS mail_account_audit/);
+});
+
+test('Mail credentials are encrypted separately from account registry and OAuth state is signed', async () => {
+  const [{ encryptMailCredential, decryptMailCredential, signMailState, readMailState }, control, migration] = await Promise.all([import('../mail-credential-vault.js'), read('mail-control.js'), read('migrations/0050_mail_control.sql')]);
+  const env={MAIL_CREDENTIAL_KEY:'test-key-not-production'};const encrypted=await encryptMailCredential(env,{refreshToken:'secret-token'});
+  assert.notEqual(encrypted.ciphertext,'secret-token');assert.equal((await decryptMailCredential(env,{credential_ciphertext:encrypted.ciphertext,credential_iv:encrypted.iv})).refreshToken,'secret-token');
+  const state=await signMailState(env,{accountId:7,exp:Date.now()+1000});assert.equal((await readMailState(env,state)).accountId,7);
+  assert.match(control,/CREATE TABLE IF NOT EXISTS mail_credentials/);assert.match(control,/CREATE TABLE IF NOT EXISTS mail_oauth_states/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS mail_credentials/);assert.match(migration,/CREATE TABLE IF NOT EXISTS mail_oauth_states/);
+  assert.doesNotMatch(control,/credential_ciphertext.*refreshToken/);
+});
+
+test('Gmail adapter uses incremental least-privilege scopes and account-bound inbox routes', async () => {
+  const [{ scopesForCapability, GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE }, control, user, admin] = await Promise.all([import('../mail-google-adapter.js'),read('mail-control.js'),read('mail-user-page.js'),read('mail-admin-page.js')]);
+  assert.ok(scopesForCapability('read').includes(GMAIL_READ_SCOPE));assert.ok(!scopesForCapability('read').includes(GMAIL_SEND_SCOPE));
+  assert.ok(scopesForCapability('send').includes(GMAIL_SEND_SCOPE));assert.ok(!scopesForCapability('send').includes(GMAIL_READ_SCOPE));
+  assert.ok(control.includes('googleConnectMatch'));assert.match(control,/MAIL_READ_FORBIDDEN/);assert.match(control,/MAIL_SEND_FORBIDDEN/);
+  assert.match(user,/전체 받은편지함/);assert.match(user,/connectionStatus==='connected'/);assert.match(user,/accountLabel/);
+  assert.match(admin,/Gmail 읽기 연결/);assert.match(admin,/발송 권한 추가/);assert.match(admin,/내 권한 저장/);
+});
+
+test('Custom-domain aliases remain identities under source inboxes instead of duplicate mailbox tabs', async () => {
+  const [control,user]=await Promise.all([read('mail-control.js'),read('mail-user-page.js')]);
+  assert.match(control,/lower\(r\.destination_email\)=lower\(\?\)/);assert.match(control,/aliases/);
+  assert.match(user,/연결 주소/);assert.doesNotMatch(user,/joseph@ekodichurch\.kr.*tab/i);
 });

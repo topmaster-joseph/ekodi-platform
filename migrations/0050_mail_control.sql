@@ -63,6 +63,31 @@ CREATE TABLE IF NOT EXISTS mail_account_grants (
   FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
 );
 
+CREATE TABLE IF NOT EXISTS mail_credentials (
+  id TEXT PRIMARY KEY,
+  account_id INTEGER NOT NULL UNIQUE,
+  provider TEXT NOT NULL,
+  credential_ciphertext TEXT NOT NULL,
+  credential_iv TEXT NOT NULL,
+  scopes TEXT NOT NULL DEFAULT '',
+  token_type TEXT NOT NULL DEFAULT 'Bearer',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  last_refreshed_at TEXT,
+  FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
+);
+
+CREATE TABLE IF NOT EXISTS mail_oauth_states (
+  nonce_hash TEXT PRIMARY KEY,
+  account_id INTEGER NOT NULL,
+  actor_user_id TEXT NOT NULL,
+  actor_email TEXT NOT NULL,
+  capability TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
+);
+
 CREATE TABLE IF NOT EXISTS mail_account_audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   account_id INTEGER,
@@ -90,5 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_mail_routes_workspace ON mail_routes(workspace_id
 CREATE INDEX IF NOT EXISTS idx_mail_accounts_owner ON mail_accounts(owner_type, owner_key, enabled);
 CREATE INDEX IF NOT EXISTS idx_mail_accounts_email ON mail_accounts(email_address);
 CREATE INDEX IF NOT EXISTS idx_mail_account_grants_principal ON mail_account_grants(principal_type, principal_key);
+CREATE INDEX IF NOT EXISTS idx_mail_credentials_account ON mail_credentials(account_id);
+CREATE INDEX IF NOT EXISTS idx_mail_oauth_states_expiry ON mail_oauth_states(expires_at);
 CREATE INDEX IF NOT EXISTS idx_mail_account_audit_subject ON mail_account_audit(subject_type, subject_key, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_mail_audit_workspace_time ON mail_control_audit(workspace_id, created_at DESC);
