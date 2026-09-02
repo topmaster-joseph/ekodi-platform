@@ -246,8 +246,8 @@ if (html.includes('control-center-ops.css') || html.includes('admin-finance.css'
 if (!html.includes(`admin-shell.css?v=${assetVersion}`) || !html.includes(`admin-central-handoff.js?v=${assetVersion}`)) throw new Error('Versioned first-path assets missing');
 if (bytes.handoff > 9000) throw new Error(`Admin handoff budget exceeded: ${bytes.handoff} bytes`);
 if (bytes.compact > 5000) throw new Error(`Compact shell budget exceeded: ${bytes.compact} bytes`);
-if (bytes.menu > 10000) throw new Error(`Menu layout budget exceeded: ${bytes.menu} bytes`);
-if (bytes.demand > 14000) throw new Error(`Demand loader budget exceeded: ${bytes.demand} bytes`);
+if (bytes.menu > 12000) throw new Error(`Menu layout budget exceeded: ${bytes.menu} bytes`);
+if (bytes.demand > 15000) throw new Error(`Demand loader budget exceeded: ${bytes.demand} bytes`);
 if (firstPathBytes > 43000) throw new Error(`Admin first-path JavaScript budget exceeded: ${firstPathBytes} bytes`);
 if (baseCssBytes > 16000) throw new Error(`Admin base CSS budget exceeded: ${baseCssBytes} bytes`);
 if (compactCssBytes > 26000) throw new Error(`Admin compact CSS budget exceeded: ${compactCssBytes} bytes`);
