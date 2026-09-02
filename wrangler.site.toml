@@ -118,9 +118,6 @@ service = "ekodi-storage-control"
 binding = "SPACE"
 service = "ekodi-space"
 
-[ai]
-binding = "AI"
-
 [assets]
 directory = "./dist"
 binding = "ASSETS"
