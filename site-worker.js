@@ -261,7 +261,7 @@ async function proxyMallService(request) {
   const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
   const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
   const cacheControl = adminSurface || apiSurface ? 'no-store' : 'public, max-age=0, must-revalidate';
-  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
+  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodibiz-mall';
   const response = withHostSecurity(new Response(upstreamResponse.body, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), MALL_CSP, cacheControl, route);
   return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
@@ -393,6 +393,7 @@ export default {
         secured.headers.set('X-EKODI-Route', 'legacy-mall-to-workspace');
         return secured;
       }
+      if (url.pathname === '/ekodibiz/mall' || url.pathname === '/ekodibiz/mall/') return proxyMallService(request);
       if (isMallPath(url.pathname)) return proxyMallService(request);
       const legacyWorkspacePath = await resolveLegacyWorkspaceRedirect(url.pathname);
       if (legacyWorkspacePath) {
