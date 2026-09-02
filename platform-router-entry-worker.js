@@ -10,7 +10,9 @@ import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
+import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 
+const PUBLIC_HOST='ekodi.kr';
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
@@ -52,6 +54,12 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+
+    if(host===PUBLIC_HOST&&request.method==='GET'){
+      if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
+      if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
+      if(isWorkspaceAdminPath(url.pathname))return workspaceAdminPage();
+    }
 
     if(host===TAX_HOST){
       if(url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
