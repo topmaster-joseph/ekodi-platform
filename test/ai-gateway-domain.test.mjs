@@ -54,12 +54,14 @@ test('AI Gateway client preserves Google admin handoff until session validation'
 test('Worker, auth and release contracts include the AI Gateway hostname', () => {
   const router = read('platform-router-entry-worker.js');
   const wrangler = read('wrangler.site.toml');
+  const apiWrangler = read('wrangler.api.toml');
   const auth = read('auth-site/admin-auth.js');
   const manifest = JSON.parse(read('deploy/manifests/shared-site.worker.json'));
 
   assert.match(router, /host===AI_GATEWAY_HOST/);
   assert.match(wrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
-  assert.match(wrangler, /\[ai\][\s\S]*binding = "AI"/);
+  assert.doesNotMatch(wrangler, /\[ai\][\s\S]*binding = "AI"/);
+  assert.match(apiWrangler, /\[ai\][\s\S]*binding = "AI"/);
   assert.match(auth, /u\.origin==='https:\/\/ai\.ekodi\.kr'/);
   assert.match(auth, /ekodi_admin_token:result\.token/);
 

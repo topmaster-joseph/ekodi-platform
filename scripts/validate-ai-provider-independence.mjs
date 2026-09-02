@@ -25,6 +25,10 @@ if (contract?.defaultPolicy?.providerFailureMustNotFailCoreRequest !== true) fai
 if (contract?.defaultPolicy?.providerSecretsAllowedInBrowser !== false) fail(contractFile, 'provider secrets must never be browser-side');
 if (contract?.defaultPolicy?.fallbackMode !== 'free_assist') fail(contractFile, 'first fallback must be free_assist');
 if (contract?.defaultPolicy?.finalFallbackMode !== 'core') fail(contractFile, 'final fallback must be core');
+if (contract?.defaultPolicy?.orchestration?.mode !== 'adaptive') fail(contractFile, 'adaptive orchestration must be the default');
+if (contract?.defaultPolicy?.orchestration?.maxProviderFanout !== 3) fail(contractFile, 'provider fanout must remain bounded to 3');
+if (contract?.defaultPolicy?.orchestration?.privacyFirstParallelRouting !== true) fail(contractFile, 'parallel routing must be privacy-first');
+if (contract?.defaultPolicy?.orchestration?.providerConsensusNeverOverridesHumanGate !== true) fail(contractFile, 'provider consensus must never override Human Gate');
 if (contract?.releaseGate?.requiredEnvironment !== 'AI_PROVIDER=NONE') fail(contractFile, 'release gate must explicitly test AI_PROVIDER=NONE');
 if (contract?.releaseGate?.blockProductionOnFailure !== true) fail(contractFile, 'failed no-provider gate must block production');
 
@@ -41,6 +45,9 @@ requireText(runtimeFile, [
   "mode: 'core'",
   'AI_PROVIDER_TIMEOUT',
 ]);
+
+const adaptiveFile = 'adaptive-ai-orchestrator.js';
+requireText(adaptiveFile, ['resolveAdaptiveAiPlan', 'runAdaptiveAiTask', 'Promise.all', 'privacy_first_single_provider', 'high_impact_cross_check']);
 
 const coreGatewayFile = 'core-ai-gateway.js';
 requireText(coreGatewayFile, [
@@ -86,6 +93,8 @@ const governanceFile = 'ai-governance-runtime.js';
 requireText(governanceFile, [
   'no_ai_provider_dependency_for_core_service',
   'provider_failure_must_degrade_not_disable_service',
+  'provider_consensus_never_expands_execution_authority',
+  'sensitive_data_parallel_fanout_requires_explicit_authority',
 ]);
 
 const authorAiFile = 'supabase/functions/author-ai-api/index.ts';

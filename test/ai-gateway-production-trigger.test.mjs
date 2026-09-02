@@ -8,7 +8,7 @@ test('AI Gateway production verification ignores non-production upstream outcome
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow, /github\.event\.workflow_run\.event != 'pull_request'/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
-  assert.match(workflow, /workflows: \['Deploy Admin True Lazy Gate', 'Deploy AI Gateway'\]/);
+  assert.match(workflow, /workflows: \['Deploy Control API'\]/);
 });
 
 test('manual AI Gateway production verification remains available', () => {

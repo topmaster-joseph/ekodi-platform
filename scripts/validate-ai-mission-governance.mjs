@@ -61,6 +61,9 @@ assert(policy.decisionLoop?.includes('restore_user_agency'), 'decision loop must
 assert(AI_MISSION_RUNTIME.version === policy.version, 'runtime policy version must match source policy');
 assert(AI_MISSION_RUNTIME.authorityModel.humanRole === policy.authorityModel.humanRole, 'runtime human role must match source policy');
 assert(AI_MISSION_RUNTIME.authorityModel.chiefAiRole === policy.authorityModel.chiefAiRole, 'runtime Chief AI role must match source policy');
+assert(JSON.stringify(AI_MISSION_RUNTIME.orchestrationContract) === JSON.stringify(policy.orchestrationContract), 'runtime orchestration contract must match source policy');
+assert(policy.orchestrationContract?.adaptiveParallelism === true, 'adaptive parallelism must remain enabled');
+assert(policy.orchestrationContract?.providerConsensusNeverOverridesHumanGate === true, 'provider consensus must never override the human gate');
 assert(JSON.stringify(AI_MISSION_RUNTIME.policyPriority) === JSON.stringify(policy.policyPriority), 'runtime policy priority must match source policy');
 assertSameSet(AI_MISSION_RUNTIME.humanGateAreas, policy.actionTiers.human_gate.areas, 'human gate areas');
 assertSameSet(AI_MISSION_RUNTIME.forbiddenAreas, policy.actionTiers.forbidden.areas, 'forbidden areas');

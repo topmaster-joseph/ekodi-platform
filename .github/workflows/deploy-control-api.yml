@@ -35,6 +35,14 @@ on:
       - 'ai-agent-control.js'
       - 'ai-governance-runtime.js'
       - 'ai-resilience-runtime.js'
+      - 'adaptive-ai-orchestrator.js'
+      - 'ai-orchestration-prompt.js'
+      - 'workers-ai-provider-adapter.js'
+      - 'test/workers-ai-provider-adapter.test.mjs'
+      - 'test/adaptive-ai-orchestrator.test.mjs'
+      - 'test/multi-provider-admin-adapters.test.mjs'
+      - 'config/ai-provider-independence.json'
+      - 'scripts/validate-ai-provider-independence.mjs'
       - 'core-ai-gateway.js'
       - 'core-api.js'
       - 'openai-provider-adapter.js'
@@ -102,6 +110,14 @@ on:
       - 'ai-agent-control.js'
       - 'ai-governance-runtime.js'
       - 'ai-resilience-runtime.js'
+      - 'adaptive-ai-orchestrator.js'
+      - 'ai-orchestration-prompt.js'
+      - 'workers-ai-provider-adapter.js'
+      - 'test/workers-ai-provider-adapter.test.mjs'
+      - 'test/adaptive-ai-orchestrator.test.mjs'
+      - 'test/multi-provider-admin-adapters.test.mjs'
+      - 'config/ai-provider-independence.json'
+      - 'scripts/validate-ai-provider-independence.mjs'
       - 'core-ai-gateway.js'
       - 'core-api.js'
       - 'openai-provider-adapter.js'
@@ -163,7 +179,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js adaptive-ai-orchestrator.js ai-orchestration-prompt.js core-ai-gateway.js core-api.js openai-provider-adapter.js workers-ai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -175,11 +191,16 @@ jobs:
           node scripts/validate-universal-membership.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
+          node scripts/validate-ai-provider-independence.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/workers-ai-provider-adapter.test.mjs test/adaptive-ai-orchestrator.test.mjs test/multi-provider-admin-adapters.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
+          grep -Fq 'AI_ORCHESTRATION_MODE = "adaptive"' wrangler.api.toml
+          grep -Fq 'AI_PARALLEL_MAX_PROVIDERS = "3"' wrangler.api.toml
+          grep -Fq '[ai]' wrangler.api.toml
+          grep -Fq 'binding = "AI"' wrangler.api.toml
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:

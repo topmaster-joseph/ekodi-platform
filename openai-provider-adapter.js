@@ -1,4 +1,5 @@
-﻿import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
+import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
+import { buildOrchestrationPrompt } from './ai-orchestration-prompt.js';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-terra';
@@ -68,6 +69,8 @@ function buildAdminInput(context = {}) {
     for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '愿由ъ옄'}: ${item.text}`);
   }
   lines.push('', `?꾩옱 ?붿껌: ${message || '?붿껌 ?댁슜 ?놁쓬'}`);
+  const orchestration = buildOrchestrationPrompt(context);
+  if (orchestration) lines.push('', orchestration);
   return lines.join('\n');
 }
 

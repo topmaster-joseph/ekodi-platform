@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "principle": "Service-first, AI-enhanced",
   "scope": {
     "includeAllEkodiSurfaces": true,
@@ -31,7 +31,18 @@
     "providerTimeoutMs": 2500,
     "circuitBreaker": true,
     "userFacingProviderErrors": false,
-    "userNotice": "기본 모드로 계속 이용할 수 있습니다. AI 고급 기능은 잠시 사용할 수 없습니다."
+    "userNotice": "기본 모드로 계속 이용할 수 있습니다. AI 고급 기능은 잠시 사용할 수 없습니다.",
+    "orchestration": {
+      "mode": "adaptive",
+      "routineProviderFanout": 1,
+      "materialProviderFanout": 2,
+      "highImpactAnalysisFanout": 3,
+      "maxProviderFanout": 3,
+      "synthesisAfterParallelReview": true,
+      "privacyFirstParallelRouting": true,
+      "sensitiveDataFanoutRequiresExplicitAuthority": true,
+      "providerConsensusNeverOverridesHumanGate": true
+    }
   },
   "coreCapabilities": [
     "authentication",

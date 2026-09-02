@@ -3,6 +3,8 @@ import apiWorker from './api-worker.js';
 import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
 import { createCloudflareWorkersAiProvider, getCloudflareWorkersAiProviderStatus } from './workers-ai-provider-adapter.js';
+import { createClaudeProvider, getClaudeProviderStatus } from './claude-provider-adapter.js';
+import { createGeminiProvider, getGeminiProviderStatus } from './gemini-provider-adapter.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 
 const PREFIX = '/api/control/ai';
@@ -12,18 +14,35 @@ const MAX_ASSIST_MESSAGE_CHARS = 4_000;
 const MAX_ASSIST_HISTORY_ITEMS = 8;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
 
-function aiProviderChain(env = {}) {
-  const workersAi = createCloudflareWorkersAiProvider(env);
-  const openai = createOpenAiProvider(env);
+function orderedProviders(env, providers) {
   const primary = String(env.AI_PROVIDER_PRIMARY || 'cloudflare-workers-ai').trim().toLowerCase();
-  return primary === 'openai' ? [openai, workersAi] : [workersAi, openai];
+  return [...providers].sort((a, b) => (a.id === primary ? -1 : b.id === primary ? 1 : 0));
+}
+
+function aiProviderChain(env = {}) {
+  const verifierModel = String(env.CLOUDFLARE_AI_VERIFIER_MODEL || '@cf/zai-org/glm-4.7-flash').trim();
+  const tiebreakerModel = String(env.CLOUDFLARE_AI_TIEBREAKER_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast').trim();
+  return orderedProviders(env, [
+    createCloudflareWorkersAiProvider(env),
+    createOpenAiProvider(env),
+    createClaudeProvider(env),
+    createGeminiProvider(env),
+    createCloudflareWorkersAiProvider(env, { id:'cloudflare-workers-ai-verifier', model:verifierModel }),
+    createCloudflareWorkersAiProvider(env, { id:'cloudflare-workers-ai-tiebreaker', model:tiebreakerModel }),
+  ]);
 }
 
 function aiProviderStatuses(env = {}) {
-  const workersAi = getCloudflareWorkersAiProviderStatus(env);
-  const openai = getOpenAiProviderStatus(env);
-  const primary = String(env.AI_PROVIDER_PRIMARY || 'cloudflare-workers-ai').trim().toLowerCase();
-  return primary === 'openai' ? [openai, workersAi] : [workersAi, openai];
+  const verifierModel = String(env.CLOUDFLARE_AI_VERIFIER_MODEL || '@cf/zai-org/glm-4.7-flash').trim();
+  const tiebreakerModel = String(env.CLOUDFLARE_AI_TIEBREAKER_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast').trim();
+  return orderedProviders(env, [
+    getCloudflareWorkersAiProviderStatus(env),
+    getOpenAiProviderStatus(env),
+    getClaudeProviderStatus(env),
+    getGeminiProviderStatus(env),
+    getCloudflareWorkersAiProviderStatus(env, { id:'cloudflare-workers-ai-verifier', model:verifierModel }),
+    getCloudflareWorkersAiProviderStatus(env, { id:'cloudflare-workers-ai-tiebreaker', model:tiebreakerModel }),
+  ]);
 }
 
 function json(data, status = 200, request = null, env = {}) {
@@ -212,6 +231,7 @@ async function finalizeAssistAction(env, id, result, value) {
     model: value?.model || null,
     responseId: value?.responseId || null,
     notice: result.notice || '',
+    orchestration: result.orchestration || null,
   };
   await env.DB.prepare(`UPDATE ai_agent_actions
     SET status = ?, result_json = ?, verified_at = ?
@@ -284,6 +304,8 @@ async function handleAdminAssist(request, env, session) {
       page,
       history,
       requestedBy: String(session.email || 'unknown'),
+      dataSensitivity: String(body.dataSensitivity || 'internal').trim().toLowerCase(),
+      parallelSensitiveApproved: body.parallelSensitiveApproved === true,
     },
     fallback: () => ({
       text: '외부 AI 연결이 준비되지 않았거나 일시적으로 응답하지 않습니다. 요청은 감사 가능한 운영 기록에 남겼으며, EKODI의 핵심 관리 기능은 AI 없이도 계속 사용할 수 있습니다.',
@@ -303,6 +325,7 @@ async function handleAdminAssist(request, env, session) {
       provider: null,
       reply: 'AI 보조 기능 없이 핵심 기능을 계속 이용할 수 있습니다.',
       notice: result.notice || '',
+      orchestration: result.orchestration || null,
     }, 503, request, env);
   }
   return json({
@@ -315,6 +338,7 @@ async function handleAdminAssist(request, env, session) {
     model: value.model || null,
     reply: String(value.text || '').trim(),
     notice: result.notice || '',
+    orchestration: result.orchestration || null,
   }, 200, request, env);
 }
 
@@ -371,6 +395,7 @@ export async function handleAgentMissionControl(request, env) {
       actionTiers: ['observe', 'assist', 'execute_reversible', 'human_gate', 'forbidden'],
       humanGateAreas: AI_MISSION_RUNTIME.humanGateAreas,
       forbiddenAreas: AI_MISSION_RUNTIME.forbiddenAreas,
+      orchestrationContract: AI_MISSION_RUNTIME.orchestrationContract,
     }, 200, request, env);
   }
 
@@ -383,6 +408,8 @@ export async function handleAgentMissionControl(request, env) {
       providers: statuses,
       openai: statuses.find(item => item.id === 'openai') || getOpenAiProviderStatus(env),
       workersAi: statuses.find(item => item.id === 'cloudflare-workers-ai') || getCloudflareWorkersAiProviderStatus(env),
+      claude: statuses.find(item => item.id === 'anthropic-claude') || getClaudeProviderStatus(env),
+      gemini: statuses.find(item => item.id === 'google-gemini') || getGeminiProviderStatus(env),
     }, 200, request, env);
   }
 

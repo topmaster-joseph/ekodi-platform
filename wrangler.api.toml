@@ -15,6 +15,12 @@ crons = ["*/10 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"
+AI_ORCHESTRATION_MODE = "adaptive"
+AI_PARALLEL_MAX_PROVIDERS = "3"
+AI_PROVIDER_PRIMARY = "cloudflare-workers-ai"
+CLOUDFLARE_AI_MODEL = "@cf/google/gemma-4-26b-a4b-it"
+CLOUDFLARE_AI_VERIFIER_MODEL = "@cf/zai-org/glm-4.7-flash"
+CLOUDFLARE_AI_TIEBREAKER_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
 ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
@@ -33,6 +39,9 @@ OPENAI_MODEL = "gpt-5.6-terra"
 USER_AI_FREE_MONTHLY_REQUESTS = "20"
 USER_AI_FLEX_MONTHLY_REQUESTS = "20"
 ALLOWED_ORIGINS = "https://api.ekodi.kr,https://ekodi.kr,https://www.ekodi.kr,https://my.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://auth.ekodi.kr,https://mail.ekodi.kr,https://author.ekodi.kr,https://marketing.ekodi.kr,https://biz.ekodi.kr,https://trade.ekodi.kr,https://mall.ekodi.kr,https://pay.ekodi.kr,https://books.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://community.ekodi.kr,https://edu.ekodi.kr,https://media.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
+
+[ai]
+binding = "AI"
 
 [observability.logs]
 enabled = true

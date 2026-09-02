@@ -4,12 +4,29 @@ on:
   pull_request:
     paths: &ai_gateway_paths
       - 'ai-gateway-page.js'
+      - 'ai-agent-control.js'
+      - 'core-ai-gateway.js'
+      - 'adaptive-ai-orchestrator.js'
+      - 'ai-orchestration-prompt.js'
+      - 'ai-governance-runtime.js'
+      - 'claude-provider-adapter.js'
+      - 'gemini-provider-adapter.js'
+      - 'test/adaptive-ai-orchestrator.test.mjs'
+      - 'test/multi-provider-admin-adapters.test.mjs'
+      - 'config/ai-provider-independence.json'
+      - 'scripts/validate-ai-provider-independence.mjs'
+      - 'workers-ai-provider-adapter.js'
       - 'platform-router-entry-worker.js'
       - 'auth-site/admin-auth.js'
       - 'wrangler.site.toml'
+      - 'wrangler.api.toml'
       - 'test/ai-gateway-domain.test.mjs'
       - 'test/ai-gateway-auth-flow.test.mjs'
+      - 'test/workers-ai-provider-adapter.test.mjs'
+      - 'test/ai-gateway-production-trigger.test.mjs'
+      - 'scripts/verify-ai-gateway-authenticated-production.mjs'
       - '.github/workflows/deploy-ai-gateway.yml'
+      - '.github/workflows/verify-ai-gateway-production.yml'
   push:
     branches: [main]
     paths: *ai_gateway_paths
@@ -27,18 +44,33 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate AI Gateway auth handoff and routing contract
+      - name: Validate AI Gateway auth handoff, provider and routing contract
         shell: bash
         run: |
           set -euo pipefail
           node --check ai-gateway-page.js
+          node --check ai-agent-control.js
+          node --check core-ai-gateway.js
+          node --check adaptive-ai-orchestrator.js
+          node --check ai-orchestration-prompt.js
+          node --check ai-governance-runtime.js
+          node --check claude-provider-adapter.js
+          node --check gemini-provider-adapter.js
+          node --check workers-ai-provider-adapter.js
+          node --check scripts/verify-ai-gateway-authenticated-production.mjs
           node --check platform-router-entry-worker.js
           node --check auth-site/admin-auth.js
-          node --test test/ai-gateway-domain.test.mjs test/ai-gateway-auth-flow.test.mjs
+          node --test test/ai-gateway-domain.test.mjs test/ai-gateway-auth-flow.test.mjs test/workers-ai-provider-adapter.test.mjs test/adaptive-ai-orchestrator.test.mjs test/multi-provider-admin-adapters.test.mjs test/ai-gateway-production-trigger.test.mjs
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.site.toml
+          grep -Fq '[ai]' wrangler.api.toml
+          grep -Fq 'binding = "AI"' wrangler.api.toml
+          grep -Fq 'AI_ORCHESTRATION_MODE = "adaptive"' wrangler.api.toml
+          grep -Fq 'AI_PARALLEL_MAX_PROVIDERS = "3"' wrangler.api.toml
+          ! grep -Fq '[ai]' wrangler.site.toml
           grep -Fq 'ekodi_admin_token:result.token' auth-site/admin-auth.js
           grep -Fq 'Google 관리자 인증 완료 · 세션 확인 중' ai-gateway-page.js
           grep -Fq "let memoryToken=''" ai-gateway-page.js
+          node scripts/validate-ai-provider-independence.mjs
           npm run build
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs
