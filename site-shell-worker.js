@@ -59,7 +59,7 @@ export default {
       if(rootInternalPath(pathname))return response;
       const serviceId=rootUserService(pathname);
       if(serviceId)return injectEkodiShell(response,serviceId);
-      return injectEkodiUserUi(response,'ekodi','public');
+      return injectEkodiShell(response,'ekodi','public');
     }
     const serviceId = shellServiceForHost(effective.host);
     if (!serviceId) return response;
