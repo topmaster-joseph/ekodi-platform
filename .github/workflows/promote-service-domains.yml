@@ -32,8 +32,8 @@ jobs:
             echo 'Retired EKODI service domain remains in source.'
             exit 1
           fi
-          grep -Fq "id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/mall'" ekodi-service-manifest.js
-          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          grep -Fq "id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/ekodibiz/mall'" ekodi-service-manifest.js
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
           npm run check
           npm test
       - name: Verify single production owner policy
