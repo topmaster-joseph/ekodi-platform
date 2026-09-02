@@ -142,7 +142,7 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
-          "x-ekodi-route: public-ekodi-mall",
+          "x-ekodi-route: public-ekodibiz-mall",
           "x-ekodi-edge: mall-path-gateway"
         ],
         "rollbackHeaderExpect": [
