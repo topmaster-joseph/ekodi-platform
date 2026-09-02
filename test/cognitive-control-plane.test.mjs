@@ -27,7 +27,7 @@ function mallWorkload(overrides = {}) {
     event_type: 'mall.product.promotion.requested',
     event_version: 1,
     occurred_at: '2026-09-02T00:00:00.000Z',
-    workspace_id: 'workspace-mall-proof',
+    scope: { type: 'platform_service', id: 'ekodi-mall' },
     source: { service_id: 'ekodi-mall', adapter_id: 'mall.growth-loop' },
     actor: { type: 'system', id: 'growth-loop' },
     subject: { type: 'product', id: 'product-001' },
@@ -216,16 +216,44 @@ test('workload ingress exposes an independent service-to-control-plane contract'
   const contract = getWorkloadIngressContract();
   assert.equal(contract.authentication, 'independent_service_caller');
   assert.equal(contract.credentialsInPayload, false);
+  assert.deepEqual(contract.supportedScopes, ['workspace', 'platform_service']);
   assert.ok(contract.supportedEvents.includes('mall.product.promotion.requested'));
 });
 
-test('Mall workload requires workspace identity and validates event v1', () => {
+test('Mall workload uses platform_service scope without a fake workspace', () => {
   const event = mallWorkload();
   assert.equal(validateWorkloadEvent(event).ok, true);
-  assert.equal(event.workspaceId, 'workspace-mall-proof');
+  assert.deepEqual(event.scope, { type: 'platform_service', id: 'ekodi-mall' });
+  assert.equal(event.workspaceId, '');
   assert.equal(event.source.serviceId, 'ekodi-mall');
-  const invalid = mallWorkload({ workspace_id: '' });
-  assert.equal(validateWorkloadEvent(invalid).code, 'workload_fields_required');
+});
+
+test('platform_service scope cannot impersonate another service or carry workspace identity', () => {
+  const wrongService = mallWorkload({ scope: { type: 'platform_service', id: 'other-service' } });
+  assert.equal(validateWorkloadEvent(wrongService).code, 'workload_service_scope_invalid');
+  const fakeWorkspace = mallWorkload({ workspace_id: 'workspace-mall-proof' });
+  assert.equal(validateWorkloadEvent(fakeWorkspace).code, 'workload_service_scope_invalid');
+});
+
+test('workspace scope requires the same immutable workspace identity', () => {
+  const valid = normalizeWorkloadEvent({
+    event_id: 'evt-workspace-001',
+    event_type: 'mall.product.promotion.requested',
+    workspace_id: '25d0a2d7-7e52-47bc-abc7-b2fcc46b3070',
+    scope: { type: 'workspace', id: '25d0a2d7-7e52-47bc-abc7-b2fcc46b3070' },
+    source: { service_id: 'ekodi-mall' },
+    subject: { type: 'product', id: 'product-001' },
+  });
+  assert.equal(validateWorkloadEvent(valid).ok, true);
+  const invalid = normalizeWorkloadEvent({
+    event_id: 'evt-workspace-002',
+    event_type: 'mall.product.promotion.requested',
+    workspace_id: '25d0a2d7-7e52-47bc-abc7-b2fcc46b3070',
+    scope: { type: 'workspace', id: 'different-workspace' },
+    source: { service_id: 'ekodi-mall' },
+    subject: { type: 'product', id: 'product-001' },
+  });
+  assert.equal(validateWorkloadEvent(invalid).code, 'workload_workspace_scope_invalid');
 });
 
 test('workload ingress rejects credentials from business payloads', () => {
@@ -238,6 +266,8 @@ test('workload ingress rejects credentials from business payloads', () => {
 test('Mall promotion plan keeps public YouTube publication behind a human gate', () => {
   const plan = planWorkloadEvent(mallWorkload());
   assert.equal(plan.goal, 'promote_product');
+  assert.deepEqual(plan.scope, { type: 'platform_service', id: 'ekodi-mall' });
+  assert.equal(plan.workspaceId, '');
   assert.equal(plan.executionBoundary, 'capability_adapters_only');
   assert.equal(plan.executionReady, false);
   assert.deepEqual(plan.steps.map(step => step.capability), [
