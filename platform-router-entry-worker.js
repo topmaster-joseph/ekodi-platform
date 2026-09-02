@@ -11,12 +11,18 @@ import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
+import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
 const PUBLIC_WORKSPACE_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/?$/;
+const EKODIBIZ_PUBLIC_ROUTE=/^\/org\/ekodibiz\/?$/i;
+const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
+const EKODIBIZ_ASSETS=new Set(['style.css']);
+const WORKSPACE_ADMIN_RETURN_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/(?:admin(?:\/[a-z0-9-]+)?|[a-z0-9-]+\/admin(?:\/[a-z0-9-]+)?)\/?$/;
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
 
@@ -39,7 +45,7 @@ function rewriteWorkspaceShellAssets(response){
   return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(response);
 }
 function safeWorkspaceReturnTo(value){
-  try{const target=new URL(String(value||''));target.hash='';if(target.origin!=='https://ekodi.kr'||!PUBLIC_WORKSPACE_ROUTE.test(target.pathname))return null;return target}catch{return null}
+  try{const target=new URL(String(value||''));target.hash='';if(target.origin!=='https://ekodi.kr'||!(PUBLIC_WORKSPACE_ROUTE.test(target.pathname)||WORKSPACE_ADMIN_RETURN_ROUTE.test(target.pathname)))return null;return target}catch{return null}
 }
 function workspaceAuthRedirect(request){
   const url=new URL(request.url);const returnTo=safeWorkspaceReturnTo(url.searchParams.get('return_to'));if(!returnTo)return null;
@@ -50,6 +56,14 @@ async function routeWorkspaceAsset(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const url=new URL(request.url);const asset=url.pathname.slice(WORKSPACE_ASSET_PREFIX.length);if(!WORKSPACE_ASSETS.has(asset))return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}});
   const upstream=await env.SPACE.fetch(workspaceUpstreamRequest(request,`/${asset}`));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');return routed;
+}
+async function routeEkodiBizAsset(request,env){
+  if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const url=new URL(request.url);const asset=url.pathname.slice(EKODIBIZ_ASSET_PREFIX.length);if(!EKODIBIZ_ASSETS.has(asset))return new Response('Not Found',{status:404});
+  const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,`/${asset}`));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');return out;
+}
+async function routeEkodiBizPublic(request,env){
+  if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
+  return new HTMLRewriter().on('link[href]',{element:e=>{const v=e.getAttribute('href')||'';if(v==='/style.css'||v.startsWith('/style.css?'))e.setAttribute('href',EKODIBIZ_ASSET_PREFIX+'style.css'+v.slice('/style.css'.length));}}).transform(routed);
 }
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
@@ -92,8 +106,14 @@ export default {
       if(request.method==='GET'){
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
+        if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
+        if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
+        if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
+        if(isTradePartnerPath(url.pathname))return tradePartnerPage();
         if(isWorkspaceAdminPath(url.pathname))return workspaceAdminPage();
       }
+      if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
+      if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&PUBLIC_WORKSPACE_ROUTE.test(url.pathname))return routePublicWorkspace(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){

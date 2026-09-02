@@ -68,7 +68,7 @@ function validHandoff(site:string,raw:string){
     cgma:["https://cgma.ekodi.kr"],
     marketing:["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"],
     biz:["https://biz.ekodi.kr"],
-    trade:["https://trade.ekodi.kr"],
+    trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"],
     mall:["https://mall.ekodi.kr"],
     pay:["https://pay.ekodi.kr"],
     books:["https://books.ekodi.kr"],
