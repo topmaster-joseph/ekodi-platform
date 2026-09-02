@@ -10,7 +10,7 @@
   <style>.shopping-note{margin-bottom:14px}</style>
 </head>
 <body>
-  <!-- canonical storefront release: header disclosures v3 -->
+  <!-- canonical storefront release: contextual gift intelligence v1 -->
   <a class="skip-link" href="#main">본문 바로가기</a>
   <header class="site-header">
     <a class="brand" href="/mall" aria-label="에코디몰 홈">
@@ -22,6 +22,7 @@
       <p class="affiliate-disclosure" id="disclosureText">쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
     </aside>
     <nav aria-label="주요 메뉴">
+      <a href="#gift-ai">선물AI</a>
       <a href="#products">상품</a>
       <a href="#categories">카테고리</a>
       <a href="/">EKODI</a>
@@ -34,7 +35,7 @@
         <p class="eyebrow">EVERYDAY SHOPPING</p>
         <h1 id="heroTitle">오늘 필요한 것,<br>에코디몰에서.</h1>
         <p class="hero-text">생활·식품·주방·건강·디지털까지, 지금 보기 좋은 상품을 한곳에서 만나보세요.</p>
-        <a class="primary-action" href="#products">상품 둘러보기</a>
+        <a class="primary-action" href="#gift-ai">상황에 맞는 선물 찾기</a>
       </div>
       <div class="hero-visual" aria-hidden="true">
         <div class="hero-shape hero-shape-large"></div>
@@ -45,8 +46,33 @@
 
     <section class="quick-strip" aria-label="에코디몰 특징">
       <div><strong>오늘의 상품</strong><span>지금 보기 좋은 상품을 한눈에</span></div>
-      <div><strong>빠른 탐색</strong><span>검색과 카테고리로 간단하게</span></div>
+      <div><strong>맥락형 선물 추천</strong><span>관계·상황·예산을 함께 고려</span></div>
       <div><strong>꾸준한 업데이트</strong><span>새로운 상품을 자동으로 반영</span></div>
+    </section>
+
+    <section class="gift-ai" id="gift-ai" aria-labelledby="giftAiTitle">
+      <div class="gift-ai-intro">
+        <p class="eyebrow">GIFT CONTEXT INTELLIGENCE</p>
+        <h2 id="giftAiTitle">누구에게<br>마음을 전하시나요?</h2>
+        <p>명절과 기념일, 받는 분과의 관계, 연령, 예산과 인원까지 함께 읽고 현재 에코디몰에 연결된 상품 중 적절한 선택을 압축해 드립니다.</p>
+        <div class="gift-ai-quick" id="giftAiQuick" aria-label="빠른 선물 상담">
+          <button type="button" data-gift-prompt="추석에 부모님께 드릴 5만원 이하 건강 선물 추천해줘">부모님 · 추석</button>
+          <button type="button" data-gift-prompt="거래처 대표에게 10만원 이하로 격식 있는 선물 추천해줘">거래처 · 격식</button>
+          <button type="button" data-gift-prompt="교회 어르신 30분께 드릴 3만원 이하 실용적인 단체 선물 추천해줘">단체 · 가성비</button>
+        </div>
+      </div>
+      <div class="gift-ai-panel">
+        <div class="gift-ai-conversation" id="giftAiConversation" aria-live="polite">
+          <div class="gift-ai-bubble assistant">관계와 상황을 말씀해 주세요. 예산이나 인원까지 알려주시면 더 정확하게 좁혀드릴게요.</div>
+        </div>
+        <form class="gift-ai-form" id="giftAiForm">
+          <label class="sr-only" for="giftAiInput">선물 상담 내용</label>
+          <textarea id="giftAiInput" rows="2" maxlength="500" placeholder="예: 추석에 70대 어르신 20분께 드릴 3만원 이하 선물. 흔하지 않고 실용적이면 좋겠어."></textarea>
+          <button type="submit">추천받기</button>
+        </form>
+        <p class="gift-ai-status" id="giftAiStatus">앞에서 말씀하신 조건을 이어서 반영합니다.</p>
+        <div class="gift-ai-results" id="giftAiResults"></div>
+      </div>
     </section>
 
     <section class="catalog" id="products" aria-labelledby="catalogTitle">
@@ -109,7 +135,7 @@
         <h2 id="productDialogTitle">상품 정보</h2>
         <p class="product-dialog-price" id="productDialogPrice"></p>
         <div class="product-dialog-badges" id="productDialogBadges"></div>
-        <p class="product-dialog-source">판매처 · 쿠팡</p>
+        <p class="product-dialog-source">판매처 · 연결된 제휴 판매처</p>
         <p class="product-dialog-note">가격과 옵션, 배송 조건은 판매처에서 최종 확인해 주세요.</p>
         <a class="dialog-buy" id="productDialogBuy" href="#" target="_blank" rel="sponsored noopener noreferrer">구매하기</a>
       </div>
@@ -141,10 +167,10 @@
       }
     }catch{send('mall_visit');}
     document.addEventListener('click',event=>{
-      const detail=event.target.closest('.product-media-trigger,.detail-button');
+      const detail=event.target.closest('.product-media-trigger,.detail-button,.gift-ai-product');
       if(detail){
-        const card=detail.closest('.product-card');
-        send('product_view',{metadata:{product_name:String(card?.querySelector('h3')?.textContent||'').slice(0,240)}});
+        const name=String(detail.dataset.productName||detail.closest('.product-card')?.querySelector('h3')?.textContent||'').slice(0,240);
+        send('product_view',{metadata:{product_name:name,source:detail.classList.contains('gift-ai-product')?'gift_ai':'catalog'}});
         return;
       }
       const buy=event.target.closest('#productDialogBuy');
@@ -153,6 +179,10 @@
       try{target_host=new URL(buy.href).hostname}catch{}
       send('affiliate_click',{target_host,metadata:{product_name:String(document.querySelector('#productDialogTitle')?.textContent||'').slice(0,240)}});
     },true);
+    document.addEventListener('ekodi:gift-query',event=>{
+      const detail=event.detail||{};
+      send('gift_query',{metadata:{context_summary:String(detail.contextSummary||'').slice(0,300),recommendation_count:Number(detail.recommendationCount||0)}});
+    });
   })();
   </script>
   <script src="/mall.js" defer></script>
