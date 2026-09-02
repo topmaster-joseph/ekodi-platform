@@ -7,10 +7,11 @@ import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('user UI header/footer/language are shared user-surface-only modules',async()=>{
-  const [header,footerClient,userLanguage,legacyMobileHeader,worker,principles,sharedCss,injector,shellPolicy]=await Promise.all([
+  const [header,footerClient,userLanguage,ccmPlayer,legacyMobileHeader,worker,principles,sharedCss,injector,shellPolicy]=await Promise.all([
     read('shell/user-ui-header.js'),
     read('shell/user-ui-footer.js'),
     read('shell/user-language.js'),
+    read('shell/ccm-mr-player.js'),
     read('shell/mobile-fixed-header.js'),
     read('ekodi-shell-worker.js'),
     read('docs/user-ui-module-principles.md'),
@@ -75,6 +76,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/text-align:\s*center/);
   assert.match(sharedCss,/justify-content:\s*center/);
   assert.match(sharedCss,/\.ekodi-user-language\s*\{/);
+  assert.match(sharedCss,/z-index:\s*2147483400/);
+  assert.match(sharedCss,/overflow:\s*visible/);
+  assert.match(userLanguage,/z-index:2147483400!important/);
   assert.match(sharedCss,/background:\s*var\(--ekodi-user-footer-background/);
   assert.match(sharedCss,/color:\s*var\(--ekodi-user-footer-text,\s*inherit\)/);
   assert.match(sharedCss,/font-family:\s*inherit/);

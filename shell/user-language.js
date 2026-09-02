@@ -12,12 +12,7 @@ const SUPPORTED=Object.freeze([
   {locale:'ko-KR',short:'한국어',label:'한국어'},
   {locale:'en',short:'English',label:'English'},
   {locale:'zh-CN',short:'中文',label:'中文'},
-  {locale:'ja',short:'日本語',label:'日本語'},
-  {locale:'my',short:'မြန်မာ',label:'မြန်မာဘာသာ'},
-  {locale:'kac',short:'Jinghpaw',label:'Jinghpaw (Kachin)'},
-  {locale:'vi',short:'Tiếng Việt',label:'Tiếng Việt'},
-  {locale:'mn',short:'Монгол',label:'Монгол хэл'},
-  {locale:'id',short:'Bahasa',label:'Bahasa Indonesia'}
+  {locale:'ja',short:'日本語',label:'日本語'}
 ]);
 const LOCALES=new Set(SUPPORTED.map(item=>item.locale));
 const COPY=Object.freeze({
@@ -98,14 +93,15 @@ function apply(locale,{save=true,emit=true}={}){
   return next;
 }
 function header(){
-  return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-language-ignore])')||
+  return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback]):not([data-ekodi-language-ignore])')||
+    document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-language-ignore])')||
     document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header');
 }
 function installStyle(){
   if(document.getElementById(STYLE_ID))return;
   const style=document.createElement('style');
   style.id=STYLE_ID;
-  style.textContent=`.ekodi-user-language[data-ekodi-language-control]{position:relative!important;display:inline-flex!important;align-items:center!important;gap:5px!important;flex:0 0 auto!important;min-height:34px!important;margin-inline-start:6px!important;padding:0 21px 0 9px!important;border:1px solid color-mix(in srgb,currentColor 18%,transparent)!important;border-radius:999px!important;background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 92%,transparent)!important;color:inherit!important;box-sizing:border-box!important;box-shadow:none!important}.ekodi-user-language[data-ekodi-language-control]::after{content:'⌄';position:absolute;right:8px;top:50%;transform:translateY(-54%);font-size:11px;opacity:.62;pointer-events:none}.ekodi-user-language__icon{font-size:13px;line-height:1}.ekodi-user-language__label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.ekodi-user-language__select{appearance:none!important;-webkit-appearance:none!important;min-width:58px!important;max-width:96px!important;min-height:32px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:inherit!important;box-shadow:none!important;font:700 12px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;cursor:pointer!important;outline:none!important}.ekodi-user-language:focus-within{outline:2px solid color-mix(in srgb,var(--ekodi-user-chrome-link,#2563eb) 32%,transparent)!important;outline-offset:2px}@media(max-width:480px){.ekodi-user-language[data-ekodi-language-control]{margin-inline-start:2px!important;padding-left:7px!important;padding-right:18px!important}.ekodi-user-language__select{max-width:70px!important;font-size:11px!important}}`;
+  style.textContent=`.ekodi-user-language[data-ekodi-language-control]{position:relative!important;z-index:2147483400!important;overflow:visible!important;display:inline-flex!important;align-items:center!important;gap:5px!important;flex:0 0 auto!important;min-height:34px!important;margin-inline-start:6px!important;padding:0 21px 0 9px!important;border:1px solid color-mix(in srgb,currentColor 18%,transparent)!important;border-radius:999px!important;background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 92%,transparent)!important;color:inherit!important;box-sizing:border-box!important;box-shadow:none!important}.ekodi-user-language[data-ekodi-language-control]::after{content:'⌄';position:absolute;right:8px;top:50%;transform:translateY(-54%);font-size:11px;opacity:.62;pointer-events:none}.ekodi-user-language__icon{font-size:13px;line-height:1}.ekodi-user-language__label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.ekodi-user-language__select{appearance:none!important;-webkit-appearance:none!important;min-width:58px!important;max-width:96px!important;min-height:32px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:inherit!important;box-shadow:none!important;font:700 12px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;cursor:pointer!important;outline:none!important}.ekodi-user-language:focus-within{outline:2px solid color-mix(in srgb,var(--ekodi-user-chrome-link,#2563eb) 32%,transparent)!important;outline-offset:2px}@media(max-width:480px){.ekodi-user-language[data-ekodi-language-control]{margin-inline-start:2px!important;padding-left:7px!important;padding-right:18px!important}.ekodi-user-language__select{max-width:70px!important;font-size:11px!important}}`;
   (document.head||document.documentElement).append(style);
 }
 function buildControl(){
