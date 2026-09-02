@@ -9,8 +9,9 @@ async function text(path) {
 }
 
 function mustReplace(source, search, replacement, label) {
-  if (!source.includes(search)) throw new Error(`admin thin-shell marker missing: ${label}`);
-  return source.replace(search, replacement);
+  const normalized = source.replace(/\r\n/g, '\n');
+  if (!normalized.includes(search)) throw new Error(`admin thin-shell marker missing: ${label}`);
+  return normalized.replace(search, replacement);
 }
 
 // Device Control and Hybrid Execution are published only as one standalone demand asset.
