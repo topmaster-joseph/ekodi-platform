@@ -11,9 +11,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.2.0') fail('constitution version must be 1.2.0 after the approved 2026-09-01 parallel-development amendment');
+if (constitution.version !== '1.3.0') fail('constitution version must be 1.3.0 after the approved 2026-09-03 orchestrator-authority amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','ekodi-orchestrator-owns-routed-ai-work','platform-super-admin-final-authority']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -24,6 +24,17 @@ if (parallel.independentWorktreeOrSandboxPerTask !== true) fail('parallel develo
 if (parallel.sharedMutableWorkingDirectoryForbidden !== true) fail('concurrent tasks must not share a mutable working directory');
 if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protected-branch writes must be forbidden');
 if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
+const aiAuthority = constitution.aiAuthorityPolicy || {};
+if (aiAuthority.taskOwner !== 'ekodi_orchestrator') fail('AI routed-task owner must be EKODI Orchestrator');
+if (aiAuthority.entryAiRole !== 'entry_point_and_bounded_participant') fail('entry AI must remain a bounded participant');
+if (aiAuthority.finalPlatformAuthority !== 'ekodi_platform_super_administrator') fail('final platform authority must be EKODI Platform Super Administrator');
+if (aiAuthority.ordinaryApprovalScope !== 'delegated_workspace_or_resource_only') fail('ordinary user/admin approval must remain scope-bounded');
+if (aiAuthority.entryAiMayClaimTaskOwnership !== false) fail('entry AI must never claim task ownership');
+if (aiAuthority.orchestratorMayOverrideSuperAdminGate !== false) fail('orchestrator must not override the super-admin gate');
+if (aiAuthority.providerMayOverrideSuperAdminGate !== false) fail('AI provider must not override the super-admin gate');
+for (const area of ['constitution_or_platform_policy_change','production_deployment_or_promotion','production_schema_migration','production_secret_change','production_dns_change','destructive_or_mass_data_change','core_identity_or_authorization_change','high_value_or_exceptional_financial_commitment','legal_commitment_or_contract_execution','domain_service_shutdown_or_ownership_transfer','repository_force_push','repository_delete','production_rollback','material_external_publication_or_commitment']) {
+  if (!aiAuthority.platformSuperAdminGateAreas?.includes(area)) fail(`missing Platform Super Administrator gate: ${area}`);
+}
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const targets = constitution.legacyDomainTargets || {};

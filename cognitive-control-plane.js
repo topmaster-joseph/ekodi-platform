@@ -1,5 +1,5 @@
 export const COGNITIVE_CONTROL_POLICY = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   planes: Object.freeze(['control', 'governance', 'execution', 'data']),
   environments: Object.freeze(['development', 'verification', 'production']),
   promotionPath: Object.freeze(['development', 'verification', 'production']),
@@ -37,7 +37,16 @@ export const COGNITIVE_CONTROL_POLICY = Object.freeze({
     'destructive-production-data-change',
     'repository-force-push',
     'repository-delete',
+    'constitution-or-platform-policy-change',
+    'core-identity-or-authorization-change',
+    'high-value-financial-commitment',
+    'legal-contract-execution',
+    'domain-service-shutdown-or-ownership-transfer',
+    'material-external-publication-or-commitment',
   ]),
+  taskOwner: 'ekodi_orchestrator',
+  entryAiRole: 'entry_point_and_bounded_participant',
+  finalPlatformAuthority: 'ekodi_platform_super_administrator',
   productionMutationMode: 'promotion-only',
   productionDataSchemaMode: 'governed-additive-migration-only',
   rebuildOnPromotion: false,
@@ -86,6 +95,7 @@ export function normalizeControlIntent(input = {}) {
     readOnly: source.readOnly === true,
     audited: source.audited === true,
     governanceAuthorized: source.governanceAuthorized === true,
+    superAdminAuthorized: source.superAdminAuthorized === true,
     rebuildOnPromotion: source.rebuildOnPromotion === true,
     highImpact: source.highImpact === true,
     gates: Object.freeze(unique(source.gates)),
@@ -103,10 +113,14 @@ export function isImmutableArtifactId(value) {
 }
 
 function result(decision, reason, explanation, extra = {}) {
+  const approvalAuthority = decision === 'super_admin_gate'
+    ? COGNITIVE_CONTROL_POLICY.finalPlatformAuthority
+    : 'none';
   return Object.freeze({
     decision,
     reason,
     explanation,
+    approvalAuthority,
     policyVersion: COGNITIVE_CONTROL_POLICY.version,
     ...extra,
   });
@@ -137,8 +151,8 @@ export function evaluateControlIntent(input = {}) {
   const mutating = MUTATING_OPERATIONS.has(intent.operation);
   const highImpact = intent.highImpact || HIGH_IMPACT.has(intent.operation);
 
-  if (highImpact) {
-    return result('human_gate', 'high_impact_change', 'High-impact changes require an explicit human stewardship decision regardless of the requesting agent or environment.', { intent });
+  if (highImpact && !intent.superAdminAuthorized) {
+    return result('super_admin_gate', 'high_impact_change', 'High-impact platform changes require explicit EKODI Platform Super Administrator approval regardless of the entry AI or requesting agent.', { intent });
   }
 
   if (intent.targetEnvironment === 'production' && intent.operation === 'observe') {
@@ -154,6 +168,9 @@ export function evaluateControlIntent(input = {}) {
     }
     if (!intent.governanceAuthorized) {
       return result('deny', 'governance_authorization_required', 'Production schema migration requires independent Governance Plane authorization.', { intent });
+    }
+    if (!intent.superAdminAuthorized) {
+      return result('super_admin_gate', 'platform_super_admin_approval_required', 'Production schema migration requires EKODI Platform Super Administrator approval before execution.', { intent });
     }
     if (!intent.audited) {
       return result('deny', 'audit_required', 'Production schema migration must create durable audit evidence.', { intent });
@@ -181,6 +198,9 @@ export function evaluateControlIntent(input = {}) {
     }
     if (!intent.governanceAuthorized) {
       return result('deny', 'governance_authorization_required', 'The requester may request promotion but may not authorize its own production change.', { intent });
+    }
+    if (!intent.superAdminAuthorized) {
+      return result('super_admin_gate', 'platform_super_admin_approval_required', 'Production deployment or artifact promotion requires EKODI Platform Super Administrator approval before execution.', { intent });
     }
     if (intent.rebuildOnPromotion) {
       return result('deny', 'production_rebuild_forbidden', 'The verified artifact must be promoted unchanged; rebuilding in production is forbidden.', { intent });
@@ -224,6 +244,9 @@ export function evaluateControlIntent(input = {}) {
 export function getControlPlaneSummary() {
   return Object.freeze({
     policyVersion: COGNITIVE_CONTROL_POLICY.version,
+    taskOwner: COGNITIVE_CONTROL_POLICY.taskOwner,
+    entryAiRole: COGNITIVE_CONTROL_POLICY.entryAiRole,
+    finalPlatformAuthority: COGNITIVE_CONTROL_POLICY.finalPlatformAuthority,
     planes: COGNITIVE_CONTROL_POLICY.planes,
     environments: COGNITIVE_CONTROL_POLICY.environments,
     promotionPath: COGNITIVE_CONTROL_POLICY.promotionPath,

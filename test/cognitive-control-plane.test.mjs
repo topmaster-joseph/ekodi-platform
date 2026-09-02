@@ -72,11 +72,28 @@ test('verified immutable artifact may be promoted without rebuild', () => {
     sourceEnvironment: 'verification',
     targetEnvironment: 'production',
     governanceAuthorized: true,
+    superAdminAuthorized: true,
     artifact: verifiedArtifact,
     gates: fullGates,
   });
   assert.equal(result.decision, 'allow');
   assert.equal(result.reason, 'verified_artifact_promotion');
+});
+
+test('production promotion cannot execute without Platform Super Administrator approval', () => {
+  const result = evaluateControlIntent({
+    actor: 'Release AI',
+    actorPlane: 'governance',
+    operation: 'promote',
+    sourceEnvironment: 'verification',
+    targetEnvironment: 'production',
+    governanceAuthorized: true,
+    artifact: verifiedArtifact,
+    gates: fullGates,
+  });
+  assert.equal(result.decision, 'super_admin_gate');
+  assert.equal(result.reason, 'platform_super_admin_approval_required');
+  assert.equal(result.approvalAuthority, 'ekodi_platform_super_administrator');
 });
 
 test('production promotion fails closed when one gate is missing', () => {
@@ -87,6 +104,7 @@ test('production promotion fails closed when one gate is missing', () => {
     sourceEnvironment: 'verification',
     targetEnvironment: 'production',
     governanceAuthorized: true,
+    superAdminAuthorized: true,
     artifact: verifiedArtifact,
     gates: fullGates.filter(gate => gate !== 'security'),
   });
@@ -103,6 +121,7 @@ test('production rebuild is forbidden even after successful verification', () =>
     sourceEnvironment: 'verification',
     targetEnvironment: 'production',
     governanceAuthorized: true,
+    superAdminAuthorized: true,
     rebuildOnPromotion: true,
     artifact: verifiedArtifact,
     gates: fullGates,
@@ -119,6 +138,7 @@ test('governed additive migration is a separate production data lane', () => {
     sourceEnvironment: 'verification',
     targetEnvironment: 'production',
     governanceAuthorized: true,
+    superAdminAuthorized: true,
     audited: true,
     artifact: verifiedArtifact,
     gates: fullMigrationGates,
@@ -135,6 +155,7 @@ test('additive migration fails closed without a recovery point', () => {
     sourceEnvironment: 'verification',
     targetEnvironment: 'production',
     governanceAuthorized: true,
+    superAdminAuthorized: true,
     audited: true,
     artifact: verifiedArtifact,
     gates: fullMigrationGates.filter(gate => gate !== 'recovery-point'),
@@ -144,7 +165,7 @@ test('additive migration fails closed without a recovery point', () => {
   assert.deepEqual(result.missingGates, ['recovery-point']);
 });
 
-test('production rollback is a human gate', () => {
+test('production rollback requires Platform Super Administrator approval', () => {
   const result = evaluateControlIntent({
     actor: 'DevOps AI',
     actorPlane: 'governance',
@@ -153,11 +174,12 @@ test('production rollback is a human gate', () => {
     targetEnvironment: 'production',
     audited: true,
   });
-  assert.equal(result.decision, 'human_gate');
+  assert.equal(result.decision, 'super_admin_gate');
   assert.equal(result.reason, 'high_impact_change');
+  assert.equal(result.approvalAuthority, 'ekodi_platform_super_administrator');
 });
 
-test('repository force push stays human-gated even outside production', () => {
+test('repository force push stays super-admin-gated even outside production', () => {
   const result = evaluateControlIntent({
     actor: 'Development AI',
     actorPlane: 'execution',
@@ -165,8 +187,9 @@ test('repository force push stays human-gated even outside production', () => {
     sourceEnvironment: 'development',
     targetEnvironment: 'development',
   });
-  assert.equal(result.decision, 'human_gate');
+  assert.equal(result.decision, 'super_admin_gate');
   assert.equal(result.reason, 'high_impact_change');
+  assert.equal(result.approvalAuthority, 'ekodi_platform_super_administrator');
 });
 
 test('read-only audited production observation stays available', () => {
@@ -203,8 +226,11 @@ test('artifact identities are immutable identifiers, not mutable tags', () => {
   assert.equal(isImmutableArtifactId('main'), false);
 });
 
-test('summary exposes four-plane path and governed data schema mode', () => {
+test('summary exposes four-plane path and EKODI authority model', () => {
   const summary = getControlPlaneSummary();
+  assert.equal(summary.taskOwner, 'ekodi_orchestrator');
+  assert.equal(summary.entryAiRole, 'entry_point_and_bounded_participant');
+  assert.equal(summary.finalPlatformAuthority, 'ekodi_platform_super_administrator');
   assert.deepEqual(summary.planes, ['control', 'governance', 'execution', 'data']);
   assert.deepEqual(summary.promotionPath, ['development', 'verification', 'production']);
   assert.equal(summary.productionMutationMode, 'promotion-only');

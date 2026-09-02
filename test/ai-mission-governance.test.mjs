@@ -26,9 +26,17 @@ test('forbidden actions cannot be overridden by Chief AI', () => {
   assert.equal(canChiefOverride(result), false);
 });
 
-test('pastoral judgment stays behind a human steward gate', () => {
+test('pastoral judgment stays behind a delegated human gate', () => {
   const result = evaluateAgentAction({ agentId: 'ministry', area: 'spiritual_or_pastoral_judgment_about_a_person' });
   assert.equal(result.tier, 'human_gate');
+  assert.equal(result.approvalAuthority, 'authorized_human_within_delegated_scope');
+  assert.equal(canChiefOverride(result), false);
+});
+
+test('platform-wide production decisions require EKODI Platform Super Administrator approval', () => {
+  const result = evaluateAgentAction({ agentId: 'release', area: 'production_deployment_or_promotion' });
+  assert.equal(result.tier, 'super_admin_gate');
+  assert.equal(result.approvalAuthority, 'ekodi_platform_super_administrator');
   assert.equal(canChiefOverride(result), false);
 });
 

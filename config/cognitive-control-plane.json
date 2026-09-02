@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "status": "enforced-foundation",
   "architecture": {
     "controlPlane": "cognitive-control",
@@ -100,15 +100,28 @@
     "productionDataCopyToDevelopment": false
   },
   "authority": {
+    "taskOwner": "ekodi_orchestrator",
+    "entryAiRole": "entry_point_and_bounded_participant",
+    "finalPlatformAuthority": "ekodi_platform_super_administrator",
+    "ordinaryUserApprovalScope": "delegated_workspace_or_resource_only",
     "aiMaySelfExpandAuthority": false,
     "unknownActorAuthority": "deny",
     "unknownEnvironment": "deny",
     "unknownPlane": "deny",
-    "productionSecretChange": "human-gate",
-    "productionDnsChange": "human-gate",
-    "destructiveProductionDataChange": "human-gate",
-    "repositoryForcePush": "human-gate",
-    "repositoryDelete": "human-gate"
+    "productionDeploymentOrPromotion": "platform-super-admin-gate",
+    "productionSchemaMigration": "platform-super-admin-gate",
+    "productionSecretChange": "platform-super-admin-gate",
+    "productionDnsChange": "platform-super-admin-gate",
+    "destructiveProductionDataChange": "platform-super-admin-gate",
+    "constitutionOrPlatformPolicyChange": "platform-super-admin-gate",
+    "coreIdentityOrAuthorizationChange": "platform-super-admin-gate",
+    "highValueFinancialCommitment": "platform-super-admin-gate",
+    "legalContractExecution": "platform-super-admin-gate",
+    "domainServiceShutdownOrOwnershipTransfer": "platform-super-admin-gate",
+    "materialExternalPublicationOrCommitment": "platform-super-admin-gate",
+    "repositoryForcePush": "platform-super-admin-gate",
+    "repositoryDelete": "platform-super-admin-gate",
+    "productionRollback": "platform-super-admin-gate"
   },
   "audit": {
     "requiredForMutation": true,

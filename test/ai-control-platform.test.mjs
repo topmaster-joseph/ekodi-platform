@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import {AI_CONTROL_POLICY,availableProviderIds,buildExecutionPlan,createTaskId,evaluateTaskMissionPolicy,normalizeTaskInput,rolePrompt,summarizeRuns} from '../ai-control-core.js';
 import {providerCapabilities,providerStatus} from '../ai-control-provider-router.js';
 
-test('coding work requests an isolated branch and stays in development',()=>{
-  const task=normalizeTaskInput({prompt:'관리자 페이지 코딩을 수정하고 Git 브랜치에서 검증해',mode:'primary-review'});
+test('coding work is owned by EKODI Orchestrator regardless of entry AI',()=>{
+  const task=normalizeTaskInput({prompt:'관리자 페이지 코딩을 수정하고 Git 브랜치에서 검증해',mode:'primary-review',entryAi:'Claude'});
   assert.equal(task.needsCodeBranch,true);
   assert.equal(task.mode,'primary-review');
+  assert.equal(task.entryAi,'claude');
+  assert.equal(task.taskOwner,'ekodi_orchestrator');
   assert.equal(task.executionEnvironment,'development');
 });
 
@@ -41,9 +43,12 @@ test('provider capability status labels plan-included account execution',()=>{
   assert.equal(status.find(item=>item.id==='openai-api')?.costClass,'paid-opt-in');
 });
 
-test('role prompt carries branch, development boundary and immutable promotion context',()=>{
-  const task=normalizeTaskInput({prompt:'코드를 수정해'});
+test('role prompt carries entry AI, orchestrator ownership and immutable promotion context',()=>{
+  const task=normalizeTaskInput({prompt:'코드를 수정해',entryAi:'gemini'});
   const prompt=rolePrompt(task,'reviewer',{branch:'ai/generic/task-1'});
+  assert.match(prompt,/Entry AI: gemini/);
+  assert.match(prompt,/Task owner: ekodi_orchestrator/);
+  assert.match(prompt,/bounded participants/);
   assert.match(prompt,/ai\/generic\/task-1/);
   assert.match(prompt,/Execution environment: development/);
   assert.match(prompt,/central review, merge, and deployment gate/);
@@ -67,9 +72,9 @@ test('mission governance blocks non-negotiable violations',()=>{
   const task=normalizeTaskInput({prompt:'lock in user',governance:{agentId:'chief',area:'bounded_action',violates:['no_artificial_lock_in']}}); const d=evaluateTaskMissionPolicy(task);
   assert.equal(d.tier,'forbidden'); assert.equal(d.allowModelConsultation,false);
 });
-test('high-impact actions remain analysis-only behind a human gate',()=>{
+test('platform high-impact actions remain analysis-only behind the super-admin gate',()=>{
   const task=normalizeTaskInput({prompt:'change production secret',governance:{agentId:'infrastructure',area:'production_secret_change'}}); const d=evaluateTaskMissionPolicy(task);
-  assert.equal(d.tier,'human_gate'); assert.equal(d.analysisOnly,true); assert.match(rolePrompt({...task,missionDecision:d},'primary',{missionDecision:d}),/analysis, review, and candidate preparation only/);
+  assert.equal(d.tier,'super_admin_gate'); assert.equal(d.superAdminGate,true); assert.equal(d.approvalAuthority,'ekodi_platform_super_administrator'); assert.equal(d.analysisOnly,true); assert.match(rolePrompt({...task,missionDecision:d},'primary',{missionDecision:d}),/analysis, review, and candidate preparation only/);
 });
 test('delegated reversible preflighted actions may pass the autonomous gate',()=>{
   const task=normalizeTaskInput({prompt:'update isolated preview',governance:{agentId:'platform',area:'bounded_preview_update',delegated:true,reversible:true,logged:true,preflightVerified:true}}); const d=evaluateTaskMissionPolicy(task);

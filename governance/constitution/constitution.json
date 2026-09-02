@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
-  "effectiveDate": "2026-09-01",
+  "version": "1.3.0",
+  "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -13,11 +13,13 @@
     "no-public-origin",
     "one-domain-grammar",
     "modular-monolith-first",
-    "isolated-parallel-development"
+    "isolated-parallel-development",
+    "ekodi-orchestrator-owns-routed-ai-work",
+    "platform-super-admin-final-authority"
   ],
   "systemBoundaries": {
-    "production": ["ekodi.kr", "my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "status.ekodi.kr"],
-    "development": ["dev.ekodi.kr", "my.dev.ekodi.kr", "admin.dev.ekodi.kr", "auth.dev.ekodi.kr", "api.dev.ekodi.kr"],
+    "production": ["ekodi.kr", "my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "ai.ekodi.kr", "status.ekodi.kr"],
+    "development": ["dev.ekodi.kr", "my.dev.ekodi.kr", "admin.dev.ekodi.kr", "auth.dev.ekodi.kr", "api.dev.ekodi.kr", "ai.dev.ekodi.kr"],
     "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
   },
   "publicNamespaces": ["personal", "org", "group", "project"],
@@ -67,6 +69,17 @@
     "directExternalProviderCallsFromFeatureModulesForbiddenWhenGatewayExists": true,
     "degradedProviderMustNotCollapseUnrelatedCoreServices": true
   },
+  "aiAuthorityPolicy": {
+    "taskOwner": "ekodi_orchestrator",
+    "entryAiRole": "entry_point_and_bounded_participant",
+    "specialistAiRole": "bounded_professional_delegate",
+    "finalPlatformAuthority": "ekodi_platform_super_administrator",
+    "ordinaryApprovalScope": "delegated_workspace_or_resource_only",
+    "entryAiMayClaimTaskOwnership": false,
+    "orchestratorMayOverrideSuperAdminGate": false,
+    "providerMayOverrideSuperAdminGate": false,
+    "platformSuperAdminGateAreas": ["constitution_or_platform_policy_change","production_deployment_or_promotion","production_schema_migration","production_secret_change","production_dns_change","destructive_or_mass_data_change","core_identity_or_authorization_change","high_value_or_exceptional_financial_commitment","legal_commitment_or_contract_execution","domain_service_shutdown_or_ownership_transfer","repository_force_push","repository_delete","production_rollback","material_external_publication_or_commitment"]
+  },
   "securityPolicy": {
     "edgeBeforeOrigin": true,
     "publicOriginForbidden": true,
@@ -93,7 +106,7 @@
     "C1": "backward-compatible implementation change; CI validation required",
     "C2": "constitutional or topology policy amendment; explicit owner confirmation, amendment record, version bump and rollback plan required",
     "C3": "breaking domain/security/data architecture change; explicit owner confirmation, migration plan, staged rollout and rollback proof required",
-    "protectedPaths": ["CONSTITUTION.md","governance/constitution/**","governance/amendments/**","platform-boundaries.json","config/core-data-boundaries.json","config/storage-policy.json","config/service-workspace-policy.json","scripts/validate-constitution.mjs",".github/workflows/constitution-check.yml"],
+    "protectedPaths": ["CONSTITUTION.md","governance/constitution/**","governance/amendments/**","platform-boundaries.json","config/core-data-boundaries.json","config/storage-policy.json","config/service-workspace-policy.json","config/ai-mission-governance.json","config/cognitive-control-plane.json","scripts/validate-constitution.mjs","scripts/validate-ai-mission-governance.mjs","scripts/validate-cognitive-control-plane.mjs",".github/workflows/constitution-check.yml"],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
