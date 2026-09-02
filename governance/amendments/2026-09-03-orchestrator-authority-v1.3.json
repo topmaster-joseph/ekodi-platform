@@ -17,6 +17,6 @@
     "orchestratorOverrideForbidden": true
   },
   "verificationPolicy": "constitutional, mission-governance, cognitive-control, AI-control, migration, security and guarded-release checks must pass before merge and production promotion",
-  "verificationEvidence": {"repositoryBaselineDebtIssue": 795, "rule": "do not disable or hide pre-existing repository test failures; this change must pass its scoped authority, policy, migration, security and guarded-release gates"},
+  "verificationEvidence": {"cognitiveControlPlaneParentPr": 748, "integrationBase": "main", "repositoryBaselineDebtIssue": 795, "rule": "do not disable or hide pre-existing repository test failures; this change must pass its scoped authority, policy, migration, security and guarded-release gates"},
   "rollbackPlan": "revert the v1.3 authority amendment and runtime changes through a new isolated task and guarded release; restore the prior verified immutable application artifact and additive-schema-compatible runtime behavior without deleting the added audit columns"
 }
