@@ -12,8 +12,10 @@ on:
       - 'admin-readable-command.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
-      - 'admin-perf-diagnostics.js'
+      - 'admin-shell.html'
+      - 'admin-shell.css'
       - 'admin-compact.css'
+      - 'admin-perf-diagnostics.js'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
       - 'release-control-admin.js'
@@ -86,14 +88,15 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
-          grep -Fq 'admin-lazy-features.js' dist/admin-demand-loader.js
+          # admin-performance-postbuild keeps secondaryScripts readable but compacts hashes to h.
+          grep -Fq "secondaryScripts: ['admin-lazy-features.js']" dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
-          grep -Fq 'system-health-admin.css' dist/admin-demand-loader.js
-          grep -Fq 'system-health-admin.js' dist/admin-demand-loader.js
-          grep -Fq '#health' dist/admin-demand-loader.js
-          ! grep -Fq 'mission-control-admin.js' dist/admin-demand-loader.js
+          grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
+          grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "h: ['#health']" dist/admin-demand-loader.js
+          ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
-          grep -Fq 'release-control-admin.js' dist/admin-demand-loader.js
+          grep -Fq "scripts: ['release-control-admin.js']" dist/admin-demand-loader.js
           grep -Fq "actionType:'ui.change_request'" dist/admin-lazy-features.js
           grep -Fq '재구성' dist/admin-lazy-features.js
           grep -Fq '전문 기능 선택을 관리자에게 넘기지 않습니다' dist/admin-lazy-features.js
@@ -128,7 +131,7 @@ jobs:
             code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
             echo "admin root -> $code"
             [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/admin-headers || return 1
+            grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-headers || return 1
             grep -Fiq 'cache-control: no-store' /tmp/admin-headers || return 1
             if grep -Fiq '^location:' /tmp/admin-headers; then return 1; fi
             LIVE_VERSION=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-body | head -1 | sed 's/.*?v=//')
@@ -162,8 +165,8 @@ jobs:
           for attempt in $(seq 1 24); do
             LIVE_VERSION=''
             if verify_root \
-              && verify_asset 'admin-demand-loader.js' 'admin-lazy-features.js' \
-              && verify_asset 'admin-demand-loader.js' 'system-health-admin.js' \
+              && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js']" \
+              && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.css' '.system-health-overall' \

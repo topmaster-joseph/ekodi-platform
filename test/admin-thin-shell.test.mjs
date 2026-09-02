@@ -63,7 +63,7 @@ test('Campus, Health and Device Control are explicit versioned demand-loaded fea
   assert.match(loader, /scripts: \['device-control-admin\.js', 'remote-power-admin\.js'\]/);
   assert.match(loader, /hashes: \['#devices'\]/);
   assert.match(loader, /assetUrl\(src\)/);
-  const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\n    \},/)?.[1] || '';
+  const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*(?:(?:['\"]?[a-z][a-z0-9-]*['\"]?)\s*:)/i)?.[1] || '';
   assert.ok(aiOps, 'AI Ops feature block must be extractable');
   assert.doesNotMatch(aiOps, /system-health-admin/);
 });

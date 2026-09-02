@@ -15,6 +15,10 @@ test('root AI Gateway is an admin-only provider status surface', async () => {
   assert.match(html, /EKODI AI Gateway/);
   assert.match(html, /Google 관리자 인증/);
   assert.match(html, /실제 연결 테스트/);
+  assert.match(html, /AI COMMAND CONSOLE/);
+  assert.match(html, /대화 · 운영 명령/);
+  assert.match(html, /activeProvider/);
+  assert.match(html, /chatForm/);
   assert.match(html, /sessionIdentity/);
   assert.match(html, /loginMessage/);
   assert.match(html, /\*\.ai\.ekodi\.kr/);
@@ -37,7 +41,10 @@ test('AI Gateway client preserves Google admin handoff until session validation'
   assert.match(script, /세션 확인 지연/);
   assert.match(script, /\/api\/control\/ai\/provider-status/);
   assert.match(script, /\/api\/control\/ai\/assist/);
-  assert.match(script, /OpenAI 실제 호출/);
+  assert.match(script, /queueOperationalRequest/);
+  assert.ok(script.includes('/api/control/ai/actions'));
+  assert.match(script, /providerName/);
+  assert.match(script, /sendChat/);
 
   const acceptBody = script.match(/function acceptHandoff\(\)\{([\s\S]*?)\}\nfunction clearHandoff/)?.[1] || '';
   assert.doesNotMatch(acceptBody, /history\.replaceState/);

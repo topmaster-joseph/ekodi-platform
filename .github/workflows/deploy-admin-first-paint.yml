@@ -1,4 +1,4 @@
-name: Validate Admin First Paint Guard
+﻿name: Validate Admin First Paint Guard
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ on:
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-shell.html'
+      - 'admin-shell.css'
       - 'admin-compact.js'
-      - 'admin-compact.css'
       - '.github/workflows/deploy-admin-first-paint.yml'
   push:
     branches: [main]
@@ -45,12 +45,15 @@ jobs:
           test -s dist/admin-central-handoff.js
           test -s dist/admin-authenticated-shell.js
           test -s dist/admin-shell.html
-          # The build/postbuild pipeline already enforces first-path byte budgets,
+          test -s dist/admin-shell.css
+          test -s dist/admin-compact.js
+          # The build/postbuild pipeline enforces first-path byte budgets,
           # no startup polling, no document-wide observers and immutable fingerprinting.
-          # Keep this check at the public artifact boundary instead of private function names.
+          # Validate only the canonical public Admin shell artifact here.
           grep -Fq 'admin-authenticated-shell.js?v=' dist/admin-shell.html
           grep -Fq 'admin-central-handoff.js?v=' dist/admin-shell.html
           grep -Fq 'admin-shell.css?v=' dist/admin-shell.html
+          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
 
       - name: Verify repository deployment ownership policy
         run: node scripts/validate-deployment-guardrails.mjs
