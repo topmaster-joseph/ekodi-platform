@@ -1,205 +1,42 @@
 (async()=>{
 'use strict';
-const [{adminMenuOrder},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([
-  import('./admin-menu-registry.js'),import('./admin-sidebar.js')
-]);
-const sidebar=document.querySelector('.sidebar');
-const nav=sidebar?.querySelector('nav');
-const content=document.querySelector('.content');
+const [{adminMenuOrder},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([import('./admin-menu-registry.js'),import('./admin-sidebar.js')]);
+const sidebar=document.querySelector('.sidebar'),nav=sidebar?.querySelector('nav'),content=document.querySelector('.content');
 if(!sidebar||!nav||!content)return;
 renderAdminSidebar(nav);
-const INTERNAL=new Set(['services','deployments','policies']);
-const ORDER=Object.freeze(adminMenuOrder());
-const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
-const DEMAND_KEYS=new Map([
-  ['campus','campus'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
-  ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
-  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
-  ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']
-]);
-const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites aiops:#ai-ops devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social affiliates:#mall-ai-sales');
-let requestedSection = '';
-let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
-const demandLoading=new Map();
-function installCompactStyle(){
-  if(document.querySelector('#ekodi-admin-menu-density'))return;
-  const style=document.createElement('style');
-  style.id='ekodi-admin-menu-density';
-  style.textContent='body.admin-compact .side-caption{margin-bottom:10px!important}body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.admin-compact .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.admin-compact .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.admin-compact .side-bottom{padding-top:8px!important}';
-  document.head.append(style);
-}
-function ensureFeatureStyle(href){
-  if(document.querySelector(`link[data-ekodi-feature-style="${href}"]`))return;
-  const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.dataset.ekodiFeatureStyle=href;document.head.append(link);
-}
-function sectionOf(item){
-  if(window.EKODIAdminSidebar?.sectionOf)return window.EKODIAdminSidebar.sectionOf(item);
-  if(item?.dataset?.deviceControlNav==='true')return'devices';
-  const raw=String(item?.dataset?.section||item?.dataset?.lazySection||'').trim();
-  return raw==='marketing'?'marketing-ai':raw;
-}
-const panelTargets=panel=>String(panel?.dataset?.panel||'').split(/\s+/).filter(Boolean);
-const allNav=()=>nav.querySelectorAll('.nav[data-section],.nav[data-lazy-section],.nav[data-device-control-nav],a.nav[href]');
-const isInternal=section=>INTERNAL.has(String(section||'').trim());
-const isInternalNav=item=>isInternal(sectionOf(item));
-const hasPanel=section=>Boolean(section&&[...content.querySelectorAll('[data-panel]')].some(panel=>panelTargets(panel).includes(section)));
-function applyOrder(){
-  if(window.EKODIAdminSidebar?.sync)return window.EKODIAdminSidebar.sync(document);
-  let unknown=500;
-  for(const item of allNav()){
-    if(isInternalNav(item)){item.style.order='9999';continue;}
-    const rank=RANK.get(sectionOf(item))??unknown++;
-    if(item.style.order!==String(rank))item.style.order=String(rank);
-    if(item.dataset.menuOrder!==String(rank))item.dataset.menuOrder=String(rank);
-  }
-  nav.dataset.stableMenuOrder='true';
-}
-function enforcePolicy(){
-  for(const item of allNav()){
-    if(!isInternalNav(item))continue;
-    item.hidden=true;
-    item.dataset.aiInternal=sectionOf(item)||item.getAttribute('href')||'internal';
-    item.setAttribute('aria-hidden','true');
-    item.tabIndex=-1;
-    item.classList.remove('active');
-  }
-  applyOrder();
-}
-const navItemFor=section=>[...allNav()].find(item=>sectionOf(item)===section&&!isInternalNav(item))||null;
-function syncTitle(section){
-  const title=document.querySelector('#pageTitle');
-  const item=navItemFor(section);
-  const label=item?.querySelector('span')?.textContent?.trim()||item?.textContent?.trim();
-  if(title&&label&&title.textContent!==label)title.textContent=label;
-  if(last===section)return;
-  last=section;
-  window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section}}));
-}
-function activatePanel(section){
-  if(!section||!hasPanel(section))return false;
-  requestedSection=section;
-  for(const panel of content.querySelectorAll('[data-panel]')){
-    const visible=panelTargets(panel).includes(section);
-    panel.classList.toggle('hidden-panel',!visible);
-    if(visible)panel.removeAttribute('hidden');else panel.hidden=true;
-  }
-  for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
-  syncTitle(section);
-  const hash=CANON.get(section);
-  if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
-  if(section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
-  sidebar.classList.remove('open');
-  return true;
-}
-async function openSites(){
-  dc=false;requestedSection='sites';
-  if(!sitesLoading)sitesLoading=import('./homepage-admin.js').then(module=>{
-    module.mountHomepageAdmin();
-    window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'sites'}}));
-    return module;
-  }).catch(error=>{sitesLoading=null;console.error(error);throw error;});
-  await sitesLoading;applyOrder();activatePanel('sites');
-  navItemFor('campus')?.classList.add('active');syncTitle('campus');
-}
-async function openCheonggyeMembers(){
-  dc=false;requestedSection='cheonggye-members';
-  ensureFeatureStyle('cheonggye-members-admin.css');
-  if(!cheonggyeLoading)cheonggyeLoading=import('./cheonggye-members-admin.js').then(module=>{
-    window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'cheonggye-members'}}));
-    return module;
-  }).catch(error=>{cheonggyeLoading=null;console.error(error);throw error;});
-  await cheonggyeLoading;applyOrder();activatePanel('cheonggye-members');syncTitle('cheonggye-members');
-}
-function fallbackDemand(section){
-  const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"],[data-section="${section}"]`;
-  nav.querySelector(selector)?.click();
-}
-function requestDemand(section){
-  for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
-  if(section==='cheonggye-members')return openCheonggyeMembers();
-  const demandKey=DEMAND_KEYS.get(section);
-  if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
-  if(demandLoading.has(section))return demandLoading.get(section);
-  const task=Promise.resolve(window.EKODIAdminDemand.activate(demandKey)).then(()=>{
-    applyOrder();
-    if(!activatePanel(section)){
-      const real=navItemFor(section);
-      if(real&&!real.dataset.demandFeature)real.click();
-      queueMicrotask(()=>activatePanel(section));
-    }
-  }).catch(error=>{
-    console.error(`[EKODI Admin] ${section} demand activation failed`,error);
-    fallbackDemand(section);
-  }).finally(()=>demandLoading.delete(section));
-  demandLoading.set(section,task);return task;
-}
-function routeInternal(){dc=false;requestedSection='aiops';if(location.hash!=='#ai-ops')history.replaceState(null,'','#ai-ops');requestDemand('aiops');}
-const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
-function reconcileNavigation(){
-  if(running){again=true;return;}
-  running=true;
-  try{
-    enforcePolicy();
-    if(!requestedSection||dc)return;
-    if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
-    else if(requestedSection==='cheonggye-members'&&!hasPanel('cheonggye-members'))openCheonggyeMembers();
-    else if(!activatePanel(requestedSection))requestDemand(requestedSection);
-  }finally{running=false;if(again){again=false;scheduleNav();}}
-}
-function scheduleNav(){if(queued)return;queued=true;window.setTimeout(()=>{queued=false;reconcileNavigation();},0);}
-function afterAuth(){if(!dc||requestedSection!=='campus')return;dc=false;window.setTimeout(()=>{if(!activatePanel('campus'))requestDemand('campus');},0);}
-nav.addEventListener('click',event=>{
-  const item=event.target.closest('.nav[data-section],.nav[data-lazy-section],.nav[data-device-control-nav],a.nav[href]');
-  if(!item)return;
-  if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
-  const section=sectionOf(item);if(!section)return;dc=false;
-  if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
-  if(section==='cheonggye-members'){event.preventDefault();event.stopImmediatePropagation();return openCheonggyeMembers();}
-  requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
-},true);
-content.addEventListener('click',event=>{
-  const control=event.target.closest('[data-campus-section]');
-  if(!control||!isInternal(control.dataset.campusSection))return;
-  event.preventDefault();event.stopImmediatePropagation();routeInternal();
-},true);
-window.addEventListener('ekodi-nav-changed',scheduleNav);
-window.addEventListener('ekodi-feature-installed',scheduleNav);
-window.addEventListener('ekodi-session-validated',afterAuth,{once:true});
-window.addEventListener('ekodi-admin-ready',()=>{
-  enforcePolicy();const section=explicitHashSection();
-  if(section&&isInternal(section))return routeInternal();
-  if(section==='sites')return openSites();
-  if(section==='cheonggye-members')return openCheonggyeMembers();
-  if(section){dc=false;requestedSection=section;if(!activatePanel(section))requestDemand(section);}
-  else{requestedSection='campus';dc=true;}
-});
-window.addEventListener('hashchange',()=>{
-  const section=explicitHashSection();if(!section)return;dc=false;
-  if(isInternal(section))return routeInternal();
-  if(section==='sites')return openSites();
-  if(section==='cheonggye-members')return openCheonggyeMembers();
-  requestedSection=section;if(!activatePanel(section))requestDemand(section);
-});
+const INTERNAL=new Set(['services','deployments','policies']),ORDER=Object.freeze(adminMenuOrder()),RANK=new Map(ORDER.map((s,i)=>[s,i+1]));
+const DEMAND_KEYS=new Map([['campus','campus'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']]);
+const pairs=s=>new Map(s.split(' ').map(x=>x.split(':')));
+const HASH=pairs('#sites:sites #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=new Map;for(const [h,s] of HASH)if(!CANON.has(s))CANON.set(s,h);
+let requestedSection='',sitesLoading,membersLoading,last='',queued=false,running=false,again=false,dc=false;
+const demandLoading=new Map;
+function installCompactStyle(){if(document.querySelector('#ekodi-admin-menu-density'))return;const s=document.createElement('style');s.id='ekodi-admin-menu-density';s.textContent='body.admin-compact .side-caption{margin-bottom:10px!important}body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.admin-compact .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.admin-compact .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.admin-compact .side-bottom{padding-top:8px!important}';document.head.append(s)}
+function ensureFeatureStyle(href){if(document.querySelector(`link[data-ekodi-feature-style="${href}"]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=href;l.dataset.ekodiFeatureStyle=href;document.head.append(l)}
+function sectionOf(i){if(window.EKODIAdminSidebar?.sectionOf)return window.EKODIAdminSidebar.sectionOf(i);if(i?.dataset?.deviceControlNav==='true')return'devices';const s=String(i?.dataset?.section||i?.dataset?.lazySection||'').trim();return s==='marketing'?'marketing-ai':s}
+const targets=p=>String(p?.dataset?.panel||'').split(/\s+/).filter(Boolean),allNav=()=>nav.querySelectorAll('.nav[data-section],.nav[data-lazy-section],.nav[data-device-control-nav],a.nav[href]'),internal=s=>INTERNAL.has(String(s||'').trim()),internalNav=i=>internal(sectionOf(i)),hasPanel=s=>Boolean(s&&[...content.querySelectorAll('[data-panel]')].some(p=>targets(p).includes(s)));
+function applyOrder(){if(window.EKODIAdminSidebar?.sync)return window.EKODIAdminSidebar.sync(document);let u=500;for(const i of allNav()){const r=internalNav(i)?9999:(RANK.get(sectionOf(i))??u++);if(i.style.order!==String(r))i.style.order=String(r);if(i.dataset.menuOrder!==String(r))i.dataset.menuOrder=String(r)}nav.dataset.stableMenuOrder='true'}
+function enforcePolicy(){for(const i of allNav()){if(!internalNav(i))continue;i.hidden=true;i.dataset.aiInternal=sectionOf(i)||i.getAttribute('href')||'internal';i.setAttribute('aria-hidden','true');i.tabIndex=-1;i.classList.remove('active')}applyOrder()}
+const navFor=s=>[...allNav()].find(i=>sectionOf(i)===s&&!internalNav(i))||null;
+function syncTitle(s){const t=document.querySelector('#pageTitle'),i=navFor(s),label=i?.querySelector('span')?.textContent?.trim()||i?.textContent?.trim();if(t&&label&&t.textContent!==label)t.textContent=label;if(last===s)return;last=s;window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section:s}}))}
+function activatePanel(s){if(!s||!hasPanel(s))return false;requestedSection=s;for(const p of content.querySelectorAll('[data-panel]')){const v=targets(p).includes(s);p.classList.toggle('hidden-panel',!v);v?p.removeAttribute('hidden'):p.hidden=true}for(const i of allNav())i.classList.toggle('active',!internalNav(i)&&sectionOf(i)===s);syncTitle(s);const h=CANON.get(s);if(h&&location.hash!==h)history.replaceState(null,'',h);if(s==='architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);sidebar.classList.remove('open');return true}
+async function openSites(){dc=false;requestedSection='sites';if(!sitesLoading)sitesLoading=import('./homepage-admin.js').then(m=>{m.mountHomepageAdmin();window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'sites'}}));return m}).catch(e=>{sitesLoading=null;throw e});await sitesLoading;applyOrder();activatePanel('sites')}
+async function openMembers(){dc=false;requestedSection='cheonggye-members';ensureFeatureStyle('cheonggye-members-admin.css');if(!membersLoading)membersLoading=import('./cheonggye-members-admin.js').then(m=>{window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'cheonggye-members'}}));return m}).catch(e=>{membersLoading=null;throw e});await membersLoading;applyOrder();activatePanel('cheonggye-members')}
+function fallbackDemand(s){const q=s==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${s}"],[data-lazy-section="${s}"],[data-section="${s}"]`;nav.querySelector(q)?.click()}
+function requestDemand(s){for(const i of allNav())i.classList.toggle('active',!internalNav(i)&&sectionOf(i)===s);if(s==='cheonggye-members')return openMembers();const k=DEMAND_KEYS.get(s);if(!k||!window.EKODIAdminDemand?.activate){fallbackDemand(s);return null}if(demandLoading.has(s))return demandLoading.get(s);const task=Promise.resolve(window.EKODIAdminDemand.activate(k)).then(()=>{applyOrder();if(!activatePanel(s)){const i=navFor(s);if(i&&!i.dataset.demandFeature)i.click();queueMicrotask(()=>activatePanel(s))}}).catch(e=>{console.error(`[EKODI Admin] ${s} demand activation failed`,e);fallbackDemand(s)}).finally(()=>demandLoading.delete(s));demandLoading.set(s,task);return task}
+function routeInternal(){dc=false;requestedSection='aiops';if(location.hash!=='#ai-ops')history.replaceState(null,'','#ai-ops');requestDemand('aiops')}
+const hashSection=()=>HASH.get(location.hash.toLowerCase())||'';
+function reconcile(){if(running){again=true;return}running=true;try{enforcePolicy();if(!requestedSection||dc)return;if(requestedSection==='sites'&&!hasPanel('sites'))openSites();else if(requestedSection==='cheonggye-members'&&!hasPanel('cheonggye-members'))openMembers();else if(!activatePanel(requestedSection))requestDemand(requestedSection)}finally{running=false;if(again){again=false;scheduleNav()}}}
+function scheduleNav(){if(queued)return;queued=true;setTimeout(()=>{queued=false;reconcile()},0)}
+function afterAuth(){if(!dc||requestedSection!=='campus')return;dc=false;setTimeout(()=>{if(!activatePanel('campus'))requestDemand('campus')},0)}
+function openSection(s){dc=false;if(internal(s))return routeInternal();if(s==='sites')return openSites();if(s==='cheonggye-members')return openMembers();requestedSection=s;return activatePanel(s)||requestDemand(s)}
+nav.addEventListener('click',e=>{const i=e.target.closest('.nav[data-section],.nav[data-lazy-section],.nav[data-device-control-nav],a.nav[href]');if(!i)return;if(internalNav(i)){e.preventDefault();e.stopImmediatePropagation();return routeInternal()}const s=sectionOf(i);if(!s)return;dc=false;if(s==='sites'||s==='cheonggye-members'){e.preventDefault();e.stopImmediatePropagation();return s==='sites'?openSites():openMembers()}requestedSection=s;setTimeout(()=>{if(!activatePanel(s))requestDemand(s)},0)},true);
+content.addEventListener('click',e=>{const c=e.target.closest('[data-campus-section]');if(!c||!internal(c.dataset.campusSection))return;e.preventDefault();e.stopImmediatePropagation();routeInternal()},true);
+window.addEventListener('ekodi-nav-changed',scheduleNav);window.addEventListener('ekodi-feature-installed',scheduleNav);window.addEventListener('ekodi-session-validated',afterAuth,{once:true});
+window.addEventListener('ekodi-admin-ready',()=>{enforcePolicy();const s=hashSection();if(s)return openSection(s);requestedSection='campus';dc=true});
+window.addEventListener('hashchange',()=>{const s=hashSection();if(s)openSection(s)});
 installCompactStyle();mountAdminSidebar(document);enforcePolicy();
-const initialHash = explicitHashSection();
-if(initialHash&&isInternal(initialHash))routeInternal();
-else if(initialHash==='sites')openSites();
-else if(initialHash==='cheonggye-members')openCheonggyeMembers();
-else if (initialHash) requestedSection = initialHash;
-else{requestedSection = 'campus';dc=true;requestDemand('campus');}
-window.EKODIAdminPanels=Object.freeze({
-  activate:section=>{
-    dc=false;
-    if(isInternal(section))return routeInternal();
-    if(section==='sites')return openSites();
-    if(section==='cheonggye-members')return openCheonggyeMembers();
-    requestedSection=section;return activatePanel(section)||requestDemand(section);
-  },
-  current:()=>requestedSection,
-  internalSections:Object.freeze([...INTERNAL]),
-  visibleMenuOrder:ORDER
-});
+const initial=hashSection();if(initial)openSection(initial);else{requestedSection='campus';dc=true;requestDemand('campus')}
+window.EKODIAdminPanels=Object.freeze({activate:openSection,current:()=>requestedSection,internalSections:Object.freeze([...INTERNAL]),visibleMenuOrder:ORDER});
 import('./admin-menu-runtime.js').catch(console.error);
 })();
