@@ -42,7 +42,7 @@ jobs:
           ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' dist/storage-admin.js
           grep -Fq 'storage:' dist/admin-demand-loader.js
           grep -Fq "scripts: ['storage-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "hashes: ['#storage']" dist/admin-demand-loader.js
+          grep -Fq "hashes: ['#storage']" admin-demand-loader.js
           ! grep -Fq '<script src="storage-admin.js"' dist/control-center.html
           grep -Fq 'binding = "STORAGE"' wrangler.site.toml
           grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
