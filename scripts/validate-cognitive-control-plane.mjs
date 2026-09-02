@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
-const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const fail = message => {
   console.error(`❌ Cognitive Control Plane: ${message}`);
   process.exitCode = 1;
@@ -102,6 +102,13 @@ for (const marker of [
 for (const marker of [
   'deploy-staging:',
   'environment: development',
+  'environment: production',
+  'Verify constitutional production registration',
+  `test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'`,
+  'Cloudflare Access',
+  'validate-ai-mission-governance.mjs',
+  'evaluateTaskMissionPolicy',
+  'migrations/0053_ai_mission_governance.sql',
   'needs: [validate, deploy-staging]',
   'Build one immutable AI Control application artifact',
   'actions/upload-artifact@v4',

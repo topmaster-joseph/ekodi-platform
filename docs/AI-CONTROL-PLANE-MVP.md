@@ -1,6 +1,6 @@
 # EKODI Cognitive Control Plane
 
-Canonical AI orchestration hostname: `ai.ekodi.kr`.
+Proposed production hostname: `ai.ekodi.kr`. Production activation remains blocked until this core-service boundary is explicitly registered through EKODI Constitution change control.
 
 ## Architecture
 
@@ -12,6 +12,12 @@ EKODI separates four responsibilities instead of making one AI a super-admin:
 4. **Data Plane** owns portable storage, cache, queue and delivery boundaries through `config/data-plane-contract.json`. Development may not use production data by default.
 
 The executable contract is split between `config/cognitive-control-plane.json`, `cognitive-control-plane.js` and `scripts/validate-cognitive-control-plane.mjs`. The JSON contract is vendor-neutral, the runtime evaluates intents, and CI fails closed when the production path drifts from policy.
+
+## Mission governance
+
+Before model dispatch, every task is evaluated by the existing executable `ai-governance-runtime.js` mission policy. Forbidden/non-negotiable actions are stored as `blocked_policy` and are not sent to workers. Human-gated work may be analyzed and prepared, but provider prompts are constrained from performing the underlying high-impact action. Only observe-only work or delegated, reversible, logged and preflight-verified action qualifies for autonomous execution.
+
+The task ledger records governance input, mission policy version, decision tier, reason, explanation and analysis-only state through additive migration `0053_ai_mission_governance.sql`. Mission and human dignity remain above safety/legal/privacy, informed consent and user agency, community/Jubilee impact, reliability, and finally efficiency/revenue.
 
 ## Production invariant
 

@@ -69,7 +69,7 @@ function runWranglerBuild() {
   fs.mkdirSync(releaseRoot, { recursive: true });
   fs.mkdirSync(bundleRoot, { recursive: true });
 
-  const result = spawnSync('npx', [
+  const wranglerArgs = [
     '--yes',
     `wrangler@${wranglerVersion}`,
     'deploy',
@@ -78,12 +78,19 @@ function runWranglerBuild() {
     bundleRoot,
     '--config',
     'wrangler.ai.build.toml',
-  ], {
-    cwd: root,
-    env: process.env,
-    encoding: 'utf8',
-    stdio: 'inherit',
-  });
+  ];
+  const isWindows = process.platform === 'win32';
+  const result = spawnSync(
+    isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npx',
+    isWindows ? ['/d', '/s', '/c', 'npx.cmd', ...wranglerArgs] : wranglerArgs,
+    {
+      cwd: root,
+      env: process.env,
+      encoding: 'utf8',
+      stdio: 'inherit',
+    },
+  );
+  if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Wrangler AI Control dry-run build failed with exit code ${result.status}.`);
 
   const jsFiles = walkFiles(bundleRoot).filter(file => file.endsWith('.js') && !file.endsWith('.js.map'));
