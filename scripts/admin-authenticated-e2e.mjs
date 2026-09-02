@@ -37,14 +37,15 @@ await fs.mkdir(artifactsDir, { recursive: true });
 const groups = {
   campus: 'home',
   work: 'operations', communication: 'operations',
-  workspace: 'people', organization: 'people', clients: 'people', admins: 'people',
+  workspace: 'people', organization: 'people', 'cheonggye-members': 'people', clients: 'people', admins: 'people',
   'life-ai': 'services', community: 'services', books: 'services', social: 'services',
-  aiops: 'ai', 'marketing-ai': 'ai', 'ai-module-spec': 'ai', 'ai-membership': 'ai',
+  aiops: 'ai', devotional: 'ai', 'marketing-ai': 'ai', 'ai-module-spec': 'ai', 'ai-membership': 'ai',
   finance: 'business', tax: 'business', affiliates: 'business',
   storage: 'data', 'api-cost': 'data',
   health: 'system', security: 'system', devices: 'system', architecture: 'system',
 };
 const menuIds = Object.keys(groups);
+const expectedMenuCount = menuIds.length;
 const internalMenuIds = menuIds.filter(id => id !== 'tax');
 const results = [];
 const consoleErrors = [];
@@ -218,7 +219,7 @@ try {
   stage('menu-registry');
   const productionOrder = await withTimeout(page.evaluate(() => window.EKODIAdminPanels?.visibleMenuOrder || []), 5_000, 'production menu order');
   console.log(`[E2E] production-menu-order ${JSON.stringify(productionOrder)}`);
-  if (productionOrder.length !== 24) throw new Error(`Expected 24 visible admin menus, got ${productionOrder.length}`);
+  if (productionOrder.length !== expectedMenuCount) throw new Error(`Expected ${expectedMenuCount} visible admin menus, got ${productionOrder.length}`);
   for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
 
   for (const id of internalMenuIds) await clickMenu(id);
@@ -239,7 +240,7 @@ try {
   const report = {
     generatedAt: new Date().toISOString(),
     baseUrl,
-    expectedMenuCount: 24,
+    expectedMenuCount,
     checkedMenuCount: results.length,
     passed: !fatal,
     lastStage: currentStage,
