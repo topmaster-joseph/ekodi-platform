@@ -46,4 +46,31 @@ jobs:
         env:
           AI_PROVIDER: NONE
         run: npm run test:ai-none
-      - run: npm test
+      - name: Compare application tests with PR base
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set +e
+          npm test 2>&1 | tee test-output-head.txt
+          head_status=${PIPESTATUS[0]}
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git worktree add --detach /tmp/ekodi-pr-base "$BASE_SHA"
+          (cd /tmp/ekodi-pr-base && npm test) 2>&1 | tee test-output-base.txt
+          base_status=${PIPESTATUS[0]}
+          printf 'head_status=%s\nbase_status=%s\n' "$head_status" "$base_status" | tee test-status.txt
+          exit "$head_status"
+      - name: Run application tests
+        if: github.event_name != 'pull_request'
+        run: npm test
+      - name: Preserve baseline comparison diagnostics
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-baseline-test-output
+          path: |
+            test-output-head.txt
+            test-output-base.txt
+            test-status.txt
+          retention-days: 1
