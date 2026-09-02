@@ -1,0 +1,45 @@
+name: Evolution CI Linux Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'evolution-intelligence-*.js'
+      - 'test/evolution-intelligence.test.mjs'
+      - '.github/workflows/evolution-ci-linux-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  linux-repro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Reproduce CI sequence and capture full test output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run check
+          npm run build
+          set +e
+          npm test > evolution-ci-test.log 2>&1
+          code=$?
+          set -e
+          printf '%s\n' "$code" > evolution-ci-test.exit
+          tail -n 240 evolution-ci-test.log > evolution-ci-test-tail.log
+      - name: Upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evolution-ci-linux-diagnostic
+          path: |
+            evolution-ci-test.log
+            evolution-ci-test-tail.log
+            evolution-ci-test.exit
+          retention-days: 1
+          if-no-files-found: error
