@@ -176,11 +176,27 @@
     document.addEventListener('pointerdown',resume,true);
     document.addEventListener('keydown',resume,true);
   }
+  function header(){
+    return document.querySelector('[data-ekodi-user-header-root]')||document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]');
+  }
+  function actionContainer(target){
+    return target?.querySelector?.('.ekodi-user-ui-fallback-header__nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions,#main-nav,nav')||target;
+  }
+  function placeButton(button=document.getElementById(buttonId)){
+    if(!button||!document.body)return;
+    const target=header();
+    if(!target){button.dataset.ekodiFloating='true';if(button.parentElement!==document.body)document.body.append(button);return;}
+    const parent=actionContainer(target);
+    button.dataset.ekodiFloating='false';
+    const language=parent?.querySelector?.('[data-ekodi-language-control]');
+    if(language&&language.nextElementSibling!==button)language.insertAdjacentElement('afterend',button);
+    else if(button.parentElement!==parent)parent?.append(button);
+  }
   function installButton(){
-    if(document.getElementById(buttonId))return;
+    if(document.getElementById(buttonId)){placeButton();return;}
     const style=document.createElement('style');
     style.dataset.ekodiCcmMr='v1';
-    style.textContent=`#${buttonId}{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:2147482500;min-width:102px;min-height:44px;padding:10px 14px;border:1px solid rgba(15,23,42,.14);border-radius:999px;background:rgba(255,255,255,.94);color:#0f172a;font:600 13px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 8px 24px rgba(15,23,42,.12);backdrop-filter:blur(12px);cursor:pointer;touch-action:manipulation}#${buttonId}:hover{background:#fff}#${buttonId}:focus-visible{outline:3px solid rgba(37,99,235,.3);outline-offset:2px}@media(max-width:480px){#${buttonId}{right:10px;bottom:10px;min-width:96px;padding:9px 12px}}`;
+    style.textContent=`#${buttonId}{position:static;z-index:auto;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:86px;min-height:34px;margin-inline-start:2px;padding:0 10px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:999px;background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 92%,transparent);color:inherit;font:700 12px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:none;backdrop-filter:blur(10px);cursor:pointer;touch-action:manipulation}#${buttonId}:hover{background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 98%,transparent)}#${buttonId}:focus-visible{outline:2px solid color-mix(in srgb,var(--ekodi-user-chrome-link,#2563eb) 32%,transparent);outline-offset:2px}#${buttonId}[data-ekodi-floating="true"]{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:2147482500;min-height:40px;background:rgba(255,255,255,.94);color:#0f172a;box-shadow:0 8px 24px rgba(15,23,42,.12)}@media(max-width:480px){#${buttonId}{min-width:72px;min-height:32px;padding:0 8px;font-size:11px}#${buttonId}[data-ekodi-floating="true"]{right:10px;bottom:10px;min-width:86px}}`;
     document.head.append(style);
     const button=document.createElement('button');
     button.type='button';
@@ -200,6 +216,7 @@
       updateButton();
     });
     document.body.append(button);
+    placeButton(button);
     updateButton();
   }
   async function boot(){
@@ -211,6 +228,10 @@
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
+  window.addEventListener('ekodi:user-header-ready',()=>placeButton());
+  window.addEventListener('ekodi:locale-change',()=>placeButton());
+  window.setTimeout(()=>placeButton(),250);
+  window.setTimeout(()=>placeButton(),1200);
 
   document.addEventListener('visibilitychange',()=>{
     if(!context||!wanted)return;
