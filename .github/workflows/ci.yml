@@ -46,4 +46,15 @@ jobs:
         env:
           AI_PROVIDER: NONE
         run: npm run test:ai-none
-      - run: npm test
+      - name: Run npm test with diagnostic capture
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test-output.txt
+      - name: Preserve failing test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-baseline-test-output
+          path: test-output.txt
+          retention-days: 1
