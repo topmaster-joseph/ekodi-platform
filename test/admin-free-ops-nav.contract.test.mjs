@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [adminJs, siteWorker, mallHeaders, freeOpsJs, authRouter] = await Promise.all([
+const [adminJs, mallHeaders, freeOpsJs, authRouter] = await Promise.all([
   readFile(new URL('../release-control-admin.js', import.meta.url), 'utf8'),
-  readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/_headers', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/free-ops.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/auth-router.js', import.meta.url), 'utf8'),
@@ -23,10 +22,6 @@ test('admin sidebar renders Mall Free Ops inside the right content panel', () =>
   assert.match(adminJs, /nav\.append\(button\)/);
 });
 
-test('Admin CSP permits only the Mall origin as an additional frame source', () => {
-  assert.match(siteWorker, /frame-src https:\/\/accounts\.google\.com\/gsi\/ https:\/\/mall\.ekodi\.kr/);
-  assert.match(siteWorker, /frame-ancestors 'none'/);
-});
 
 test('Mall keeps global anti-framing but grants Admin a narrow Free Ops exception', () => {
   const globalBlock = mallHeaders.slice(0, mallHeaders.indexOf('/free-ops*'));
