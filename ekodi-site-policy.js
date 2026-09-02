@@ -33,15 +33,6 @@ const OWNED_CUSTOMER_SITE_DEFINITIONS = [
     defaultActivityRoleLabel: '연구소장',
   },
   {
-    id: 'trade',
-    slug: 'ekodi-trade',
-    name: 'EKODI Global Trading',
-    domain: 'trade.ekodi.kr',
-    workspaceKind: 'business',
-    defaultActivityRole: 'representative',
-    defaultActivityRoleLabel: '대표',
-  },
-  {
     id: 'cafe',
     slug: 'ekodi-cafe',
     name: '에코디 카페',
