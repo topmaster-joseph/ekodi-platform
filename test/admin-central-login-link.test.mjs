@@ -55,14 +55,13 @@ test('central handoff preserves current admin destinations without retired route
 
 test('authenticated shell keeps the app hidden until the requested menu runtime is activated', async () => {
   const source = await read('admin-authenticated-shell.js');
-  assert.ok(source.includes('app.style.visibility=\'hidden\''));
+  assert.ok(source.includes("app.style.visibility='hidden'"));
   assert.ok(source.includes('for(const src of criticalPostAuthScripts)'));
   assert.ok(source.includes('await loadScript(src)'));
-  assert.ok(source.includes('waitForMenuRuntime'));
   assert.ok(source.includes('window.EKODIAdminPanels?.activate'));
   assert.ok(source.includes('window.EKODIAdminSidebar'));
   assert.ok(source.includes('await Promise.resolve(window.EKODIAdminPanels.activate(requestedSection()))'));
   assert.ok(source.includes("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
   assert.ok(source.indexOf('await Promise.resolve(window.EKODIAdminPanels.activate(requestedSection()))') < source.indexOf('announceReady();loadDeferredEnhancements()'));
-  assert.doesNotMatch(source, /canonicalizeLegacyEntry|\/legacy/);
+  assert.doesNotMatch(source, /waitForMenuRuntime|canonicalizeLegacyEntry|\/legacy/);
 });
