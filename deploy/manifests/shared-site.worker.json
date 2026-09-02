@@ -1,5 +1,5 @@
 {
-  "version": 38,
+  "version": 39,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -124,10 +124,8 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/mall",
-        "statuses": [
-          200
-        ],
+        "url": "https://ekodi.kr/ekodibiz/mall",
+        "statuses": [200],
         "redirect": "follow",
         "expect": [
           "EKODI MALL",
@@ -139,6 +137,72 @@
         "headerExpect": [
           "x-content-type-options: nosniff"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: ekodibiz"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: ekodichurch"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodilab",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: ekodilab"]
+      },
+      {
+        "url": "https://ekodi.kr/ekoditrade",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: ekoditrade"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodicafe",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: ekodicafe"]
+      },
+      {
+        "url": "https://ekodi.kr/cgma",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: cgma"]
+      },
+      {
+        "url": "https://ekodi.kr/jadam",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: jadam"]
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: pizzamaru"]
+      },
+      {
+        "url": "https://ekodi.kr/yogurt",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: public-workspace-namespace", "x-ekodi-public-namespace: yogurt"]
+      },
+      {
+        "url": "https://ekodi.kr/mall",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://ekodi.kr/ekodibiz/mall", "x-ekodi-route: legacy-mall-to-workspace"]
+      },
+      {
+        "url": "https://ekodi.kr/org/cgma",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://ekodi.kr/cgma", "x-ekodi-route: legacy-workspace-path"]
       },
       {
         "url": "https://ekodi.kr/admin",
@@ -594,9 +658,7 @@
           308
         ],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://trade.biz.ekodi.kr/"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/ekoditrade"]
       },
       {
         "url": "https://tax.ekodi.kr/",
