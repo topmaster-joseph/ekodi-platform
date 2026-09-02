@@ -67,7 +67,7 @@ test('Campus, Health and Device Control are explicit versioned demand-loaded fea
   assert.match(loader, /scripts: \['device-control-admin\.js', 'remote-power-admin\.js'\]/);
   assert.match(loader, /hashes: \['#devices'\]/);
   assert.match(loader, /assetUrl\(src\)/);
-  const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  const aiOps = loader.match(/aiops:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*devotional:/)?.[1] || '';
   assert.ok(aiOps, 'AI Ops feature block must be extractable');
   assert.doesNotMatch(aiOps, /system-health-admin/);
 });
@@ -166,7 +166,7 @@ test('postbuild emits a purpose-built minimal compact runtime and strips legacy 
   assert.match(postbuild, /brand side-brand/);
   assert.match(postbuild, /scopeBadge/);
   assert.match(postbuild, /Legacy Admin sidebar header or scope badge survived postbuild/);
-  const generated = postbuild.match(/const minimalCompactJs = `([\s\S]*?)`;\nnew Function\(minimalCompactJs\)/)?.[1] || '';
+  const generated = postbuild.match(/const minimalCompactJs = `([\s\S]*?)`;\r?\nnew Function\(minimalCompactJs\)/)?.[1] || '';
   assert.ok(generated, 'minimal compact runtime template must be extractable');
   assert.doesNotMatch(generated, /setTimeout\(/);
   assert.doesNotMatch(generated, /installCampus|installPolicies|WINDOWS_AGENT_URL|ekodiDevicePanel/);

@@ -77,6 +77,11 @@ function syncTitle(section){
   last=section;
   window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section}}));
 }
+function financeAssets(){
+  const d=window.EKODIAdminDemand;
+  if(!d)return window.addEventListener('ekodi-admin-ready',financeAssets,{once:true});
+  d.loadStyle('admin-finance.css').then(()=>d.loadScript('finance-monitor.js')).catch(console.error);
+}
 function activatePanel(section){
   if(!section||!hasPanel(section))return false;
   requestedSection=section;
@@ -89,6 +94,7 @@ function activatePanel(section){
   syncTitle(section);
   const hash=CANON.get(section);
   if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
+  if(section==='finance')financeAssets();
   if(section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
   sidebar.classList.remove('open');
   return true;

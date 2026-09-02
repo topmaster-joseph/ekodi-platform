@@ -4,17 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('finance assets load from direct clicks, contextual tabs and direct hash entry', async () => {
-  const loader = await read('admin-demand-loader.js');
-  assert.match(loader, /const loadFinanceAssets = \(\) =>/);
-  assert.match(loader, /loadStyle\('admin-finance\.css'\)/);
-  assert.match(loader, /loadScript\('finance-monitor\.js'\)/);
-  assert.match(loader, /finance\.addEventListener\('click', loadFinanceAssets, true\)/);
-  assert.match(loader, /ekodi-admin-section-changed/);
-  assert.match(loader, /event\.detail\?\.section === 'finance'/);
-  assert.match(loader, /location\.hash\.toLowerCase\(\) === '#finance'/);
-  assert.match(loader, /finance\.classList\.contains\('active'\)/);
-  assert.doesNotMatch(loader, /financeAssetsPromise/);
+test('finance assets are owned by the route layer and use the generic demand loader', async () => {
+  const [loader, menu] = await Promise.all([read('admin-demand-loader.js'), read('admin-menu-layout.js')]);
+  assert.match(menu, /function financeAssets\(\)/);
+  assert.match(menu, /loadStyle\('admin-finance\.css'\)/);
+  assert.match(menu, /loadScript\('finance-monitor\.js'\)/);
+  assert.match(menu, /if\(section==='finance'\)financeAssets\(\)/);
+  assert.match(menu, /ekodi-admin-ready/);
+  assert.doesNotMatch(loader, /admin-finance\.css|finance-monitor\.js|financeDemandBound|financeAssetsRequested/);
 });
 
 test('finance demand stylesheet remains readable on the light admin surface', async () => {

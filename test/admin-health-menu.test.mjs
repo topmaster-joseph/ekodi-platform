@@ -23,7 +23,7 @@ test('Health remains a visible standalone route before Security and later operat
 
 test('Health assets do not ride along with AI Ops secondary hydration', async () => {
   const loader = await read('admin-demand-loader.js');
-  const aiOpsBlock = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  const aiOpsBlock = loader.match(/aiops:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*devotional:/)?.[1] || '';
   assert.ok(aiOpsBlock);
   assert.doesNotMatch(aiOpsBlock, /system-health-admin/);
   assert.doesNotMatch(aiOpsBlock, /system-health-admin\.css/);
