@@ -32,7 +32,7 @@ test('Primary AI Ops does not auto-hydrate Governance, Health or Deployments',as
   assert.match(build,/'mission-control-admin\.js'/);
   assert.doesNotMatch(html,/mission-control-admin\.(?:js|css)/);
   assert.doesNotMatch(shell,/'mission-control-admin\.js'/);
-  const aiops=demand.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  const aiops=demand.match(/aiops:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*devotional:/)?.[1] || '';
   assert.match(aiops,/secondaryScripts: \['admin-lazy-features\.js'\]/);
   assert.doesNotMatch(aiops,/system-health-admin|mission-control-admin|release-control-admin/);
   assert.match(demand,/health:\s*\{/);

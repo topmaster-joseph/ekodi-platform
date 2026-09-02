@@ -9,8 +9,11 @@ async function text(path) {
 }
 
 function mustReplace(source, search, replacement, label) {
-  if (!source.includes(search)) throw new Error(`admin thin-shell marker missing: ${label}`);
-  return source.replace(search, replacement);
+  const newline = source.includes('\r\n') ? '\r\n' : '\n';
+  const normalized = source.replaceAll('\r\n', '\n');
+  if (!normalized.includes(search)) throw new Error(`admin thin-shell marker missing: ${label}`);
+  const next = normalized.replace(search, replacement);
+  return newline === '\r\n' ? next.replaceAll('\n', '\r\n') : next;
 }
 
 // Device Control and Hybrid Execution are published only as one standalone demand asset.
