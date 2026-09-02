@@ -9,7 +9,9 @@ test('Mail control is tenant-scoped, provider-neutral and seeds the EKODI Church
   assert.match(control, /current_site_activity_contexts/);
   assert.match(control, /workspace_id TEXT NOT NULL/);
   assert.match(control, /mail_control_audit/);
-  assert.match(control, /cloudflare-email-routing/);
+  assert.match(control, /forward-email/);
+  assert.match(control, /mx1\.forwardemail\.net/);
+  assert.match(control, /destinationVisibleInPublicDns/);
   assert.match(control, /ekodichurch\.kr/);
   assert.match(control, /ekodichurch@gmail\.com/);
   assert.match(control, /'joseph'/);

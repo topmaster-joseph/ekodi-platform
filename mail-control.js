@@ -3,7 +3,7 @@ const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
 const MAIL_PREFIX = '/api/mail/control';
 const WRITE_ROLES = new Set(['tenant_admin', 'owner', 'admin', 'manager', 'store_owner']);
 const ALLOWED_ORIGINS = new Set(['https://ekodi.kr', 'https://mail.ekodi.kr', 'https://my.ekodi.kr']);
-const DEFAULT_PROVIDER = 'cloudflare-email-routing';
+const DEFAULT_PROVIDER = 'forward-email';
 
 function cors(origin) {
   const headers = {
@@ -52,7 +52,7 @@ function normalizeLocalPart(value) {
 
 function normalizeEmail(value) {
   const email = String(value || '').trim().toLowerCase();
-  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+  return email.length <= 254 && /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(email) ? email : '';
 }
 
 async function readJson(request) {
@@ -166,11 +166,15 @@ async function audit(db, identity, action, resource, detail = '') {
 async function bootstrapEkodiChurch(db, identity) {
   if (identity.workspaceSlug !== 'ekodi-church') return;
   const now = new Date().toISOString();
-  await db.prepare(`INSERT OR IGNORE INTO mail_domains
+  await db.prepare(`INSERT INTO mail_domains
     (workspace_id, workspace_slug, hostname, delivery_mode, routing_provider, routing_status,
      outbound_provider, outbound_status, default_destination, created_at, updated_at)
     VALUES (?, ?, 'ekodichurch.kr', 'forward_to_external_inbox', ?, 'pending_dns',
-      'unconfigured', 'not_configured', 'ekodichurch@gmail.com', ?, ?)`)
+      'unconfigured', 'not_configured', 'ekodichurch@gmail.com', ?, ?)
+    ON CONFLICT(workspace_id, hostname) DO UPDATE SET
+      routing_provider=CASE WHEN mail_domains.routing_status='pending_dns' THEN excluded.routing_provider ELSE mail_domains.routing_provider END,
+      default_destination=CASE WHEN mail_domains.routing_status='pending_dns' THEN excluded.default_destination ELSE mail_domains.default_destination END,
+      updated_at=excluded.updated_at`)
     .bind(identity.workspaceId, identity.workspaceSlug, DEFAULT_PROVIDER, now, now).run();
   const domain = await db.prepare('SELECT id FROM mail_domains WHERE workspace_id = ? AND hostname = ?')
     .bind(identity.workspaceId, 'ekodichurch.kr').first();
@@ -199,7 +203,7 @@ async function dnsQuery(hostname, type) {
   } catch { return []; }
 }
 
-async function dnsSnapshot(hostname) {
+async function dnsSnapshot(hostname, provider = DEFAULT_PROVIDER) {
   const [mx, txt, ns] = await Promise.all([
     dnsQuery(hostname, 'MX'),
     dnsQuery(hostname, 'TXT'),
@@ -207,16 +211,45 @@ async function dnsSnapshot(hostname) {
   ]);
   const cloudflareMx = mx.some(value => /\broute[123]\.mx\.cloudflare\.net\.?$/i.test(value));
   const cloudflareNs = ns.some(value => /\.ns\.cloudflare\.com\.?$/i.test(value));
+  const forwardMx1 = mx.some(value => /\bmx1\.forwardemail\.net\.?$/i.test(value));
+  const forwardMx2 = mx.some(value => /\bmx2\.forwardemail\.net\.?$/i.test(value));
+  const routingDnsReady = provider === 'forward-email'
+    ? forwardMx1 && forwardMx2
+    : provider === 'cloudflare-email-routing'
+      ? cloudflareMx
+      : mx.length > 0;
   return {
     checkedAt: new Date().toISOString(),
     mx,
     txt,
     nameservers: ns,
     hasMx: mx.length > 0,
+    provider,
     cloudflareDns: cloudflareNs,
     cloudflareRoutingMx: cloudflareMx,
-    routingDnsReady: cloudflareMx,
+    forwardEmailRoutingMx: forwardMx1 && forwardMx2,
+    routingDnsReady,
   };
+}
+
+function forwardEmailDnsPlan(domain, routes) {
+  const active = routes.filter(route => Number(route.enabled) === 1);
+  const aliasValue = active.map(route => `${route.local_part}:${route.destination_email}`).join(',');
+  return {
+    provider: 'forward-email',
+    destinationVisibleInPublicDns: true,
+    records: [
+      { type: 'MX', name: '@', priority: 0, value: 'mx1.forwardemail.net' },
+      { type: 'MX', name: '@', priority: 0, value: 'mx2.forwardemail.net' },
+      ...(aliasValue ? [{ type: 'TXT', name: '@', value: `forward-email=${aliasValue}` }] : []),
+      { type: 'TXT', name: '@', value: 'v=spf1 a include:spf.forwardemail.net -all', mergeIfExistingSpf: true },
+    ],
+  };
+}
+
+function dnsPlan(domain, routes) {
+  if (domain.routing_provider === 'forward-email') return forwardEmailDnsPlan(domain, routes);
+  return { provider: domain.routing_provider, destinationVisibleInPublicDns: false, records: [] };
 }
 
 function publicDomain(row) {
@@ -253,7 +286,8 @@ async function workspaceSnapshot(db, identity) {
     JOIN mail_domains d ON d.id = r.domain_id
     WHERE r.workspace_id = ? ORDER BY d.hostname, r.local_part`).bind(identity.workspaceId).all();
   const domains = domainRows.results.map(publicDomain);
-  const dnsPairs = await Promise.all(domains.map(async domain => [domain.hostname, await dnsSnapshot(domain.hostname)]));
+  const dnsPairs = await Promise.all(domains.map(async domain => [domain.hostname, await dnsSnapshot(domain.hostname, domain.routingProvider)]));
+  const dnsPlans = Object.fromEntries(domainRows.results.map(domain => [domain.hostname, dnsPlan(domain, routeRows.results.filter(route => Number(route.domain_id) === Number(domain.id)))]));
   return {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -277,6 +311,7 @@ async function workspaceSnapshot(db, identity) {
     domains,
     routes: routeRows.results.map(row => publicRoute(row, row.hostname)),
     dns: Object.fromEntries(dnsPairs),
+    dnsPlans,
   };
 }
 
@@ -376,8 +411,8 @@ export async function handleMailControl(request, env) {
     if (!access.identity.canManage) return json({ error: '메일 도메인을 확인할 권한이 없습니다.', code: 'WRITE_FORBIDDEN' }, 403, request);
     const domain = await env.DB.prepare('SELECT * FROM mail_domains WHERE id=? AND workspace_id=?').bind(domainId, access.identity.workspaceId).first();
     if (!domain) return json({ error: '메일 도메인을 찾을 수 없습니다.', code: 'DOMAIN_NOT_FOUND' }, 404, request);
-    const dns = await dnsSnapshot(domain.hostname);
-    const routingStatus = dns.cloudflareRoutingMx ? 'dns_ready' : (dns.hasMx ? 'foreign_mx' : 'pending_dns');
+    const dns = await dnsSnapshot(domain.hostname, domain.routing_provider);
+    const routingStatus = dns.routingDnsReady ? 'dns_ready' : (dns.hasMx ? 'foreign_mx' : 'pending_dns');
     await env.DB.prepare('UPDATE mail_domains SET routing_status=?, updated_at=? WHERE id=? AND workspace_id=?')
       .bind(routingStatus, new Date().toISOString(), domainId, access.identity.workspaceId).run();
     await audit(env.DB, access.identity, 'mail.domain.verify', domain.hostname, JSON.stringify({ routingStatus, nameservers: dns.nameservers, mx: dns.mx }));

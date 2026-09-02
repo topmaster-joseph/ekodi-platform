@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS mail_domains (
   workspace_slug TEXT NOT NULL,
   hostname TEXT NOT NULL UNIQUE,
   delivery_mode TEXT NOT NULL DEFAULT 'forward_to_external_inbox',
-  routing_provider TEXT NOT NULL DEFAULT 'cloudflare-email-routing',
+  routing_provider TEXT NOT NULL DEFAULT 'forward-email',
   routing_status TEXT NOT NULL DEFAULT 'pending_dns',
   outbound_provider TEXT NOT NULL DEFAULT 'unconfigured',
   outbound_status TEXT NOT NULL DEFAULT 'not_configured',
