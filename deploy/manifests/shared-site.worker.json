@@ -1,5 +1,5 @@
 {
-  "version": 36,
+  "version": 37,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -9,6 +9,20 @@
         "statuses": [200],
         "redirect": "follow",
         "expect": ["에코디의 모든 길을 한눈에", "One ecosystem. Many ways to connect."]
+      },
+      {
+        "url": "https://ekodi.kr/org/deployment-probe",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["OPERATING SPACE"],
+        "headerExpect": ["x-ekodi-service: space", "x-ekodi-workspace-gateway: space-service-binding", "x-ekodi-shell: v2", "cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/_ekodi/space/config.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI_SPACE_CONFIG", "routeModel", "workspaceApi"],
+        "headerExpect": ["x-ekodi-workspace-gateway: space-service-binding", "x-ekodi-route: config", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/history",
