@@ -7,10 +7,12 @@ import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('user UI header/footer/language are shared user-surface-only modules',async()=>{
-  const [header,footerClient,userLanguage,legacyMobileHeader,worker,principles,sharedCss,injector,shellPolicy]=await Promise.all([
+  const [header,footerClient,userLanguage,userPageTranslation,translationWorker,legacyMobileHeader,worker,principles,sharedCss,injector,shellPolicy]=await Promise.all([
     read('shell/user-ui-header.js'),
     read('shell/user-ui-footer.js'),
     read('shell/user-language.js'),
+    read('shell/user-page-translation.js'),
+    read('user-translation-worker.js'),
     read('shell/mobile-fixed-header.js'),
     read('ekodi-shell-worker.js'),
     read('docs/user-ui-module-principles.md'),
@@ -75,6 +77,11 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/text-align:\s*center/);
   assert.match(sharedCss,/justify-content:\s*center/);
   assert.match(sharedCss,/\.ekodi-user-language\s*\{/);
+  assert.match(sharedCss,/Cross-service quality guard/);
+  assert.match(sharedCss,/word-break:\s*keep-all/);
+  assert.match(sharedCss,/overflow-x:\s*clip/);
+  assert.match(sharedCss,/data-ekodi-user-color-scheme=\"dark\"/);
+  assert.doesNotMatch(sharedCss,/@media \(prefers-color-scheme: dark\)/);
   assert.match(sharedCss,/background:\s*var\(--ekodi-user-footer-background/);
   assert.match(sharedCss,/color:\s*var\(--ekodi-user-footer-text,\s*inherit\)/);
   assert.match(sharedCss,/font-family:\s*inherit/);
@@ -97,7 +104,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(parsedPolicy.footer.themePolicy,/inherit each service/);
   assert.equal(parsedPolicy.language.owner,'shared-shell');
   assert.equal(parsedPolicy.language.adminExcluded,true);
-  assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja']);
+  assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
+  assert.equal(parsedPolicy.language.pageTranslation.runtime,'shell/user-page-translation.js');
+  assert.equal(parsedPolicy.quality.strategy,'guardrails-not-cloning');
 
   const strictCsp=shellCsp("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'");
   assert.match(strictCsp,/style-src 'self' https:\/\/shell\.ekodi\.kr/);

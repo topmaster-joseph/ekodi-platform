@@ -7,6 +7,9 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "staging"
 
+[ai]
+binding = "AI"
+
 [assets]
 directory = "./shell"
 binding = "ASSETS"
@@ -15,3 +18,10 @@ run_worker_first = true
 [observability.logs]
 enabled = true
 invocation_logs = true
+
+[[ratelimits]]
+name = "TRANSLATION_RATE_LIMITER"
+namespace_id = "2301"
+  [ratelimits.simple]
+  limit = 120
+  period = 60

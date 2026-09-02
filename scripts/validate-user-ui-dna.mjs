@@ -6,7 +6,7 @@ import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource,ccmMrSource] = await Promise.all([
+const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,userPageTranslationSource,userTranslationWorkerSource,wranglerShell,designInheritanceSource,ccmMrSource] = await Promise.all([
   readJson('config/ecosystem-services.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
@@ -17,6 +17,9 @@ const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,s
   readText('ekodi-shell-worker.js'),
   readText('shell/user-ui-footer.js'),
   readText('shell/user-language.js'),
+  readText('shell/user-page-translation.js'),
+  readText('user-translation-worker.js'),
+  readText('wrangler.shell.toml'),
   readText('shell/service-design-inheritance.js'),
   readText('shell/ccm-mr-player.js'),
 ]);
@@ -129,16 +132,30 @@ if (!shell?.inheritance?.excludedRootPrefixes?.includes('/admin')) {
   errors.push('Admin root paths must stay outside the User UI Shell.');
 }
 
-const expectedLocales=['ko-KR','en','zh-CN','ja'];
+const expectedLocales=['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id'];
 if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/user-language.js'||shell?.language?.adminExcluded!==true){
   errors.push('Shared user language selector must be owned by the User UI Shell and exclude admin surfaces.');
 }
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
-  errors.push('Shared user language selector must support Korean, English, Simplified Chinese and Japanese.');
+  errors.push('Shared user language selector must support every declared EKODI user locale.');
 }
 for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
 }
+if(shell?.language?.pageTranslation?.owner!=='shared-shell'||shell?.language?.pageTranslation?.runtime!=='shell/user-page-translation.js'||shell?.language?.pageTranslation?.dynamicContent!==true||shell?.language?.pageTranslation?.restoreOriginalOnKorean!==true){
+  errors.push('Whole-page translation must remain shared-shell owned, dynamic and reversible.');
+}
+for(const marker of ['window.EKODIUserPageTranslation','ekodi:locale-change','data-ekodi-no-translate','data-sensitive','data-private','data-user-content',"surface()==='workspace'",'restore()']){
+  if(!userPageTranslationSource.includes(marker))errors.push(`Shared page translation runtime lost privacy/dynamic marker: ${marker}`);
+}
+for(const marker of ['handleUserTranslation','M2M_MODEL','workspaceCache:false','maxPayloadCharacters:8000','originAllowed','caches.default']){
+  if(!userTranslationWorkerSource.includes(marker))errors.push(`Shared translation worker lost boundary marker: ${marker}`);
+}
+if(!wranglerShell.includes('[ai]')||!wranglerShell.includes('binding = "AI"'))errors.push('Shell translation adapter requires the declared Workers AI binding.');
+for(const marker of ['name = "TRANSLATION_RATE_LIMITER"','namespace_id = "2301"','limit = 120','period = 60'])if(!wranglerShell.includes(marker))errors.push(`Shell translation rate limiter lost marker: ${marker}`);
+if(shell?.quality?.owner!=='shared-shell'||shell?.quality?.strategy!=='guardrails-not-cloning'||shell?.quality?.adminExcluded!==true)errors.push('Shared quality guard must protect user pages without cloning service visual identity.');
+for(const marker of ['Cross-service quality guard','word-break: keep-all','overflow-x: clip','data-ekodi-user-color-scheme="dark"'])if(!userUiStyle.includes(marker))errors.push(`Shared user quality stylesheet lost marker: ${marker}`);
+if(userUiStyle.includes('@media (prefers-color-scheme: dark)'))errors.push('Shared user chrome must not force dark mode from OS preference.');
 if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
   errors.push('Shared ambient audio control must be Shell-owned, avoid content overlap and exclude admin surfaces.');
 }

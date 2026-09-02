@@ -328,6 +328,23 @@ html[data-ekodi-user-ui] {
   display: none !important;
 }
 
+/* Cross-service quality guard. These rules prevent layout breakage without cloning service design. */
+html[data-ekodi-user-ui] body {
+  overflow-x: clip;
+}
+html[data-ekodi-user-ui] :where(main,section,article,aside,header,footer,nav,div,form,fieldset) {
+  min-width: 0;
+}
+html[data-ekodi-user-ui] :where(h1,h2,h3,h4,h5,h6,button,label,legend,summary,.title,.headline,.hero-title,[role="button"],[role="tab"],[role="menuitem"]) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+html[data-ekodi-user-ui] :where(img,video,canvas,svg) {
+  max-width: 100%;
+}
+html[data-ekodi-user-ui] :where(.ekodi-user-ui-header,[data-ekodi-user-header-root]) :where(button,a,select,[data-ekodi-language-control],#ekodi-ccm-mr-toggle) {
+  flex-shrink: 0;
+}
 @media (max-width: 840px) {
   .ekodi-user-ui-header .ekodi-user-ui-header-center {
     max-width: 46vw !important;
@@ -403,16 +420,14 @@ html[data-ekodi-user-ui] {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  html[data-ekodi-user-ui] {
-    --ekodi-user-chrome-bg: color-mix(in srgb, #101512 92%, var(--ekodi-service-accent, #315d48) 8%);
-    --ekodi-user-chrome-text: #edf4ef;
-    --ekodi-user-chrome-muted: #adb9b1;
-    --ekodi-user-chrome-link: color-mix(in srgb, var(--ekodi-service-accent, #9ed0b4) 68%, white 32%);
-    --ekodi-user-chrome-line: rgba(255, 255, 255, .12);
-  }
+/* A service chooses dark chrome explicitly. OS preference must not recolor an unrelated public site. */
+html[data-ekodi-user-ui][data-ekodi-user-color-scheme="dark"] {
+  --ekodi-user-chrome-bg: color-mix(in srgb, #101512 92%, var(--ekodi-service-accent, #315d48) 8%);
+  --ekodi-user-chrome-text: #edf4ef;
+  --ekodi-user-chrome-muted: #adb9b1;
+  --ekodi-user-chrome-link: color-mix(in srgb, var(--ekodi-service-accent, #9ed0b4) 68%, white 32%);
+  --ekodi-user-chrome-line: rgba(255, 255, 255, .12);
 }
-
 @media (prefers-reduced-motion: reduce) {
   .ekodi-user-ui-header *,
   .ekodi-user-ui-footer *,

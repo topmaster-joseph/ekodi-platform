@@ -1,9 +1,12 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
-  "scope": ["public", "workspace"],
+  "scope": [
+    "public",
+    "workspace"
+  ],
   "adminExcluded": true,
   "principles": {
     "singleSource": true,
@@ -16,17 +19,41 @@
     "legacyCommonFooterSuppressed": true,
     "rootInternalPathsExcluded": true,
     "languageChoiceEverywhere": true,
-    "globalUtilitiesInHeader": true
+    "globalUtilitiesInHeader": true,
+    "commonQualityGuard": true
   },
   "header": {
     "owner": "shared-shell",
     "strategy": "adopt-existing-first",
     "fallback": "shared-shell-header-when-missing",
-    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path", "language choice"],
+    "requiredMeaning": [
+      "EKODI identity",
+      "current service context",
+      "account or My EKODI path",
+      "language choice"
+    ],
     "localNavigation": "service-owned",
-    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control"],
-    "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
-    "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"]
+    "behavior": [
+      "single banner",
+      "safe-area aware",
+      "keyboard accessible",
+      "responsive",
+      "content offset when fixed",
+      "compact language control"
+    ],
+    "recognizedExistingHeaders": [
+      "header",
+      ".site-header",
+      ".topbar",
+      ".app-header",
+      ".main-header",
+      "[data-ekodi-fixed-header]"
+    ],
+    "forbidden": [
+      "second global header",
+      "service-specific copy of shared header runtime",
+      "admin navigation mixed into user header"
+    ]
   },
   "footer": {
     "owner": "shared-shell",
@@ -42,11 +69,31 @@
     "owner": "shared-shell",
     "runtime": "shell/user-language.js",
     "placement": "inside the adopted or fallback user header",
-    "supported": ["ko-KR", "en", "zh-CN", "ja"],
+    "supported": [
+      "ko-KR",
+      "en",
+      "zh-CN",
+      "ja",
+      "my",
+      "kac",
+      "vi",
+      "mn",
+      "id"
+    ],
     "default": "ko-KR",
     "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
     "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
-    "adminExcluded": true
+    "adminExcluded": true,
+    "pageTranslation": {
+      "owner": "shared-shell",
+      "runtime": "shell/user-page-translation.js",
+      "sourceLanguage": "ko-KR",
+      "strategy": "public-full-workspace-ui-only",
+      "backend": "shell.ekodi.kr/translate",
+      "privacy": "never translate form values, editable content, code, secrets or explicit no-translate regions",
+      "dynamicContent": true,
+      "restoreOriginalOnKorean": true
+    }
   },
   "ambientAudio": {
     "owner": "shared-shell",
@@ -59,7 +106,24 @@
     "hostRule": "all public/workspace service hosts inherit the manifest service shell",
     "pathRule": "all subordinate paths inherit their parent service shell",
     "rootServiceRule": "ekodi.kr/<service>/... inherits that service when the route is a user surface",
-    "rootPolicyPages": ["/privacy", "/terms"],
-    "excludedRootPrefixes": ["/admin"]
+    "rootPolicyPages": [
+      "/privacy",
+      "/terms"
+    ],
+    "excludedRootPrefixes": [
+      "/admin"
+    ]
+  },
+  "quality": {
+    "owner": "shared-shell",
+    "strategy": "guardrails-not-cloning",
+    "rules": [
+      "no forced global dark mode",
+      "word-safe headings and controls",
+      "no horizontal page overflow",
+      "header utilities stay compact and non-overlapping",
+      "service-owned palette, typography and content rhythm remain intact"
+    ],
+    "adminExcluded": true
   }
 }
