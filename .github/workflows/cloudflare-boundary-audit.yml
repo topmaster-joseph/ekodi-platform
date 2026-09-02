@@ -114,9 +114,18 @@ jobs:
               if prod_workers_namespace in text:
                   errors.append(f'{filename}: staging verification still targets the Production workers.dev namespace')
 
-          # Marketing Pages previews are the only temporary exception. They are static Pages previews,
-          # not Workers routes. Move them after the Development token has Cloudflare Pages Edit.
-          pages_preview_exception = 'stage-marketing-pages-shell.yml'
+          pages_staging_files = {'stage-marketing-pages-shell.yml'}
+          for filename in sorted(pages_staging_files):
+              path = root / filename
+              if not path.exists():
+                  errors.append(f'{filename}: required Pages staging workflow is missing')
+                  continue
+              text = path.read_text(encoding='utf-8')
+              for marker in ('environment: development', dev_secret, dev_account, 'pages deploy'):
+                  if marker not in text:
+                      errors.append(f'{filename}: missing Development Pages boundary marker: {marker}')
+              if any(marker in text for marker in prod_secret_markers):
+                  errors.append(f'{filename}: Pages staging references production Cloudflare credentials')
 
           for path in sorted(root.glob('*.yml')):
               text = path.read_text(encoding='utf-8')
@@ -126,13 +135,8 @@ jobs:
                   ('wrangler' in text and (' deploy ' in text or 'pages deploy' in text))
                   or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
               )
-              if staging_workflow and uses_prod and cloudflare_write and path.name != pages_preview_exception:
+              if staging_workflow and uses_prod and cloudflare_write:
                   errors.append(f'{path.name}: staging workflow can write with production Cloudflare credentials')
-              if path.name == pages_preview_exception:
-                  if 'pages deploy' not in text:
-                      errors.append(f'{path.name}: temporary exception may only deploy Cloudflare Pages previews')
-                  if re.search(r'wrangler(?:@[^\s]+)?\s+deploy\s+--config', text):
-                      errors.append(f'{path.name}: temporary Pages exception must never deploy a Worker')
 
               # Enforce the boundary at job level too. Mixed deploy-*.yml workflows can contain both
               # Production and staging jobs, so filename-only checks are insufficient.
@@ -204,5 +208,5 @@ jobs:
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Cloudflare boundary audit passed: Workers staging is Development-only and production guardrails remain intact.')
+          print('Cloudflare boundary audit passed: Worker and Pages staging are Development-only and production guardrails remain intact.')
           PY
