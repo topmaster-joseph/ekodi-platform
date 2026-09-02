@@ -4,16 +4,18 @@ on:
   pull_request:
     paths:
       - 'site-worker.js'
-      - 'control-center.html'
+      - 'admin-shell.html'
       - 'admin-central-handoff.js'
+      - 'admin-authenticated-shell.js'
       - 'test/admin-central-login-link.test.mjs'
       - '.github/workflows/verify-admin-login.yml'
   push:
     branches: [main]
     paths:
       - 'site-worker.js'
-      - 'control-center.html'
+      - 'admin-shell.html'
       - 'admin-central-handoff.js'
+      - 'admin-authenticated-shell.js'
       - 'test/admin-central-login-link.test.mjs'
       - '.github/workflows/verify-admin-login.yml'
 
@@ -32,6 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check site-worker.js
+          node --check admin-authenticated-shell.js
           node --test test/admin-central-login-link.test.mjs
 
   production:
@@ -51,6 +54,7 @@ jobs:
             if [[ "$page_code" == "200" ]] \
               && grep -Fq 'id="centralAdminLogin"' /tmp/admin-work.html \
               && grep -Fq 'admin-central-handoff.js' /tmp/admin-work.html \
+              && grep -Fq 'admin-authenticated-shell.js' /tmp/admin-work.html \
               && [[ "$redirect_code" == "302" ]] \
               && [[ "$location" == https://auth.ekodi.kr/* ]] \
               && [[ "$location" == *'site=admin'* ]] \

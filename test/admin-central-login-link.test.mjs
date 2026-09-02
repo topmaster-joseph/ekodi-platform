@@ -52,10 +52,16 @@ test('central handoff preserves current admin destinations without retired route
   assert.ok(source.includes("route=normalizeRoute(query.get('route')||hash.get('ekodi_admin_route')"));
 });
 
-test('authenticated shell restores requested hash and contains no retired path normalizer', async () => {
+test('authenticated shell restores requested hash and waits for the real menu runtime before revealing the app', async () => {
   const source = await read('admin-authenticated-shell.js');
   assert.ok(source.includes("const requestedHash=location.hash"));
-  assert.ok(source.includes("await Promise.all(criticalPostAuthScripts.map(loadScript))"));
+  assert.ok(source.includes('for(const src of criticalPostAuthScripts)'));
+  assert.ok(source.includes('await loadScript(src)'));
   assert.ok(source.includes("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
+  assert.ok(source.includes('window.EKODIAdminPanels?.activate'));
+  assert.ok(source.includes('window.EKODIAdminSidebar'));
+  assert.ok(source.includes('await Promise.resolve(window.EKODIAdminPanels.activate(section))'));
+  assert.ok(source.indexOf('for(const src of criticalPostAuthScripts)') < source.indexOf("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
+  assert.ok(source.indexOf('await Promise.resolve(window.EKODIAdminPanels.activate(section))') < source.indexOf('announceReady();loadDeferredEnhancements()'));
   assert.doesNotMatch(source, /canonicalizeLegacyEntry|\/legacy/);
 });
