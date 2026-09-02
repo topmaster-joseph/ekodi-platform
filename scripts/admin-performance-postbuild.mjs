@@ -46,7 +46,10 @@ for (const [from,to] of [
   ['hashes','h'],
   ['paths','p'],
 ]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
-await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
+for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph']]) {
+  demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
+}
+await writeFile(demandLoaderPath, demandLoaderSource.replace(/\r\n/g, '\n').split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
 // Login/return parses only the base visual CSS and the small central-auth handoff.
 html = html
@@ -112,40 +115,15 @@ const compactJsPath = `${dist}admin-compact.js`;
 const compactJsSource = (await readFile(compactJsPath, 'utf8')).replace(/^[ \t]+/gm, '');
 await writeFile(compactJsPath, compactJsSource);
 
-// Keep the readable menu source in Git, but compact private identifiers in the generated
-// first-path module. Public globals, data attributes, hashes and event names remain untouched.
+// Keep the readable menu source in Git and ship a deterministic compact derivative.
+// The source hash makes stale generated runtime fail closed whenever the readable source changes.
 const menuRuntimePath = `${dist}admin-menu-layout.js`;
-let menuRuntimeSource = await readFile(menuRuntimePath, 'utf8');
-for (const [from,to] of [
-  ['INTERNAL_ONLY_SECTIONS','I'],
-  ['INTERNAL_ONLY_HREFS','H'],
-  ['VISIBLE_NAV_ORDER','O'],
-  ['VISIBLE_NAV_RANK','R'],
-  ['DEMAND_KEYS','D'],
-  ['HASH_SECTIONS','HS'],
-  ['CANONICAL_HASH','CH'],
-  ['requestedSection','q'],
-  ['activeSectionState','a'],
-  ['sitesLoading','site'],
-  ['demandLoading','tasks'],
-  ['installCompactNavigationStyle','navCss'],
-  ['panelTargets','pt'],
-  ['isInternalSection','isInt'],
-  ['isInternalNav','intNav'],
-  ['allNavItems','items'],
-  ['applyStableNavigationOrder','order'],
-  ['enforceInternalNavigationPolicy','policy'],
-  ['navItemFor','navFor'],
-  ['syncTitle','heading'],
-  ['activatePanel','show'],
-  ['clickDemandFallback','fallback'],
-  ['requestDemand','demand'],
-  ['routeInternalToAiOps','toAi'],
-  ['explicitHashSection','hashOf'],
-  ['reconcileNavigation','navSync'],
-]) menuRuntimeSource = menuRuntimeSource.replaceAll(from, to);
-menuRuntimeSource = menuRuntimeSource.replace(/\r\n/g, '\n').replace(/^[ \t]+/gm, '').split('\n').filter(Boolean).join('\n') + '\n';
-await writeFile(menuRuntimePath, menuRuntimeSource);
+const menuReadableSource = await readFile(`${root}admin-menu-layout.js`, 'utf8');
+const menuReadableHash = createHash('sha256').update(menuReadableSource.replace(/\r\n/g, '\n')).digest('hex');
+const menuCompactSource = await readFile(`${root}admin-menu-layout.compact.js`, 'utf8');
+const menuCompactHeader = menuCompactSource.match(/^\/\/ source-sha256:([a-f0-9]{64})\r?\n/);
+if (!menuCompactHeader || menuCompactHeader[1] !== menuReadableHash) throw new Error('Admin menu compact runtime is stale; regenerate it from admin-menu-layout.js');
+await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].length));
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
