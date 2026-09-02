@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-ai-control",
+    "config": "wrangler.ai.release.toml",
+    "allowFirstDeploy": true,
+    "requests": [
+      {"url":"https://ai.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["AI Control Plane","명령은 한 번","Google 로그인"]},
+      {"url":"https://ai.ekodi.kr/config.js","statuses":[200],"expect":["ai-control","free-first","humanApprovalRequired"]},
+      {"url":"https://ai.ekodi.kr/api/status","statuses":[200],"expect":["\"ok\":true","\"platform\":\"ai-control\"","\"stateStore\":\"ready\""]}
+    ]
+  }
+}
