@@ -203,8 +203,15 @@
         "url": "https://mail.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI Mail", "내 메일을 안전하게 불러오는 중입니다."],
-        "headerExpect": ["x-ekodi-route: mail-readonly", "x-ekodi-shell: v2", "cache-control: no-store"]
+        "expect": ["EKODI Mail", "권한 있는 메일 계정을 불러오는 중입니다."],
+        "headerExpect": ["x-ekodi-route: mail-hub", "x-ekodi-shell: v2", "cache-control: no-store"]
+      },
+      {
+        "url": "https://mail.ekodi.kr/admin",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Mail Admin", "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."],
+        "headerExpect": ["x-ekodi-route: mail-admin", "cache-control: no-store"]
       },
       {
         "url": "https://live.ekodi.kr/",
