@@ -29,6 +29,10 @@ function rootInternalPath(pathname){
   const path=normalizedPath(pathname);
   return path==='/admin'||path==='/admin.html'||path.startsWith('/admin/');
 }
+function customerOwnedRootPath(pathname){
+  const path=normalizedPath(pathname);
+  return path==='/cgma'||path.startsWith('/cgma/');
+}
 
 function effectiveRequest(request, env) {
   const original = new URL(request.url);
@@ -56,7 +60,7 @@ export default {
     const response = await siteWorker.fetch(effective.request, env, ctx);
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
-      if(rootInternalPath(pathname))return response;
+      if(rootInternalPath(pathname)||customerOwnedRootPath(pathname))return response;
       const serviceId=rootUserService(pathname);
       if(serviceId)return injectEkodiShell(response,serviceId);
       return injectEkodiUserUi(response,'ekodi','public');

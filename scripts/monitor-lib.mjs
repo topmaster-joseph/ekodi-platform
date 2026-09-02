@@ -60,6 +60,10 @@ const MARKETING_TENANT_SITES = marketingTenants.tenants.map(row => [
   `https://${row.domain}${row.landingPath || '/'}`
 ]);
 
+const MARKETING_CANONICAL_SITES = marketingTenants.tenants
+  .filter(row => row.canonicalSiteUrl)
+  .map(row => { const url=new URL(row.canonicalSiteUrl); return [`marketing-canonical-${row.tenant}`,`${row.name} canonical site`,url.hostname,url.toString()]; });
+
 const MARKETING_PUBLIC_SITES = marketingTenants.tenants
   .filter(row => row.publicSiteDomain && row.visibility !== 'private')
   .map(row => [
@@ -115,6 +119,7 @@ export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
   ...BUSINESS_CHAIN_SITES,
   ...SERVICE_SITES,
   ...MARKETING_TENANT_SITES,
+  ...MARKETING_CANONICAL_SITES,
   ...MARKETING_PUBLIC_SITES,
   ...MARKETING_PRIVATE_SITES,
   ...MARKETING_ALIAS_SITES,

@@ -40,6 +40,8 @@ const HUB_HOSTS = new Set([
 
 const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
 const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
+const CGMA_PREFIX = '/cgma';
+const CGMA_UPSTREAM = 'https://cheonggye-market.pages.dev';
 
 const ADMIN_ALIASES = new Set([
   '/',
@@ -190,6 +192,20 @@ const HUB_CSP = [
   "object-src 'none'",
 ].join('; ');
 
+const CGMA_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://static.cloudflareinsights.com",
+  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://static.cloudflareinsights.com",
+  "img-src 'self' data: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "frame-src https://meet.jit.si https://www.youtube.com https://www.youtube-nocookie.com https://docs.google.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://docs.google.com",
+  "object-src 'none'",
+].join('; ');
+
 function assetRequest(request, pathname) {
   const url = new URL(request.url);
   url.pathname = pathname;
@@ -320,6 +336,40 @@ async function proxyAdminMarketingPublishing(request) {
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
 }
 
+class CgmaRootAttributeRewriter {
+  constructor(name){this.name=name}
+  element(element){
+    const value=element.getAttribute(this.name);
+    if(!value||!value.startsWith('/')||value.startsWith('//')||value===CGMA_PREFIX||value.startsWith(CGMA_PREFIX+'/'))return;
+    element.setAttribute(this.name,CGMA_PREFIX+value);
+  }
+}
+class CgmaHeadInjector {
+  element(element){
+    element.prepend('<script src="/cgma/site-path.js?v=20260902-canonical"></script>',{html:true});
+    element.append('<link rel="canonical" href="https://ekodi.kr/cgma">',{html:true});
+  }
+}
+function cgmaProxyRequest(request){
+  const source=new URL(request.url), target=new URL(CGMA_UPSTREAM);
+  const suffix=source.pathname===CGMA_PREFIX||source.pathname===CGMA_PREFIX+'/'?'/':source.pathname.slice(CGMA_PREFIX.length)||'/';
+  target.pathname=suffix; target.search=source.search;
+  const headers=new Headers(request.headers);headers.delete('host');headers.delete('origin');
+  return new Request(target,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:'manual'});
+}
+async function proxyCgma(request){
+  const upstream=await fetch(cgmaProxyRequest(request));
+  const headers=new Headers(upstream.headers);headers.delete('x-robots-tag');headers.set('x-ekodi-cgma-upstream','cheonggye-market-pages');
+  const location=headers.get('location');
+  if(location){try{const next=new URL(location,CGMA_UPSTREAM);if(next.origin===CGMA_UPSTREAM){headers.set('location','https://ekodi.kr/cgma'+(next.pathname==='/'?'':next.pathname)+next.search+next.hash)}}catch{}}
+  let response=new Response(upstream.body,{status:upstream.status,statusText:upstream.statusText,headers});
+  if(String(headers.get('content-type')||'').toLowerCase().includes('text/html')){
+    response=new HTMLRewriter().on('head',new CgmaHeadInjector()).on('[href]',new CgmaRootAttributeRewriter('href')).on('[src]',new CgmaRootAttributeRewriter('src')).on('[action]',new CgmaRootAttributeRewriter('action')).transform(response);
+  }
+  const cache=headers.get('cache-control')||(['GET','HEAD'].includes(request.method)?'public, max-age=30':'no-store');
+  return withHostSecurity(response,CGMA_CSP,cache,'public-cgma-proxy');
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -328,6 +378,7 @@ export default {
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
     if (host === PUBLIC_HOST) {
+      if (url.pathname === CGMA_PREFIX || url.pathname.startsWith(CGMA_PREFIX + '/')) return proxyCgma(request);
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));

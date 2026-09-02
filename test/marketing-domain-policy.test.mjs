@@ -39,14 +39,16 @@ test('Pro custom domain means mapping a customer-owned hostname, not giving away
   assert.equal(cfg.policy.customDomain.mappingOnly, true);
 });
 
-test('CGMA organization site is private and separate from its AI workspace', () => {
+test('CGMA uses EKODI root canonical paths while its AI workspace remains private', () => {
   const cgma = cfg.tenants.find((row) => row.tenant === 'cgma');
   assert.ok(cgma);
   assert.equal(cgma.tenantType, 'organization');
   assert.equal(cgma.visibility, 'private');
-  assert.equal(cgma.privateSiteDomain, 'cgma.ekodi.kr');
-  assert.equal(cgma.publicSiteDomain, undefined);
+  assert.equal(cgma.privateSiteDomain, undefined);
+  assert.equal(cgma.canonicalSiteUrl, 'https://ekodi.kr/cgma');
+  assert.equal(cgma.canonicalAiUrl, 'https://ekodi.kr/cgma/ai');
+  assert.deepEqual(cgma.customDomains, ['cgma.or.kr']);
   assert.equal(cgma.domain, 'cgma.ai.ekodi.kr');
   assert.equal(cgma.landingPath, '/market-ai');
-  assert.ok(!cgma.legacyDomains.includes('cgma.ekodi.kr'));
+  assert.ok(cgma.legacyDomains.includes('cgma.ekodi.kr'));
 });
