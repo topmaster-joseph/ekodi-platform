@@ -18,7 +18,7 @@ function loginUrl(){const u=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=tr
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function slug(v){return String(v||'counterparty').trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,'-').replace(/^-|-$/g,'').slice(0,60)||crypto.randomUUID().slice(0,8)}
 function tenantRole(){return active?.role||'member'}
-function canManage(){return ['tenant_admin','owner','manager','admin','platform_admin'].includes(tenantRole())}
+function canManage(){return tenantRole()==='tenant_admin'}
 function setTab(name){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('hide',el.id!==`tab-${name}`));document.querySelectorAll('.tabs button').forEach(el=>el.classList.toggle('active',el.dataset.tab===name))}
 
 document.querySelectorAll('.tabs button').forEach(btn=>btn.onclick=()=>setTab(btn.dataset.tab));
@@ -53,7 +53,7 @@ async function insert(name,payload){
 async function loadData(){
   if(!active)return;
   $('tenantName').textContent=active.workspace_name||active.tenant||'고객사';
-  $('roleInfo').textContent=`현재 권한: ${tenantRole()} · 데이터 경계: tenant ${active.tenant_id} · 다른 고객사 데이터는 RLS에서 차단됩니다.`;
+  $('roleInfo').textContent=`현재 권한: ${tenantRole()} · 데이터 경계: tenant ${active.tenant_id} · 다른 고객사 데이터는 RLS에서 차단됩니다. 플랫폼 관리자 권한은 고객사 권한으로 자동 전환되지 않습니다.`;
   const q=`tenant_id=eq.${encodeURIComponent(active.tenant_id)}&order=updated_at.desc`;
   [counterparties,cases]=await Promise.all([table('trade_counterparties',q),table('trade_cases',q)]);
   render();
