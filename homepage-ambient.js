@@ -18,13 +18,6 @@
     { label:'콘텐츠와 글쓰기', copy:'글·출판·콘텐츠에 필요한 길', query:'콘텐츠 글쓰기 출판 책 창작', preferred:['author','publishing','books','social','lab'] },
   ];
 
-  const localeOptions = [
-    { code:'ko-KR', short:'KO', label:'한국어' },
-    { code:'en', short:'EN', label:'English' },
-    { code:'zh-CN', short:'中', label:'中文(简体)' },
-    { code:'ja', short:'JA', label:'日本語' },
-  ];
-
   const localeCopy = {
     'ko-KR': {
       about:'소개', login:'로그인', start:'무료로 시작', hero:'원하는 일, 바로 시작하세요',
@@ -86,13 +79,41 @@
 
   function getLocale() {
     try {
-      const saved = localStorage.getItem('ekodi.locale');
+      const item = String(document.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith('ekodi_locale='));
+      if (item) return normalizeLocale(decodeURIComponent(item.slice('ekodi_locale='.length)));
+    } catch {}
+    try {
+      const saved = localStorage.getItem('ekodi_user_locale') || localStorage.getItem('ekodi.locale');
       if (saved) return normalizeLocale(saved);
     } catch {}
     return normalizeLocale(navigator.language);
   }
 
   const copy = (locale, key) => localeCopy[locale]?.[key] ?? localeCopy['ko-KR'][key];
+
+  const pageCopy = Object.freeze({
+    'ko-KR':{live:'운영중',beta:'테스트',services:'현재 이용 가능한 플랫폼',aboutMain:'는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.',aboutSub:'EKODI connects community, ministry, business, creativity, and everyday life while keeping each person and platform free to stand on its own.',pills:['사람 중심 · Human-centered','독립 플랫폼 · Independent','필요한 연결 · Connected by choice'],groups:{'community-ministry':['공동체 · 사역','Community & Ministry'],'business-growth':['비즈니스 · 성장','Business & Growth'],'knowledge-creation':['지식 · 콘텐츠','Knowledge & Content'],'work-life':['일 · 생활','Work & Life']},connect:{kicker:'CONNECTED ECOSYSTEM · 연결',title:'각 플랫폼은 독립적으로, 필요한 곳에서 연결됩니다',sub:'Independent by design. Connected by choice.',body:'서비스의 목적과 운영 경계는 분명히 유지하고, 계정·데이터·AI는 허용된 범위에서만 이어집니다.',bodySub:'Each service keeps a clear purpose and boundary. Accounts, data, and AI connect only where permitted.',points:[['하나의 입구','One entrance','ekodi.kr에서 전체 생태계를 찾습니다.'],['독립 운영','Independent services','플랫폼마다 목적과 정체성을 지킵니다.'],['필요한 연결','Connected by choice','사람이 선택한 범위 안에서만 연결합니다.']]},contact:{kicker:'CONTACT · 문의',title:'어디에서 시작할지 모르겠다면',sub:'Not sure where to begin?',body:'비즈니스와 협력은 에코디비즈, 공동체와 사역은 커뮤니티에서 시작할 수 있습니다.',bodySub:'Start with EKODI Biz for business and collaboration, or Community for people and ministry.',actions:['비즈니스 문의','공동체 연결']}},
+    en:{live:'Live',beta:'Beta',services:'Available platforms',aboutMain:' connects community, ministry, business, creativity, and everyday life while protecting each person’s choice and independence.',aboutSub:'',pills:['Human-centered','Independent platforms','Connected by choice'],groups:{'community-ministry':['Community & Ministry',''],'business-growth':['Business & Growth',''],'knowledge-creation':['Knowledge & Content',''],'work-life':['Work & Life','']},connect:{kicker:'CONNECTED ECOSYSTEM',title:'Independent by design. Connected where needed.',sub:'',body:'Each service keeps a clear purpose and operating boundary. Accounts, data, and AI connect only where permitted.',bodySub:'',points:[['One entrance','','Find the whole ecosystem at ekodi.kr.'],['Independent services','','Each platform keeps its purpose and identity.'],['Connected by choice','','Connections happen only within the scope people choose.']]},contact:{kicker:'CONTACT',title:'Not sure where to begin?',sub:'',body:'Start with EKODI Biz for business and collaboration, or Community for people and ministry.',bodySub:'',actions:['Business inquiry','Community connection']}},
+    'zh-CN':{live:'运行中',beta:'测试',services:'当前可用平台',aboutMain:'连接社区、事工、商业、创作与日常生活，同时尊重每个人的选择与独立性。',aboutSub:'',pills:['以人为本','平台独立','按需连接'],groups:{'community-ministry':['社区 · 事工',''],'business-growth':['商业 · 成长',''],'knowledge-creation':['知识 · 内容',''],'work-life':['工作 · 生活','']},connect:{kicker:'连接生态',title:'各平台独立运行，在需要之处彼此连接。',sub:'',body:'每项服务都保持清晰的目标与运营边界，账户、数据与 AI 仅在获准范围内连接。',bodySub:'',points:[['一个入口','','从 ekodi.kr 找到整个生态。'],['独立运营','','每个平台保有自己的目标与身份。'],['按需连接','','只在用户选择的范围内建立连接。']]},contact:{kicker:'联系我们',title:'不知道从哪里开始？',sub:'',body:'商务与合作可从 EKODI Biz 开始，社区与事工可从 Community 开始。',bodySub:'',actions:['商务咨询','连接社区']}},
+    ja:{live:'運用中',beta:'テスト',services:'現在利用できるプラットフォーム',aboutMain:'は、一人ひとりの選択と自立を大切にしながら、コミュニティ、ミニストリー、ビジネス、創作、暮らしをつなぐプラットフォーム・エコシステムです。',aboutSub:'',pills:['人を中心に','独立したプラットフォーム','必要なつながり'],groups:{'community-ministry':['コミュニティ · ミニストリー',''],'business-growth':['ビジネス · 成長',''],'knowledge-creation':['知識 · コンテンツ',''],'work-life':['仕事 · 暮らし','']},connect:{kicker:'CONNECTED ECOSYSTEM',title:'各プラットフォームは独立し、必要な場所でつながります。',sub:'',body:'サービスごとの目的と運営境界を明確に保ち、アカウント・データ・AI は許可された範囲でのみ連携します。',bodySub:'',points:[['一つの入口','','ekodi.kr からエコシステム全体を探せます。'],['独立運営','','各プラットフォームが目的とアイデンティティを守ります。'],['必要なつながり','','人が選んだ範囲の中でのみつながります。']]},contact:{kicker:'お問い合わせ',title:'どこから始めればよいかわからないときは',sub:'',body:'ビジネスと協力は EKODI Biz、コミュニティとミニストリーは Community から始められます。',bodySub:'',actions:['ビジネス相談','コミュニティにつながる']}}
+  });
+  const serviceCopy = Object.freeze({
+    church:{'zh-CN':['爱可迪教会','礼拜、圣经话语与共同体的空间'],ja:['エコディ教会','礼拝とみことば、コミュニティの場']},
+    bible:{'zh-CN':['爱可迪圣经对话','从生活问题到圣经话语，再到默想、实践与共同体分享'],ja:['エコディ聖書対話','暮らしの問いからみことばへ、黙想・実践・共同体の分かち合いへ']},
+    community:{'zh-CN':['社区','连接人与聚会及参与'],ja:['コミュニティ','人、集まり、参加をつなぐ']},
+    social:{'zh-CN':['EKODI Social','汇聚 EKODI 的社交动态'],ja:['EKODI Social','EKODI のソーシャルの流れを一か所に']},
+    biz:{'zh-CN':['EKODI Biz','业务与成长的执行枢纽'],ja:['EKODI Biz','事業と成長の実行ハブ']},
+    mall:{'zh-CN':['爱可迪商城','轻松快速找到日常所需商品'],ja:['エコディモール','暮らしに必要な商品を手軽に見つけるショッピングモール']},
+    marketing:{'zh-CN':['Marketing AI','面向小商户与组织的 AI 营销'],ja:['Marketing AI','小規模事業者と組織のための AI マーケティング']},
+    books:{'zh-CN':['爱可迪书店','连接图书探索、销售与独立网上书店'],ja:['エコディ書店','本の発見・販売と独立オンライン書店をつなぐ']},
+    publishing:{'zh-CN':['出版','提供出版咨询、制作、代理、发行与工作室服务'],ja:['出版','出版相談・制作・出版代行・流通・スタジオを提供']},
+    author:{'zh-CN':['Creator AI','支持写作及更广泛创作工作的 AI'],ja:['Creator AI','文章だけでなく創作全般を支える AI']},
+    lab:{'zh-CN':['爱可迪研究所','积累研究、证据与实验'],ja:['エコディ研究所','研究・根拠・実験を蓄積']},
+    life:{'zh-CN':['今日问题','从关系、金钱、工作、家庭、内心、未来、信仰与人生问题开始的 Life AI'],ja:['今日の質問','関係・お金・仕事・家族・心・未来・信仰・人生の問いから始まる Life AI']},
+    my:{'zh-CN':['My EKODI','集中管理我的活动与服务'],ja:['My EKODI','自分の活動とサービスを一か所に']},
+    space:{'zh-CN':['运营空间','以固定空间 ID 与权限连接个人、机构、团体和项目空间'],ja:['運営スペース','不変のスペース ID と権限で個人・機関・団体・プロジェクトをつなぐ']},
+    work:{'zh-CN':['EKODI Work','执行工作与项目的空间'],ja:['EKODI Work','仕事とプロジェクトを実行する空間']}
+  });
 
   function installMessageUI() {
     if (window.EKODIMessage || document.querySelector('script[data-ekodi-message-runtime]')) return;
@@ -112,24 +133,6 @@
     document.head.appendChild(style);
   }
 
-  function installLanguageStyle() {
-    if (document.querySelector('#ekodi-homepage-language-style')) return;
-    const style = document.createElement('style');
-    style.id = 'ekodi-homepage-language-style';
-    style.textContent = `
-      .language-menu{position:relative;flex:0 0 auto}
-      .language-menu summary{min-height:34px;display:flex;align-items:center;gap:5px;padding:0 10px;border:1px solid rgba(69,103,81,.1);border-radius:999px;background:rgba(255,255,255,.55);color:#5e7566;cursor:pointer;list-style:none;font-size:10px;font-weight:850}
-      .language-menu summary::-webkit-details-marker{display:none}
-      .language-menu summary span{font-size:12px}.language-menu summary b{font-size:9px}
-      .language-options{position:absolute;top:calc(100% + 8px);right:0;z-index:20;width:156px;padding:6px;border:1px solid rgba(69,103,81,.1);border-radius:15px;background:rgba(255,255,255,.96);box-shadow:0 16px 42px rgba(56,76,63,.12);backdrop-filter:blur(16px)}
-      .language-options button{width:100%;min-height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 9px;border:0;border-radius:9px;background:transparent;color:#506358;cursor:pointer;font:inherit;font-size:10px;text-align:left}
-      .language-options button:hover,.language-options button:focus-visible,.language-options button[aria-checked="true"]{background:#f2f7f1;outline:0}
-      .language-options small{color:#91a098;font-size:8px}
-      @media(max-width:640px){.language-menu summary{width:34px;justify-content:center;padding:0}.language-menu summary b{display:none}.language-options{right:-44px}}
-    `;
-    document.head.appendChild(style);
-  }
-
   function seoulDateKey(now = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' });
     const values = Object.fromEntries(formatter.formatToParts(now).map(part => [part.type, part.value]));
@@ -143,41 +146,6 @@
       hash = Math.imul(hash, 16777619);
     }
     return hash >>> 0;
-  }
-
-  function installLanguageSelector(nav, locale) {
-    if (!nav) return;
-    const details = document.createElement('details');
-    details.className = 'language-menu';
-    details.dataset.ekodiLanguage = 'v1';
-    const selected = localeOptions.find(item => item.code === locale) || localeOptions[0];
-
-    const summary = document.createElement('summary');
-    summary.setAttribute('aria-label', 'Language');
-    summary.innerHTML = `<span aria-hidden="true">◎</span><b>${selected.short}</b>`;
-
-    const menu = document.createElement('div');
-    menu.className = 'language-options';
-    menu.setAttribute('role', 'menu');
-    for (const option of localeOptions) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.dataset.locale = option.code;
-      button.setAttribute('role', 'menuitemradio');
-      button.setAttribute('aria-checked', String(option.code === locale));
-      button.innerHTML = `<span>${option.label}</span><small>${option.short}</small>`;
-      button.addEventListener('click', () => {
-        try { localStorage.setItem('ekodi.locale', option.code); } catch {}
-        window.location.reload();
-      });
-      menu.append(button);
-    }
-    details.append(summary, menu);
-    nav.append(details);
-
-    document.addEventListener('click', event => {
-      if (details.open && !details.contains(event.target)) details.open = false;
-    });
   }
 
   function setHookFirstHero(locale) {
@@ -195,17 +163,18 @@
     const nav = document.querySelector('.site-header .nav');
     const login = nav?.querySelector('.login');
     if (nav) {
+      const utilities = [...nav.querySelectorAll('[data-ekodi-language-control],#ekodi-ccm-mr-toggle')];
       nav.replaceChildren();
       const about = document.createElement('a');
       about.href = '#about';
       about.textContent = copy(locale, 'about');
       nav.append(about);
-      installLanguageSelector(nav, locale);
       if (login) {
-        login.innerHTML = copy(locale, 'login');
+        login.textContent = copy(locale, 'login');
         login.setAttribute('aria-label', copy(locale, 'login'));
         nav.append(login);
       }
+      utilities.forEach(node => nav.append(node));
     }
 
     const actions = document.querySelector('.hero-actions');
@@ -223,11 +192,50 @@
         signIn.textContent = copy(locale, 'login');
         actions.append(signIn);
       }
-      const note = document.createElement('p');
-      note.className = 'hero-note';
+      let note = document.querySelector('.hero-note');
+      if (!note) {
+        note = document.createElement('p');
+        note.className = 'hero-note';
+        actions.after(note);
+      }
       note.textContent = copy(locale, 'note');
-      actions.after(note);
     }
+  }
+
+  function setHeading(node, main, sub='') {
+    if (!node) return;
+    node.replaceChildren(document.createTextNode(main));
+    if (sub) { const span=document.createElement('span'); span.textContent=sub; node.append(span); }
+  }
+
+  function applyPageLocale(locale) {
+    const c=pageCopy[locale]||pageCopy['ko-KR'];
+    document.documentElement.lang=locale;
+    document.documentElement.dataset.locale=locale;
+    const about=document.querySelector('#about .about-grid > p');
+    if(about){about.replaceChildren();const brand=document.createElement('strong');brand.textContent='EKODI';about.append(brand,document.createTextNode(c.aboutMain));if(c.aboutSub){const span=document.createElement('span');span.textContent=c.aboutSub;about.append(span);}}
+    [...document.querySelectorAll('#about .about-pills > span')].forEach((node,index)=>{if(c.pills[index])node.textContent=c.pills[index];});
+    const servicesHeading=document.querySelector('#services > h2.sr-only');if(servicesHeading)servicesHeading.textContent=c.services;
+    document.querySelector('#ecosystem')?.setAttribute('aria-label',c.services);
+    for(const group of document.querySelectorAll('.service-group[data-service-category]')){
+      const pair=c.groups[group.dataset.serviceCategory];if(!pair)continue;
+      const strong=group.querySelector('.service-group-heading h3 strong');const small=group.querySelector('.service-group-heading h3 small');
+      if(strong)strong.textContent=pair[0];if(small){small.textContent=pair[1]||'';small.hidden=!pair[1];}
+    }
+    for(const card of document.querySelectorAll('.service-card[data-service-id]')){
+      const title=card.querySelector('.service-title strong');const enTitle=card.querySelector('.service-name-en');const desc=card.querySelector('.service-description > span');const enDesc=card.querySelector('.service-description small');
+      if(title&&!card.dataset.ekodiKoTitle)card.dataset.ekodiKoTitle=title.textContent.trim();if(enTitle&&!card.dataset.ekodiEnTitle)card.dataset.ekodiEnTitle=enTitle.textContent.trim();
+      if(desc&&!card.dataset.ekodiKoDescription)card.dataset.ekodiKoDescription=desc.textContent.trim();if(enDesc&&!card.dataset.ekodiEnDescription)card.dataset.ekodiEnDescription=enDesc.textContent.trim();
+      const custom=serviceCopy[card.dataset.serviceId]?.[locale];
+      if(locale==='ko-KR'){if(title)title.textContent=card.dataset.ekodiKoTitle||title.textContent;if(desc)desc.textContent=card.dataset.ekodiKoDescription||desc.textContent;}
+      else if(locale==='en'){if(title)title.textContent=card.dataset.ekodiEnTitle||card.dataset.ekodiKoTitle;if(desc)desc.textContent=card.dataset.ekodiEnDescription||card.dataset.ekodiKoDescription;}
+      else {if(title)title.textContent=custom?.[0]||card.dataset.ekodiEnTitle||card.dataset.ekodiKoTitle;if(desc)desc.textContent=custom?.[1]||card.dataset.ekodiEnDescription||card.dataset.ekodiKoDescription;}
+      if(enTitle)enTitle.hidden=locale!=='ko-KR';if(enDesc)enDesc.hidden=locale!=='ko-KR';
+      const status=card.querySelector('.service-status b');const statusSub=card.querySelector('.service-status span');if(status)status.textContent=card.dataset.serviceStatus==='beta'?c.beta:c.live;if(statusSub)statusSub.hidden=locale!=='ko-KR';
+    }
+    const connect=document.querySelector('#connect');if(connect){const kicker=connect.querySelector('.section-kicker');if(kicker)kicker.textContent=c.connect.kicker;setHeading(connect.querySelector('h2'),c.connect.title,c.connect.sub);setHeading(connect.querySelector('p:not(.section-kicker)'),c.connect.body,c.connect.bodySub);[...connect.querySelectorAll('.connect-point')].forEach((node,index)=>{const p=c.connect.points[index];if(!p)return;const strong=node.querySelector('strong'),small=node.querySelector('small'),span=node.querySelector('span');if(strong)strong.textContent=p[0];if(small){small.textContent=p[1]||'';small.hidden=!p[1];}if(span)span.textContent=p[2];});}
+    const contact=document.querySelector('#contact');if(contact){const kicker=contact.querySelector('.section-kicker');if(kicker)kicker.textContent=c.contact.kicker;setHeading(contact.querySelector('h2'),c.contact.title,c.contact.sub);setHeading(contact.querySelector('p:not(.section-kicker)'),c.contact.body,c.contact.bodySub);[...contact.querySelectorAll('.contact-actions a')].forEach((node,index)=>{if(c.contact.actions[index])node.textContent=c.contact.actions[index];});}
+    for(const node of document.querySelectorAll('.status-satellite')){const status=node.dataset.status;const b=node.querySelector('b'),span=node.querySelector('span');if(b)b.textContent=status==='beta'?c.beta:c.live;if(span)span.hidden=locale!=='ko-KR';}
   }
 
   function serviceData(card) {
@@ -443,10 +451,15 @@
 
   function installSecondaryLinks(locale) {
     const note = document.querySelector('.footer-note');
-    if (!note || note.querySelector('[data-ekodi-secondary-links]')) return;
-    const links = document.createElement('span');
-    links.dataset.ekodiSecondaryLinks = 'v2';
-    links.className = 'secondary-links';
+    if (!note) return;
+    let links = note.querySelector('[data-ekodi-secondary-links]');
+    if (!links) {
+      links = document.createElement('span');
+      links.dataset.ekodiSecondaryLinks = 'v2';
+      links.className = 'secondary-links';
+      note.append(links);
+    }
+    links.replaceChildren();
     const history = document.createElement('a');
     history.href = '/history';
     history.dataset.ekodiHistoryLink = 'v1';
@@ -464,16 +477,22 @@
     note.append(links);
   }
 
+  function renderHomepageLocale(locale) {
+    const next=normalizeLocale(locale);
+    setHookFirstHero(next);
+    applyPageLocale(next);
+    installSecondaryLinks(next);
+    const cards=[...document.querySelectorAll('.service-card[data-service-status][data-service-id]')].filter(card=>!card.hasAttribute('hidden'));
+    buildDailyPanel(cards,next);
+  }
+
   async function start() {
     installMessageUI();
     installPresentationStyle();
-    installLanguageStyle();
 
     const locale = getLocale();
     document.documentElement.lang = locale;
     document.documentElement.dataset.locale = locale;
-    setHookFirstHero(locale);
-    installSecondaryLinks(locale);
 
     const root = document.documentElement;
     const dateKey = seoulDateKey();
@@ -487,9 +506,9 @@
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);
-    const cards = allCards.filter(card => !card.hasAttribute('hidden'));
-    buildDailyPanel(cards, locale);
+    renderHomepageLocale(locale);
   }
 
+  window.addEventListener('ekodi:locale-change', event => renderHomepageLocale(event.detail?.locale || getLocale()));
   start().catch(error => console.warn('[EKODI] hook-first gateway failed to initialize.', error));
 })();
