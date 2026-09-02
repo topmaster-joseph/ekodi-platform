@@ -432,3 +432,18 @@ main#platform{padding-top:18px!important}
   body::before{animation:none}
   *{transition:none!important}
 }
+
+
+/* EKODI homepage intent journey v5 */
+.about-grid{grid-template-columns:1fr!important;justify-items:center!important;gap:10px!important;text-align:center}
+.about-strip{max-width:1080px!important;margin:0 auto 22px!important;padding:16px 0!important}
+.about-strip p{max-width:920px!important;text-align:center!important}
+.about-pills{justify-content:center!important}
+.hero{display:flex!important;flex-direction:column!important;max-width:760px!important;margin:0 auto!important;min-height:0!important;gap:16px!important;padding:32px 0 28px!important}
+.hero-copy{width:100%!important;max-width:760px!important}
+.hero>.info-panel,.ecosystem-pulse.living-daily{width:100%!important;max-width:760px!important}
+.hero>#connect{margin:0!important}
+body[data-living-gateway="v5-intent-journey"] #ecosystem{display:none!important}
+.lower-grid{max-width:760px!important;grid-template-columns:1fr!important;margin-top:18px!important}
+.intent-chip.is-active{background:#466b55!important;border-color:#466b55!important;color:#fff!important}
+@media(max-width:640px){.about-strip{margin-bottom:14px!important}.hero{padding:20px 0 24px!important;gap:13px!important}.lower-grid{margin-top:13px!important}}

@@ -6,16 +6,11 @@
   ];
 
   const intentSets = [
-    { id:'community', label:'공동체', query:'공동체 모임 교회 사람 연결', preferred:['community','church'] },
-    { id:'ministry', label:'사역', query:'교회 예배 말씀 성경 묵상 기도 사역', preferred:['church','bible','community'] },
-    { id:'business', label:'비즈니스', query:'사업 경영 매장 마케팅 홍보 판매 일', preferred:['marketing','management','work','business','biz'] },
-    { id:'content', label:'콘텐츠', query:'콘텐츠 글 출판 책 연구 소셜 창작', preferred:['author','publishing','books','social','lab'] },
-  ];
-
-  const quickPaths = [
-    { label:'교회와 모임', copy:'공동체와 사역에 필요한 길', query:'교회 공동체 모임 사역 예배', preferred:['church','community','bible'] },
-    { label:'매장과 마케팅', copy:'사업과 홍보에 필요한 길', query:'매장 사업 마케팅 홍보 판매', preferred:['marketing','business','biz','management','work'] },
-    { label:'콘텐츠와 글쓰기', copy:'글·출판·콘텐츠에 필요한 길', query:'콘텐츠 글쓰기 출판 책 창작', preferred:['author','publishing','books','social','lab'] },
+    { id:'all', label:'전체', query:'', preferred:[] },
+    { id:'community-ministry', label:'공동체 · 사역', query:'공동체 사역 교회 예배 말씀 성경 묵상 기도 사람 모임 연결', preferred:['church','community','bible','social'] },
+    { id:'business-growth', label:'비즈니스 · 성장', query:'비즈니스 성장 사업 경영 매장 마케팅 홍보 판매 쇼핑', preferred:['biz','marketing','mall','management','business'] },
+    { id:'knowledge-content', label:'지식 · 콘텐츠', query:'지식 콘텐츠 글 출판 책 연구 창작 소셜', preferred:['books','publishing','author','lab','social'] },
+    { id:'work-life', label:'일 · 생활', query:'일 생활 업무 프로젝트 삶 질문', preferred:['work','life','my'] },
   ];
 
   const localeCopy = {
@@ -27,7 +22,7 @@
       desc:'하고 싶은 일을 고르거나 적어보세요. 필요한 길만 보여드립니다.',
       placeholder:'예: 교회 주보 만들기, 매장 홍보하기', find:'찾기', recommendation:'추천',
       empty:'현재 연결 가능한 서비스를 찾지 못했습니다.',
-      intents:['공동체','사역','비즈니스','콘텐츠'],
+      intents:['전체','공동체 · 사역','비즈니스 · 성장','지식 · 콘텐츠','일 · 생활'],
       paths:[['교회와 모임','공동체와 사역에 필요한 길'],['매장과 마케팅','사업과 홍보에 필요한 길'],['콘텐츠와 글쓰기','글·출판·콘텐츠에 필요한 길']],
       history:'역사', terms:'이용약관', privacy:'개인정보처리방침',
     },
@@ -39,7 +34,7 @@
       desc:'Choose or describe what you want to do. We will show only the relevant paths.',
       placeholder:'e.g. Create a church bulletin, promote my store', find:'Find', recommendation:'Recommendations',
       empty:'No available service matches yet.',
-      intents:['Community','Ministry','Business','Content'],
+      intents:['All','Community · Ministry','Business · Growth','Knowledge · Content','Work · Life'],
       paths:[['Church & groups','For community and ministry'],['Store & marketing','For business and promotion'],['Content & writing','For writing, publishing and content']],
       history:'History', terms:'Terms', privacy:'Privacy',
     },
@@ -51,7 +46,7 @@
       desc:'选择或输入你想做的事，只显示相关路径。',
       placeholder:'例如：制作教会周报、宣传门店', find:'查找', recommendation:'推荐',
       empty:'暂未找到可连接的服务。',
-      intents:['社区','事工','商业','内容'],
+      intents:['全部','社区 · 事工','商业 · 成长','知识 · 内容','工作 · 生活'],
       paths:[['教会与聚会','社区与事工所需路径'],['门店与营销','商业与推广所需路径'],['内容与写作','写作、出版与内容路径']],
       history:'历史', terms:'使用条款', privacy:'隐私政策',
     },
@@ -63,7 +58,7 @@
       desc:'やりたいことを選ぶか入力してください。必要な道だけを表示します。',
       placeholder:'例：教会週報を作る、店舗を宣伝する', find:'検索', recommendation:'おすすめ',
       empty:'現在利用できるサービスが見つかりません。',
-      intents:['コミュニティ','ミニストリー','ビジネス','コンテンツ'],
+      intents:['すべて','コミュニティ · ミニストリー','ビジネス · 成長','知識 · コンテンツ','仕事 · 暮らし'],
       paths:[['教会と集まり','コミュニティとミニストリー'],['店舗とマーケティング','ビジネスと広報'],['コンテンツと執筆','執筆・出版・コンテンツ']],
       history:'沿革', terms:'利用規約', privacy:'プライバシー',
     },
@@ -261,12 +256,8 @@
     }).sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name, 'ko')).slice(0, limit);
   }
 
-  function bestService(cards, path) {
-    return rankServices(cards, path.query, path.preferred, 1)[0]?.item || null;
-  }
-
-  function renderRecommendations(host, cards, query = '', preferred = [], label = '추천', locale = 'ko-KR') {
-    const matches = rankServices(cards, query, preferred, 3);
+  function renderRecommendations(host, cards, query = '', preferred = [], label = '추천', locale = 'ko-KR', limit = 5) {
+    const matches = rankServices(cards, query, preferred, limit);
     host.replaceChildren();
     const heading = document.createElement('p');
     heading.className = 'intent-results-label';
@@ -289,39 +280,12 @@
       link.append(text, arrow);
       host.append(link);
     }
-
     if (!matches.length) {
       const empty = document.createElement('p');
       empty.className = 'intent-empty';
       empty.textContent = copy(locale, 'empty');
       host.append(empty);
     }
-  }
-
-  function buildQuickLinks(cards, locale) {
-    const list = document.createElement('div');
-    list.className = 'quick-paths';
-    list.setAttribute('aria-label', copy(locale, 'quick'));
-
-    quickPaths.forEach((path, index) => {
-      const item = bestService(cards, path);
-      const translated = copy(locale, 'paths')[index] || [path.label, path.copy];
-      const link = document.createElement('a');
-      link.className = 'quick-path';
-      link.href = item?.url || '#services';
-      const text = document.createElement('span');
-      const strong = document.createElement('strong');
-      strong.textContent = translated[0];
-      const small = document.createElement('small');
-      small.textContent = translated[1];
-      const arrow = document.createElement('b');
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '→';
-      text.append(strong, small);
-      link.append(text, arrow);
-      list.append(link);
-    });
-    return list;
   }
 
   function buildDailyPanel(cards, locale) {
@@ -361,8 +325,11 @@
       button.className = 'intent-chip';
       button.textContent = copy(locale, 'intents')[index] || intent.label;
       button.addEventListener('click', () => {
+        chips.querySelectorAll('.intent-chip').forEach(node => node.classList.remove('is-active'));
+        button.classList.add('is-active');
         results.hidden = false;
-        renderRecommendations(results, cards, intent.query, intent.preferred, `${button.textContent} ${copy(locale, 'recommendation')}`, locale);
+        const limit = intent.id === 'all' ? Math.max(1, cards.length) : 5;
+        renderRecommendations(results, cards, intent.query, intent.preferred, `${button.textContent} ${copy(locale, 'recommendation')}`, locale, limit);
       });
       chips.append(button);
     });
@@ -391,8 +358,15 @@
       renderRecommendations(results, cards, query, [], `“${query.slice(0, 24)}” ${copy(locale, 'recommendation')}`, locale);
     });
 
-    panel.append(kicker, title, desc, chips, form, buildQuickLinks(cards, locale), results);
+    panel.append(kicker, title, desc, chips, form, results);
     host.append(panel);
+  }
+
+  function arrangeHomepageJourney() {
+    const hero = document.querySelector('.hero');
+    const host = hero?.querySelector('.ecosystem-pulse');
+    const connect = document.getElementById('connect');
+    if (hero && host && connect && connect.parentElement !== hero) hero.insertBefore(connect, host);
   }
 
   function staticPresentation(card) {
@@ -502,10 +476,11 @@
     keys.forEach((key, index) => root.style.setProperty(key, palette[index]));
     root.dataset.ambientTheme = String((seed % palettes.length) + 1);
     root.dataset.dailyDate = dateKey;
-    document.body.dataset.livingGateway = 'v4-hook-first';
+    document.body.dataset.livingGateway = 'v5-intent-journey';
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);
+    arrangeHomepageJourney();
     renderHomepageLocale(locale);
   }
 
