@@ -1,0 +1,80 @@
+name: Verify EKODI AI Gateway Provider Production
+
+on:
+  workflow_run:
+    workflows: ['Deploy Control API']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-ai-gateway-provider-production-verification
+  cancel-in-progress: true
+
+jobs:
+  verify-provider:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event != 'pull_request' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+      UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Require guarded Control API success
+        if: github.event_name == 'workflow_run'
+        run: |
+          test "$UPSTREAM_CONCLUSION" = 'success' || exit 1
+
+      - name: Verify public Gateway and unauthenticated boundary
+        id: static
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=$(curl -sS -D /tmp/root-h -o /tmp/root -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/')
+          status=$(curl -sS -D /tmp/status-h -o /tmp/status -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ai.ekodi.kr/api/control/ai/provider-status' || true)
+          test "$root" = '200'
+          { [ "$status" = '401' ] || [ "$status" = '403' ]; }
+          grep -Fq 'EKODI AI Gateway' /tmp/root
+          grep -Fiq 'x-ekodi-route: ai-gateway' /tmp/root-h
+          grep -Fiq 'x-ekodi-route: ai-gateway-api-proxy' /tmp/status-h
+
+      # Issue short-lived genuine super-admin session.
+      # Verify Workers AI with an authenticated production request.
+      # Revoke short-lived AI Gateway verification session in the script's finally block.
+      - name: Verify authenticated Workers AI production request
+        id: live
+        run: node scripts/verify-ai-gateway-authenticated-production.mjs
+      - name: Publish provider verification failure checkpoint
+        if: ${{ always() && (steps.static.outcome != 'success' || steps.live.outcome != 'success') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATIC_OUTCOME: ${{ steps.static.outcome }}
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(cat <<EOF
+          ❌ **AI GATEWAY PROVIDER NOT VERIFIED**
+
+          - upstream Control API: \`${UPSTREAM_CONCLUSION:-manual}\`
+          - static Gateway boundary: \`$STATIC_OUTCOME\`
+          - authenticated Workers AI call: \`$LIVE_OUTCOME\`
+          - canonical: https://ai.ekodi.kr/
+          - verification session: short-lived and revoked by verifier
+          - workflow: $RUN_URL
+          - upstream: ${UPSTREAM_RUN_URL:-manual}
+          EOF
+          )
+          gh issue comment 443 --repo "$GITHUB_REPOSITORY" --body "$body"

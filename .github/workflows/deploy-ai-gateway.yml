@@ -14,10 +14,10 @@ on:
       - 'test/ai-gateway-domain.test.mjs'
       - 'test/ai-gateway-auth-flow.test.mjs'
       - 'test/workers-ai-provider-adapter.test.mjs'
-      - 'test/ai-gateway-production-trigger.test.mjs'
+      - 'test/ai-gateway-provider-production.test.mjs'
       - 'scripts/verify-ai-gateway-authenticated-production.mjs'
       - '.github/workflows/deploy-ai-gateway.yml'
-      - '.github/workflows/verify-ai-gateway-production.yml'
+      - '.github/workflows/verify-ai-gateway-provider-production.yml'
   push:
     branches: [main]
     paths: *ai_gateway_paths
@@ -46,7 +46,7 @@ jobs:
           node --check scripts/verify-ai-gateway-authenticated-production.mjs
           node --check platform-router-entry-worker.js
           node --check auth-site/admin-auth.js
-          node --test test/ai-gateway-domain.test.mjs test/ai-gateway-auth-flow.test.mjs test/workers-ai-provider-adapter.test.mjs test/ai-gateway-production-trigger.test.mjs
+          node --test test/ai-gateway-domain.test.mjs test/ai-gateway-auth-flow.test.mjs test/workers-ai-provider-adapter.test.mjs test/ai-gateway-provider-production.test.mjs
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.site.toml
           grep -Fq '[ai]' wrangler.api.toml
           grep -Fq 'binding = "AI"' wrangler.api.toml

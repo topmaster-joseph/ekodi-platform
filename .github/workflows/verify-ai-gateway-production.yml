@@ -2,7 +2,7 @@ name: Verify EKODI AI Gateway Production
 
 on:
   workflow_run:
-    workflows: ['Deploy Control API']
+    workflows: ['Deploy EKODI Shared Site Core', 'Deploy Admin True Lazy Gate', 'Validate AI Gateway']
     types: [completed]
   workflow_dispatch:
 
@@ -18,19 +18,12 @@ jobs:
   verify:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event != 'pull_request' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     env:
       UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
       UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
       UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-
       - name: Require guarded upstream success
         if: github.event_name == 'workflow_run'
         run: |
@@ -76,19 +69,11 @@ jobs:
           test "$passed" = 'true' || (echo 'AI Gateway production verification failed within bounded retries.' && exit 1)
           echo '✅ ai.ekodi.kr production auth-handoff contract verified.'
 
-      # Issue short-lived genuine super-admin session.
-      # Verify Workers AI with an authenticated production request.
-      # Revoke short-lived AI Gateway verification session in the script's finally block.
-      - name: Verify authenticated Workers AI production request
-        id: live
-        run: node scripts/verify-ai-gateway-authenticated-production.mjs
-
       - name: Publish AI Gateway production failure checkpoint
-        if: ${{ always() && (steps.gateway.outcome != 'success' || steps.live.outcome != 'success') }}
+        if: ${{ always() && steps.gateway.outcome != 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          STATIC_OUTCOME: ${{ steps.gateway.outcome }}
-          LIVE_OUTCOME: ${{ steps.live.outcome }}
+          VERIFY_OUTCOME: ${{ steps.gateway.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           CURRENT_SHA: ${{ github.sha }}
         shell: bash
@@ -100,10 +85,10 @@ jobs:
 
           - commit: \`$commit\`
           - guarded upstream: \`${UPSTREAM_CONCLUSION:-manual}\`
-          - AI Gateway static contract: \`$STATIC_OUTCOME\`
-          - authenticated Workers AI request: \`$LIVE_OUTCOME\`
+          - AI Gateway production check: \`$VERIFY_OUTCOME\`
+          - auth handoff: hash token retained until session validation, memory fallback enabled
           - canonical: https://ai.ekodi.kr/
-          - security: unauthenticated session/provider status rejected; verification session is short-lived and revoked
+          - security: unauthenticated session/provider status rejected
           - verification workflow: $RUN_URL
           - upstream workflow: ${UPSTREAM_RUN_URL:-manual}
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
