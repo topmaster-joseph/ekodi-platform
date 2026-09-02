@@ -67,15 +67,15 @@ test('Creator Billing belongs to Books and is not loaded by Finance', async () =
   assert.match(author, /\[data-books-pane="finance"\]/);
   assert.doesNotMatch(author, /#financeTitle/);
   const loader = await read('admin-demand-loader.js');
-  const financeStart = loader.indexOf('function bindBaseEnhancements()');
-  const requestedStart = loader.indexOf('function requestedFeature()');
   const installStart = loader.indexOf('function install()');
   const authStart = loader.indexOf('onAuthState();', installStart);
-  assert.ok(financeStart >= 0 && requestedStart > financeStart && installStart > requestedStart && authStart > installStart);
-  assert.doesNotMatch(loader.slice(financeStart, requestedStart), /author-billing/);
+  assert.ok(installStart >= 0 && authStart > installStart);
   const booksBinding = loader.slice(installStart, authStart);
-  assert.match(booksBinding, /author-billing-admin\.css/);
-  assert.match(booksBinding, /author-billing-admin\.js/);
+  assert.match(booksBinding, /data-section=.*books/);
+  assert.ok(booksBinding.includes('author-billing-admin.css'));
+  assert.ok(booksBinding.includes('author-billing-admin.js'));
+  assert.doesNotMatch(loader.slice(0, installStart), /author-billing-admin/);
+  assert.doesNotMatch(loader.slice(authStart), /author-billing-admin/);
 });
 
 test('Admin registry exposes Tax as an external professional service', async () => {
