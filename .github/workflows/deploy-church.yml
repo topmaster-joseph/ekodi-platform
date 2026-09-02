@@ -90,7 +90,7 @@ jobs:
           set -euo pipefail
           church_sha=$(git -C church rev-parse HEAD)
           branch="central-${church_sha:0:8}"
-          npx --yes wrangler@${WRANGLER_VERSION} pages deploy church --project-name ekodi-church --branch "$branch" --commit-hash "$church_sha" --commit-dirty=true 2>&1 | tee /tmp/church-preview.log
+          (cd church && npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch "$branch" --commit-hash "$church_sha" --commit-dirty=true) 2>&1 | tee /tmp/church-preview.log
           preview_url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' /tmp/church-preview.log | tail -1 || true)
           test -n "$preview_url"
           echo "PREVIEW_URL=$preview_url" >> "$GITHUB_ENV"
@@ -130,7 +130,8 @@ jobs:
         run: |
           set -euo pipefail
           church_sha=$(git -C church rev-parse HEAD)
-          npx --yes wrangler@${WRANGLER_VERSION} pages deploy church --project-name ekodi-church --branch main --commit-hash "$church_sha" --commit-dirty=true
+          cd church
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-hash "$church_sha" --commit-dirty=true
       - name: Verify church production
         shell: bash
         run: |
