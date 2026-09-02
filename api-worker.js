@@ -2,6 +2,8 @@ import authWorker from './auth-worker.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
+import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
+import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -400,6 +402,27 @@ async function overview(env) {
   };
 }
 
+async function evolutionSnapshot(env, force = false) {
+  if (force) await runChecks(env);
+  const controlOverview = await overview(env);
+  const live = analyzeServiceFleet(controlOverview, {
+    sourceUrl: 'https://admin.ekodi.kr/#ai-ops'
+  });
+  await persistEvolutionReport(env.DB, live);
+  const [recommendations, store] = await Promise.all([
+    listEvolutionRecommendations(env.DB, { limit: 100 }),
+    evolutionStoreSummary(env.DB)
+  ]);
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    policy: 'verification_first_security_native_self_evolving',
+    live,
+    store,
+    recommendations
+  };
+}
+
 async function handleControl(request, env) {
   if (!env.DB) return controlJson({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
   const auth = await sessionCheck(request, env);
@@ -411,6 +434,38 @@ async function handleControl(request, env) {
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/evolution`) {
+    return controlJson(await evolutionSnapshot(env), 200, auth.response.headers);
+  }
+
+  if (request.method === 'POST' && path === `${CONTROL_PREFIX}/evolution/check`) {
+    const snapshot = await evolutionSnapshot(env, true);
+    await writeAudit(env, auth.session, 'evolution.check', 'platform', 'manual platform evolution analysis');
+    return controlJson(snapshot, 200, auth.response.headers);
+  }
+
+  if (request.method === 'POST' && path === `${CONTROL_PREFIX}/evolution/technology/evaluate`) {
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object') {
+      return controlJson({ error: '기술 후보 형식을 확인해 주세요.' }, 400, auth.response.headers);
+    }
+    const recommendation = evaluateTechnologyCandidate(body);
+    const report = {
+      schemaVersion: 1,
+      generatedAt: recommendation.verifiedAt,
+      recommendations: [recommendation]
+    };
+    await persistEvolutionReport(env.DB, report);
+    await writeAudit(
+      env,
+      auth.session,
+      'evolution.technology.evaluate',
+      recommendation.target,
+      JSON.stringify({ id: recommendation.id, score: recommendation.score, evidenceGrade: recommendation.evidenceGrade })
+    );
+    return controlJson({ recommendation }, 200, auth.response.headers);
   }
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/cloudflare-accounts`) {
@@ -519,9 +574,12 @@ export default {
   },
 
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(Promise.all([
-      runChecks(env),
-      cloudflareAccountSnapshot(env)
-    ]).catch(error => console.error('Scheduled service or Cloudflare account check failed', error)));
+    ctx.waitUntil((async () => {
+      await Promise.all([
+        runChecks(env),
+        cloudflareAccountSnapshot(env)
+      ]);
+      await evolutionSnapshot(env);
+    })().catch(error => console.error('Scheduled service, account, or evolution check failed', error)));
   }
 };
