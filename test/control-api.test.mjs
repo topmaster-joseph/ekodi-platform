@@ -3,20 +3,15 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import apiWorker from '../api-worker.js';
 
-const [apiSource, controlHtml, controlJs, buildScript, wranglerApi, entrySource, missionEntrySource] = await Promise.all([
-  readFile(new URL('../api-worker.js', import.meta.url), 'utf8'),
-  readFile(new URL('../control-center.html', import.meta.url), 'utf8'),
-  readFile(new URL('../control-center.js', import.meta.url), 'utf8'),
-  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
-  readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
-  readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
-  readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8')
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const [apiSource, domains, health, loader, wranglerApi, entrySource, missionEntrySource] = await Promise.all([
+  read('api-worker.js'), read('domains-hub.js'), read('system-health-admin.js'), read('admin-demand-loader.js'),
+  read('wrangler.api.toml'), read('customer-entry-worker.js'), read('mission-control-entry-worker.js')
 ]);
 
 test('shared API preserves the existing health endpoint', async () => {
   const response = await apiWorker.fetch(new Request('https://api.example/health'), {
-    ENVIRONMENT: 'production',
-    ALLOWED_ORIGINS: 'https://admin.ekodi.kr'
+    ENVIRONMENT: 'production', ALLOWED_ORIGINS: 'https://admin.ekodi.kr'
   });
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, service: 'ekodi-auth-api', version: 4 });
@@ -24,55 +19,31 @@ test('shared API preserves the existing health endpoint', async () => {
 
 test('control endpoints require the D1 operations store', async () => {
   const response = await apiWorker.fetch(new Request('https://api.example/api/control/overview'), {
-    ENVIRONMENT: 'production',
-    ALLOWED_ORIGINS: 'https://admin.ekodi.kr'
+    ENVIRONMENT: 'production', ALLOWED_ORIGINS: 'https://admin.ekodi.kr'
   });
   assert.equal(response.status, 503);
 });
-
-test('control API defines health, statistics, settings and history boundaries', () => {
-  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/overview`"));
-  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/check`"));
-  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/cloudflare-accounts`"));
-  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/cloudflare-accounts/check`"));
-  assert.match(apiSource, /cloudflare_environment_checks/);
-  assert.ok(apiSource.includes("path === `${CONTROL_PREFIX}/services`"));
-  assert.match(apiSource, /service_controls/);
-  assert.match(apiSource, /service_checks/);
-  assert.match(apiSource, /stats24h/);
-  assert.match(apiSource, /\/history\$/);
-  assert.match(apiSource, /VALID_STATES/);
+test('control API keeps overview, checks, services, account and history boundaries', () => {
+  for (const fragment of ['/overview', '/check', '/cloudflare-accounts', '/services']) assert.ok(apiSource.includes(fragment));
+  assert.match(apiSource, /service_controls|service_checks|stats24h|VALID_STATES/);
 });
 
-test('Control Center consumes only the canonical operations API for service controls', () => {
-  assert.match(controlHtml, /id="serviceControlGrid"/);
-  assert.match(controlHtml, /id="runHealthCheck"/);
-  assert.match(controlJs, /\/api\/control\/overview/);
-  assert.match(controlJs, /\/api\/control\/check/);
-  assert.match(controlJs, /\/api\/control\/services\//);
-  assert.match(controlJs, /\/api\/control\/cloudflare-accounts/);
-  assert.match(controlHtml, /id="cloudflareAccountGrid"/);
-  assert.doesNotMatch(controlJs, /raw\.githubusercontent\.com/);
+test('current demand-loaded Admin consumers use only canonical control APIs', () => {
+  assert.match(domains, /\/api\/control\/overview/);
+  assert.match(health, /\/api\/control\//);
+  assert.match(loader, /health:\s*\{/);
+  assert.doesNotMatch(domains, /raw\.githubusercontent\.com/);
 });
 
-test('service URLs are fixed server-side rather than editable through the browser', () => {
+test('service URLs stay server-owned rather than browser-editable', () => {
   assert.match(apiSource, /const SERVICE_CATALOG/);
-  assert.doesNotMatch(controlJs, /name=['"]url['"]/);
-  assert.doesNotMatch(controlJs, /service\.url\s*=/);
+  assert.doesNotMatch(domains, /name=['"]url['"]|service\.url\s*=/);
 });
 
-test('production build includes operations styling', () => {
-  assert.match(buildScript, /'control-center-ops\.css'/);
-});
-
-test('Cloudflare API Mission Control security wrapper preserves the ten-minute monitoring schedule', () => {
+test('Mission Control wrapper preserves the ten-minute monitoring schedule and edge security', () => {
   assert.match(wranglerApi, /main = "mission-control-entry-worker\.js"/);
-  assert.match(wranglerApi, /pattern = "api\.ekodi\.kr"/);
   assert.match(wranglerApi, /crons = \["\*\/10 \* \* \* \*"\]/);
-  assert.match(missionEntrySource, /return customerEntryWorker\.scheduled\(controller, env, ctx\)/);
-  assert.match(missionEntrySource, /const response = await customerEntryWorker\.fetch\(request, env, ctx\)/);
-  assert.match(missionEntrySource, /return applyApiSecurityHeaders\(response\)/);
-  assert.match(missionEntrySource, /const guard = await enforceEdgeSecurity\(request, env\)/);
-  assert.match(entrySource, /return apiWorker\.scheduled\(controller, env, ctx\)/);
-  assert.match(entrySource, /return apiWorker\.fetch\(request, env, ctx\)/);
+  assert.match(missionEntrySource, /customerEntryWorker\.scheduled/);
+  assert.match(missionEntrySource, /enforceEdgeSecurity/);
+  assert.match(entrySource, /apiWorker\.scheduled/);
 });

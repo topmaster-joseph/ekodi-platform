@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
-const ui = await readFile(new URL('../admin-compact.js', import.meta.url), 'utf8');
+test('current Admin navigation exposes the eight canonical work areas in English', () => {
+  const groupLabels = ADMIN_MENU_GROUPS.map(group => group.labels.en);
+  assert.deepEqual(groupLabels, [
+    'Home', 'Operations', 'People & Spaces', 'Services',
+    'AI & Automation', 'Business', 'Data', 'System'
+  ]);
+});
 
-test('all Control Center navigation labels are English', () => {
-  const labels = [
-    'Campus', 'Operations', 'Services', 'Clients', 'Admin Accounts', 'Finance', 'Mail & Live',
-    'Cloud & Files', 'Organization', 'Domains & DNS', 'Policies', 'Activity Logs', 'Logout',
-  ];
-  for (const label of labels) assert.ok(ui.includes(label), `${label} must be present`);
+test('current visible subservices use registry-owned English labels', () => {
+  const labels = ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.labels.en);
+  for (const label of ['Site Management', 'Work', 'Customer Sites', 'Finance & Accounting', 'Storage', 'System Health']) {
+    assert.ok(labels.includes(label), `${label} must be present`);
+  }
+  assert.ok(ADMIN_MENU_REGISTRY.filter(item => item.internal).some(item => item.id === 'policies'));
 });

@@ -3,32 +3,32 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const worker = await read('site-worker.js');
 
 test('historical storige entry is normalized and preserved through central auth', async () => {
   const handoff = await read('admin-central-handoff.js');
-  assert.match(handoff, /storige:'storage'/);
-  assert.match(handoff, /target=`https:\/\/admin\.ekodi\.kr\/\?route=\$\{encodeURIComponent\(r\)\}`/);
-  assert.match(handoff, /return_to=\$\{encodeURIComponent\(target\)\}/);
-  assert.match(handoff, /query\.get\('route'\)/);
-  assert.match(handoff, /cleanRouteUrl\(route\)/);
+  assert.ok(handoff.includes("storige:'storage'"));
+  assert.ok(handoff.includes('target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`'));
+  assert.ok(handoff.includes('return_to=${encodeURIComponent(target)}'));
+  assert.ok(handoff.includes("query.get('route')"));
+  assert.ok(handoff.includes('cleanRouteUrl(route)'));
 });
 
-test('legacy path is compatibility-only and converges to current AI Ops', async () => {
+test('legacy admin paths are retired instead of reopening an old UI', async () => {
   const handoff = await read('admin-central-handoff.js');
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(handoff, /location\.pathname\.startsWith\('\/legacy'\)\?'ai-ops'/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /'#ai-ops'/);
-  assert.doesNotMatch(shell, /await loadScript\('control-center\.js'\)/);
-  assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
+  assert.ok(worker.includes('RETIRED_ADMIN_PATHS'));
+  assert.ok(worker.includes("'/legacy'"));
+  assert.ok(worker.includes('return retiredAdminResponse()'));
+  assert.ok(!handoff.includes('legacy'));
+  assert.ok(!/canonicalizeLegacyEntry|repairLegacyLinks|control-center\.js/.test(shell));
 });
 
-test('authenticated Admin Tools links cannot reopen legacy UI', async () => {
+test('authenticated Admin Tools use only the current shared menu runtime', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /function repairLegacyLinks\(\)/);
-  assert.match(shell, /hero\.href='#ai-ops'/);
-  assert.match(shell, /a\[href="\/legacy"\]/);
-  assert.match(shell, /link\.href='#ai-ops'/);
+  assert.ok(shell.includes('admin-menu-layout.js'));
+  assert.ok(shell.includes('admin-demand-loader.js'));
+  assert.ok(!/\/legacy|control-center\.js|control-center-ops\.css/.test(shell));
 });
 
 test('Storage remains an explicit demand-loaded admin destination', async () => {

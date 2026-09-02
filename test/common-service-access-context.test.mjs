@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -17,7 +18,7 @@ test('central common-service auth preserves source return target and bounded wor
 
 test('My common-service access guidance resolves only RLS-protected user access and never guesses another workspace',async()=>{
   const access=await read('my/access-context.js');
-  execFileSync(process.execPath,['--check',new URL('../my/access-context.js',import.meta.url).pathname],{stdio:'pipe'});
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../my/access-context.js', import.meta.url))],{stdio:'pipe'});
   assert.match(access,/current_site_access/);
   assert.match(access,/current_site_workspaces/);
   assert.match(access,/ACTIVE_STATUSES/);

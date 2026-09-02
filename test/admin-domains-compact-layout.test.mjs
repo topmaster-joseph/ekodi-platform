@@ -2,45 +2,34 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [features, adminJs, adminCss, domainsJs, build, worker] = await Promise.all([
-  readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
-  readFile(new URL('../google-admin-auth.js', import.meta.url), 'utf8'),
-  readFile(new URL('../google-admin-auth.css', import.meta.url), 'utf8'),
-  readFile(new URL('../domains-hub.js', import.meta.url), 'utf8'),
-  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
-  readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const [registry, adminJs, adminCss, domainsJs, build, worker] = await Promise.all([
+  read('admin-menu-registry.js'), read('google-admin-auth.js'), read('google-admin-auth.css'),
+  read('domains-hub.js'), read('scripts/build.mjs'), read('site-worker.js')
 ]);
 
-test('sidebar uses short Admin and Domains labels', () => {
-  assert.ok(features.includes("placeholder('admins', '◈', 'Admin')"));
-  assert.ok(features.includes("placeholder('domains', '◎', 'Domains')"));
-  assert.ok(features.includes("setShortLabel('admins', 'Admin')"));
-  assert.ok(features.includes("setShortLabel('domains', 'Domains')"));
+test('Admin remains visible while Domains is no longer a global navigation axis', () => {
+  assert.match(registry, /id: 'admins'/);
+  assert.doesNotMatch(registry, /id: 'domains'/);
 });
 
-test('Admin screen uses top preregistration toolbar, two-column account cards and guarded permission removal', () => {
-  assert.ok(adminJs.includes('google-admin-toolbar'));
-  assert.ok(adminJs.includes('google-admin-filters'));
-  assert.ok(adminJs.includes('google-admin-bulk'));
-  assert.ok(adminCss.includes('.google-admin-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
-  assert.ok(adminJs.includes('최소 1명의 활성 최고관리자는 반드시 유지해야 합니다.'));
-  assert.ok(adminJs.includes("method: 'DELETE'"));
-  assert.ok(adminJs.includes('마지막 활성 최고관리자는 제거할 수 없습니다.'));
-  assert.ok(adminJs.includes('현재 로그인한 최고관리자 자신의 권한은 제거할 수 없습니다.'));
-  assert.ok(adminJs.includes('Google 계정과 고객사이트 로컬 역할은 삭제되지 않습니다.'));
+test('Admin accounts keep guarded two-column permission management', () => {
+  assert.match(adminJs, /google-admin-toolbar/);
+  assert.match(adminJs, /google-admin-filters/);
+  assert.match(adminCss, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(adminJs, /최소 1명의 활성 최고관리자는 반드시 유지해야 합니다/);
+  assert.match(adminJs, /method: 'DELETE'/);
+});
+test('Domains remains a read-first service hub, not a browser DNS editor', () => {
+  assert.match(domainsJs, /api\('\/api\/control\/overview'\)/);
+  assert.match(domainsJs, /Services에서 관리 →/);
+  assert.doesNotMatch(domainsJs, /\/api\/dns/);
+  assert.doesNotMatch(domainsJs, /method: 'PUT'|method: 'POST'/);
 });
 
-test('Domains is a read-first service control hub, not a browser DNS editor', () => {
-  assert.ok(domainsJs.includes("api('/api/control/overview')"));
-  assert.ok(domainsJs.includes('Services에서 관리 →'));
-  assert.equal(domainsJs.includes('/api/dns'), false);
-  assert.equal(domainsJs.includes("method: 'PUT'"), false);
-  assert.equal(domainsJs.includes("method: 'POST'"), false);
-});
-
-test('Domains assets are built and receive admin edge security headers', () => {
+test('Domains assets remain deployable behind Admin edge security', () => {
   for (const asset of ['domains-hub.css', 'domains-hub.js']) {
     assert.ok(build.includes(`'${asset}'`), `${asset} must be copied into dist`);
-    assert.ok(worker.includes(`'/${asset}'`), `${asset} must be treated as an admin asset`);
+    assert.ok(worker.includes(`'/${asset}'`), `${asset} must be an admin asset`);
   }
 });

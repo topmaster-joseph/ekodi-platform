@@ -44,15 +44,15 @@ test('Social workspace switcher consumes one-time handoff and revalidates person
 
 test('Control Center lazy-loads Social Channels while security-wrapped Mission Control preserves the canonical API entry', async () => {
   const [features, build, admin, entry, missionEntry, wrangler] = await Promise.all([
-    readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
+    readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
     readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
     readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
   ]);
-  assert.match(features, /placeholder\('social', '◉', 'Social'\)/);
-  assert.match(features, /social-admin\.js/);
+  assert.match(features, /social:\s*\{/);
+  assert.match(features, /scripts:\s*\['social-admin\.js'\]/);
   assert.match(build, /social-admin\.css/);
   assert.match(build, /social-admin\.js/);
   assert.match(admin, /\/api\/control\/social\/registry/);

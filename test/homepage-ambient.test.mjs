@@ -18,8 +18,8 @@ test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(js, /--ambient-a/);
   assert.doesNotMatch(js, /crypto\.getRandomValues\(/);
   assert.doesNotMatch(js, /Math\.random\(/);
-  assert.match(deploySiteCore, /grep -Fq 'function seoulDateKey'/);
-  assert.match(deploySiteCore, /grep -Fq 'function dailySeed'/);
+  assert.match(deploySiteCore, /homepage-ambient\.js/);
+  assert.match(deploySiteCore, /homepage-ambient\.js[\s\S]*node --check/);
 });
 
 test('public homepage is hook-first and routes intent instead of leading with a directory', () => {

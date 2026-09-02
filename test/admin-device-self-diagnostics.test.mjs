@@ -6,9 +6,11 @@ const loader = fs.readFileSync(new URL('../admin-demand-loader.js', import.meta.
 const source = fs.readFileSync(new URL('../device-browser-diagnostics.js', import.meta.url), 'utf8');
 const style = fs.readFileSync(new URL('../device-browser-diagnostics.css', import.meta.url), 'utf8');
 const build = fs.readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+const registry = fs.readFileSync(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
 test('admin device menu is localized and lazy-loads self diagnostics', () => {
-  assert.match(loader, /label: '기기 관리'/);
+  assert.match(registry, /id: 'devices'[\s\S]*en: 'Remote Work'/);
+  assert.match(loader, /devices:\s*\{/);
   assert.match(loader, /device-browser-diagnostics\.css/);
   assert.match(loader, /device-browser-diagnostics\.js/);
 });

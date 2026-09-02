@@ -11,5 +11,5 @@ test('admin Control Center aliases are Worker-first before Static Assets canonic
     assert.ok(siteWorker.includes(`'${path}'`), `${path} must remain an admin alias in site-worker.js`);
   }
   assert.match(siteWorker, /Static Assets canonicalizes \*\.html URLs to extensionless paths/);
-  assert.match(siteWorker, /'admin-control-center'/);
+  assert.match(siteWorker, /'admin-retired'/);
 });

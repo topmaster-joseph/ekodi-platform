@@ -1,42 +1,30 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
-const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [ui, css, build] = await Promise.all([
-  read('../admin-compact.js'),
-  read('../admin-compact.css'),
-  read('../scripts/build.mjs'),
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const [css, sidebar, shell, postbuild] = await Promise.all([
+  read('admin-compact.css'), read('admin-sidebar.js'),
+  read('admin-authenticated-shell.js'), read('scripts/admin-thin-postbuild.mjs')
 ]);
 
-test('compact admin navigation is English and includes Campus, Operations and Policies', () => {
-  for (const label of [
-    'Campus', 'Operations', 'Services', 'Clients', 'Admin Accounts', 'Finance', 'Mail & Live',
-    'Cloud & Files', 'Organization', 'Domains & DNS', 'Policies', 'Activity Logs',
-  ]) assert.ok(ui.includes(label), `missing navigation label: ${label}`);
-  assert.match(ui, /dataSection|dataset\.section|data-section/);
-  assert.match(ui, /campusPanel/);
-  assert.match(ui, /policiesPanel/);
+test('compact Admin uses the canonical eight-area navigation', () => {
+  assert.equal(ADMIN_MENU_GROUPS.length, 8);
+  assert.equal(ADMIN_MENU_REGISTRY.some(item => item.id === 'campus' && !item.internal), true);
+  assert.equal(ADMIN_MENU_REGISTRY.some(item => item.id === 'policies' && item.internal), true);
+  assert.match(sidebar, /admin-global-navs/);
+  assert.match(sidebar, /admin-context-tabs/);
 });
 
-test('Policies documents production, access, tenant and AI rules', () => {
-  for (const contract of [
-    'Production', 'Access', 'Clients', 'AI Actions', 'Deployment', 'Incidents',
-    'Code → Test → Deploy → Production Verify → Audit Log',
-  ]) assert.ok(ui.includes(contract), `missing policy contract: ${contract}`);
+test('compact visual layer reduces dashboard density without owning authentication', () => {
+  assert.match(css, /body\.admin-compact/);
+  assert.match(css, /campus-layout|campus-panel/);
+  assert.doesNotMatch(css, /\/api\/google\/login|\/api\/login/);
+  assert.match(shell, /admin-menu-layout\.js/);
 });
-
-test('compact layer reduces dashboard spacing without altering core auth', () => {
-  assert.match(css, /grid-template-columns:220px/);
-  assert.match(css, /topbar\{height:70px/);
-  assert.match(css, /content\{max-width:none;padding:18px 22px 34px/);
-  assert.match(css, /policy-grid/);
-  assert.match(css, /campus-layout/);
-  assert.doesNotMatch(ui, /\/api\/google\/login|\/api\/login/);
-});
-
-test('production build injects compact assets after existing access modules', () => {
-  assert.match(build, /admin-compact\.css/);
-  assert.match(build, /admin-compact\.js/);
-  assert.ok(build.indexOf('google-admin-auth.js') < build.lastIndexOf('admin-compact.js'));
+test('compact runtime is generated after authentication instead of shipped as legacy source', () => {
+  assert.match(postbuild, /admin-compact\.js/);
+  assert.match(postbuild, /Assist launcher-only first path|compact runtime/i);
+  assert.doesNotMatch(shell, /control-center\.js/);
 });

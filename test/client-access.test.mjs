@@ -13,7 +13,7 @@ const [source, css, directoryApi, entryWorker, build] = await Promise.all([
 test('Control Center ships customer access assets only in the admin build', () => {
   assert.match(build, /'client-access\.css'/);
   assert.match(build, /'client-access\.js'/);
-  assert.match(build, /asset === 'control-center\.html'/);
+  assert.match(build, /'admin-shell\.html'/);
   assert.match(build, /client-access\.js/);
   assert.match(build, /client-access\.css/);
 });

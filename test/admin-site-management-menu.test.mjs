@@ -11,7 +11,7 @@ test('Campus and Sites are one canonical Site Management entry', () => {
   assert.match(registry, /id: 'campus'[\s\S]*ko: '사이트 관리'[\s\S]*en: 'Site Management'/);
   assert.doesNotMatch(registry, /id: 'sites'/);
   assert.match(layout, /#sites:sites/);
-  assert.match(layout, /if \(section === 'sites'\) return openSites\(\)/);
+  assert.match(layout, /if\(section==='sites'\)return openSites\(\)/);
   assert.match(layout, /navItemFor\('campus'\)\?\.classList\.add\('active'\)/);
 });
 

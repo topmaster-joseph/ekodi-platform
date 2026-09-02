@@ -164,10 +164,10 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
   ]);
   assert.match(workflow,/name: Release EKODI Conversation Foundation/);
   assert.match(workflow,/workspace-staging:/);
-  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
+  assert.match(workflow,/control-staging:\r?\n\s+needs: workspace-staging/);
   assert.match(workflow,/production-workspace:/);
-  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
-  assert.match(workflow,/production-ui:\n\s+needs: production-control/);
+  assert.match(workflow,/production-control:\r?\n\s+needs: production-workspace/);
+  assert.doesNotMatch(workflow,/production-ui:/); assert.match(workflow,/Shared Messenger\/Invest UI is not owned here/);
   assert.match(workflow,/ekodi-workspace-staging/);
   assert.match(workflow,/ekodi-conversation-control-staging/);
   assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
@@ -176,5 +176,5 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
   assert.match(helper,/UNIQUE constraint failed: d1_migrations\\\.name|d1_migrations\.name/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
-  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.doesNotMatch(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
 });

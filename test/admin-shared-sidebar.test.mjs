@@ -40,7 +40,7 @@ test('left navigation is a reusable shared module backed only by the registry', 
   assert.match(sidebar, /getAdminMenuLabel\(id, locale\)/);
   assert.match(sidebar, /window\.EKODIAdminSidebar/);
   assert.match(layout, /import\('\.\/admin-sidebar\.js'\)/);
-  assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
+  assert.match(layout, /ORDER=Object\.freeze\(adminMenuOrder\(\)\)/);
 });
 
 test('contextual subservices render as a sticky top tab strip and source nav stays hidden', () => {
@@ -82,11 +82,11 @@ test('menu labels and tab state are repaired when features are installed or sect
 });
 
 test('internal operational capabilities stay off the global work areas as direct items', () => {
-  assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
+  assert.match(layout, /INTERNAL=new Set\(\['services','deployments','policies'\]\)/);
   assert.match(layout, /#campus:campus/);
   assert.match(layout, /campus:#campus/);
   assert.match(layout, /requestedSection = 'campus'/);
-  assert.doesNotMatch(layout, /INTERNAL_ONLY_SECTIONS[^\n]*overview/);
+  assert.doesNotMatch(layout, /INTERNAL[^\n]*overview/);
 });
 
 test('shared menu ES modules are published and cache-busted with the admin release', () => {

@@ -8,6 +8,8 @@ const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), '
 const shell = await readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8');
 const demand = await readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8');
+const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
+const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
 
 test('Campus first screen renders the full site catalog with direct operational actions', () => {
   assert.match(js, /사이트 관리 ·/);
@@ -85,19 +87,20 @@ test('public site Open links never inherit monitor-only health endpoints', () =>
   assert.match(js, /serviceControlGrid/);
 });
 
-test('Domains and DNS navigation is removed while Affiliates has a visible icon', () => {
-  assert.match(js, /data-section="domains"/);
-  assert.match(js, /data-lazy-section="domains"/);
-  assert.match(js, /\.forEach\(item => item\.remove\(\)\)/);
-  assert.match(js, /🤝 Affiliates/);
+test('Domains and DNS navigation is removed while Affiliates stays registry-backed', () => {
+  assert.ok(!registry.includes("id: 'domains'"));
+  assert.ok(registry.includes("id: 'affiliates'"));
+  assert.ok(registry.includes('Mall AI Sales'));
+  assert.ok(!js.includes('data-section="domains"'));
+  assert.ok(!js.includes('data-lazy-section="domains"'));
 });
 
-test('sidebar normalization is idempotent and cannot feed its own MutationObserver forever', () => {
-  assert.match(js, /if \(span\.textContent !== '🤝 Affiliates'\) span\.textContent = '🤝 Affiliates'/);
-  assert.match(js, /first\.nodeType === Node\.TEXT_NODE && first\.textContent/);
-  assert.match(js, /if \(item\.textContent !== '🤝 Affiliates'\) item\.textContent = '🤝 Affiliates'/);
-  assert.match(js, /let sidebarQueued = false/);
-  assert.match(js, /queueMicrotask\(\(\) =>/);
+test('shared sidebar normalization is idempotent and observer-scoped', () => {
+  assert.ok(sidebar.includes('if (label.textContent !== canonical) label.textContent = canonical'));
+  assert.ok(sidebar.includes('let queued = false'));
+  assert.ok(sidebar.includes('if (queued || syncing) return'));
+  assert.ok(sidebar.includes('queueMicrotask(() =>'));
+  assert.ok(sidebar.includes('observer.observe(nav, { childList: true, subtree: false })'));
 });
 
 test('Campus action assets are shipped but fetched only after the administrator opens Campus', () => {

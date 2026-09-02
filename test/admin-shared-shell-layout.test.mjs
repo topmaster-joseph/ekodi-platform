@@ -18,7 +18,7 @@ test('all administrator hostnames inherit the same control-center shell', () => 
   ]) {
     assert.ok(worker.includes(`'${host}'`), `${host} must stay in ADMIN_HOSTS`);
   }
-  assert.ok(worker.includes("env.ASSETS.fetch(assetRequest(request, '/control-center'))"));
+  assert.ok(worker.includes("env.ASSETS.fetch(assetRequest(request, '/admin-shell'))"));
   assert.ok(build.includes('admin-authenticated-shell.js'));
 });
 

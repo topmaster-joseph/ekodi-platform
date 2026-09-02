@@ -15,9 +15,9 @@ test('Control API contains Community and Social as active services without legac
 });
 
 test('Campus uses Community label instead of the retired mission organization label', async () => {
-  const campus = await text('admin-compact.js');
-  assert.match(campus, /key: 'community', label: '커뮤니티', name: '커뮤니티'/);
-  assert.doesNotMatch(campus, /key: 'community', label: '선교회'/);
+  const campus = await text('campus-actions.js');
+  assert.match(campus, /name: '커뮤니티'.*domain: 'community\.ekodi\.kr'/);
+  assert.doesNotMatch(campus, /name: '에코디선교회'|label: '선교회'/);
 });
 
 test('platform boundaries declare the central Social registry dependency', async () => {

@@ -2,33 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const js = await readFile(new URL('../admin-compact.js', import.meta.url), 'utf8');
-const css = await readFile(new URL('../admin-compact.css', import.meta.url), 'utf8');
+const js = await readFile(new URL('../campus-actions.js', import.meta.url), 'utf8');
+const css = await readFile(new URL('../campus-actions.css', import.meta.url), 'utf8');
 
-test('compact control center keeps site management as the first screen and renders a simple site table', () => {
-  assert.match(js, /dataset\.section = 'campus'/);
-  assert.match(js, /campus: '사이트 관리'/);
-  assert.match(js, /campusServiceRows/);
-  assert.match(js, /class="finance-table campus-table"/);
-  assert.match(js, /<th>Type<\/th><th>Service<\/th><th>Domain<\/th><th>Manage<\/th>/);
-  assert.match(js, /showPanel\('campus'\)/);
-  assert.doesNotMatch(js, /Management Preview/);
-  assert.doesNotMatch(js, /campusOrbit/);
+test('Site Management renders the canonical grouped site catalog', () => {
+  assert.ok(js.includes('const ALL_SITES = ['));
+  assert.ok(js.includes('const SITE_GROUPS = ['));
+  assert.ok(js.includes('campusSiteGroups'));
+  assert.ok(js.includes('campus-groups-grid'));
+  for (const domain of ['books.ekodi.kr', 'church.ekodi.kr', 'mall.ekodi.kr']) assert.ok(js.includes(domain));
 });
 
-test('site-list rows open public sites and route to related admin sections', () => {
-  assert.match(js, /campusServiceRow/);
-  assert.match(js, /data\.campusSection|dataset\.campusSection/);
-  assert.match(js, /openAdminSection/);
-  assert.match(js, /highlightService/);
-  assert.match(js, /books\.ekodi\.kr/);
-  assert.match(js, /church\.ekodi\.kr/);
-  assert.match(js, /mall\.ekodi\.kr/);
-  assert.match(js, /link\.target = '_blank'/);
+test('site rows expose bounded operational actions and external open links', () => {
+  assert.ok(js.includes("makeButton('Manage'"));
+  assert.ok(js.includes("makeButton('Status'"));
+  assert.ok(js.includes("link.target = '_blank'"));
+  assert.ok(js.includes('openSection('));
+  assert.ok(js.includes('focusService('));
 });
 
-test('existing compact table and service-focus styling remain available', () => {
-  assert.match(css, /\.campus-panel/);
+test('compact site-management styling remains available', () => {
+  assert.match(css, /#campusPanel/);
   assert.match(css, /\.campus-toolbar/);
-  assert.match(css, /\.service-control-card\.campus-focus/);
+  assert.match(css, /\.campus-site-item/);
 });

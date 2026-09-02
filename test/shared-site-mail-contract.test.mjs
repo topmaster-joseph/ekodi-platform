@@ -4,20 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('shared runtime mail verifier follows the current EKODI Mail user app contract', async () => {
+test('shared runtime link audit includes the current EKODI Mail user surface', async () => {
   const workflow = await read('.github/workflows/deploy-site-core.yml');
   const mailPage = await read('mail-user-page.js');
-  const markers = [
-    '<title>EKODI Mail</title>',
-    'id="accountLabel"',
-    'id="searchForm"',
-    'id="gmailLink"',
-  ];
-
-  for (const marker of markers) {
+  for (const marker of ['<title>EKODI Mail</title>', 'id="accountLabel"', 'id="searchForm"', 'id="gmailLink"']) {
     assert.ok(mailPage.includes(marker), `mail user page must expose ${marker}`);
-    assert.ok(workflow.includes(`grep -Fq '${marker}' /tmp/mail-body`), `shared-site verifier must check ${marker}`);
   }
-
-  assert.ok(!workflow.includes("grep -Fq 'EKODI Hub' /tmp/mail-body"));
+  assert.match(workflow, /https:\/\/mail\.ekodi\.kr\//);
+  assert.match(workflow, /EKODI production link audit/);
+  assert.match(workflow, /grep -io '<title>\[\^<\]\*<\/title>'/);
+  assert.doesNotMatch(workflow, /grep -Fq 'EKODI Hub' \/tmp\/mail-body/);
 });

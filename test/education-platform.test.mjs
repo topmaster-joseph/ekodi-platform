@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
+import { fileURLToPath } from 'node:url';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -55,8 +56,8 @@ test('Education browser code stores planning metadata only and parses',async()=>
   assert.match(app,/ekodi_education_planner_v1/);
   assert.doesNotMatch(app,/passport|성적표|재정증빙|resident|주민등록/i);
   assert.match(app,/isHttps/);
-  execFileSync(process.execPath,['--check',new URL('../education/app.js',import.meta.url).pathname],{stdio:'pipe'});
-  execFileSync(process.execPath,['--check',new URL('../education-worker.js',import.meta.url).pathname],{stdio:'pipe'});
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/app.js', import.meta.url))],{stdio:'pipe'});
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education-worker.js', import.meta.url))],{stdio:'pipe'});
 });
 
 test('Post-promotion Education code does not retain unused rollout hooks',async()=>{
