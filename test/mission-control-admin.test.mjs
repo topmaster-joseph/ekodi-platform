@@ -76,7 +76,7 @@ test('AI Ops production workflow verifies the canonical true-lazy release instea
   assert.match(workflow,/health:/);
   assert.match(workflow,/system-health-admin\.js/);
   assert.match(workflow,/actionType:'ui\.change_request'/);
-  assert.match(workflow,/workflows: \['Deploy Admin True Lazy Gate'\]/);
+  assert.match(workflow,/workflows: \['Deploy EKODI Shared Site Core'\]/);
   assert.match(workflow,/Verify production fingerprinted thin shell and flat AI Ops/);
   assert.match(workflow,/ai-ops-admin\.css/);
   assert.match(workflow,/max-age=31536000, immutable/);

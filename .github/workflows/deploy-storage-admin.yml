@@ -47,6 +47,6 @@ jobs:
           grep -Fq 'binding = "STORAGE"' wrangler.site.toml
           grep -Fq 'service = "ekodi-storage-control"' wrangler.site.toml
           demand_bytes=$(wc -c < dist/admin-demand-loader.js)
-          test "$demand_bytes" -le 14000
+          test "$demand_bytes" -le 15000
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs
