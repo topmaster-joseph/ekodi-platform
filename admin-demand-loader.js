@@ -9,7 +9,6 @@
   const loadedStyles=new Map();
   const pending=new Map();
   const secondaryScheduled=new Set();
-  let financeAssetsPromise=null;
 
   const FEATURES = {
     campus: {
@@ -161,27 +160,6 @@
     });
     loadedScripts.set(src, promise);
     return promise;
-  }
-
-  function financeRequested() {
-    const finance = nav?.querySelector('[data-section="finance"]');
-    return location.hash.toLowerCase() === '#finance' || Boolean(finance?.classList.contains('active'));
-  }
-
-  function ensureFinanceAssets() {
-    if (!authenticated()) return Promise.resolve(null);
-    if (financeAssetsPromise) return financeAssetsPromise;
-    const finance = nav?.querySelector('[data-section="finance"]');
-    if (finance) finance.dataset.financeAssetsRequested = 'true';
-    financeAssetsPromise = loadStyle('admin-finance.css')
-      .then(() => loadScript('finance-monitor.js'))
-      .catch(error => {
-        financeAssetsPromise = null;
-        if (finance) finance.dataset.financeAssetsRequested = 'false';
-        console.warn('[EKODI Admin] Finance lazy load failed', error);
-        return null;
-      });
-    return financeAssetsPromise;
   }
 
   function waitFor(selector, timeout = 4500) {
@@ -351,21 +329,20 @@
 
   function bindBaseEnhancements() {
     const finance = nav?.querySelector('[data-section="finance"]');
-    if (!finance) return false;
-    let changed = false;
-    if (finance.dataset.financeDemandBound !== 'true') {
-      finance.dataset.financeDemandBound = 'true';
-      finance.addEventListener('click', () => ensureFinanceAssets(), true);
-      changed = true;
-    }
-    if (nav.dataset.financeSectionBound !== 'true') {
-      nav.dataset.financeSectionBound = 'true';
-      window.addEventListener('ekodi-admin-section-changed', event => {
-        if (event.detail?.section === 'finance') ensureFinanceAssets();
+    if (!finance || finance.dataset.financeDemandBound === 'true') return false;
+    finance.dataset.financeDemandBound = 'true';
+    const loadFinanceAssets = () => {
+      if (finance.dataset.financeAssetsRequested === 'true') return;
+      finance.dataset.financeAssetsRequested = 'true';
+      loadStyle('admin-finance.css').then(() => loadScript('finance-monitor.js')).catch(error => {
+        finance.dataset.financeAssetsRequested = 'false';
+        console.warn('[EKODI Admin] Finance lazy load failed', error);
       });
-      changed = true;
-    }
-    return changed;
+    };
+    finance.addEventListener('click', loadFinanceAssets, true);
+    window.addEventListener('ekodi-admin-section-changed', event => { if (event.detail?.section === 'finance') loadFinanceAssets(); });
+    if (location.hash.toLowerCase() === '#finance' || finance.classList.contains('active')) loadFinanceAssets();
+    return true;
   }
 
   function requestedFeature() {
@@ -379,7 +356,6 @@
     let changed = false;
     Object.entries(FEATURES).forEach(([key, feature]) => { if (placeholder(key, feature)) changed = true; });
     if (bindBaseEnhancements()) changed = true;
-    if (financeRequested()) ensureFinanceAssets();
     if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);changed=true;}
     if (changed) window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requested = requestedFeature();
@@ -394,7 +370,6 @@
   window.addEventListener('ekodi-admin-ready', install);
   window.addEventListener('ekodi-authenticated', onAuthState);
   window.addEventListener('hashchange', () => {
-    if (authenticated() && location.hash.toLowerCase() === '#finance') ensureFinanceAssets();
     const requested = requestedFeature();
     if (!requested || !authenticated()) return;
     const button = nav?.querySelector(`[data-demand-feature="${requested}"]`);
