@@ -432,3 +432,19 @@ main#platform{padding-top:18px!important}
   body::before{animation:none}
   *{transition:none!important}
 }
+
+/* EKODI homepage intent-centered layout v5 */
+.hero{grid-template-columns:1fr!important;justify-items:center!important;align-items:start!important;gap:26px!important;min-height:0!important;padding:38px 0 30px!important;text-align:center!important}
+.hero-copy{max-width:860px!important;margin-inline:auto!important}
+.hero h1,.hero h1 span{margin-left:auto!important;margin-right:auto!important}
+.hero-actions{justify-content:center!important}
+.hero-note{text-align:center!important}
+.ecosystem-pulse.living-daily{width:min(760px,100%)!important;margin:0 auto!important;align-self:auto!important}
+.daily-connect{text-align:left!important}
+#ecosystem{display:none!important}
+.about-strip{max-width:860px!important;margin:0 auto 34px!important;text-align:center!important}
+.about-grid{grid-template-columns:1fr!important;justify-items:center!important;gap:10px!important}
+.about-strip p{max-width:820px!important;margin-inline:auto!important}
+.about-pills{justify-content:center!important}
+@media(max-width:900px){.hero{gap:22px!important;padding:30px 0 28px!important}.ecosystem-pulse.living-daily{max-width:720px!important}}
+.intent-result-action{font-size:9px!important;font-weight:850!important;white-space:nowrap!important;letter-spacing:-.01em}
