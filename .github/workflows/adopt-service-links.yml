@@ -33,11 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           if grep -E 'ekodibook\.kr|ekodichurch\.kr|ekodilab\.kr|mall\.ekodi\.kr|www\.mall\.ekodi\.kr' index.html scripts/monitor-lib.mjs; then
-            echo 'Retired service domain found. EKODI Mall must use https://ekodi.kr/mall.'
+            echo 'Retired service domain found. EKODI Mall must use https://ekodi.kr/ekodibiz/mall.'
             exit 1
           fi
-          grep -Fq "id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/mall'" ekodi-service-manifest.js
-          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          grep -Fq "id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/ekodibiz/mall'" ekodi-service-manifest.js
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
       - name: Validate application and deployment ownership
         run: |
           npm run check
