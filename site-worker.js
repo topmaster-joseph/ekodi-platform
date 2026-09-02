@@ -1,7 +1,12 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
+const MALL_PREFIX = '/mall';
+const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
+const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
@@ -143,13 +148,15 @@ const PUBLIC_CSP = [
 
 const MALL_CSP = [
   "default-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "script-src 'self' 'unsafe-inline' https://js.tosspayments.com",
+  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "frame-src https://*.tosspayments.com",
   "img-src 'self' data: https:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
 
@@ -213,6 +220,49 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
+}
+
+function isMallPath(pathname) {
+  return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
+}
+
+function mallUpstreamPath(pathname) {
+  const suffix = pathname.slice(MALL_PREFIX.length);
+  return suffix || '/';
+}
+
+async function proxyMallService(request) {
+  const incoming = new URL(request.url);
+  const upstream = new URL(request.url);
+  upstream.protocol = 'https:';
+  upstream.hostname = MALL_ORIGIN_HOST;
+  upstream.port = '';
+  upstream.pathname = mallUpstreamPath(incoming.pathname);
+
+  const upstreamRequest = new Request(upstream.toString(), request);
+  upstreamRequest.headers.set(MALL_PROXY_HEADER, 'apex-mall-v1');
+  const upstreamResponse = await fetch(upstreamRequest, { redirect: 'manual' });
+  const headers = new Headers(upstreamResponse.headers);
+  const location = headers.get('location');
+  if (location) {
+    try {
+      const redirect = new URL(location, upstream);
+      if (redirect.hostname === MALL_ORIGIN_HOST) {
+        redirect.protocol = 'https:';
+        redirect.hostname = PUBLIC_HOST;
+        redirect.pathname = redirect.pathname === '/' ? MALL_PREFIX : `${MALL_PREFIX}${redirect.pathname}`;
+        headers.set('location', redirect.toString());
+      }
+    } catch {}
+  }
+  headers.set('x-ekodi-edge', 'mall-path-gateway');
+  headers.set('x-ekodi-service', 'mall');
+  const adminSurface = incoming.pathname === '/mall/admin' || incoming.pathname.startsWith('/mall/admin/');
+  const apiSurface = incoming.pathname === '/mall/api' || incoming.pathname.startsWith('/mall/api/');
+  const cacheControl = adminSurface || apiSurface ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
+  const response = withHostSecurity(new Response(upstreamResponse.body, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), MALL_CSP, cacheControl, route);
+  return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
 
 function retiredAdminResponse() {
@@ -333,10 +383,14 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
       }
-      if (url.pathname === '/mall' || url.pathname === '/mall/' || url.pathname === '/mall.html') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/mall'));
-        return withHostSecurity(response, MALL_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
+      if (url.pathname === '/mall.html') {
+        const canonical = new URL(request.url);
+        canonical.pathname = '/mall';
+        const response = Response.redirect(canonical.toString(), 308);
+        applyBaseSecurityHeaders(response.headers);
+        return response;
       }
+      if (isMallPath(url.pathname)) return proxyMallService(request);
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
         const rewritten = rewriteAdminApexLogin(response);
