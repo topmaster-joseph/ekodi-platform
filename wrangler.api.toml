@@ -24,7 +24,6 @@ OPENAI_MODEL = "gpt-5.6-terra"
 # Google Drive OAuth credentials stay isolated in the drive.ekodi.kr Storage Worker.
 # API-side server secrets/config required only when the corresponding gateway is activated:
 #   EKODI_STORAGE_GATEWAY_KEY          shared service-to-service key for drive.ekodi.kr
-#   MALL_PARTNER_CREDENTIAL_KEY       AES-GCM master key for Mall provider credentials
 #   EKODI_AI_MODULE_GATEWAY_KEY        privileged AI module gateway key
 #   EKODI_AI_MODULE_CALLERS            comma-separated registered EKODI internal caller ids
 #   EKODI_AI_MODULE_REGISTRY_JSON      module manifests without actual provider secrets
