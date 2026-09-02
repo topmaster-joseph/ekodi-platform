@@ -14,6 +14,7 @@ import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleMallAdminRequest } from './mall-admin-control.js';
+import { handleMallPartnerRequest } from './mall-partner-control.js';
 import { runAffiliateAutomation } from './coupang-partners-automation.js';
 import { handleSocialRegistry } from './social-registry-api.js';
 
@@ -137,6 +138,18 @@ export default {
       }
     }
 
+    if (path.startsWith('/api/mall/admin/providers') || path.startsWith('/api/mall/providers/')) {
+      try {
+        const response = await handleMallPartnerRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Mall Partner API error', error);
+        return new Response(JSON.stringify({ error: '에코디몰 제휴처 API 처리 중 오류가 발생했습니다.', code: 'MALL_PARTNER_API_ERROR' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
+        });
+      }
+    }
     if (path.startsWith('/api/mall/admin')) {
       try {
         const response = await handleMallAdminRequest(request, env);

@@ -10,6 +10,9 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'mall-admin-control.js'
+      - 'mall-partner-vault.js'
+      - 'mall-partner-control.js'
       - 'mission-control-entry-worker.js'
       - 'devotional-control.js'
       - 'test/devotional-control.test.mjs'
@@ -58,6 +61,7 @@ on:
       - 'mail-credential-vault.js'
       - 'mail-google-adapter.js'
       - 'test/mail-control.test.mjs'
+      - 'test/mall-partner-control.test.mjs'
       - 'migrations/**'
       - '!migrations/*messenger*.sql'
       - 'wrangler.api.toml'
@@ -77,6 +81,9 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'mall-admin-control.js'
+      - 'mall-partner-vault.js'
+      - 'mall-partner-control.js'
       - 'mission-control-entry-worker.js'
       - 'devotional-control.js'
       - 'test/devotional-control.test.mjs'
@@ -125,6 +132,7 @@ on:
       - 'mail-credential-vault.js'
       - 'mail-google-adapter.js'
       - 'test/mail-control.test.mjs'
+      - 'test/mall-partner-control.test.mjs'
       - 'migrations/**'
       - '!migrations/*messenger*.sql'
       - 'wrangler.api.toml'
@@ -163,7 +171,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js mall-admin-control.js mall-partner-vault.js mall-partner-control.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -176,7 +184,7 @@ jobs:
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/mall-partner-control.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
@@ -321,7 +329,7 @@ jobs:
           node-version: '24'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
-      - name: Provision isolated Mail OAuth and credential secrets
+      - name: Provision isolated OAuth and credential-vault secrets
         shell: bash
         run: |
           set -euo pipefail
@@ -336,6 +344,10 @@ jobs:
           if ! printf '%s' "$names" | grep -Fq 'MAIL_CREDENTIAL_KEY'; then
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if ! printf '%s' "$names" | grep -Fq 'MALL_PARTNER_CREDENTIAL_KEY'; then
+            node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MALL_PARTNER_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
+            echo 'Generated a persistent Mall partner credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
