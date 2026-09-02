@@ -1,6 +1,6 @@
 {
   "version": "1.3.0",
-  "effectiveDate": "2026-09-02",
+  "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -13,7 +13,10 @@
     "no-public-origin",
     "one-domain-grammar",
     "modular-monolith-first",
-    "isolated-parallel-development"
+    "isolated-parallel-development",
+    "verification-first-evolution",
+    "security-native-intelligence",
+    "evidence-linked-recommendations"
   ],
   "systemBoundaries": {
     "production": [
@@ -253,5 +256,57 @@
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr"
-  ]
+  ],
+  "evolutionPolicy": {
+    "mode": "verification_first_security_native_self_evolving",
+    "finalAuthority": "ekodi_platform_super_administrator",
+    "providerIndependent": true,
+    "evidenceLinksRequiredForPublishedRecommendations": true,
+    "unsupportedRecommendationsRemainInternal": true,
+    "externalAndInternalEvidenceCombined": true,
+    "observedSignals": [
+      "traffic",
+      "latency",
+      "error_rate",
+      "capacity",
+      "database",
+      "queue",
+      "cache",
+      "storage",
+      "network",
+      "ai_cost",
+      "security_events",
+      "operational_load"
+    ],
+    "approvalRequired": [
+      "production_change",
+      "shared_core_creation",
+      "permission_expansion",
+      "paid_cost_commitment",
+      "data_migration",
+      "destructive_change",
+      "security_boundary_change",
+      "production_dns_change",
+      "provider_lock_in"
+    ],
+    "securityCore": [
+      "least_privilege",
+      "zero_trust",
+      "strong_authn_authz",
+      "secret_management",
+      "encryption",
+      "audit",
+      "tenant_isolation",
+      "sandbox",
+      "supply_chain_verification",
+      "agent_identity",
+      "tool_boundary",
+      "data_boundary",
+      "anomaly_detection",
+      "automatic_isolation",
+      "rollback",
+      "backup",
+      "disaster_recovery"
+    ]
+  }
 }

@@ -44,6 +44,7 @@
   ];
 
   let overview = null;
+  let evolution = null;
   let lastReviewAt = null;
   let selectedDomain = '';
   let fleetQuery = '';
@@ -72,6 +73,24 @@
     overview = await response.json();
     lastReviewAt = new Date();
     return overview;
+  }
+
+  async function loadEvolution(force = false) {
+    const path = force ? '/api/control/evolution/check' : '/api/control/evolution';
+    try {
+      const response = await fetch(`${API}${path}`, {
+        method: force ? 'POST' : 'GET',
+        headers:authHeaders(),
+        cache:'no-store',
+      });
+      if (!response.ok) throw new Error(`Evolution API ${response.status}`);
+      evolution = await response.json();
+      return evolution;
+    } catch (error) {
+      evolution = { error:String(error?.message || 'Evolution Intelligence 연결 실패') };
+      console.warn('EKODI Evolution Intelligence unavailable', error);
+      return null;
+    }
   }
 
   function serviceMap() {
@@ -196,6 +215,10 @@
       </div>
       <div class="ai-ops-metrics" id="aiOpsMetrics"></div>
       <div class="ai-ops-main">
+        <section class="ai-ops-block ai-evolution-block" aria-live="polite">
+          <div class="ai-evolution-head"><div><small>EVOLUTION INTELLIGENCE</small><h3>플랫폼 진화 제안</h3></div><span id="aiEvolutionMeta">검증된 근거 기반 분석</span></div>
+          <div class="ai-evolution-cards" id="aiEvolutionCards"></div>
+        </section>
         <div class="ai-ops-observe">
           <section class="ai-ops-block ai-fleet-block">
             <div class="ai-block-head ai-fleet-head"><div><small>SITE FLEET</small><h3>사이트 상태</h3></div><div class="ai-fleet-tools"><input id="aiFleetSearch" type="search" autocomplete="off" placeholder="사이트·도메인 검색" aria-label="사이트 검색"><select id="aiFleetFilter" aria-label="상태 필터"><option value="all">전체 상태</option><option value="needs-attention">주의·장애</option><option value="healthy">정상</option><option value="standby">연결대기</option></select></div></div>
@@ -233,6 +256,43 @@
     const compact = $('#aiOpsDecisionCompact');
     if (compact) compact.textContent = String(data.decisions);
     panel()?.setAttribute('data-decision-count', String(data.decisions));
+  }
+
+  function evolutionRecommendations() {
+    const items = evolution?.recommendations || evolution?.live?.recommendations || [];
+    return [...items].filter(item => item?.publishable !== false).sort((left, right) => Number(right?.score || 0) - Number(left?.score || 0));
+  }
+
+  function evidenceLinks(item) {
+    const sources = (item?.references || []).filter(source => source?.url).slice(0, 2);
+    if (!sources.length) return '<span class="ai-evidence-missing">근거 링크 보강 필요</span>';
+    return sources.map(source => `<a href="${esc(source.url)}" target="_blank" rel="noopener" title="${esc(source.title || source.url)}">근거 ↗</a>`).join('');
+  }
+
+  function renderEvolution() {
+    const host = $('#aiEvolutionCards');
+    const meta = $('#aiEvolutionMeta');
+    if (!host) return;
+    if (evolution?.error) {
+      host.innerHTML = `<div class="ai-evolution-empty">진화 분석 연결 대기 · ${esc(evolution.error)}</div>`;
+      if (meta) meta.textContent = '기존 AI Ops는 정상 동작';
+      return;
+    }
+    const items = evolutionRecommendations();
+    const approvals = items.filter(item => item?.approval?.required).length;
+    if (meta) meta.textContent = `${items.length}개 제안 · 승인 필요 ${approvals} · ${evolution?.store?.lastSeenAt ? '근거원장 저장됨' : '실시간 분석'}`;
+    if (!items.length) {
+      host.innerHTML = '<div class="ai-evolution-empty">현재 우선 개선 제안 없음 · 운영지표와 기술 변화를 계속 관찰합니다.</div>';
+      return;
+    }
+    host.innerHTML = items.slice(0, 3).map(item => {
+      const tone = item?.approval?.required ? 'gate' : Number(item?.score || 0) >= 85 ? 'high' : 'normal';
+      return `<article class="ai-evolution-card ${tone}">
+        <div class="ai-evolution-card-top"><strong>${esc(item.title)}</strong><b>${esc(Math.round(Number(item.score || 0)))}점</b></div>
+        <p>${esc(item.summary || item.reason || '검증된 운영·기술 근거를 기반으로 제안')}</p>
+        <div class="ai-evolution-card-foot"><span>근거 ${esc(item.evidenceGrade || 'C')} · 신뢰 ${esc(Math.round(Number(item.confidence || 0)))}%</span><span class="ai-evidence-links">${evidenceLinks(item)}</span></div>
+      </article>`;
+    }).join('');
   }
 
   function severity(state) {
@@ -418,7 +478,9 @@
   function render(error = '') {
     if (!panel()) return;
     const data = summary();
+    data.decisions += evolutionRecommendations().filter(item => item?.approval?.required).length;
     renderMetrics(data);
+    renderEvolution();
     renderFleet();
     renderSelectedDetail();
     const button = $('#aiOpsRefresh');
@@ -432,6 +494,7 @@
     if (button) { button.disabled = true; button.textContent = '↻ 점검 중…'; }
     try {
       await loadOverview(true);
+      await loadEvolution(false);
       render();
     } catch (error) {
       render(error.message || '상태점검 실패');
@@ -442,7 +505,7 @@
 
   async function initialData() {
     try {
-      await loadOverview(false);
+      await Promise.all([loadOverview(false), loadEvolution(false)]);
       render();
     } catch (error) {
       console.warn('EKODI AI Ops overview unavailable', error);

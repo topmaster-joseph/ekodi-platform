@@ -11,9 +11,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.3.0') fail('constitution version must be 1.3.0 after the approved 2026-09-02 Journal common-service amendment');
+if (constitution.version !== '1.3.0') fail('constitution version must remain 1.3.0 with approved common-service and verification-first evolution amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -24,6 +24,21 @@ if (parallel.independentWorktreeOrSandboxPerTask !== true) fail('parallel develo
 if (parallel.sharedMutableWorkingDirectoryForbidden !== true) fail('concurrent tasks must not share a mutable working directory');
 if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protected-branch writes must be forbidden');
 if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
+const evolution = constitution.evolutionPolicy || {};
+if (evolution.mode !== 'verification_first_security_native_self_evolving') fail('evolution policy must remain verification-first and security-native');
+if (evolution.finalAuthority !== 'ekodi_platform_super_administrator') fail('Evolution Intelligence final authority must remain the EKODI Platform Super Administrator');
+if (evolution.providerIndependent !== true) fail('Evolution Intelligence must remain provider-independent');
+if (evolution.evidenceLinksRequiredForPublishedRecommendations !== true) fail('published Evolution recommendations must require evidence links');
+if (evolution.unsupportedRecommendationsRemainInternal !== true) fail('unsupported Evolution recommendations must remain internal');
+for (const signal of ['traffic','latency','error_rate','capacity','ai_cost','security_events']) {
+  if (!evolution.observedSignals?.includes(signal)) fail(`Evolution observed signal missing: ${signal}`);
+}
+for (const gate of ['production_change','shared_core_creation','permission_expansion','paid_cost_commitment','data_migration','destructive_change','security_boundary_change','production_dns_change']) {
+  if (!evolution.approvalRequired?.includes(gate)) fail(`Evolution approval gate missing: ${gate}`);
+}
+for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','rollback','backup','disaster_recovery']) {
+  if (!evolution.securityCore?.includes(control)) fail(`Evolution security core control missing: ${control}`);
+}
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
