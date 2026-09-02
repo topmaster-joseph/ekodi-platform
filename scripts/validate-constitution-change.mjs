@@ -20,9 +20,15 @@ try {
 const protectedPrefixes = [
   'CONSTITUTION.md',
   'governance/constitution/',
+  'platform-boundaries.json',
   'config/core-data-boundaries.json',
   'config/storage-policy.json',
-  'config/service-workspace-policy.json'
+  'config/service-workspace-policy.json',
+  'config/ai-mission-governance.json',
+  'config/cognitive-control-plane.json',
+  'scripts/validate-constitution.mjs',
+  'scripts/validate-ai-mission-governance.mjs',
+  'scripts/validate-cognitive-control-plane.mjs'
 ];
 const protectedChanged = changed.filter(file => protectedPrefixes.some(prefix => file === prefix || file.startsWith(prefix)));
 if (!protectedChanged.length) {

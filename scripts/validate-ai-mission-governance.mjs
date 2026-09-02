@@ -26,6 +26,12 @@ const requiredForbidden = [
 
 assert(policy.authorityModel?.humanRole === 'steward_delegate', 'humanRole must remain steward_delegate');
 assert(policy.authorityModel?.chiefAiRole === 'orchestrator_not_sovereign', 'Chief AI must remain an orchestrator, not a sovereign');
+assert(policy.authorityModel?.taskOwner === 'ekodi_orchestrator', 'EKODI Orchestrator must own every routed task');
+assert(policy.authorityModel?.entryAiRole === 'entry_point_and_bounded_participant', 'entry AI must remain an entry point and bounded participant');
+assert(policy.authorityModel?.platformSuperAdministratorRole === 'final_platform_authority', 'Platform Super Administrator must remain final platform authority');
+assert(policy.orchestrationContract?.requestOwner === 'ekodi_orchestrator', 'orchestration contract must assign task ownership to EKODI Orchestrator');
+assert(policy.orchestrationContract?.specialistRouting === 'ekodi_orchestrator', 'specialist routing must be owned by EKODI Orchestrator');
+assert(policy.orchestrationContract?.finalPlatformAuthority === 'ekodi_platform_super_administrator', 'final platform authority must be EKODI Platform Super Administrator');
 assert(policy.authorityModel?.defaultAuthority === 'least_privilege', 'default AI authority must be least_privilege');
 
 for (const principle of requiredPrinciples) {
@@ -61,8 +67,15 @@ assert(policy.decisionLoop?.includes('restore_user_agency'), 'decision loop must
 assert(AI_MISSION_RUNTIME.version === policy.version, 'runtime policy version must match source policy');
 assert(AI_MISSION_RUNTIME.authorityModel.humanRole === policy.authorityModel.humanRole, 'runtime human role must match source policy');
 assert(AI_MISSION_RUNTIME.authorityModel.chiefAiRole === policy.authorityModel.chiefAiRole, 'runtime Chief AI role must match source policy');
+assert(AI_MISSION_RUNTIME.authorityModel.taskOwner === policy.authorityModel.taskOwner, 'runtime task owner must match source policy');
+assert(AI_MISSION_RUNTIME.authorityModel.entryAiRole === policy.authorityModel.entryAiRole, 'runtime entry AI role must match source policy');
+assert(AI_MISSION_RUNTIME.authorityModel.platformSuperAdministratorRole === policy.authorityModel.platformSuperAdministratorRole, 'runtime platform super administrator role must match source policy');
+assert(AI_MISSION_RUNTIME.orchestrationContract.requestOwner === policy.orchestrationContract.requestOwner, 'runtime request owner must match orchestration contract');
+assert(AI_MISSION_RUNTIME.orchestrationContract.specialistRouting === policy.orchestrationContract.specialistRouting, 'runtime specialist routing must match orchestration contract');
+assert(AI_MISSION_RUNTIME.orchestrationContract.finalPlatformAuthority === policy.orchestrationContract.finalPlatformAuthority, 'runtime final platform authority must match source policy');
 assert(JSON.stringify(AI_MISSION_RUNTIME.policyPriority) === JSON.stringify(policy.policyPriority), 'runtime policy priority must match source policy');
 assertSameSet(AI_MISSION_RUNTIME.humanGateAreas, policy.actionTiers.human_gate.areas, 'human gate areas');
+assertSameSet(AI_MISSION_RUNTIME.platformSuperAdminGateAreas, policy.platformSuperAdminGateAreas, 'platform super admin gate areas');
 assertSameSet(AI_MISSION_RUNTIME.forbiddenAreas, policy.actionTiers.forbidden.areas, 'forbidden areas');
 assertSameSet(AI_MISSION_RUNTIME.nonNegotiables, policy.nonNegotiables, 'non-negotiables');
 assertSameSet(Object.keys(AI_MISSION_RUNTIME.agents), Object.keys(policy.agents), 'agent registry');

@@ -43,6 +43,14 @@ const stagingReleaseConfig = read(stagingReleaseConfigFile);
 const productionReleaseConfig = read(productionReleaseConfigFile);
 
 if (contract.status !== 'enforced-foundation') fail('contract status must be enforced-foundation');
+if (contract.version !== 2) fail('cognitive control contract version must be 2');
+if (contract.authority?.taskOwner !== 'ekodi_orchestrator') fail('EKODI Orchestrator must own every control-plane task');
+if (contract.authority?.entryAiRole !== 'entry_point_and_bounded_participant') fail('entry AI must be only an entry point and bounded participant');
+if (contract.authority?.finalPlatformAuthority !== 'ekodi_platform_super_administrator') fail('Platform Super Administrator must be final platform authority');
+if (contract.authority?.ordinaryUserApprovalScope !== 'delegated_workspace_or_resource_only') fail('ordinary approval authority must remain delegated-scope only');
+for (const key of ['productionDeploymentOrPromotion','productionSchemaMigration','productionSecretChange','productionDnsChange','destructiveProductionDataChange','constitutionOrPlatformPolicyChange','coreIdentityOrAuthorizationChange','highValueFinancialCommitment','legalContractExecution','domainServiceShutdownOrOwnershipTransfer','materialExternalPublicationOrCommitment','repositoryForcePush','repositoryDelete','productionRollback']) {
+  if (contract.authority?.[key] !== 'platform-super-admin-gate') fail(`${key} must require Platform Super Administrator approval`);
+}
 for (const plane of ['control', 'governance', 'execution', 'data']) {
   if (!contract.planes?.[plane]) fail(`missing plane: ${plane}`);
 }
@@ -87,9 +95,14 @@ const configuredMigrationGates = new Set(contract.migration?.requiredGates || []
 for (const gate of requiredMigrationGates) if (!configuredMigrationGates.has(gate)) fail(`missing production migration gate: ${gate}`);
 
 for (const marker of [
+  "taskOwner: 'ekodi_orchestrator'",
+  "entryAiRole: 'entry_point_and_bounded_participant'",
+  "finalPlatformAuthority: 'ekodi_platform_super_administrator'",
   "productionMutationMode: 'promotion-only'",
   "productionDataSchemaMode: 'governed-additive-migration-only'",
   "rebuildOnPromotion: false",
+  "'super_admin_gate'",
+  "'platform_super_admin_approval_required'",
   "'direct_production_mutation_forbidden'",
   "'governance_authorization_required'",
   "'promotion_gates_incomplete'",
@@ -109,6 +122,7 @@ for (const marker of [
   'validate-ai-mission-governance.mjs',
   'evaluateTaskMissionPolicy',
   'migrations/0052_ai_mission_governance.sql',
+  'migrations/0053_orchestrator_authority.sql',
   'needs: [validate, deploy-staging]',
   'Build one immutable AI Control application artifact',
   'actions/upload-artifact@v4',

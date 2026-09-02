@@ -1,13 +1,17 @@
 export const AI_MISSION_RUNTIME = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   authorityModel: Object.freeze({
     humanRole: 'steward_delegate',
     chiefAiRole: 'orchestrator_not_sovereign',
+    taskOwner: 'ekodi_orchestrator',
+    entryAiRole: 'entry_point_and_bounded_participant',
+    platformSuperAdministratorRole: 'final_platform_authority',
     defaultAuthority: 'least_privilege',
   }),
   orchestrationContract: Object.freeze({
-    requestOwner: 'current_conversation_ai',
-    specialistRouting: 'internal',
+    requestOwner: 'ekodi_orchestrator',
+    entryAiRole: 'entry_point_and_bounded_participant',
+    specialistRouting: 'ekodi_orchestrator',
     requireUserToChooseSpecialist: false,
     directSpecialistAccess: true,
     primaryAdminInterface: 'chief',
@@ -16,6 +20,8 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     roleRefusalForDelegatedSolvableRequest: false,
     safeActionDefault: 'observe_consult_act_verify_report',
     missingExecutorBehavior: 'queue_and_disclose_without_false_completion',
+    finalPlatformAuthority: 'ekodi_platform_super_administrator',
+    ordinaryUserApprovalScope: 'delegated_workspace_or_resource_only',
     humanGateOnlyForHighImpact: true,
   }),
   policyPriority: Object.freeze([
@@ -42,6 +48,22 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     'repository_force_push',
     'repository_delete',
     'production_rollback',
+  ]),
+  platformSuperAdminGateAreas: Object.freeze([
+    'constitution_or_platform_policy_change',
+    'production_deployment_or_promotion',
+    'production_schema_migration',
+    'production_secret_change',
+    'production_dns_change',
+    'destructive_or_mass_data_change',
+    'core_identity_or_authorization_change',
+    'high_value_or_exceptional_financial_commitment',
+    'legal_commitment_or_contract_execution',
+    'domain_service_shutdown_or_ownership_transfer',
+    'repository_force_push',
+    'repository_delete',
+    'production_rollback',
+    'material_external_publication_or_commitment',
   ]),
   forbiddenAreas: Object.freeze([
     'deceptive_impersonation_of_human_or_divine_authority',
@@ -85,6 +107,7 @@ export const AI_MISSION_RUNTIME = Object.freeze({
 
 const OBSERVE = new Set(AI_MISSION_RUNTIME.observeAreas);
 const HUMAN_GATE = new Set(AI_MISSION_RUNTIME.humanGateAreas);
+const SUPER_ADMIN_GATE = new Set(AI_MISSION_RUNTIME.platformSuperAdminGateAreas);
 const FORBIDDEN = new Set(AI_MISSION_RUNTIME.forbiddenAreas);
 const NON_NEGOTIABLE = new Set(AI_MISSION_RUNTIME.nonNegotiables);
 
@@ -96,10 +119,13 @@ export function getOrchestrationContract() {
   return AI_MISSION_RUNTIME.orchestrationContract;
 }
 
-export function mustOwnAndRouteRequest({ highImpact = false, forbidden = false } = {}) {
-  if (forbidden || highImpact) return false;
-  return AI_MISSION_RUNTIME.orchestrationContract.requestOwner === 'current_conversation_ai'
-    && AI_MISSION_RUNTIME.orchestrationContract.specialistRouting === 'internal';
+export function mustOwnAndRouteRequest() {
+  return AI_MISSION_RUNTIME.orchestrationContract.requestOwner === 'ekodi_orchestrator'
+    && AI_MISSION_RUNTIME.orchestrationContract.specialistRouting === 'ekodi_orchestrator';
+}
+
+export function canAutonomouslyExecuteRequest({ highImpact = false, forbidden = false } = {}) {
+  return !highImpact && !forbidden;
 }
 
 export function evaluateMissionAction(action = {}) {
@@ -116,12 +142,20 @@ export function evaluateMissionAction(action = {}) {
   }
 
   if (
+    SUPER_ADMIN_GATE.has(area)
+    || Boolean(action.platformWide)
+    || Boolean(action.requiresPlatformSuperAdmin)
+  ) {
+    return decision('super_admin_gate', area || 'platform_high_impact', 'EKODI Platform Super Administrator review and approval is required before execution.');
+  }
+
+  if (
     HUMAN_GATE.has(area)
     || Boolean(action.reducesUserRights)
     || Boolean(action.crossTenantPrivateData)
     || agent.mustEscalate?.includes(area)
   ) {
-    return decision('human_gate', area || 'high_impact', 'A human steward must make this decision within delegated authority.');
+    return decision('human_gate', area || 'high_impact', 'An authorized human must make this decision within the delegated workspace or resource scope.');
   }
 
   if (OBSERVE.has(area)) {
@@ -136,9 +170,14 @@ export function evaluateMissionAction(action = {}) {
 }
 
 export function canChiefOverrideMissionDecision(result) {
-  return !['human_gate', 'forbidden'].includes(result?.tier);
+  return !['super_admin_gate', 'human_gate', 'forbidden'].includes(result?.tier);
 }
 
 function decision(tier, reason, explanation) {
-  return Object.freeze({ tier, reason, explanation, policyVersion: AI_MISSION_RUNTIME.version });
+  const approvalAuthority = tier === 'super_admin_gate'
+    ? 'ekodi_platform_super_administrator'
+    : tier === 'human_gate'
+      ? 'authorized_human_within_delegated_scope'
+      : 'none';
+  return Object.freeze({ tier, reason, explanation, approvalAuthority, policyVersion: AI_MISSION_RUNTIME.version });
 }

@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.2.0
+# EKODI Platform Constitution v1.3.0
 
-Effective: 2026-09-01
+Effective: 2026-09-03
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -12,8 +12,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
-- Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
-- Development mirrors those boundaries under `*.dev.ekodi.kr`.
+- Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr`, `ai.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
+- Development mirrors those boundaries under `*.dev.ekodi.kr`; AI Control verification additionally uses an isolated development-account `workers.dev` staging endpoint.
 - Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
 - Canonical public user-space namespaces are `ekodi.kr/personal/{slug}`, `ekodi.kr/org/{slug}`, `ekodi.kr/group/{slug}` and `ekodi.kr/project/{slug}`.
 - Business, church, school, nonprofit, association, institution and similar formal entities are organization subtypes under `/org/{slug}` unless a future constitutional amendment defines another universal workspace kind.
@@ -53,7 +53,12 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Login, signup, upload, AI and other abuse-sensitive endpoints receive dedicated throttling and verification.
 
 ## 7. AI Constitution
-- AI calls route through provider-independent governance when a gateway exists.
+- AI calls route through provider-independent EKODI governance and orchestration when a gateway exists.
+- ChatGPT, Claude, Gemini, Codex and any future connected AI are entry points or bounded specialist participants; the entry AI never becomes the task owner merely because the request began there.
+- Every routed EKODI task is owned and directed by `EKODI Orchestrator`, which interprets intent, applies this constitution, selects appropriate AI or human specialists, coordinates collaboration and preserves shared task context and audit evidence.
+- `EKODI Platform Super Administrator` is the final platform authority. AI agents, specialist providers and EKODI Orchestrator cannot override or silently substitute for that authority.
+- Ordinary users and delegated administrators approve only within their authorized workspace, resource or service scope.
+- Platform-wide or high-impact actions require explicit EKODI Platform Super Administrator review before execution, including constitutional/platform-policy changes, production deployment or promotion, production schema/secret/DNS changes, destructive or mass data changes, core identity/authorization changes, exceptional financial or legal commitments, domain shutdown/ownership transfer, repository force-push/delete, production rollback and material external commitments.
 - AI never owns EKODI identity, authorization, payment or irreversible high-impact decisions.
 - Expensive AI work has quota, timeout, retry, circuit-breaker and fallback behavior.
 - Provider unavailability must retain a safe degraded or non-AI path where the service permits it.

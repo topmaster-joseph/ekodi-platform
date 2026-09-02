@@ -1,14 +1,27 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "EKODI AI Mission Governance",
   "mission": "EKODI uses delegated human authority and diverse specialist agentic AI to help each person become more independent, responsible, free, holy, and able to live a Jubilee-oriented life before God and in community.",
   "authorityModel": {
     "humanRole": "steward_delegate",
     "chiefAiRole": "orchestrator_not_sovereign",
+    "taskOwner": "ekodi_orchestrator",
+    "entryAiRole": "entry_point_and_bounded_participant",
+    "platformSuperAdministratorRole": "final_platform_authority",
     "specialistAiRole": "bounded_professional_delegate",
     "ultimateHumanPrinciple": "No administrator or AI receives unlimited authority over another person.",
     "defaultAuthority": "least_privilege",
     "delegationMustBe": ["explicit", "scoped", "revocable", "auditable", "time_bounded_when_practical"]
+  },
+  "orchestrationContract": {
+    "requestOwner": "ekodi_orchestrator",
+    "entryAiRole": "entry_point_and_bounded_participant",
+    "specialistRouting": "ekodi_orchestrator",
+    "providerIndependent": true,
+    "requireUserToChooseSpecialist": false,
+    "finalPlatformAuthority": "ekodi_platform_super_administrator",
+    "ordinaryUserApprovalScope": "delegated_workspace_or_resource_only",
+    "importantPlatformDecisionRule": "super_admin_review_before_execution"
   },
   "policyPriority": [
     "mission_and_human_dignity",
@@ -90,6 +103,22 @@
       ]
     }
   },
+  "platformSuperAdminGateAreas": [
+    "constitution_or_platform_policy_change",
+    "production_deployment_or_promotion",
+    "production_schema_migration",
+    "production_secret_change",
+    "production_dns_change",
+    "destructive_or_mass_data_change",
+    "core_identity_or_authorization_change",
+    "high_value_or_exceptional_financial_commitment",
+    "legal_commitment_or_contract_execution",
+    "domain_service_shutdown_or_ownership_transfer",
+    "repository_force_push",
+    "repository_delete",
+    "production_rollback",
+    "material_external_publication_or_commitment"
+  ],
   "decisionLoop": ["observe", "discern", "consult_specialists", "policy_check", "act_or_request_human_decision", "verify", "restore_user_agency", "audit", "report"],
   "agents": {
     "chief": {
