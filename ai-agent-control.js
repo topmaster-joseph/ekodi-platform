@@ -2,6 +2,7 @@ import authWorker from './auth-worker.js';
 import apiWorker from './api-worker.js';
 import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
+import { createCloudflareWorkersAiProvider, getCloudflareWorkersAiProviderStatus } from './workers-ai-provider-adapter.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 
 const PREFIX = '/api/control/ai';
@@ -10,6 +11,20 @@ const MAX_PAYLOAD_BYTES = 16_384;
 const MAX_ASSIST_MESSAGE_CHARS = 4_000;
 const MAX_ASSIST_HISTORY_ITEMS = 8;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
+
+function aiProviderChain(env = {}) {
+  const workersAi = createCloudflareWorkersAiProvider(env);
+  const openai = createOpenAiProvider(env);
+  const primary = String(env.AI_PROVIDER_PRIMARY || 'cloudflare-workers-ai').trim().toLowerCase();
+  return primary === 'openai' ? [openai, workersAi] : [workersAi, openai];
+}
+
+function aiProviderStatuses(env = {}) {
+  const workersAi = getCloudflareWorkersAiProviderStatus(env);
+  const openai = getOpenAiProviderStatus(env);
+  const primary = String(env.AI_PROVIDER_PRIMARY || 'cloudflare-workers-ai').trim().toLowerCase();
+  return primary === 'openai' ? [openai, workersAi] : [workersAi, openai];
+}
 
 function json(data, status = 200, request = null, env = {}) {
   const headers = new Headers({
@@ -257,8 +272,8 @@ async function handleAdminAssist(request, env, session) {
   });
   const decision = evaluateMissionAction(auditAction);
   const stored = await insertAction(env, session, auditAction, decision);
-  const provider = createOpenAiProvider(env);
-  const gateway = buildCoreAiGateway(env, [provider]);
+  const providers = aiProviderChain(env);
+  const gateway = buildCoreAiGateway(env, providers);
   const configuredTimeout = Number(env.AI_ADMIN_TIMEOUT_MS || 15_000);
   const timeoutMs = Math.min(Math.max(Number.isFinite(configuredTimeout) ? configuredTimeout : 15_000, 2_500), 30_000);
   const result = await gateway.run({
@@ -360,11 +375,14 @@ export async function handleAgentMissionControl(request, env) {
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/provider-status`) {
-    const provider = createOpenAiProvider(env);
+    const providers = aiProviderChain(env);
+    const statuses = aiProviderStatuses(env);
     return json({
       ok: true,
-      gateway: getCoreAiGatewayStatus(env, [provider]),
-      openai: getOpenAiProviderStatus(env),
+      gateway: getCoreAiGatewayStatus(env, providers),
+      providers: statuses,
+      openai: statuses.find(item => item.id === 'openai') || getOpenAiProviderStatus(env),
+      workersAi: statuses.find(item => item.id === 'cloudflare-workers-ai') || getCloudflareWorkersAiProviderStatus(env),
     }, 200, request, env);
   }
 
