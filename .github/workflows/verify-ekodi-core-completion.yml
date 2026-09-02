@@ -83,7 +83,7 @@ jobs:
       - name: Verify live EKODI Core production contract
         run: npm run verify:core-production
       - name: Upload final completion evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ekodi-core-completion-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/ekodi-core-production-verification.json

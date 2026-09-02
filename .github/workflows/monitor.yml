@@ -30,7 +30,7 @@ jobs:
         run: npm run monitor
       - name: Preserve latest status without repository writes
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ekodi-monitor-status
           path: monitor-status.json
