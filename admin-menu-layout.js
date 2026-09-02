@@ -8,9 +8,9 @@ const nav=sidebar?.querySelector('nav');
 const content=document.querySelector('.content');
 if(!sidebar||!nav||!content)return;
 renderAdminSidebar(nav);
-const INTERNAL_ONLY_SECTIONS = new Set(['services', 'deployments', 'policies']);
-const VISIBLE_NAV_ORDER = Object.freeze(adminMenuOrder());
-const RANK=new Map(VISIBLE_NAV_ORDER.map((section,index)=>[section,index+1]));
+const INTERNAL=new Set(['services','deployments','policies']);
+const ORDER=Object.freeze(adminMenuOrder());
+const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
@@ -23,6 +23,13 @@ const CANON=pairMap('sites:#sites aiops:#ai-ops devotional:#devotional ai-module
 let requestedSection = '';
 let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
+function installCompactStyle(){
+  if(document.querySelector('#ekodi-admin-menu-density'))return;
+  const style=document.createElement('style');
+  style.id='ekodi-admin-menu-density';
+  style.textContent='body.admin-compact .side-caption{margin-bottom:10px!important}body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.admin-compact .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.admin-compact .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.admin-compact .side-bottom{padding-top:8px!important}';
+  document.head.append(style);
+}
 function ensureFeatureStyle(href){
   if(document.querySelector(`link[data-ekodi-feature-style="${href}"]`))return;
   const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.dataset.ekodiFeatureStyle=href;document.head.append(link);
@@ -35,7 +42,7 @@ function sectionOf(item){
 }
 const panelTargets=panel=>String(panel?.dataset?.panel||'').split(/\s+/).filter(Boolean);
 const allNav=()=>nav.querySelectorAll('.nav[data-section],.nav[data-lazy-section],.nav[data-device-control-nav],a.nav[href]');
-const isInternal=section=>INTERNAL_ONLY_SECTIONS.has(String(section||'').trim());
+const isInternal=section=>INTERNAL.has(String(section||'').trim());
 const isInternalNav=item=>isInternal(sectionOf(item));
 const hasPanel=section=>Boolean(section&&[...content.querySelectorAll('[data-panel]')].some(panel=>panelTargets(panel).includes(section)));
 function applyOrder(){
@@ -175,7 +182,7 @@ window.addEventListener('hashchange',()=>{
   if(section==='cheonggye-members')return openCheonggyeMembers();
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
-mountAdminSidebar(document);enforcePolicy();
+installCompactStyle();mountAdminSidebar(document);enforcePolicy();
 const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
@@ -191,8 +198,8 @@ window.EKODIAdminPanels=Object.freeze({
     requestedSection=section;return activatePanel(section)||requestDemand(section);
   },
   current:()=>requestedSection,
-  internalSections:Object.freeze([...INTERNAL_ONLY_SECTIONS]),
-  visibleMenuOrder:VISIBLE_NAV_ORDER
+  internalSections:Object.freeze([...INTERNAL]),
+  visibleMenuOrder:ORDER
 });
 import('./admin-menu-runtime.js').catch(console.error);
 })();

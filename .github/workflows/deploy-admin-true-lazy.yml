@@ -86,8 +86,8 @@ jobs:
           echo "Admin budgets: version=$version handoff=$handoff_bytes compact=$compact_bytes menu=$menu_bytes demand=$demand_bytes first-js=$first_path first-css=$css_bytes"
           test "$handoff_bytes" -le 9000
           test "$compact_bytes" -le 5000
-          test "$menu_bytes" -le 12000
-          test "$demand_bytes" -le 15000
+          test "$menu_bytes" -le 10000
+          test "$demand_bytes" -le 14000
           test "$first_path" -le 43000
           test "$css_bytes" -le 40000
 
