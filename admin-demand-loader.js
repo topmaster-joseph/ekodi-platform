@@ -2,17 +2,19 @@
 'use strict';
 const TOKEN_KEY='ekodi-auth-token',ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__',app=document.querySelector('#app'),nav=document.querySelector('.sidebar nav'),loadedScripts=new Map(),loadedStyles=new Map(),pending=new Map(),secondaryScheduled=new Set();
 const FEATURES={
-  campus: {label:'Campus',icon:'⌂',styles:['campus-actions.css'],scripts:['campus-actions.js'],real:'[data-section="campus"]',hashes:['#campus'],insert:'first'},
+  campus: {label:'Campus',icon:'⌂',styles: ['campus-actions.css'],scripts: ['campus-actions.js'],real:'[data-section="campus"]',hashes:['#campus'],insert:'first'},
   aiops: {label:'AI Ops',icon:'✦',styles:['ai-ops-admin.css'],scripts:['ai-ops-admin.js'],secondaryScripts:['admin-lazy-features.js'],real:'[data-section="aiops"]',hashes:['#ai-ops','#aiops'],insert:'after-campus'},
   devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
   'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
   'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
-  aimembers:{label:'AI 회원운영',icon:'◈',styles:['ai-ops-admin.css'],scripts:['ai-ops-admin.js'],real:'[data-section="ai-membership"]',hashes:['#ai-membership'],insert:'after-deployments'},
-  health: {label:'Health',icon:'◉',styles:['system-health-admin.css'],scripts:['system-health-admin.js'],real:'[data-section="health"]',hashes:['#health'],insert: 'after-aiops'},
+  aimembers:{label:'AI 회원운영',icon:'◈',styles:['ai-ops-admin.css'],scripts:['ai-ops-admin.js'],real:'[data-section="ai-membership"]',hashes:['#ai-membership'],insert:'after-deployments'
+  },
+  health: {label: 'Health',icon:'◉',styles: ['system-health-admin.css'],scripts: ['system-health-admin.js'],real:'[data-section="health"]',hashes: ['#health'],insert: 'after-aiops'},
   'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
   storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],insert:'after-health'},
-  security: {label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert: 'after-health'},
-  deployments: {label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert: 'after-security'},
+  security: {label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert: 'after-health'
+  },
+  deployments: {label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts: ['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert: 'after-security'},
   work:{label:'WORK',icon:'W',styles:['work-admin.css'],scripts:['work-admin.js'],real:'[data-section="work"]',hashes:['#work'],paths:['/work','/work/'],insert:'after-services'},
   clients:{label:'고객 사이트',icon:'C',styles:['client-access.css'],scripts:['client-access.js'],real:'[data-section="clients"]',hashes:['#clients']},
   community:{label:'커뮤니티',icon:'◎',styles:['community-reports-admin.css'],scripts:['community-reports-admin.js'],real:'[data-section="community"]',hashes:['#community']},
@@ -21,7 +23,7 @@ const FEATURES={
   social:{label:'소셜',icon:'S',styles:['social-admin.css'],scripts:['social-admin.js'],real:'[data-section="social"]',hashes:['#social']},
   affiliates:{label:'제휴',icon:'A',styles:['marketing-funnel-admin.css'],scripts:['marketing-funnel-admin.js'],real:'[data-section="affiliates"]',hashes:['#affiliates']},
   marketing:{label:'MarketingAI',icon:'AI',styles:['marketing-ai-admin.css'],scripts:['marketing-ai-admin.js'],real:'[data-section="marketing-ai"]',hashes:['#marketing-ai'],insert:'after-work'},
-  devices:{label:'원격 작업',icon:'⌁',styles:['device-control-admin.css','remote-power-admin.css'],scripts:['device-control-admin.js','remote-power-admin.js'],secondaryStyles:['device-browser-diagnostics.css'],secondaryScripts:['device-browser-diagnostics.js'],real:'[data-device-control-nav]',hashes:['#devices'],insert:'after-workspace'}
+  devices: {label:'원격 작업',icon:'⌁',styles: ['device-control-admin.css', 'remote-power-admin.css'],scripts: ['device-control-admin.js', 'remote-power-admin.js'],secondaryStyles:['device-browser-diagnostics.css'],secondaryScripts:['device-browser-diagnostics.js'],real:'[data-device-control-nav]',hashes: ['#devices'],insert:'after-workspace'}
 };
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token()&&app&&!app.hidden)}
