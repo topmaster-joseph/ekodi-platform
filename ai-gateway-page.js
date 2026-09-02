@@ -36,7 +36,7 @@ function secureHeaders(contentType, routeName) {
 }
 
 function pageHtml() {
-  const loginUrl = 'https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fai.ekodi.kr%2F';
+  const loginUrl = 'https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fai.ekodi.kr%2F';
   return `<!doctype html>
 <html lang="ko">
 <head>

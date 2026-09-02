@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { aiGatewayScript } from '../ai-gateway-page.js';
+import { aiGatewayPage, aiGatewayScript } from '../ai-gateway-page.js';
 
 function element() {
   return {
@@ -104,6 +104,11 @@ async function runClient({ storageThrows = false } = {}) {
   await new Promise(resolve => setTimeout(resolve, 30));
   return { elements, sequence, location, token };
 }
+
+test('Gateway Google admin button enters central auth in direct mode', async () => {
+  const html = await aiGatewayPage().text();
+  assert.match(html, /https:\/\/auth\.ekodi\.kr\/\?site=admin&direct=1&return_to=https%3A%2F%2Fai\.ekodi\.kr%2F/);
+});
 
 test('Google admin handoff survives blocked sessionStorage and opens authenticated Gateway', async () => {
   const { elements, sequence, location } = await runClient({ storageThrows:true });
