@@ -46,9 +46,9 @@ test('Chief AI owns action requests and routes specialists internally', async ()
 
 test('AI Ops no longer auto-hydrates Governance cockpit or Deployments', async () => {
   const loader = await read('admin-demand-loader.js');
-  const aiops = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*deployments:/)?.[1] || '';
+  const aiops = loader.match(/aiops:\s*\{([\s\S]*?)\n    \},/)?.[1] || '';
   assert.match(aiops, /admin-lazy-features\.js/);
-  assert.match(aiops, /system-health-admin\.js/);
+  assert.doesNotMatch(aiops, /system-health-admin\.js/);
   assert.doesNotMatch(aiops, /mission-control-admin/);
   assert.doesNotMatch(aiops, /release-control-admin/);
   assert.match(loader, /deployments:\s*\{/);

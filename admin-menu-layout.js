@@ -14,26 +14,15 @@ const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
-  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
+  ['clients','clients'],['community','community'],['cheonggye-members','cheonggye-members'],['books','books'],['social','social'],['affiliates','affiliates'],
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH=pairMap('#sites:sites #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #work:work #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
 const CANON=pairMap('sites:#sites aiops:#ai-ops devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus work:#work marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social affiliates:#mall-ai-sales');
 let requestedSection = '';
-let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
+let sitesLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
-function installCompactStyle(){
-  if(document.querySelector('#ekodi-admin-menu-density'))return;
-  const style=document.createElement('style');
-  style.id='ekodi-admin-menu-density';
-  style.textContent='body.admin-compact .side-caption{margin-bottom:10px!important}body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.admin-compact .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.admin-compact .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.admin-compact .side-bottom{padding-top:8px!important}';
-  document.head.append(style);
-}
-function ensureFeatureStyle(href){
-  if(document.querySelector(`link[data-ekodi-feature-style="${href}"]`))return;
-  const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.dataset.ekodiFeatureStyle=href;document.head.append(link);
-}
 function sectionOf(item){
   if(window.EKODIAdminSidebar?.sectionOf)return window.EKODIAdminSidebar.sectionOf(item);
   if(item?.dataset?.deviceControlNav==='true')return'devices';
@@ -103,22 +92,12 @@ async function openSites(){
   await sitesLoading;applyOrder();activatePanel('sites');
   navItemFor('campus')?.classList.add('active');syncTitle('campus');
 }
-async function openCheonggyeMembers(){
-  dc=false;requestedSection='cheonggye-members';
-  ensureFeatureStyle('cheonggye-members-admin.css');
-  if(!cheonggyeLoading)cheonggyeLoading=import('./cheonggye-members-admin.js').then(module=>{
-    window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'cheonggye-members'}}));
-    return module;
-  }).catch(error=>{cheonggyeLoading=null;console.error(error);throw error;});
-  await cheonggyeLoading;applyOrder();activatePanel('cheonggye-members');syncTitle('cheonggye-members');
-}
 function fallbackDemand(section){
   const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"],[data-section="${section}"]`;
   nav.querySelector(selector)?.click();
 }
 function requestDemand(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
-  if(section==='cheonggye-members')return openCheonggyeMembers();
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
@@ -144,7 +123,6 @@ function reconcileNavigation(){
     enforcePolicy();
     if(!requestedSection||dc)return;
     if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
-    else if(requestedSection==='cheonggye-members'&&!hasPanel('cheonggye-members'))openCheonggyeMembers();
     else if(!activatePanel(requestedSection))requestDemand(requestedSection);
   }finally{running=false;if(again){again=false;scheduleNav();}}
 }
@@ -156,7 +134,6 @@ nav.addEventListener('click',event=>{
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
   const section=sectionOf(item);if(!section)return;dc=false;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
-  if(section==='cheonggye-members'){event.preventDefault();event.stopImmediatePropagation();return openCheonggyeMembers();}
   requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
 },true);
 content.addEventListener('click',event=>{
@@ -171,7 +148,6 @@ window.addEventListener('ekodi-admin-ready',()=>{
   enforcePolicy();const section=explicitHashSection();
   if(section&&isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  if(section==='cheonggye-members')return openCheonggyeMembers();
   if(section){dc=false;requestedSection=section;if(!activatePanel(section))requestDemand(section);}
   else{requestedSection='campus';dc=true;}
 });
@@ -179,14 +155,12 @@ window.addEventListener('hashchange',()=>{
   const section=explicitHashSection();if(!section)return;dc=false;
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  if(section==='cheonggye-members')return openCheonggyeMembers();
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
-installCompactStyle();mountAdminSidebar(document);enforcePolicy();
+mountAdminSidebar(document);enforcePolicy();
 const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
-else if(initialHash==='cheonggye-members')openCheonggyeMembers();
 else if (initialHash) requestedSection = initialHash;
 else{requestedSection = 'campus';dc=true;requestDemand('campus');}
 window.EKODIAdminPanels=Object.freeze({
@@ -194,7 +168,6 @@ window.EKODIAdminPanels=Object.freeze({
     dc=false;
     if(isInternal(section))return routeInternal();
     if(section==='sites')return openSites();
-    if(section==='cheonggye-members')return openCheonggyeMembers();
     requestedSection=section;return activatePanel(section)||requestDemand(section);
   },
   current:()=>requestedSection,

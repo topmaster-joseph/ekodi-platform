@@ -5,7 +5,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 
 async function text(path) {
-  return readFile(path, 'utf8');
+  return (await readFile(path, 'utf8')).replace(/\r\n/g, '\n');
 }
 
 function mustReplace(source, search, replacement, label) {
