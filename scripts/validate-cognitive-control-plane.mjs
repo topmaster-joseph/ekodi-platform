@@ -108,7 +108,7 @@ for (const marker of [
   'Cloudflare Access',
   'validate-ai-mission-governance.mjs',
   'evaluateTaskMissionPolicy',
-  'migrations/0053_ai_mission_governance.sql',
+  'migrations/0052_ai_mission_governance.sql',
   'needs: [validate, deploy-staging]',
   'Build one immutable AI Control application artifact',
   'actions/upload-artifact@v4',

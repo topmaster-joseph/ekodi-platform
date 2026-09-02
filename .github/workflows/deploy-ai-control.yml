@@ -18,7 +18,7 @@ on:
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
-      - 'migrations/0053_ai_mission_governance.sql'
+      - 'migrations/0052_ai_mission_governance.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -43,7 +43,7 @@ on:
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
-      - 'migrations/0053_ai_mission_governance.sql'
+      - 'migrations/0052_ai_mission_governance.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -106,7 +106,7 @@ jobs:
           grep -Fq "['login','status']" scripts/ai-account-node.mjs
           test -f migrations/0050_ai_control_plane.sql
           test -f migrations/0051_ai_account_nodes.sql
-          test -f migrations/0053_ai_mission_governance.sql
+          test -f migrations/0052_ai_mission_governance.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
