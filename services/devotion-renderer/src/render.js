@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
+﻿import { mkdir, mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -86,7 +86,7 @@ export function buildFfmpegArgs({ item, outputPath, subtitlePath, format = {} })
   return args;
 }
 
-export async function renderItem({ item, workspaceId, batchKey, format, outputDir, ffmpegPath = 'ffmpeg', fontName }) {
+export async function renderItem({ item, workspaceId, batchKey, format, outputDir, ffmpegPath = 'ffmpeg', fontName, includeVideoBase64 = false }) {
   const tempDir = await mkdtemp(join(tmpdir(), 'ekodi-devotion-render-'));
   try {
     let effectiveItem = item;
@@ -105,13 +105,15 @@ export async function renderItem({ item, workspaceId, batchKey, format, outputDi
     const outputPath = resolve(outputDir, filename);
     const args = buildFfmpegArgs({ item: effectiveItem, outputPath, subtitlePath, format });
     await runProcess(ffmpegPath, args);
-    return { item_id: String(item.id), path: outputPath, filename, duration_seconds: duration };
+    const result = { item_id: String(item.id), path: outputPath, filename, duration_seconds: duration };
+    if (includeVideoBase64) result.video_base64 = (await readFile(outputPath)).toString('base64');
+    return result;
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
 }
 
-export async function renderBatch({ job, batch, outputDir = '/tmp/ekodi-devotion-renderer', ffmpegPath = 'ffmpeg', fontName }) {
+export async function renderBatch({ job, batch, outputDir = '/tmp/ekodi-devotion-renderer', ffmpegPath = 'ffmpeg', fontName, includeVideoBase64 = false }) {
   if (!job || !batch) throw new Error('job and batch are required');
   if (!batch.workspace_id || !batch.batch_key) throw new Error('batch workspace_id and batch_key are required');
   if (!Array.isArray(batch.items) || !batch.items.length) throw new Error('batch items are required');
@@ -124,7 +126,8 @@ export async function renderBatch({ job, batch, outputDir = '/tmp/ekodi-devotion
       format: job.payload?.format || {},
       outputDir,
       ffmpegPath,
-      fontName
+      fontName,
+      includeVideoBase64
     }));
   }
   return { job_id: String(job.id || ''), workspace_id: batch.workspace_id, batch_key: batch.batch_key, artifacts };

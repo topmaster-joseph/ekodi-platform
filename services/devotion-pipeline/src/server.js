@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {createDevotionPipeline} from './service.js';
+import {createHttpWriter} from './adapters/http-writer.js';
 import {createHttpVoice} from './adapters/http-voice.js';
 import {createHttpAssets} from './adapters/http-assets.js';
 import {createHttpRenderer} from './adapters/http-renderer.js';
@@ -7,6 +8,7 @@ import {createHttpRenderer} from './adapters/http-renderer.js';
 const port=Number(process.env.PORT||8790);
 const serviceKey=String(process.env.PIPELINE_SERVICE_KEY||'');
 const service=createDevotionPipeline({
+  writer:createHttpWriter({endpoint:process.env.WRITER_ENDPOINT,token:process.env.WRITER_TOKEN}),
   voice:createHttpVoice({endpoint:process.env.VOICE_ENDPOINT,token:process.env.VOICE_TOKEN}),
   assets:createHttpAssets({endpoint:process.env.ASSET_ENDPOINT,token:process.env.ASSET_TOKEN}),
   renderer:createHttpRenderer({endpoint:process.env.RENDER_ENDPOINT,token:process.env.RENDER_TOKEN})
@@ -17,7 +19,8 @@ http.createServer(async(req,res)=>{
   const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);
   if(req.method==='GET'&&url.pathname==='/health'){
     const ready=service.ready();
-    return send(res,Object.values(ready).every(Boolean)?200:503,{ok:Object.values(ready).every(Boolean),service:'ekodi.devotion-pipeline',dependencies:ready});
+    const required={voice:ready.voice,assets:ready.assets,renderer:ready.renderer};
+    return send(res,Object.values(required).every(Boolean)?200:503,{ok:Object.values(required).every(Boolean),service:'ekodi.devotion-pipeline',dependencies:ready});
   }
   if(serviceKey&&req.headers.authorization!==`Bearer ${serviceKey}`)return send(res,401,{error:'unauthorized',code:'UNAUTHORIZED'});
   if(req.method!=='POST'||url.pathname!=='/v1/process')return send(res,404,{error:'not found',code:'NOT_FOUND'});

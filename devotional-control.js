@@ -45,9 +45,12 @@ function integrationBatch(config, passages = EKODI_SEPTEMBER_2026) {
   return {
     ...base,
     items: passages.map((passage, index) => ({
-      id: String(index + 1).padStart(2, '0'),
+      ...(base.items[index] || { id: String(index + 1).padStart(2, '0') }),
       passage: String(passage),
-      metadata: { devotion_date: `2026-09-${String(index + 1).padStart(2, '0')}` }
+      metadata: {
+        ...(base.items[index]?.metadata || {}),
+        devotion_date: `2026-09-${String(index + 1).padStart(2, '0')}`
+      }
     }))
   };
 }

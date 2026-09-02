@@ -45,9 +45,10 @@ test('render dispatch receives generic batch data and no organization assumption
   const service = createDevotionStudio({ repository, renderer, clock: fixedClock, idFactory: makeIdFactory() });
   await service.putBatch(batch('workspace-a'));
   const job = await service.queueRender({ workspace_id: 'workspace-a', batch_key: '2026-09' });
-  assert.equal(job.status, 'queued');
+  assert.equal(job.status, 'completed');
   assert.equal(calls.length, 1);
   assert.equal(calls[0].snapshot.workspace_id, 'workspace-a');
+  assert.equal((await service.getBatch({ workspace_id: 'workspace-a', batch_key: '2026-09' })).render_status, 'ready');
 });
 
 test('publication scheduling is target-driven and fails closed without publisher adapter', async () => {

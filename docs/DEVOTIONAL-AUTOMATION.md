@@ -48,3 +48,22 @@ Provider credentials and OAuth refresh tokens must never be committed or exposed
 
 ## Deployment boundary
 Devotion Studio must have an independent deployment lifecycle. Church, Mission, Admin, renderer, storage and YouTube adapters may all be replaced or redeployed independently. A failure or disconnect in one workspace or publication target must not stop other workspaces or the service itself.
+
+## Cloud-first execution
+The default operational path is `.github/workflows/devotion-cloud-run.yml`, which runs on an isolated Ubuntu runner instead of depending on a particular EKODI operator PC. The scheduled run starts at 02:30 Asia/Seoul and prepares a seven-day buffer.
+
+The executable chain is:
+`Devotion Writer → Devotion Voice → Devotion Assets → Devotion Renderer → Devotion Publisher`.
+
+Scheduled production stays idle until the Gemini generation credential and durable Storage Gateway are connected. YouTube scheduling independently stays idle until both publication targets have OAuth credentials. Missing providers are never reported as completed.
+
+Required production secrets are named:
+- `DEVOTION_GEMINI_API_KEY`
+- `DEVOTION_STORAGE_GATEWAY_ENDPOINT`
+- `DEVOTION_STORAGE_GATEWAY_TOKEN`
+- `DEVOTION_YOUTUBE_CLIENT_ID`
+- `DEVOTION_YOUTUBE_CLIENT_SECRET`
+- `DEVOTION_YOUTUBE_CHURCH_REFRESH_TOKEN`
+- `DEVOTION_YOUTUBE_MISSION_REFRESH_TOKEN`
+
+Rendering uses FFmpeg installed on the ephemeral cloud runner. Final script, voice, video and publication records are keyed by `workspace_id + batch_key + item_id + render_version`, allowing retries without duplicate generation or publication.

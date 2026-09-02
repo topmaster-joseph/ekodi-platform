@@ -1,0 +1,17 @@
+{
+  "service_id": "ekodi.devotion-publisher",
+  "display_name": "EKODI Devotion Publisher",
+  "version": "0.1.0",
+  "scope": "shared-independent-service",
+  "tenant_neutral": true,
+  "interfaces": { "http": ["GET /health", "POST /v1/schedule"] },
+  "providers": { "default_adapter": "youtube-data-api-v3", "replaceable": true },
+  "input": { "video": "Devotion Assets", "metadata": "structured devotional script" },
+  "forbidden_core_dependencies": [
+    "specific church or mission names",
+    "FFmpeg rendering",
+    "TTS generation",
+    "EKODI admin authentication",
+    "specific workspace ids"
+  ]
+}

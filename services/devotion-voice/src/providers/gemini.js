@@ -12,7 +12,7 @@ export function createGeminiTtsProvider({apiKey,model='gemini-3.1-flash-tts-prev
       let lastError;
       for(let attempt=1;attempt<=3;attempt++){
         try{
-          const response=await fetchImpl(endpoint,{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},body:JSON.stringify({model,input:prompt,response_format:{type:'audio'},generation_config:{speech_config:[{voice:voiceName}]}})});
+          const response=await fetchImpl(endpoint,{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json','Api-Revision':'2026-05-20'},body:JSON.stringify({model,input:prompt,response_format:{type:'audio'},generation_config:{speech_config:[{voice:voiceName}]}})});
           const body=await response.json().catch(()=>({}));
           if(!response.ok){const error=new Error(body?.error?.message||`Gemini TTS HTTP ${response.status}`);error.status=response.status;throw error}
           const data=body?.output_audio?.data;

@@ -5,8 +5,11 @@ on:
     paths:
       - 'services/devotion-pipeline/**'
       - 'services/devotion-assets/**'
+      - 'services/devotion-writer/**'
       - 'services/devotion-voice/**'
       - 'services/devotion-renderer/**'
+      - 'services/devotion-publisher/**'
+      - 'services/devotion-runner/**'
       - 'services/devotion-studio/**'
       - 'integrations/devotion-studio/**'
       - '.github/workflows/devotion-pipeline-ci.yml'
@@ -15,8 +18,11 @@ on:
     paths:
       - 'services/devotion-pipeline/**'
       - 'services/devotion-assets/**'
+      - 'services/devotion-writer/**'
       - 'services/devotion-voice/**'
       - 'services/devotion-renderer/**'
+      - 'services/devotion-publisher/**'
+      - 'services/devotion-runner/**'
       - 'services/devotion-studio/**'
       - 'integrations/devotion-studio/**'
 
@@ -41,9 +47,13 @@ jobs:
             services/devotion-pipeline/src/adapters/*.js \
             services/devotion-assets/src/*.js \
             services/devotion-assets/src/adapters/*.js \
+            services/devotion-writer/src/*.js \
+            services/devotion-writer/src/providers/*.js \
             services/devotion-voice/src/*.js \
             services/devotion-voice/src/providers/*.js \
             services/devotion-renderer/src/*.js \
+            services/devotion-publisher/src/*.js \
+            services/devotion-runner/src/*.js \
             services/devotion-studio/src/*.js \
             services/devotion-studio/src/adapters/*.js; do
             node --check "$file"
@@ -51,6 +61,8 @@ jobs:
           node --test \
             services/devotion-pipeline/test/*.test.mjs \
             services/devotion-assets/test/*.test.mjs \
+            services/devotion-writer/test/*.test.mjs \
             services/devotion-voice/test/*.test.mjs \
             services/devotion-renderer/test/*.test.mjs \
+            services/devotion-publisher/test/*.test.mjs \
             services/devotion-studio/test/*.test.mjs

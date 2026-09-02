@@ -1,4 +1,4 @@
-const nowIso = clock => clock().toISOString();
+﻿const nowIso = clock => clock().toISOString();
 const required = (value, name) => {
   const text = String(value ?? '').trim();
   if (!text) throw new Error(`${name} is required`);
@@ -84,8 +84,15 @@ export function createDevotionStudio({ repository, renderer, publisher, clock = 
     };
     await repository.enqueueJob(job);
     await repository.markBatchRenderState(workspaceId, batchKey, 'queued', job.updated_at);
-    await renderer.dispatch({ job, snapshot });
-    return job;
+    try {
+      const result = await renderer.dispatch({ job, snapshot });
+      const completedAt = nowIso(clock);
+      await repository.markBatchRenderState(workspaceId, batchKey, 'ready', completedAt);
+      return { ...job, status: 'completed', updated_at: completedAt, result };
+    } catch (error) {
+      await repository.markBatchRenderState(workspaceId, batchKey, 'error', nowIso(clock));
+      throw error;
+    }
   }
 
   async function schedulePublication({ workspace_id, batch_key, target_id, publish_at, item_ids }) {

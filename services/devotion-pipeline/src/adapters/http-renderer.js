@@ -11,7 +11,7 @@ export function createHttpRenderer({endpoint,token='',fetchImpl=fetch}){
       const response=await fetchImpl(`${base}/v1/render`,{
         method:'POST',
         headers:{'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{})},
-        body:JSON.stringify({job,batch:{...batch,items}})
+        body:JSON.stringify({job,batch:{...batch,items},include_video_base64:true})
       });
       const body=await response.json().catch(()=>({}));
       if(!response.ok){const error=new Error(body.error||`renderer request failed: HTTP ${response.status}`);error.code=body.code||'RENDER_REQUEST_FAILED';throw error}

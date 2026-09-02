@@ -1,4 +1,4 @@
-import http from 'node:http';
+﻿import http from 'node:http';
 import { renderBatch, ffmpegAvailable } from './render.js';
 
 const port = Number(process.env.PORT || 8787);
@@ -39,7 +39,8 @@ const server = http.createServer(async (req, res) => {
       batch: payload.batch,
       outputDir,
       ffmpegPath,
-      fontName
+      fontName,
+      includeVideoBase64: payload.include_video_base64 === true
     });
     return send(res, 200, { ok: true, ...result });
   } catch (error) {
