@@ -13,7 +13,7 @@ on:
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-perf-diagnostics.js'
-      - 'compact-control-center.css'
+      - 'admin-compact.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
       - 'release-control-admin.js'
@@ -78,14 +78,14 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
-          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js compact-control-center.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
+          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js admin-compact.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/control-center.html | head -1 | sed 's/.*?v=//')
+          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          grep -Fq "control-center.css?v=$version" dist/control-center.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/control-center.html
+          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
           grep -Fq 'admin-lazy-features.js' dist/admin-demand-loader.js
           grep -Fq 'health:' dist/admin-demand-loader.js
           grep -Fq 'system-health-admin.css' dist/admin-demand-loader.js
@@ -100,7 +100,7 @@ jobs:
           grep -Fq 'admin-readable-command.css' dist/ai-ops-admin.css
           grep -Fq '#aiOpsPanel .ai-chief-chat{order:1!important;position:static!important' dist/ai-ops-admin.css
           grep -Fq '#aiOpsPanel .ai-ops-side' dist/ai-ops-admin.css
-          ! grep -Fq 'admin-readable-command.css' dist/compact-control-center.css
+          ! grep -Fq 'admin-readable-command.css' dist/admin-compact.css
           grep -Fq 'PerformanceObserver' dist/admin-perf-diagnostics.js
           ! grep -Fq 'PerformanceObserver' dist/admin-central-handoff.js
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
@@ -134,7 +134,7 @@ jobs:
             LIVE_VERSION=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' /tmp/admin-body | head -1 | sed 's/.*?v=//')
             [ -n "$LIVE_VERSION" ] || return 1
             [ "$LIVE_VERSION" = "$EXPECTED_VERSION" ] || return 1
-            grep -Fq "control-center.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
+            grep -Fq "admin-shell.css?v=$LIVE_VERSION" /tmp/admin-body || return 1
             grep -Fq "admin-central-handoff.js?v=$LIVE_VERSION" /tmp/admin-body || return 1
             ! grep -Fq '<script src="control-center.js"' /tmp/admin-body || return 1
             ! grep -Fq 'control-center-ops.css' /tmp/admin-body || return 1
@@ -153,7 +153,7 @@ jobs:
           }
 
           verify_compact_without_readable_css() {
-            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/compact-control-center.css?v=$LIVE_VERSION" || true)
+            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-compact.css?v=$LIVE_VERSION" || true)
             [ "$code" = '200' ] || return 1
             grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
             ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
