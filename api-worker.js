@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 
@@ -493,6 +494,18 @@ async function handleControl(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/mail/control')) {
+      try {
+        const response = await handleMailControl(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Mail control API error', error);
+        return new Response(JSON.stringify({ error: '메일 관리 API 처리 중 오류가 발생했습니다.', code: 'MAIL_CONTROL_ERROR' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
+        });
+      }
+    }
     if (request.method === 'OPTIONS') return authWorker.fetch(request, env, ctx);
     if (url.pathname.startsWith(CONTROL_PREFIX)) {
       try {

@@ -10,6 +10,7 @@ import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
+import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -145,6 +146,7 @@ export default {
     if(host===MAIL_HOST){
       const apiResponse=await handleMailApi(request,env);
       if(apiResponse)return apiResponse;
+      if(request.method==='GET'&&url.pathname==='/admin')return mailAdminPage();
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 

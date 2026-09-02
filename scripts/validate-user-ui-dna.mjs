@@ -155,7 +155,7 @@ for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.e
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
-for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=3','ekodi-user-ui-footer__copy','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters']) {
+for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=4','ekodi-user-ui-footer__copy','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters']) {
   if (!clientFooterSource.includes(marker)) errors.push(`Shared client footer lost central-config marker: ${marker}`);
 }
 for (const duplicatedText of ['213-13-01959','백련동1길 17-4','© 2026 EKODI · EKODIBIZ']) {
