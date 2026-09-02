@@ -25,7 +25,7 @@ test('templates stay provider-neutral while devotional daily is workspace-specia
 });
 test('OAuth credentials are encrypted and owned by person or immutable workspace', async () => {
   const [migration,vault,oauth,subject] = await Promise.all([
-    read('migrations/0053_channel_automation_core.sql'), read('channel-credential-vault.js'),
+    read('migrations/0055_channel_automation_core.sql'), read('channel-credential-vault.js'),
     read('channel-oauth-control.js'), read('channel-automation-subject.js'),
   ]);
   assert.match(migration, /owner_type TEXT NOT NULL CHECK\(owner_type IN \('person','workspace'\)\)/);
@@ -55,6 +55,7 @@ test('My EKODI and workspace admin expose separate channel automation entry poin
   ]);
   assert.match(myHtml, /channel-automation\.js\?v=20260903-channel-automation-1/);
   assert.match(myApp, /window\.EKODI_MY_AUTH/);
+  const myWorker=await read('my-worker.js'); assert.match(myWorker, /marketing-publish-api\.ekodi\.kr/);
   assert.match(myChannel, /subject_type=person/);
   assert.match(workspace, /\['publishing','쇼츠 자동화'\]/);
   assert.match(workspace, /subject_type=workspace/);
@@ -68,7 +69,7 @@ test('deployment gates include the channel core migration and production health 
     read('.github/workflows/deploy-marketing-publishing.yml'),
     read('deploy/manifests/marketing-publishing.worker.json'), read('platform-boundaries.json'),
   ]);
-  assert.match(workflow, /migrations\/0053_channel_automation_core\.sql/);
+  assert.match(workflow, /migrations\/0055_channel_automation_core\.sql/);
   assert.match(workflow, /test\/channel-automation-core\.test\.mjs/);
   assert.match(workflow, /channel_automation_profiles/);
   assert.match(workflow, /channel_oauth_connections/);
