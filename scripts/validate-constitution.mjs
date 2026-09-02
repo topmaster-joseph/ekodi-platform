@@ -11,7 +11,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.2.0') fail('constitution version must be 1.2.0 after the approved 2026-09-01 parallel-development amendment');
+if (constitution.version !== '1.3.0') fail('constitution version must be 1.3.0 after the approved 2026-09-02 Journal common-service amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -26,10 +26,12 @@ if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protect
 if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
+const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
+if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
 
 const expectedNamespaces = ['personal','org','group','project'];
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expectedNamespaces)) {
@@ -59,7 +61,7 @@ if (legacyPathAliases['https://user.ekodi.kr/{path}'] !== 'https://ekodi.kr/{pat
 for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
   for (const domain of service.domains || []) {
     if (!domain.endsWith('.ekodi.kr') && domain !== 'ekodi.kr') continue;
-    if (!systemDomains.has(domain) && !legacy.has(domain)) fail(`${serviceId}: unregistered feature subdomain ${domain}`);
+    if (!systemDomains.has(domain) && !legacy.has(domain) && !registeredCommon.has(domain)) fail(`${serviceId}: unregistered feature subdomain ${domain}`);
     if (legacy.has(domain) && !targets[domain]) fail(`${serviceId}: legacy domain ${domain} has no canonical migration target`);
   }
 }
@@ -112,6 +114,7 @@ if (failures.length) {
 console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
+console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
 console.log('- canonical user spaces: /personal, /org, /group, /project on ekodi.kr');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
 console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');

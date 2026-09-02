@@ -1,0 +1,163 @@
+name: Deploy Journal
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &journal_paths
+      - 'journal/**'
+      - 'journal-content.js'
+      - 'journal-worker.js'
+      - 'wrangler.journal*.toml'
+      - 'deploy/manifests/journal.worker.json'
+      - 'test/journal-platform.test.mjs'
+      - 'config/ecosystem-services.json'
+      - 'config/user-ui-dna.json'
+      - 'config/seasonal-design-governance.json'
+      - 'ekodi-service-manifest.js'
+      - 'shell/theme.json'
+      - 'shell/service-design-inheritance.js'
+      - 'platform-boundaries.json'
+      - 'CONSTITUTION.md'
+      - 'governance/constitution/**'
+      - 'governance/amendments/*journal*.json'
+      - '.github/workflows/deploy-journal.yml'
+  push:
+    branches: [main]
+    paths: *journal_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-journal-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Journal source and governance
+        run: |
+          set -euo pipefail
+          node --check journal-worker.js
+          node --check journal-content.js
+          node --check journal/app.js
+          node --test test/journal-platform.test.mjs
+          npm run validate:constitution
+          npm run validate:boundaries
+          npm run validate:ui-dna
+          npm run validate:seasonal-design
+          npm run validate:security
+          npm run validate:shell
+          npm run validate:deployments
+          test -f deploy/manifests/journal.worker.json
+          grep -Fq 'allowFirstDeploy' deploy/manifests/journal.worker.json
+          grep -Fq 'journal.ekodi.kr' wrangler.journal.toml
+          grep -Fq 'ekodi-journal-staging' wrangler.journal.staging.toml
+
+  deploy-staging:
+    environment: development
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-journal-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Development boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Deploy isolated Journal staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.journal.staging.toml
+      - name: Confirm staging deployment exists
+        run: npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.journal.staging.toml --json > /tmp/journal-staging-deployments.json
+      - name: Verify Journal staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup(){ if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi; }
+          trap cleanup EXIT
+          access_code=$(curl -sS -D /tmp/journal-access.headers -o /tmp/journal-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/journal-access.headers; then
+            remote_protected=1
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.journal.staging.toml --local --port 8792 >/tmp/journal-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8792'
+            for attempt in $(seq 1 30); do
+              curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1 && break
+              kill -0 "$runtime_pid" 2>/dev/null || { cat /tmp/journal-local.log; exit 1; }
+              sleep 2
+            done
+          fi
+          root_code=$(curl -L -sS -D /tmp/journal-root.headers -o /tmp/journal-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
+          health_code=$(curl -sS -o /tmp/journal-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
+          feed_code=$(curl -sS -o /tmp/journal-feed.xml -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/feed.xml" || true)
+          api_code=$(curl -sS -o /tmp/journal-posts.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/posts" || true)
+          admin_code=$(curl -sS --max-redirs 0 -D /tmp/journal-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/admin" || true)
+          [[ "$root_code" == '200' ]]
+          [[ "$health_code" == '200' ]]
+          [[ "$feed_code" == '200' ]]
+          [[ "$api_code" == '200' ]]
+          [[ "$admin_code" =~ ^30[1278]$ ]]
+          grep -Fq 'EKODI JOURNAL' /tmp/journal-root.html
+          grep -Fq 'ekodi-journal' /tmp/journal-health.json
+          grep -Fq '<rss version="2.0">' /tmp/journal-feed.xml
+          grep -Fq 'journal.ekodi.kr' /tmp/journal-posts.json
+          grep -Fiq 'location: https://admin.ekodi.kr/journal' /tmp/journal-admin.headers
+          if [[ "$remote_protected" == '1' ]]; then echo 'Development staging remains Access-protected; exact local runtime contract verified.'; fi
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Guarded Journal production release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/journal.worker.json
+      - name: Deep verify Journal production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -L -sS -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/health' || true)
+            feed_code=$(curl -sS -o /tmp/feed.xml -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/feed.xml' || true)
+            api_code=$(curl -sS -o /tmp/posts.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/api/posts' || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://journal.ekodi.kr/admin' || true)
+            if [[ "$root_code" == '200' ]] && [[ "$health_code" == '200' ]] && [[ "$feed_code" == '200' ]] && [[ "$api_code" == '200' ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
+              && grep -Fq 'EKODI JOURNAL' /tmp/root.html \
+              && grep -Fq 'ekodi-journal' /tmp/health.json \
+              && grep -Fq '<rss version="2.0">' /tmp/feed.xml \
+              && grep -Fq 'journal.ekodi.kr' /tmp/posts.json \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/root.headers \
+              && grep -Fiq 'location: https://admin.ekodi.kr/journal' /tmp/admin.headers; then
+              echo 'Journal production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
