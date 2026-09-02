@@ -37,16 +37,11 @@
     "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
   },
   "publicNamespaces": [
-    "personal",
-    "org",
-    "group",
-    "project"
+    "{public_namespace}"
   ],
   "canonicalWorkspacePatterns": [
-    "https://ekodi.kr/personal/{slug}",
-    "https://ekodi.kr/org/{slug}",
-    "https://ekodi.kr/group/{slug}",
-    "https://ekodi.kr/project/{slug}"
+    "https://ekodi.kr/{public_namespace}",
+    "https://ekodi.kr/{public_namespace}/{service}"
   ],
   "organizationSubtypes": [
     "business",
@@ -65,7 +60,13 @@
   "workspaceRoutingPolicy": {
     "canonicalHost": "ekodi.kr",
     "identityKey": "workspace_id",
-    "slugIsLocatorOnly": true,
+    "publicNamespaceKey": "public_namespace",
+    "publicNamespacePattern": "/{public_namespace}",
+    "servicePattern": "/{public_namespace}/{service}",
+    "workspaceTypeInUrl": false,
+    "displayNameUnique": false,
+    "publicNamespaceUnique": true,
+    "namespaceConflictPolicy": "first_valid_claim_wins_then_suggest_alternatives",
     "workspaceSubdomainsForbidden": true,
     "personalHomeSubdomainException": "my.ekodi.kr"
   },
@@ -78,8 +79,12 @@
     "legacyAliasesMustBeRegistered": true
   },
   "legacyPathAliases": {
-    "/people/{slug}": "/personal/{slug}",
-    "/biz/{slug}": "/org/{slug}",
+    "/personal/{slug}": "/{public_namespace}",
+    "/org/{slug}": "/{public_namespace}",
+    "/group/{slug}": "/{public_namespace}",
+    "/project/{slug}": "/{public_namespace}",
+    "/people/{slug}": "/{public_namespace}",
+    "/biz/{slug}": "/{public_namespace}",
     "https://space.ekodi.kr/{path}": "https://ekodi.kr/{path}",
     "https://user.ekodi.kr/{path}": "https://ekodi.kr/{path}"
   },
@@ -121,7 +126,10 @@
     "pizzamaru.ai.ekodi.kr",
     "yogurt.ai.ekodi.kr",
     "space.ekodi.kr",
-    "user.ekodi.kr"
+    "user.ekodi.kr",
+    "jadam.ekodi.kr",
+    "pizzamaru.ekodi.kr",
+    "yogurt.ekodi.kr"
   ],
   "dataSovereignty": {
     "ekodiCoreOwns": [
@@ -217,9 +225,9 @@
   "legacyDomainTargets": {
     "shell.ekodi.kr": "https://my.ekodi.kr",
     "management.ekodi.kr": "https://my.ekodi.kr/management",
-    "mall.ekodi.kr": "https://ekodi.kr/mall",
-    "mall.biz.ekodi.kr": "https://ekodi.kr/mall",
-    "cafe.ekodi.kr": "https://ekodi.kr/cafe",
+    "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
+    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
+    "cafe.ekodi.kr": "https://ekodi.kr/ekodicafe",
     "books.ekodi.kr": "https://ekodi.kr/books",
     "publishing.ekodi.kr": "https://ekodi.kr/publish",
     "community.ekodi.kr": "https://ekodi.kr/community",
@@ -238,21 +246,24 @@
     "marketing-publish-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/publish",
     "www.ekodi.kr": "https://ekodi.kr",
     "pay.ekodi.kr": "https://ekodi.kr/pay",
-    "trade.ekodi.kr": "https://ekodi.kr/trade",
+    "trade.ekodi.kr": "https://ekodi.kr/ekoditrade",
     "mail.ekodi.kr": "https://my.ekodi.kr/mail",
     "live.ekodi.kr": "https://ekodi.kr/live",
-    "biz.ekodi.kr": "https://ekodi.kr/org/ekodi-biz",
-    "church.ekodi.kr": "https://ekodi.kr/org/ekodi-church",
-    "lab.ekodi.kr": "https://ekodi.kr/org/ekodi-lab",
+    "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
+    "church.ekodi.kr": "https://ekodi.kr/ekodichurch",
+    "lab.ekodi.kr": "https://ekodi.kr/ekodilab",
     "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
     "marketing.ekodi.kr": "https://ekodi.kr/marketing",
-    "cgma.ekodi.kr": "https://ekodi.kr/org/cgma",
-    "cgma.ai.ekodi.kr": "https://ekodi.kr/org/cgma",
-    "jadam.ai.ekodi.kr": "https://ekodi.kr/org/jadam",
-    "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/org/pizzamaru",
-    "yogurt.ai.ekodi.kr": "https://ekodi.kr/org/yogurt",
+    "cgma.ekodi.kr": "https://ekodi.kr/cgma",
+    "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma",
+    "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam",
+    "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru",
+    "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt",
     "space.ekodi.kr": "https://ekodi.kr",
-    "user.ekodi.kr": "https://ekodi.kr"
+    "user.ekodi.kr": "https://ekodi.kr",
+    "jadam.ekodi.kr": "https://ekodi.kr/jadam",
+    "pizzamaru.ekodi.kr": "https://ekodi.kr/pizzamaru",
+    "yogurt.ekodi.kr": "https://ekodi.kr/yogurt"
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr"

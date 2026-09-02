@@ -15,10 +15,10 @@ const [api, automation, router, html, js, css, migration, registryText] = await 
 ]);
 const registry = JSON.parse(registryText);
 
-test('EKODI Mall remains a root storefront separate from shared Shop platform', () => {
+test('EKODI Mall remains the EKODIBIZ workspace storefront separate from shared Shop platform', () => {
   const mall = registry.services.find(service => service.id === 'mall');
   const shop = registry.services.find(service => service.id === 'shop');
-  assert.equal(mall.url, 'https://ekodi.kr/mall');
+  assert.equal(mall.url, 'https://ekodi.kr/ekodibiz/mall');
   assert.equal(mall.status, 'live');
   assert.equal(shop.url, 'https://shop.ekodi.kr');
   assert.equal(shop.status, 'planned');
@@ -30,15 +30,18 @@ test('public storefront reads as a normal shopping mall', () => {
   assert.match(html, /SMART SHOPPING/);
   assert.match(html, /오늘 필요한 것/);
   assert.match(html, /오늘의 상품/);
-  assert.match(html, /상품 둘러보기/);
+  assert.match(html, /상황에 맞는 선물 찾기/);
+  assert.match(html, /상품 또는 카테고리 검색/);
   assert.match(html, /새 상품을 준비하고 있습니다/);
   assert.doesNotMatch(html, /COUPANG AFFILIATE CURATION/);
   assert.doesNotMatch(html, /추천링크 클릭 후 검색하세요/);
   assert.doesNotMatch(html, /에코디 추천상품/);
 });
 
-test('official storefront canonical is ekodi.kr/mall', () => {
-  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/mall">/);
+test('official storefront canonical is ekodi.kr/ekodibiz/mall', () => {
+  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz\/mall">/);
+  assert.match(html, /href="\/ekodibiz\/mall" aria-label="에코디몰 홈"/);
+  assert.match(html, /landing_path:'\/ekodibiz\/mall'/);
 });
 
 test('affiliate and seller disclosures are centered inside the header and absent from footer', () => {
@@ -126,9 +129,11 @@ test('automatic product schema is additive and stores provider facts', () => {
   assert.match(migration, /affiliate_storefront_clicks/);
 });
 
-test('root router still publishes Mall page and assets on the apex host', () => {
+test('root router publishes Mall beneath EKODIBIZ and preserves the legacy Mall redirect', () => {
   assert.match(router, /url\.pathname === '\/mall'/);
-  assert.match(router, /public-ekodi-mall/);
+  assert.match(router, /legacy-mall-to-workspace/);
+  assert.match(router, /url\.pathname === '\/ekodibiz\/mall'/);
+  assert.match(router, /public-ekodibiz-mall/);
   assert.match(router, /'\/mall\.css'/);
   assert.match(router, /'\/mall\.js'/);
 });

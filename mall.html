@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="description" content="생활에 필요한 상품을 쉽고 빠르게 만나보는 에코디몰입니다.">
   <title>에코디몰 | EKODI MALL</title>
-  <link rel="canonical" href="https://ekodi.kr/mall">
+  <link rel="canonical" href="https://ekodi.kr/ekodibiz/mall">
   <link rel="stylesheet" href="/mall.css">
   <style>.shopping-note{margin-bottom:14px}</style>
 </head>
@@ -13,7 +13,7 @@
   <!-- canonical storefront release: contextual gift intelligence v1 -->
   <a class="skip-link" href="#main">본문 바로가기</a>
   <header class="site-header">
-    <a class="brand" href="/mall" aria-label="에코디몰 홈">
+    <a class="brand" href="/ekodibiz/mall" aria-label="에코디몰 홈">
       <span class="brand-mark">E</span>
       <span><strong>EKODI MALL</strong><small>SMART SHOPPING</small></span>
     </a>
@@ -154,7 +154,7 @@
     const medium=String(params.get('utm_medium')||'').slice(0,80);
     const content=String(params.get('utm_content')||'').slice(0,160);
     const test=params.get('ekodi_test')==='1'||campaign.startsWith('test_');
-    const base={campaign,source,medium,content,landing_path:'/mall',test};
+    const base={campaign,source,medium,content,landing_path:'/ekodibiz/mall',test};
     function send(event_type,extra={}){
       const body=JSON.stringify({...base,event_type,...extra});
       fetch(endpoint,{method:'POST',mode:'cors',credentials:'omit',keepalive:true,headers:{apikey,'content-type':'application/json','prefer':'return=minimal'},body}).catch(()=>{});

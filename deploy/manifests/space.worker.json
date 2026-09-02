@@ -15,15 +15,15 @@
         "url": "https://space.ekodi.kr/health",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["ekodi-space", "operating-space", "workspace-id", "personal", "org", "group", "project"],
+        "expect": ["ekodi-space", "legacy-operating-space-compatibility", "workspace-id", "public_namespace"],
         "headerExpect": ["x-ekodi-service: space", "cache-control: no-store"]
       },
       {
-        "url": "https://space.ekodi.kr/org/deployment-probe",
-        "statuses": [200],
+        "url": "https://space.ekodi.kr/org/cgma",
+        "statuses": [308],
         "redirect": "manual",
-        "expect": ["OPERATING SPACE", "실제 데이터·권한 연결"],
-        "headerExpect": ["x-ekodi-service: space", "x-ekodi-route: space-workspace", "cache-control: no-store"]
+        "expect": [],
+        "headerExpect": ["location: https://ekodi.kr/cgma", "x-ekodi-service: space", "x-ekodi-route: legacy-space-redirect"]
       }
     ]
   }

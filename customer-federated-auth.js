@@ -74,7 +74,12 @@ async function ensureSchema(db) {
       name TEXT NOT NULL,
       domain TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      workspace_id TEXT,
+      workspace_type TEXT,
+      workspace_subtype TEXT,
+      public_namespace TEXT,
+      namespace_claimed_at TEXT
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_access_grants (
       tenant_id INTEGER NOT NULL,
@@ -200,7 +205,7 @@ async function federatedLogin(request, env) {
   const identity = await supabaseUser(String(body?.accessToken || ''));
   if (!tenantSlug || !identity) return json({ error: '통합인증 세션을 확인해 주세요.' }, 401, request, env);
 
-  const tenant = await env.DB.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(tenantSlug).first();
+  const tenant = await env.DB.prepare('SELECT id, slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace FROM customer_tenants WHERE slug = ?').bind(tenantSlug).first();
   if (!tenant || tenant.status !== 'active') return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
 
   const grant = await env.DB.prepare(`SELECT email, role, enabled, last_verified_at
@@ -224,7 +229,11 @@ async function federatedLogin(request, env) {
     email: identity.email,
     displayName: user.display_name || identity.displayName,
     role: grant.role,
-    tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain },
+    tenant: {
+      slug: tenant.slug, name: tenant.name, domain: tenant.domain,
+      workspaceId: tenant.workspace_id || '', workspaceType: tenant.workspace_type || '', workspaceSubtype: tenant.workspace_subtype || '',
+      publicNamespace: tenant.public_namespace || '', canonicalUrl: tenant.public_namespace ? `https://ekodi.kr/${tenant.public_namespace}` : `https://${tenant.domain}`,
+    },
     ...session,
   }, 200, request, env);
 }

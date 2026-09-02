@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -27,18 +27,25 @@
   "publicWorkspaceRouting": {
     "canonicalHost": "ekodi.kr",
     "workspaceIdentityKey": "workspace_id",
-    "slugRole": "routing_locator_only",
-    "namespaces": {
-      "personal": "/personal/{slug}",
-      "organization": "/org/{slug}",
-      "group": "/group/{slug}",
-      "project": "/project/{slug}"
-    },
+    "publicNamespaceKey": "public_namespace",
+    "canonicalPattern": "/{public_namespace}",
+    "servicePattern": "/{public_namespace}/{service}",
+    "workspaceTypeInUrl": false,
+    "workspaceDisplayNameUnique": false,
+    "publicNamespaceUnique": true,
+    "namespaceRole": "routing_locator_only",
+    "namespaceConflictPolicy": "first_valid_claim_wins_then_suggest_alternatives",
+    "namespaceAssignmentAuthority": "ekodi_core",
     "organizationSubtypes": ["business", "church", "school", "nonprofit", "association", "institution"],
     "workspaceSubdomains": "forbidden",
+    "reservedNamespaceExamples": ["admin", "api", "auth", "my", "status", "mall", "shop", "pay", "marketing", "books", "community", "work", "trade", "live"],
     "legacyRedirects": {
-      "/people/{slug}": "/personal/{slug}",
-      "/biz/{slug}": "/org/{slug}",
+      "/personal/{slug}": "/{public_namespace}",
+      "/org/{slug}": "/{public_namespace}",
+      "/group/{slug}": "/{public_namespace}",
+      "/project/{slug}": "/{public_namespace}",
+      "/people/{slug}": "/{public_namespace}",
+      "/biz/{slug}": "/{public_namespace}",
       "space.ekodi.kr": "ekodi.kr",
       "user.ekodi.kr": "ekodi.kr"
     }
