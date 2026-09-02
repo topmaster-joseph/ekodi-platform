@@ -59,6 +59,7 @@ test('Worker, auth and release contracts include the AI Gateway hostname', () =>
 
   assert.match(router, /host===AI_GATEWAY_HOST/);
   assert.match(wrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
+  assert.match(wrangler, /\[ai\][\s\S]*binding = "AI"/);
   assert.match(auth, /u\.origin==='https:\/\/ai\.ekodi\.kr'/);
   assert.match(auth, /ekodi_admin_token:result\.token/);
 
