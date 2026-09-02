@@ -30,11 +30,15 @@ test('worker exposes real scheduled publishing lifecycle and never persists prov
   assert.match(worker, /media_type:'CAROUSEL'/);
 });
 
-test('personal brand subject resolves to authenticated person without tenant membership', async () => {
-  const worker = await read('marketing-publishing-worker.js');
-  assert.match(worker, /subjectType === 'person'/);
-  assert.match(worker, /key:identity\.id/);
+test('personal and workspace subjects resolve through the shared immutable authority boundary', async () => {
+  const [worker,subject] = await Promise.all([read('marketing-publishing-worker.js'),read('channel-automation-subject.js')]);
+  assert.match(subject, /requested === 'person'/);
+  assert.match(subject, /key:actor\.id/);
+  assert.match(subject, /workspaceId:context\.workspaceId/);
+  assert.match(subject, /ownerKey:context\.workspaceId/);
+  assert.match(subject, /writable:context\.canManage/);
   assert.match(worker, /personalBrand:true/);
+  assert.match(worker, /workspaceIdentity:true/);
   assert.match(worker, /AI_PUBLISH_REQUIRES_DELEGATION/);
 });
 

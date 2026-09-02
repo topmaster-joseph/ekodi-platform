@@ -1,8 +1,14 @@
 import { evaluateMissionAction } from './ai-governance-runtime.js';
+import { CHANNEL_AUTOMATION_TEMPLATES, channelAutomationEntitlement } from './channel-automation-policy.js';
+import { channelCredentialReady, channelStateHash, decryptChannelCredential, encryptChannelCredential, randomChannelId, randomChannelToken } from './channel-credential-vault.js';
+import { exchangeYoutubeCode, listYoutubeChannels, uploadYoutubeVideo, youtubeAuthorizeUrl, youtubeOAuthConfigured } from './channel-youtube-adapter.js';
+import { channelAutomationActor, resolveChannelAutomationSubject } from './channel-automation-subject.js';
+import { automationEntitlement, listAutomationProfiles, upsertAutomationProfile } from './channel-automation-runtime.js';
+import { disconnectManagedConnection, handleYoutubeCallback, listManagedConnections, managedCredential, selectYoutubeConnection, startYoutubeConnection, youtubeConnectionReady } from './channel-oauth-control.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
+const WRITE_ROLES = new Set(['tenant_admin','admin','store_owner','hq_manager','client_admin','client_editor','manager','owner']);
 const SUBJECT_TYPES = new Set(['person','tenant','store']);
 const JOB_STATES = new Set(['scheduled','queued','publishing','published','retrying','failed','cancelled','credentials_required']);
 const MAX_CAPTION = 12000;
@@ -14,7 +20,7 @@ function cors(request, env) {
   if (!allowed) {
     try {
       const host = new URL(origin).hostname;
-      allowed = host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
+      allowed = host === 'ekodi.kr' || host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
     } catch {}
   }
   const headers = {
@@ -46,51 +52,15 @@ function safeUrl(value) {
   try { const u = new URL(raw); return u.protocol === 'https:' ? u.href : ''; } catch { return ''; }
 }
 
-async function identityFromRequest(request) {
-  const auth = String(request.headers.get('authorization') || '');
-  const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
-  if (!token || token.length > 8192) return null;
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`} });
-  if (!response.ok) return null;
-  const user = await response.json().catch(() => null);
-  const email = String(user?.email || '').trim().toLowerCase();
-  if (!user?.id || !email || !user?.email_confirmed_at) return null;
-  return { id:String(user.id), email };
-}
-
-async function resolveSubject(env, identity, type, key) {
-  const subjectType = SUBJECT_TYPES.has(String(type || '').toLowerCase()) ? String(type).toLowerCase() : 'person';
-  if (subjectType === 'person') return { type:'person', key:identity.id, role:'owner', tenant:null, writable:true };
-
-  if (subjectType === 'tenant') {
-    const tenantKey = clean(key, 80).toLowerCase();
-    if (!tenantKey) return null;
-    const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(tenantKey).first();
-    if (!tenant || tenant.status !== 'active') return null;
-    const grant = await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id, identity.email).first();
-    if (!grant || Number(grant.enabled) !== 1) return null;
-    const role = String(grant.role || '');
-    return { type:'tenant', key:String(tenant.slug), role, tenant:String(tenant.slug), writable:WRITE_ROLES.has(role) };
-  }
-
-  const storeId = clean(key, 100);
-  if (!storeId) return null;
-  const store = await env.DB.prepare('SELECT store_id,tenant_slug,status FROM marketing_store_workspaces WHERE store_id=?').bind(storeId).first();
-  if (!store || store.status !== 'active' || !store.tenant_slug) return null;
-  const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(store.tenant_slug).first();
-  if (!tenant || tenant.status !== 'active') return null;
-  const grant = await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id, identity.email).first();
-  if (!grant || Number(grant.enabled) !== 1) return null;
-  const role = String(grant.role || '');
-  return { type:'store', key:String(store.store_id), role, tenant:String(store.tenant_slug), writable:WRITE_ROLES.has(role) };
-}
+async function identityFromRequest(request, env) { return channelAutomationActor(request, env); }
+async function resolveSubject(env, identity, type, key) { return resolveChannelAutomationSubject(env, identity, type, key); }
 
 function subjectParams(url) {
   return { type:url.searchParams.get('subject_type') || 'person', key:url.searchParams.get('subject_key') || '' };
 }
 
 async function authSubject(request, env, { write = false } = {}) {
-  const identity = await identityFromRequest(request);
+  const identity = await identityFromRequest(request, env);
   if (!identity) return { error:'AUTH_REQUIRED', status:401 };
   const url = new URL(request.url);
   const params = subjectParams(url);
@@ -108,9 +78,28 @@ async function schemaReady(env) {
   } catch { return false; }
 }
 
+async function channelSchemaReady(env) {
+  if (!env.DB) return false;
+  try {
+    const result=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('channel_automation_profiles','channel_oauth_connections')").all();
+    return new Set((result.results||[]).map(row=>row.name)).size===2;
+  } catch { return false; }
+}
+
+async function automationSnapshot(request,env,subject) {
+  const entitlement=await automationEntitlement(env,subject);
+  const [profiles,connections,channels,jobs]=await Promise.all([
+    listAutomationProfiles(env,subject),
+    listManagedConnections(env,subject),
+    env.DB.prepare('SELECT id,provider,channel_type,display_name,external_account_id,status,config_json,last_check_at,last_error,created_at,updated_at FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? ORDER BY id DESC').bind(subject.type,subject.key).all(),
+    env.DB.prepare('SELECT id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,external_post_url,last_error,published_at,created_at FROM marketing_publication_jobs WHERE subject_type=? AND subject_key=? ORDER BY created_at DESC LIMIT 50').bind(subject.type,subject.key).all(),
+  ]);
+  return json(request,env,{subject:{type:subject.type,key:subject.key,workspaceId:subject.workspaceId||'',workspaceSlug:subject.workspaceSlug||''},entitlement,profiles,connections,channels:(channels.results||[]).map(row=>({...row,config:safeParse(row.config_json,{})})),jobs:jobs.results||[],youtubeOAuthAvailable:youtubeConnectionReady(env)});
+}
+
 async function audit(env, subject, jobId, action, detail = '', actor = '') {
-  await env.DB.prepare(`INSERT INTO marketing_publication_audit(subject_type,subject_key,job_id,action,detail,actor,created_at)
-    VALUES(?,?,?,?,?,?,?)`).bind(subject.type, subject.key, jobId || null, clean(action,80), clean(detail,1000), clean(actor,160), nowIso()).run();
+  await env.DB.prepare(`INSERT INTO marketing_publication_audit(subject_type,subject_key,workspace_id,job_id,action,detail,actor,created_at)
+    VALUES(?,?,?,?,?,?,?,?)`).bind(subject.type, subject.key, subject.workspaceId || '', jobId || null, clean(action,80), clean(detail,1000), clean(actor,160), nowIso()).run();
 }
 
 async function getPolicy(env, subject) {
@@ -125,10 +114,10 @@ async function upsertBrand(request, env, identity, subject) {
   const brandName = clean(body.brandName, 120);
   if (!brandName) return json(request, env, {error:'BRAND_NAME_REQUIRED'}, 400);
   const now = nowIso();
-  await env.DB.prepare(`INSERT INTO marketing_brand_profiles(subject_type,subject_key,brand_name,tagline,audience_summary,voice_json,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?)
+  await env.DB.prepare(`INSERT INTO marketing_brand_profiles(subject_type,subject_key,workspace_id,brand_name,tagline,audience_summary,voice_json,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?)
     ON CONFLICT(subject_type,subject_key) DO UPDATE SET brand_name=excluded.brand_name,tagline=excluded.tagline,audience_summary=excluded.audience_summary,voice_json=excluded.voice_json,updated_at=excluded.updated_at`)
-    .bind(subject.type, subject.key, brandName, clean(body.tagline,240), clean(body.audienceSummary,1200), safeJson(body.voice || {}), now, now).run();
+    .bind(subject.type, subject.key, subject.workspaceId || '', brandName, clean(body.tagline,240), clean(body.audienceSummary,1200), safeJson(body.voice || {}), now, now).run();
   await audit(env, subject, null, 'brand_profile_updated', brandName, identity.email);
   return json(request, env, {ok:true,subject:{type:subject.type,key:subject.key},brandName});
 }
@@ -146,9 +135,9 @@ async function upsertPolicy(request, env, identity, subject) {
   const maxDaily = Math.max(1, Math.min(100, Number(body.maxDailyPosts || 5)));
   const providers = Array.isArray(body.allowedProviders) ? body.allowedProviders.map(v=>clean(v,80)).filter(Boolean).slice(0,30) : [];
   const now = nowIso();
-  await env.DB.prepare(`INSERT INTO marketing_publish_policies(subject_type,subject_key,mode,max_daily_posts,allowed_providers_json,quiet_hours_json,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(subject_type,subject_key) DO UPDATE SET mode=excluded.mode,max_daily_posts=excluded.max_daily_posts,allowed_providers_json=excluded.allowed_providers_json,quiet_hours_json=excluded.quiet_hours_json,updated_at=excluded.updated_at`)
-    .bind(subject.type, subject.key, mode, maxDaily, safeJson(providers,[]), safeJson(body.quietHours || {}), now, now).run();
+  await env.DB.prepare(`INSERT INTO marketing_publish_policies(subject_type,subject_key,workspace_id,mode,max_daily_posts,allowed_providers_json,quiet_hours_json,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(subject_type,subject_key) DO UPDATE SET mode=excluded.mode,max_daily_posts=excluded.max_daily_posts,allowed_providers_json=excluded.allowed_providers_json,quiet_hours_json=excluded.quiet_hours_json,updated_at=excluded.updated_at`)
+    .bind(subject.type, subject.key, subject.workspaceId || '', mode, maxDaily, safeJson(providers,[]), safeJson(body.quietHours || {}), now, now).run();
   await audit(env, subject, null, 'publish_policy_updated', `${mode}:${maxDaily}`, identity.email);
   return json(request, env, {ok:true,mode,maxDailyPosts:maxDaily,allowedProviders:providers});
 }
@@ -161,24 +150,22 @@ async function listChannels(request, env, subject) {
 }
 
 async function connectChannel(request, env, identity, subject) {
-  const body = await readJson(request);
-  if (!body) return json(request, env, {error:'INVALID_JSON'}, 400);
-  const provider = clean(body.provider,50).toLowerCase();
-  const channelType = clean(body.channelType,50).toLowerCase();
-  const displayName = clean(body.displayName,120);
-  const externalId = clean(body.externalAccountId,160);
-  const credentialRef = clean(body.credentialRef,80).toUpperCase();
-  if (!provider || !channelType || !displayName) return json(request, env, {error:'CHANNEL_FIELDS_REQUIRED'}, 400);
-  if (credentialRef && !/^[A-Z0-9_]{3,80}$/.test(credentialRef)) return json(request, env, {error:'INVALID_CREDENTIAL_REF'}, 400);
-  const hasCredential = Boolean(credentialRef && env[credentialRef]);
-  const status = hasCredential ? 'active' : 'credentials_required';
-  const now = nowIso();
-  await env.DB.prepare(`INSERT INTO marketing_publish_channels(subject_type,subject_key,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)
-    ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET display_name=excluded.display_name,credential_ref=excluded.credential_ref,status=excluded.status,config_json=excluded.config_json,updated_at=excluded.updated_at`)
-    .bind(subject.type,subject.key,provider,channelType,displayName,externalId,credentialRef,status,safeJson(body.config || {}),now,now).run();
-  await audit(env, subject, null, 'channel_connected', `${provider}:${channelType}:${status}`, identity.email);
-  return json(request, env, {ok:true,status,credentialConfigured:hasCredential});
+  const body = await readJson(request); if (!body) return json(request,env,{error:'INVALID_JSON'},400);
+  const entitlement = await automationEntitlement(env,subject);
+  if (entitlement.maxChannels < 1) return json(request,env,{error:'CHANNEL_PLAN_UPGRADE_REQUIRED',entitlement},409);
+  const provider=clean(body.provider,50).toLowerCase(), channelType=clean(body.channelType,50).toLowerCase(), displayName=clean(body.displayName,120), externalId=clean(body.externalAccountId,160);
+  if (!provider || !channelType || !displayName) return json(request,env,{error:'CHANNEL_FIELDS_REQUIRED'},400);
+  const existing=await env.DB.prepare('SELECT id FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(subject.type,subject.key,provider,channelType,externalId).first();
+  const count=await env.DB.prepare("SELECT count(*) AS n FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND status IN ('active','credentials_required','paused')").bind(subject.type,subject.key).first();
+  if (!existing && Number(count?.n||0) >= entitlement.maxChannels) return json(request,env,{error:'CHANNEL_PLAN_LIMIT_REACHED',entitlement},409);
+  const requestedRef=clean(body.credentialRef,80).toUpperCase();
+  const credentialRef=String(env.ALLOW_LEGACY_CHANNEL_SECRET_REF||'false')==='true' ? requestedRef : '';
+  if (credentialRef && !/^[A-Z0-9_]{3,80}$/.test(credentialRef)) return json(request,env,{error:'INVALID_CREDENTIAL_REF'},400);
+  const hasCredential=Boolean(credentialRef && env[credentialRef]), status=hasCredential?'active':'credentials_required', now=nowIso();
+  await env.DB.prepare(`INSERT INTO marketing_publish_channels(subject_type,subject_key,workspace_id,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET workspace_id=excluded.workspace_id,display_name=excluded.display_name,credential_ref=CASE WHEN excluded.credential_ref!='' THEN excluded.credential_ref ELSE marketing_publish_channels.credential_ref END,status=CASE WHEN excluded.credential_ref!='' THEN excluded.status ELSE marketing_publish_channels.status END,config_json=excluded.config_json,updated_at=excluded.updated_at`).bind(subject.type,subject.key,subject.workspaceId||'',provider,channelType,displayName,externalId,credentialRef,status,safeJson(body.config||{}),now,now).run();
+  await audit(env,subject,null,'channel_connected',provider+':'+channelType+':'+status,identity.email);
+  return json(request,env,{ok:true,status,credentialConfigured:hasCredential,entitlement});
 }
 
 function normalizeScheduledAt(value) {
@@ -195,9 +182,13 @@ async function queuePublish(request, env, identity, subject) {
   if (!scheduledAt) return json(request, env, {error:'INVALID_SCHEDULE'}, 400);
   const recurrence = ['', 'daily','weekly','monthly'].includes(String(body.recurrenceRule || '')) ? String(body.recurrenceRule || '') : '';
   const scheduleKind = recurrence ? 'repeating' : Date.parse(scheduledAt) <= Date.now() + 5000 ? 'immediate' : 'scheduled';
+  const entitlement = await automationEntitlement(env,subject);
+  const allowedByPlan = scheduleKind === 'immediate' ? entitlement.immediate : scheduleKind === 'scheduled' ? entitlement.scheduled : scheduleKind === 'repeating' ? entitlement.repeating : entitlement.optimal;
+  if (!allowedByPlan) return json(request,env,{error:'CHANNEL_PLAN_SCHEDULE_NOT_ALLOWED',scheduleKind,entitlement},409);
   const policy = await getPolicy(env, subject);
   const requestedBy = body.requestedBy === 'ai' ? 'ai' : 'human';
   if (requestedBy === 'ai') {
+    if (!entitlement.autonomous) return json(request,env,{error:'CHANNEL_PLAN_AI_AUTOMATION_REQUIRED',entitlement},409);
     const delegated = policy.mode === 'autonomous';
     const decision = evaluateMissionAction({agentId:'marketing',area:'social_content_publish',reversible:true,delegated,logged:true,preflightVerified:true});
     if (decision.tier !== 'execute_reversible') return json(request, env, {error:'AI_PUBLISH_REQUIRES_DELEGATION',decision}, 409);
@@ -210,28 +201,29 @@ async function queuePublish(request, env, identity, subject) {
   const source = ['human','ai','imported'].includes(content.source) ? content.source : requestedBy;
   const approvalState = requestedBy === 'human' ? 'approved' : 'auto_approved';
   const now = nowIso();
-  const insertContent = await env.DB.prepare(`INSERT INTO marketing_content_items(subject_type,subject_key,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(subject.type,subject.key,title,contentType,caption,safeUrl(content.assetUrl),safeUrl(content.linkUrl),safeJson(content.data || {}),source,approvalState,identity.email,now,now).run();
+  const insertContent = await env.DB.prepare(`INSERT INTO marketing_content_items(subject_type,subject_key,workspace_id,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',title,contentType,caption,safeUrl(content.assetUrl),safeUrl(content.linkUrl),safeJson(content.data || {}),source,approvalState,identity.email,now,now).run();
   const contentId = Number(insertContent.meta?.last_row_id || 0);
   if (!contentId) return json(request, env, {error:'CONTENT_INSERT_FAILED'}, 500);
 
   const ids = [...new Set(body.channelIds.map(Number).filter(Number.isInteger))].slice(0,20);
+  if (ids.length > entitlement.maxChannels) return json(request,env,{error:'CHANNEL_PLAN_LIMIT_REACHED',entitlement},409);
   const placeholders = ids.map(()=>'?').join(',');
-  const channelResult = await env.DB.prepare(`SELECT id,provider,channel_type,status,credential_ref FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND id IN (${placeholders})`)
+  const channelResult = await env.DB.prepare(`SELECT id,provider,channel_type,status,credential_ref,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND id IN (${placeholders})`)
     .bind(subject.type,subject.key,...ids).all();
   const channels = channelResult.results || [];
   const jobs = [];
   for (const channel of channels) {
-    const credentialReady = channel.status === 'active' && channel.credential_ref && env[channel.credential_ref];
+    const credentialReady = channel.status === 'active' && await channelCredentialConfigured(env,channel.credential_ref);
     const initial = credentialReady ? (scheduleKind === 'immediate' ? 'queued' : 'scheduled') : 'credentials_required';
-    const insert = await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,created_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,0,5,?,?)`).bind(subject.type,subject.key,contentId,channel.id,scheduleKind,scheduledAt,recurrence,initial,requestedBy,now,now).run();
+    const insert = await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,0,5,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',contentId,channel.id,scheduleKind,scheduledAt,recurrence,initial,requestedBy,now,now).run();
     const jobId = Number(insert.meta?.last_row_id || 0);
     jobs.push({id:jobId,channelId:Number(channel.id),status:initial});
     await audit(env, subject, jobId, 'publication_queued', `${channel.provider}:${channel.channel_type}:${scheduledAt}`, identity.email);
   }
   if (!jobs.length) return json(request, env, {error:'NO_OWNED_CHANNELS'}, 400);
-  return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs}, 201);
+  return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs,entitlement}, 201);
 }
 
 async function listJobs(request, env, subject) {
@@ -260,8 +252,17 @@ async function mutateJob(request, env, identity, subject, id, action) {
   return json(request, env, {error:'UNKNOWN_ACTION'}, 404);
 }
 
-function secretConfig(env, ref) {
-  const raw = ref ? env[ref] : null;
+async function channelCredentialConfigured(env, ref) {
+  const value=String(ref||'');
+  if (!value) return false;
+  if (value.startsWith('oauth:')) { try { return Boolean(await managedCredential(env,value)); } catch { return false; } }
+  return Boolean(env[value]);
+}
+
+async function secretConfig(env, ref) {
+  const value=String(ref||'');
+  if (value.startsWith('oauth:')) return managedCredential(env,value);
+  const raw=value ? env[value] : null;
   if (!raw) throw Object.assign(new Error('채널 인증정보가 연결되지 않았습니다.'),{code:'CREDENTIALS_REQUIRED'});
   if (typeof raw === 'object') return raw;
   try { return JSON.parse(String(raw)); } catch { throw Object.assign(new Error('채널 인증정보 형식이 올바르지 않습니다.'),{code:'INVALID_CREDENTIAL_CONFIG'}); }
@@ -349,7 +350,12 @@ async function publishInstagram(content, secret) {
 }
 
 async function executeProvider(env, job, content, channel) {
-  const secret = secretConfig(env, channel.credential_ref);
+  const secret = await secretConfig(env, channel.credential_ref);
+  if (channel.provider === 'youtube' && channel.channel_type === 'youtube_short') {
+    if (content.content_type !== 'short_video' || !content.asset_url) throw Object.assign(new Error('YouTube Shorts 게시에는 영상 자산이 필요합니다.'),{code:'ASSET_REQUIRED'});
+    const config=safeParse(channel.config_json,{});
+    return uploadYoutubeVideo({env,refreshToken:secret.refreshToken,assetUrl:content.asset_url,title:content.title||'EKODI Shorts',description:content.caption,privacyStatus:config.privacyStatus||'private',categoryId:config.categoryId||'22'});
+  }
   if (channel.provider === 'webhook') return publishWebhook(job,content,channel,secret);
   if (channel.provider === 'meta' && channel.channel_type === 'facebook_page') return publishFacebook(content,secret);
   if (channel.provider === 'meta' && channel.channel_type === 'instagram_business') return publishInstagram(content,secret);
@@ -371,7 +377,7 @@ function nextRecurrence(value, rule) {
 }
 
 async function processJob(env, row) {
-  const subject = {type:row.subject_type,key:row.subject_key};
+  const subject = {type:row.subject_type,key:row.subject_key,workspaceId:row.workspace_id||''};
   const claimed = await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='publishing',attempt_count=attempt_count+1,updated_at=?
     WHERE id=? AND status IN ('scheduled','queued','retrying')`).bind(nowIso(),row.id).run();
   if (!claimed.meta?.changes) return;
@@ -391,9 +397,9 @@ async function processJob(env, row) {
     const nextAt = nextRecurrence(row.scheduled_at,row.recurrence_rule);
     if (nextAt) {
       const now = nowIso();
-      await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,governance_action_id,attempt_count,max_attempts,created_at,updated_at)
-        VALUES(?,?,?,?, 'repeating',?,?, 'scheduled',?,?,0,?,?,?)`)
-        .bind(subject.type,subject.key,row.content_id,row.channel_id,nextAt,row.recurrence_rule,row.requested_by,row.governance_action_id || null,row.max_attempts || 5,now,now).run();
+      await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,governance_action_id,attempt_count,max_attempts,created_at,updated_at)
+        VALUES(?,?,?,?,?, 'repeating',?,?, 'scheduled',?,?,0,?,?,?)`)
+        .bind(subject.type,subject.key,subject.workspaceId||'',row.content_id,row.channel_id,nextAt,row.recurrence_rule,row.requested_by,row.governance_action_id || null,row.max_attempts || 5,now,now).run();
     }
   } catch (error) {
     const code = String(error?.code || 'PUBLISH_FAILED');
@@ -412,7 +418,7 @@ async function processJob(env, row) {
 async function runScheduler(env) {
   if (!(await schemaReady(env))) return {processed:0,schemaReady:false};
   const now = nowIso();
-  const result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.status AS channel_status
+  const result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.config_json,ch.status AS channel_status
     FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
     WHERE j.status IN ('scheduled','queued','retrying') AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
     ORDER BY j.scheduled_at ASC LIMIT 25`).bind(now,now).all();
@@ -426,14 +432,39 @@ export default {
     const url = new URL(request.url);
     const corsInfo = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
-    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:await schemaReady(env),scheduler:true,personalBrand:true,mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
-    if (!(await schemaReady(env))) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
+    const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env);
+    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
+    if (!baseReady) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
+    if (url.pathname === '/oauth/youtube/callback' && request.method === 'GET') {
+      if (String(env.ALLOW_MUTATIONS || 'true') === 'false') return json(request,env,{error:'STAGING_READ_ONLY'},403);
+      if (!automationReady) return json(request,env,{error:'CHANNEL_SCHEMA_NOT_READY'},503);
+      return handleYoutubeCallback(request,env);
+    }
 
     const write = ['POST','PUT','DELETE'].includes(request.method);
     if (write && String(env.ALLOW_MUTATIONS || 'true') === 'false') return json(request,env,{error:'STAGING_READ_ONLY'},403);
     const auth = await authSubject(request,env,{write});
     if (auth.error) return json(request,env,{error:auth.error},auth.status);
     const {identity,subject} = auth;
+
+    if (url.pathname.startsWith('/v1/automation') || url.pathname.startsWith('/v1/oauth/')) {
+      if (!automationReady) return json(request,env,{error:'CHANNEL_SCHEMA_NOT_READY'},503);
+    }
+    if (url.pathname === '/v1/automation' && request.method === 'GET') return automationSnapshot(request,env,subject);
+    if (url.pathname === '/v1/automation/profile' && request.method === 'PUT') {
+      const body=await readJson(request); if(!body) return json(request,env,{error:'INVALID_JSON'},400);
+      try { const result=await upsertAutomationProfile(env,identity,subject,body); await audit(env,subject,null,'automation_profile_updated',result.templateId,identity.email); return json(request,env,result); }
+      catch(error){return json(request,env,{error:error.code||'AUTOMATION_PROFILE_ERROR'},error.status||400)}
+    }
+    if (url.pathname === '/v1/oauth/connections' && request.method === 'GET') return json(request,env,{connections:await listManagedConnections(env,subject),entitlement:await automationEntitlement(env,subject),youtubeOAuthAvailable:youtubeConnectionReady(env)});
+    if (url.pathname === '/v1/oauth/youtube/start' && request.method === 'POST') {
+      const entitlement=await automationEntitlement(env,subject); if(entitlement.maxChannels<1) return json(request,env,{error:'CHANNEL_PLAN_UPGRADE_REQUIRED',entitlement},409);
+      const body=await readJson(request)||{}; try{return json(request,env,await startYoutubeConnection(env,identity,subject,body),201)}catch(error){return json(request,env,{error:error.code||'YOUTUBE_OAUTH_START_FAILED'},error.status||500)}
+    }
+    const selectMatch=url.pathname.match(/^\/v1\/oauth\/connections\/([^/]+)\/select$/);
+    if(selectMatch && request.method==='POST'){const entitlement=await automationEntitlement(env,subject);try{return json(request,env,await selectYoutubeConnection(request,env,identity,subject,decodeURIComponent(selectMatch[1]),entitlement.maxChannels))}catch(error){return json(request,env,{error:error.code||'CHANNEL_SELECT_FAILED'},error.status||400)}}
+    const disconnectMatch=url.pathname.match(/^\/v1\/oauth\/connections\/([^/]+)\/disconnect$/);
+    if(disconnectMatch && request.method==='POST'){try{return json(request,env,await disconnectManagedConnection(env,subject,decodeURIComponent(disconnectMatch[1])))}catch(error){return json(request,env,{error:error.code||'CHANNEL_DISCONNECT_FAILED'},error.status||400)}}
 
     if (url.pathname === '/v1/brand' && request.method === 'GET') return readBrand(request,env,subject);
     if (url.pathname === '/v1/brand' && request.method === 'PUT') return upsertBrand(request,env,identity,subject);

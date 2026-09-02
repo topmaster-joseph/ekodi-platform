@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - 'marketing-publishing-worker.js'
+      - 'channel-*.js'
+      - 'migrations/0053_channel_automation_core.sql'
+      - 'test/channel-automation-core.test.mjs'
       - 'wrangler.marketing-publishing.toml'
       - 'wrangler.marketing-publishing.staging.toml'
       - 'migrations/0026_marketing_publication_queue.sql'
@@ -17,6 +20,9 @@ on:
     branches: [main]
     paths:
       - 'marketing-publishing-worker.js'
+      - 'channel-*.js'
+      - 'migrations/0053_channel_automation_core.sql'
+      - 'test/channel-automation-core.test.mjs'
       - 'wrangler.marketing-publishing.toml'
       - 'wrangler.marketing-publishing.staging.toml'
       - 'migrations/0026_marketing_publication_queue.sql'
@@ -49,11 +55,18 @@ jobs:
         run: |
           set -euo pipefail
           node --check marketing-publishing-worker.js
-          node --test test/marketing-publishing.test.mjs
+          for f in channel-*.js; do node --check "$f"; done
+          node --test test/marketing-publishing.test.mjs test/channel-automation-core.test.mjs
           grep -Fq "subject_type IN ('person','tenant','store')" migrations/0026_marketing_publication_queue.sql
           grep -Fq 'credential_ref' migrations/0026_marketing_publication_queue.sql
           grep -Fq 'MARKETING_PLAN_SCHEDULE_REQUIRED' migrations/0027_marketing_publication_entitlements.sql
           grep -Fq 'BEFORE UPDATE OF status ON marketing_publication_jobs' migrations/0027_marketing_publication_entitlements.sql
+          grep -Fq 'channel_oauth_connections' migrations/0053_channel_automation_core.sql
+          grep -Fq 'credential_ciphertext' migrations/0053_channel_automation_core.sql
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0053_channel_automation_core.sql; then
+            echo 'Plaintext provider tokens must not be persisted in Channel Automation D1.'
+            exit 1
+          fi
           if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0026_marketing_publication_queue.sql; then
             echo 'Provider tokens must not be persisted in D1.'
             exit 1
@@ -125,8 +138,8 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='marketing_publication_jobs';" --json > /tmp/schema.json 2>/tmp/schema.err; then
-              if grep -Fq 'marketing_publication_jobs' /tmp/schema.json; then
+            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_publication_jobs','channel_automation_profiles','channel_oauth_connections');" --json > /tmp/schema.json 2>/tmp/schema.err; then
+              if grep -Fq 'marketing_publication_jobs' /tmp/schema.json && grep -Fq 'channel_automation_profiles' /tmp/schema.json && grep -Fq 'channel_oauth_connections' /tmp/schema.json; then
                 echo 'Shared Marketing publication schema is ready.'
                 exit 0
               fi
@@ -141,9 +154,11 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml \
-            --command "SELECT name,type FROM sqlite_master WHERE name IN ('marketing_publication_jobs','trg_marketing_publication_plan_insert_scheduled','trg_marketing_publication_plan_execute') ORDER BY name;" \
+            --command "SELECT name,type FROM sqlite_master WHERE name IN ('marketing_publication_jobs','channel_automation_profiles','channel_oauth_connections','trg_marketing_publication_plan_insert_scheduled','trg_marketing_publication_plan_execute') ORDER BY name;" \
             --json > /tmp/publishing-schema.json
           grep -Fq 'marketing_publication_jobs' /tmp/publishing-schema.json
+          grep -Fq 'channel_automation_profiles' /tmp/publishing-schema.json
+          grep -Fq 'channel_oauth_connections' /tmp/publishing-schema.json
           grep -Fq 'trg_marketing_publication_plan_insert_scheduled' /tmp/publishing-schema.json
           grep -Fq 'trg_marketing_publication_plan_execute' /tmp/publishing-schema.json
       - name: Bootstrap or guarded production release
@@ -170,6 +185,8 @@ jobs:
               && grep -Fq '"schemaReady":true' /tmp/publishing-health.json \
               && grep -Fq '"scheduler":true' /tmp/publishing-health.json \
               && grep -Fq '"personalBrand":true' /tmp/publishing-health.json \
+              && grep -Fq '"workspaceIdentity":true' /tmp/publishing-health.json \
+              && grep -Fq '"channelAutomationCore":true' /tmp/publishing-health.json \
               && grep -Fq '"mutations":true' /tmp/publishing-health.json; then
               echo 'Marketing publishing production verified.'
               exit 0
