@@ -16,12 +16,45 @@ const PUBLIC_HOST='ekodi.kr';
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
+const PUBLIC_WORKSPACE_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/?$/;
+const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
+const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
   if(env?.ENVIRONMENT!=='staging')return url.hostname.toLowerCase();
   const simulated=String(request.headers.get('x-ekodi-staging-host')||'').trim().toLowerCase();
   return simulated||url.hostname.toLowerCase();
+}
+
+function workspaceServiceUnavailable(){
+  return new Response('Workspace service unavailable',{status:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'space-binding-unavailable'}});
+}
+function workspaceUpstreamRequest(request,pathname){
+  const url=new URL(request.url);url.pathname=pathname;
+  return new Request(url,{method:request.method,headers:request.headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect});
+}
+function rewriteWorkspaceShellAssets(response){
+  const rewrite=(element,name)=>{const value=element.getAttribute(name)||'';for(const asset of WORKSPACE_ASSETS){const rootPath=`/${asset}`;if(value===rootPath||value.startsWith(`${rootPath}?`)){element.setAttribute(name,`${WORKSPACE_ASSET_PREFIX}${asset}${value.slice(rootPath.length)}`);break}}};
+  return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(response);
+}
+function safeWorkspaceReturnTo(value){
+  try{const target=new URL(String(value||''));target.hash='';if(target.origin!=='https://ekodi.kr'||!PUBLIC_WORKSPACE_ROUTE.test(target.pathname))return null;return target}catch{return null}
+}
+function workspaceAuthRedirect(request){
+  const url=new URL(request.url);const returnTo=safeWorkspaceReturnTo(url.searchParams.get('return_to'));if(!returnTo)return null;
+  const target=new URL('https://auth.ekodi.kr/');target.searchParams.set('site','space');target.searchParams.set('return_to',returnTo.toString());
+  return new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'auth-handoff'}});
+}
+async function routeWorkspaceAsset(request,env){
+  if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
+  const url=new URL(request.url);const asset=url.pathname.slice(WORKSPACE_ASSET_PREFIX.length);if(!WORKSPACE_ASSETS.has(asset))return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}});
+  const upstream=await env.SPACE.fetch(workspaceUpstreamRequest(request,`/${asset}`));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');return routed;
+}
+async function routePublicWorkspace(request,env){
+  if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
+  const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
+  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
 }
 
 async function routeTaxFinance(request,env,ctx){
@@ -55,10 +88,17 @@ export default {
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
 
-    if(host===PUBLIC_HOST&&request.method==='GET'){
-      if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
-      if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
-      if(isWorkspaceAdminPath(url.pathname))return workspaceAdminPage();
+    if(host===PUBLIC_HOST){
+      if(request.method==='GET'){
+        if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
+        if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
+        if(isWorkspaceAdminPath(url.pathname))return workspaceAdminPage();
+      }
+      if(['GET','HEAD'].includes(request.method)&&PUBLIC_WORKSPACE_ROUTE.test(url.pathname))return routePublicWorkspace(request,env);
+      if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
+      if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
+        const auth=workspaceAuthRedirect(request);if(auth)return auth;
+      }
     }
 
     if(host===TAX_HOST){
