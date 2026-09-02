@@ -47,3 +47,28 @@ test('Toss webhook fails closed until a server secret is configured', async () =
   const data = await response.json();
   assert.match(data.error, /서버키/);
 });
+
+test('church giving orders are classified into the church finance boundary', async () => {
+  const binds = [];
+  const DB = { prepare(sql) { return {
+    bind(...args) { binds.push({ sql, args }); return this; },
+    async first() { return null; },
+    async run() { return { success: true }; },
+  }; } };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    paymentKey: 'pk_church_1', orderId: 'CHURCH_123_abc', status: 'DONE', method: 'CARD',
+    currency: 'KRW', totalAmount: 10000, orderName: '에코디교회 십일조·주일헌금', approvedAt: new Date().toISOString(),
+  }), { status: 200, headers: { 'content-type': 'application/json' } });
+  try {
+    const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/webhooks/toss', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ eventType: 'PAYMENT_STATUS_CHANGED', data: { paymentKey: 'pk_church_1', orderId: 'CHURCH_123_abc', status: 'DONE' } }),
+    }), { DB, TOSS_SECRET_KEY: 'server-secret-for-test' });
+    assert.equal(response.status, 200);
+    const paymentInsert = binds.find((entry) => /INSERT INTO payments/.test(entry.sql));
+    assert.equal(paymentInsert.args[2], 'EKODICHURCH');
+    assert.equal(paymentInsert.args[3], 'CHURCH');
+    assert.equal(paymentInsert.args[5], 'church.ekodi.kr');
+  } finally { globalThis.fetch = originalFetch; }
+});
