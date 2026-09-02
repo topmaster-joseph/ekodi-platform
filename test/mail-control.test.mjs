@@ -48,3 +48,29 @@ test('Mail schema migration stays additive and does not seed a guessed immutable
   assert.match(migration, /CREATE TABLE IF NOT EXISTS mail_control_audit/);
   assert.doesNotMatch(migration, /INSERT\s+INTO\s+mail_domains/i);
 });
+
+test('Mail admin is a central projection of personal and workspace authority', async () => {
+  const [control, page, router] = await Promise.all([read('mail-control.js'), read('mail-admin-page.js'), read('platform-router-entry-worker.js')]);
+  assert.match(control, /CREATE TABLE IF NOT EXISTS mail_accounts/);
+  assert.match(control, /owner_type TEXT NOT NULL CHECK\(owner_type IN \('person','workspace'\)\)/);
+  assert.match(control, /authorityModel:'mail-admin-projects-existing-person-and-workspace-authority'/);
+  assert.match(control, /pending_oauth/);
+  assert.match(control, /credential_ref TEXT NOT NULL DEFAULT ''/);
+  assert.match(page, /통합 메일 관리/);
+  assert.match(page, /내 개인 메일/);
+  assert.match(page, /기관 메일 도메인·주소 상세설정/);
+  assert.match(page, /비밀번호는 이 화면이나 D1에 평문 저장하지 않습니다/);
+  assert.match(router, /url\.pathname==='\/admin'\)return mailAdminPage\(\)/);
+});
+
+test('Mail account content rights are separate from workspace administration', async () => {
+  const [control, migration] = await Promise.all([read('mail-control.js'), read('migrations/0050_mail_control.sql')]);
+  assert.match(control, /mail_account_grants/);
+  assert.match(control, /can_read/);
+  assert.match(control, /can_send/);
+  assert.match(control, /can_manage/);
+  assert.match(control, /permissions:\{read:/);
+  assert.match(control, /mail_account_audit/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS mail_account_grants/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS mail_account_audit/);
+});

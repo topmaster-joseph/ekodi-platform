@@ -1,4 +1,4 @@
-﻿-- Tenant-scoped EKODI Mail control. Configuration is provider-neutral and auditable.
+-- Tenant-scoped EKODI Mail control. Configuration is provider-neutral and auditable.
 -- Actual DNS/provider activation remains an explicit external operation.
 CREATE TABLE IF NOT EXISTS mail_domains (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +30,50 @@ CREATE TABLE IF NOT EXISTS mail_routes (
   FOREIGN KEY(domain_id) REFERENCES mail_domains(id)
 );
 
+CREATE TABLE IF NOT EXISTS mail_accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_type TEXT NOT NULL CHECK(owner_type IN ('person','workspace')),
+  owner_key TEXT NOT NULL,
+  workspace_slug TEXT NOT NULL DEFAULT '',
+  provider TEXT NOT NULL,
+  email_address TEXT NOT NULL,
+  display_name TEXT NOT NULL DEFAULT '',
+  connector_mode TEXT NOT NULL,
+  connection_status TEXT NOT NULL DEFAULT 'pending_connection',
+  credential_ref TEXT NOT NULL DEFAULT '',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  last_sync_at TEXT,
+  last_error TEXT NOT NULL DEFAULT '',
+  created_by_email TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(owner_type, owner_key, email_address)
+);
+CREATE TABLE IF NOT EXISTS mail_account_grants (
+  account_id INTEGER NOT NULL,
+  principal_type TEXT NOT NULL DEFAULT 'person',
+  principal_key TEXT NOT NULL,
+  can_read INTEGER NOT NULL DEFAULT 0,
+  can_send INTEGER NOT NULL DEFAULT 0,
+  can_manage INTEGER NOT NULL DEFAULT 0,
+  created_by_email TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(account_id, principal_type, principal_key),
+  FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
+);
+
+CREATE TABLE IF NOT EXISTS mail_account_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER,
+  subject_type TEXT NOT NULL,
+  subject_key TEXT NOT NULL,
+  actor_email TEXT NOT NULL,
+  action TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS mail_control_audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   workspace_id TEXT NOT NULL,
@@ -43,4 +87,8 @@ CREATE TABLE IF NOT EXISTS mail_control_audit (
 
 CREATE INDEX IF NOT EXISTS idx_mail_domains_workspace ON mail_domains(workspace_id, hostname);
 CREATE INDEX IF NOT EXISTS idx_mail_routes_workspace ON mail_routes(workspace_id, enabled);
+CREATE INDEX IF NOT EXISTS idx_mail_accounts_owner ON mail_accounts(owner_type, owner_key, enabled);
+CREATE INDEX IF NOT EXISTS idx_mail_accounts_email ON mail_accounts(email_address);
+CREATE INDEX IF NOT EXISTS idx_mail_account_grants_principal ON mail_account_grants(principal_type, principal_key);
+CREATE INDEX IF NOT EXISTS idx_mail_account_audit_subject ON mail_account_audit(subject_type, subject_key, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_mail_audit_workspace_time ON mail_control_audit(workspace_id, created_at DESC);

@@ -1,9 +1,18 @@
-﻿const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const MAIL_PREFIX = '/api/mail/control';
 const WRITE_ROLES = new Set(['tenant_admin', 'owner', 'admin', 'manager', 'store_owner']);
 const ALLOWED_ORIGINS = new Set(['https://ekodi.kr', 'https://mail.ekodi.kr', 'https://my.ekodi.kr']);
 const DEFAULT_PROVIDER = 'forward-email';
+const ACCOUNT_PROVIDERS = Object.freeze({
+  gmail: { label: 'Gmail', connectorMode: 'google-oauth', auth: 'oauth', read: true, send: true },
+  outlook: { label: 'Outlook / Microsoft', connectorMode: 'microsoft-oauth', auth: 'oauth', read: true, send: true },
+  naver: { label: 'Naver Mail', connectorMode: 'imap-adapter', auth: 'provider-app-password-or-oauth', read: true, send: true },
+  daum: { label: 'Daum Mail', connectorMode: 'imap-adapter', auth: 'provider-app-password-or-oauth', read: true, send: true },
+  kakao: { label: 'Kakao Mail', connectorMode: 'imap-adapter', auth: 'provider-app-password-or-oauth', read: true, send: true },
+  'generic-imap': { label: '기타 IMAP 메일', connectorMode: 'imap-adapter', auth: 'oauth-or-app-password', read: true, send: true },
+  'workspace-delegation': { label: 'Google Workspace 위임', connectorMode: 'workspace-delegation', auth: 'service-account', read: true, send: false },
+});
 
 function cors(origin) {
   const headers = {
@@ -110,6 +119,17 @@ async function workspaceIdentity(request, env, slug) {
   }
 }
 
+async function mailActor(request, env) {
+  const token=bearer(request); if(!token)return null;
+  try{const [user,raw]=await Promise.all([supabaseJson('/auth/v1/user',token,env),supabaseJson('/rest/v1/rpc/current_site_activity_contexts',token,env,{method:'POST',body:'{}'})]);
+    if(!user?.id||!user?.email)return null; const contexts=(Array.isArray(raw)?raw:[]).map(item=>({workspaceId:String(item?.tenant_id||''),workspaceKey:String(item?.workspace_key||''),workspaceSlug:String(item?.tenant||'').toLowerCase(),workspaceName:String(item?.workspace_name||item?.tenant||''),workspaceKind:String(item?.workspace_kind||'organization'),authorizationRole:String(item?.authorization_role||''),activityRole:String(item?.activity_role||''),activityRoleLabel:String(item?.activity_role_label||''),canManage:WRITE_ROLES.has(String(item?.authorization_role||''))})).filter(x=>x.workspaceId&&x.workspaceSlug);
+    return{userId:String(user.id),email:String(user.email).toLowerCase(),contexts};}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
+}
+function providerForEmail(email,requested=''){const v=String(requested||'').trim().toLowerCase();if(ACCOUNT_PROVIDERS[v])return v;const d=String(email||'').split('@').pop().toLowerCase();if(['gmail.com','googlemail.com'].includes(d))return'gmail';if(['outlook.com','hotmail.com','live.com'].includes(d))return'outlook';if(d==='naver.com')return'naver';if(['daum.net','hanmail.net'].includes(d))return'daum';if(d==='kakao.com')return'kakao';return'generic-imap'}
+function publicAccount(r){return{id:Number(r.id),ownerType:r.owner_type,ownerKey:r.owner_key,workspaceSlug:r.workspace_slug||'',provider:r.provider,providerLabel:ACCOUNT_PROVIDERS[r.provider]?.label||r.provider,emailAddress:r.email_address,displayName:r.display_name||r.email_address,connectorMode:r.connector_mode,connectionStatus:r.connection_status,enabled:Boolean(r.enabled),lastSyncAt:r.last_sync_at||null,lastError:r.last_error||'',credentialStored:Boolean(r.credential_ref)}}
+async function accountsForActor(db,actor){const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key=? ORDER BY display_name,email_address`).bind(actor.userId).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
+
+async function accountsVisibleForActor(db,actor){const rows=await accountsForActor(db,actor);return Promise.all(rows.map(async a=>{if(a.ownerType==='person')return{...a,permissions:{read:true,send:true,manage:true}};const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(a.id,actor.userId).first();const context=actor.contexts.find(c=>c.workspaceId===a.ownerKey);return{...a,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context?.canManage)}}}))}
 async function ensureSchema(db) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS mail_domains (
@@ -140,6 +160,25 @@ async function ensureSchema(db) {
       UNIQUE(domain_id, local_part),
       FOREIGN KEY(domain_id) REFERENCES mail_domains(id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS mail_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, owner_type TEXT NOT NULL CHECK(owner_type IN ('person','workspace')),
+      owner_key TEXT NOT NULL, workspace_slug TEXT NOT NULL DEFAULT '', provider TEXT NOT NULL,
+      email_address TEXT NOT NULL, display_name TEXT NOT NULL DEFAULT '', connector_mode TEXT NOT NULL,
+      connection_status TEXT NOT NULL DEFAULT 'pending_connection', credential_ref TEXT NOT NULL DEFAULT '',
+      enabled INTEGER NOT NULL DEFAULT 1, last_sync_at TEXT, last_error TEXT NOT NULL DEFAULT '',
+      created_by_email TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      UNIQUE(owner_type, owner_key, email_address)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS mail_account_grants (
+      account_id INTEGER NOT NULL, principal_type TEXT NOT NULL DEFAULT 'person', principal_key TEXT NOT NULL,
+      can_read INTEGER NOT NULL DEFAULT 0, can_send INTEGER NOT NULL DEFAULT 0, can_manage INTEGER NOT NULL DEFAULT 0,
+      created_by_email TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY(account_id, principal_type, principal_key), FOREIGN KEY(account_id) REFERENCES mail_accounts(id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS mail_account_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER, subject_type TEXT NOT NULL, subject_key TEXT NOT NULL,
+      actor_email TEXT NOT NULL, action TEXT NOT NULL, resource TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS mail_control_audit (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       workspace_id TEXT NOT NULL,
@@ -152,10 +191,15 @@ async function ensureSchema(db) {
     )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_domains_workspace ON mail_domains(workspace_id, hostname)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_routes_workspace ON mail_routes(workspace_id, enabled)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_accounts_owner ON mail_accounts(owner_type, owner_key, enabled)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_accounts_email ON mail_accounts(email_address)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_account_grants_principal ON mail_account_grants(principal_type, principal_key)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_account_audit_subject ON mail_account_audit(subject_type, subject_key, created_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_mail_audit_workspace_time ON mail_control_audit(workspace_id, created_at DESC)'),
   ]);
 }
 
+async function auditAccount(db, actor, subjectType, subjectKey, accountId, action, resource, detail=''){await db.prepare(`INSERT INTO mail_account_audit (account_id,subject_type,subject_key,actor_email,action,resource,detail,created_at) VALUES (?,?,?,?,?,?,?,?)`).bind(accountId||null,subjectType,subjectKey,actor.email,action,resource,String(detail).slice(0,1000),new Date().toISOString()).run()}
 async function audit(db, identity, action, resource, detail = '') {
   await db.prepare(`INSERT INTO mail_control_audit
     (workspace_id, workspace_slug, actor_email, action, resource, detail, created_at)
@@ -184,6 +228,7 @@ async function bootstrapEkodiChurch(db, identity) {
       VALUES (?, ?, 'joseph', 'ekodichurch@gmail.com', 1, 0, ?, ?)`)
       .bind(identity.workspaceId, domain.id, now, now).run();
   }
+  await db.prepare(`INSERT OR IGNORE INTO mail_accounts (owner_type,owner_key,workspace_slug,provider,email_address,display_name,connector_mode,connection_status,credential_ref,enabled,created_by_email,created_at,updated_at) VALUES ('workspace',?,'ekodi-church','gmail','ekodichurch@gmail.com','에코디교회 Gmail','google-oauth','pending_oauth','',1,?,?,?)`).bind(identity.workspaceId,identity.email,now,now).run();
 }
 
 function parseDnsAnswer(data, type) {
@@ -330,6 +375,10 @@ export async function handleMailControl(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
   if (!env.DB) return json({ error: '메일 관리 데이터베이스가 연결되지 않았습니다.', code: 'DB_UNAVAILABLE' }, 503, request);
   await ensureSchema(env.DB);
+
+  if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/contexts`){const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);for(const c of actor.contexts)await bootstrapEkodiChurch(env.DB,{...c,userId:actor.userId,email:actor.email,workspaceName:c.workspaceName,workspaceKind:c.workspaceKind});return json({person:{id:actor.userId,email:actor.email,canManage:true},workspaces:actor.contexts,providers:ACCOUNT_PROVIDERS,accounts:await accountsVisibleForActor(env.DB,actor),authorityModel:'mail-admin-projects-existing-person-and-workspace-authority'},200,request)}
+  if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/accounts`){const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);return json({accounts:await accountsVisibleForActor(env.DB,actor),providers:ACCOUNT_PROVIDERS},200,request)}
+  if(request.method==='POST'&&url.pathname===`${MAIL_PREFIX}/accounts`){const body=await readJson(request),actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);const email=normalizeEmail(body?.emailAddress),scope=String(body?.scope||'person').trim().toLowerCase(),provider=providerForEmail(email,body?.provider);if(!email||!ACCOUNT_PROVIDERS[provider])return json({error:'연결할 메일 계정을 확인해 주세요.',code:'INVALID_ACCOUNT'},400,request);let ownerType='person',ownerKey=actor.userId,workspaceSlug='';if(scope==='workspace'){const slug=normalizeSlug(body?.workspace),context=actor.contexts.find(x=>x.workspaceSlug===slug);if(!context)return json({error:'이 운영공간에 접근할 수 없습니다.',code:'WORKSPACE_ACCESS_REQUIRED'},403,request);if(!context.canManage)return json({error:'이 운영공간의 메일 계정을 변경할 권한이 없습니다.',code:'WRITE_FORBIDDEN'},403,request);ownerType='workspace';ownerKey=context.workspaceId;workspaceSlug=context.workspaceSlug}const config=ACCOUNT_PROVIDERS[provider],status=config.auth==='service-account'?'pending_service_connection':config.auth==='oauth'?'pending_oauth':'pending_connection',displayName=String(body?.displayName||email).trim().slice(0,100),now=new Date().toISOString();await env.DB.prepare(`INSERT INTO mail_accounts (owner_type,owner_key,workspace_slug,provider,email_address,display_name,connector_mode,connection_status,credential_ref,enabled,created_by_email,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'',1,?,?,?) ON CONFLICT(owner_type,owner_key,email_address) DO UPDATE SET provider=excluded.provider,display_name=excluded.display_name,connector_mode=excluded.connector_mode,enabled=1,updated_at=excluded.updated_at`).bind(ownerType,ownerKey,workspaceSlug,provider,email,displayName,config.connectorMode,status,actor.email,now,now).run();const account=await env.DB.prepare('SELECT id FROM mail_accounts WHERE owner_type=? AND owner_key=? AND email_address=?').bind(ownerType,ownerKey,email).first();if(account?.id){await env.DB.prepare(`INSERT INTO mail_account_grants (account_id,principal_type,principal_key,can_read,can_send,can_manage,created_by_email,created_at,updated_at) VALUES (?,'person',?,1,1,1,?,?,?) ON CONFLICT(account_id,principal_type,principal_key) DO UPDATE SET can_read=1,can_send=1,can_manage=1,updated_at=excluded.updated_at`).bind(account.id,actor.userId,actor.email,now,now).run();await auditAccount(env.DB,actor,ownerType,ownerKey,account.id,'mail.account.register',email,JSON.stringify({provider,connectorMode:config.connectorMode}))}return json({ok:true,accounts:await accountsVisibleForActor(env.DB,actor)},200,request)}
 
   if (request.method === 'GET' && url.pathname === `${MAIL_PREFIX}/workspace`) {
     const slug = normalizeSlug(url.searchParams.get('slug'));
