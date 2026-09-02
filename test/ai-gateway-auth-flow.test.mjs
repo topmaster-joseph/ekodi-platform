@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { aiGatewayScript } from '../ai-gateway-page.js';
+import { aiGatewayPage, aiGatewayScript } from '../ai-gateway-page.js';
 
 function element() {
   return {
@@ -20,6 +20,7 @@ async function runClient({ storageThrows = false } = {}) {
     'signedIn','signedOut','overallDot','overallText','checkedAt','sessionIdentity',
     'loginTitle','loginMessage','refreshBtn','gatewayState','gatewayMeta','openaiState',
     'openaiMeta','fallbackState','fallbackMeta','testBtn','testResult','logoutBtn',
+    'activeProvider','activeModel','chatMessages','chatStatus','chatForm','chatInput','chatSendBtn',
   ];
   const elements = Object.fromEntries(ids.map(id => [id, element()]));
   elements.signedIn.hidden = true;
@@ -104,6 +105,11 @@ async function runClient({ storageThrows = false } = {}) {
   return { elements, sequence, location, token };
 }
 
+test('Gateway Google admin button enters central auth in direct mode', async () => {
+  const html = await aiGatewayPage().text();
+  assert.match(html, /https:\/\/auth\.ekodi\.kr\/\?site=admin&direct=1&return_to=https%3A%2F%2Fai\.ekodi\.kr%2F/);
+});
+
 test('Google admin handoff survives blocked sessionStorage and opens authenticated Gateway', async () => {
   const { elements, sequence, location } = await runClient({ storageThrows:true });
   assert.deepEqual(sequence.slice(0, 3), ['session', 'clear-handoff', 'provider']);
@@ -112,7 +118,9 @@ test('Google admin handoff survives blocked sessionStorage and opens authenticat
   assert.equal(elements.signedIn.hidden, false);
   assert.match(elements.sessionIdentity.textContent, /admin@example\.test · super_admin/);
   assert.match(elements.overallText.textContent, /OpenAI 구성 정상/);
-  assert.equal(elements.openaiState.textContent, '구성됨 · 런타임 준비');
+  assert.equal(elements.openaiState.textContent, 'OpenAI 연결 준비');
+  assert.equal(elements.activeProvider.textContent, 'OpenAI');
+  assert.equal(elements.activeModel.textContent, 'test-model');
 });
 
 test('handoff is removed only after session validation succeeds', async () => {

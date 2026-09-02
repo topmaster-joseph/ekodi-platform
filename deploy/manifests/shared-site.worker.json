@@ -1,5 +1,5 @@
 {
-  "version": 35,
+  "version": 36,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -107,14 +107,14 @@
         "url": "https://ai.ekodi.kr/",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI AI Gateway", "AI PROVIDER CONNECTION", "실제 연결 테스트", "Provider 독립"],
+        "expect": ["EKODI AI Gateway", "ACTIVE AI PROVIDER", "AI COMMAND CONSOLE", "Provider 독립"],
         "headerExpect": ["x-ekodi-route: ai-gateway", "cache-control: no-store", "x-content-type-options: nosniff"]
       },
       {
         "url": "https://ai.ekodi.kr/ai-gateway.js",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["/api/control/ai/provider-status", "/api/control/ai/assist", "ekodi_admin_token", "OpenAI 실제 호출"],
+        "expect": ["/api/control/ai/provider-status", "/api/control/ai/assist", "/api/control/ai/actions", "ekodi_admin_token"],
         "headerExpect": ["cache-control: no-store", "x-content-type-options: nosniff"]
       },
       {
