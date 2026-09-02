@@ -1,7 +1,7 @@
 const CANONICAL = Object.freeze({
-  'ekodichurch.kr': 'https://church.ekodi.kr',
-  'ekodilab.kr': 'https://lab.ekodi.kr',
-  'ekodimall.kr': 'https://mall.ekodi.kr'
+  'ekodichurch.kr': 'https://ekodi.kr/ekodichurch',
+  'ekodilab.kr': 'https://ekodi.kr/ekodilab',
+  'ekodimall.kr': 'https://ekodi.kr/ekodibiz/mall'
 });
 
 export default {
@@ -11,7 +11,9 @@ export default {
     if (!base) return new Response('Not found', { status: 404 });
 
     const target = new URL(base);
-    target.pathname = incoming.pathname;
+    const basePath = target.pathname.replace(/\/$/, '');
+    const suffix = incoming.pathname === '/' ? '' : incoming.pathname;
+    target.pathname = `${basePath}${suffix}` || '/';
     target.search = incoming.search;
     target.hash = incoming.hash;
     return Response.redirect(target.toString(), 301);

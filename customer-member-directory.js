@@ -80,6 +80,11 @@ function publicMember(row) {
       slug: row.tenant_slug,
       name: row.tenant_name,
       domain: row.tenant_domain,
+      workspaceId: row.workspace_id || '',
+      workspaceType: row.workspace_type || '',
+      workspaceSubtype: row.workspace_subtype || '',
+      publicNamespace: row.public_namespace || '',
+      canonicalUrl: row.public_namespace ? `https://ekodi.kr/${row.public_namespace}` : '',
       status: row.tenant_status,
     },
   };
@@ -95,7 +100,7 @@ function filterMembers(members, url) {
     if (status && member.status !== status) return false;
     if (role && member.role !== role && member.coreRole !== role) return false;
     if (q) {
-      const haystack = normalize(`${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel} ${member.coreRoleLabel}`);
+      const haystack = normalize(`${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.tenant.publicNamespace} ${member.tenant.canonicalUrl} ${member.roleLabel} ${member.coreRoleLabel}`);
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -124,6 +129,11 @@ function tenantDirectory(rows, members) {
       slug: row.slug,
       name: row.name,
       domain: row.domain,
+      workspaceId: row.workspace_id || '',
+      workspaceType: row.workspace_type || '',
+      workspaceSubtype: row.workspace_subtype || '',
+      publicNamespace: row.public_namespace || '',
+      canonicalUrl: row.public_namespace ? `https://ekodi.kr/${row.public_namespace}` : '',
       status: row.status,
       members: siteMembers.length,
       activeUsers: siteMembers.filter(member => member.status === 'active').length,
@@ -161,7 +171,7 @@ export async function handleCustomerMemberDirectory(request, env) {
   if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
 
   const [tenantRows, memberRows] = await Promise.all([
-    env.DB.prepare('SELECT slug, name, domain, status FROM customer_tenants ORDER BY name').all(),
+    env.DB.prepare('SELECT slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace FROM customer_tenants ORDER BY name').all(),
     env.DB.prepare(`SELECT
         a.email,
         a.role,
@@ -175,6 +185,10 @@ export async function handleCustomerMemberDirectory(request, env) {
         t.slug AS tenant_slug,
         t.name AS tenant_name,
         t.domain AS tenant_domain,
+        t.workspace_id,
+        t.workspace_type,
+        t.workspace_subtype,
+        t.public_namespace,
         t.status AS tenant_status
       FROM customer_access_grants a
       JOIN customer_tenants t ON t.id = a.tenant_id

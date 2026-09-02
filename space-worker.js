@@ -1,4 +1,6 @@
-const SPACE_ROUTE=/^\/(personal|org|group|project)\/([a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?)\/?$/;
+import { resolveLegacyWorkspaceRedirect } from './workspace-public-proxy.js';
+
+const SPACE_ROUTE=/^\/(personal|org|group|project|people|biz)\/([a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?)(?:\/.*)?$/;
 
 function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net'];
@@ -26,11 +28,11 @@ function withHeaders(env,response,route='asset'){
 function json(env,data,status=200){return withHeaders(env,new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}),'api')}
 function runtimeConfig(env){
   const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
-  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=space',canonicalOrigin:'https://space.ekodi.kr',routeModel:'/personal/{slug} | /org/{slug} | /group/{slug} | /project/{slug}',identityModel:'ekodi_id -> workspace_id -> role -> capability'};
+  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:'/{public_namespace} | /{public_namespace}/{service}',identityModel:'ekodi_id -> workspace_id -> role -> capability'};
 }
 function authRedirect(request,env){
   const current=new URL(request.url);current.hash='';
-  const canonical=new URL(current.pathname+current.search,'https://space.ekodi.kr');
+  const canonical=new URL(current.pathname+current.search,'https://ekodi.kr');
   const target=new URL(env.AUTH_URL||'https://auth.ekodi.kr/?site=space');
   target.searchParams.set('site','space');target.searchParams.set('return_to',canonical.href);
   return withHeaders(env,Response.redirect(target.href,302),'auth-start');
@@ -43,7 +45,7 @@ async function appShell(request,env,route='space-home'){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
-    if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['personal','org','group','project'],dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
+    if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'legacy-operating-space-compatibility',identity:'ekodi-id',workspaceIdentity:'workspace-id',canonicalRouteModel:'/{public_namespace}',legacyRouteModel:['personal','org','group','project','people','biz'],dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
     if(url.pathname==='/auth/start'){
@@ -51,8 +53,13 @@ export default{
       return authRedirect(request,env);
     }
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
-    if(SPACE_ROUTE.test(url.pathname))return appShell(request,env,'space-workspace');
-    if(/^\/(personal|org|group|project)\//.test(url.pathname))return json(env,{error:'space_route_not_found'},404);
+    if(SPACE_ROUTE.test(url.pathname)){
+      const canonicalPath=await resolveLegacyWorkspaceRedirect(url.pathname);
+      if(!canonicalPath)return json(env,{error:'space_route_not_found'},404);
+      const target=new URL(canonicalPath,'https://ekodi.kr');target.search=url.search;
+      return withHeaders(env,Response.redirect(target.toString(),308),'legacy-space-redirect');
+    }
+    if(/^\/(personal|org|group|project|people|biz)\//.test(url.pathname))return json(env,{error:'space_route_not_found'},404);
     return withHeaders(env,await env.ASSETS.fetch(request),'space-asset');
   }
 };

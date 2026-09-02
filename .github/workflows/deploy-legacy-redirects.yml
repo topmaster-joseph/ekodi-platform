@@ -49,16 +49,16 @@ jobs:
         run: |
           set -u
           failed=0
-          for spec in "ekodichurch.kr:church.ekodi.kr" "ekodilab.kr:lab.ekodi.kr" "ekodimall.kr:mall.ekodi.kr"; do
-            old="${spec%%:*}"; new="${spec#*:}"; code=000; location=""
+          for spec in "ekodichurch.kr|https://ekodi.kr/ekodichurch" "ekodilab.kr|https://ekodi.kr/ekodilab" "ekodimall.kr|https://ekodi.kr/ekodibiz/mall"; do
+            old="${spec%%|*}"; new="${spec#*|}"; code=000; location=""
             for attempt in $(seq 1 12); do
               curl -sS -o /dev/null -D /tmp/headers --connect-timeout 10 --max-time 20 "https://$old/domain-check?source=legacy" || true
               code=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' /tmp/headers 2>/dev/null || echo 0)
               location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/headers 2>/dev/null || true)
-              if [ "$code" = "301" ] && printf '%s' "$location" | grep -q "https://$new/domain-check?source=legacy"; then break; fi
+              if [ "$code" = "301" ] && printf '%s' "$location" | grep -Fq "$new/domain-check?source=legacy"; then break; fi
               sleep 5
             done
             echo "$old http=$code location=$location"
-            if [ "$code" != "301" ] || ! printf '%s' "$location" | grep -q "https://$new/domain-check?source=legacy"; then failed=1; fi
+            if [ "$code" != "301" ] || ! printf '%s' "$location" | grep -Fq "$new/domain-check?source=legacy"; then failed=1; fi
           done
           exit "$failed"

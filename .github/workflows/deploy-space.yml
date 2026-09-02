@@ -6,6 +6,8 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'workspace-public-namespace.js'
+      - 'workspace-public-proxy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
@@ -15,6 +17,8 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'workspace-public-namespace.js'
+      - 'workspace-public-proxy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
@@ -44,6 +48,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check space-worker.js
+          node --check workspace-public-namespace.js
+          node --check workspace-public-proxy.js
           node --check space/app.js
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
@@ -53,7 +59,8 @@ jobs:
           grep -Fq 'tenant_members+RLS' supabase/functions/workspace-api/index.ts
           grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/resolve' space/app.js
-          grep -Fq '/personal/{slug} | /org/{slug} | /group/{slug} | /project/{slug}' space-worker.js
+          grep -Fq '/{public_namespace} | /{public_namespace}/{service}' space-worker.js
+          grep -Fq 'legacy-space-redirect' space-worker.js
           test -f deploy/manifests/space.worker.json
 
   staging:
@@ -130,8 +137,8 @@ jobs:
             for attempt in $(seq 1 18); do
               root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
               health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
-              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/org/deployment-probe' || true)
-              if [[ "$root" == '200' && "$health" == '200' && "$route" == '200' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-live.html && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
+              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/org/cgma' || true)
+              if [[ "$root" == '200' && "$health" == '200' && "$route" == '308' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-live.html && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*legacy-space-redirect' /tmp/space-live-route.headers && grep -Eiq '^location:[[:space:]]*https://ekodi.kr/cgma' /tmp/space-live-route.headers; then
                 echo 'Operating Space production bootstrap verified.'
                 exit 0
               fi
