@@ -23,6 +23,13 @@
   let started=false;
   let wanted=true;
   let gestureArmed=false;
+  const LABELS=Object.freeze({
+    'ko-KR':{play:'♫ MR 재생',stop:'♫ MR 끄기',playAria:'배경 CCM MR 재생',stopAria:'배경 CCM MR 끄기'},
+    en:{play:'♫ Play MR',stop:'♫ Stop MR',playAria:'Play background CCM instrumental',stopAria:'Stop background CCM instrumental'},
+    'zh-CN':{play:'♫ 播放 MR',stop:'♫ 关闭 MR',playAria:'播放背景 CCM 伴奏',stopAria:'关闭背景 CCM 伴奏'},
+    ja:{play:'♫ MR 再生',stop:'♫ MR 停止',playAria:'背景 CCM MR を再生',stopAria:'背景 CCM MR を停止'}
+  });
+  function locale(){const raw=String(window.EKODIUserLanguage?.getLocale?.()||document.documentElement.lang||'ko-KR').toLowerCase();if(raw.startsWith('en'))return'en';if(raw.startsWith('zh'))return'zh-CN';if(raw.startsWith('ja'))return'ja';return'ko-KR';}
 
   const progression=[
     {root:48,notes:[60,64,67]},
@@ -156,10 +163,11 @@
     const button=document.getElementById(buttonId);
     if(!button)return;
     const active=wanted&&started;
-    button.textContent=active?'♫ MR 끄기':'♫ MR 재생';
+    const labels=LABELS[locale()]||LABELS['ko-KR'];
+    button.textContent=active?labels.stop:labels.play;
     button.setAttribute('aria-pressed',active?'true':'false');
-    button.setAttribute('aria-label',active?'배경 CCM MR 끄기':'배경 CCM MR 재생');
-    button.title=active?'배경 CCM MR 끄기':'배경 CCM MR 재생';
+    button.setAttribute('aria-label',active?labels.stopAria:labels.playAria);
+    button.title=active?labels.stopAria:labels.playAria;
   }
   function armGesture(){
     if(gestureArmed||!wanted)return;
@@ -177,7 +185,7 @@
     document.addEventListener('keydown',resume,true);
   }
   function header(){
-    return document.querySelector('[data-ekodi-user-header-root]')||document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]');
+    return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback])')||document.querySelector('[data-ekodi-user-header-root]')||document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]');
   }
   function actionContainer(target){
     return target?.querySelector?.('.ekodi-user-ui-fallback-header__nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions,#main-nav,nav')||target;
@@ -229,7 +237,7 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
   window.addEventListener('ekodi:user-header-ready',()=>placeButton());
-  window.addEventListener('ekodi:locale-change',()=>placeButton());
+  window.addEventListener('ekodi:locale-change',()=>{updateButton();placeButton();});
   window.setTimeout(()=>placeButton(),250);
   window.setTimeout(()=>placeButton(),1200);
 
