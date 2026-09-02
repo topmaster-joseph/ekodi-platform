@@ -44,52 +44,63 @@ jobs:
       - name: Validate Admin runtime contract
         shell: bash
         run: |
-          set -euo pipefail
-          node scripts/validate-admin-source.mjs
-          node --test \
-            test/admin-true-lazy.test.mjs \
-            test/admin-thin-shell.test.mjs \
-            test/admin-health-menu.test.mjs \
-            test/admin-system-map.test.mjs \
-            test/admin-preauth-shell.test.mjs \
-            test/admin-performance-hardening.test.mjs \
-            test/admin-readable-command.test.mjs
-          npm run build
+          set -o pipefail
+          {
+            set -euo pipefail
+            node scripts/validate-admin-source.mjs
+            node --test \
+              test/admin-true-lazy.test.mjs \
+              test/admin-thin-shell.test.mjs \
+              test/admin-health-menu.test.mjs \
+              test/admin-system-map.test.mjs \
+              test/admin-preauth-shell.test.mjs \
+              test/admin-performance-hardening.test.mjs \
+              test/admin-readable-command.test.mjs
+            npm run build
 
-          for asset in \
-            admin-shell.html \
-            admin-shell.css \
-            admin-central-handoff.js \
-            admin-authenticated-shell.js \
-            admin-compact.js \
-            admin-compact.css \
-            admin-menu-layout.js \
-            admin-menu-registry.js \
-            admin-sidebar.js \
-            admin-menu-runtime.js \
-            admin-demand-loader.js; do
-            test -f "dist/$asset"
-          done
+            for asset in \
+              admin-shell.html \
+              admin-shell.css \
+              admin-central-handoff.js \
+              admin-authenticated-shell.js \
+              admin-compact.js \
+              admin-compact.css \
+              admin-menu-layout.js \
+              admin-menu-registry.js \
+              admin-sidebar.js \
+              admin-menu-runtime.js \
+              admin-demand-loader.js; do
+              test -f "dist/$asset"
+            done
 
-          version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
-          test -n "$version"
-          grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
-          grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
-          grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
+            version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
+            test -n "$version"
+            grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
+            grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
+            grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
 
-          handoff_bytes=$(wc -c < dist/admin-central-handoff.js)
-          compact_bytes=$(wc -c < dist/admin-compact.js)
-          menu_bytes=$(wc -c < dist/admin-menu-layout.js)
-          demand_bytes=$(wc -c < dist/admin-demand-loader.js)
-          first_path=$((handoff_bytes + $(wc -c < dist/admin-authenticated-shell.js) + compact_bytes + menu_bytes + demand_bytes))
-          css_bytes=$(( $(wc -c < dist/admin-shell.css) + $(wc -c < dist/admin-compact.css) ))
-          echo "Admin budgets: version=$version handoff=$handoff_bytes compact=$compact_bytes menu=$menu_bytes demand=$demand_bytes first-js=$first_path first-css=$css_bytes"
-          test "$handoff_bytes" -le 9000
-          test "$compact_bytes" -le 5000
-          test "$menu_bytes" -le 10000
-          test "$demand_bytes" -le 14000
-          test "$first_path" -le 43000
-          test "$css_bytes" -le 40000
+            handoff_bytes=$(wc -c < dist/admin-central-handoff.js)
+            compact_bytes=$(wc -c < dist/admin-compact.js)
+            menu_bytes=$(wc -c < dist/admin-menu-layout.js)
+            demand_bytes=$(wc -c < dist/admin-demand-loader.js)
+            first_path=$((handoff_bytes + $(wc -c < dist/admin-authenticated-shell.js) + compact_bytes + menu_bytes + demand_bytes))
+            css_bytes=$(( $(wc -c < dist/admin-shell.css) + $(wc -c < dist/admin-compact.css) ))
+            echo "Admin budgets: version=$version handoff=$handoff_bytes compact=$compact_bytes menu=$menu_bytes demand=$demand_bytes first-js=$first_path first-css=$css_bytes"
+            test "$handoff_bytes" -le 9000
+            test "$compact_bytes" -le 5000
+            test "$menu_bytes" -le 10000
+            test "$demand_bytes" -le 14000
+            test "$first_path" -le 43000
+            test "$css_bytes" -le 40000
+          } 2>&1 | tee runtime-contract-output.txt
+
+      - name: Preserve runtime contract diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-runtime-contract-output
+          path: runtime-contract-output.txt
+          retention-days: 1
 
       - name: Confirm this workflow never owns production deployment
         shell: bash
