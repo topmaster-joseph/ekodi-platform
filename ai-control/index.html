@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>EKODI AI Control Plane</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="https://ekodi.kr/">EKODI</a>
+  <div><strong>AI Control Plane</strong><small>ai.ekodi.kr</small></div>
+  <a id="authLink" class="button secondary" href="#">Google 로그인</a>
+</header>
+<main>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">MULTI-AI ORCHESTRATION</p>
+      <h1>명령은 한 번.<br>AI는 서로 보완해서 움직입니다.</h1>
+      <p>무료 공식 API와 로그인된 계정형 작업노드를 우선 사용하고, 필요한 경우에만 선택형 유료 API로 내려갑니다. 코드 작업은 독립 브랜치에서 실행되고 운영 반영은 승인 뒤에만 진행됩니다.</p>
+    </div>
+    <aside class="status-card">
+      <span id="healthDot" class="dot"></span>
+      <strong id="healthText">상태 확인 중</strong>
+      <dl>
+        <div><dt>라우팅</dt><dd id="strategy">free-first</dd></div>
+        <div><dt>상태저장</dt><dd id="stateStore">-</dd></div>
+        <div><dt>브랜치 할당</dt><dd id="branchState">-</dd></div>
+      </dl>
+    </aside>
+  </section>
+  <section id="loginPanel" class="panel login-panel">
+    <div><h2>관리자 로그인 필요</h2><p>AI 실행과 계정형 작업노드 연결은 관리자에게만 보입니다.</p></div>
+    <a id="loginButton" class="button" href="#">Google로 로그인</a>
+  </section>
+  <section id="appPanel" class="workspace" hidden>
+    <section class="panel command-panel">
+      <div class="section-head"><div><p class="eyebrow">NEW TASK</p><h2>통합 명령</h2></div><span id="identity" class="identity"></span></div>
+      <label>작업 제목 <input id="title" maxlength="160" placeholder="예: 관리자 메뉴 링크 오류 수정"></label>
+      <label>명령 <textarea id="prompt" rows="8" maxlength="24000" placeholder="여기에 한 번만 명령하세요. 각 AI 역할과 실행 순서는 오케스트레이터가 정합니다."></textarea></label>
+      <div class="options">
+        <label>실행 방식
+          <select id="mode">
+            <option value="primary-review">주 작업 + 교차검토</option>
+            <option value="parallel">최대 3개 AI 병렬</option>
+            <option value="single">가장 적합한 AI 1개</option>
+          </select>
+        </label>
+        <label class="check"><input id="needsCodeBranch" type="checkbox"> 코드 작업용 독립 브랜치 필요</label>
+      </div>
+      <div class="actions"><button id="runTask" class="button">작업 생성 · 자동 실행</button><span id="commandStatus"></span></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><p class="eyebrow">PROVIDERS</p><h2>현재 연결</h2></div><button id="refresh" class="button secondary small">새로고침</button></div>
+      <div id="providers" class="provider-grid"></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><p class="eyebrow">ACCOUNT NODES</p><h2>무료계정 작업노드</h2><p class="muted compact">ChatGPT·Gemini·Claude 계정 로그인은 각 컴퓨터 안에만 보관합니다.</p></div><button id="pairNode" class="button small">연결코드 만들기</button></div>
+      <div id="pairing" class="pairing" hidden>
+        <span>10분 안에 작업노드에서 입력</span><strong id="pairCode"></strong><small id="pairExpiry"></small>
+      </div>
+      <div id="nodes" class="provider-grid"><p class="muted">연결된 작업노드를 확인하는 중입니다.</p></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><p class="eyebrow">TASKS</p><h2>작업 흐름</h2></div></div>
+      <div id="tasks" class="task-list"><p class="muted">작업을 불러오는 중입니다.</p></div>
+    </section>
+  </section>
+</main>
+<footer>© 2026 EKODI · AI 공급자는 교체 가능한 작업자이며 운영권한은 중앙 승인 게이트에 남습니다.</footer>
+</body>
+</html>
