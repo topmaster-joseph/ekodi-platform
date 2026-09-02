@@ -25,7 +25,7 @@ for (const [from,to] of [
   ['insertPlaceholder','insert'],
   ['activateFeature','activate'],
   ['bindBaseEnhancements','bindBase'],
-  ['requestedFeature','requested'],
+  ['requestedFeature','reqFeature'],
   ['demandGenerated','dg'],
   ['__ekodiDemandHandler','_dh'],
   ['scheduleSecondary','schedule'],
@@ -49,6 +49,8 @@ for (const [from,to] of [
 for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph']]) {
   demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
 }
+const selfInitializingIdentifier = demandLoaderSource.match(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*\(/);
+if (selfInitializingIdentifier) throw new Error(`Demand loader compaction created a TDZ self-call: ${selfInitializingIdentifier[0]}`);
 await writeFile(demandLoaderPath, demandLoaderSource.replace(/\r\n/g, '\n').split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
 // Login/return parses only the base visual CSS and the small central-auth handoff.
