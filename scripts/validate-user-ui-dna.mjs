@@ -6,7 +6,7 @@ import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource] = await Promise.all([
+const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource,ccmMrSource] = await Promise.all([
   readJson('config/ecosystem-services.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
@@ -18,6 +18,7 @@ const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,s
   readText('shell/user-ui-footer.js'),
   readText('shell/user-language.js'),
   readText('shell/service-design-inheritance.js'),
+  readText('shell/ccm-mr-player.js'),
 ]);
 
 const errors = [];
@@ -72,7 +73,7 @@ if (!Array.isArray(shell?.scope) || !['public', 'workspace'].every(surface => sh
 if (shell?.principles?.singleSource !== true || shell?.principles?.noDuplicatedHeaderOrFooter !== true) {
   errors.push('User UI Shell must enforce single-source chrome without duplicate headers or footers.');
 }
-for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere']) {
+for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
 if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
@@ -135,8 +136,14 @@ if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/us
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
   errors.push('Shared user language selector must support Korean, English, Simplified Chinese and Japanese.');
 }
-for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN']){
+for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
+}
+if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
+  errors.push('Shared ambient audio control must be Shell-owned, avoid content overlap and exclude admin surfaces.');
+}
+for(const marker of ['placeButton','data-ekodi-floating','[data-ekodi-language-control]','ekodi:user-header-ready']){
+  if(!ccmMrSource.includes(marker))errors.push(`Shared CCM MR control lost header-placement marker: ${marker}`);
 }
 
 for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallback','renderEkodiUserFooter','manifestServiceForHost','shellServiceForRootPath','data-ekodi-user-ui-style']) {
@@ -148,7 +155,7 @@ for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.e
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
-for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=3','ekodi-user-ui-footer__copy','data-ekodi-i18n']) {
+for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=3','ekodi-user-ui-footer__copy','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters']) {
   if (!clientFooterSource.includes(marker)) errors.push(`Shared client footer lost central-config marker: ${marker}`);
 }
 for (const duplicatedText of ['213-13-01959','백련동1길 17-4','© 2026 EKODI · EKODIBIZ']) {
