@@ -355,10 +355,10 @@
     if (bindBaseEnhancements()) changed = true;
     if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);changed=true;}
     if (changed) window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
-    const requested = requestedFeature();
-    if (requested) {
-      const button = nav.querySelector(`[data-demand-feature="${requested}"]`);
-      activateFeature(requested, button, true);
+    const requestedKey = requestedFeature();
+    if (requestedKey) {
+      const button = nav.querySelector(`[data-demand-feature="${requestedKey}"]`);
+      activateFeature(requestedKey, button, true);
     }
   }
 
@@ -367,10 +367,10 @@
   window.addEventListener('ekodi-admin-ready', install);
   window.addEventListener('ekodi-authenticated', onAuthState);
   window.addEventListener('hashchange', () => {
-    const requested = requestedFeature();
-    if (!requested || !authenticated()) return;
-    const button = nav?.querySelector(`[data-demand-feature="${requested}"]`);
-    if (button) activateFeature(requested, button, true);
+    const requestedKey = requestedFeature();
+    if (!requestedKey || !authenticated()) return;
+    const button = nav?.querySelector(`[data-demand-feature="${requestedKey}"]`);
+    if (button) activateFeature(requestedKey, button, true);
   });
 
   window.EKODIAdminDemand = Object.freeze({

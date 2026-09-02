@@ -45,17 +45,23 @@ test('central handoff preserves current admin destinations without retired route
   assert.ok(source.includes("storige:'storage'"));
   assert.ok(source.includes("aiops:'ai-ops'"));
   assert.ok(source.includes("release:'deployments'"));
-  assert.ok(source.includes("health api-cost storage security"));
+  assert.ok(source.includes('ai-ops devotional ai-module-spec'));
+  assert.ok(source.includes('health api-cost storage security'));
   assert.doesNotMatch(source, /const ALIASES=\{[^}]*\b(?:legacy|domains|activity|overview):/);
   assert.ok(source.includes("const q=normalizeRoute(new URLSearchParams(location.search).get('route'))"));
   assert.ok(source.includes("const target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`"));
   assert.ok(source.includes("route=normalizeRoute(query.get('route')||hash.get('ekodi_admin_route')"));
 });
 
-test('authenticated shell restores requested hash and contains no retired path normalizer', async () => {
+test('authenticated shell keeps the app hidden until the requested menu runtime is activated', async () => {
   const source = await read('admin-authenticated-shell.js');
-  assert.ok(source.includes("const requestedHash=location.hash"));
-  assert.ok(source.includes("await Promise.all(criticalPostAuthScripts.map(loadScript))"));
+  assert.ok(source.includes("app.style.visibility='hidden'"));
+  assert.ok(source.includes('for(const src of criticalPostAuthScripts)'));
+  assert.ok(source.includes('await loadScript(src)'));
+  assert.ok(source.includes('window.EKODIAdminPanels?.activate'));
+  assert.ok(source.includes('window.EKODIAdminSidebar'));
+  assert.ok(source.includes('await Promise.resolve(window.EKODIAdminPanels.activate(requestedSection()))'));
   assert.ok(source.includes("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
-  assert.doesNotMatch(source, /canonicalizeLegacyEntry|\/legacy/);
+  assert.ok(source.indexOf('await Promise.resolve(window.EKODIAdminPanels.activate(requestedSection()))') < source.indexOf('announceReady();loadDeferredEnhancements()'));
+  assert.doesNotMatch(source, /waitForMenuRuntime|canonicalizeLegacyEntry|\/legacy/);
 });

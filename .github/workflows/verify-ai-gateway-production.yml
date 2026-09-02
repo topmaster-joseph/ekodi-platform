@@ -2,7 +2,7 @@ name: Verify EKODI AI Gateway Production
 
 on:
   workflow_run:
-    workflows: ['Deploy Admin True Lazy Gate', 'Deploy AI Gateway']
+    workflows: ['Deploy EKODI Shared Site Core', 'Deploy Admin True Lazy Gate', 'Validate AI Gateway']
     types: [completed]
   workflow_dispatch:
 
@@ -47,11 +47,13 @@ jobs:
               && { [ "$unauth_code" = '401' ] || [ "$unauth_code" = '403' ]; } \
               && grep -Fq 'EKODI AI Gateway' /tmp/ai-root \
               && grep -Fq 'Google 관리자 인증' /tmp/ai-root \
+              && grep -Fq 'AI COMMAND CONSOLE' /tmp/ai-root \
               && grep -Fq 'Google 관리자 인증 완료 · 세션 확인 중' /tmp/ai-asset \
               && grep -Fq "let memoryToken=''" /tmp/ai-asset \
               && grep -Fq "const HANDOFF_KEY='ekodi_admin_token'" /tmp/ai-asset \
               && grep -Fq '/api/control/ai/provider-status' /tmp/ai-asset \
               && grep -Fq '/api/control/ai/assist' /tmp/ai-asset \
+              && grep -Fq '/api/control/ai/actions' /tmp/ai-asset \
               && grep -Fiq 'x-ekodi-route: ai-gateway' /tmp/ai-root-headers \
               && grep -Fiq 'cache-control: no-store' /tmp/ai-root-headers \
               && grep -Fiq 'x-content-type-options: nosniff' /tmp/ai-root-headers \
