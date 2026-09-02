@@ -41,6 +41,20 @@ for (const [from,to] of [
   ['stylesLoaded','cssReady'],
   ['TOKEN_KEY','TK'],
   ['secondaryStyles','secCss'],
+  ['secondaryScripts','secJs'],
+  ['scripts','js'],
+  ['styles','css'],
+  ['existing','ex'],
+  ['promise','pr'],
+  ['selector','sel'],
+  ['timeout','tmo'],
+  ['settled','st'],
+  ['finish','done'],
+  ['observer','obs'],
+  ['changed','chg'],
+  ['handler','hd'],
+  ['requested','req'],
+  ['index','idx'],
   ['waitFor','wait'],
   ['pending','pnd'],
   ['hashes','h'],
@@ -49,6 +63,10 @@ for (const [from,to] of [
 for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph']]) {
   demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
 }
+demandLoaderSource = demandLoaderSource
+  .replaceAll('document', 'd')
+  .replaceAll('window', 'w')
+  .replace("'use strict';", "'use strict';\nconst d=document,w=window;");
 await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
 // Login/return parses only the base visual CSS and the small central-auth handoff.
