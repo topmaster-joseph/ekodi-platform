@@ -72,7 +72,11 @@ async function tossPayment(env, paymentKey, orderId) {
 async function routeForOrder(env, orderId) {
   const order = await env.DB.prepare(`SELECT organization_id, business_unit_id, project_id, source_domain
     FROM payment_orders WHERE order_id = ?`).bind(orderId).first();
-  return order || {
+  if (order) return order;
+  if (/^CHURCH_/.test(String(orderId || ''))) {
+    return { organization_id: 'EKODICHURCH', business_unit_id: 'CHURCH', project_id: null, source_domain: 'church.ekodi.kr' };
+  }
+  return {
     organization_id: 'EKODIBIZ',
     business_unit_id: 'PAY',
     project_id: null,
@@ -89,6 +93,7 @@ async function upsertPayment(env, payment) {
   const metadata = JSON.stringify({
     type: payment.type || '',
     mId: payment.mId || '',
+    orderName: payment.orderName || '',
     status: payment.status || '',
     method: payment.method || '',
     requestedAt: payment.requestedAt || null,
