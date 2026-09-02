@@ -17,6 +17,9 @@ test('admin system structure overview reads canonical structure, services and mo
   assert.match(mapJs, /fetch\('\/platform-boundaries\.json'/);
   assert.match(mapJs, /fetch\('\/monitor-status\.json'/);
   assert.match(mapJs, /fetch\('\/ecosystem-services\.json'/);
+  assert.match(mapJs, /fetch\('\/constitution-policy\.json'/);
+  assert.match(mapJs, /헌법 기준 구조 ↔ 현재 실제 구조/);
+  assert.match(mapJs, /legacyDomainTargets/);
   assert.match(mapJs, /EKODISystemMap/);
   assert.doesNotMatch(mapJs, /setInterval\(/);
 });
@@ -27,6 +30,8 @@ test('postbuild keeps system map in lazy admin bundle and publishes canonical re
   assert.match(postbuild, /platform-boundaries\.json/);
   assert.match(postbuild, /config\/ecosystem-services\.json/);
   assert.match(postbuild, /ecosystem-services\.json/);
+  assert.match(postbuild, /governance\/constitution\/constitution\.json/);
+  assert.match(postbuild, /constitution-policy\.json/);
 });
 
 test('system structure is a visible routed system tab', () => {
