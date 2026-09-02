@@ -148,7 +148,7 @@ jobs:
               && grep -Fq 'current_site_access' /tmp/my-stage-journey-app.js \
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-stage-journey-app.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-stage-app.js \
-              && grep -Fq '["trade","EKODI Global Trading","https://trade.ekodi.kr/"]' /tmp/my-stage-app.js \
+              && grep -Fq '["trade","EKODI Global Trading","https://ekodi.kr/ekoditrade"]' /tmp/my-stage-app.js \
               && grep -Fq '/api/membership/portfolio' /tmp/my-stage-membership.js \
               && grep -Fq 'USER_SERVICES' /tmp/my-stage-user-services.js \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/my-stage-services.json \
@@ -276,7 +276,7 @@ jobs:
               && grep -Fq 'current_site_access' /tmp/my-journey-app.js \
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-journey-app.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-app.js \
-              && grep -Fq '["trade","EKODI Global Trading","https://trade.ekodi.kr/"]' /tmp/my-app.js \
+              && grep -Fq '["trade","EKODI Global Trading","https://ekodi.kr/ekoditrade"]' /tmp/my-app.js \
               && grep -Fq '/api/membership/portfolio' /tmp/my-membership.js \
               && grep -Fq 'USER_SERVICES' /tmp/my-user-services.js \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/my-services.json \

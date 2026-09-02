@@ -1,0 +1,23 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-PUBLIC-NAMESPACE-V1.3",
+  "date": "2026-09-03",
+  "class": "C3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit owner instruction to replace workspace-type URL prefixes with a single globally unique public namespace and complete guarded production deployment",
+  "constitutionVersion": "1.3.0",
+  "summary": "Canonicalize every user-operated public workspace directly under ekodi.kr/{public_namespace}; workspace type and display name remain metadata, while immutable workspace_id remains identity authority.",
+  "affectedAreas": ["domain", "workspace-routing", "identity", "customer-sites", "mall", "api", "migration", "release"],
+  "namespacePolicy": {
+    "canonicalPattern": "https://ekodi.kr/{public_namespace}",
+    "servicePattern": "https://ekodi.kr/{public_namespace}/{service}",
+    "workspaceTypeInUrl": false,
+    "displayNameUnique": false,
+    "publicNamespaceUnique": true,
+    "identityKey": "workspace_id",
+    "conflictPolicy": "first_valid_claim_wins_then_suggest_alternatives"
+  },
+  "migrationPlan": "add public_namespace and workspace metadata to EKODI Core, seed existing workspaces, expose compatibility redirects/proxies, move EKODI Mall to /ekodibiz/mall, preserve legacy links during staged rollout",
+  "verificationPolicy": "constitution, migration, namespace conflict, route proxy, Mall contract, Control API staging and guarded shared-site deployment must pass before production is declared complete",
+  "rollbackPlan": "revert v1.3 routing and governance commits, retain additive D1 columns/history, restore legacy canonical URL targets and shared-site route map, then re-run guarded deployment verification"
+}

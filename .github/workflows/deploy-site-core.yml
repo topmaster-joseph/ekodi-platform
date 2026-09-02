@@ -12,6 +12,8 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'workspace-public-namespace.js'
+      - 'workspace-public-proxy.js'
       - 'platform-router-entry-worker.js'
       - 'workspace-admin-page.js'
       - 'workspace-trade-admin-page.js'
@@ -58,6 +60,7 @@ on:
       - 'config/user-ui-shell.json'
       - 'campus-actions.js'
       - 'campus-actions.css'
+      - 'client-access.js'
       - '_headers'
       - 'auth-site/**'
       - 'marketing-ai-admin.js'
@@ -113,7 +116,8 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js workspace-admin-page.js workspace-trade-admin-page.js workspace-trade-portal.js ai-gateway-page.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js admin-demand-loader.js ai-ops-admin.js communication-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/validate-user-ui-dna.mjs; do
+
+          for f in site-worker.js workspace-public-namespace.js workspace-public-proxy.js platform-router-entry-worker.js workspace-admin-page.js workspace-trade-admin-page.js workspace-trade-portal.js ai-gateway-page.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js admin-demand-loader.js ai-ops-admin.js communication-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js client-access.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/validate-user-ui-dna.mjs; do
             node --check "$f"
           done
           node --test test/admin-communication.test.mjs
@@ -124,7 +128,10 @@ jobs:
           test -f mall.html
           test -f mall.css
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
+          grep -Fq 'legacy-workspace-path' site-worker.js
+          grep -Fq 'public-workspace-namespace' workspace-public-proxy.js
+          grep -Fq 'first_valid_claim_wins_then_suggest_alternatives' config/service-workspace-policy.json
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
@@ -272,7 +279,16 @@ jobs:
           const urls=new Set([
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
-            'https://ekodi.kr/mall',
+            'https://ekodi.kr/ekodibiz',
+            'https://ekodi.kr/ekodibiz/mall',
+            'https://ekodi.kr/ekodichurch',
+            'https://ekodi.kr/ekodilab',
+            'https://ekodi.kr/ekoditrade',
+            'https://ekodi.kr/ekodicafe',
+            'https://ekodi.kr/cgma',
+            'https://ekodi.kr/jadam',
+            'https://ekodi.kr/pizzamaru',
+            'https://ekodi.kr/yogurt',
             'https://ekodi.kr/admin',
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
@@ -412,7 +428,7 @@ jobs:
             echo '' >> "$GITHUB_STEP_SUMMARY"
             echo '| Menu | Group | Result | Duration |' >> "$GITHUB_STEP_SUMMARY"
             echo '|---|---|---|---:|' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.results[] | "| \(.id) | \(.group) | ✅ | \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "| \(.id) | \(.group) | ??| \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived E2E session

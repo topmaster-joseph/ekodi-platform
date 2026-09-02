@@ -1,4 +1,4 @@
-const TARGET = 'https://biz.ekodi.kr';
+const TARGET = 'https://ekodi.kr/ekodibiz';
 const ALLOWED_HOSTS = new Set(['ekodibiz.kr', 'www.ekodibiz.kr']);
 
 export default {
@@ -9,7 +9,9 @@ export default {
     }
 
     const target = new URL(TARGET);
-    target.pathname = incoming.pathname;
+    const basePath = target.pathname.replace(/\/$/, '');
+    const suffix = incoming.pathname === '/' ? '' : incoming.pathname;
+    target.pathname = `${basePath}${suffix}` || '/';
     target.search = incoming.search;
     target.hash = incoming.hash;
     return Response.redirect(target.toString(), 301);
