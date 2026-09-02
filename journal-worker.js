@@ -82,7 +82,7 @@ function sitemap() {
 }
 
 async function shellHtml(env, request) {
-  const assetUrl = new URL('/index.html', request.url);
+  const assetUrl = new URL('/', request.url);
   const response = await env.ASSETS.fetch(new Request(assetUrl, request));
   return injectEkodiShell(withHeaders(response, 'public, max-age=60, stale-while-revalidate=300'), 'journal');
 }
