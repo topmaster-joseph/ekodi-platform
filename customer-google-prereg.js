@@ -72,7 +72,12 @@ async function ensureSchema(db) {
       name TEXT NOT NULL,
       domain TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      workspace_id TEXT,
+      workspace_type TEXT,
+      workspace_subtype TEXT,
+      public_namespace TEXT,
+      namespace_claimed_at TEXT
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_access_grants (
       tenant_id INTEGER NOT NULL,
@@ -130,7 +135,7 @@ async function writeAdminAudit(db, session, action, resource, detail = '') {
 }
 
 async function tenantBySlug(db, slug) {
-  return db.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(slug).first();
+  return db.prepare('SELECT id, slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace FROM customer_tenants WHERE slug = ?').bind(slug).first();
 }
 
 function accessStatus(row) {
@@ -202,7 +207,11 @@ async function listAccessUsers(request, env, slug) {
     createdAt: row.created_at,
   }));
 
-  return json({ tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain }, users }, 200, request, env);
+  return json({ tenant: {
+    slug: tenant.slug, name: tenant.name, domain: tenant.domain,
+    workspaceId: tenant.workspace_id || '', workspaceType: tenant.workspace_type || '', workspaceSubtype: tenant.workspace_subtype || '',
+    publicNamespace: tenant.public_namespace || '', canonicalUrl: tenant.public_namespace ? `https://ekodi.kr/${tenant.public_namespace}` : `https://${tenant.domain}`,
+  }, users }, 200, request, env);
 }
 
 async function listDirectory(request, env) {
@@ -211,7 +220,7 @@ async function listDirectory(request, env) {
 
   const [tenantRows, memberRows] = await Promise.all([
     env.DB.prepare(`SELECT
-        t.slug, t.name, t.domain, t.status,
+        t.slug, t.name, t.domain, t.status, t.workspace_id, t.workspace_type, t.workspace_subtype, t.public_namespace,
         COUNT(a.email) AS members,
         SUM(CASE WHEN a.enabled = 1 AND a.last_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS active_users,
         SUM(CASE WHEN a.enabled = 1 AND a.last_verified_at IS NULL THEN 1 ELSE 0 END) AS google_pending
@@ -222,6 +231,7 @@ async function listDirectory(request, env) {
     env.DB.prepare(`SELECT
         a.email, a.role, a.enabled, a.created_at, a.last_verified_at,
         t.slug, t.name AS tenant_name, t.domain, t.status AS tenant_status,
+        t.workspace_id, t.workspace_type, t.workspace_subtype, t.public_namespace,
         COALESCE(u.display_name, '') AS display_name,
         COALESCE(u.last_login_at, '') AS user_last_login_at
       FROM customer_access_grants a
@@ -242,6 +252,11 @@ async function listDirectory(request, env) {
       slug: row.slug,
       name: row.tenant_name,
       domain: row.domain,
+      workspaceId: row.workspace_id || '',
+      workspaceType: row.workspace_type || '',
+      workspaceSubtype: row.workspace_subtype || '',
+      publicNamespace: row.public_namespace || '',
+      canonicalUrl: row.public_namespace ? `https://ekodi.kr/${row.public_namespace}` : `https://${row.domain}`,
       status: row.tenant_status,
     },
   }));
@@ -256,6 +271,11 @@ async function listDirectory(request, env) {
     slug: row.slug,
     name: row.name,
     domain: row.domain,
+    workspaceId: row.workspace_id || '',
+    workspaceType: row.workspace_type || '',
+    workspaceSubtype: row.workspace_subtype || '',
+    publicNamespace: row.public_namespace || '',
+    canonicalUrl: row.public_namespace ? `https://ekodi.kr/${row.public_namespace}` : `https://${row.domain}`,
     status: row.status,
     members: Number(row.members || 0),
     activeUsers: Number(row.active_users || 0),

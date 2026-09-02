@@ -228,7 +228,7 @@
       if (role && member.role !== role) return false;
       if (status && member.status !== status) return false;
       if (q) {
-        const haystack = `${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel || ''}`.toLowerCase();
+        const haystack = `${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.tenant.publicNamespace || ''} ${member.tenant.canonicalUrl || ''} ${member.roleLabel || ''}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -263,7 +263,7 @@
         row.append(identity);
         if (includeSite) {
           const site = document.createElement('td');
-          site.append(text('strong', member.tenant.name), text('small', member.tenant.domain));
+          site.append(text('strong', member.tenant.name), text('small', member.tenant.canonicalUrl || member.tenant.domain));
           row.append(site);
         }
         row.append(
@@ -302,7 +302,7 @@
       top.append(text('strong', tenant.name), text('span', tenant.status === 'active' ? '운영' : tenant.status, 'health-badge online'));
       item.append(
         top,
-        text('small', tenant.domain),
+        text('small', tenant.canonicalUrl || tenant.domain),
         text('small', `회원 ${tenant.members || 0} · 활성 ${tenant.activeUsers || 0} · 대기 ${tenant.googlePending || 0}`),
       );
       item.addEventListener('click', () => {
@@ -369,10 +369,10 @@
     const header = document.createElement('div');
     header.className = 'client-detail-head';
     const identity = document.createElement('div');
-    identity.append(text('p', 'CLIENT SITE · GOOGLE MEMBERSHIP', 'kicker'), text('h3', tenant.name), text('small', tenant.domain));
+    identity.append(text('p', 'CLIENT SITE · GOOGLE MEMBERSHIP', 'kicker'), text('h3', tenant.name), text('small', tenant.canonicalUrl || tenant.domain));
     const open = document.createElement('a');
     open.className = 'secondary compact';
-    open.href = `https://${tenant.domain}`;
+    open.href = tenant.canonicalUrl || `https://${tenant.domain}`;
     open.target = '_blank';
     open.rel = 'noopener';
     open.textContent = '고객 사이트 열기 ↗';

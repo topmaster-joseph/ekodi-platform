@@ -78,11 +78,18 @@ async function resolveCorePrincipal(request, env) {
 
 function organizationFromRow(row, role = null) {
   const sourceRole = role || row.role || '';
+  const publicNamespace = row.public_namespace || '';
   return {
     id: Number(row.id),
     slug: row.slug,
     name: row.name,
     domain: row.domain,
+    workspaceId: row.workspace_id || '',
+    workspaceType: row.workspace_type || '',
+    workspaceSubtype: row.workspace_subtype || '',
+    publicNamespace,
+    canonicalPath: publicNamespace ? `/${publicNamespace}` : '',
+    canonicalUrl: publicNamespace ? `https://ekodi.kr/${publicNamespace}` : '',
     status: row.status,
     ...(sourceRole ? {
       role: sourceRole,
@@ -93,20 +100,20 @@ function organizationFromRow(row, role = null) {
 
 async function organizationsForPrincipal(env, resolved) {
   if (resolved.admin) {
-    const rows = await env.DB.prepare(`SELECT id, slug, name, domain, status
+    const rows = await env.DB.prepare(`SELECT id, slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace
       FROM customer_tenants
       ORDER BY name`).all();
     return (rows.results || []).map(row => organizationFromRow(row, 'admin'));
   }
 
   if (resolved.source === 'customer-session' && resolved.principal.subject.type === 'tenant') {
-    const row = await env.DB.prepare(`SELECT id, slug, name, domain, status
+    const row = await env.DB.prepare(`SELECT id, slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace
       FROM customer_tenants WHERE slug = ?`).bind(resolved.principal.subject.key).first();
     return row ? [organizationFromRow(row, resolved.principal.role)] : [];
   }
 
   const rows = await env.DB.prepare(`SELECT
-      t.id, t.slug, t.name, t.domain, t.status, g.role
+      t.id, t.slug, t.name, t.domain, t.status, t.workspace_id, t.workspace_type, t.workspace_subtype, t.public_namespace, g.role
     FROM customer_access_grants g
     JOIN customer_tenants t ON t.id = g.tenant_id
     WHERE lower(trim(g.email)) = ? AND g.enabled = 1 AND t.status = 'active'
@@ -116,7 +123,7 @@ async function organizationsForPrincipal(env, resolved) {
 }
 
 async function organizationForSlug(env, resolved, slug) {
-  const row = await env.DB.prepare(`SELECT id, slug, name, domain, status
+  const row = await env.DB.prepare(`SELECT id, slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace
     FROM customer_tenants WHERE slug = ?`).bind(slug).first();
   if (!row) return null;
   if (resolved.admin) return organizationFromRow(row, 'admin');

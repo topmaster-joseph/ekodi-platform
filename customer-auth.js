@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { isReservedPublicNamespace, isValidPublicNamespace, normalizePublicNamespace, publicNamespaceForLegacyTenantSlug, suggestPublicNamespaces, workspaceForLegacyTenantSlug } from './workspace-public-namespace.js';
 
 const ITERATIONS = 310000;
 const SESSION_HOURS = 12;
@@ -13,7 +14,7 @@ export const CUSTOMER_TENANTS = Object.freeze([
 ]);
 
 const ROLE_SET = new Set(['client_admin', 'client_editor', 'client_viewer']);
-const SLUG_SET = new Set(CUSTOMER_TENANTS.map(tenant => tenant.slug));
+const TENANT_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
 
 function bytesToHex(bytes) {
   return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -55,7 +56,7 @@ function normalizeEmail(value) {
 
 export function normalizeTenantSlug(value) {
   const slug = String(value || '').trim().toLowerCase();
-  return SLUG_SET.has(slug) ? slug : '';
+  return TENANT_SLUG_RE.test(slug) ? slug : '';
 }
 
 export function normalizeCustomerRole(value) {
@@ -103,7 +104,21 @@ async function ensureSchema(db) {
       name TEXT NOT NULL,
       domain TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      workspace_id TEXT,
+      workspace_type TEXT,
+      workspace_subtype TEXT,
+      public_namespace TEXT,
+      namespace_claimed_at TEXT
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS workspace_namespace_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workspace_id TEXT NOT NULL,
+      public_namespace TEXT NOT NULL COLLATE NOCASE,
+      status TEXT NOT NULL DEFAULT 'active',
+      valid_from TEXT NOT NULL,
+      valid_to TEXT,
+      UNIQUE(workspace_id, public_namespace, valid_from)
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -171,15 +186,41 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_customer_sessions_user ON customer_sessions(user_id, tenant_id)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_customer_login_attempts_time ON customer_login_attempts(attempted_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_customer_audit_tenant_time ON customer_audit_logs(tenant_id, created_at DESC)'),
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_tenants_workspace_id ON customer_tenants(workspace_id)
+      WHERE workspace_id IS NOT NULL AND trim(workspace_id) <> ''`),
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_tenants_public_namespace ON customer_tenants(public_namespace COLLATE NOCASE)
+      WHERE public_namespace IS NOT NULL AND trim(public_namespace) <> ''`),
   ]);
   const seed = db.prepare(`INSERT OR IGNORE INTO customer_tenants (slug, name, domain, status, created_at)
     VALUES (?, ?, ?, 'active', ?)`);
   const now = new Date().toISOString();
   await db.batch(CUSTOMER_TENANTS.map(tenant => seed.bind(tenant.slug, tenant.name, tenant.domain, now)));
+  const namespaceUpdate = db.prepare(`UPDATE customer_tenants SET workspace_id=?, workspace_type=?, workspace_subtype=?, public_namespace=?, namespace_claimed_at=COALESCE(namespace_claimed_at, created_at)
+    WHERE slug=? AND (public_namespace IS NULL OR trim(public_namespace)='')`);
+  const namespaceUpdates = CUSTOMER_TENANTS.map(tenant => {
+    const workspace = workspaceForLegacyTenantSlug(tenant.slug);
+    return workspace ? namespaceUpdate.bind(workspace.workspaceId, workspace.workspaceType, workspace.workspaceSubtype, publicNamespaceForLegacyTenantSlug(tenant.slug) || tenant.slug, tenant.slug) : null;
+  }).filter(Boolean);
+  if (namespaceUpdates.length) await db.batch(namespaceUpdates);
 }
 
+const TENANT_FIELDS = 'id, slug, name, domain, status, workspace_id, workspace_type, workspace_subtype, public_namespace, namespace_claimed_at';
+
 async function tenantBySlug(db, slug) {
-  return db.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(slug).first();
+  return db.prepare(`SELECT ${TENANT_FIELDS} FROM customer_tenants WHERE slug = ?`).bind(slug).first();
+}
+
+async function tenantByPublicNamespace(db, namespace) {
+  return db.prepare(`SELECT ${TENANT_FIELDS} FROM customer_tenants WHERE public_namespace = ? COLLATE NOCASE`).bind(namespace).first();
+}
+
+function publicTenant(row) {
+  const namespace = row.public_namespace || '';
+  return {
+    slug: row.slug, name: row.name, domain: row.domain,
+    workspaceId: row.workspace_id || '', workspaceType: row.workspace_type || '', workspaceSubtype: row.workspace_subtype || '',
+    publicNamespace: namespace, canonicalPath: namespace ? `/${namespace}` : '', canonicalUrl: namespace ? `https://ekodi.kr/${namespace}` : '',
+  };
 }
 
 async function adminSession(request, env) {
@@ -229,6 +270,7 @@ async function customerSession(request, db) {
       customer_users.id AS user_id, customer_users.email, customer_users.display_name,
       customer_users.status AS user_status, customer_tenants.id AS tenant_id,
       customer_tenants.slug, customer_tenants.name AS tenant_name, customer_tenants.domain,
+      customer_tenants.workspace_id, customer_tenants.workspace_type, customer_tenants.workspace_subtype, customer_tenants.public_namespace,
       customer_tenants.status AS tenant_status, customer_memberships.role,
       customer_memberships.status AS membership_status, customer_sessions.expires_at
     FROM customer_sessions
@@ -247,7 +289,7 @@ function publicSession(row) {
   return {
     email: row.email,
     displayName: row.display_name || '',
-    tenant: { slug: row.slug, name: row.tenant_name, domain: row.domain },
+    tenant: publicTenant({ ...row, name: row.tenant_name }),
     role: row.role,
     expiresAt: row.expires_at,
   };
@@ -265,13 +307,27 @@ async function enforceLoginRateLimit(request, db, tenantId) {
 async function handlePublic(request, env, path) {
   const db = env.DB;
   const url = new URL(request.url);
+  if (request.method === 'GET' && path === '/api/customer/namespace') {
+    const requested = normalizePublicNamespace(url.searchParams.get('name'));
+    const rows = await db.prepare(`SELECT public_namespace FROM customer_tenants WHERE public_namespace IS NOT NULL AND trim(public_namespace) <> ''`).all();
+    const taken = (rows.results || []).map(row => row.public_namespace);
+    const reserved = isReservedPublicNamespace(requested);
+    const valid = isValidPublicNamespace(requested);
+    const occupied = taken.some(value => String(value).toLowerCase() === requested);
+    const available = valid && !occupied;
+    const suggestions = available ? [] : suggestPublicNamespaces(requested, taken, {
+      region: url.searchParams.get('region') || '', brand: url.searchParams.get('brand') || '', subtype: url.searchParams.get('subtype') || '',
+    });
+    return customerJson({ requested, available, reserved, occupied, reason: reserved ? 'reserved' : !valid ? 'invalid' : occupied ? 'claimed' : 'available', suggestions }, 200, request, env);
+  }
   if (request.method === 'GET' && path === '/api/customer/tenant') {
     const slug = normalizeTenantSlug(url.searchParams.get('slug'));
+    const namespace = normalizePublicNamespace(url.searchParams.get('namespace'));
     const hostname = String(url.searchParams.get('hostname') || '').trim().toLowerCase();
-    const tenant = slug ? await tenantBySlug(db, slug)
-      : await db.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE domain = ?').bind(hostname).first();
+    const tenant = namespace ? await tenantByPublicNamespace(db, namespace) : slug ? await tenantBySlug(db, slug)
+      : await db.prepare(`SELECT ${TENANT_FIELDS} FROM customer_tenants WHERE domain = ?`).bind(hostname).first();
     if (!tenant || tenant.status !== 'active') return customerJson({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
-    return customerJson({ tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain } }, 200, request, env);
+    return customerJson({ tenant: publicTenant(tenant) }, 200, request, env);
   }
 
   if (request.method === 'POST' && path === '/api/customer/login') {
@@ -298,7 +354,7 @@ async function handlePublic(request, env, path) {
     await db.prepare('UPDATE customer_users SET last_login_at = ? WHERE id = ?').bind(new Date().toISOString(), user.id).run();
     await writeCustomerAudit(db, tenant.id, user.id, 'session.login', 'customer-portal');
     return customerJson({ ok: true, email: user.email, displayName: user.display_name || '', role: user.role,
-      tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain }, ...session }, 200, request, env);
+      tenant: publicTenant(tenant), ...session }, 200, request, env);
   }
 
   if (request.method === 'POST' && path === '/api/customer/accept-invite') {
@@ -309,7 +365,8 @@ async function handlePublic(request, env, path) {
     if (!/^[a-f0-9]{64}$/i.test(rawToken) || typeof password !== 'string' || password.length < 12) return customerJson({ error: '초대 링크와 12자 이상의 비밀번호를 확인해 주세요.' }, 400, request, env);
     const tokenHash = await sha256(rawToken);
     const invite = await db.prepare(`SELECT customer_invites.*, customer_tenants.slug,
-        customer_tenants.name AS tenant_name, customer_tenants.domain, customer_tenants.status AS tenant_status
+        customer_tenants.name AS tenant_name, customer_tenants.domain, customer_tenants.status AS tenant_status,
+        customer_tenants.workspace_id, customer_tenants.workspace_type, customer_tenants.workspace_subtype, customer_tenants.public_namespace
       FROM customer_invites JOIN customer_tenants ON customer_tenants.id = customer_invites.tenant_id
       WHERE customer_invites.token_hash = ?`).bind(tokenHash).first();
     const now = new Date().toISOString();
@@ -335,7 +392,7 @@ async function handlePublic(request, env, path) {
     await db.prepare('UPDATE customer_users SET last_login_at = ? WHERE id = ?').bind(now, user.id).run();
     await writeCustomerAudit(db, invite.tenant_id, user.id, 'invite.accept', 'customer-portal', invite.role);
     return customerJson({ ok: true, email: invite.email, displayName: user.display_name || displayName, role: invite.role,
-      tenant: { slug: invite.slug, name: invite.tenant_name, domain: invite.domain }, ...session }, 201, request, env);
+      tenant: publicTenant({ ...invite, name: invite.tenant_name }), ...session }, 201, request, env);
   }
 
   if (request.method === 'GET' && path === '/api/customer/session') {
@@ -361,13 +418,47 @@ async function handleAdmin(request, env, path) {
   if (!session) return customerJson({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
   if (request.method === 'GET' && path === '/api/customers/tenants') {
     const tenants = await db.prepare(`SELECT t.id, t.slug, t.name, t.domain, t.status,
+        t.workspace_id, t.workspace_type, t.workspace_subtype, t.public_namespace, t.namespace_claimed_at,
         COUNT(DISTINCT CASE WHEN m.status = 'active' THEN m.user_id END) AS active_users,
         COUNT(DISTINCT CASE WHEN i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > ? THEN i.id END) AS pending_invites
       FROM customer_tenants t LEFT JOIN customer_memberships m ON m.tenant_id = t.id
       LEFT JOIN customer_invites i ON i.tenant_id = t.id
       GROUP BY t.id ORDER BY t.name`).bind(new Date().toISOString()).all();
-    return customerJson({ tenants: tenants.results.map(row => ({ slug: row.slug, name: row.name, domain: row.domain,
-      status: row.status, activeUsers: Number(row.active_users || 0), pendingInvites: Number(row.pending_invites || 0) })) }, 200, request, env);
+    return customerJson({ tenants: tenants.results.map(row => ({ ...publicTenant(row),
+      status: row.status, namespaceClaimedAt: row.namespace_claimed_at || '', activeUsers: Number(row.active_users || 0), pendingInvites: Number(row.pending_invites || 0) })) }, 200, request, env);
+  }
+
+  if (request.method === 'POST' && path === '/api/customers/namespaces/claim') {
+    const body = await readJson(request);
+    const slug = normalizeTenantSlug(body?.tenant);
+    const namespace = normalizePublicNamespace(body?.namespace);
+    const tenant = slug && await tenantBySlug(db, slug);
+    if (!tenant) return customerJson({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+    if (tenant.public_namespace && tenant.public_namespace === namespace) return customerJson({ ok: true, tenant: publicTenant(tenant), idempotent: true }, 200, request, env);
+    if (tenant.public_namespace && tenant.public_namespace !== namespace) {
+      return customerJson({ error: '이미 배정된 공개 주소명은 일반 선점 요청으로 변경할 수 없습니다.', code: 'NAMESPACE_RENAME_REQUIRES_MIGRATION', tenant: publicTenant(tenant) }, 409, request, env);
+    }
+    const takenRows = await db.prepare(`SELECT public_namespace FROM customer_tenants WHERE id <> ? AND public_namespace IS NOT NULL`).bind(tenant.id).all();
+    const taken = (takenRows.results || []).map(row => row.public_namespace);
+    if (!isValidPublicNamespace(namespace) || taken.some(value => String(value).toLowerCase() === namespace)) {
+      return customerJson({ error: '사용할 수 없는 EKODI 주소명입니다.', namespace,
+        reason: isReservedPublicNamespace(namespace) ? 'reserved' : 'claimed_or_invalid',
+        suggestions: suggestPublicNamespaces(namespace, taken, { region: body?.region || '', brand: body?.brand || '', subtype: tenant.workspace_subtype || body?.subtype || '' }) }, 409, request, env);
+    }
+    const now = new Date().toISOString();
+    const workspaceId = tenant.workspace_id || `ws_${crypto.randomUUID().replace(/-/g, '')}`;
+    try {
+      await db.prepare(`UPDATE customer_tenants SET public_namespace=?, namespace_claimed_at=?, workspace_id=?, workspace_type=COALESCE(NULLIF(workspace_type,''),'organization') WHERE id=?`)
+        .bind(namespace, now, workspaceId, tenant.id).run();
+      await db.prepare(`INSERT OR IGNORE INTO workspace_namespace_history (workspace_id, public_namespace, status, valid_from) VALUES (?, ?, 'active', ?)`)
+        .bind(workspaceId, namespace, now).run();
+    } catch {
+      return customerJson({ error: '다른 공간이 방금 이 주소명을 선점했습니다.', namespace,
+        suggestions: suggestPublicNamespaces(namespace, [...taken, namespace], { subtype: tenant.workspace_subtype || '' }) }, 409, request, env);
+    }
+    await writeAdminAudit(db, session, 'workspace.namespace.claim', namespace, JSON.stringify({ tenant: tenant.slug, workspaceId }));
+    const updated = await tenantBySlug(db, slug);
+    return customerJson({ ok: true, tenant: publicTenant(updated) }, 200, request, env);
   }
 
   const usersMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/users$/);
@@ -379,7 +470,7 @@ async function handleAdmin(request, env, path) {
         m.role, m.status AS membership_status, m.created_at
       FROM customer_memberships m JOIN customer_users u ON u.id = m.user_id
       WHERE m.tenant_id = ? ORDER BY u.email`).bind(tenant.id).all();
-    return customerJson({ tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain }, users: users.results.map(row => ({
+    return customerJson({ tenant: publicTenant(tenant), users: users.results.map(row => ({
       email: row.email, displayName: row.display_name || '', role: row.role, status: row.membership_status,
       userStatus: row.user_status, lastLoginAt: row.last_login_at || '', createdAt: row.created_at })) }, 200, request, env);
   }
@@ -414,7 +505,8 @@ async function handleAdmin(request, env, path) {
       (tenant_id, email, role, token_hash, expires_at, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .bind(tenant.id, email, role, tokenHash, expiresAt.toISOString(), createdBy, now.toISOString()).run();
     await writeAdminAudit(db, session, 'customer.invite.create', tenant.domain, JSON.stringify({ email, role }));
-    const inviteUrl = `https://${tenant.domain}/?ekodi_invite=${rawToken}`;
+    const inviteBase = tenant.public_namespace ? `https://ekodi.kr/${tenant.public_namespace}/` : `https://${tenant.domain}/`;
+    const inviteUrl = `${inviteBase}?ekodi_invite=${rawToken}`;
     return customerJson({ ok: true, invite: { id: result.meta.last_row_id, email, role, tenant: tenant.slug,
       inviteUrl, expiresAt: expiresAt.toISOString() } }, 201, request, env);
   }

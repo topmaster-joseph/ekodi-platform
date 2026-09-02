@@ -13,11 +13,12 @@ const serviceOrigins={
   marketing:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],
   biz:['https://biz.ekodi.kr'],
   trade:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],
-  mall:['https://mall.ekodi.kr'],
+  mall:['https://mall.ekodi.kr','https://mall.biz.ekodi.kr'],
   pay:['https://pay.ekodi.kr'],
   books:['https://books.ekodi.kr'],
   church:['https://church.ekodi.kr'],
   lab:['https://lab.ekodi.kr'],
+  cafe:['https://cafe.ekodi.kr'],
   mission:['https://mission.ekodi.kr'],
   community:['https://community.ekodi.kr'],
   edu:['https://edu.ekodi.kr'],
@@ -25,12 +26,28 @@ const serviceOrigins={
   social:['https://social.ekodi.kr'],
   energy:['https://energy.ekodi.kr'],
 };
+const canonicalPrefixes={
+  cgma:['/cgma'], biz:['/ekodibiz'], trade:['/ekoditrade'], mall:['/ekodibiz/mall'],
+  church:['/ekodichurch'], lab:['/ekodilab'], cafe:['/ekodicafe'],
+  marketing:['/jadam','/pizzamaru','/yogurt'],
+};
+const canonicalDefaults={
+  cgma:'https://ekodi.kr/cgma/', biz:'https://ekodi.kr/ekodibiz/', trade:'https://ekodi.kr/ekoditrade/',
+  mall:'https://ekodi.kr/ekodibiz/mall', church:'https://ekodi.kr/ekodichurch/', lab:'https://ekodi.kr/ekodilab/', cafe:'https://ekodi.kr/ekodicafe/',
+};
 const origins=serviceOrigins[site]||[];
 if(!origins.length||!requested||requested.length>180||!/^[a-z]+:[a-zA-Z0-9:_-]+$/.test(requested))throw new Error('target_workspace_not_applicable');
 
 function safeReturn(raw){
-  try{const target=new URL(raw||origins[0]);return target.protocol==='https:'&&origins.includes(target.origin)?target.href:`${origins[0]}/`;}
-  catch{return `${origins[0]}/`;}
+  const fallback=canonicalDefaults[site]||`${origins[0]}/`;
+  try{
+    const target=new URL(raw||fallback);
+    if(target.protocol!=='https:')return fallback;
+    if(origins.includes(target.origin))return target.href;
+    const prefixes=canonicalPrefixes[site]||[];
+    if(target.origin==='https://ekodi.kr'&&prefixes.some(prefix=>target.pathname===prefix||target.pathname.startsWith(`${prefix}/`)))return target.href;
+    return fallback;
+  }catch{return fallback;}
 }
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
