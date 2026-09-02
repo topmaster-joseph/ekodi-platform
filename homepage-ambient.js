@@ -6,10 +6,11 @@
   ];
 
   const intentSets = [
-    { id:'community', label:'공동체', query:'공동체 모임 교회 사람 연결', preferred:['community','church'] },
-    { id:'ministry', label:'사역', query:'교회 예배 말씀 성경 묵상 기도 사역', preferred:['church','bible','community'] },
-    { id:'business', label:'비즈니스', query:'사업 경영 매장 마케팅 홍보 판매 일', preferred:['marketing','management','work','business','biz'] },
-    { id:'content', label:'콘텐츠', query:'콘텐츠 글 출판 책 연구 소셜 창작', preferred:['author','publishing','books','social','lab'] },
+    { id:'all', category:'all', label:'전체' },
+    { id:'community-ministry', category:'community-ministry', label:'공동체 · 사역' },
+    { id:'business-growth', category:'business-growth', label:'비즈니스 · 성장' },
+    { id:'knowledge-creation', category:'knowledge-creation', label:'지식 · 콘텐츠' },
+    { id:'work-life', category:'work-life', label:'일 · 생활' },
   ];
 
   const quickPaths = [
@@ -25,9 +26,9 @@
       note:'복잡한 메뉴 대신, 지금 필요한 한 가지에서 시작하세요.',
       quick:'QUICK START', today:'오늘 무엇을 하시나요?',
       desc:'하고 싶은 일을 고르거나 적어보세요. 필요한 길만 보여드립니다.',
-      placeholder:'예: 교회 주보 만들기, 매장 홍보하기', find:'찾기', recommendation:'추천',
+      placeholder:'예: 교회 주보 만들기, 매장 홍보하기', find:'찾기', recommendation:'추천', connect:'연결하기',
       empty:'현재 연결 가능한 서비스를 찾지 못했습니다.',
-      intents:['공동체','사역','비즈니스','콘텐츠'],
+      intents:['전체','공동체 · 사역','비즈니스 · 성장','지식 · 콘텐츠','일 · 생활'],
       paths:[['교회와 모임','공동체와 사역에 필요한 길'],['매장과 마케팅','사업과 홍보에 필요한 길'],['콘텐츠와 글쓰기','글·출판·콘텐츠에 필요한 길']],
       history:'역사', terms:'이용약관', privacy:'개인정보처리방침',
     },
@@ -37,9 +38,9 @@
       note:'Skip the maze of menus. Start with the one thing you need now.',
       quick:'QUICK START', today:'What would you like to do today?',
       desc:'Choose or describe what you want to do. We will show only the relevant paths.',
-      placeholder:'e.g. Create a church bulletin, promote my store', find:'Find', recommendation:'Recommendations',
+      placeholder:'e.g. Create a church bulletin, promote my store', find:'Find', recommendation:'Recommendations', connect:'Connect',
       empty:'No available service matches yet.',
-      intents:['Community','Ministry','Business','Content'],
+      intents:['All','Community & Ministry','Business & Growth','Knowledge & Content','Work & Life'],
       paths:[['Church & groups','For community and ministry'],['Store & marketing','For business and promotion'],['Content & writing','For writing, publishing and content']],
       history:'History', terms:'Terms', privacy:'Privacy',
     },
@@ -49,9 +50,9 @@
       note:'无需浏览复杂菜单，从现在最需要的一件事开始。',
       quick:'快速开始', today:'今天想做什么？',
       desc:'选择或输入你想做的事，只显示相关路径。',
-      placeholder:'例如：制作教会周报、宣传门店', find:'查找', recommendation:'推荐',
+      placeholder:'例如：制作教会周报、宣传门店', find:'查找', recommendation:'推荐', connect:'连接',
       empty:'暂未找到可连接的服务。',
-      intents:['社区','事工','商业','内容'],
+      intents:['全部','社区 · 事工','商业 · 成长','知识 · 内容','工作 · 生活'],
       paths:[['教会与聚会','社区与事工所需路径'],['门店与营销','商业与推广所需路径'],['内容与写作','写作、出版与内容路径']],
       history:'历史', terms:'使用条款', privacy:'隐私政策',
     },
@@ -61,9 +62,9 @@
       note:'複雑なメニューではなく、今必要な一つから始めましょう。',
       quick:'クイックスタート', today:'今日は何をしますか？',
       desc:'やりたいことを選ぶか入力してください。必要な道だけを表示します。',
-      placeholder:'例：教会週報を作る、店舗を宣伝する', find:'検索', recommendation:'おすすめ',
+      placeholder:'例：教会週報を作る、店舗を宣伝する', find:'検索', recommendation:'おすすめ', connect:'接続する',
       empty:'現在利用できるサービスが見つかりません。',
-      intents:['コミュニティ','ミニストリー','ビジネス','コンテンツ'],
+      intents:['すべて','コミュニティ · ミニストリー','ビジネス · 成長','知識 · コンテンツ','仕事 · 暮らし'],
       paths:[['教会と集まり','コミュニティとミニストリー'],['店舗とマーケティング','ビジネスと広報'],['コンテンツと執筆','執筆・出版・コンテンツ']],
       history:'沿革', terms:'利用規約', privacy:'プライバシー',
     },
@@ -245,6 +246,7 @@
       name: card.querySelector('.service-title strong')?.textContent?.trim() || '서비스',
       copy: card.querySelector('.service-description > span')?.textContent?.trim() || '필요한 기능으로 이동합니다.',
       url: card.getAttribute('href') || '#services',
+      order: Number(card.dataset.homepageOrder || 9999),
     };
   }
 
@@ -254,19 +256,21 @@
     return cards.map(card => {
       const item = serviceData(card);
       const haystack = `${item.id} ${item.name} ${item.copy}`.toLowerCase();
+      const matchedWords = words.filter(word => haystack.includes(word));
       let score = item.status === 'live' ? 3 : 0;
       score += preferredRank.get(item.id) || 0;
-      for (const word of words) if (haystack.includes(word)) score += 6;
-      return { item, score };
-    }).sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name, 'ko')).slice(0, limit);
+      score += matchedWords.length * 6;
+      return { item, score, matched: words.length === 0 || matchedWords.length > 0 || preferredRank.has(item.id) };
+    }).filter(entry => entry.matched)
+      .sort((a, b) => b.score - a.score || a.item.order - b.item.order || a.item.name.localeCompare(b.item.name, 'ko')).slice(0, limit);
   }
 
   function bestService(cards, path) {
     return rankServices(cards, path.query, path.preferred, 1)[0]?.item || null;
   }
 
-  function renderRecommendations(host, cards, query = '', preferred = [], label = '추천', locale = 'ko-KR') {
-    const matches = rankServices(cards, query, preferred, 3);
+  function renderRecommendations(host, cards, query = '', preferred = [], label = '추천', locale = 'ko-KR', limit = 6) {
+    const matches = rankServices(cards, query, preferred, limit);
     host.replaceChildren();
     const heading = document.createElement('p');
     heading.className = 'intent-results-label';
@@ -283,8 +287,8 @@
       const small = document.createElement('small');
       small.textContent = item.copy;
       const arrow = document.createElement('b');
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '→';
+      arrow.className = 'intent-result-action';
+      arrow.textContent = copy(locale, 'connect');
       text.append(strong, small);
       link.append(text, arrow);
       host.append(link);
@@ -361,8 +365,11 @@
       button.className = 'intent-chip';
       button.textContent = copy(locale, 'intents')[index] || intent.label;
       button.addEventListener('click', () => {
+        const categoryCards = intent.category === 'all'
+          ? cards
+          : cards.filter(card => card.closest('.service-group')?.dataset.serviceCategory === intent.category);
         results.hidden = false;
-        renderRecommendations(results, cards, intent.query, intent.preferred, `${button.textContent} ${copy(locale, 'recommendation')}`, locale);
+        renderRecommendations(results, categoryCards, '', [], `${button.textContent} ${copy(locale, 'recommendation')}`, locale, categoryCards.length);
       });
       chips.append(button);
     });
@@ -388,10 +395,10 @@
         return;
       }
       results.hidden = false;
-      renderRecommendations(results, cards, query, [], `“${query.slice(0, 24)}” ${copy(locale, 'recommendation')}`, locale);
+      renderRecommendations(results, cards, query, [], `“${query.slice(0, 24)}” ${copy(locale, 'recommendation')}`, locale, 6);
     });
 
-    panel.append(kicker, title, desc, chips, form, buildQuickLinks(cards, locale), results);
+    panel.append(kicker, title, desc, chips, form, results);
     host.append(panel);
   }
 
