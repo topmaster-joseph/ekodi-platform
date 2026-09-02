@@ -106,6 +106,8 @@ const ADMIN_ASSETS = new Set([
   '/mission-control-admin.js',
   '/work-admin.css',
   '/work-admin.js',
+  '/communication-admin.css',
+  '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
