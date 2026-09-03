@@ -40,6 +40,7 @@ jobs:
       - name: Verify shadow-only cutover guard
         shell: bash
         run: |
-          grep -q "'authoritative_source', 'legacy'" supabase/migrations/20260903010000_trust_layer_foundation.sql
-          grep -q "'cutover_allowed', false" supabase/migrations/20260903010000_trust_layer_foundation.sql
-          grep -q 'body?.mode !== "shadow"' supabase/functions/trust-api/index.ts
+          grep -Fq "'authoritative_source', 'legacy'" supabase/migrations/20260903010000_trust_layer_foundation.sql
+          grep -Fq "'cutover_allowed', false" supabase/migrations/20260903010000_trust_layer_foundation.sql
+          grep -Fq 'body.mode !== "shadow"' supabase/functions/trust-api/index.ts
+          grep -Fq 'trust_cutover_not_allowed' supabase/functions/_shared/trust.ts
