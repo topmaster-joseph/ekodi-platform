@@ -285,7 +285,8 @@
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
-    "marketing.ekodi.kr"
+    "marketing.ekodi.kr",
+    "try.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
