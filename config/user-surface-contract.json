@@ -46,7 +46,9 @@
     "pizzamaru-marketing": "https://ekodi.kr/pizzamaru/marketing",
     "yogurt": "https://ekodi.kr/yogurt",
     "yogurt-marketing": "https://ekodi.kr/yogurt/marketing",
-    "cgma": "https://ekodi.kr/cgma"
+    "cgma": "https://ekodi.kr/cgma",
+    "ekodichurch-marketing": "https://ekodi.kr/ekodichurch/marketing",
+    "cgma-marketing": "https://ekodi.kr/cgma/marketing"
   },
   "publicServiceOverrides": {
     "marketing": {

@@ -4,30 +4,23 @@ EKODI Marketing AI uses one tenant address policy for individuals, stores, compa
 
 ## Canonical hierarchy
 
-- `marketing.ekodi.kr` = shared Marketing AI product hub, free entry and plan selection.
-- `marketing.ekodi.kr/<tenant>` = Free/Basic workspace entry for an individual, store, company, institution or group.
-- `ai.ekodi.kr` = reserved namespace for dedicated EKODI customer AI workspaces.
-- `<tenant>.ai.ekodi.kr` = Plus-or-higher dedicated EKODI AI workspace address.
-- Customer-owned hostname = Pro-or-higher optional alias mapped to the same workspace.
+- `ekodi.kr/ekodibiz/marketing-ai` = EKODIBIZ가 제공하는 Marketing AI 상품·가입·체험의 공개 canonical entry.
+- `ekodi.kr/{public_namespace}/marketing` = 각 사용자/매장/기관의 실제 Marketing 서비스 canonical surface.
+- `marketing.ekodi.kr` = EKODI Marketing Core 공통엔진. 일반 고객의 정체성이나 대표 진입주소가 아니다.
+- `ai.ekodi.kr` = provider-independent EKODI AI Gateway / Orchestrator. 일반 고객은 내부 provider/model 선택을 알 필요가 없다.
+- 기존 `<tenant>.ai.ekodi.kr` = migration 중인 compatibility execution alias일 뿐 새 canonical naming standard가 아니다.
+- 고객 소유 hostname = 선택적 custom alias이며 동일한 immutable `workspace_id`에 매핑한다.
 
-A customer's public website and its AI workspace are separate products and may use separate hostnames.
+Examples:
 
-Example:
-
-- `cgma.ekodi.kr` = 청계면상인회 official/public website.
-- `marketing.ekodi.kr/cgma` = shared/Basic Marketing AI entry model.
-- `cgma.ai.ekodi.kr` = dedicated Marketing AI workspace when the organization has the dedicated entitlement.
+- 자담치킨 목포대점: `ekodi.kr/jadam` → Marketing: `ekodi.kr/jadam/marketing`
+- 피자마루 목포대점: `ekodi.kr/pizzamaru` → Marketing: `ekodi.kr/pizzamaru/marketing`
+- 요거트퍼플 목포대점: `ekodi.kr/yogurt` → Marketing: `ekodi.kr/yogurt/marketing`
+- 청계면상인회: `ekodi.kr/cgma` → Marketing: `ekodi.kr/cgma/marketing`
 
 ## Plan and domain entitlement
 
-| Customer state | EKODI Marketing AI address | Customer-owned domain |
-|---|---|---|
-| Free / Basic | `marketing.ekodi.kr/<tenant>` | No |
-| Plus | `<tenant>.ai.ekodi.kr` | No |
-| Pro | `<tenant>.ai.ekodi.kr` | Yes, 1 mapped hostname by default |
-| AUTO / Enterprise | Dedicated EKODI AI address | Pro-level or contract-based mappings |
-
-An organization can include Basic member workspaces without issuing one DNS hostname per member store. A member store receives its own `<store>.ai.ekodi.kr` only when it has the required dedicated-domain entitlement.
+Plan/tier determines capability, quota and automation entitlement, not the public URL grammar. Free, Plus, Pro, AUTO and Enterprise all keep the same workspace canonical path. A higher plan may add a customer-owned custom domain, but it does not create a new EKODI tenant/AI subdomain identity.
 
 ## Pro customer-owned domain policy
 
@@ -69,13 +62,13 @@ If the subscription no longer qualifies, the scheduled lifecycle worker disconne
 
 The commercial/domain policy source of truth is `config/marketing-tenants.json`. Runtime custom-domain state is stored in the shared D1 tables `marketing_workspaces`, `marketing_custom_domains` and `marketing_domain_audit`.
 
-Current dedicated AI workspace targets include:
+Current canonical Marketing surfaces include:
 
-- `jadam.ai.ekodi.kr` → Cloudflare Pages project `marketing-ai-jadam`
-- `pizzamaru.ai.ekodi.kr` → Cloudflare Pages project `marketing-ai-pizzamaru`
-- `yogurt.ai.ekodi.kr` → Cloudflare Pages project `marketing-ai-yogurtpurple`
-- `cgma.ai.ekodi.kr` → Cloudflare Pages project `cheonggye-market`, landing at `/market-ai`
+- `ekodi.kr/jadam/marketing` → Cloudflare Pages project `marketing-ai-jadam`
+- `ekodi.kr/pizzamaru/marketing` → Cloudflare Pages project `marketing-ai-pizzamaru`
+- `ekodi.kr/yogurt/marketing` → Cloudflare Pages project `marketing-ai-yogurtpurple`
+- `ekodi.kr/cgma/marketing` → Cloudflare Pages project `cheonggye-market`, upstream landing at `/market-ai`
 
-Existing production aliases are retained during migration so current links do not break. They are compatibility addresses, not the new naming standard.
+Existing production `*.ai.ekodi.kr` aliases are retained only during migration so current links do not break. They are compatibility execution addresses, not the naming standard.
 
 Marketing AI uses the public product name `마케팅AI` and the common footer `Powered by EKODIBIZ`.

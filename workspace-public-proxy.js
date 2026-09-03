@@ -4,6 +4,20 @@ const DYNAMIC_ROUTE_CACHE = new Map();
 const ROUTE_CACHE_MS = 5 * 60 * 1000;
 const NEGATIVE_CACHE_MS = 30 * 1000;
 
+const NESTED_SERVICE_MOUNTS = Object.freeze({
+  ekodibiz: Object.freeze([{ prefix:'/marketing-ai', serviceId:'marketing', upstreamHost:'marketing-ai.pages.dev', upstreamBase:'/' }]),
+  ekodichurch: Object.freeze([{ prefix:'/marketing', serviceId:'marketing', upstreamHost:'marketing-ai.pages.dev', upstreamBase:'/church' }]),
+  jadam: Object.freeze([{ prefix:'/marketing', serviceId:'marketing', upstreamHost:'marketing-ai-jadam.pages.dev', upstreamBase:'/' }]),
+  pizzamaru: Object.freeze([{ prefix:'/marketing', serviceId:'marketing', upstreamHost:'marketing-ai-pizzamaru.pages.dev', upstreamBase:'/' }]),
+  yogurt: Object.freeze([{ prefix:'/marketing', serviceId:'marketing', upstreamHost:'marketing-ai-yogurtpurple.pages.dev', upstreamBase:'/' }]),
+  cgma: Object.freeze([{ prefix:'/marketing', serviceId:'marketing', upstreamHost:'cheonggye-market.pages.dev', upstreamBase:'/market-ai' }]),
+});
+
+function nestedServiceMount(publicNamespace, suffix) {
+  const mounts = NESTED_SERVICE_MOUNTS[publicNamespace] || [];
+  return mounts.find(mount => suffix === mount.prefix || suffix.startsWith(`${mount.prefix}/`)) || null;
+}
+
 function baseHeaders(headers) {
   headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -20,7 +34,7 @@ function routeParts(pathname) {
 }
 
 function routeForWorkspace(parts, workspace) {
-  return { ...parts, workspace };
+  return { ...parts, workspace, serviceMount: nestedServiceMount(parts.publicNamespace, parts.suffix) };
 }
 
 function safeUpstreamHost(value) {
@@ -91,8 +105,8 @@ function canonicalUrl(publicNamespace, suffix = '/') {
   return `https://ekodi.kr${path}`;
 }
 
-function rewriteText(text, publicNamespace, upstreamHost, contentType) {
-  const prefix = `/${publicNamespace}`;
+function rewriteText(text, publicNamespace, upstreamHost, contentType, servicePrefix = '') {
+  const prefix = `/${publicNamespace}${servicePrefix}`;
   let next = text;
   if (contentType.includes('text/html')) {
     next = next.replace(/\b(href|src|action|poster)=(['"])\/(?!\/)/gi, `$1=$2${prefix}/`);
@@ -114,22 +128,27 @@ function rewriteText(text, publicNamespace, upstreamHost, contentType) {
   return next;
 }
 
-function canonicalizeLocation(location, upstreamUrl, publicNamespace) {
+function canonicalizeLocation(location, upstreamUrl, publicNamespace, servicePrefix = '') {
   if (!location) return '';
   try {
     const target = new URL(location, upstreamUrl);
     if (target.hostname !== upstreamUrl.hostname) return location;
-    return `${canonicalUrl(publicNamespace, target.pathname)}${target.search}${target.hash}`;
+    return `${canonicalUrl(publicNamespace, `${servicePrefix}${target.pathname}`)}${target.search}${target.hash}`;
   } catch {
     return location;
   }
 }
 
 export async function proxyPublicWorkspace(request, route) {
-  const { publicNamespace, workspace, suffix } = route;
+  const { publicNamespace, workspace, suffix, serviceMount } = route;
   const incoming = new URL(request.url);
-  const upstreamUrl = new URL(`https://${workspace.upstreamHost}`);
-  upstreamUrl.pathname = suffix;
+  const upstreamHost = serviceMount?.upstreamHost || workspace.upstreamHost;
+  const servicePrefix = serviceMount?.prefix || '';
+  const upstreamBase = serviceMount?.upstreamBase || '';
+  const strippedSuffix = serviceMount ? (suffix.slice(servicePrefix.length) || '/') : suffix;
+  const upstreamSuffix = serviceMount ? `${upstreamBase.replace(/\/$/, '')}${strippedSuffix}` || '/' : strippedSuffix;
+  const upstreamUrl = new URL(`https://${upstreamHost}`);
+  upstreamUrl.pathname = upstreamSuffix;
   upstreamUrl.search = incoming.search;
   const headers = new Headers(request.headers);
   headers.delete('host');
@@ -141,19 +160,20 @@ export async function proxyPublicWorkspace(request, route) {
     redirect: 'manual',
   });
   const responseHeaders = new Headers(upstream.headers);
-  const location = canonicalizeLocation(responseHeaders.get('location'), upstreamUrl, publicNamespace);
+  const location = canonicalizeLocation(responseHeaders.get('location'), upstreamUrl, publicNamespace, servicePrefix);
   if (location) responseHeaders.set('location', location);
   baseHeaders(responseHeaders);
   responseHeaders.set('X-EKODI-Route', 'public-workspace-namespace');
   responseHeaders.set('X-EKODI-Workspace-ID', workspace.workspaceId);
   responseHeaders.set('X-EKODI-Public-Namespace', publicNamespace);
+  if (serviceMount) responseHeaders.set('X-EKODI-Service-Mount', serviceMount.serviceId);
   responseHeaders.set('Link', `<${canonicalUrl(publicNamespace, suffix)}>; rel="canonical"`);
 
   const contentType = responseHeaders.get('content-type') || '';
   if (!/(text\/html|javascript|text\/css)/i.test(contentType) || request.method === 'HEAD') {
     return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders });
   }
-  const text = rewriteText(await upstream.text(), publicNamespace, workspace.upstreamHost, contentType);
+  const text = rewriteText(await upstream.text(), publicNamespace, upstreamHost, contentType, servicePrefix);
   responseHeaders.delete('content-length');
   responseHeaders.delete('content-encoding');
   responseHeaders.delete('etag');
