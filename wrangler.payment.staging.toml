@@ -1,0 +1,14 @@
+name = "ekodi-payment-staging"
+main = "payment-worker.js"
+compatibility_date = "2026-09-03"
+workers_dev = true
+preview_urls = false
+
+[vars]
+EKODI_PAYMENT_ROLLOUT = "shadow"
+EKODI_PAYMENT_VERSION = "1.0.0"
+ALLOW_DONATION_PAYMENTS = "false"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

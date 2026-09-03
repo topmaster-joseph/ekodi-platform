@@ -1,0 +1,133 @@
+name: Deploy EKODI Payment Common Service
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &payment_paths
+      - 'payment-core.js'
+      - 'payment-worker.js'
+      - 'wrangler.payment*.toml'
+      - 'deploy/manifests/payment.worker.json'
+      - 'test/payment-common-service.test.mjs'
+      - 'ekodi-service-manifest.js'
+      - 'ekodi-shell-injector.js'
+      - 'platform-boundaries.json'
+      - 'CONSTITUTION.md'
+      - 'governance/constitution/**'
+      - 'governance/amendments/*payment*.json'
+      - 'scripts/validate-constitution.mjs'
+      - '.github/workflows/deploy-payment.yml'
+  push:
+    branches: [main]
+    paths: *payment_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-payment-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate payment common-service source and governance
+        run: |
+          set -euo pipefail
+          node --check payment-core.js
+          node --check payment-worker.js
+          node --test test/payment-common-service.test.mjs
+          npm run validate:constitution
+          npm run validate:boundaries
+          npm run validate:deployments
+          npm run validate:security
+          npm run validate:shell
+          test -f deploy/manifests/payment.worker.json
+          grep -Fq 'allowFirstDeploy' deploy/manifests/payment.worker.json
+          grep -Fq 'pay.ekodi.kr/*' wrangler.payment.toml
+          grep -Fq 'EKODI_PAYMENT_ROLLOUT = "shadow"' wrangler.payment.toml
+          grep -Fq 'ekodi-payment-staging' wrangler.payment.staging.toml
+
+  deploy-staging:
+    environment: development
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-payment-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Development boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Deploy isolated payment staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.payment.staging.toml
+      - name: Verify payment staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -L -sS -D /tmp/payment-root.headers -o /tmp/payment-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health_code=$(curl -sS -o /tmp/payment-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            capabilities_code=$(curl -sS -o /tmp/payment-capabilities.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/capabilities" || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/payment-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin" || true)
+            if [[ "$root_code" == '200' ]] && [[ "$health_code" == '200' ]] && [[ "$capabilities_code" == '200' ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
+              && grep -Fq 'EKODI Payment' /tmp/payment-root.html \
+              && grep -Fq 'ekodi-payment' /tmp/payment-health.json \
+              && grep -Fq '"transactionExecution":false' /tmp/payment-capabilities.json \
+              && grep -Fiq 'location: https://admin.ekodi.kr/payment' /tmp/payment-admin.headers; then
+              echo 'Payment staging verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Guarded payment production release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/payment.worker.json
+      - name: Deep verify payment production
+        shell: bash
+        run: |
+          set -euo pipefail
+          root_code=$(curl -L -sS -D /tmp/payment-root.headers -o /tmp/payment-root.html -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://pay.ekodi.kr/' || true)
+          health_code=$(curl -sS -o /tmp/payment-health.json -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://pay.ekodi.kr/health' || true)
+          capabilities_code=$(curl -sS -o /tmp/payment-capabilities.json -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://pay.ekodi.kr/api/capabilities' || true)
+          admin_code=$(curl -sS --max-redirs 0 -D /tmp/payment-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://pay.ekodi.kr/admin' || true)
+          [[ "$root_code" == '200' ]]
+          [[ "$health_code" == '200' ]]
+          [[ "$capabilities_code" == '200' ]]
+          [[ "$admin_code" =~ ^30[1278]$ ]]
+          grep -Fq 'EKODI Payment' /tmp/payment-root.html
+          grep -Fq 'ekodi-payment' /tmp/payment-health.json
+          grep -Fq '"transactionExecution":false' /tmp/payment-capabilities.json
+          grep -Fiq 'x-ekodi-shell: v2' /tmp/payment-root.headers
+          grep -Fiq 'location: https://admin.ekodi.kr/payment' /tmp/payment-admin.headers
+          echo 'EKODI Payment production verified.'

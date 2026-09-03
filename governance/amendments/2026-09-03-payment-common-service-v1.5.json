@@ -1,0 +1,22 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-PAYMENT-COMMON-SERVICE-V1.5",
+  "date": "2026-09-03",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit Platform Super Administrator instruction in conversation approving pay.ekodi.kr as the EKODI Payment common service and explicitly authorizing deployment",
+  "constitutionVersion": "1.5.0",
+  "summary": "Register pay.ekodi.kr as the provider-neutral EKODI Payment common-service boundary with workspace-scoped merchant ownership, guarded transaction activation and reversible route-fronted rollout.",
+  "affectedAreas": ["domain", "common-service", "payments", "security", "governance", "deployment"],
+  "registeredBoundary": "pay.ekodi.kr",
+  "boundaryReason": "payments are a shared protocol and high-impact operational boundary reused by Mall, membership, courses, reservations, subscriptions, service fees and approved donations; the boundary does not identify a person or workspace",
+  "paymentAuthorityRule": "payment ownership and authorization resolve from immutable workspace_id; provider accounts, merchant IDs and settlement accounts remain workspace-scoped and replaceable",
+  "providerRule": "PortOne, Toss, NICE and future providers are adapters rather than EKODI payment identity or domain truth",
+  "fundsRule": "platform fund pooling and redistribution are forbidden by default; direct settlement to the workspace merchant account is preferred unless a separately approved legal settlement model exists",
+  "sensitiveDataRule": "raw card number, CVC and equivalent reusable payment credentials are never stored by EKODI Payment",
+  "donationRule": "church donation payment execution stays disabled until the selected provider and merchant account explicitly approve the category",
+  "rolloutPolicy": ["off", "shadow", "canary", "on"],
+  "transitionRule": "during the first verified release, the legacy pay.ekodi.kr shared-site Custom Domain remains as the rollback origin while the dedicated Payment Worker runs on a more specific Worker Route in front of it",
+  "verificationPolicy": "constitution, payment contract tests, isolated staging, guarded candidate promotion and real pay.ekodi.kr health/capability/admin checks must pass before the release is reported complete",
+  "rollbackPlan": "remove the pay.ekodi.kr/* Worker Route to restore the existing pay.ekodi.kr origin immediately; no payment database or provider credential migration occurs in this foundation release"
+}

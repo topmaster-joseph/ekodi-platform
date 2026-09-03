@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-payment",
+    "config": "wrangler.payment.toml",
+    "requests": [
+      {
+        "url": "https://pay.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["EKODI Payment", "SHADOW FOUNDATION"],
+        "headerExpect": ["x-ekodi-shell: v2"]
+      },
+      {
+        "url": "https://pay.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["ekodi-payment", "registered-common-service", "shadow"]
+      },
+      {
+        "url": "https://pay.ekodi.kr/api/capabilities",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["replaceable-adapter", "workspace_id", "transactionExecution"]
+      },
+      {
+        "url": "https://pay.ekodi.kr/admin",
+        "statuses": [301, 302, 307, 308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://admin.ekodi.kr/payment"]
+      }
+    ],
+    "allowFirstDeploy": true
+  }
+}

@@ -1,0 +1,20 @@
+name = "ekodi-payment"
+main = "payment-worker.js"
+compatibility_date = "2026-09-03"
+workers_dev = true
+preview_urls = false
+
+[vars]
+EKODI_PAYMENT_ROLLOUT = "shadow"
+EKODI_PAYMENT_VERSION = "1.0.0"
+ALLOW_DONATION_PAYMENTS = "false"
+
+# Route-fronted migration: this Worker runs before the existing pay.ekodi.kr
+# Custom Domain origin. Removing this route restores the previous origin immediately.
+[[routes]]
+pattern = "pay.ekodi.kr/*"
+zone_name = "ekodi.kr"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
