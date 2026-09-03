@@ -21,6 +21,7 @@ const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
 const PUBLIC_WORKSPACE_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/?$/;
 const EKODIBIZ_PUBLIC_ROUTE=/^\/org\/ekodibiz\/?$/i;
+const EKODIBIZ_TRADE_PREFIX='/ekodibiz/trade';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css']);
 const WORKSPACE_ADMIN_RETURN_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/(?:admin(?:\/[a-z0-9-]+)?|[a-z0-9-]+\/admin(?:\/[a-z0-9-]+)?)\/?$/;
@@ -66,6 +67,16 @@ async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
   return new HTMLRewriter().on('link[href]',{element:e=>{const v=e.getAttribute('href')||'';if(v==='/style.css'||v.startsWith('/style.css?'))e.setAttribute('href',EKODIBIZ_ASSET_PREFIX+'style.css'+v.slice('/style.css'.length));}}).transform(routed);
 }
+async function routeEkodiBizTrade(request,env){
+  if(!env?.TRADE?.fetch)return new Response('Trade service unavailable',{status:503,headers:{'cache-control':'no-store','x-ekodi-trade-gateway':'trade-binding-unavailable'}});
+  const url=new URL(request.url);let suffix=url.pathname.slice(EKODIBIZ_TRADE_PREFIX.length)||'/';if(suffix==='/admin/')suffix='/admin';
+  const upstreamRequest=workspaceUpstreamRequest(request,suffix);upstreamRequest.headers.set('x-ekodi-trade-tenant-key','ekodi-biz');upstreamRequest.headers.set('x-ekodi-trade-surface','ekodibiz');
+  const upstream=await env.TRADE.fetch(upstreamRequest);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-trade-gateway','trade-service-binding');routed.headers.set('x-ekodi-trade-surface','ekodibiz');
+  const type=routed.headers.get('content-type')||'';if(!type.includes('text/html'))return routed;
+  const rewrite=(el,name)=>{const value=el.getAttribute(name)||'';for(const asset of ['/styles.css','/config.js','/app.js']){if(value===asset||value.startsWith(asset+'?')){el.setAttribute(name,EKODIBIZ_TRADE_PREFIX+value);return}}if(name==='href'&&value==='/')el.setAttribute(name,EKODIBIZ_TRADE_PREFIX)};
+  return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).on('a[href]',{element:e=>rewrite(e,'href')}).transform(routed);
+}
+
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
@@ -104,6 +115,7 @@ export default {
     const host=resolvedHost(request,env);
 
     if(host===PUBLIC_HOST){
+      if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_TRADE_PREFIX))return routeEkodiBizTrade(request,env);
       if(request.method==='GET'){
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();

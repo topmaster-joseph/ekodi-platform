@@ -122,6 +122,10 @@ service = "ekodi-space"
 binding = "EKODIBIZ"
 service = "ekodibiz-revenue-os"
 
+[[services]]
+binding = "TRADE"
+service = "ekodi-trade"
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
@@ -131,4 +135,4 @@ binding = "ASSETS"
 # fingerprinted shared Admin menu modules, which require Worker cache/security headers.
 # Public legal/history/mall paths use glob matching so extensionless HTML routing
 # cannot bypass the common User UI Shell contract.
-run_worker_first = ["/", "/privacy*", "/terms*", "/history*", "/mall*", "/personal/*", "/org/*", "/group/*", "/project/*", "/_ekodi/space/*", "/_ekodi/ekodibiz/*", "/auth/start", "/workspace-admin.css", "/workspace-admin.js", "/workspace-trade-admin.js", "/workspace-trade-portal.css", "/workspace-trade-portal.js", "/admin", "/control-center", "/control-center/", "/control-center.html", "/api/*", "/auth.js", "/auth-router.js", "/marketing-auth-hotfix.js", "/auth-workspace-target.js", "/admin-auth.js", "/client-auth.js", "/author-auth.js", "/business-auth.js", "/marketing-onboarding.js", "/membership-ui.js", "/control-center.css", "/admin-shell.css", "/admin-central-handoff.js", "/admin-authenticated-shell.js", "/compact-control-center.js", "/compact-control-center.css", "/admin-compact.js", "/admin-compact.css", "/admin-menu-layout.js", "/admin-menu-registry.js", "/admin-sidebar.js", "/admin-menu-runtime.js", "/admin-demand-loader.js", "/admin-perf-diagnostics.js", "/device-browser-diagnostics.js", "/device-browser-diagnostics.css", "/admin-lazy-features.js", "/ai-ops-admin.css", "/system-health-admin.js", "/system-health-admin.css"]
+run_worker_first = ["/", "/privacy*", "/terms*", "/history*", "/mall*", "/ekodibiz/trade*", "/personal/*", "/org/*", "/group/*", "/project/*", "/_ekodi/space/*", "/_ekodi/ekodibiz/*", "/auth/start", "/workspace-admin.css", "/workspace-admin.js", "/workspace-trade-admin.js", "/workspace-trade-portal.css", "/workspace-trade-portal.js", "/admin", "/control-center", "/control-center/", "/control-center.html", "/api/*", "/auth.js", "/auth-router.js", "/marketing-auth-hotfix.js", "/auth-workspace-target.js", "/admin-auth.js", "/client-auth.js", "/author-auth.js", "/business-auth.js", "/marketing-onboarding.js", "/membership-ui.js", "/control-center.css", "/admin-shell.css", "/admin-central-handoff.js", "/admin-authenticated-shell.js", "/compact-control-center.js", "/compact-control-center.css", "/admin-compact.js", "/admin-compact.css", "/admin-menu-layout.js", "/admin-menu-registry.js", "/admin-sidebar.js", "/admin-menu-runtime.js", "/admin-demand-loader.js", "/admin-perf-diagnostics.js", "/device-browser-diagnostics.js", "/device-browser-diagnostics.css", "/admin-lazy-features.js", "/ai-ops-admin.css", "/system-health-admin.js", "/system-health-admin.css"]

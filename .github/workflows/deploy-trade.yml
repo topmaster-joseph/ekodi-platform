@@ -1,0 +1,139 @@
+name: Deploy EKODI Trade
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'trade/**'
+      - 'trade-worker.js'
+      - 'trade-readiness.js'
+      - 'test/trade-*.test.mjs'
+      - 'supabase/migrations/*trade*.sql'
+      - 'wrangler.trade.toml'
+      - 'wrangler.trade.staging.toml'
+      - 'deploy/manifests/trade.worker.json'
+      - '.github/workflows/deploy-trade.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'trade/**'
+      - 'trade-worker.js'
+      - 'trade-readiness.js'
+      - 'test/trade-*.test.mjs'
+      - 'supabase/migrations/*trade*.sql'
+      - 'wrangler.trade.toml'
+      - 'deploy/manifests/trade.worker.json'
+      - '.github/workflows/deploy-trade.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-trade-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Trade contracts
+        run: |
+          set -euo pipefail
+          node --check trade-worker.js
+          node --check trade-readiness.js
+          node --check trade/tenant-model.js
+          node --check trade/app.js
+          node --test test/trade-readiness.test.mjs test/trade-tenancy.test.mjs test/trade-surface-routing.test.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/trade.worker.json','utf8'))"
+          grep -Fq 'SHARED TRADE OPERATING MODULE' trade/index.html
+          grep -Fq 'platformAdminImplicitTenantAccess:false' trade-worker.js
+          grep -Fq 'trade_case_access' supabase/migrations/20260903125500_trade_shared_case_operations.sql
+
+  staging:
+    environment: development
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-trade-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deploy isolated staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.trade.staging.toml
+      - name: Verify staging
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/trade-h -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            health=$(curl -sS -o /tmp/trade-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            admin=$(curl -L -sS -o /tmp/trade-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin" || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$admin" == '200' ]] \
+              && grep -Fq 'SHARED TRADE OPERATING MODULE' /tmp/trade.html \
+              && grep -Fq '"counterpartyIsolation":true' /tmp/trade-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/trade-health.json \
+              && grep -Fq '거래상대 Counterparty' /tmp/trade-admin.html; then
+              echo 'Trade isolated staging verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Bootstrap or guarded release
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.trade.toml --json > /tmp/deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/trade.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.trade.toml
+          else
+            cat /tmp/deployments.log
+            exit 1
+          fi
+      - name: Reconcile production hostname
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.trade.toml
+      - name: Verify production
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/trade-h -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/' || true)
+            health=$(curl -sS -o /tmp/trade-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/health' || true)
+            admin=$(curl -L -sS -o /tmp/trade-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://trade.ekodi.kr/admin' || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$admin" == '200' ]] \
+              && grep -Fq 'SHARED TRADE OPERATING MODULE' /tmp/trade.html \
+              && grep -Fq '"canonicalHost":"trade.ekodi.kr"' /tmp/trade-health.json \
+              && grep -Fq '"platformAdminImplicitTenantAccess":false' /tmp/trade-health.json \
+              && grep -Fq '거래상대 Counterparty' /tmp/trade-admin.html \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/trade-h; then
+              echo 'trade.ekodi.kr production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
