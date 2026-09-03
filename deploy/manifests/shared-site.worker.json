@@ -1,5 +1,5 @@
 {
-  "version": 41,
+  "version": 42,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -130,17 +130,12 @@
         ],
         "redirect": "follow",
         "expect": [
-          "ekodibizmall",
-          "GIFT AI",
-          "GIFT CONTEXT INTELLIGENCE",
-          "CURATED FOR EVERYDAY"
+          "EKODI MALL",
+          "data-ekodi-service=\"mall\""
         ],
         "rollbackExpect": [
           "EKODI MALL",
-          "SMART SHOPPING",
-          "오늘 필요한 것",
-          "오늘의 상품",
-          "상품 둘러보기"
+          "data-ekodi-service=\"mall\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
