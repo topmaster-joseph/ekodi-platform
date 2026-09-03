@@ -10,6 +10,7 @@ const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url),
 const accessScript = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../migrations/0038_google_drive_storage.sql', import.meta.url), 'utf8');
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
+const cheonggyeAdmin = await readFile(new URL('../cheonggye-members-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
 
 test('Google Drive credentials are encrypted and never committed', () => {
@@ -101,4 +102,17 @@ test('canonical EKODI archive folders are source-controlled', () => {
 
 test('new storage worker may bootstrap exactly through explicit manifest opt-in', () => {
   assert.match(manifest, /"allowFirstDeploy": true/);
+});
+
+
+test('Cheonggye merchant members use Google Sheets as the single source of truth', () => {
+  assert.match(control, /CHEONGGYE_SPREADSHEET_ID = '1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo'/);
+  assert.match(control, /CHEONGGYE_SHEET_NAME = '웹관리'/);
+  assert.match(control, /auth\/spreadsheets/);
+  assert.match(control, /sheets\.googleapis\.com\/v4\/spreadsheets/);
+  assert.match(control, /cheonggye-members/);
+  assert.match(control, /cheonggye_member_audit/);
+  assert.match(cheonggyeAdmin, /\/api\/control\/storage\/google\/cheonggye-members/);
+  assert.doesNotMatch(cheonggyeAdmin, /localStorage\.setItem/);
+  assert.doesNotMatch(cheonggyeAdmin, /INITIAL_ROWS/);
 });
