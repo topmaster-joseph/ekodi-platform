@@ -393,7 +393,7 @@ function Apply-WorkstationProfile {
     @{ name = 'EKODI Admin'; url = 'https://admin.ekodi.kr' },
     @{ name = 'My EKODI'; url = 'https://my.ekodi.kr' },
     @{ name = 'EKODI Community'; url = 'https://community.ekodi.kr' },
-    @{ name = 'Marketing AI'; url = 'https://marketing.ekodi.kr' },
+    @{ name = 'Marketing AI'; url = 'https://ekodi.kr/ekodibiz/marketing-ai' },
     @{ name = 'EKODI Cloud'; url = 'https://cloud.ekodi.kr' }
   )
   $created = @()

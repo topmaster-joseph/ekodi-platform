@@ -49,6 +49,8 @@ Current canonical workspace identity is derived from immutable `workspace_id`. H
 
 Dedicated subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries registered in constitutional governance. Historical customer, feature or AI subdomain examples are legacy or compatibility information unless the current constitution explicitly registers them as active boundaries.
 
+Marketing user surfaces are canonical paths: `ekodi.kr/ekodibiz/marketing-ai` for the EKODIBIZ product and `ekodi.kr/{slug}/marketing` for workspace use, including `ekodi.kr/jadam/marketing`, `ekodi.kr/pizzamaru/marketing`, `ekodi.kr/yogurt/marketing`, and `ekodi.kr/cgma/marketing`. `marketing.ekodi.kr` is an engine boundary and `ai.ekodi.kr` is the AI Gateway/Core; do not expose either as an ordinary customer entry.
+
 Customer-owned domains may map to a workspace public surface but never redefine EKODI internal identity or authorization.
 
 ## 4. Customer classification and authority scope

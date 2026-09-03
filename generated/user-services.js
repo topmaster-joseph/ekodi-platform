@@ -1,4 +1,4 @@
-// GENERATED from config/ecosystem-services.json. Do not edit by hand.
+// GENERATED from config/ecosystem-services.json through config/user-surface-contract.json. Do not edit by hand.
 export const USER_SERVICES = Object.freeze([
   {
     "id": "church",
@@ -167,11 +167,11 @@ export const USER_SERVICES = Object.freeze([
   },
   {
     "id": "marketing",
-    "name": "마케팅 AI",
+    "name": "마케팅AI",
     "nameEn": "Marketing AI",
-    "label": "marketing.ekodi.kr",
-    "url": "https://marketing.ekodi.kr/",
-    "domain": "marketing.ekodi.kr",
+    "label": "ekodi.kr/ekodibiz/marketing-ai",
+    "url": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "domain": "ekodi.kr",
     "group": "business-growth",
     "status": "live",
     "productionVerified": true,
