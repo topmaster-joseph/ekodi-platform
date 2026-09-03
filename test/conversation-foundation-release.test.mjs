@@ -5,7 +5,7 @@ import { handleMessengerOperatorControl } from '../messenger-operator-control.js
 import workspaceEntry from '../workspace-platform-entry-worker.js';
 import { drainMessengerOutbox } from '../messenger-outbox.js';
 
-const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+const read=async path=>(await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/\r\n/g,'\n');
 const triggerBlock=workflow=>workflow.split('\npermissions:')[0];
 
 test('operator and workspace entry modules import without side effects',()=>{

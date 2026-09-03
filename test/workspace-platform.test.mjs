@@ -5,7 +5,7 @@ import { classifyMessengerMessage } from '../messenger-triage.js';
 import { buildPrincipal, principalCapabilities } from '../ekodi-principal.js';
 import { buildChannelEnvelope, normalizeChannel } from '../messenger-channel-adapters.js';
 
-const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+const read=async path=>(await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/\r\n/g,'\n');
 
 test('workspace migrations keep one Messenger ledger and add asynchronous outbox',async()=>{
   const [base,operator,foundation]=await Promise.all([
