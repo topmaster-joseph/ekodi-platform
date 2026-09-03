@@ -119,6 +119,7 @@ function nodeJobId(path){const match=path.match(/^\/api\/node\/jobs\/([^/]+)\/co
 export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_AI_CONFIG=${JSON.stringify(config(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...headers()}});
+  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=ai-ops&source=ai.ekodi.kr',307);
   if(request.method==='GET'&&url.pathname==='/api/status'){const nodes=await onlineNodeProviders(env);return json({ok:true,platform:'ai-control',config:config(env),providers:providerStatus(env,nodes),stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes})}
   if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);
   if(request.method==='POST'&&url.pathname==='/api/node/enroll')return enrollNode(request,env);

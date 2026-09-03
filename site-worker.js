@@ -377,6 +377,16 @@ export default {
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
+    if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      const response = Response.redirect(target.toString(), 307);
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      return response;
+    }
+
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {

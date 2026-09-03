@@ -45,6 +45,7 @@ export default {
     const financeEnv = Object.create(env || null);
     if (env?.DB) financeEnv.DB = namespacedDatabase(env.DB);
     const pathname = new URL(request.url).pathname;
+    if (pathname === '/admin' || pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=finance&source=finance-api.ekodi.kr', 307);
     if (pathname.startsWith('/api/finance/tax-business-')) return taxBusinessRegistryService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-hometax-')) return taxHometaxLedgerService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-')) return taxServiceWorker.fetch(request, financeEnv, ctx);
