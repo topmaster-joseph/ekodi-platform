@@ -13,6 +13,7 @@ on:
       - 'migrations/0028_marketing_growth_connectors.sql'
       - 'migrations/0048_ekodi_mall_promotion_automation.sql'
       - 'migrations/0049_ekodi_mall_active_sales_ai.sql'
+      - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/marketing-growth-oauth.test.mjs'
       - 'test/ekodi-mall-active-sales-ai.test.mjs'
@@ -39,7 +40,7 @@ jobs:
       META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
       THREADS_APP_ID: ${{ secrets.THREADS_APP_ID }}
       THREADS_APP_SECRET: ${{ secrets.THREADS_APP_SECRET }}
-      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.MAIL_GOOGLE_CLIENT_SECRET }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
       NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
@@ -68,8 +69,9 @@ jobs:
           grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql
           grep -Fq 'affiliate_growth_opportunities' migrations/0049_ekodi_mall_active_sales_ai.sql
           grep -Fq 'affiliate_product_performance_daily' migrations/0049_ekodi_mall_active_sales_ai.sql
+          grep -Fq "'tenant','ekodibiz','marketing','auto','active'" migrations/0050_ekodibiz_marketing_internal_entitlement.sql
           grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
-          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql; then
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql; then
             echo 'Plain provider token columns are forbidden.'
             exit 1
           fi
