@@ -162,19 +162,20 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
     read('.github/workflows/release-messenger-investment-functional.yml'),
     read('scripts/apply-d1-migrations-with-retry.sh')
   ]);
-  assert.match(workflow,/name: Release EKODI Conversation Foundation/);
-  assert.match(workflow,/workspace-staging:/);
-  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
-  assert.match(workflow,/production-workspace:/);
-  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
-  assert.match(workflow,/production-ui:\n\s+needs: production-control/);
-  assert.match(workflow,/ekodi-workspace-staging/);
-  assert.match(workflow,/ekodi-conversation-control-staging/);
-  assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
-  assert.doesNotMatch(workflow,/triggers deploy --config wrangler\.workspace-platform\.toml/);
+  const normalized=workflow.replace(/\r\n/g,'\n');
+  assert.match(normalized,/name: Release EKODI Conversation Foundation/);
+  assert.match(normalized,/workspace-staging:/);
+  assert.match(normalized,/control-staging:\n\s+needs: workspace-staging/);
+  assert.match(normalized,/production-workspace:/);
+  assert.match(normalized,/production-control:\n\s+needs: production-workspace/);
+  assert.match(normalized,/ekodi-workspace-staging/);
+  assert.match(normalized,/ekodi-conversation-control-staging/);
+  assert.match(normalized,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);
+  assert.doesNotMatch(normalized,/triggers deploy --config wrangler\.workspace-platform\.toml/);
   assert.match(helper,/d1 migrations apply/);
   assert.match(helper,/UNIQUE constraint failed: d1_migrations\\\.name|d1_migrations\.name/);
-  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
-  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
-  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.match(normalized,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
+  assert.match(normalized,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
+  assert.doesNotMatch(normalized,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+  assert.match(normalized,/Shared Messenger\/Invest UI is not owned here/);
 });

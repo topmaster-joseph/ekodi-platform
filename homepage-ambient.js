@@ -120,6 +120,11 @@
     document.head.appendChild(script);
   }
 
+  function installEkodian() {
+    if (window.EKODIAN || document.querySelector('script[data-ekodian-runtime]')) return;
+    const script=document.createElement('script');script.src='/character-system.js';script.defer=true;script.dataset.ekodianRuntime='v2';script.dataset.ekodiService='ekodi';script.dataset.ekodiSurface='public';document.head.appendChild(script);
+  }
+
   function installPresentationStyle() {
     if (document.querySelector('#ekodi-homepage-presentation-style')) return;
     const style = document.createElement('style');
@@ -462,6 +467,7 @@
 
   async function start() {
     installMessageUI();
+    installEkodian();
     installPresentationStyle();
 
     const locale = getLocale();

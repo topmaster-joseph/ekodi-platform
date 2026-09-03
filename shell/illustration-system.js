@@ -74,9 +74,10 @@
   }
   function enhanceMessageUI(){document.querySelectorAll('.ekodi-message-ui__visual').forEach(v=>{if(v.dataset.ekodiIllustrationEnhanced)return;v.dataset.ekodiIllustrationEnhanced='true';v.innerHTML=sceneSvg(sceneFor());});}
   function observe(){const observer=new MutationObserver(()=>{upgrade();enhanceMessageUI();});observer.observe(document.documentElement,{childList:true,subtree:true});}
+  function installEkodian(){if(window.EKODIAN||document.querySelector('script[data-ekodian-runtime]'))return;const script=document.createElement('script');const base=document.currentScript?.src||'https://shell.ekodi.kr/illustration-system.js';script.src=new URL('/character-system.js',base).toString();script.defer=true;script.dataset.ekodianRuntime='v2';script.dataset.ekodiService=serviceId();script.dataset.ekodiSurface=document.documentElement.dataset.ekodiUserSurface||'public';document.head.appendChild(script);}
 
   window.EKODIIllustration=Object.freeze({version:1,scenes:{...SERVICE_SCENES},sceneFor,render,create,upgrade});
   installStyles();
-  const boot=()=>{document.documentElement.dataset.ekodiIllustrationSystem='v1';upgrade();enhanceMessageUI();observe();};
+  const boot=()=>{document.documentElement.dataset.ekodiIllustrationSystem='v1';upgrade();enhanceMessageUI();installEkodian();observe();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
