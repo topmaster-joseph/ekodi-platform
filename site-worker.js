@@ -1,4 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -394,6 +395,17 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+      }
+      if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
+      if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (url.pathname === '/mall/admin' || url.pathname.startsWith('/mall/admin/')) {
+        const next = new URL(request.url);
+        next.pathname = '/ekodibiz/mall/admin' + url.pathname.slice('/mall/admin'.length);
+        return Response.redirect(next.toString(), 308);
+      }
+      if (isWorkspaceAdminPath(url.pathname)) {
+        if (url.pathname.startsWith('/org/')) { const next=new URL(request.url); next.pathname=url.pathname.slice(4); return Response.redirect(next.toString(),308); }
+        return workspaceAdminPage();
       }
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);

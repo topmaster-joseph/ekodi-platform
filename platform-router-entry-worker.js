@@ -23,7 +23,7 @@ const PUBLIC_WORKSPACE_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-
 const EKODIBIZ_PUBLIC_ROUTE=/^\/org\/ekodibiz\/?$/i;
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css']);
-const WORKSPACE_ADMIN_RETURN_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/(?:admin(?:\/[a-z0-9-]+)?|[a-z0-9-]+\/admin(?:\/[a-z0-9-]+)?)\/?$/;
+const WORKSPACE_ADMIN_RETURN_ROUTE=/^\/(?:personal\/|org\/|group\/|project\/)?[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/(?:admin(?:\/[a-z0-9-]+)?|[a-z0-9-]+\/admin(?:\/[a-z0-9-]+)?)\/?$/;
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
 
