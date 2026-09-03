@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -281,7 +281,8 @@
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
-    "try.ekodi.kr"
+    "try.ekodi.kr",
+    "invest.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",

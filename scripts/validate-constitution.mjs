@@ -11,8 +11,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-
-if (constitution.version !== '1.4.0') fail('constitution version must remain 1.4.0 with approved Secure Projection amendment');
+if (constitution.version !== '1.4.1') fail('constitution version must remain 1.4.1 with approved Secure Projection, Invest common-service, public-namespace and verification-first evolution amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -57,6 +56,7 @@ if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !sys
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
+if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
 
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(['{public_namespace}'])) {
   fail('public workspace namespace grammar must be one globally unique {public_namespace}');

@@ -1,4 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { proxyPublicWorkspace, resolveLegacyWorkspaceRedirect, resolvePublicWorkspacePath } from './workspace-public-proxy.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
@@ -412,6 +413,11 @@ export default {
         return secured;
       }
       if (isCanonicalMallPath(url.pathname)) return proxyMallService(request);
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
+        const page = ekodiBizInvestBusinessPage(request);
+        const secured = withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
+        return injectEkodiShell(secured, 'biz', 'public');
+      }
       const legacyWorkspacePath = await resolveLegacyWorkspaceRedirect(url.pathname);
       if (legacyWorkspacePath) {
         const target = new URL(legacyWorkspacePath, 'https://ekodi.kr');
