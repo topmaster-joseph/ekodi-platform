@@ -12,8 +12,6 @@ META_GRAPH_VERSION = "v25.0"
 MAX_DAILY_AD_BUDGET_KRW = "100000"
 MAX_TOTAL_AD_BUDGET_KRW = "1000000"
 
-[triggers]
-crons = ["5 * * * *"]
 
 [[d1_databases]]
 binding = "DB"

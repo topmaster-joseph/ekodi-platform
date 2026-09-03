@@ -1,4 +1,6 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
+import { runMallPromotionAutomation } from './mall-promotion-automation.js';
+import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
@@ -601,6 +603,13 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
 }
 
 export class MarketingGrowthPublisher extends WorkerEntrypoint {
+  async runGrowthCycle(input = {}) {
+    const reason = clean(input?.reason || 'shared-publishing-cron',80);
+    const intelligence = await runMallSalesIntelligence(this.env,{reason});
+    const promotion = await runMallPromotionAutomation(this.env,{reason});
+    return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,promotion};
+  }
+
   async publishFromVault(input = {}) {
     const env = this.env;
     if (!(await schemaReady(env))) throw Object.assign(new Error('SCHEMA_NOT_READY'), { code:'SCHEMA_NOT_READY' });

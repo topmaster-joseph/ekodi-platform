@@ -17,7 +17,7 @@ test('publication queue is first-class for person tenant and store subjects', as
 
 test('worker exposes real scheduled publishing lifecycle and never persists provider tokens', async () => {
   const worker = await read('marketing-publishing-worker.js');
-  assert.match(worker, /scheduled\(_event, env, ctx\)/);
+  assert.match(worker, /scheduled\(event, env, ctx\)/);
   assert.match(worker, /runScheduler/);
   assert.match(worker, /status='publishing'/);
   assert.match(worker, /status='published'/);
@@ -85,4 +85,7 @@ test('central publisher reuses OAuth vault over private service binding and supp
   assert.match(wrangler, /binding = "MARKETING_GROWTH"/);
   assert.match(wrangler, /service = "ekodi-marketing-growth"/);
   assert.match(wrangler, /entrypoint = "MarketingGrowthPublisher"/);
+  assert.match(publisher, /runGrowthCycle/);
+  assert.match(publisher, /getUTCMinutes\(\) === 5/);
+  assert.match(growth, /async runGrowthCycle/);
 });

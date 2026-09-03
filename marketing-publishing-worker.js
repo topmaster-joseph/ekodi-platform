@@ -494,8 +494,11 @@ export default {
     if (jobMatch && request.method === 'POST') return mutateJob(request,env,identity,subject,Number(jobMatch[1]),jobMatch[2]);
     return json(request,env,{error:'NOT_FOUND'},404);
   },
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runScheduler(env));
+  async scheduled(event, env, ctx) {
+    const tasks = [runScheduler(env)];
+    const scheduledAt = new Date(Number(event?.scheduledTime || Date.now()));
+    if (scheduledAt.getUTCMinutes() === 5 && env.MARKETING_GROWTH?.runGrowthCycle) tasks.push(env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'}));
+    ctx.waitUntil(Promise.allSettled(tasks));
   },
 };
 
