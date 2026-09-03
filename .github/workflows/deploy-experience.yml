@@ -1,0 +1,157 @@
+﻿name: Deploy EKODI Experience
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &experience_paths
+      - 'experience/**'
+      - 'experience-catalog.js'
+      - 'experience-worker.js'
+      - 'secure-projection.js'
+      - 'wrangler.experience*.toml'
+      - 'deploy/manifests/experience.worker.json'
+      - 'test/experience-platform.test.mjs'
+      - 'platform-boundaries.json'
+      - 'CONSTITUTION.md'
+      - 'governance/constitution/**'
+      - 'governance/amendments/*experience*.json'
+      - '.github/workflows/deploy-experience.yml'
+  push:
+    branches: [main]
+    paths: *experience_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-experience-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Experience boundary and Secure Projection
+        run: |
+          set -euo pipefail
+          node --check experience-worker.js
+          node --check experience-catalog.js
+          node --check experience/app.js
+          node --test test/experience-platform.test.mjs
+          npm run validate:constitution
+          npm run validate:boundaries
+          npm run validate:security
+          npm run validate:deployments
+          grep -Fq 'try.ekodi.kr' wrangler.experience.toml
+          grep -Fq 'ekodi-experience-staging' wrangler.experience.staging.toml
+
+  deploy-staging:
+    environment: development
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-experience-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Development boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Deploy isolated Experience staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.experience.staging.toml
+      - name: Verify Experience staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_ready=0
+          remote_protected=0
+          for attempt in $(seq 1 12); do
+            access_code=$(curl -sS -D /tmp/experience-access.headers -o /tmp/experience-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$access_code" == '200' ]]; then remote_ready=1; break; fi
+            if [[ "$access_code" == '302' ]] && grep -iq 'cloudflare-access' /tmp/experience-access.headers; then remote_protected=1; break; fi
+            sleep 2
+          done
+          if [[ "$remote_ready" != '1' && "$remote_protected" != '1' ]]; then
+            echo "Staging deployment did not become reachable or Access-protected. Last code=$access_code" >&2
+            cat /tmp/experience-access.headers || true
+            exit 1
+          fi
+
+          npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.experience.staging.toml --local --port 18794 >/tmp/experience-local.log 2>&1 &
+          runtime_pid=$!
+          cleanup(){ kill "$runtime_pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 30); do
+            curl -sSf --max-time 5 'http://127.0.0.1:18794/health' >/dev/null 2>&1 && break
+            kill -0 "$runtime_pid" 2>/dev/null || { cat /tmp/experience-local.log; exit 1; }
+            sleep 2
+          done
+          verify_base='http://127.0.0.1:18794'
+          root_code=$(curl -sS -D /tmp/experience-root.headers -o /tmp/experience-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
+          health_code=$(curl -sS -o /tmp/experience-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
+          catalog_code=$(curl -sS -o /tmp/experience-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/catalog" || true)
+          admin_code=$(curl -sS --max-redirs 0 -D /tmp/experience-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/admin" || true)
+          [[ "$root_code" == '200' ]]
+          [[ "$health_code" == '200' ]]
+          [[ "$catalog_code" == '200' ]]
+          [[ "$admin_code" =~ ^30[1278]$ ]]
+          grep -Fq '사용자모드' /tmp/experience-root.html
+          grep -Fq '개발자모드' /tmp/experience-root.html
+          grep -Fq 'synthetic-only' /tmp/experience-health.json
+          grep -Fq 'productionWrites' /tmp/experience-catalog.json
+          grep -Fiq 'x-ekodi-shell: v2' /tmp/experience-root.headers
+          grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/experience-admin.headers
+          if [[ "$remote_protected" == '1' ]]; then echo 'Development staging is Cloudflare Access-protected; exact Worker contract verified locally.'; else echo 'Development staging is reachable; exact Worker contract verified locally.'; fi
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Guarded Experience production release
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/experience.worker.json
+      - name: Deep verify Experience production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -L -sS -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://try.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://try.ekodi.kr/health' || true)
+            catalog_code=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://try.ekodi.kr/api/catalog' || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://try.ekodi.kr/admin' || true)
+            if [[ "$root_code" == '200' ]] && [[ "$health_code" == '200' ]] && [[ "$catalog_code" == '200' ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
+              && grep -Fq '사용자모드' /tmp/root.html \
+              && grep -Fq '개발자모드' /tmp/root.html \
+              && grep -Fq 'synthetic-only' /tmp/health.json \
+              && grep -Fq 'experience_public' /tmp/health.json \
+              && grep -Fq 'productionWrites' /tmp/catalog.json \
+              && grep -Fiq 'x-ekodi-shell: v2' /tmp/root.headers \
+              && grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/admin.headers; then
+              echo 'EKODI Experience production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
