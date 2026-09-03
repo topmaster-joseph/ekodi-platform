@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -16,7 +16,8 @@
     "isolated-parallel-development",
     "verification-first-evolution",
     "security-native-intelligence",
-    "evidence-linked-recommendations"
+    "evidence-linked-recommendations",
+    "secure-projection-minimum-disclosure"
   ],
   "systemBoundaries": {
     "production": [
@@ -167,7 +168,20 @@
     ],
     "heavyWorkUsesQueue": true,
     "publicCachePreferred": true,
-    "privateAndAdminCacheRestricted": true
+    "privateAndAdminCacheRestricted": true,
+    "secureProjection": {
+      "enabledByDefault": true,
+      "model": "purpose-bound-minimum-disclosure",
+      "browserHiddenFieldsForbidden": true,
+      "secretsNeverProjected": true,
+      "sourceTopologyNotProjectedToBrowserOrExternalOperationalAi": true,
+      "adminDefaultProfile": "admin_safe",
+      "userSelfProfile": "user_self",
+      "workspaceMemberProfile": "workspace_member",
+      "experienceProfile": "experience_public",
+      "externalAiDefaultProfile": "ai_minimum",
+      "viewExportDownloadApiRawDataSeparated": true
+    }
   },
   "parallelDevelopmentPolicy": {
     "appliesTo": [
@@ -255,7 +269,8 @@
     "user.ekodi.kr": "https://ekodi.kr"
   },
   "registeredCommonServiceBoundaries": [
-    "journal.ekodi.kr"
+    "journal.ekodi.kr",
+    "try.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
@@ -306,7 +321,8 @@
       "automatic_isolation",
       "rollback",
       "backup",
-      "disaster_recovery"
+      "disaster_recovery",
+      "secure_projection"
     ]
   }
 }

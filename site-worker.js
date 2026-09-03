@@ -111,6 +111,8 @@ const ADMIN_ASSETS = new Set([
   '/mission-control-admin.js',
   '/work-admin.css',
   '/work-admin.js',
+  '/communication-admin.css',
+  '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
@@ -397,6 +399,17 @@ export default {
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
     if (host === PUBLIC_HOST && url.pathname.startsWith(PUBLIC_CHARACTER_PREFIX)) return proxyPublicCharacter(request,env);
+
+    if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      return response;
+    }
+
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {
@@ -434,8 +447,8 @@ export default {
     }
 
     if (ADMIN_HOSTS.has(host)) {
-      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_CHARACTER_PREFIX)) return proxyAdminStorage(request,env);
+      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
       if (url.pathname === '/auth/start') {

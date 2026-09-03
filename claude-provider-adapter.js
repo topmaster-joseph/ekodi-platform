@@ -1,3 +1,5 @@
+import { sanitizeProjectionText } from './secure-projection.js';
+
 const CLAUDE_MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 const MAX_MESSAGE_CHARS = 4_000;
@@ -27,7 +29,7 @@ export function createClaudePersonalProvider(options = {}) {
     available,
     async invoke({ message = '' } = {}) {
       if (!available) throw new Error('CLAUDE_PERSONAL_PROVIDER_NOT_CONFIGURED');
-      const input = text(message);
+      const input = sanitizeProjectionText(text(message), { strict: true, max: MAX_MESSAGE_CHARS });
       if (!input) throw new Error('CLAUDE_PERSONAL_EMPTY_INPUT');
       const response = await fetchImpl(CLAUDE_MESSAGES_URL, {
         method:'POST',

@@ -20,6 +20,7 @@ export default {
     if (request.method === 'GET' && path === '/health') {
       return json({ ok: true, service: 'ekodi-marketing-domain-api', version: 3, authHandoff: 'httpOnly-cookie' });
     }
+    if (path === '/admin' || path === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-api.ekodi.kr', 307);
     if (path.startsWith('/api/marketing/handoff')) {
       try {
         const response = await handleMarketingAuthHandoffRequest(request, env);
