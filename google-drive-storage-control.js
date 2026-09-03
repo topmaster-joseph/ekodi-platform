@@ -9,6 +9,7 @@ const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const CHEONGGYE_SPREADSHEET_ID = '1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo';
 const CHEONGGYE_SHEET_NAME = '웹관리';
 const CHEONGGYE_SCOPE = 'cheonggye-merchant-association';
+const CHEONGGYE_CONNECTION_CACHE_KEY = 'control/cheonggye/storage-connection.json';
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPES = [
   'openid', 'email', 'profile',
@@ -138,8 +139,23 @@ async function sheetsFetch(access, path, init = {}) {
   return data;
 }
 function sheetRange(range) { return encodeURIComponent(`'${CHEONGGYE_SHEET_NAME}'!${range}`); }
+async function readCheonggyeConnectionCache(env) {
+  if (!env.R2_BUCKET) return null;
+  try { const object = await env.R2_BUCKET.get(CHEONGGYE_CONNECTION_CACHE_KEY); return object ? await object.json() : null; }
+  catch (error) { console.error('Cheonggye connection cache read failed', error); return null; }
+}
+async function writeCheonggyeConnectionCache(env, row) {
+  if (!env.R2_BUCKET || !row?.credential_ciphertext || !row?.credential_iv) return;
+  const payload = { id:row.id || '', role:'primary', status:row.status || 'ready', credential_ciphertext:row.credential_ciphertext, credential_iv:row.credential_iv, cachedAt:new Date().toISOString() };
+  await env.R2_BUCKET.put(CHEONGGYE_CONNECTION_CACHE_KEY, JSON.stringify(payload), { httpMetadata:{ contentType:'application/json' } });
+}
 async function primaryStorageConnection(env) {
-  return env.DB.prepare(`SELECT * FROM storage_connections WHERE role='primary' AND status IN ('ready','connected') ORDER BY updated_at DESC LIMIT 1`).first();
+  const cached = await readCheonggyeConnectionCache(env);
+  if (cached?.credential_ciphertext && cached?.credential_iv) return cached;
+  if (!env.DB) return null;
+  const row = await env.DB.prepare(`SELECT * FROM storage_connections WHERE role='primary' AND status IN ('ready','connected') ORDER BY updated_at DESC LIMIT 1`).first();
+  if (row) await writeCheonggyeConnectionCache(env,row).catch(error => console.error('Cheonggye connection cache warm failed',error));
+  return row;
 }
 async function cheonggyeAccess(env) {
   const row = await primaryStorageConnection(env);
@@ -159,8 +175,17 @@ function normalizeMember(body = {}) {
   return { joinedAt:String(body.joinedAt||'').trim(), category:String(body.category||'').trim(), store:String(body.store||'').trim(), name:String(body.name||'').trim(), contact:String(body.contact||'').trim() };
 }
 async function cheonggyeAudit(env, session, action, memberNo, detail = '') {
-  await env.DB.prepare(`INSERT INTO cheonggye_member_audit(action,member_no,admin_email,detail,created_at) VALUES(?,?,?,?,?)`)
-    .bind(action,memberNo||null,String(session?.email||''),String(detail).slice(0,500),new Date().toISOString()).run();
+  const createdAt = new Date().toISOString();
+  const event = { scope:CHEONGGYE_SCOPE, action, memberNo:memberNo||null, adminEmail:String(session?.email||''), detail:String(detail).slice(0,500), createdAt };
+  if (env.R2_BUCKET) {
+    const day = createdAt.slice(0,10).replaceAll('-','/');
+    const key = `audit/cheonggye-members/${day}/${createdAt.replaceAll(':','-')}-${crypto.randomUUID()}.json`;
+    try { await env.R2_BUCKET.put(key, JSON.stringify(event), { httpMetadata:{ contentType:'application/json' } }); } catch(error) { console.error('Cheonggye R2 audit failed',error); }
+  }
+  if (env.DB) {
+    try { await env.DB.prepare(`INSERT INTO cheonggye_member_audit(action,member_no,admin_email,detail,created_at) VALUES(?,?,?,?,?)`).bind(action,memberNo||null,event.adminEmail,event.detail,createdAt).run(); }
+    catch(error) { console.error('Cheonggye D1 audit unavailable; R2 audit retained',error); }
+  }
 }
 async function cheonggyeList(env) { const { values } = await cheonggyeValues(env); return parseCheonggye(values); }
 async function cheonggyeAppend(env, member) {
@@ -260,8 +285,11 @@ async function bootstrap(env, row) {
 export async function handleGoogleDriveStorageControl(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(BASE)) return null;
-  if (!env.DB) return json({error:'Storage registry database unavailable',code:'STORAGE_DB_UNAVAILABLE'},503);
-  await ensureSchema(env.DB);
+  const isCheonggyeRoute = url.pathname.startsWith(`${BASE}/cheonggye-members`);
+  if (!isCheonggyeRoute) {
+    if (!env.DB) return json({error:'Storage registry database unavailable',code:'STORAGE_DB_UNAVAILABLE'},503);
+    await ensureSchema(env.DB);
+  }
 
   if (url.pathname === `${BASE}/callback` && request.method === 'GET') {
     if (!ready(env)) return html('Google Drive OAuth 환경설정이 아직 준비되지 않았습니다.');
@@ -284,6 +312,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
       if (payload.role === 'primary') await env.DB.prepare(`UPDATE storage_connections SET status='disabled',updated_at=? WHERE role='primary' AND status!='disabled'`).bind(now).run();
       await env.DB.prepare(`INSERT INTO storage_connections(id,provider,role,account_email,account_domain,display_name,status,credential_ciphertext,credential_iv,scopes,created_by,created_at,updated_at,last_verified_at) VALUES(?,'google_drive',?,?,?,?, 'connected',?,?,?,?,?,?,?)`)
         .bind(id,payload.role,email,domain,String(profile.user?.displayName || ''),encrypted.ciphertext,encrypted.iv,SCOPES.join(' '),payload.adminEmail,now,now,now).run();
+      if (payload.role === 'primary') await writeCheonggyeConnectionCache(env,{id,status:'connected',credential_ciphertext:encrypted.ciphertext,credential_iv:encrypted.iv});
       return html(`${email} 계정이 ${payload.role === 'primary' ? 'EKODI 기본 저장소' : '보조 저장소'}로 연결되었습니다. 이제 사용할 Drive를 선택하고 EKODI 폴더를 확인할 수 있습니다.`,true);
     } catch (error) { console.error('Google Drive OAuth callback failed',error); return html('Google Drive 계정 연결 중 오류가 발생했습니다.'); }
   }
@@ -355,6 +384,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
   if (disconnectMatch && request.method === 'DELETE') {
     const row=await rowById(env,decodeURIComponent(disconnectMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
     await env.DB.prepare(`UPDATE storage_connections SET status='disabled',credential_ciphertext='',credential_iv='',updated_at=? WHERE id=?`).bind(new Date().toISOString(),row.id).run();
+    if (row.role === 'primary' && env.R2_BUCKET) await env.R2_BUCKET.delete(CHEONGGYE_CONNECTION_CACHE_KEY);
     return json({ok:true},200,auth.response.headers);
   }
   return json({error:'Google Drive Storage endpoint not found'},404,auth.response.headers);
