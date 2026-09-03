@@ -400,6 +400,7 @@ export class RevenueStore extends DurableObject {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=organization&source=biz.ekodi.kr', 307);
     if (url.pathname.startsWith('/api/')) return handleApi(request, url, env, ctx);
     if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'method_not_allowed' }, 405);
     if (!env.ASSETS) return new Response('EKODIBIZ assets unavailable', { status: 503, headers: securityHeaders() });

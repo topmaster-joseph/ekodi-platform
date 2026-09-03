@@ -64,6 +64,7 @@ export default {
         },
       });
     }
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=books&source=author.ekodi.kr', 307);
     if (url.pathname === '/books' || url.pathname === '/books/') return Response.redirect('https://books.ekodi.kr/', 307);
     if (url.pathname === '/my' || url.pathname === '/my/') return Response.redirect('https://my.ekodi.kr/', 307);
     if (url.pathname === '/community' || url.pathname === '/community/') return Response.redirect('https://community.ekodi.kr/', 307);

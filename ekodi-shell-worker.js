@@ -81,6 +81,7 @@ export default {
       return service?json(service):json({error:'service_not_found'},404,'no-store');
     }
     if(url.pathname==='/shell.js')return bundledShell(request,env);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?source=shell.ekodi.kr',307);
     if(url.pathname==='/')return Response.redirect('https://my.ekodi.kr/',302);
     return withHeaders(await env.ASSETS.fetch(request));
   }

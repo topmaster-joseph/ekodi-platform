@@ -525,6 +525,7 @@ export default {
     const url = new URL(request.url);
     const { allowed, headers } = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:allowed ? 204 : 403,headers});
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-connect-api.ekodi.kr',307);
     if (!allowed) return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
     if (url.pathname === '/health' && request.method === 'GET') {
       const ready = await schemaReady(env);
