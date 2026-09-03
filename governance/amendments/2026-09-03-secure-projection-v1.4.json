@@ -1,0 +1,37 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-SECURE-PROJECTION-V1.4",
+  "date": "2026-09-03",
+  "class": "C3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit super-administrator instruction to build, deploy and operate EKODI Secure Projection after approving purpose-bound minimum-disclosure for users, administrators, experience surfaces and AI",
+  "constitutionVersion": "1.4.0",
+  "summary": "Make purpose-bound minimum disclosure a shared security boundary. Raw secrets, source/topology details and unnecessary personal data are removed server-side before browser or external operational-AI disclosure.",
+  "affectedAreas": [
+    "security",
+    "core-api",
+    "admin",
+    "user-surfaces",
+    "experience",
+    "ai-gateway",
+    "provider-adapters",
+    "ci"
+  ],
+  "migrationPlan": [
+    "add the projection runtime as a shared module without changing canonical storage",
+    "apply safe projection first to protected Core API views and outbound operational-AI boundaries",
+    "keep canonical data and local audit records unchanged inside EKODI",
+    "expand adoption service-by-service only after contract and smoke verification"
+  ],
+  "stagedRollout": [
+    "unit-and-static-validation",
+    "isolated-task-branch",
+    "pull-request-ci",
+    "guarded-merge",
+    "existing-service-release-owner",
+    "production-smoke"
+  ],
+  "rollbackPlan": "revert the secure-projection imports and v1.4 constitutional amendment through the guarded pipeline; canonical data is unchanged so no data rollback is required",
+  "rollbackProof": "the change is projection-only and additive to canonical storage; local audit/persistence continues to use original EKODI identifiers while only outbound/display payloads are transformed",
+  "authority": "ekodi_platform_super_administrator"
+}

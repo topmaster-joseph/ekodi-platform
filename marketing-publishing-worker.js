@@ -426,6 +426,7 @@ export default {
     const url = new URL(request.url);
     const corsInfo = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-publish-api.ekodi.kr',307);
     if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:await schemaReady(env),scheduler:true,personalBrand:true,mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
     if (!(await schemaReady(env))) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
 

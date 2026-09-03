@@ -28,6 +28,7 @@ function profileEnv(env){
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=workspace-api.ekodi.kr',307);
     if(url.pathname==='/v1/profiles'||url.pathname.startsWith('/v1/profiles/')){
       const response=await handleProfileEvidenceApi(request,profileEnv(env));
       if(response)return response;
