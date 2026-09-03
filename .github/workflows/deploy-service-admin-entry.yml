@@ -66,21 +66,25 @@ jobs:
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
       - name: Deploy isolated staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.service-admin-entry.staging.toml
-      - name: Verify protected or directly reachable staging edge
+      - name: Verify deployed staging version and bundled runtime
         shell: bash
         run: |
           set -euo pipefail
-          code=$(curl -sS -D /tmp/admin-entry-h -o /tmp/admin-entry-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/__health" || true)
-          if [ "$code" = '200' ] && grep -Fq '"service":"ekodi-service-admin-entry"' /tmp/admin-entry-body; then
-            echo 'Service Admin Entry staging verified directly.'
-            exit 0
-          fi
-          if [ "$code" = '302' ] && grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/' /tmp/admin-entry-h; then
-            echo 'Service Admin Entry staging is isolated behind Cloudflare Access.'
-            exit 0
-          fi
-          cat /tmp/admin-entry-h || true
-          cat /tmp/admin-entry-body || true
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.service-admin-entry.staging.toml --json > /tmp/admin-entry-staging-deployments.json
+          grep -Eq '[0-9a-f]{8}-[0-9a-f-]{27,}' /tmp/admin-entry-staging-deployments.json
+          npx --yes wrangler@${WRANGLER_VERSION} dev --local --config wrangler.service-admin-entry.staging.toml --ip 127.0.0.1 --port 8794 > /tmp/admin-entry-local.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /tmp/admin-entry-body -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8794/__health' || true)
+            if [ "$code" = '200' ] && grep -Fq '"service":"ekodi-service-admin-entry"' /tmp/admin-entry-body; then
+              echo 'Service Admin Entry staging deployment and bundled runtime verified.'
+              exit 0
+            fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/admin-entry-local.log; exit 1; fi
+            sleep 2
+          done
+          cat /tmp/admin-entry-local.log
           exit 1
 
   production:
