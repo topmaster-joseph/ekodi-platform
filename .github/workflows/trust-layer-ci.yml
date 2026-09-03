@@ -1,0 +1,45 @@
+name: Trust Layer CI
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/_shared/trust.ts'
+      - 'supabase/functions/_shared/trust.test.ts'
+      - 'supabase/functions/trust-api/**'
+      - 'supabase/migrations/*trust_layer*.sql'
+      - 'docs/security/TRUST_LAYER.md'
+      - '.github/workflows/trust-layer-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/_shared/trust.ts'
+      - 'supabase/functions/_shared/trust.test.ts'
+      - 'supabase/functions/trust-api/**'
+      - 'supabase/migrations/*trust_layer*.sql'
+      - 'docs/security/TRUST_LAYER.md'
+      - '.github/workflows/trust-layer-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  trust-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Trust Layer core
+        run: deno check supabase/functions/_shared/trust.ts
+      - name: Type-check Trust shadow API
+        run: deno check supabase/functions/trust-api/index.ts
+      - name: Run Trust invariants
+        run: deno test supabase/functions/_shared/trust.test.ts
+      - name: Verify shadow-only cutover guard
+        shell: bash
+        run: |
+          grep -q "'authoritative_source', 'legacy'" supabase/migrations/20260903010000_trust_layer_foundation.sql
+          grep -q "'cutover_allowed', false" supabase/migrations/20260903010000_trust_layer_foundation.sql
+          grep -q 'body?.mode !== "shadow"' supabase/functions/trust-api/index.ts
