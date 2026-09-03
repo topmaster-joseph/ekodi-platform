@@ -124,7 +124,7 @@ jobs:
           test -f mall.html
           test -f mall.css
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
@@ -272,7 +272,7 @@ jobs:
           const urls=new Set([
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
-            'https://ekodi.kr/mall',
+            'https://ekodi.kr/ekodibiz/mall',
             'https://ekodi.kr/admin',
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',

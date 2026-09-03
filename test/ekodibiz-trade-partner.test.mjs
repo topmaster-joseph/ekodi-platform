@@ -7,7 +7,7 @@ test('EKODIBIZ public site stays simple and sends partners to private workspace'
   const html=await read('ekodibiz/index.html');
   assert.ok(html.includes('WHAT WE DO'));
   assert.ok(html.includes('관계자 로그인'));
-  assert.ok(html.includes('https://ekodi.kr/org/ekodibiz/trade'));
+  assert.ok(html.includes('https://ekodi.kr/ekodibiz/trade'));
   assert.ok(!html.includes('id="goalForm"'));
   assert.ok(!html.includes('무엇을 이루고 싶으세요?'));
 });
@@ -19,14 +19,14 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(router.includes("from './workspace-trade-portal.js'"));
   assert.ok(router.includes('isTradePartnerPath(url.pathname)'));
   assert.ok(portal.includes('export function isTradePartnerPath'));
-  assert.ok(portal.includes('/org\\/ekodibiz\\/trade'));
+  assert.ok(portal.includes('/ekodibiz\\/trade'));
   assert.ok(admin.includes('/trade\\/admin'));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js'])assert.ok(wrangler.includes(`"${asset}"`),asset);
 });
 test('trade auth uses EKODIBIZ tenant and canonical apex portal',async()=>{
   const [auth,access]=await Promise.all([read('auth-site/auth.js'),read('supabase/functions/access-api/index.ts')]);
   assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekodi-biz'"));
-  assert.ok(auth.includes("returnTo:'https://ekodi.kr/org/ekodibiz/trade'"));
+  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
   assert.ok(auth.includes('requestable:false'));
   assert.ok(access.includes('trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"]'));
 });
@@ -72,6 +72,6 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(router.includes("env?.EKODIBIZ?.fetch"));
   assert.ok(router.includes("x-ekodi-workspace-gateway','ekodibiz-service-binding"));
   assert.match(wrangler,/binding = "EKODIBIZ"[\s\S]*service = "ekodibiz-revenue-os"/);
-  assert.ok(html.includes('<link rel="canonical" href="https://ekodi.kr/org/ekodibiz">'));
-  const manifest=JSON.parse(manifestText);assert.ok(manifest.worker.requests.some(x=>x.url==='https://ekodi.kr/org/ekodibiz'));
+  assert.ok(html.includes('<link rel="canonical" href="https://ekodi.kr/ekodibiz">'));
+  const manifest=JSON.parse(manifestText);assert.ok(manifest.worker.requests.some(x=>x.url==='https://ekodi.kr/ekodibiz'));
 });
