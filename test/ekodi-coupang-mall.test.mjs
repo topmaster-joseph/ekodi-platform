@@ -30,7 +30,7 @@ test('public storefront reads as a normal shopping mall', () => {
   assert.match(html, /SMART SHOPPING/);
   assert.match(html, /오늘 필요한 것/);
   assert.match(html, /오늘의 상품/);
-  assert.match(html, /상황에 맞는 선물 찾기/);
+  assert.match(html, /상품 둘러보기/);
   assert.match(html, /상품 또는 카테고리 검색/);
   assert.match(html, /새 상품을 준비하고 있습니다/);
   assert.doesNotMatch(html, /COUPANG AFFILIATE CURATION/);
