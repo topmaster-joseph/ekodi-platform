@@ -1,13 +1,13 @@
 function tradeAdminClient(){
-  const route=location.pathname.replace(/\/+$/,'').match(/^(?:\/org\/([^/]+)|\/(ekodibiz))\/trade\/admin(?:\/([^/]+))?$/i);
+  const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?$/i);
   if(!route)return;
-  const workspaceUrlSlug=(route[1]||route[2]).toLowerCase();
+  const workspaceUrlSlug=route[1].toLowerCase();
   const workspace=workspaceUrlSlug==='ekodibiz'?'ekodi-biz':workspaceUrlSlug;
-  const section=(route[3]||'overview').toLowerCase();
+  const section=(route[2]||'overview').toLowerCase();
   const API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/workspace-api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-  const base=workspaceUrlSlug==='ekodibiz'?'/ekodibiz/trade/admin':`/org/${workspaceUrlSlug}/trade/admin`;
+  const base=`/${workspaceUrlSlug}/trade/admin`;
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const roleLabel={workspace_admin:'에코디비즈 전체관리자',trade_admin:'무역 전체관리자',trade_manager:'거래 운영관리자',trade_viewer:'조회 관리자'};
@@ -20,7 +20,7 @@ function tradeAdminClient(){
   function setHeader(){
     $('serviceName').textContent='무역거래 관리';
     $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';
-    $('publicLink').href=workspaceUrlSlug==='ekodibiz'?'/ekodibiz/trade':`/org/${workspaceUrlSlug}/trade`;
+    $('publicLink').href=`/${workspaceUrlSlug}/trade`;
     $('publicLink').textContent='관계자 화면';
     const nav=$('adminNav');nav.replaceChildren();
     [['overview','대시보드'],['companies','거래회사'],['access','관리자 · 권한']].forEach(([key,label])=>{

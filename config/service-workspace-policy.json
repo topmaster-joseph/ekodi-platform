@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -10,38 +10,61 @@
     "entitlement": "사용자 또는 Workspace가 특정 Service를 이용할 수 있는 권리"
   },
   "userServiceKinds": [
-    {"id": "shared_user_service", "label": "사용자 공용서비스"},
-    {"id": "dedicated_user_service", "label": "사용자 전용서비스"}
+    {
+      "id": "shared_user_service",
+      "label": "사용자 공용서비스"
+    },
+    {
+      "id": "dedicated_user_service",
+      "label": "사용자 전용서비스"
+    }
   ],
   "visibilityPolicies": [
-    {"id": "guest_visible", "label": "비회원 노출 ON", "guestVisible": true, "existingMemberAccess": true},
-    {"id": "guest_hidden", "label": "비회원 노출 OFF", "guestVisible": false, "existingMemberAccess": true},
-    {"id": "member_forced_off", "label": "회원 이용 강제 OFF", "guestVisible": false, "existingMemberAccess": false}
+    {
+      "id": "guest_visible",
+      "label": "비회원 노출 ON",
+      "guestVisible": true,
+      "existingMemberAccess": true
+    },
+    {
+      "id": "guest_hidden",
+      "label": "비회원 노출 OFF",
+      "guestVisible": false,
+      "existingMemberAccess": true
+    },
+    {
+      "id": "member_forced_off",
+      "label": "회원 이용 강제 OFF",
+      "guestVisible": false,
+      "existingMemberAccess": false
+    }
   ],
   "customerWorkspaceRule": {
     "mustNotAppearInProviderServiceRegistry": true,
     "managedBy": "customer_tenant_directory",
     "preserveCustomerOwnership": true,
-    "examples": ["청계면상인회", "자담치킨 목포대점", "피자마루 목포대점", "요거트퍼플 목포대점"]
+    "examples": [
+      "청계면상인회",
+      "자담치킨 목포대점",
+      "피자마루 목포대점",
+      "요거트퍼플 목포대점"
+    ]
   },
   "publicWorkspaceRouting": {
     "canonicalHost": "ekodi.kr",
     "workspaceIdentityKey": "workspace_id",
     "slugRole": "routing_locator_only",
-    "namespaces": {
-      "personal": "/personal/{slug}",
-      "organization": "/org/{slug}",
-      "group": "/group/{slug}",
-      "project": "/project/{slug}"
-    },
-    "organizationSubtypes": ["business", "church", "school", "nonprofit", "association", "institution"],
     "workspaceSubdomains": "forbidden",
     "legacyRedirects": {
-      "/people/{slug}": "/personal/{slug}",
-      "/biz/{slug}": "/org/{slug}",
-      "space.ekodi.kr": "ekodi.kr",
-      "user.ekodi.kr": "ekodi.kr"
-    }
+      "space.ekodi.kr/{slug}": "ekodi.kr/{slug}",
+      "user.ekodi.kr/{slug}": "ekodi.kr/{slug}"
+    },
+    "canonicalPattern": "/{slug}",
+    "servicePattern": "/{slug}/{service}",
+    "adminPattern": "/{slug}/admin",
+    "serviceAdminPattern": "/{slug}/{service}/admin",
+    "kindEncodedInUrl": false,
+    "reservedRootSlugsManagedBy": "platform_route_registry"
   },
   "subdomainExceptions": {
     "personalHome": "my.ekodi.kr",
@@ -52,7 +75,10 @@
     "commonAndCoreServices": "allowed_only_when_security_operational_protocol_or_service_boundary_is_justified_and_registered"
   },
   "commonServiceUserAccessRule": {
-    "appliesTo": ["platform-core", "shared-service"],
+    "appliesTo": [
+      "platform-core",
+      "shared-service"
+    ],
     "surface": "user-pages",
     "guestExperience": "service-guide-only",
     "memberMinimumTier": "free",
@@ -60,5 +86,7 @@
     "excludeCustomerSites": true
   },
   "identityAuthority": "ekodi",
-  "linkedIdentityProviders": ["google"]
+  "linkedIdentityProviders": [
+    "google"
+  ]
 }
