@@ -4,6 +4,7 @@ import { createOpenAiProvider } from './openai-provider-adapter.js';
 import { CORE_PERMISSION_POLICY, evaluateCorePermission } from './core-permission.js';
 import { CORE_WORKFLOW_POLICY } from './core-workflow.js';
 import { CORE_EVIDENCE_POLICY } from './core-evidence.js';
+import { SECURE_PROJECTION_POLICY, projectValue, projectionProfileForPrincipal, projectionStamp } from './secure-projection.js';
 import {
   CORE_ROLES,
   canonicalCoreRole,
@@ -195,6 +196,21 @@ function centralContracts() {
       defaultVisibility: CORE_EVIDENCE_POLICY.defaultVisibility,
       authorityLevels: CORE_EVIDENCE_POLICY.authorityLevels,
     },
+    projection: {
+      version: SECURE_PROJECTION_POLICY.version,
+      model: SECURE_PROJECTION_POLICY.model,
+      defaultDecision: SECURE_PROJECTION_POLICY.defaultDecision,
+      secrets: SECURE_PROJECTION_POLICY.secrets,
+      sourceAndTopology: SECURE_PROJECTION_POLICY.sourceAndTopology,
+    },
+  };
+}
+
+function projectedCorePayload(resolved, data, { surface = 'workspace', purpose = 'core-api' } = {}) {
+  const profile = projectionProfileForPrincipal(resolved?.principal, { surface });
+  return {
+    ...projectValue(data, { profile, purpose }),
+    projection: projectionStamp(profile, purpose),
   };
 }
 
@@ -287,49 +303,49 @@ export async function handleCoreApi(request, env) {
       delegatedTenant: false,
       reversible,
     });
-    return json(request, env, {
+    return json(request, env, projectedCorePayload(resolved, {
       schemaVersion: 1,
       principal: publicPrincipal(resolved.principal),
       decision,
-    });
+    }, { purpose: 'permission-decision' }));
   }
 
   if (url.pathname === `${CORE_API_PREFIX}/recovery/status`) {
     if (!resolved.admin) return json(request, env, { error: '관리자 권한이 필요합니다.', code: 'CORE_ADMIN_REQUIRED' }, 403);
-    return json(request, env, {
+    return json(request, env, projectedCorePayload(resolved, {
       schemaVersion: 1,
       recovery: await latestRecoveryStatus(env),
-    });
+    }, { purpose: 'admin-recovery-status' }));
   }
 
   if (url.pathname === `${CORE_API_PREFIX}/me`) {
     const organizations = await organizationsForPrincipal(env, resolved);
-    return json(request, env, {
+    return json(request, env, projectedCorePayload(resolved, {
       schemaVersion: 1,
       principal: publicPrincipal(resolved.principal),
       authSource: resolved.source,
       organizations,
-    });
+    }, { surface: 'self', purpose: 'self-profile' }));
   }
 
   if (url.pathname === `${CORE_API_PREFIX}/organizations`) {
     const organizations = await organizationsForPrincipal(env, resolved);
-    return json(request, env, {
+    return json(request, env, projectedCorePayload(resolved, {
       schemaVersion: 1,
       principal: publicPrincipal(resolved.principal),
       organizations,
-    });
+    }, { purpose: 'organization-list' }));
   }
 
   const organizationMatch = url.pathname.match(/^\/api\/core\/v1\/organizations\/([a-z0-9-]+)$/);
   if (organizationMatch) {
     const organization = await organizationForSlug(env, resolved, organizationMatch[1]);
     if (!organization) return json(request, env, { error: '접근 가능한 조직이 아닙니다.', code: 'CORE_ORGANIZATION_FORBIDDEN' }, 403);
-    return json(request, env, {
+    return json(request, env, projectedCorePayload(resolved, {
       schemaVersion: 1,
       principal: publicPrincipal(resolved.principal),
       organization,
-    });
+    }, { purpose: 'organization-detail' }));
   }
 
   return json(request, env, { error: 'Core API endpoint not found', code: 'CORE_NOT_FOUND' }, 404);

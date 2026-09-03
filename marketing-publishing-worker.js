@@ -348,14 +348,61 @@ async function publishInstagram(content, secret) {
   return {id:clean(published.id,240),url:permalink,response:published};
 }
 
-async function executeProvider(env, job, content, channel) {
-  const secret = secretConfig(env, channel.credential_ref);
-  if (channel.provider === 'webhook') return publishWebhook(job,content,channel,secret);
-  if (channel.provider === 'meta' && channel.channel_type === 'facebook_page') return publishFacebook(content,secret);
-  if (channel.provider === 'meta' && channel.channel_type === 'instagram_business') return publishInstagram(content,secret);
-  throw Object.assign(new Error(`${channel.provider}/${channel.channel_type} 자동 게시 어댑터가 아직 활성화되지 않았습니다.`),{code:'PROVIDER_NOT_READY'});
+async function publishOAuthVault(env, content, channel) {
+  const config = safeParse(channel.config_json,{});
+  const connectionId = Number(config.oauthConnectionId || 0);
+  if (!connectionId) throw Object.assign(new Error('OAuth Vault connection is missing.'),{code:'CREDENTIALS_REQUIRED'});
+  if (!env.MARKETING_GROWTH || typeof env.MARKETING_GROWTH.publishFromVault !== 'function') throw Object.assign(new Error('Marketing Growth service binding is missing.'),{code:'SERVICE_BINDING_REQUIRED'});
+  return env.MARKETING_GROWTH.publishFromVault({
+    subject:{type:channel.subject_type,key:channel.subject_key}, connectionId, provider:channel.provider,
+    content:{title:content.title,caption:content.caption,imageUrl:content.asset_url,linkUrl:content.link_url,campaignName:safeParse(content.content_json,{}).campaignName || ''},
+  });
 }
 
+async function googleAccessToken(secret) {
+  const clientId = String(secret.clientId || secret.client_id || '');
+  const clientSecret = String(secret.clientSecret || secret.client_secret || '');
+  const refreshToken = String(secret.refreshToken || secret.refresh_token || '');
+  if (!clientId || !clientSecret || !refreshToken) throw Object.assign(new Error('YouTube OAuth credential is incomplete.'),{code:'INVALID_CREDENTIAL_CONFIG'});
+  const body = new URLSearchParams({client_id:clientId,client_secret:clientSecret,refresh_token:refreshToken,grant_type:'refresh_token'});
+  const response = await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok || !data.access_token) throw Object.assign(new Error(data.error_description || data.error || 'YouTube OAuth refresh failed'),{code:'PROVIDER_ERROR'});
+  return String(data.access_token);
+}
+
+async function publishYouTube(content, secret) {
+  const assetUrl = safeUrl(content.asset_url);
+  if (!assetUrl) throw Object.assign(new Error('YouTube upload requires a public HTTPS video URL.'),{code:'ASSET_REQUIRED'});
+  const accessToken = await googleAccessToken(secret);
+  const asset = await fetch(assetUrl);
+  if (!asset.ok) throw Object.assign(new Error(`YouTube asset fetch failed (${asset.status})`),{code:'PROVIDER_ERROR'});
+  const contentType = asset.headers.get('content-type') || 'video/mp4';
+  const bytes = await asset.arrayBuffer();
+  const title = clean(content.title || 'EKODI',100);
+  const description = [clean(content.caption,4800),safeUrl(content.link_url)].filter(Boolean).join('\n\n');
+  const privacyStatus = ['private','unlisted','public'].includes(String(secret.privacyStatus || '')) ? String(secret.privacyStatus) : 'private';
+  const metadata = {snippet:{title,description,categoryId:String(secret.categoryId || '22')},status:{privacyStatus,selfDeclaredMadeForKids:false}};
+  const begin = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{authorization:`Bearer ${accessToken}`,'content-type':'application/json; charset=UTF-8','x-upload-content-type':contentType,'x-upload-content-length':String(bytes.byteLength)},body:JSON.stringify(metadata)});
+  const beginData = await begin.clone().json().catch(()=>({}));
+  const location = begin.headers.get('location');
+  if (!begin.ok || !location) throw Object.assign(new Error(beginData?.error?.message || `YouTube resumable start failed (${begin.status})`),{code:'PROVIDER_ERROR'});
+  const uploaded = await fetch(location,{method:'PUT',headers:{authorization:`Bearer ${accessToken}`,'content-type':contentType,'content-length':String(bytes.byteLength)},body:bytes});
+  const data = await uploaded.json().catch(()=>({}));
+  if (!uploaded.ok || !data.id) throw Object.assign(new Error(data?.error?.message || `YouTube upload failed (${uploaded.status})`),{code:'PROVIDER_ERROR'});
+  return {id:clean(data.id,240),url:`https://www.youtube.com/watch?v=${encodeURIComponent(data.id)}`,response:{id:data.id,privacyStatus}};
+}
+
+async function executeProvider(env, job, content, channel) {
+  const config = safeParse(channel.config_json,{});
+  if (config.credentialMode === 'oauth-vault' && ['facebook','instagram','threads','youtube'].includes(channel.provider)) return publishOAuthVault(env,content,channel);
+  const secret = secretConfig(env, channel.credential_ref);
+  if (channel.provider === 'webhook') return publishWebhook(job,content,channel,secret);
+  if ((channel.provider === 'meta' || channel.provider === 'facebook') && channel.channel_type === 'facebook_page') return publishFacebook(content,secret);
+  if ((channel.provider === 'meta' || channel.provider === 'instagram') && channel.channel_type === 'instagram_business') return publishInstagram(content,secret);
+  if (channel.provider === 'youtube' && channel.channel_type === 'youtube_channel') return publishYouTube(content,secret);
+  throw Object.assign(new Error(`${channel.provider}/${channel.channel_type} provider adapter is not ready.`),{code:'PROVIDER_NOT_READY'});
+}
 function safeProviderResult(result) {
   return {id:clean(result?.id,240),url:safeUrl(result?.url),ok:true};
 }
@@ -412,7 +459,7 @@ async function processJob(env, row) {
 async function runScheduler(env) {
   if (!(await schemaReady(env))) return {processed:0,schemaReady:false};
   const now = nowIso();
-  const result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.status AS channel_status
+  const result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.config_json,ch.status AS channel_status
     FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
     WHERE j.status IN ('scheduled','queued','retrying') AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
     ORDER BY j.scheduled_at ASC LIMIT 25`).bind(now,now).all();
@@ -426,6 +473,7 @@ export default {
     const url = new URL(request.url);
     const corsInfo = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-publish-api.ekodi.kr',307);
     if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:await schemaReady(env),scheduler:true,personalBrand:true,mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
     if (!(await schemaReady(env))) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
 
@@ -446,8 +494,11 @@ export default {
     if (jobMatch && request.method === 'POST') return mutateJob(request,env,identity,subject,Number(jobMatch[1]),jobMatch[2]);
     return json(request,env,{error:'NOT_FOUND'},404);
   },
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runScheduler(env));
+  async scheduled(event, env, ctx) {
+    const tasks = [runScheduler(env)];
+    const scheduledAt = new Date(Number(event?.scheduledTime || Date.now()));
+    if (scheduledAt.getUTCMinutes() === 5 && env.MARKETING_GROWTH?.runGrowthCycle) tasks.push(env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'}));
+    ctx.waitUntil(Promise.allSettled(tasks));
   },
 };
 

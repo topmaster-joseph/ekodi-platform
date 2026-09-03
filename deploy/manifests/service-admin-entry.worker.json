@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-service-admin-entry",
+    "config": "wrangler.service-admin-entry.toml",
+    "allowFirstDeploy": true,
+    "requests": [
+      {"url":"https://ai.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/","cache-control: no-store","x-ekodi-admin-entry: central-handoff-v1"]},
+      {"url":"https://auth.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/","cache-control: no-store"]},
+      {"url":"https://cloud.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://live.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://live.biz.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://live.church.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://live.lab.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://mail.biz.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://mail.church.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://pay.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://pay.biz.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://trade.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://trade.biz.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://invest.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://messenger.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://tax.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://management.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://marketing-api.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]}
+    ]
+  }
+}

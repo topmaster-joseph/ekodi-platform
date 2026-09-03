@@ -1,3 +1,5 @@
+import { sanitizeProjectionText } from './secure-projection.js';
+
 const GEMINI_GENERATE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
 const MAX_MESSAGE_CHARS = 4_000;
@@ -28,7 +30,7 @@ export function createGeminiPersonalProvider(options = {}) {
     available,
     async invoke({ message = '' } = {}) {
       if (!available) throw new Error('GEMINI_PERSONAL_PROVIDER_NOT_CONFIGURED');
-      const input = text(message);
+      const input = sanitizeProjectionText(text(message), { strict: true, max: MAX_MESSAGE_CHARS });
       if (!input) throw new Error('GEMINI_PERSONAL_EMPTY_INPUT');
       const response = await fetchImpl(`${GEMINI_GENERATE_URL}/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',

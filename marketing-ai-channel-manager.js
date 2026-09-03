@@ -15,7 +15,7 @@
     return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   };
   const stateLabel = value => ({active:'연결됨',expired:'만료',revoked:'해제',error:'오류',paused:'중지',draft:'초안',ready:'승인됨',completed:'완료',failed:'실패',approved:'승인',rejected:'거절'})[String(value || '').toLowerCase()] || String(value || '확인중');
-  const providerLabel = value => ({facebook:'Facebook',instagram:'Instagram',threads:'Threads',facebook_ads:'Meta 광고'})[String(value || '').toLowerCase()] || String(value || '채널');
+  const providerLabel = value => ({facebook:'Facebook',instagram:'Instagram',threads:'Threads',youtube:'YouTube',facebook_ads:'Meta 광고'})[String(value || '').toLowerCase()] || String(value || '채널');
 
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -65,7 +65,7 @@
     return `<div class="growth-list">${connections.map(row => `<article class="growth-row"><div><strong>${esc(row.display_name || providerLabel(row.provider))}</strong><div class="growth-meta"><span>${esc(providerLabel(row.provider))} · ${esc(row.resource_type)}</span><small>${esc(row.external_id)}</small><small>확인 ${esc(dateText(row.last_check_at || row.updated_at))}</small></div>${row.last_error ? `<small>${esc(row.last_error)}</small>` : ''}</div><span class="growth-state ${esc(row.status)}">${esc(stateLabel(row.status))}</span></article>`).join('')}</div>`;
   }
   function channelChecks(connections) {
-    const rows = connections.filter(row => ['facebook','instagram','threads'].includes(row.provider) && row.status === 'active');
+    const rows = connections.filter(row => ['facebook','instagram','threads','youtube'].includes(row.provider) && row.status === 'active');
     if (!rows.length) return '<div class="growth-empty">게시할 계정을 먼저 연결하세요.</div>';
     return `<div class="growth-checks">${rows.map(row => `<label class="growth-check"><input type="checkbox" name="connectionIds" value="${Number(row.id)}" checked><span>${esc(providerLabel(row.provider))} · ${esc(row.display_name)}</span></label>`).join('')}</div>`;
   }
@@ -80,7 +80,7 @@
   }
 
   async function connect(provider,mode='publish') {
-    const path = provider === 'threads' ? '/v1/connect/threads/start' : '/v1/connect/meta/start';
+    const path = provider === 'threads' ? '/v1/connect/threads/start' : provider === 'youtube' ? '/v1/connect/youtube/start' : '/v1/connect/meta/start';
     const data = await request(path,{method:'POST',body:{mode,returnUrl:currentReturnUrl()}});
     if (!data.authorizationUrl) throw new Error('인증 주소를 받지 못했습니다.');
     location.assign(data.authorizationUrl);
@@ -106,12 +106,12 @@
       const [connectionData,campaignData] = await Promise.all([request('/v1/connections'),request('/v1/promotions')]);
       const connections = Array.isArray(connectionData.connections) ? connectionData.connections : [];
       const campaigns = Array.isArray(campaignData.campaigns) ? campaignData.campaigns : [];
-      const activePublish = connections.filter(row => ['facebook','instagram','threads'].includes(row.provider) && row.status === 'active').length;
+      const activePublish = connections.filter(row => ['facebook','instagram','threads','youtube'].includes(row.provider) && row.status === 'active').length;
       const adAccounts = connections.filter(row => row.provider === 'facebook_ads' && row.status === 'active').length;
       const organic = campaigns.filter(row => row.mode === 'organic').length;
       const paid = campaigns.filter(row => row.mode === 'paid').length;
       const platform = connectionData.platform || {};
-      const platformAlert = (!platform.metaConfigured || !platform.threadsConfigured) ? `<div class="growth-platform-alert"><b>최초 1회 플랫폼 설정 필요</b><br>사용자별 인증키 입력은 없앴습니다. 다만 에코디 전체가 사용할 공식 앱 식별정보가 아직 등록되지 않은 서비스는 연결 버튼이 잠깁니다. Meta 앱 설정은 시스템 전체에서 한 번만 완료하면 이후 모든 사용자는 로그인 승인만 합니다.</div>` : '';
+      const platformAlert = (!platform.metaConfigured || !platform.threadsConfigured || !platform.youtubeConfigured) ? `<div class="growth-platform-alert"><b>최초 1회 플랫폼 설정 필요</b><br>사용자별 인증키 입력은 없앴습니다. 다만 에코디 전체가 사용할 공식 앱 식별정보가 아직 등록되지 않은 서비스는 연결 버튼이 잠깁니다. Meta·Google 앱 설정은 시스템 전체에서 한 번만 완료하면 이후 모든 사용자는 공식 계정 로그인과 권한 승인만 합니다.</div>` : '';
 
       view.innerHTML = `<div class="growth-hub" data-growth-hub>
         <section class="growth-hero"><span class="growth-chip">중앙 OAuth · 암호화 Vault · 무료 직접 게시</span><h3>게시 · 홍보 연결센터</h3><p>인증키, Access Token, Page ID를 복사하지 않습니다. 공식 계정으로 로그인하면 에코디가 권한·계정발견·토큰보관·게시·유입추적을 한 흐름으로 처리합니다. Metricool은 필수가 아닙니다.</p></section>
@@ -120,11 +120,12 @@
         <div class="growth-connectors">
           <section class="growth-card"><header><h4>Meta 통합 연결</h4><span class="growth-state ${platform.metaConfigured ? 'active' : 'draft'}">${platform.metaConfigured ? '준비됨' : '앱 설정 필요'}</span></header><p>Facebook 페이지와 연결된 Instagram 비즈니스 계정을 한 번의 Meta 승인으로 자동 검색·연결합니다.</p><button type="button" data-connect="meta" ${platform.metaConfigured ? '' : 'disabled'}>Meta로 계속</button></section>
           <section class="growth-card"><header><h4>Threads 연결</h4><span class="growth-state ${platform.threadsConfigured ? 'active' : 'draft'}">${platform.threadsConfigured ? '준비됨' : '앱 설정 필요'}</span></header><p>Threads 공식 로그인으로 프로필을 연결합니다. 토큰은 암호화 Vault에만 보관됩니다.</p><button type="button" data-connect="threads" ${platform.threadsConfigured ? '' : 'disabled'}>Threads로 계속</button></section>
+          <section class="growth-card"><header><h4>YouTube 연결</h4><span class="growth-state ${platform.youtubeConfigured ? 'active' : 'draft'}">${platform.youtubeConfigured ? '준비됨' : '앱 설정 필요'}</span></header><p>Google 계정으로 로그인해 YouTube 채널을 연결합니다. API 키나 비밀번호는 입력하지 않습니다.</p><button type="button" data-connect="youtube" ${platform.youtubeConfigured ? '' : 'disabled'}>Google로 YouTube 연결</button></section>
           <section class="growth-card"><header><h4>유료 홍보 권한</h4><span class="growth-state ${adAccounts ? 'active' : 'draft'}">${adAccounts ? `${adAccounts} 계정` : '선택 연결'}</span></header><p>Meta 광고계정 권한을 연결합니다. 광고 캠페인은 승인 후에도 PAUSED로만 생성해 예기치 않은 과금을 막습니다.</p><button type="button" data-connect-paid ${platform.metaConfigured ? '' : 'disabled'}>Meta 광고계정 연결</button></section>
         </div>
         <section class="growth-card"><h4>연결된 계정</h4>${connectionRows(connections)}</section>
         <div class="growth-grid">
-          <section class="growth-card"><h4>무료 게시 · 홍보 실행</h4><p>연결 채널을 고르면 UTM을 자동 부착해 실제 게시하고, 성공·실패 URL을 에코디에 기록합니다.</p><form class="growth-form" data-organic-form>${channelChecks(connections)}<div class="growth-form-grid"><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 오늘의 발견"></label><label class="growth-full">게시문<textarea name="caption" required maxlength="12000" placeholder="홍보 문구"></textarea></label><label>유입 링크<input name="targetUrl" type="url" placeholder="https://ekodi.kr/ekodibiz/mall"></label><label>이미지 URL<input name="imageUrl" type="url" placeholder="Instagram 선택 시 필요"></label></div><div class="growth-note">무료 홍보는 광고비 0원입니다. Facebook·Instagram·Threads마다 UTM source를 자동 구분해 유입을 추적합니다.</div><button type="submit" ${activePublish ? '' : 'disabled'}>게시 · 무료 홍보 실행</button><div class="growth-result"></div></form></section>
+          <section class="growth-card"><h4>무료 게시 · 홍보 실행</h4><p>연결 채널을 고르면 UTM을 자동 부착해 실제 게시하고, 성공·실패 URL을 에코디에 기록합니다.</p><form class="growth-form" data-organic-form>${channelChecks(connections)}<div class="growth-form-grid"><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 오늘의 발견"></label><label class="growth-full">게시문<textarea name="caption" required maxlength="12000" placeholder="홍보 문구"></textarea></label><label>유입 링크<input name="targetUrl" type="url" placeholder="https://ekodi.kr/ekodibiz/mall"></label><label>미디어 URL<input name="imageUrl" type="url" placeholder="Instagram은 이미지 · YouTube는 MP4 영상"></label></div><div class="growth-note">무료 홍보는 광고비 0원입니다. Facebook·Instagram·Threads·YouTube마다 UTM source를 자동 구분해 유입을 추적합니다.</div><button type="submit" ${activePublish ? '' : 'disabled'}>게시 · 무료 홍보 실행</button><div class="growth-result"></div></form></section>
           <section class="growth-card"><h4>유료 홍보 초안</h4><p>예산·목표만 먼저 기록합니다. 초안 생성만으로는 1원도 집행되지 않습니다.</p><form class="growth-form" data-paid-form><div class="growth-form-grid"><label class="growth-full">광고계정<select name="adAccountConnectionId" required>${adOptions(connections)}</select></label><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 유입 캠페인"></label><label class="growth-full">목표 URL<input name="targetUrl" required type="url" placeholder="https://ekodi.kr/ekodibiz/mall"></label><label>일 예산<input name="dailyBudgetKrw" required type="number" min="1000" step="1000" value="5000"></label><label>총 예산<input name="totalBudgetKrw" required type="number" min="1000" step="1000" value="30000"></label><label class="growth-full">광고 문안<textarea name="caption" maxlength="12000" placeholder="광고 소재 문안"></textarea></label></div><div class="growth-note">안전장치: 초안 → 명시적 광고비 승인 → Meta에 PAUSED 캠페인 생성. 현재 자동 활성화는 의도적으로 막아두었습니다.</div><button type="submit" ${adAccounts ? '' : 'disabled'}>유료 홍보 초안 만들기</button><div class="growth-result"></div></form></section>
         </div>
         <section class="growth-card"><h4>홍보 활동 내역</h4>${campaignRows(campaigns)}</section>
@@ -132,6 +133,7 @@
 
       view.querySelector('[data-connect="meta"]')?.addEventListener('click',() => connect('meta').catch(error => alert(error.message)));
       view.querySelector('[data-connect="threads"]')?.addEventListener('click',() => connect('threads').catch(error => alert(error.message)));
+      view.querySelector('[data-connect="youtube"]')?.addEventListener('click',() => connect('youtube').catch(error => alert(error.message)));
       view.querySelector('[data-connect-paid]')?.addEventListener('click',() => connect('meta','paid').catch(error => alert(error.message)));
       view.querySelector('[data-organic-form]')?.addEventListener('submit',async event => {
         event.preventDefault();

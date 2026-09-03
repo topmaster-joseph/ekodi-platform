@@ -47,6 +47,7 @@ export default{
     const url=new URL(request.url);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'legacy-operating-space-compatibility',identity:'ekodi-id',workspaceIdentity:'workspace-id',canonicalRouteModel:'/{public_namespace}',legacyRouteModel:['personal','org','group','project','people','biz'],dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
     if(url.pathname==='/auth/start'){
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
       return authRedirect(request,env);

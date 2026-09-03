@@ -1,5 +1,5 @@
 {
-  "version": 40,
+  "version": 41,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -804,6 +804,13 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EVOLUTION INTELLIGENCE", "/api/control/evolution", "플랫폼 진화 제안"],
+        "headerExpect": ["x-content-type-options: nosniff"]
+      },
+      {
+        "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI COMMUNICATION ADMIN", "https://mail.ekodi.kr/admin", "https://live.ekodi.kr/"],
         "headerExpect": ["x-content-type-options: nosniff"]
       }
     ]

@@ -1,9 +1,13 @@
+import { WorkerEntrypoint } from 'cloudflare:workers';
+import { runMallPromotionAutomation } from './mall-promotion-automation.js';
+import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
 const SUBJECT_TYPES = new Set(['person','tenant','store']);
 const META_PROVIDER = 'meta';
 const THREADS_PROVIDER = 'threads';
+const YOUTUBE_PROVIDER = 'youtube';
 
 const nowIso = () => new Date().toISOString();
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
@@ -101,6 +105,7 @@ async function encryptionKey(secret) {
 }
 function providerSecret(env, provider) {
   if (provider === THREADS_PROVIDER) return String(env.THREADS_APP_SECRET || env.META_APP_SECRET || '');
+  if (provider === YOUTUBE_PROVIDER) return String(env.GOOGLE_CLIENT_SECRET || '');
   return String(env.META_APP_SECRET || '');
 }
 async function encryptToken(env, provider, token) {
@@ -151,6 +156,7 @@ async function schemaReady(env) {
 }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
+function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET); }
 
 async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
   const state = randomState();
@@ -196,6 +202,21 @@ async function startThreads(request, env, identity, subject) {
   url.searchParams.set('scope','threads_basic,threads_content_publish,threads_manage_insights,threads_manage_replies');
   return json(request,env,{authorizationUrl:url.href,provider:'threads',mode:'publish'});
 }
+async function startYouTube(request, env, identity, subject) {
+  if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET'},503);
+  const body = await readJson(request) || {};
+  const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.set('client_id',String(env.GOOGLE_CLIENT_ID));
+  url.searchParams.set('redirect_uri',callbackUrl(env,YOUTUBE_PROVIDER));
+  url.searchParams.set('state',state);
+  url.searchParams.set('response_type','code');
+  url.searchParams.set('scope','https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
+  url.searchParams.set('access_type','offline');
+  url.searchParams.set('prompt','consent');
+  url.searchParams.set('include_granted_scopes','true');
+  return json(request,env,{authorizationUrl:url.href,provider:'youtube',mode:'publish'});
+}
 async function fetchJson(url, init = {}) {
   const response = await fetch(url,init);
   const data = await response.json().catch(() => ({}));
@@ -207,7 +228,8 @@ async function fetchJson(url, init = {}) {
 }
 function graphBase(env) { return `https://graph.facebook.com/${clean(env.META_GRAPH_VERSION || 'v25.0',16)}`; }
 async function upsertConnection(env, subject, {provider,resourceType,externalId,displayName,token,expiresAt='',scopes=[],metadata={}}) {
-  const ciphertext = await encryptToken(env,provider === 'threads' ? THREADS_PROVIDER : META_PROVIDER,token);
+  const cryptoProvider = provider === 'threads' ? THREADS_PROVIDER : provider === 'youtube' ? YOUTUBE_PROVIDER : META_PROVIDER;
+  const ciphertext = await encryptToken(env,cryptoProvider,token);
   const now = nowIso();
   await env.DB.prepare(`INSERT INTO marketing_oauth_connections(subject_type,subject_key,provider,resource_type,external_id,display_name,token_ciphertext,token_expires_at,scopes_json,status,metadata_json,last_check_at,last_error,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,'active',?,?, '',?,?)
@@ -323,17 +345,45 @@ async function threadsCallback(request, env) {
   }
 }
 
+async function youtubeCallback(request, env) {
+  const url = new URL(request.url);
+  const state = await consumeOAuthState(env,url.searchParams.get('state') || '',YOUTUBE_PROVIDER);
+  if (!state) return new Response('Invalid or expired OAuth state',{status:400});
+  if (url.searchParams.get('error')) return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)});
+  try {
+    const code = clean(url.searchParams.get('code'),4096);
+    if (!code) throw new Error('AUTHORIZATION_CODE_MISSING');
+    const form = new URLSearchParams({client_id:String(env.GOOGLE_CLIENT_ID),client_secret:String(env.GOOGLE_CLIENT_SECRET),code,redirect_uri:callbackUrl(env,YOUTUBE_PROVIDER),grant_type:'authorization_code'});
+    const tokenData = await fetchJson('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
+    const accessToken = String(tokenData.access_token || '');
+    const refreshToken = String(tokenData.refresh_token || '');
+    if (!accessToken || !refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
+    const channels = await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',{headers:{authorization:`Bearer ${accessToken}`}});
+    const subject = {type:state.subject_type,key:state.subject_key};
+    const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
+    let count = 0;
+    for (const channel of (channels.items || [])) {
+      if (!channel?.id) continue;
+      const display = clean(channel.snippet?.title || 'YouTube',120);
+      const token = safeJson({accessToken,refreshToken,expiresAt});
+      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth'}});
+      if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); count += 1; }
+    }
+    return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
+  } catch (error) { return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(error.message,160)}); }
+}
+
 async function listConnections(request, env, subject) {
   const result = await env.DB.prepare(`SELECT id,provider,resource_type,external_id,display_name,token_expires_at,scopes_json,status,metadata_json,last_check_at,last_error,created_at,updated_at
     FROM marketing_oauth_connections WHERE subject_type=? AND subject_key=? ORDER BY provider,display_name`).bind(subject.type,subject.key).all();
   const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{})}));
-  return json(request,env,{connections,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),credentialMode:'central_oauth_vault'}});
+  return json(request,env,{connections,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env),credentialMode:'central_oauth_vault'}});
 }
 async function connectionWithToken(env, subject, id) {
   const row = await env.DB.prepare(`SELECT id,provider,resource_type,external_id,display_name,token_ciphertext,status,metadata_json
     FROM marketing_oauth_connections WHERE id=? AND subject_type=? AND subject_key=?`).bind(Number(id),subject.type,subject.key).first();
   if (!row || row.status !== 'active') return null;
-  const cryptoProvider = row.provider === 'threads' ? THREADS_PROVIDER : META_PROVIDER;
+  const cryptoProvider = row.provider === 'threads' ? THREADS_PROVIDER : row.provider === 'youtube' ? YOUTUBE_PROVIDER : META_PROVIDER;
   const token = await decryptToken(env,cryptoProvider,row.token_ciphertext);
   return {...row,metadata:safeParse(row.metadata_json,{}),token};
 }
@@ -352,7 +402,7 @@ function trackedUrl(raw, provider, campaign) {
   return url.href;
 }
 async function ensureChannelId(env, subject, connection) {
-  const channelType = connection.provider === 'facebook' ? 'page' : connection.provider === 'instagram' ? 'business' : 'profile';
+  const channelType = connection.provider === 'facebook' ? 'page' : connection.provider === 'instagram' ? 'business' : connection.provider === 'youtube' ? 'channel' : 'profile';
   await upsertPublishChannel(env,subject,{provider:connection.provider,channelType,displayName:connection.display_name,externalId:connection.external_id,connectionId:Number(connection.id)});
   const row = await env.DB.prepare(`SELECT id FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?`)
     .bind(subject.type,subject.key,connection.provider,channelType,connection.external_id).first();
@@ -424,6 +474,37 @@ async function publishThreads(connection, content) {
   }
   return {id:String(published.id || ''),url:permalink,data:published};
 }
+async function youtubeAccessToken(env, connection) {
+  const saved = safeParse(connection.token,{});
+  const refreshToken = String(saved.refreshToken || '');
+  if (!refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
+  const form = new URLSearchParams({client_id:String(env.GOOGLE_CLIENT_ID),client_secret:String(env.GOOGLE_CLIENT_SECRET),refresh_token:refreshToken,grant_type:'refresh_token'});
+  const data = await fetchJson('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
+  if (!data.access_token) throw new Error('YOUTUBE_ACCESS_TOKEN_MISSING');
+  return String(data.access_token);
+}
+async function publishYouTube(env, connection, content) {
+  const assetUrl = safeUrl(content.imageUrl);
+  if (!assetUrl) throw new Error('YOUTUBE_VIDEO_REQUIRED');
+  const accessToken = await youtubeAccessToken(env,connection);
+  const asset = await fetch(assetUrl);
+  if (!asset.ok) throw new Error(`YOUTUBE_ASSET_FETCH_${asset.status}`);
+  const bytes = await asset.arrayBuffer();
+  const contentType = asset.headers.get('content-type') || 'video/mp4';
+  const link = trackedUrl(content.linkUrl,'youtube',content.campaignName);
+  const title = clean(content.title || content.campaignName || 'EKODI',100);
+  const description = [clean(content.caption,4800),link].filter(Boolean).join('\n\n');
+  const metadata = {snippet:{title,description,categoryId:'22'},status:{privacyStatus:'private',selfDeclaredMadeForKids:false}};
+  const begin = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{authorization:`Bearer ${accessToken}`,'content-type':'application/json; charset=UTF-8','x-upload-content-type':contentType,'x-upload-content-length':String(bytes.byteLength)},body:JSON.stringify(metadata)});
+  const beginData = await begin.clone().json().catch(()=>({}));
+  const location = begin.headers.get('location');
+  if (!begin.ok || !location) throw new Error(beginData?.error?.message || `YOUTUBE_UPLOAD_START_${begin.status}`);
+  const uploaded = await fetch(location,{method:'PUT',headers:{authorization:`Bearer ${accessToken}`,'content-type':contentType,'content-length':String(bytes.byteLength)},body:bytes});
+  const data = await uploaded.json().catch(()=>({}));
+  if (!uploaded.ok || !data.id) throw new Error(data?.error?.message || `YOUTUBE_UPLOAD_${uploaded.status}`);
+  return {id:String(data.id),url:`https://www.youtube.com/watch?v=${encodeURIComponent(data.id)}`,data:{id:data.id,privacyStatus:'private'}};
+}
+
 async function executePublish(request, env, identity, subject, body) {
   const ids = [...new Set((Array.isArray(body.connectionIds) ? body.connectionIds : []).map(Number).filter(Number.isInteger))].slice(0,20);
   const content = body.content || {};
@@ -436,14 +517,15 @@ async function executePublish(request, env, identity, subject, body) {
     let channelId = 0;
     try {
       connection = await connectionWithToken(env,subject,id);
-      if (!connection || !['facebook','instagram','threads'].includes(connection.provider)) throw new Error('PUBLISH_CONNECTION_UNAVAILABLE');
+      if (!connection || !['facebook','instagram','threads','youtube'].includes(connection.provider)) throw new Error('PUBLISH_CONNECTION_UNAVAILABLE');
       channelId = await ensureChannelId(env,subject,connection);
       if (!channelId) throw new Error('CHANNEL_LEDGER_UNAVAILABLE');
       let published;
       const payload = {...content,campaignName:body.campaignName || content.campaignName || ''};
       if (connection.provider === 'facebook') published = await publishFacebook(env,connection,payload);
       else if (connection.provider === 'instagram') published = await publishInstagram(env,connection,payload);
-      else published = await publishThreads(connection,payload);
+      else if (connection.provider === 'threads') published = await publishThreads(connection,payload);
+      else published = await publishYouTube(env,connection,payload);
       await insertJob(env,subject,contentId,channelId,'published','',published.id,published.url,published.data);
       results.push({connectionId:id,provider:connection.provider,status:'published',externalPostId:published.id,externalPostUrl:published.url});
     } catch (error) {
@@ -520,18 +602,48 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
   }
 }
 
+export class MarketingGrowthPublisher extends WorkerEntrypoint {
+  async runGrowthCycle(input = {}) {
+    const reason = clean(input?.reason || 'shared-publishing-cron',80);
+    const intelligence = await runMallSalesIntelligence(this.env,{reason});
+    const promotion = await runMallPromotionAutomation(this.env,{reason});
+    return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,promotion};
+  }
+
+  async publishFromVault(input = {}) {
+    const env = this.env;
+    if (!(await schemaReady(env))) throw Object.assign(new Error('SCHEMA_NOT_READY'), { code:'SCHEMA_NOT_READY' });
+    const subject = { type:clean(input?.subject?.type,20), key:clean(input?.subject?.key,160) };
+    const connectionId = Number(input?.connectionId || 0);
+    const provider = clean(input?.provider,40).toLowerCase();
+    if (!subject.type || !subject.key || !Number.isInteger(connectionId) || connectionId <= 0) throw Object.assign(new Error('VAULT_PUBLISH_INPUT_INVALID'), { code:'VAULT_PUBLISH_INPUT_INVALID' });
+    const connection = await connectionWithToken(env, subject, connectionId);
+    if (!connection || connection.provider !== provider || !['facebook','instagram','threads','youtube'].includes(provider)) throw Object.assign(new Error('PUBLISH_CONNECTION_UNAVAILABLE'), { code:'PUBLISH_CONNECTION_UNAVAILABLE' });
+    const raw = input?.content || {};
+    const content = { title:clean(raw.title,240), caption:clean(raw.caption,12000), imageUrl:safeUrl(raw.imageUrl), linkUrl:safeUrl(raw.linkUrl), campaignName:clean(raw.campaignName,120) };
+    let published;
+    if (provider === 'facebook') published = await publishFacebook(env, connection, content);
+    else if (provider === 'instagram') published = await publishInstagram(env, connection, content);
+    else if (provider === 'threads') published = await publishThreads(connection, content);
+    else published = await publishYouTube(env, connection, content);
+    return { id:String(published?.id || ''), url:safeUrl(published?.url), provider };
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const { allowed, headers } = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:allowed ? 204 : 403,headers});
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-connect-api.ekodi.kr',307);
     if (!allowed) return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
     if (url.pathname === '/health' && request.method === 'GET') {
       const ready = await schemaReady(env);
-      return json(request,env,{service:'ekodi-marketing-growth',ok:ready,schemaReady:ready,oauthBroker:true,encryptedVault:true,organicPublishing:true,paidPromotionDrafts:true,paidActivation:false,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env)},graphVersion:clean(env.META_GRAPH_VERSION || 'v25.0',16)},ready ? 200 : 503);
+      return json(request,env,{service:'ekodi-marketing-growth',ok:ready,schemaReady:ready,oauthBroker:true,encryptedVault:true,organicPublishing:true,paidPromotionDrafts:true,paidActivation:false,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env)},graphVersion:clean(env.META_GRAPH_VERSION || 'v25.0',16)},ready ? 200 : 503);
     }
     if (url.pathname === '/oauth/meta/callback' && request.method === 'GET') return metaCallback(request,env);
     if (url.pathname === '/oauth/threads/callback' && request.method === 'GET') return threadsCallback(request,env);
+    if (url.pathname === '/oauth/youtube/callback' && request.method === 'GET') return youtubeCallback(request,env);
     if (!(await schemaReady(env))) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
 
     const write = request.method !== 'GET';
@@ -541,6 +653,7 @@ export default {
 
     if (url.pathname === '/v1/connect/meta/start' && request.method === 'POST') return startMeta(request,env,identity,subject);
     if (url.pathname === '/v1/connect/threads/start' && request.method === 'POST') return startThreads(request,env,identity,subject);
+    if (url.pathname === '/v1/connect/youtube/start' && request.method === 'POST') return startYouTube(request,env,identity,subject);
     if (url.pathname === '/v1/connections' && request.method === 'GET') return listConnections(request,env,subject);
     if (url.pathname === '/v1/publish' && request.method === 'POST') {
       const body = await readJson(request);

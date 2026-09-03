@@ -73,13 +73,15 @@ function handleCloudflareSecretPreflight(request, env = {}) {
 
 export default {
   async fetch(request, env, ctx) {
+    const incoming = new URL(request.url);
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?source=api.ekodi.kr', 307);
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
 
     const secretPreflight = handleCloudflareSecretPreflight(request, env);
     if (secretPreflight) return secretPreflight;
 
-    const path = new URL(request.url).pathname;
+    const path = incoming.pathname;
 
     if (path.startsWith('/api/storage/v1')) {
       try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
