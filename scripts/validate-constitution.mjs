@@ -11,7 +11,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.4.0') fail('constitution version must remain 1.4.0 with approved Secure Projection amendment');
+if (constitution.version !== '1.5.0') fail('constitution version must remain 1.5.0 with approved EKODI Payment common-service amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -55,7 +55,20 @@ const targets = constitution.legacyDomainTargets || {};
 if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
-if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
+for (const commonService of ['journal.ekodi.kr','try.ekodi.kr','pay.ekodi.kr']) {
+  if (!registeredCommon.has(commonService)) fail(`registered common-service boundary missing: ${commonService}`);
+}
+
+const payment = constitution.paymentPolicy || {};
+if (payment.commonServiceBoundary !== 'pay.ekodi.kr') fail('payment common-service boundary must be pay.ekodi.kr');
+if (payment.workspaceIdentityKey !== 'workspace_id') fail('payment ownership must resolve from immutable workspace_id');
+if (payment.providerModel !== 'replaceable_adapter') fail('payment providers must remain replaceable adapters');
+if (payment.tenantMerchantAccountPreferred !== true) fail('workspace-scoped merchant accounts must remain preferred');
+if (payment.platformFundPoolingDefaultForbidden !== true) fail('platform fund pooling must be forbidden by default');
+if (payment.rawCardDataStorageForbidden !== true) fail('raw card data storage must be forbidden');
+if (payment.irreversibleActionsRequireHumanConfirmation !== true) fail('irreversible payment actions must require human confirmation');
+if (payment.donationPaymentsDefault !== 'disabled_until_provider_approval') fail('donation payments must remain disabled until provider approval');
+if (JSON.stringify(payment.rolloutStages || []) !== JSON.stringify(['off','shadow','canary','on'])) fail('payment rollout stages must remain off, shadow, canary, on');
 
 const expectedNamespaces = ['personal','org','group','project'];
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expectedNamespaces)) {
@@ -141,4 +154,4 @@ console.log(`- ${legacy.size} legacy domains registered with canonical migration
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
 console.log('- canonical user spaces: /personal, /org, /group, /project on ekodi.kr');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
-console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');
+console.log('- data sovereignty, tenant authority, provider, payment and storage transition rules checked');
