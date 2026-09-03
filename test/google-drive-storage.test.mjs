@@ -116,3 +116,13 @@ test('Cheonggye merchant members use Google Sheets as the single source of truth
   assert.doesNotMatch(cheonggyeAdmin, /localStorage\.setItem/);
   assert.doesNotMatch(cheonggyeAdmin, /INITIAL_ROWS/);
 });
+
+test('Cheonggye realtime member path survives D1 read quota by using encrypted R2 credential cache', () => {
+  assert.match(control, /CHEONGGYE_CONNECTION_CACHE_KEY = 'control\/cheonggye\/storage-connection\.json'/);
+  assert.match(control, /readCheonggyeConnectionCache/);
+  assert.match(control, /env\.R2_BUCKET\.get\(CHEONGGYE_CONNECTION_CACHE_KEY\)/);
+  assert.match(control, /writeCheonggyeConnectionCache/);
+  assert.match(control, /audit\/cheonggye-members/);
+  assert.match(control, /const isCheonggyeRoute = url\.pathname\.startsWith/);
+  assert.match(control, /if \(!isCheonggyeRoute\)/);
+});
