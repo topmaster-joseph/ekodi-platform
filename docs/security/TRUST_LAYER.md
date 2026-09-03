@@ -55,9 +55,11 @@ Pure Trust primitives:
 
 - security-context normalization
 - default-deny policy evaluation
+- deny-before-allow precedence at equal policy priority
 - compatibility adapter for the current authorization source
 - shadow comparison
-- capability derivation
+- explicit cutover gate for any future enforce mode
+- action-specific capability derivation
 - recursive restricted-field removal
 - safe audit summaries
 
@@ -71,6 +73,7 @@ Authenticated shadow evaluator:
 - refuses `enforce` mode
 - loads versioned shadow policy server-side
 - writes minimum-data comparison audit rows
+- requires `TRUST_AUDIT_SALT` for pseudonymous subject hashes
 - returns `cache-control: no-store`
 
 Client-supplied roles or authorization decisions are not trusted.
@@ -85,18 +88,24 @@ Internal state:
 
 RLS is enabled and direct `anon` / `authenticated` table privileges are revoked intentionally. These are server-side Trust state tables, not browser data sources.
 
+## Deployment prerequisite
+
+Before `trust-api` is deployed to any environment, configure a cryptographically random environment-specific `TRUST_AUDIT_SALT` secret through the approved secret-management path. The function fails closed for audit pseudonymization when this secret is absent. Do not put the salt in source control, logs, browser configuration or migration files.
+
 ## Non-negotiable invariants
 
 1. Shadow mode must never alter the current live decision.
 2. No policy has an implicit allow. No match means deny.
-3. Browser hiding is never treated as security.
-4. Secrets, reusable credentials, private keys and internal topology are removed before serialization.
-5. A Trust projection cannot widen a denied authorization decision.
-6. Workspace selection must be resolved against server-side membership data.
-7. Audit rows do not store request bodies, bearer tokens, secrets or reusable credentials.
-8. RLS remains active after Trust Layer authority cutover.
-9. External AI receives a purpose-bound projection, not canonical platform internals.
-10. Production authority cutover requires explicit gated deployment and rollback readiness.
+3. At equal priority, a matching deny rule wins over an allow rule.
+4. Browser hiding is never treated as security.
+5. Secrets, reusable credentials, private keys and internal topology are removed before serialization.
+6. A Trust projection cannot widen a denied authorization decision.
+7. Workspace selection must be resolved against server-side membership data.
+8. Audit rows do not store request bodies, bearer tokens, secrets or reusable credentials.
+9. RLS remains active after Trust Layer authority cutover.
+10. External AI receives a purpose-bound projection, not canonical platform internals.
+11. View permission does not imply export, download, API, AI-share or raw-diagnostic capability.
+12. Production authority cutover requires both the code-level `cutoverAllowed` gate and the guarded deployment approval path.
 
 ## Shadow exit gates
 
