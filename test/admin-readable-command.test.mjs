@@ -44,15 +44,15 @@ test('Chief AI owns action requests and routes specialists internally', async ()
   assert.match(js, /form\.requestSubmit\(\)/);
 });
 
-test('AI Ops no longer auto-hydrates Governance cockpit or Deployments', async () => {
+test('AI Ops keeps Health and Deployments as standalone demand-loaded features', async () => {
   const loader = await read('admin-demand-loader.js');
-  const aiops = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*deployments:/)?.[1] || '';
+  const aiops = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*devotional:/)?.[1] || '';
   assert.match(aiops, /admin-lazy-features\.js/);
-  assert.match(aiops, /system-health-admin\.js/);
+  assert.doesNotMatch(aiops, /system-health-admin/);
   assert.doesNotMatch(aiops, /mission-control-admin/);
   assert.doesNotMatch(aiops, /release-control-admin/);
-  assert.match(loader, /deployments:\s*\{/);
-  assert.match(loader, /scripts: \['release-control-admin\.js'\]/);
+  assert.match(loader, /health:\s*\{[\s\S]*?scripts: \['system-health-admin\.js'\]/);
+  assert.match(loader, /deployments:\s*\{[\s\S]*?scripts: \['release-control-admin\.js'\]/);
 });
 
 test('base readability is first-path while AI orchestration stays lazy and performance guard runs last', async () => {

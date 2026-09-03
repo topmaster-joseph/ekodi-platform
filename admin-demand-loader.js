@@ -49,8 +49,22 @@
     },
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
     storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],insert:'after-health'},
-    security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
-    deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
+    security: {
+      label: 'Security', icon: '◆',
+      styles: ['admin-secret-generator.css'],
+      scripts: ['admin-secret-generator.js'],
+      real: '[data-section="security"]',
+      hashes: ['#security'],
+      insert: 'after-health',
+    },
+    deployments: {
+      label: 'Deployments', icon: '↑',
+      styles: ['release-control-admin.css'],
+      scripts: ['release-control-admin.js'],
+      real: '[data-section="deployments"]',
+      hashes: ['#deployments', '#release'],
+      insert: 'after-security',
+    },
     comm:{scripts:['communication-admin.js'],real:'[data-section="communication"]'},
     work: {
       label: 'WORK', icon: 'W',
@@ -87,20 +101,10 @@
     },
   };
 
-  function token() {
-    try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
-  }
-
-  function authenticated() {
-    return Boolean(token() && app && !app.hidden);
-  }
-
-  function assetUrl(path) {
-    const separator = path.includes('?') ? '&' : '?';
-    return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
-  }
-
-  function mark(name) { try { performance.mark(name); } catch {} }
+  function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
+  function authenticated(){return Boolean(token()&&app&&!app.hidden)}
+  function assetUrl(path){return `${path}${path.includes('?')?'&':'?'}v=${encodeURIComponent(ASSET_VERSION)}`}
+  function mark(name){try{performance.mark(name)}catch{}}
 
   function loadStyle(href) {
     if (loadedStyles.has(href)) return loadedStyles.get(href);
