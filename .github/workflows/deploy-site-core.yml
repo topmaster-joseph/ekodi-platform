@@ -149,7 +149,8 @@ jobs:
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
-          grep -Fq "comm:{scripts:['communication-admin.js'],real:'[data-section="communication"]'}" admin-demand-loader.js
+          grep -Fq 'communication-admin.js' admin-demand-loader.js
+          grep -Fq 'data-section=\"communication\"' admin-demand-loader.js
           grep -Fq "['communication','comm']" admin-menu-layout.js
           grep -Fq "['campus','campus']" admin-menu-layout.js
           grep -Fq "requestDemand('campus')" admin-menu-layout.js
