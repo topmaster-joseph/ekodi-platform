@@ -85,25 +85,32 @@ Full transaction/behavior contract tests are a later profile revision. A service
 - redirects are rejected
 - health endpoints must remain same-origin paths
 - public profile reading does not grant integration or production access
-- `admin.ekodi.kr/dev` must be integrated through the existing EKODI admin IAM/control plane, never exposed as a bypass route
+- `admin.ekodi.kr/dev` requires an authenticated EKODI identity supplied by the existing Cloudflare Access/admin IAM boundary
+- absence of that identity fails closed with HTTP 401
+- the admin projection does not expose a second administrator system or a public bypass route
 
 ## Rollout
 
 ### Phase 1 — scaffold
 
 - private Integration Core Worker
-- Developer Center projection
+- `dev.ekodi.kr` Developer Center projection
 - machine-readable Marketing AI Profile v1
 - protected contact-boundary conformance runner
 - tests
 
-### Phase 2 — admin projection
+### Phase 2 — protected admin projection (implemented baseline)
 
-Attach `admin.ekodi.kr/dev` to the existing authenticated admin shell. Add profile/version management, project credentials, test history, exception review, and approval gates.
+- `admin.ekodi.kr/dev` path projection to the same Integration Core
+- authenticated EKODI identity required
+- internal status endpoint at `/dev/api/status`
+- Integration Core governance owner and production-promotion policy surfaced internally
+
+The baseline is intentionally read-oriented. Profile editing, developer/company/project credentials, test history, exception review, and approval actions remain future control-plane functions and must inherit the existing EKODI administrator authorization model rather than inventing a parallel IAM system.
 
 ### Phase 3 — integration lifecycle
 
-Add sandbox credentials, behavior-contract scenarios, staging approval, audit evidence, and optional `api.ekodi.kr/integration/*` gateway routes.
+Add sandbox credentials, behavior-contract scenarios, profile/version administration, test history, staging approval, audit evidence, and optional `api.ekodi.kr/integration/*` gateway routes.
 
 ## Production rule
 
