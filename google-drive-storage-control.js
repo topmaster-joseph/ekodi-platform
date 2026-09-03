@@ -168,11 +168,11 @@ async function cheonggyeValues(env) {
   return { access, values:Array.isArray(data.values) ? data.values : [] };
 }
 function parseCheonggye(values) {
-  return values.slice(1).map((row,index) => ({ sheetRow:index+2, no:Number(row[0]||0), joinedAt:String(row[1]||''), category:String(row[2]||''), store:String(row[3]||''), name:String(row[4]||''), contact:String(row[5]||'') }))
-    .filter(row => row.no || row.joinedAt || row.category || row.store || row.name || row.contact);
+  return values.slice(1).map((row,index) => ({ sheetRow:index+2, no:Number(row[0]||0), joinedAt:String(row[1]||''), category:String(row[2]||''), store:String(row[3]||''), name:String(row[4]||''), note:String(row[5]||'') }))
+    .filter(row => row.no || row.joinedAt || row.category || row.store || row.name || row.note);
 }
 function normalizeMember(body = {}) {
-  return { joinedAt:String(body.joinedAt||'').trim(), category:String(body.category||'').trim(), store:String(body.store||'').trim(), name:String(body.name||'').trim(), contact:String(body.contact||'').trim() };
+  return { joinedAt:String(body.joinedAt||'').trim(), category:String(body.category||'').trim(), store:String(body.store||'').trim(), name:String(body.name||'').trim(), note:String(body.note||'').trim() };
 }
 async function cheonggyeAudit(env, session, action, memberNo, detail = '') {
   const createdAt = new Date().toISOString();
@@ -191,7 +191,7 @@ async function cheonggyeList(env) { const { values } = await cheonggyeValues(env
 async function cheonggyeAppend(env, member) {
   const { access, values } = await cheonggyeValues(env); const members=parseCheonggye(values);
   const nextNo=members.reduce((max,row)=>Math.max(max,Number(row.no||0)),0)+1;
-  const body=JSON.stringify({values:[[nextNo,member.joinedAt,member.category,member.store,member.name,member.contact]]});
+  const body=JSON.stringify({values:[[nextNo,member.joinedAt,member.category,member.store,member.name,member.note]]});
   await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}/values/${sheetRange('A:F')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {method:'POST',body});
   return nextNo;
 }
@@ -199,7 +199,7 @@ async function cheonggyeUpdate(env, no, member) {
   const { access, values }=await cheonggyeValues(env); const target=parseCheonggye(values).find(row=>Number(row.no)===Number(no));
   if(!target)return false;
   const range=sheetRange(`A${target.sheetRow}:F${target.sheetRow}`);
-  const body=JSON.stringify({range:`'${CHEONGGYE_SHEET_NAME}'!A${target.sheetRow}:F${target.sheetRow}`,majorDimension:'ROWS',values:[[no,member.joinedAt,member.category,member.store,member.name,member.contact]]});
+  const body=JSON.stringify({range:`'${CHEONGGYE_SHEET_NAME}'!A${target.sheetRow}:F${target.sheetRow}`,majorDimension:'ROWS',values:[[no,member.joinedAt,member.category,member.store,member.name,member.note]]});
   await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`, {method:'PUT',body}); return true;
 }
 async function cheonggyeDelete(env, no) {
