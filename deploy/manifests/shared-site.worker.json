@@ -16,7 +16,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/org/ekodibiz",
+        "url": "https://ekodi.kr/ekodibiz",
         "statuses": [
           200
         ],
@@ -47,7 +47,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/org/ekodibiz/trade/admin",
+        "url": "https://ekodi.kr/ekodibiz/trade/admin",
         "statuses": [
           200
         ],
@@ -77,7 +77,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/org/ekodibiz/trade",
+        "url": "https://ekodi.kr/ekodibiz/trade",
         "statuses": [
           200
         ],
@@ -124,7 +124,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/mall",
+        "url": "https://ekodi.kr/ekodibiz/mall",
         "statuses": [
           200
         ],
@@ -147,7 +147,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/mall/admin/",
+        "url": "https://ekodi.kr/ekodibiz/mall/admin/",
         "statuses": [
           200
         ],
