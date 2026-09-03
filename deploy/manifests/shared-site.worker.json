@@ -1,5 +1,5 @@
 {
-  "version": 42,
+  "version": 43,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -130,12 +130,12 @@
         ],
         "redirect": "follow",
         "expect": [
-          "EKODI MALL",
-          "data-ekodi-service=\"mall\""
+          "data-ekodi-service=\"mall\"",
+          "data-ekodi-user-surface=\"public\""
         ],
         "rollbackExpect": [
-          "EKODI MALL",
-          "data-ekodi-service=\"mall\""
+          "data-ekodi-service=\"mall\"",
+          "data-ekodi-user-surface=\"public\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
