@@ -1,0 +1,8 @@
+name = "ekodi-service-admin-entry-staging"
+main = "service-admin-entry-worker.js"
+compatibility_date = "2026-09-03"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "isolated-staging"

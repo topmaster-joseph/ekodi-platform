@@ -1,0 +1,63 @@
+name = "ekodi-service-admin-entry"
+main = "service-admin-entry-worker.js"
+compatibility_date = "2026-09-03"
+workers_dev = false
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "production"
+
+[[routes]]
+pattern = "ai.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "auth.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "cloud.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "live.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "live.biz.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "live.church.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "live.lab.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "mail.biz.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "mail.church.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "pay.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "pay.biz.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "trade.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "trade.biz.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "invest.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "messenger.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "tax.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "management.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
+pattern = "marketing-api.ekodi.kr/admin*"
+zone_name = "ekodi.kr"

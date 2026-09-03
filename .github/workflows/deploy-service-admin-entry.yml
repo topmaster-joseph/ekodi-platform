@@ -1,0 +1,113 @@
+name: Deploy Service Admin Entry Gateway
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'service-admin-entry-worker.js'
+      - 'wrangler.service-admin-entry.toml'
+      - 'wrangler.service-admin-entry.staging.toml'
+      - 'deploy/manifests/service-admin-entry.worker.json'
+      - 'test/service-admin-entry-gateway.test.mjs'
+      - '.github/workflows/deploy-service-admin-entry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'service-admin-entry-worker.js'
+      - 'wrangler.service-admin-entry.toml'
+      - 'wrangler.service-admin-entry.staging.toml'
+      - 'deploy/manifests/service-admin-entry.worker.json'
+      - 'test/service-admin-entry-gateway.test.mjs'
+      - '.github/workflows/deploy-service-admin-entry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-service-admin-entry-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate independent admin entry gateway
+        run: |
+          set -euo pipefail
+          node --check service-admin-entry-worker.js
+          node --test test/service-admin-entry-gateway.test.mjs
+          node scripts/validate-admin-subdomain-routes.mjs
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/service-admin-entry.worker.json','utf8'))"
+
+  staging:
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-service-admin-entry-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Development boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+      - name: Deploy isolated staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.service-admin-entry.staging.toml
+      - name: Verify protected or directly reachable staging edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -D /tmp/admin-entry-h -o /tmp/admin-entry-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/__health" || true)
+          if [ "$code" = '200' ] && grep -Fq '"service":"ekodi-service-admin-entry"' /tmp/admin-entry-body; then
+            echo 'Service Admin Entry staging verified directly.'
+            exit 0
+          fi
+          if [ "$code" = '302' ] && grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/' /tmp/admin-entry-h; then
+            echo 'Service Admin Entry staging is isolated behind Cloudflare Access.'
+            exit 0
+          fi
+          cat /tmp/admin-entry-h || true
+          cat /tmp/admin-entry-body || true
+          exit 1
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Guarded first deploy or production promotion
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/service-admin-entry.worker.json
+      - name: Verify all repaired admin entrypoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('node:fs');
+          const manifest=JSON.parse(fs.readFileSync('deploy/manifests/service-admin-entry.worker.json','utf8'));
+          (async()=>{for(const item of manifest.worker.requests){const response=await fetch(item.url,{redirect:'manual',signal:AbortSignal.timeout(10000)});if(response.status!==307||!String(response.headers.get('location')||'').startsWith('https://admin.ekodi.kr/'))throw new Error(`${item.url}: ${response.status} ${response.headers.get('location')||''}`);console.log(`OK ${item.url}`)}})().catch(error=>{console.error(error);process.exit(1)});
+          NODE
