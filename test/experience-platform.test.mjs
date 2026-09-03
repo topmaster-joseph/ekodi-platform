@@ -54,6 +54,9 @@ test('experience worker health and catalog are public GET-only contracts',async(
   assert.equal(catalog.safety.productionWrites,false);
   const post=await worker.fetch(new Request('https://try.ekodi.kr/api/catalog',{method:'POST'}),env);
   assert.equal(post.status,405);
+  const admin=await worker.fetch(new Request('https://try.ekodi.kr/admin'),env);
+  assert.equal(admin.status,307);
+  assert.equal(admin.headers.get('location'),'https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr');
 });
 
 test('experience UI clearly labels modes, synthetic boundary and simulation',()=>{

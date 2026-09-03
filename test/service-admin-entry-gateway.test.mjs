@@ -16,9 +16,28 @@ test('broken production admin hosts are covered by the independent route gateway
     assert.match(config, new RegExp(`pattern = "${host.replaceAll('.', '\\.')}/admin\\*"`));
     assert.ok(manifest.worker.requests.some(item => item.url === `https://${host}/admin`), host);
   }
-  assert.equal(manifest.worker.requests.length, expectedHosts.length);
+  assert.match(config, /pattern = "admin\.ekodi\.kr\/experience"/);
+  assert.match(config, /pattern = "admin\.ekodi\.kr\/experience\/\*"/);
+  assert.ok(manifest.worker.requests.some(item => item.url === 'https://admin.ekodi.kr/experience'));
+  assert.equal(manifest.worker.requests.length, expectedHosts.length + 1);
 });
 
+test('legacy Experience admin path heals through the isolated gateway', async () => {
+  const response = await worker.fetch(new Request('https://admin.ekodi.kr/experience'));
+  assert.equal(response.status, 307);
+  assert.equal(response.headers.get('location'), 'https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr');
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('x-ekodi-admin-entry'), 'central-handoff-v1');
+  assert.match(response.headers.get('x-robots-tag') || '', /noindex/);
+
+  const descendant = await worker.fetch(new Request('https://admin.ekodi.kr/experience/overview'));
+  assert.equal(descendant.status, 307);
+  assert.equal(descendant.headers.get('location'), 'https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr');
+
+  const post = await worker.fetch(new Request('https://admin.ekodi.kr/experience', { method: 'POST' }));
+  assert.equal(post.status, 405);
+  assert.equal(post.headers.get('allow'), 'GET, HEAD');
+});
 test('admin root hands off to the central control plane without caching', async () => {
   const response = await worker.fetch(new Request('https://invest.ekodi.kr/admin'));
   assert.equal(response.status, 307);

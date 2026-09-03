@@ -33,7 +33,7 @@ export default {
     if(request.method!=='GET' && request.method!=='HEAD') return json({error:'read_only_experience'},405);
     if(path==='/health') return json({ok:true,service:'ekodi-experience',publicName:EXPERIENCE_META.publicName,boundary:'registered-common-service',canonical:EXPERIENCE_META.canonicalOrigin,dataPolicy:'synthetic-only',sideEffects:'none',projection:'experience_public',modes:['user','developer'],shell:'v2'});
     if(path==='/api/catalog') return json(projectedCatalog(),200,PUBLIC_CACHE);
-    if(path==='/admin') return Response.redirect('https://admin.ekodi.kr/experience',307);
+    if(path==='/admin') return Response.redirect('https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr',307);
     if(path==='/' || path==='/user' || path==='/developer') return shellHtml(env,request);
     const response=await env.ASSETS.fetch(request);
     return withHeaders(response,response.headers.get('content-type')?.includes('text/html')?PUBLIC_CACHE:'public, max-age=86400, immutable');
