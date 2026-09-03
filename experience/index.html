@@ -1,64 +1,89 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko-KR" data-ekodi-service="experience">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>에코디 체험 · EKODI Experience</title>
-  <meta name="description" content="사용자모드와 개발자모드로 에코디를 안전하게 직접 체험해 보세요.">
-  <meta name="theme-color" content="#071522">
+  <meta name="description" content="사용자모드와 개발자모드로 에코디의 세계를 안전하게 탐험하는 몰입형 가상 체험입니다.">
+  <meta name="theme-color" content="#071126">
   <link rel="canonical" href="https://try.ekodi.kr/">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <canvas id="experience-sky" class="experience-sky" aria-hidden="true"></canvas>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+
   <main class="experience-shell" id="experience-app">
-    <section class="hero" aria-labelledby="experience-title">
-      <div class="eyebrow">EKODI EXPERIENCE · SAFE PROJECTION</div>
-      <div class="hero-grid">
-        <div>
-          <h1 id="experience-title">에코디를<br>직접 경험해 보세요.</h1>
-          <p class="lead">실제 내부를 노출하지 않고, 사용자에게 필요한 경험과 개발자가 이해해야 할 관계만 안전하게 투영합니다.</p>
+    <section class="portal-hero" aria-labelledby="experience-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="pulse-dot"></span> EKODI EXPERIENCE · SAFE PROJECTION</div>
+        <h1 id="experience-title">에코디를<br><span>직접 경험해 보세요</span></h1>
+        <p class="lead">설명을 읽는 대신, 에코디의 세계 안으로 들어가 보세요. 모드와 관점을 선택하면 당신에게 맞는 공간이 단계별로 열립니다.</p>
+        <div class="hero-actions">
+          <button class="primary-action" id="start-experience" type="button"><span class="play-mark">▶</span><span>가상 체험 시작</span><span class="arrow">→</span></button>
+          <button class="ghost-action" id="view-guide" type="button">체험 가이드 보기</button>
         </div>
-        <aside class="safety-note">
-          <strong>가상 체험 환경</strong>
-          <span>합성 데이터만 사용합니다.</span>
-          <span>결제·메시지·게시·운영데이터 변경은 발생하지 않습니다.</span>
-        </aside>
+        <div class="trust-strip">
+          <div><span class="trust-icon">◇</span><span><strong>보안 투영 적용</strong><small>Experience without Exposure</small></span></div>
+          <div><span class="trust-icon">⬡</span><span><strong>가상 데이터 전용</strong><small>실제 운영데이터 0건</small></span></div>
+          <div><span class="trust-icon">○</span><span><strong>읽기 전용 체험</strong><small>결제·게시·메시지 없음</small></span></div>
+        </div>
       </div>
-      <div class="mode-switch" role="group" aria-label="체험 모드">
-        <button class="mode-button is-active" data-mode="user" type="button">사용자모드</button>
-        <button class="mode-button" data-mode="developer" type="button">개발자모드</button>
+
+      <div class="portal-scene" id="portal-scene" aria-label="에코디 가상세계 포털">
+        <div class="portal-orbit orbit-a"></div><div class="portal-orbit orbit-b"></div><div class="portal-orbit orbit-c"></div>
+        <div class="portal-frame"><div class="portal-brand">EKODI<small>EXPERIENCE</small></div><div class="portal-core"><div class="world-sky"></div><div class="world-city"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="world-path"></div><div class="world-glow"></div></div></div>
+        <div class="portal-platform"><span></span><span></span><span></span></div>
+        <div class="floating-chip chip-one">AI · RELATION</div><div class="floating-chip chip-two">WORKSPACE</div><div class="floating-chip chip-three">SAFE VIEW</div>
+      </div>
+
+      <aside class="journey-console" id="journey-console" aria-label="체험 단계 선택">
+        <header><div><span class="console-live"></span><strong>EXPERIENCE GUIDE</strong></div><small>안전한 가상 환경</small></header>
+        <div class="journey-step is-current" data-step="1"><div class="step-title"><span>1단계</span><strong>모드 선택</strong></div><div class="mode-grid" id="mode-grid">
+          <button class="mode-card is-active" data-mode="user" type="button"><span class="mode-icon">◎</span><strong>사용자모드</strong><small>서비스를 이용하며 가치를 경험합니다.</small><b>→</b></button>
+          <button class="mode-card" data-mode="developer" type="button"><span class="mode-icon">&lt;/&gt;</span><strong>개발자모드</strong><small>역할과 연결관계를 안전하게 탐색합니다.</small><b>→</b></button>
+        </div></div>
+        <div class="journey-step" data-step="2"><div class="step-title"><span>2단계</span><strong>관점 선택</strong></div><div class="persona-mini-grid" id="persona-mini-grid"></div></div>
+        <div class="journey-step" data-step="3"><div class="step-title"><span>3단계</span><strong>서비스 체험</strong></div><div class="service-chip-grid" id="service-chip-grid"></div></div>
+      </aside>
+    </section>
+
+    <section class="journey-progress" id="journey-progress" aria-label="체험 진행 단계">
+      <button type="button" data-jump="1" class="is-active"><span>1</span><strong>모드 선택</strong></button><i>→</i>
+      <button type="button" data-jump="2"><span>2</span><strong>관점 선택</strong></button><i>→</i>
+      <button type="button" data-jump="3"><span>3</span><strong>서비스 체험</strong></button><i>→</i>
+      <button type="button" data-jump="4"><span>4</span><strong>공간 안으로</strong></button>
+    </section>
+
+    <section class="experience-map" id="experience-map" aria-labelledby="map-title">
+      <div class="section-heading"><div><span class="section-kicker">STEP BY STEP</span><h2 id="map-title">선택할수록 더 구체적인 공간이 열립니다</h2></div><p id="mode-description">하고 싶은 일을 중심으로 에코디를 체험합니다.</p></div>
+      <div class="map-layout">
+        <aside class="persona-deck"><div class="deck-label">관점 선택</div><div class="persona-grid" id="persona-grid"></div></aside>
+        <section class="room-browser">
+          <header class="room-browser-head"><div><span class="section-kicker" id="workspace-kicker">SYNTHETIC WORKSPACE</span><h3 id="workspace-title">봄날카페</h3></div><div class="workspace-badge"><span></span> 가상 데이터</div></header>
+          <div class="room-browser-body"><nav class="service-list" id="service-list" aria-label="체험 서비스"></nav><section class="service-stage" id="service-stage" aria-live="polite"></section></div>
+        </section>
       </div>
     </section>
 
-    <section class="persona-section" aria-labelledby="persona-title">
-      <div class="section-heading">
-        <div><span class="section-kicker">START HERE</span><h2 id="persona-title">누구의 시선으로 볼까요?</h2></div>
-        <p id="mode-description">하고 싶은 일을 중심으로 에코디를 체험합니다.</p>
-      </div>
-      <div class="persona-grid" id="persona-grid"></div>
-    </section>
-
-    <section class="workspace" aria-labelledby="workspace-title">
-      <header class="workspace-header">
-        <div><span class="section-kicker" id="workspace-kicker">SYNTHETIC WORKSPACE</span><h2 id="workspace-title">봄날카페</h2></div>
-        <div class="workspace-badge">가상 데이터</div>
-      </header>
-      <div class="workspace-body">
-        <nav class="service-list" id="service-list" aria-label="체험 서비스"></nav>
-        <section class="service-stage" id="service-stage" aria-live="polite"></section>
-      </div>
+    <section class="room-gallery" aria-labelledby="room-gallery-title">
+      <div class="section-heading"><div><span class="section-kicker">IMMERSIVE ROOMS</span><h2 id="room-gallery-title">에코디 안쪽의 방을 미리 둘러보세요</h2></div><p>선택한 서비스가 실제 사용 화면과 공간 감각으로 이어지는 모습을 보여줍니다.</p></div>
+      <div class="room-cards" id="room-cards"></div>
     </section>
 
     <section class="status-section" aria-labelledby="status-title">
-      <div class="section-heading">
-        <div><span class="section-kicker">PUBLIC STATUS</span><h2 id="status-title">서비스 현황</h2></div>
-        <p>운영 상태는 외부에 공개해도 안전한 단계 정보만 표시합니다.</p>
-      </div>
-      <div class="status-filters" id="status-filters"></div>
-      <div class="status-grid" id="status-grid"></div>
+      <div class="section-heading"><div><span class="section-kicker">PUBLIC STATUS</span><h2 id="status-title">서비스 현황</h2></div><p>운영 상태는 외부에 공개해도 안전한 단계 정보만 표시합니다.</p></div>
+      <div class="status-filters" id="status-filters"></div><div class="status-grid" id="status-grid"></div>
     </section>
   </main>
-  <noscript>에코디 체험을 이용하려면 JavaScript가 필요합니다.</noscript>
-  <script type="module" src="/app.js"></script>
-</body>
-</html>
+
+  <div class="room-overlay" id="room-overlay" hidden><div class="room-backdrop" data-close-room></div><article class="immersive-room" role="dialog" aria-modal="true" aria-labelledby="immersive-room-title">
+    <header><div><span class="room-live"></span><span id="immersive-room-kicker">VIRTUAL ROOM</span></div><button type="button" data-close-room aria-label="체험 공간 닫기">×</button></header>
+    <div class="room-viewport" id="room-viewport"><div class="room-depth depth-back"></div><div class="room-depth depth-mid"></div><div class="room-console console-left"></div><div class="room-console console-right"></div><div class="room-hologram"><span></span><i></i><b></b></div><div class="room-dashboard" id="room-dashboard"></div></div>
+    <footer><div><span class="section-kicker">SYNTHETIC EXPERIENCE</span><h2 id="immersive-room-title">AI 인사이트 룸</h2><p id="immersive-room-copy">가상 데이터로 공간 안의 흐름을 체험합니다.</p></div><button type="button" id="room-action">이 공간 체험하기 <span>→</span></button></footer>
+  </article></div>
+
+  <button class="guide-bubble" id="guide-bubble" type="button"><span class="guide-avatar">◉</span><span><strong>어디부터 볼까요?</strong><small>에코디언 가이드가 안내해 드릴게요</small></span></button>
+  <noscript>에코디 체험을 이용하려면 JavaScript가 필요합니다.</noscript><script type="module" src="/app.js"></script>
+</body></html>
