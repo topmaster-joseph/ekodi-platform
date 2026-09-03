@@ -10,19 +10,20 @@ test('canonical public workspace paths use the isolated Space service binding',a
     read('wrangler.site.toml'),
     read('deploy/manifests/shared-site.worker.json'),
   ]);
-  assert.match(router,/PUBLIC_WORKSPACE_ROUTE/);
+  assert.ok(router.includes("import { isPublicWorkspacePath } from './workspace-route-policy.js'"));
   assert.match(router,/env\?\.SPACE\?\.fetch/);
   assert.ok(router.includes("routed.headers.set('x-ekodi-workspace-gateway','space-service-binding')"));
   assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace')"));
   assert.match(router,/safeWorkspaceReturnTo/);
   assert.match(wrangler,/binding = "SPACE"[\s\S]*service = "ekodi-space"/);
-  for(const route of ['/personal/*','/org/*','/group/*','/project/*','/_ekodi/space/*','/auth/start']){
+  for(const route of ['/deployment-probe','/_ekodi/space/*','/auth/start']){
     assert.ok(wrangler.includes(`"${route}"`),route);
   }
   const manifest=JSON.parse(manifestText);
-  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/org/deployment-probe');
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/deployment-probe');
   assert.ok(probe);
   assert.ok(probe.headerExpect.includes('x-ekodi-workspace-gateway: space-service-binding'));
+  for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
 });
 
 test('workspace shell assets and auth handoff stay inside the apex gateway',async()=>{

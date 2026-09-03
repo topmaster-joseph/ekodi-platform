@@ -1,7 +1,7 @@
 (() => {
   const API = 'https://api.ekodi.kr';
   const ACCOUNT = 'coupang-ekodibiz';
-  const MALL = 'https://ekodi.kr/mall';
+  const MALL = 'https://ekodi.kr/ekodibiz/mall';
   const TRACKING_URL = 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/mall_sales_events';
   const TRACKING_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';

@@ -12,8 +12,6 @@ const OPEN_SSO_ORIGINS:Record<string,string[]>={
 };
 const PERSON_WORKSPACE_SITES=["church","biz","books","author","lab","community","work","business","mall","marketing"];
 const ACTIVE_STATUSES=new Set(["active","pre_registered"]);
-const SPACE_TYPES=new Set(["personal","org","group","project"]);
-const ORG_KINDS=new Set(["organization","business","church","association","institution","school","nonprofit","franchise"]);
 
 function allowedOrigin(origin:string|null){
   if(!origin)return AUTH_ORIGIN;
@@ -53,12 +51,6 @@ async function authenticatedClient(req:Request){
 function planRank(value:unknown){
   return ({free:0,basic:1,standard:2,pro:3,enterprise:4})[String(value||"free").toLowerCase()]??0;
 }
-function spaceType(kind:unknown){
-  const value=String(kind||"").trim().toLowerCase();
-  if(value==="personal"||value==="group"||value==="project")return value;
-  if(ORG_KINDS.has(value))return "org";
-  return "org";
-}
 function validSpaceSlug(value:string){return /^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/.test(value)}
 async function tenantSpaces(db:any,userId:string){
   const {data:tenants,error:tenantError}=await db.from("tenants").select("id,slug,name,status,kind").eq("status","active").order("name",{ascending:true});
@@ -75,13 +67,13 @@ async function tenantSpaces(db:any,userId:string){
     }
   }
   return rows.filter((row:any)=>roles.has(String(row.id))).map((row:any)=>({
-    workspace_id:String(row.id),slug:String(row.slug),name:String(row.name),kind:String(row.kind),path_type:spaceType(row.kind),role:roles.get(String(row.id))||"member",status:String(row.status),url:`https://space.ekodi.kr/${spaceType(row.kind)}/${encodeURIComponent(String(row.slug))}`,
+    workspace_id:String(row.id),slug:String(row.slug),name:String(row.name),role:roles.get(String(row.id))||"member",status:String(row.status),url:`https://ekodi.kr/${encodeURIComponent(String(row.slug))}`,
   }));
 }
-async function resolveTenantSpace(db:any,userId:string,type:string,slug:string){
-  if(!SPACE_TYPES.has(type)||!validSpaceSlug(slug))return null;
+async function resolveTenantSpace(db:any,userId:string,slug:string){
+  if(!validSpaceSlug(slug))return null;
   const spaces=await tenantSpaces(db,userId);
-  return spaces.find((item:any)=>item.path_type===type&&item.slug===slug)??null;
+  return spaces.find((item:any)=>item.slug===slug)??null;
 }
 async function personWorkspaces(db:any){
   const results=await Promise.all(PERSON_WORKSPACE_SITES.map(async(site)=>{
@@ -125,17 +117,16 @@ Deno.serve(async(req)=>{
   const url=new URL(req.url);
   const path=url.pathname.replace(/^\/workspace-api/,"")||"/";
   try{
-    if(req.method==="GET"&&path==="/health")return json(req,{ok:true,service:"workspace-api",scope:"person-space",sites:Object.keys(OPEN_SSO_ORIGINS),spaceRoutes:["personal","org","group","project"]});
+    if(req.method==="GET"&&path==="/health")return json(req,{ok:true,service:"workspace-api",scope:"person-space",sites:Object.keys(OPEN_SSO_ORIGINS),spaceRoutes:["/{slug}"]});
     if(req.method==="GET"&&path==="/spaces"){
       const spaces=await tenantSpaces(auth.db,auth.user.id);
       return json(req,{spaces,user:{id:auth.user.id,email:auth.user.email??null},identityKey:"ekodi_id",workspaceKey:"workspace_id"});
     }
     if(req.method==="GET"&&path==="/spaces/resolve"){
-      const type=clip(url.searchParams.get("type"),20).toLowerCase();
       const slug=clip(url.searchParams.get("slug"),100).toLowerCase();
-      const space=await resolveTenantSpace(auth.db,auth.user.id,type,slug);
+      const space=await resolveTenantSpace(auth.db,auth.user.id,slug);
       if(!space)return json(req,{error:"workspace_not_found_or_forbidden"},404);
-      return json(req,{space,route:{type,slug},authorization:"tenant_members+RLS"});
+      return json(req,{space,route:{slug},authorization:"tenant_members+RLS"});
     }
     if(req.method==="GET"&&path==="/trade/context"){
       const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekodi-biz";

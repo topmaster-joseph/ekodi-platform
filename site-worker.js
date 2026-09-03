@@ -5,7 +5,8 @@ import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceA
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
-const MALL_PREFIX = '/mall';
+const MALL_PREFIX = '/ekodibiz/mall';
+const LEGACY_MALL_PREFIX = '/mall';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
@@ -229,6 +230,20 @@ function isMallPath(pathname) {
   return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
 }
 
+function isLegacyMallPath(pathname) {
+  return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
+}
+
+function redirectLegacyMallPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
+  const response = Response.redirect(target.toString(), 308);
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-legacy-canonical-redirect');
+  return response;
+}
+
 function mallUpstreamPath(pathname) {
   const suffix = pathname.slice(MALL_PREFIX.length);
   return suffix || '/';
@@ -260,8 +275,8 @@ async function proxyMallService(request) {
   }
   headers.set('x-ekodi-edge', 'mall-path-gateway');
   headers.set('x-ekodi-service', 'mall');
-  const adminSurface = incoming.pathname === '/mall/admin' || incoming.pathname.startsWith('/mall/admin/');
-  const apiSurface = incoming.pathname === '/mall/api' || incoming.pathname.startsWith('/mall/api/');
+  const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
+  const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
   const cacheControl = adminSurface || apiSurface ? 'no-store' : 'public, max-age=0, must-revalidate';
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
   const response = withHostSecurity(new Response(upstreamResponse.body, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), MALL_CSP, cacheControl, route);
@@ -398,18 +413,11 @@ export default {
       }
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
-      if (url.pathname === '/mall/admin' || url.pathname.startsWith('/mall/admin/')) {
-        const next = new URL(request.url);
-        next.pathname = '/ekodibiz/mall/admin' + url.pathname.slice('/mall/admin'.length);
-        return Response.redirect(next.toString(), 308);
-      }
-      if (isWorkspaceAdminPath(url.pathname)) {
-        if (url.pathname.startsWith('/org/')) { const next=new URL(request.url); next.pathname=url.pathname.slice(4); return Response.redirect(next.toString(),308); }
-        return workspaceAdminPage();
-      }
+      if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);
-        canonical.pathname = '/mall';
+        canonical.pathname = MALL_PREFIX;
         const response = Response.redirect(canonical.toString(), 308);
         applyBaseSecurityHeaders(response.headers);
         return response;

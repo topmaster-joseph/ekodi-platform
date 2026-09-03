@@ -32,7 +32,7 @@ function mallWorkload(overrides = {}) {
     actor: { type: 'system', id: 'growth-loop' },
     subject: { type: 'product', id: 'product-001' },
     correlation_id: 'campaign-001',
-    payload: { product_name: '테스트 상품', tracked_url: 'https://ekodi.kr/mall' },
+    payload: { product_name: '테스트 상품', tracked_url: 'https://ekodi.kr/ekodibiz/mall' },
     ...overrides,
   }, '2026-09-02T00:00:01.000Z');
 }

@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/mall' -o /tmp/mall.html
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
           grep -Fq 'EKODI MALL' /tmp/mall.html
           grep -Fq 'SMART SHOPPING' /tmp/mall.html
           grep -Fq '오늘 필요한 것,' /tmp/mall.html
