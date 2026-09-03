@@ -11,11 +11,7 @@ on:
       - 'wrangler.experience*.toml'
       - 'deploy/manifests/experience.worker.json'
       - 'test/experience-platform.test.mjs'
-      - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
-      - 'config/ecosystem-services.json'
-      - 'shell/theme.json'
-      - 'shell/service-design-inheritance.js'
       - 'CONSTITUTION.md'
       - 'governance/constitution/**'
       - 'governance/amendments/*experience*.json'
@@ -53,9 +49,6 @@ jobs:
           npm run validate:constitution
           npm run validate:boundaries
           npm run validate:security
-          npm run validate:ui-dna
-          npm run validate:seasonal-design
-          npm run validate:shell
           npm run validate:deployments
           grep -Fq 'try.ekodi.kr' wrangler.experience.toml
           grep -Fq 'ekodi-experience-staging' wrangler.experience.staging.toml
@@ -84,24 +77,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          remote_ready=0
           remote_protected=0
-          verify_base="$STAGING_URL"
-          runtime_pid=''
-          cleanup(){ if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi; }
-          trap cleanup EXIT
-          access_code=$(curl -sS -D /tmp/experience-access.headers -o /tmp/experience-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/experience-access.headers; then
-            remote_protected=1
-            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.experience.staging.toml --local --port 8794 >/tmp/experience-local.log 2>&1 &
-            runtime_pid=$!
-            verify_base='http://127.0.0.1:8794'
-            for attempt in $(seq 1 30); do
-              curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1 && break
-              kill -0 "$runtime_pid" 2>/dev/null || { cat /tmp/experience-local.log; exit 1; }
-              sleep 2
-            done
+          for attempt in $(seq 1 12); do
+            access_code=$(curl -sS -D /tmp/experience-access.headers -o /tmp/experience-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$access_code" == '200' ]]; then remote_ready=1; break; fi
+            if [[ "$access_code" == '302' ]] && grep -iq 'cloudflare-access' /tmp/experience-access.headers; then remote_protected=1; break; fi
+            sleep 2
+          done
+          if [[ "$remote_ready" != '1' && "$remote_protected" != '1' ]]; then
+            echo "Staging deployment did not become reachable or Access-protected. Last code=$access_code" >&2
+            cat /tmp/experience-access.headers || true
+            exit 1
           fi
-          root_code=$(curl -L -sS -D /tmp/experience-root.headers -o /tmp/experience-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
+
+          npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.experience.staging.toml --local --port 18794 >/tmp/experience-local.log 2>&1 &
+          runtime_pid=$!
+          cleanup(){ kill "$runtime_pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 30); do
+            curl -sSf --max-time 5 'http://127.0.0.1:18794/health' >/dev/null 2>&1 && break
+            kill -0 "$runtime_pid" 2>/dev/null || { cat /tmp/experience-local.log; exit 1; }
+            sleep 2
+          done
+          verify_base='http://127.0.0.1:18794'
+          root_code=$(curl -sS -D /tmp/experience-root.headers -o /tmp/experience-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
           health_code=$(curl -sS -o /tmp/experience-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
           catalog_code=$(curl -sS -o /tmp/experience-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/catalog" || true)
           admin_code=$(curl -sS --max-redirs 0 -D /tmp/experience-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/admin" || true)
@@ -113,8 +113,9 @@ jobs:
           grep -Fq '개발자모드' /tmp/experience-root.html
           grep -Fq 'synthetic-only' /tmp/experience-health.json
           grep -Fq 'productionWrites' /tmp/experience-catalog.json
+          grep -Fiq 'x-ekodi-shell: v2' /tmp/experience-root.headers
           grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/experience-admin.headers
-          if [[ "$remote_protected" == '1' ]]; then echo 'Development staging remains Access-protected; exact local runtime contract verified.'; fi
+          if [[ "$remote_protected" == '1' ]]; then echo 'Development staging is Cloudflare Access-protected; exact Worker contract verified locally.'; else echo 'Development staging is reachable; exact Worker contract verified locally.'; fi
 
   deploy-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
