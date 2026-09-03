@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
+import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { proxyPublicWorkspace, resolveLegacyWorkspaceRedirect, resolvePublicWorkspacePath } from './workspace-public-proxy.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
@@ -409,6 +410,11 @@ export default {
         const next = new URL(request.url);
         next.pathname = '/ekodibiz/mall/admin' + url.pathname.slice('/mall/admin'.length);
         return Response.redirect(next.toString(), 308);
+      }
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
+        const page=ekodiBizInvestAdminPage(request);
+        const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
+        return injectEkodiShell(secured, 'biz', 'admin');
       }
       if (isWorkspaceAdminPath(url.pathname)) {
         if (url.pathname.startsWith('/org/')) { const next=new URL(request.url); next.pathname=url.pathname.slice(4); return Response.redirect(next.toString(),308); }

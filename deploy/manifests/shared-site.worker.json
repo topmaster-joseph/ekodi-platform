@@ -1,5 +1,5 @@
 {
-  "version": 47,
+  "version": 48,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -237,6 +237,22 @@
         "headerExpect": [
           "x-ekodi-route: public-ekodibiz-invest",
           "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/invest/admin",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "EKODIBIZ INVEST",
+          "WORKSPACE-LOCAL ADMIN",
+          "data-ekodi-admin-surface=\"local\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-ekodibiz-invest-admin",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false

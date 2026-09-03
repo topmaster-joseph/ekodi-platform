@@ -1,5 +1,6 @@
 const PREFIX = '/ekodibiz/invest';
 const COMMON_INVEST_URL = 'https://invest.ekodi.kr/';
+const ADMIN_PATH = `${PREFIX}/admin`;
 
 const SECTIONS = Object.freeze({
   overview: {
@@ -64,7 +65,7 @@ export function ekodiBizInvestBusinessPage(request) {
   const content = key === 'overview'
     ? `<section class="grid">${cards()}</section>`
     : `<section class="card"><b>${section.title}</b><span>${section.description}</span><p class="note">이 사업의 분석·실사·Evidence 기능은 독립 공통서비스 EKODI Invest를 사용하며, 에코디비즈 사업 데이터와 공통엔진의 핵심 로직은 분리합니다.</p></section>`;
-  const html = `${body}<main class="wrap" data-ekodi-workspace="ekodibiz" data-ekodi-business-unit="invest"><header class="top"><a class="brand" href="/ekodibiz">EKODIBIZ</a>${nav}</header><section class="hero"><div class="eyebrow">${section.eyebrow}</div><h1>${section.title}</h1><p>${section.description}</p><div class="actions"><a class="button primary" href="${COMMON_INVEST_URL}">EKODI Invest 공통서비스</a><a class="button" href="/ekodibiz">에코디비즈 홈</a></div></section>${content}<aside class="boundary"><b>사업과 공통서비스의 경계</b><div class="note">이 경로는 에코디비즈의 실제 세부사업입니다. 공통 투자 분석·실사 엔진은 <strong>invest.ekodi.kr</strong>에서 독립적으로 운영되며 다른 Workspace에서도 재사용할 수 있습니다. 투자금 수취·주문·체결·수탁·수익보장은 이 사업 화면에서 수행하지 않습니다.</div></aside><footer>EKODIBIZ · Investment Business · Powered by EKODI Invest Core</footer></main></body></html>`;
+  const html = `${body}<main class="wrap" data-ekodi-workspace="ekodibiz" data-ekodi-business-unit="invest"><header class="top"><a class="brand" href="/ekodibiz">EKODIBIZ</a>${nav}</header><section class="hero"><div class="eyebrow">${section.eyebrow}</div><h1>${section.title}</h1><p>${section.description}</p><div class="actions"><a class="button primary" href="${COMMON_INVEST_URL}">EKODI Invest 공통서비스</a><a class="button" href="${ADMIN_PATH}">사업 관리자</a><a class="button" href="/ekodibiz">에코디비즈 홈</a></div></section>${content}<aside class="boundary"><b>사업과 공통서비스의 경계</b><div class="note">이 경로는 에코디비즈의 실제 세부사업입니다. 공통 투자 분석·실사 엔진은 <strong>invest.ekodi.kr</strong>에서 독립적으로 운영되며 다른 Workspace에서도 재사용할 수 있습니다. 투자금 수취·주문·체결·수탁·수익보장은 이 사업 화면에서 수행하지 않습니다.</div></aside><footer>EKODIBIZ · Investment Business · Powered by EKODI Invest Core</footer></main></body></html>`;
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
@@ -76,6 +77,7 @@ export function ekodiBizInvestBusinessPage(request) {
 
 export const EKODIBIZ_INVEST_BUSINESS = Object.freeze({
   canonicalPath: PREFIX,
+  adminPath: ADMIN_PATH,
   workspaceNamespace: 'ekodibiz',
   commonService: COMMON_INVEST_URL,
   businessUnits: Object.freeze(['projects','ir','connect','programs']),
