@@ -61,6 +61,7 @@ on:
       - '_headers'
       - 'auth-site/**'
       - 'marketing-ai-admin.js'
+      - 'marketing-ai-channel-manager.js'
       - 'marketing-ai-admin.css'
       - 'config/ecosystem-services.json'
       - 'scripts/ecosystem-registry.mjs'
