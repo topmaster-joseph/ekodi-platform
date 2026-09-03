@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -48,6 +48,22 @@
       "/biz/{slug}": "/{public_namespace}",
       "space.ekodi.kr": "ekodi.kr",
       "user.ekodi.kr": "ekodi.kr"
+    }
+  },
+  "userSurfaceTopologyPolicy": {
+    "rule": "User-facing URLs express the user/workspace/business and the service being used; AI provider, model, orchestration and engine topology are implementation details.",
+    "businessServicePattern": "https://ekodi.kr/{business_namespace}/{service}",
+    "workspaceServicePattern": "https://ekodi.kr/{public_namespace}/{service}",
+    "workspaceAdminPattern": "https://ekodi.kr/{public_namespace}/admin",
+    "customerSpecificAiSubdomains": "forbidden_as_canonical",
+    "providerOrModelNameInCustomerCanonical": "forbidden",
+    "professionalEngineSubdomain": "allowed_only_as_registered_non_customer_boundary",
+    "ordinaryUserProviderDisclosure": "hidden_unless_consent_safety_legal_or_explicit_technical_context_requires_it",
+    "examples": {
+      "ekodibizMarketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
+      "jadamMarketing": "https://ekodi.kr/jadam/marketing",
+      "marketingEngine": "https://marketing.ekodi.kr",
+      "aiGateway": "https://ai.ekodi.kr"
     }
   },
   "subdomainExceptions": {
