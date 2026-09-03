@@ -19,7 +19,7 @@
         "headerExpect": ["x-ekodi-service: space", "cache-control: no-store"]
       },
       {
-        "url": "https://space.ekodi.kr/org/deployment-probe",
+        "url": "https://space.ekodi.kr/deployment-probe",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["OPERATING SPACE", "실제 데이터·권한 연결"],

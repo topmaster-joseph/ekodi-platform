@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.4.0
+# EKODI Platform Constitution v1.5.0
 
 Effective: 2026-09-03
 
@@ -15,8 +15,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
 - Development mirrors those boundaries under `*.dev.ekodi.kr`.
 - Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
-- Canonical public user-space namespaces are `ekodi.kr/personal/{slug}`, `ekodi.kr/org/{slug}`, `ekodi.kr/group/{slug}` and `ekodi.kr/project/{slug}`.
-- Business, church, school, nonprofit, association, institution and similar formal entities are organization subtypes under `/org/{slug}` unless a future constitutional amendment defines another universal workspace kind.
+- Canonical public user-space addresses use the universal root pattern `ekodi.kr/{slug}`. Workspace kind is internal metadata and is never encoded into the public URL.
+- Workspace child services use `ekodi.kr/{slug}/{service}`; workspace administration uses `ekodi.kr/{slug}/admin` or `ekodi.kr/{slug}/{service}/admin`. Root slugs reserved for platform, common-service or core-service routes cannot be claimed by a workspace.
 - `space.ekodi.kr`, `user.ekodi.kr` and per-tenant subdomains are not canonical workspace addresses. If such aliases exist, they must redirect to the corresponding `ekodi.kr` path while preserving the remaining path where practical.
 - `my.ekodi.kr` remains the personal authenticated home/control surface and may present workspace participation, switching and private controls without becoming the canonical public workspace address.
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
@@ -89,7 +89,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Protected constitutional files must not be silently changed as part of unrelated work.
 
 ## 10. Legacy Migration Rule
-Existing feature and workspace aliases are not deleted merely to satisfy the canonical grammar. They migrate through canonical paths plus redirects/compatibility routes. In particular, legacy `/people/{slug}` maps to `/personal/{slug}` and legacy `/biz/{slug}` tenant/workspace paths map to `/org/{slug}`. Any deployed `space.ekodi.kr` or `user.ekodi.kr` workspace alias must redirect to the equivalent `ekodi.kr` path. Migration proceeds without breaking existing users, OAuth callbacks or external links, and redirect rules must be verified before an alias is retired.
+Workspace type-prefixed public routes are retired and are not part of the runtime routing grammar. Any maintained `space.ekodi.kr` or `user.ekodi.kr` workspace alias maps a workspace slug directly to `ekodi.kr/{slug}`. Workspace type remains internal metadata bound to immutable `workspace_id`; it is not a public path component. Root-route collisions are prevented by the platform route registry and verified before release.
 
 ## 11. Enforcement
 `npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy and governance records. `npm run check` includes it. GitHub CI runs the same check on constitutional and platform changes.

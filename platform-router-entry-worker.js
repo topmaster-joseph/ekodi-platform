@@ -14,17 +14,15 @@ import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
+import { isPublicWorkspacePath } from './workspace-route-policy.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
-const PUBLIC_WORKSPACE_ROUTE=/^\/(personal|org|group|project)\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/?$/;
 const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
-const EKODIBIZ_LEGACY_PREFIX='/org/ekodibiz';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css']);
-const WORKSPACE_ADMIN_RETURN_ROUTE=/^\/(?:personal\/|org\/|group\/|project\/)?[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/(?:admin(?:\/[a-z0-9-]+)?|[a-z0-9-]+\/admin(?:\/[a-z0-9-]+)?)\/?$/;
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
 
@@ -33,13 +31,6 @@ function resolvedHost(request,env){
   if(env?.ENVIRONMENT!=='staging')return url.hostname.toLowerCase();
   const simulated=String(request.headers.get('x-ekodi-staging-host')||'').trim().toLowerCase();
   return simulated||url.hostname.toLowerCase();
-}
-
-function legacyEkodiBizCanonicalRedirect(request){
-  const target=new URL(request.url);
-  if(!(target.pathname===EKODIBIZ_LEGACY_PREFIX||target.pathname.startsWith(`${EKODIBIZ_LEGACY_PREFIX}/`)))return null;
-  target.pathname=`/ekodibiz${target.pathname.slice(EKODIBIZ_LEGACY_PREFIX.length)}`;
-  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'ekodibiz-legacy-canonical-redirect'}});
 }
 
 function workspaceServiceUnavailable(){
@@ -54,7 +45,7 @@ function rewriteWorkspaceShellAssets(response){
   return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(response);
 }
 function safeWorkspaceReturnTo(value){
-  try{const target=new URL(String(value||''));target.hash='';if(target.origin!=='https://ekodi.kr'||!(PUBLIC_WORKSPACE_ROUTE.test(target.pathname)||EKODIBIZ_PUBLIC_ROUTE.test(target.pathname)||WORKSPACE_ADMIN_RETURN_ROUTE.test(target.pathname)||isWorkspaceAdminPath(target.pathname)))return null;return target}catch{return null}
+  try{const target=new URL(String(value||''));target.hash='';if(target.origin!=='https://ekodi.kr'||!(isPublicWorkspacePath(target.pathname)||EKODIBIZ_PUBLIC_ROUTE.test(target.pathname)||isWorkspaceAdminPath(target.pathname)))return null;return target}catch{return null}
 }
 function workspaceAuthRedirect(request){
   const url=new URL(request.url);const returnTo=safeWorkspaceReturnTo(url.searchParams.get('return_to'));if(!returnTo)return null;
@@ -112,9 +103,6 @@ export default {
     const host=resolvedHost(request,env);
 
     if(host===PUBLIC_HOST){
-      if(['GET','HEAD'].includes(request.method)){
-        const legacyEkodiBiz=legacyEkodiBizCanonicalRedirect(request);if(legacyEkodiBiz)return legacyEkodiBiz;
-      }
       if(request.method==='GET'){
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
@@ -126,7 +114,7 @@ export default {
       }
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
-      if(['GET','HEAD'].includes(request.method)&&PUBLIC_WORKSPACE_ROUTE.test(url.pathname))return routePublicWorkspace(request,env);
+      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname))return routePublicWorkspace(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;

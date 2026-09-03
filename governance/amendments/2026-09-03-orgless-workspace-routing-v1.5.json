@@ -1,0 +1,20 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-V1.5-ORGLESS-WORKSPACE-ROUTING",
+  "date": "2026-09-03",
+  "class": "C3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "Explicit user instruction in ChatGPT conversation on 2026-09-03 to remove public workspace type prefixes and their active source records from user pages and child services.",
+  "constitutionVersion": "1.5.0",
+  "summary": "Canonicalize all public workspace addresses to ekodi.kr/{slug} and child services to ekodi.kr/{slug}/{service}; keep workspace kind internal to workspace_id-backed data.",
+  "affectedAreas": [
+    "domain",
+    "workspace-routing",
+    "user-pages",
+    "child-services",
+    "authentication-return-targets",
+    "governance"
+  ],
+  "migrationPolicy": "Breaking public-route simplification: typed public workspace route prefixes are retired from runtime and current source-of-truth records; reserved root slugs protect platform, common-service and core-service routes.",
+  "rollbackPlan": "Revert the v1.5 orgless routing changes to restore the prior route model if staged verification detects workspace resolution, route collision, authentication return, or core-route regression."
+}
