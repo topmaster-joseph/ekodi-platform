@@ -126,3 +126,12 @@ test('Cheonggye realtime member path survives D1 read quota by using encrypted R
   assert.match(control, /const isCheonggyeRoute = url\.pathname\.startsWith/);
   assert.match(control, /if \(!isCheonggyeRoute\)/);
 });
+
+test('Cheonggye 웹관리 A:F contract preserves 비고 as column F', () => {
+  assert.match(control, /name:String\(row\[4\]/);
+  assert.match(control, /note:String\(row\[5\]/);
+  assert.match(control, /member\.name,member\.note/);
+  assert.match(cheonggyeAdmin, /name="note"/);
+  assert.match(cheonggyeAdmin, /data-sort="note">비고/);
+  assert.doesNotMatch(cheonggyeAdmin, /연락처/);
+});
