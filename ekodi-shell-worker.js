@@ -21,7 +21,7 @@ async function bundledShell(request,env){
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,ccmMrResponse,adminShellResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
     env.ASSETS.fetch(new Request(shellUrl,request)),
     env.ASSETS.fetch(new Request(navUrl,request)),
     env.ASSETS.fetch(new Request(contextUrl,request)),
@@ -63,14 +63,14 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
-  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
 }
 
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:1,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:1,userCharacterVersion:1,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/user-footer.json')return json(EKODI_USER_FOOTER,200,'public, max-age=300, stale-while-revalidate=3600');
     if(url.pathname==='/service'){
