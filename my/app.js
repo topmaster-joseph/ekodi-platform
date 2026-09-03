@@ -210,13 +210,18 @@ async function saveProfile(event){
   console.error('profile save',error);status.className='profile-status error';status.textContent='저장하지 못했습니다. 기존 정보는 변경되지 않았습니다.';
  }finally{button.textContent=old;button.disabled=false;input.disabled=false}
 }
-async function authAction(){if(!enabled)return;if(!session){const target=new URL(authUrl);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href);return}await sb.auth.signOut();session=null;await loadAll();authUi()}
+function authEntryUrl(){const target=new URL(authUrl);target.searchParams.set('return_to',location.href.split('#')[0]);return target.href;}
+function redirectToAuth(){document.body.dataset.ekodiAuthState='redirecting';location.replace(authEntryUrl());}
+async function authAction(){if(!enabled)return;if(!session){redirectToAuth();return}await sb.auth.signOut();session=null;redirectToAuth()}
 
 $('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#profileForm').addEventListener('submit',saveProfile);
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
-if(!enabled){authUi();await loadAll()}else{
+if(!enabled){document.body.dataset.ekodiAuthState='signed-in';authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
- const {data}=await sb.auth.getSession();session=data.session;authUi();
- try{await loadAll()}catch(e){console.error('My EKODI load',e)}
- sb.auth.onAuthStateChange(async(_e,next)=>{session=next;authUi();await loadAll()});
+ const {data}=await sb.auth.getSession();session=data.session;
+ if(!session){redirectToAuth()}else{
+  document.body.dataset.ekodiAuthState='signed-in';authUi();
+  try{await loadAll()}catch(e){console.error('My EKODI load',e)}
+  sb.auth.onAuthStateChange(async(_e,next)=>{session=next;if(!session){redirectToAuth();return}document.body.dataset.ekodiAuthState='signed-in';authUi();await loadAll()});
+ }
 }

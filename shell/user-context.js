@@ -14,15 +14,31 @@ function allowed(){
  surface=String(d.ekodiShellSurface||surface||'').toLowerCase();
  return USER_SURFACES.has(surface);
 }
-function switchUrl(){
+function serviceId(){return String(document.documentElement.dataset.ekodiService||'').trim().toLowerCase();}
+function contextualMyUrl(){
  const u=new URL(MY);
- u.searchParams.set('return_to',location.href);
+ const service=serviceId();
+ if(service&&service!=='my')u.searchParams.set('from',service);
+ if(service!=='my')u.searchParams.set('return_to',location.href);
+ return u;
+}
+function decorateMyLinks(){
+ const service=serviceId();
+ if(service==='my')return;
+ const target=contextualMyUrl().href;
+ for(const link of document.querySelectorAll('a[href]')){
+  try{const href=new URL(link.href,location.href);if(href.origin===new URL(MY).origin)link.href=target;}catch{}
+ }
+}
+function switchUrl(){
+ const u=contextualMyUrl();
  u.hash='workspaces';
  return u.href;
 }
 function shellShadow(){return document.querySelector('[data-ekodi-shell-root]')?.shadowRoot||null;}
 function apply(){
  if(!allowed())return;
+ decorateMyLinks();
  const shadow=shellShadow();
  if(!shadow)return;
  const space=shadow.querySelector('[data-space]');

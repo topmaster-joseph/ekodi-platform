@@ -49,7 +49,7 @@
     const secure=location.protocol==='https:'?'; Secure':'';
     document.cookie=`${COOKIE}=${encodeURIComponent(value)}; Path=/; Domain=.ekodi.kr; SameSite=Lax${secure}`;
   }
-  wanted=cookieValue()!=='off';
+  wanted=cookieValue()==='on';
 
   function midi(note){return 440*Math.pow(2,(note-69)/12);}
   function voice(freq,start,duration,level,type='sine',detune=0,destination=master){
@@ -190,8 +190,16 @@
   function actionContainer(target){
     return target?.querySelector?.('.ekodi-user-ui-fallback-header__nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions,#main-nav,nav')||target;
   }
+  function utilityRail(){
+    if(!document.body||!window.matchMedia('(max-width:640px)').matches)return null;
+    let rail=document.querySelector('[data-ekodi-user-utility-rail]');
+    if(!rail){rail=document.createElement('div');rail.setAttribute('data-ekodi-user-utility-rail','v1');rail.setAttribute('data-ekodi-header-side','right');document.body.append(rail);}
+    return rail;
+  }
   function placeButton(button=document.getElementById(buttonId)){
     if(!button||!document.body)return;
+    const rail=utilityRail();
+    if(rail){button.dataset.ekodiFloating='false';if(button.parentElement!==rail)rail.append(button);return;}
     const target=header();
     if(!target){button.dataset.ekodiFloating='true';if(button.parentElement!==document.body)document.body.append(button);return;}
     const parent=actionContainer(target);
