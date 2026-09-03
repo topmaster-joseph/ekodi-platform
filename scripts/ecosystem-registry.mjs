@@ -1,5 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import {
+  applyUserSurfaceOverride,
+  assertEngineBoundarySeparation,
+  assertUserFacingCanonical,
+  loadUserSurfaceContract,
+} from './user-surface-contract.mjs';
 
 const registryPath = fileURLToPath(new URL('../config/ecosystem-services.json', import.meta.url));
 
@@ -93,7 +99,14 @@ function validateRegistry(registry) {
 }
 
 export async function loadHomepageServices() {
-  const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
+  const contract = await loadUserSurfaceContract();
+  assertEngineBoundarySeparation(contract);
+  const source = JSON.parse(await readFile(registryPath, 'utf8'));
+  source.services = Array.isArray(source.services)
+    ? source.services.map(service => applyUserSurfaceOverride(service, contract))
+    : source.services;
+  const registry = validateRegistry(source);
+  for (const service of registry.services) assertUserFacingCanonical(service, contract);
   const candidates = registry.services
     .filter(service => service.productionVerified === true && service.status === 'live')
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.id.localeCompare(b.id));
