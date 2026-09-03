@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.3.0
+# EKODI Platform Constitution v1.4.0
 
 Effective: 2026-09-03
 
@@ -21,6 +21,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `my.ekodi.kr` remains the personal authenticated home/control surface and may present workspace participation, switching and private controls without becoming the canonical public workspace address.
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
 - Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
+- An independently managed common/core or user-facing service subdomain with an operator UI uses `https://{service-host}/admin` as its standard administration entry. The entry is a protected local projection or a handoff into `admin.ekodi.kr`; the hostname and path never become an authorization source. Privileged infrastructure hosts such as `api.ekodi.kr` and `auth.ekodi.kr` remain central-only unless a separately approved security boundary exists.
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
@@ -49,6 +50,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Internet traffic reaches EKODI through the edge security boundary before origin services.
 - Public origin, database, Redis, SSH/RDP and privileged administration endpoints are forbidden.
 - Admin uses a stronger access boundary than ordinary user surfaces.
+- Service-local `/admin` entrypoints preserve EKODI Core RBAC, use central authentication or an equivalent strong admin boundary, never derive workspace authority from the hostname, and keep private/admin content `no-store`.
 - Public content is cache-first; private/admin responses are restricted or no-cache.
 - Edge controls absorb volumetric abuse; EKODI enforces user, tenant, capability and cost-aware limits.
 - Login, signup, upload, AI and other abuse-sensitive endpoints receive dedicated throttling and verification.

@@ -30,7 +30,8 @@
       "order": 15,
       "homepage": false,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://bible.ekodi.kr/admin"
     },
     {
       "id": "community",
@@ -45,7 +46,8 @@
       "order": 20,
       "homepage": true,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://community.ekodi.kr/admin"
     },
     {
       "id": "social",
@@ -60,7 +62,8 @@
       "order": 30,
       "homepage": true,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://social.ekodi.kr/admin"
     },
     {
       "id": "cafe",
@@ -105,7 +108,8 @@
       "order": 50,
       "homepage": true,
       "productionVerified": true,
-      "status": "beta"
+      "status": "beta",
+      "adminUrl": "https://business.ekodi.kr/admin"
     },
     {
       "id": "management",
@@ -120,7 +124,8 @@
       "order": 55,
       "homepage": false,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://management.ekodi.kr/admin"
     },
     {
       "id": "mall",
@@ -210,7 +215,8 @@
       "order": 85,
       "homepage": true,
       "productionVerified": true,
-      "status": "beta"
+      "status": "beta",
+      "adminUrl": "https://invest.ekodi.kr/admin"
     },
     {
       "id": "support",
@@ -225,7 +231,8 @@
       "order": 87,
       "homepage": false,
       "productionVerified": true,
-      "status": "beta"
+      "status": "beta",
+      "adminUrl": "https://support.ekodi.kr/admin"
     },
     {
       "id": "money",
@@ -240,7 +247,8 @@
       "order": 88,
       "homepage": false,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://money.ekodi.kr/admin"
     },
     {
       "id": "pay",
@@ -255,7 +263,8 @@
       "order": 90,
       "homepage": false,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://pay.ekodi.kr/admin"
     },
     {
       "id": "books",
@@ -270,7 +279,8 @@
       "order": 100,
       "homepage": true,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://books.ekodi.kr/admin"
     },
     {
       "id": "publishing",
@@ -285,7 +295,8 @@
       "order": 105,
       "homepage": true,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://publishing.ekodi.kr/admin"
     },
     {
       "id": "journal",
@@ -300,7 +311,8 @@
       "order": 107,
       "homepage": true,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://journal.ekodi.kr/admin"
     },
     {
       "id": "author",
@@ -315,7 +327,8 @@
       "order": 110,
       "homepage": true,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://author.ekodi.kr/admin"
     },
     {
       "id": "lab",
@@ -345,7 +358,8 @@
       "order": 130,
       "homepage": false,
       "productionVerified": false,
-      "status": "planned"
+      "status": "planned",
+      "adminUrl": "https://edu.ekodi.kr/admin"
     },
     {
       "id": "life",
@@ -360,7 +374,8 @@
       "order": 135,
       "homepage": false,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://life.ekodi.kr/admin"
     },
     {
       "id": "my",
@@ -405,7 +420,8 @@
       "order": 150,
       "homepage": true,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "adminUrl": "https://work.ekodi.kr/admin"
     },
     {
       "id": "energy",
@@ -420,7 +436,8 @@
       "order": 160,
       "homepage": true,
       "productionVerified": true,
-      "status": "beta"
+      "status": "beta",
+      "adminUrl": "https://energy.ekodi.kr/admin"
     },
     {
       "id": "insurance",
@@ -450,7 +467,8 @@
       "order": 175,
       "homepage": true,
       "productionVerified": true,
-      "status": "beta"
+      "status": "beta",
+      "adminUrl": "https://messenger.ekodi.kr/admin"
     },
     {
       "id": "mail",
@@ -465,7 +483,8 @@
       "order": 180,
       "homepage": false,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://mail.ekodi.kr/admin"
     },
     {
       "id": "live",
@@ -480,7 +499,8 @@
       "order": 190,
       "homepage": false,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://live.ekodi.kr/admin"
     },
     {
       "id": "cloud",
@@ -495,7 +515,8 @@
       "order": 200,
       "homepage": false,
       "productionVerified": false,
-      "status": "preparing"
+      "status": "preparing",
+      "adminUrl": "https://cloud.ekodi.kr/admin"
     },
     {
       "id": "media",

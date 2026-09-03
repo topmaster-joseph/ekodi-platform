@@ -39,6 +39,7 @@ function publicWorkspaceTypes(){return MANAGEMENT_WORKSPACE_TYPES.map(type=>({id
 
 export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
+  if(request.method==='GET'&&(url.pathname==='/admin'||url.pathname==='/admin/'))return Response.redirect('https://admin.ekodi.kr/?focus=management',307);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_MANAGEMENT_CONFIG=${JSON.stringify(cfg(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
   if(request.method==='GET'&&url.pathname==='/api/catalog')return json({platform:'management',guestMode:MANAGEMENT_ACCESS_POLICY.guestMode,minimumTier:MANAGEMENT_ACCESS_POLICY.minimumTier,workspaceKinds:MANAGEMENT_WORKSPACE_KINDS,workspaceTypes:publicWorkspaceTypes(),modules:publicCatalog()});
   if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);

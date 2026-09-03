@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -16,7 +16,8 @@
     "isolated-parallel-development",
     "verification-first-evolution",
     "security-native-intelligence",
-    "evidence-linked-recommendations"
+    "evidence-linked-recommendations",
+    "service-local-admin-entrypoints"
   ],
   "systemBoundaries": {
     "production": [
@@ -308,5 +309,24 @@
       "backup",
       "disaster_recovery"
     ]
+  },
+  "serviceAdministrationPolicy": {
+    "canonicalServiceAdminPath": "/admin",
+    "centralControlOrigin": "https://admin.ekodi.kr",
+    "appliesTo": "independently_managed_common_core_and_user_facing_service_subdomains_with_operator_ui",
+    "serviceEntryIsAuthoritySource": false,
+    "authorizationSource": "ekodi_core_rbac",
+    "authenticationBoundary": "central_auth_or_equivalent_strong_admin_boundary",
+    "allowedDeliveryModes": [
+      "central_admin_handoff",
+      "protected_service_local_projection"
+    ],
+    "privateAndAdminCachePolicy": "no-store",
+    "privilegedCoreHosts": [
+      "api.ekodi.kr",
+      "auth.ekodi.kr"
+    ],
+    "privilegedCoreExposure": "central-only unless a separately approved security boundary exists",
+    "workspaceIdentityFromHostnameForbidden": true
   }
 }

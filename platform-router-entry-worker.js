@@ -151,6 +151,7 @@ export default {
     }
 
     if(host===MESSENGER_HOST&&request.method==='GET'){
+      if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?focus=messenger',307);
       if(url.pathname==='/'||url.pathname===''){
         const response=await withReleaseMarker(messengerUserPage());
         return injectEkodiShell(response,'messenger');
@@ -159,6 +160,7 @@ export default {
     }
 
     if(host===INVEST_HOST&&request.method==='GET'){
+      if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?focus=invest',307);
       if(url.pathname==='/'||url.pathname==='')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');
       if(url.pathname==='/invest-ui.js')return investUiScript();
       if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();

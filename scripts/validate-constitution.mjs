@@ -11,9 +11,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.3.0') fail('constitution version must remain 1.3.0 with approved common-service and verification-first evolution amendments');
+if (constitution.version !== '1.4.0') fail('constitution version must remain 1.4.0 with approved service-local administration, common-service and verification-first evolution amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','service-local-admin-entrypoints']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -47,6 +47,14 @@ if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !sys
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
+const serviceAdmin = constitution.serviceAdministrationPolicy || {};
+if (serviceAdmin.canonicalServiceAdminPath !== '/admin') fail('service administration path must remain /admin');
+if (serviceAdmin.centralControlOrigin !== 'https://admin.ekodi.kr') fail('central service administration origin must remain admin.ekodi.kr');
+if (serviceAdmin.serviceEntryIsAuthoritySource !== false) fail('service-local admin entry may not become an authority source');
+if (serviceAdmin.authorizationSource !== 'ekodi_core_rbac') fail('service administration authorization must remain EKODI Core RBAC');
+if (serviceAdmin.privateAndAdminCachePolicy !== 'no-store') fail('service administration cache policy must remain no-store');
+if (serviceAdmin.workspaceIdentityFromHostnameForbidden !== true) fail('service administration may not derive workspace identity from hostname');
+for (const host of ['api.ekodi.kr','auth.ekodi.kr']) if (!serviceAdmin.privilegedCoreHosts?.includes(host)) fail('privileged core admin exception missing: '+host);
 
 const expectedNamespaces = ['personal','org','group','project'];
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expectedNamespaces)) {

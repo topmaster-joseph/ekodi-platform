@@ -42,6 +42,7 @@ async function authorHtml(response) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (request.method === 'GET' && (url.pathname === '/admin' || url.pathname === '/admin/')) return Response.redirect('https://admin.ekodi.kr/?focus=author', 307);
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({
         ok: true,

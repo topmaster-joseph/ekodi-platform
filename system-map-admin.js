@@ -240,17 +240,20 @@
       const group = document.createElement('section'); group.className = 'structure-service-group';
       const title = document.createElement('h4'); title.textContent = categoryLabels[category] || category;
       const grid = document.createElement('div'); grid.className = 'structure-service-grid';
+
       rows.forEach(service => {
-        const card = document.createElement('a');
+        const card = document.createElement('article');
         card.className = 'structure-service-card';
-        card.href = service.url || `https://${service.label || ''}`; card.target = '_blank'; card.rel = 'noopener noreferrer';
         const top = document.createElement('div');
         const name = document.createElement('strong'); name.textContent = service.name || service.nameEn || service.id;
         const badge = document.createElement('b'); badge.dataset.state = service.status || 'planned'; badge.textContent = service.status || 'planned';
         top.append(name, badge);
         const domain = document.createElement('small'); domain.textContent = service.label || service.url || '';
         const desc = document.createElement('span'); desc.textContent = service.descriptionKo || service.descriptionEn || '';
-        card.append(top, domain, desc); grid.append(card);
+        const actions = document.createElement('nav'); actions.className = 'structure-service-actions'; actions.setAttribute('aria-label', `${name.textContent} links`);
+        if (service.url) { const open = document.createElement('a'); open.href = service.url; open.target = '_blank'; open.rel = 'noopener noreferrer'; open.textContent = '서비스'; actions.append(open); }
+        if (service.adminUrl) { const admin = document.createElement('a'); admin.href = service.adminUrl; admin.target = '_blank'; admin.rel = 'noopener noreferrer'; admin.dataset.adminEntry = service.id; admin.textContent = '관리'; actions.append(admin); }
+        card.append(top, domain, desc, actions); grid.append(card);
       });
       group.append(title, grid); root.append(group);
     }

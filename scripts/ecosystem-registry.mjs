@@ -76,6 +76,13 @@ function validateRegistry(registry) {
     urls.add(service.url);
 
     if (!service.name || !service.label) throw new Error(`Service name/label required: ${service.id}`);
+    if (service.adminUrl) {
+      let admin;
+      try { admin = new URL(service.adminUrl); } catch { throw new Error(`Invalid service admin URL: ${service.id}`); }
+      if (admin.protocol !== 'https:' || admin.pathname.replace(/\/+$/, '') !== '/admin') throw new Error(`Service admin URL must use HTTPS and canonical /admin path: ${service.id}`);
+      if (admin.origin !== parsed.origin) throw new Error(`Service admin URL must stay on the service origin: ${service.id}`);
+      if (['api.ekodi.kr','auth.ekodi.kr','admin.ekodi.kr'].includes(admin.hostname)) throw new Error(`Privileged core host cannot be registered as a service-local admin entry: ${service.id}`);
+    }
     if (!ICONS[service.icon]) throw new Error(`Unknown service icon: ${service.id}`);
     if (!CATEGORY_IDS.has(service.category)) throw new Error(`Unknown service category: ${service.id}`);
 

@@ -447,6 +447,13 @@ export default {
       }
     }
 
+    if (HUB_HOSTS.has(host) && PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
+      const service = host.split('.')[0];
+      return withHostSecurity(Response.redirect(`https://admin.ekodi.kr/?focus=${encodeURIComponent(service)}`, 307), HUB_CSP, 'no-store', 'admin-service-handoff');
+    }
+
+
+
     if (HUB_HOSTS.has(host) && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/hub'));
       return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'hub');
