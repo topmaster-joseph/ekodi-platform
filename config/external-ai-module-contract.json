@@ -6,13 +6,35 @@
   "timeoutMsDefault": 12000,
   "timeoutMsMax": 30000,
   "requestEnvelope": {
-    "required": ["contractVersion", "requestId", "moduleId", "capability", "context", "input"],
-    "contextRequired": ["spaceId", "serviceId", "actorId", "role", "capabilities", "attestedBy"]
+    "required": [
+      "contractVersion",
+      "requestId",
+      "moduleId",
+      "capability",
+      "context",
+      "input"
+    ],
+    "contextRequired": [
+      "spaceId",
+      "serviceId",
+      "actorId",
+      "role",
+      "capabilities",
+      "attestedBy"
+    ]
   },
   "responseEnvelope": {
-    "required": ["contractVersion", "requestId", "ok"],
-    "successRequired": ["output"],
-    "failureRequired": ["error"]
+    "required": [
+      "contractVersion",
+      "requestId",
+      "ok"
+    ],
+    "successRequired": [
+      "output"
+    ],
+    "failureRequired": [
+      "error"
+    ]
   },
   "security": {
     "executionTrust": "registered_ekodi_internal_caller",
@@ -26,7 +48,14 @@
     "providerSecretsStayServerSide": true,
     "tenantContextRequired": true,
     "capabilityCheckRequired": true,
-    "capabilitiesMustBeAttestedByEkodiCaller": true
+    "capabilitiesMustBeAttestedByEkodiCaller": true,
+    "secureProjectionRequired": true,
+    "projectionPolicy": "purpose-bound-minimum-disclosure",
+    "projectionProfileDefault": "ai_minimum",
+    "canonicalActorIdMayLeaveEkodi": false,
+    "canonicalSpaceIdMayLeaveEkodi": false,
+    "personalDataDefault": "drop",
+    "sourceTopologyMayLeaveEkodi": false
   },
   "persistence": {
     "providerReturnsOutputToEkodi": true,
@@ -35,6 +64,13 @@
     "canonicalCredentialsSource": "encrypted_storage_connections",
     "canonicalRouteSource": "storage_routes"
   },
-  "moduleManifestRequired": ["id", "name", "version", "endpoint", "capabilities", "secretBinding"],
+  "moduleManifestRequired": [
+    "id",
+    "name",
+    "version",
+    "endpoint",
+    "capabilities",
+    "secretBinding"
+  ],
   "moduleIdPattern": "^[a-z0-9][a-z0-9._-]{2,63}$"
 }
