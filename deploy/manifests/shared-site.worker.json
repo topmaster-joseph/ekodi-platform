@@ -1,5 +1,5 @@
 {
-  "version": 44,
+  "version": 45,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -149,19 +149,18 @@
       {
         "url": "https://ekodi.kr/mall/admin/",
         "statuses": [
-          302
+          200
         ],
         "redirect": "manual",
         "expect": [
-          "Redirecting to https://admin.ekodi.kr/?source=mall.ekodi.kr"
+          "EKODI Workspace Admin",
+          "workspace-admin.js"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-mall-proxy",
-          "x-ekodi-edge: mall-path-gateway",
+          "x-ekodi-route: workspace-admin",
           "cache-control: no-store",
-          "location: https://admin.ekodi.kr/?source=mall.ekodi.kr"
-        ],
-        "rollbackVerify": false
+          "x-content-type-options: nosniff"
+        ]
       },
       {
         "url": "https://ekodi.kr/admin",
