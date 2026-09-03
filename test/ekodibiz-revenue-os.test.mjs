@@ -20,7 +20,7 @@ test('EKODIBIZ stays separate from common Business OS', () => {
 test('public UI stays simple while the revenue engine remains available behind operations', () => {
   assert.match(html, /WHAT WE DO/);
   assert.match(html, /관계자 로그인/);
-  assert.match(html, /https:\/\/ekodi\.kr\/org\/ekodibiz\/trade/);
+  assert.match(html, /https:\/\/ekodi\.kr\/ekodibiz\/trade/);
   assert.doesNotMatch(html, /무엇을 이루고 싶으세요/);
   assert.doesNotMatch(html, /id="goalForm"/);
   for (const endpoint of ['/api/consult','/api/offers','/api/checkout-intent','/api/ops/status']) assert.match(app, new RegExp(endpoint.replaceAll('/','\\/')));
@@ -30,7 +30,7 @@ test('public company page separates open information from the private partner wo
   assert.match(html, /PRIVATE PARTNER WORKSPACE/);
   assert.match(html, /공개 정보는 간결하게/);
   assert.match(html, /공식 거래기록/);
-  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/org\/ekodibiz">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz">/);
   assert.match(css, /position:sticky/);
   assert.match(css, /@media\(max-width:600px\)/);
 });

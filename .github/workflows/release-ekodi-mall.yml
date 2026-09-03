@@ -32,8 +32,8 @@ jobs:
           set -euo pipefail
           node --check mall.js
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
-          grep -Fq '<link rel="canonical" href="https://ekodi.kr/mall">' mall.html
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
+          grep -Fq '<link rel="canonical" href="https://ekodi.kr/ekodibiz/mall">' mall.html
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in release source.'
             exit 1

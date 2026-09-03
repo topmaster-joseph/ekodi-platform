@@ -12,7 +12,7 @@ const realms={
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
-  mall:{name:'EKODI Mall',returnTo:'https://mall.ekodi.kr/',open:true,kind:'mall'},
+  mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodibiz/mall',origins:['https://ekodi.kr','https://mall.ekodi.kr'],open:true,kind:'mall'},
   pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
