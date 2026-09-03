@@ -13,6 +13,7 @@
     books:{accent:'#15335a',accent2:'#7f2538',warm:'#b49a6b',leaf:'#65716a',paper:'#fbf6ea',ink:'#1d2a39',radius:'0px',softRadius:'2px',density:'medium-high',motion:'page',mood:'academic-press'},
     publishing:{accent:'#a05f3f',accent2:'#477f7d',warm:'#c7834c',leaf:'#748d75',paper:'#fff8eb',ink:'#2c2a27',radius:'8px',softRadius:'4px',density:'medium-high',motion:'proof',mood:'publisher-workroom'},
     journal:{accent:'#355d50',accent2:'#6f86a8',warm:'#d7a54a',leaf:'#6f8f70',paper:'#fffdf7',ink:'#1f2a32',radius:'10px',softRadius:'6px',density:'medium',motion:'turn',mood:'living-record'},
+    experience:{accent:'#376f69',accent2:'#6f86a8',warm:'#d7a54a',leaf:'#6f8f70',paper:'#f7fbfa',ink:'#1f2a32',radius:'16px',softRadius:'10px',density:'medium',motion:'measured',mood:'safe-projection-lens'},
     author:{accent:'#b9f227',accent2:'#72f0c8',warm:'#d5ff62',leaf:'#95c83d',paper:'#111411',ink:'#f4f7ef',radius:'14px',softRadius:'10px',density:'medium-high',motion:'pulse',mood:'writing-lab'},
     lab:{accent:'#c05d2d',accent2:'#2b6da1',warm:'#d89a56',leaf:'#687d68',paper:'#fbf1df',ink:'#30302d',radius:'3px',softRadius:'3px',density:'medium-high',motion:'measured',mood:'field-research-journal'},
     work:{accent:'#245fda',accent2:'#7ba7d9',warm:'#dca74a',leaf:'#778b81',paper:'#f8fbff',ink:'#1f2937',radius:'7px',softRadius:'6px',density:'high',motion:'snappy',mood:'precision-workbench'},

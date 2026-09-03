@@ -511,6 +511,21 @@
       "homepage": false,
       "productionVerified": false,
       "status": "planned"
+    },
+    {
+      "id": "experience",
+      "name": "에코디 체험",
+      "nameEn": "EKODI Experience",
+      "descriptionKo": "사용자모드와 개발자모드로 에코디 전체를 안전하게 체험하는 공통 서비스",
+      "descriptionEn": "Safe whole-platform experience with user and developer projection modes",
+      "url": "https://try.ekodi.kr",
+      "label": "try.ekodi.kr",
+      "icon": "my",
+      "category": "work-life",
+      "order": 5,
+      "homepage": false,
+      "productionVerified": false,
+      "status": "preparing"
     }
   ]
 }

@@ -509,6 +509,21 @@ export const USER_SERVICES = Object.freeze([
     "homepageEligible": false,
     "homepageDefault": false,
     "homepageOrder": 210
+  },
+  {
+    "id": "experience",
+    "name": "에코디 체험",
+    "nameEn": "EKODI Experience",
+    "label": "try.ekodi.kr",
+    "url": "https://try.ekodi.kr/",
+    "domain": "try.ekodi.kr",
+    "group": "work-life",
+    "status": "preparing",
+    "productionVerified": false,
+    "available": false,
+    "homepageEligible": false,
+    "homepageDefault": false,
+    "homepageOrder": 5
   }
 ]);
 export const USER_SERVICE_IDS = new Set(USER_SERVICES.map((service) => service.id));
