@@ -40,6 +40,23 @@ function developerCenter() {
 </body></html>`;
 }
 
+function adminCenter(identity) {
+  const safeIdentity = identity.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+  return `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EKODI Developer & Integration Admin</title>
+<style>body{font-family:system-ui,sans-serif;max-width:980px;margin:0 auto;padding:42px 24px;line-height:1.6;color:#17202a}h1{font-size:2rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.card{border:1px solid #dfe5eb;border-radius:14px;padding:18px}.pill{display:inline-block;padding:.2rem .55rem;border:1px solid #ccd5de;border-radius:999px;font-size:.82rem}code{background:#f3f5f7;padding:.15rem .4rem;border-radius:.35rem}</style></head>
+<body><p>EKODI Platform · Internal</p><h1>Developer & Integration Admin</h1>
+<p>EKODI Integration Core의 내부 통제 화면입니다. Profile·호환성 검증·운영 승격의 최종 권한은 EKODI에 있습니다.</p>
+<p class="pill">Authenticated: ${safeIdentity}</p>
+<div class="grid">
+<section class="card"><h2>Integration Core</h2><p>상태: <strong>active</strong></p><p>Core는 비공개 서비스이며 외부에는 <code>dev.ekodi.kr</code> 경계만 투영합니다.</p></section>
+<section class="card"><h2>Marketing AI</h2><p>Profile: <strong>v1.0.0</strong></p><p>상태: <strong>draft</strong></p><p>공통 ID와 capability 계약을 EKODI가 소유합니다.</p></section>
+<section class="card"><h2>Conformance</h2><p>개발사 자체 PASS가 아니라 EKODI 검증 결과를 기준으로 Staging/Production 승격 여부를 결정합니다.</p></section>
+</div>
+</body></html>`;
+}
+
 function testKeyMatches(request, env) {
   const expected = env?.EKODI_INTEGRATION_TEST_KEY;
   if (!expected) return false;
@@ -48,6 +65,14 @@ function testKeyMatches(request, env) {
   let mismatch = 0;
   for (let i = 0; i < expected.length; i += 1) mismatch |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
   return mismatch === 0;
+}
+
+function accessIdentity(request) {
+  return request.headers.get("cf-access-authenticated-user-email") || request.headers.get("x-ekodi-admin-identity") || "";
+}
+
+function isAdminProjection(url) {
+  return url.hostname === "admin.ekodi.kr" && (url.pathname === "/dev" || url.pathname.startsWith("/dev/"));
 }
 
 async function parseJson(request) {
@@ -62,8 +87,31 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (isAdminProjection(url)) {
+      const identity = accessIdentity(request);
+      if (!identity) {
+        return json({ error: "unauthorized", message: "EKODI administrator identity is required." }, 401);
+      }
+
+      if (request.method === "GET" && (url.pathname === "/dev" || url.pathname === "/dev/")) {
+        return html(adminCenter(identity));
+      }
+
+      if (request.method === "GET" && url.pathname === "/dev/api/status") {
+        return json({
+          service: "ekodi-integration-core",
+          visibility: "private-core",
+          governance_owner: "EKODI",
+          profiles: [{ id: "marketing-ai", version: "1.0.0", status: "draft" }],
+          production_promotion: "EKODI_APPROVAL_REQUIRED",
+        });
+      }
+
+      return json({ error: "not_found" }, 404);
+    }
+
     if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, service: "ekodi-integration-core", version: "0.1.0", visibility: "private-core/public-gateway" });
+      return json({ ok: true, service: "ekodi-integration-core", version: "0.2.0", visibility: "private-core/public-gateway" });
     }
 
     if (request.method === "GET" && (url.pathname === "/api/profiles/marketing-ai/v1" || url.pathname === "/.well-known/ekodi-integration-profile.json")) {
