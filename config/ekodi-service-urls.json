@@ -1,14 +1,38 @@
 {
-  "version": 1,
+  "version": 2,
   "canonical": {
     "root": "https://ekodi.kr/",
+    "ekodibiz": "https://ekodi.kr/ekodibiz",
+    "marketingAi": "https://ekodi.kr/ekodibiz/marketing-ai",
     "mall": "https://ekodi.kr/ekodibiz/mall",
+    "jadam": "https://ekodi.kr/jadam",
+    "jadamMarketing": "https://ekodi.kr/jadam/marketing",
+    "pizzamaru": "https://ekodi.kr/pizzamaru",
+    "pizzamaruMarketing": "https://ekodi.kr/pizzamaru/marketing",
+    "yogurt": "https://ekodi.kr/yogurt",
+    "yogurtMarketing": "https://ekodi.kr/yogurt/marketing",
     "admin": "https://admin.ekodi.kr/",
     "auth": "https://auth.ekodi.kr/"
   },
+  "engines": {
+    "marketing": {
+      "url": "https://marketing.ekodi.kr/",
+      "role": "common-engine",
+      "userFacing": false
+    },
+    "ai": {
+      "url": "https://ai.ekodi.kr/",
+      "role": "core-gateway-orchestrator",
+      "userFacing": false,
+      "providerIndependent": true
+    }
+  },
   "policy": {
     "mallPublicUrl": "https://ekodi.kr/ekodibiz/mall",
+    "marketingPublicUrl": "https://ekodi.kr/ekodibiz/marketing-ai",
     "legacyMallUrlsAllowed": false,
+    "customerAiSubdomainsCanonical": false,
+    "providerModelDisclosureOnOrdinaryUserPages": false,
     "sharedSiteProductionOwner": "deploy-site-core.yml"
   }
 }
