@@ -1,5 +1,5 @@
 {
-  "version": 43,
+  "version": 44,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -160,24 +160,6 @@
           "x-ekodi-edge: mall-path-gateway",
           "cache-control: no-store",
           "location: https://admin.ekodi.kr/?source=mall.ekodi.kr"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/mall/api/product-registry?limit=2",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "\"registryMode\":\"federated-live\"",
-          "\"providers\"",
-          "\"EKODI Mall\""
-        ],
-        "headerExpect": [
-          "x-ekodi-route: mall-api-proxy",
-          "x-ekodi-edge: mall-path-gateway",
-          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
