@@ -14,6 +14,12 @@ test('performance guard covers canonical public, admin, and Support entry points
   ]) assert.match(workflow, new RegExp(target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
+test('performance guard follows the current EKODI Admin shell contract', () => {
+  assert.match(workflow, /<title>EKODI Admin<\/title>/);
+  assert.doesNotMatch(workflow, /EKODI Control Center/);
+  assert.match(workflow, /admin-shell\.html/);
+});
+
 test('performance guard uses warning and incident response budgets', () => {
   assert.match(workflow, /WARN_SECONDS: '2\.0'/);
   assert.match(workflow, /FAIL_SECONDS: '5\.0'/);
