@@ -380,7 +380,7 @@ export default {
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
       const target = new URL('https://admin.ekodi.kr/');
       target.searchParams.set('source', host);
-      const response = Response.redirect(target.toString(), 307);
+      const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
       applyBaseSecurityHeaders(response.headers);
       response.headers.set('Cache-Control', 'no-store');
       response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
