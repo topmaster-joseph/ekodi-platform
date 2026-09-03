@@ -93,6 +93,18 @@ test('catalog supports registered popularity and price sorting', () => {
   assert.match(css, /\.sort-box select/);
 });
 
+test('social campaign attribution survives from Mall landing to Coupang click', () => {
+  assert.doesNotThrow(() => new Function(js));
+  assert.match(js, /ekodi-mall-attribution-v1/);
+  assert.match(js, /ATTRIBUTION_TTL_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
+  for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) assert.match(js, new RegExp(key));
+  assert.match(js, /withAttribution/);
+  assert.match(js, /localStorage\.setItem\(ATTRIBUTION_KEY/);
+  assert.match(api, /affiliate_storefront_attributed_clicks/);
+  assert.match(api, /automaticCampaignAttribution\s*:\s*true/);
+  assert.match(api, /topCampaigns30d/);
+});
+
 test('mall has no fake or generic fallback products', () => {
   assert.doesNotMatch(js, /FALLBACK_PRODUCTS/);
   assert.doesNotMatch(js, /cwWXWm/);

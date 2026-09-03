@@ -60,7 +60,19 @@ test('automatic capabilities are exposed while manual operations remain compatib
   assert.match(apiSource, /automaticProductSearch\s*:\s*true/);
   assert.match(apiSource, /automaticDeepLink\s*:\s*true/);
   assert.match(apiSource, /automaticClickTracking\s*:\s*true/);
+  assert.match(apiSource, /automaticCampaignAttribution\s*:\s*true/);
   assert.match(apiSource, /automaticPerformanceSync\s*:\s*false/);
+});
+
+test('campaign attribution is persisted without changing the outbound affiliate URL', () => {
+  assert.match(apiSource, /affiliate_storefront_attributed_clicks/);
+  assert.match(apiSource, /utm_source/);
+  assert.match(apiSource, /utm_medium/);
+  assert.match(apiSource, /utm_campaign/);
+  assert.match(apiSource, /utm_content/);
+  assert.match(apiSource, /attributedClicks30d/);
+  assert.match(apiSource, /topCampaigns30d/);
+  assert.match(apiSource, /headers\.set\('location', target\)/);
 });
 
 test('public catalog has no generic affiliate fallback', () => {

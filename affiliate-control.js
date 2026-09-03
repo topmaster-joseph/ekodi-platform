@@ -25,6 +25,9 @@ async function readJson(request) {
 }
 
 function cleanText(value, max = 200) { return String(value ?? '').trim().slice(0, max); }
+function attributionToken(value, max = 80) {
+  return cleanText(value, max).replace(/[^0-9a-zA-Z가-힣._:-]+/g, '_').replace(/^_+|_+$/g, '');
+}
 function nonNegativeInt(value) {
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0) return null;
@@ -70,7 +73,26 @@ async function audit(env, session, action, resource, detail = '') {
     .bind(id, action, resource, String(detail).slice(0, 500), new Date().toISOString()).run();
 }
 
+async function ensureAttributionSchema(db) {
+  await db.batch([
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_storefront_attributed_clicks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_row_id INTEGER NOT NULL,
+      click_date TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT '',
+      medium TEXT NOT NULL DEFAULT '',
+      campaign TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL DEFAULT '',
+      clicks INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      UNIQUE(product_row_id, click_date, source, medium, campaign, content)
+    )`),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_attributed_clicks_date ON affiliate_storefront_attributed_clicks(click_date DESC, source, campaign)'),
+  ]);
+}
+
 async function ensureSchema(db) {
+  await ensureAttributionSchema(db);
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_providers (provider_key TEXT PRIMARY KEY, display_name TEXT NOT NULL, provider_kind TEXT NOT NULL DEFAULT 'affiliate', connection_mode TEXT NOT NULL DEFAULT 'manual', enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_accounts (id TEXT PRIMARY KEY, provider_key TEXT NOT NULL, owner_type TEXT NOT NULL DEFAULT 'internal', owner_key TEXT NOT NULL, display_name TEXT NOT NULL, account_label TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'manual_ready', connection_mode TEXT NOT NULL DEFAULT 'manual', default_channel TEXT NOT NULL DEFAULT '', disclosure_text TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1, last_synced_at TEXT, last_error TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`),
@@ -200,6 +222,20 @@ async function publicClick(request, env, url) {
   await env.DB.prepare(`INSERT INTO affiliate_storefront_clicks (product_row_id, click_date, clicks, updated_at) VALUES (?, ?, 1, ?)
     ON CONFLICT(product_row_id, click_date) DO UPDATE SET clicks = affiliate_storefront_clicks.clicks + 1, updated_at = excluded.updated_at`)
     .bind(row.id, today, now).run().catch(() => {});
+
+  const source = attributionToken(url.searchParams.get('utm_source'), 64).toLowerCase();
+  const medium = attributionToken(url.searchParams.get('utm_medium'), 64).toLowerCase();
+  const campaign = attributionToken(url.searchParams.get('utm_campaign'), 96);
+  const content = attributionToken(url.searchParams.get('utm_content'), 96);
+  if (source || medium || campaign || content) {
+    await ensureAttributionSchema(env.DB).catch(() => {});
+    await env.DB.prepare(`INSERT INTO affiliate_storefront_attributed_clicks (product_row_id, click_date, source, medium, campaign, content, clicks, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+      ON CONFLICT(product_row_id, click_date, source, medium, campaign, content)
+      DO UPDATE SET clicks = affiliate_storefront_attributed_clicks.clicks + 1, updated_at = excluded.updated_at`)
+      .bind(row.id, today, source, medium, campaign, content, now).run().catch(() => {});
+  }
+
   const headers = publicHeaders(request);
   headers.set('location', target);
   headers.set('cache-control', 'no-store');
@@ -209,11 +245,18 @@ async function publicClick(request, env, url) {
 
 async function overview(env) {
   const automation = await getAffiliateAutomationStatus(env);
-  const [accounts, links, metrics, tracked] = await Promise.all([
+  const [accounts, links, metrics, tracked, attributed, attributionRows] = await Promise.all([
     env.DB.prepare('SELECT * FROM affiliate_accounts ORDER BY provider_key, id').all(),
     env.DB.prepare(`SELECT COUNT(*) AS total_links, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_links FROM affiliate_links`).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(orders), 0) AS orders, COALESCE(SUM(revenue_krw), 0) AS revenue_krw FROM affiliate_daily_metrics WHERE metric_date >= date('now', '-29 day')`).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_storefront_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
+    env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_storefront_attributed_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
+    env.DB.prepare(`SELECT source, medium, campaign, SUM(clicks) AS clicks
+      FROM affiliate_storefront_attributed_clicks
+      WHERE click_date >= date('now', '-29 day')
+      GROUP BY source, medium, campaign
+      ORDER BY clicks DESC, source, campaign
+      LIMIT 12`).all().catch(() => ({ results: [] })),
   ]);
   return {
     generatedAt: new Date().toISOString(),
@@ -226,8 +269,17 @@ async function overview(env) {
       totalLinks: Number(links?.total_links || 0),
       activeProducts: Number(automation.activeProducts || 0),
       clicks30d: Number(tracked?.clicks || 0),
+      attributedClicks30d: Number(attributed?.clicks || 0),
       orders30d: Number(metrics?.orders || 0),
       revenue30dKrw: Number(metrics?.revenue_krw || 0),
+    },
+    attribution: {
+      topCampaigns30d: (attributionRows.results || []).map(row => ({
+        source: row.source || '',
+        medium: row.medium || '',
+        campaign: row.campaign || '',
+        clicks: Number(row.clicks || 0),
+      })),
     },
     capabilities: {
       manualLinkRegistry: true,
@@ -235,6 +287,7 @@ async function overview(env) {
       automaticProductSearch: true,
       automaticDeepLink: true,
       automaticClickTracking: true,
+      automaticCampaignAttribution: true,
       automaticPerformanceSync: false,
       apiStatus: automation.configured ? 'configured' : 'credentials_required',
     },
