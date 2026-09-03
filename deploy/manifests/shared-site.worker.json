@@ -149,18 +149,17 @@
       {
         "url": "https://ekodi.kr/mall/admin/",
         "statuses": [
-          200
+          302
         ],
         "redirect": "manual",
         "expect": [
-          "ekodibizmall Admin",
-          "EKODIBIZMALL · OPERATIONS",
-          "/mall/admin/admin.js"
+          "Redirecting to https://admin.ekodi.kr/?source=mall.ekodi.kr"
         ],
         "headerExpect": [
           "x-ekodi-route: admin-mall-proxy",
           "x-ekodi-edge: mall-path-gateway",
-          "cache-control: no-store"
+          "cache-control: no-store",
+          "location: https://admin.ekodi.kr/?source=mall.ekodi.kr"
         ],
         "rollbackVerify": false
       },
@@ -676,7 +675,8 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI COMMUNICATION ADMIN", "https://mail.ekodi.kr/admin", "https://live.ekodi.kr/"],
-        "headerExpect": ["x-content-type-options: nosniff"]
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
       }
     ]
   }
