@@ -41,3 +41,12 @@ test('shared-site router owns the business path before generic workspace proxy',
   assert.match(source, /public-ekodibiz-invest/);
   assert.match(source, /injectEkodiShell\(secured, 'biz', 'public'\)/);
 });
+
+test('Invest remains a registered common-service boundary outside EKODIBIZ business ownership', async () => {
+  const constitution = JSON.parse(await readFile(new URL('../governance/constitution/constitution.json', import.meta.url), 'utf8'));
+  const boundaries = JSON.parse(await readFile(new URL('../platform-boundaries.json', import.meta.url), 'utf8'));
+  assert.ok(constitution.registeredCommonServiceBoundaries.includes('invest.ekodi.kr'));
+  assert.equal(boundaries.platforms.invest.kind, 'common-service-platform');
+  assert.deepEqual(boundaries.platforms.invest.domains, ['invest.ekodi.kr']);
+  assert.match(boundaries.platforms.invest.note, /EKODIBIZ-specific investment businesses remain under ekodi\.kr\/ekodibiz\/invest/);
+});
