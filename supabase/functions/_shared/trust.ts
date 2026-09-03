@@ -121,7 +121,12 @@ function ruleMatches(ctx: SecurityContext, rule: PolicyRule) {
 }
 
 export function evaluatePolicy(ctx: SecurityContext, rules: PolicyRule[]): TrustDecision {
-  const ordered = [...rules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  const ordered = [...rules].sort((a, b) => {
+    const priority = (b.priority ?? 0) - (a.priority ?? 0);
+    if (priority !== 0) return priority;
+    if (a.allow === b.allow) return 0;
+    return a.allow ? 1 : -1;
+  });
   const match = ordered.find((rule) => ruleMatches(ctx, rule));
 
   if (!match) {
@@ -174,14 +179,19 @@ export function compatibilityDecision(
 }
 
 /**
- * Shadow mode can never change the live result. Enforce mode exists in the core
- * contract but must not be enabled until parity, rollback, and Super Admin gates pass.
+ * Shadow mode can never change the live result. Enforce mode also requires an explicit
+ * cutover gate so importing this helper cannot accidentally promote Trust to authority.
  */
 export function compareWithLegacy(
   legacyAllowed: boolean,
   decision: TrustDecision,
   mode: TrustMode = "shadow",
+  gate: { cutoverAllowed: boolean } = { cutoverAllowed: false },
 ): ShadowComparison {
+  if (mode === "enforce" && !gate.cutoverAllowed) {
+    throw new Error("trust_cutover_not_allowed");
+  }
+
   const parity = legacyAllowed === decision.allowed;
   let severity: ShadowComparison["severity"] = "ok";
   let reason = "Legacy and Trust decisions match.";
@@ -261,11 +271,14 @@ export function capabilitySet(params: {
   roles: string[];
   service: string;
   resource: string;
+  action: string;
   legacyAllowed: boolean;
 }) {
   if (!params.legacyAllowed) return [];
   const base = `${clean(params.service, 80)}.${clean(params.resource, 120)}`;
-  const caps = new Set<string>([`${base}.view`]);
+  const action = clean(params.action, 80);
+  if (!action) return [];
+  const caps = new Set<string>([`${base}.${action}`]);
   if (params.roles.some((role) => ["owner", "tenant_admin", "platform_admin", "admin"].includes(role))) {
     caps.add(`${base}.manage`);
   }
