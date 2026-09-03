@@ -1,5 +1,5 @@
 {
-  "version": 38,
+  "version": 44,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -131,14 +131,37 @@
         "redirect": "follow",
         "expect": [
           "EKODI MALL",
-          "SMART SHOPPING",
-          "오늘 필요한 것",
-          "오늘의 상품",
-          "상품 둘러보기"
+          "data-ekodi-service=\"mall\""
+        ],
+        "rollbackExpect": [
+          "EKODI MALL",
+          "data-ekodi-service=\"mall\""
         ],
         "headerExpect": [
+          "x-content-type-options: nosniff",
+          "x-ekodi-route: public-ekodi-mall",
+          "x-ekodi-edge: mall-path-gateway"
+        ],
+        "rollbackHeaderExpect": [
           "x-content-type-options: nosniff"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/mall/admin/",
+        "statuses": [
+          302
+        ],
+        "redirect": "manual",
+        "expect": [
+          "Redirecting to https://admin.ekodi.kr/?source=mall.ekodi.kr"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: admin-mall-proxy",
+          "x-ekodi-edge: mall-path-gateway",
+          "cache-control: no-store",
+          "location: https://admin.ekodi.kr/?source=mall.ekodi.kr"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/admin",
@@ -621,6 +644,21 @@
           "/api/finance/tax-invoices",
           "manual-issued"
         ]
+      },
+      {
+        "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EVOLUTION INTELLIGENCE", "/api/control/evolution", "플랫폼 진화 제안"],
+        "headerExpect": ["x-content-type-options: nosniff"]
+      },
+      {
+        "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI COMMUNICATION ADMIN", "https://mail.ekodi.kr/admin", "https://live.ekodi.kr/"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
       }
     ]
   }

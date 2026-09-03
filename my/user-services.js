@@ -286,6 +286,21 @@ export const USER_SERVICES = Object.freeze([
     "homepageOrder": 105
   },
   {
+    "id": "journal",
+    "name": "에코디 저널",
+    "nameEn": "EKODI Journal",
+    "label": "journal.ekodi.kr",
+    "url": "https://journal.ekodi.kr/",
+    "domain": "journal.ekodi.kr",
+    "group": "knowledge-creation",
+    "status": "live",
+    "productionVerified": true,
+    "available": true,
+    "homepageEligible": true,
+    "homepageDefault": true,
+    "homepageOrder": 107
+  },
+  {
     "id": "author",
     "name": "크리에이터 AI",
     "nameEn": "Creator AI",

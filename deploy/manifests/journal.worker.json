@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-journal",
+    "config": "wrangler.journal.toml",
+    "requests": [
+      {
+        "url": "https://journal.ekodi.kr/",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "EKODI JOURNAL",
+          "EKODI · LIVING RECORD"
+        ],
+        "headerExpect": [
+          "x-ekodi-shell: v2"
+        ]
+      },
+      {
+        "url": "https://journal.ekodi.kr/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "ekodi-journal",
+          "registered-common-service"
+        ]
+      },
+      {
+        "url": "https://journal.ekodi.kr/feed.xml",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "<rss version=\"2.0\">",
+          "EKODI Journal"
+        ]
+      },
+      {
+        "url": "https://journal.ekodi.kr/admin",
+        "statuses": [
+          301,
+          302,
+          307,
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://admin.ekodi.kr/journal"
+        ]
+      }
+    ],
+    "allowFirstDeploy": true
+  }
+}

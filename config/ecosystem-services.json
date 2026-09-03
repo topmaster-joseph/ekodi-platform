@@ -288,6 +288,21 @@
       "status": "live"
     },
     {
+      "id": "journal",
+      "name": "에코디 저널",
+      "nameEn": "EKODI Journal",
+      "descriptionKo": "에코디의 정신·실천·기술·공동체의 배움을 공개적으로 기록하는 공통 저널",
+      "descriptionEn": "Public living record of EKODI principles, practice, technology, and community learning",
+      "url": "https://journal.ekodi.kr",
+      "label": "journal.ekodi.kr",
+      "icon": "lab",
+      "category": "knowledge-creation",
+      "order": 107,
+      "homepage": true,
+      "productionVerified": true,
+      "status": "live"
+    },
+    {
       "id": "author",
       "name": "크리에이터 AI",
       "nameEn": "Creator AI",

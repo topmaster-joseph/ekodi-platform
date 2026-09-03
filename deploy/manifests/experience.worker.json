@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-experience",
+    "config": "wrangler.experience.toml",
+    "requests": [
+      {
+        "url": "https://try.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["에코디를", "사용자모드", "개발자모드"],
+        "headerExpect": ["x-ekodi-shell: v2"]
+      },
+      {
+        "url": "https://try.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["ekodi-experience", "synthetic-only", "experience_public"]
+      },
+      {
+        "url": "https://try.ekodi.kr/api/catalog",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["curated-public-projection", "syntheticDataOnly", "internalTopologyVisible"]
+      },
+      {
+        "url": "https://try.ekodi.kr/admin",
+        "statuses": [301, 302, 307, 308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://admin.ekodi.kr/experience"]
+      }
+    ],
+    "allowFirstDeploy": true
+  }
+}
