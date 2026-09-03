@@ -9,6 +9,10 @@ pattern = "dev.ekodi.kr"
 zone_name = "ekodi.kr"
 custom_domain = true
 
+[[routes]]
+pattern = "admin.ekodi.kr/dev*"
+zone_name = "ekodi.kr"
+
 [vars]
 ENVIRONMENT = "production"
 INTEGRATION_CORE_MODE = "profile-first"
