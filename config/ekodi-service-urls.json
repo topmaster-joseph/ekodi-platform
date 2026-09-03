@@ -12,7 +12,11 @@
     "yogurt": "https://ekodi.kr/yogurt",
     "yogurtMarketing": "https://ekodi.kr/yogurt/marketing",
     "admin": "https://admin.ekodi.kr/",
-    "auth": "https://auth.ekodi.kr/"
+    "auth": "https://auth.ekodi.kr/",
+    "ekodichurch": "https://ekodi.kr/ekodichurch",
+    "ekodichurchMarketing": "https://ekodi.kr/ekodichurch/marketing",
+    "cgma": "https://ekodi.kr/cgma",
+    "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
   },
   "engines": {
     "marketing": {

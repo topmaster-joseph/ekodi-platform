@@ -51,10 +51,10 @@ EKODI-owned customer-site examples include:
 - `cafe.ekodi.kr` — 에코디 카페 when operated as an organization/business
 
 Revenue-critical external clients currently include:
-- `cgma.ekodi.kr` — 청계면상인회 public site; `cgma.ai.ekodi.kr` is its dedicated Marketing AI workspace.
-- `jadam.ai.ekodi.kr` — 자담치킨 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
-- `pizzamaru.ai.ekodi.kr` — 피자마루 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
-- `yogurt.ai.ekodi.kr` — 요거트퍼플 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
+- `ekodi.kr/cgma` — 청계면상인회 canonical public workspace; marketing is `ekodi.kr/cgma/marketing`. Legacy `cgma*.ekodi.kr` hosts are compatibility aliases only.
+- `ekodi.kr/jadam` — 자담치킨 목포대점 canonical workspace; marketing is `ekodi.kr/jadam/marketing`. Legacy Jadam subdomains are compatibility aliases only.
+- `ekodi.kr/pizzamaru` — 피자마루 목포대점 canonical workspace; marketing is `ekodi.kr/pizzamaru/marketing`. Legacy Pizzamaru subdomains are compatibility aliases only.
+- `ekodi.kr/yogurt` — 요거트퍼플 목포대점 canonical workspace; marketing is `ekodi.kr/yogurt/marketing`. Legacy Yogurt subdomains are compatibility aliases only.
 
 One person may hold both platform-global and tenant-local roles. These authorities must never be implicitly combined. A Super Admin acts with platform authority only inside an explicit admin/control-plane context; when entering a customer site, including an EKODI-owned customer site, the person acts only through that site's membership and local activity role. A tenant-local role named `admin` must never inherit platform-admin capabilities merely because the role string matches.
 

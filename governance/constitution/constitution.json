@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -17,7 +17,8 @@
     "verification-first-evolution",
     "security-native-intelligence",
     "evidence-linked-recommendations",
-    "secure-projection-minimum-disclosure"
+    "secure-projection-minimum-disclosure",
+    "user-surface-engine-separation"
   ],
   "systemBoundaries": {
     "production": [
@@ -26,7 +27,8 @@
       "admin.ekodi.kr",
       "auth.ekodi.kr",
       "api.ekodi.kr",
-      "status.ekodi.kr"
+      "status.ekodi.kr",
+      "ai.ekodi.kr"
     ],
     "development": [
       "dev.ekodi.kr",
@@ -35,7 +37,7 @@
       "auth.dev.ekodi.kr",
       "api.dev.ekodi.kr"
     ],
-    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
+    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity. Ordinary customer URLs must not expose AI provider/model/orchestration topology."
   },
   "publicNamespaces": [
     "{public_namespace}"
@@ -77,7 +79,11 @@
     "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": true,
     "customDomainsMapToTenantPublicSpace": true,
     "legacyAliasesMayRedirect": true,
-    "legacyAliasesMustBeRegistered": true
+    "legacyAliasesMustBeRegistered": true,
+    "customerSpecificAiSubdomainsForbidden": true,
+    "providerOrModelInCustomerCanonicalForbidden": true,
+    "engineBoundaryNotDefaultUserEntry": true,
+    "ordinaryUserProviderDisclosure": "hidden_unless_consent_safety_legal_or_explicit_technical_context_requires_it"
   },
   "legacyPathAliases": {
     "/personal/{slug}": "/{public_namespace}",
@@ -120,7 +126,6 @@
     "church.ekodi.kr",
     "lab.ekodi.kr",
     "mail.*.ekodi.kr",
-    "marketing.ekodi.kr",
     "cgma.ekodi.kr",
     "cgma.ai.ekodi.kr",
     "jadam.ai.ekodi.kr",
@@ -267,7 +272,6 @@
     "church.ekodi.kr": "https://ekodi.kr/ekodichurch",
     "lab.ekodi.kr": "https://ekodi.kr/ekodilab",
     "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
-    "marketing.ekodi.kr": "https://ekodi.kr/marketing",
     "cgma.ekodi.kr": "https://ekodi.kr/cgma",
     "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma",
     "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam",
@@ -280,7 +284,8 @@
     "yogurt.ekodi.kr": "https://ekodi.kr/yogurt"
   },
   "registeredCommonServiceBoundaries": [
-    "journal.ekodi.kr"
+    "journal.ekodi.kr",
+    "marketing.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
@@ -334,5 +339,23 @@
       "disaster_recovery",
       "secure_projection"
     ]
-  }
+  },
+  "userSurfacePolicy": {
+    "canonicalBusinessService": "https://ekodi.kr/{business_namespace}/{service}",
+    "canonicalWorkspaceService": "https://ekodi.kr/{public_namespace}/{service}",
+    "customerSpecificAiSubdomainsForbidden": true,
+    "providerOrModelInCanonicalForbidden": true,
+    "engineBoundaryMayUseRegisteredSubdomain": true,
+    "engineBoundaryIsNotCustomerIdentity": true,
+    "engineBoundaryIsNotOrdinaryUserEntry": true,
+    "examples": {
+      "ekodibizMarketingAi": "https://ekodi.kr/ekodibiz/marketing-ai",
+      "jadamMarketing": "https://ekodi.kr/jadam/marketing",
+      "marketingCore": "https://marketing.ekodi.kr",
+      "aiGateway": "https://ai.ekodi.kr"
+    }
+  },
+  "registeredCoreServiceBoundaries": [
+    "ai.ekodi.kr"
+  ]
 }

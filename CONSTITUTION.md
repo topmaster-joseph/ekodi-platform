@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.4.0
+# EKODI Platform Constitution v1.4.1
 
 Effective: 2026-09-03
 
@@ -23,6 +23,9 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, `public_namespace`, display name and workspace type are routing or presentation metadata, not identity or authorization truth.
 - Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
+- `marketing.ekodi.kr` is the registered EKODI Marketing Core common-service boundary. It is an engine boundary, not an ordinary customer entry or workspace identity. The public EKODIBIZ Marketing AI product is canonical at `ekodi.kr/ekodibiz/marketing-ai`, while workspace marketing surfaces live at `ekodi.kr/{public_namespace}/marketing`.
+- `ai.ekodi.kr` is the registered provider-independent EKODI AI Gateway and Orchestrator core boundary. Ordinary users do not need to know which AI provider or model is selected behind a professional service unless consent, safety, law or an explicit technical/admin context requires that disclosure.
+- Customer-specific AI subdomains such as `{customer}.ai.ekodi.kr` are forbidden as new canonical addresses. Existing ones are compatibility aliases only and migrate to the customer workspace path.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 
@@ -59,6 +62,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 
 ## 7. AI Constitution
 - AI calls route through provider-independent governance when a gateway exists.
+- Customer-facing service names and URLs describe the user’s task and workspace, not the hidden provider/model/orchestration topology. AI is a replaceable engine behind the service, not the customer identity.
 - AI never owns EKODI identity, authorization, payment or irreversible high-impact decisions.
 - Operational AI receives only the minimum projected context required for the task. Canonical personal identifiers, credentials and internal source/topology details stay inside EKODI unless a separately governed engineering workflow explicitly requires them.
 - Expensive AI work has quota, timeout, retry, circuit-breaker and fallback behavior.

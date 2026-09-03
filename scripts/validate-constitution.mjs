@@ -10,10 +10,11 @@ const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
+const userSurface = json('config/user-surface-contract.json');
 
-if (constitution.version !== '1.4.0') fail('constitution version must remain 1.4.0 with Secure Projection and public namespace amendments');
+if (constitution.version !== '1.4.1') fail('constitution version must remain 1.4.1 with Secure Projection, public namespace and user-surface/engine separation amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','user-surface-engine-separation']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -51,11 +52,19 @@ if (secureProjection.viewExportDownloadApiRawDataSeparated !== true) fail('view/
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
+const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
-if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr') || !systemDomains.has('ai.ekodi.kr')) fail('canonical system/core domain set is incomplete');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
+if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
+if (!registeredCore.has('ai.ekodi.kr')) fail('registered core-service boundary missing: ai.ekodi.kr');
+if (constitution.domainPolicy?.customerSpecificAiSubdomainsForbidden !== true) fail('customer-specific AI subdomains must be forbidden as new canonical addresses');
+if (constitution.domainPolicy?.providerOrModelInCustomerCanonicalForbidden !== true) fail('provider/model names must be forbidden in ordinary customer canonical URLs');
+if (constitution.userSurfacePolicy?.engineBoundaryIsNotOrdinaryUserEntry !== true) fail('engine boundary must not be an ordinary user entry');
+if (constitution.userSurfacePolicy?.examples?.ekodibizMarketingAi !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('EKODIBIZ Marketing AI canonical mismatch');
+if (constitution.userSurfacePolicy?.examples?.jadamMarketing !== 'https://ekodi.kr/jadam/marketing') fail('Jadam marketing canonical mismatch');
 
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(['{public_namespace}'])) {
   fail('public workspace namespace grammar must be one globally unique {public_namespace}');
@@ -91,7 +100,7 @@ if (legacyPathAliases['https://user.ekodi.kr/{path}'] !== 'https://ekodi.kr/{pat
 for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
   for (const domain of service.domains || []) {
     if (!domain.endsWith('.ekodi.kr') && domain !== 'ekodi.kr') continue;
-    if (!systemDomains.has(domain) && !legacy.has(domain) && !registeredCommon.has(domain)) fail(`${serviceId}: unregistered feature subdomain ${domain}`);
+    if (!systemDomains.has(domain) && !legacy.has(domain) && !registeredCommon.has(domain) && !registeredCore.has(domain)) fail(`${serviceId}: unregistered feature subdomain ${domain}`);
     if (legacy.has(domain) && !targets[domain]) fail(`${serviceId}: legacy domain ${domain} has no canonical migration target`);
   }
 }
@@ -105,7 +114,7 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 3) fail('service workspace policy schemaVersion must be 3');
+if (workspace.schemaVersion !== 4) fail('service workspace policy schemaVersion must be 4');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
@@ -123,6 +132,12 @@ if (publicRouting.workspaceSubdomains !== 'forbidden') fail('service workspace s
 if (workspace.subdomainExceptions?.personalHome !== 'my.ekodi.kr') fail('service workspace policy must preserve my.ekodi.kr exception');
 if (workspace.subdomainExceptions?.administration !== 'admin.ekodi.kr') fail('service workspace policy must preserve admin.ekodi.kr exception');
 if (workspace.subdomainExceptions?.authentication !== 'auth.ekodi.kr') fail('service workspace policy must preserve auth.ekodi.kr exception');
+if (workspace.userSurfaceTopologyPolicy?.customerSpecificAiSubdomains !== 'forbidden_as_canonical') fail('service workspace policy must forbid customer-specific AI canonical subdomains');
+if (workspace.userSurfaceTopologyPolicy?.examples?.jadamMarketing !== 'https://ekodi.kr/jadam/marketing') fail('service workspace policy Jadam marketing canonical mismatch');
+if (userSurface.principles?.customerSpecificAiSubdomainsForbidden !== true) fail('user surface contract must forbid customer AI canonical subdomains');
+if (userSurface.principles?.providerDetailsHiddenFromOrdinaryUserSurface !== true) fail('user surface contract must hide ordinary provider disclosure');
+if (userSurface.registeredEngineBoundaries?.marketing?.host !== 'marketing.ekodi.kr' || userSurface.registeredEngineBoundaries?.marketing?.publicUserEntry !== false) fail('Marketing Core engine boundary contract mismatch');
+if (userSurface.registeredEngineBoundaries?.ai?.host !== 'ai.ekodi.kr' || userSurface.registeredEngineBoundaries?.ai?.providerIndependent !== true) fail('AI Gateway engine boundary contract mismatch');
 
 const alignment = storage.constitutionAlignment || {};
 if (alignment.identityAuthority !== 'ekodi') fail('storage policy must declare EKODI identity authority');
@@ -148,7 +163,7 @@ if (failures.length) {
 console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
-console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
+console.log(`- ${registeredCommon.size} registered common-service boundaries + ${registeredCore.size} core-service boundaries checked`);
 console.log('- canonical user spaces: /{public_namespace} with nested /{service} on ekodi.kr');
 console.log('- workspace_id remains immutable identity; public_namespace is the unique routing locator');
 console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');

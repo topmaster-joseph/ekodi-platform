@@ -1,46 +1,40 @@
 {
-  "id": "2026-09-03-user-surface-engine-separation-v1.4.1",
+  "id": "EKODI-CONSTITUTION-2026-09-03-USER-SURFACE-ENGINE-SEPARATION-V1.4.1",
   "date": "2026-09-03",
-  "classification": "C2",
-  "status": "approved-by-owner-in-conversation",
-  "fromVersion": "1.4.0",
-  "toVersion": "1.4.1",
-  "title": "Separate customer-facing service identity from professional AI/common engines",
-  "ownerDecision": "Customer and workspace pages use ekodi.kr/{public_namespace}/{service}. Customer-specific *.ai.ekodi.kr addresses are legacy-only. marketing.ekodi.kr is the shared Marketing Core, ai.ekodi.kr is the provider-independent AI Gateway/Orchestrator, and neither is the ordinary customer canonical entry.",
-  "constitutionalRules": [
-    "User-facing URLs express the user/workspace/business and the requested service.",
-    "AI provider, model and orchestration topology must not define ordinary customer canonical URLs.",
-    "Customer-specific AI subdomains are forbidden as canonical addresses.",
-    "Professional AI/common engines may use justified registered subdomains but remain independent from customer identity.",
-    "Ordinary users do not need provider/model disclosure unless consent, safety, law or an explicit technical/admin context requires it.",
-    "EKODIBIZ Marketing AI public product canonical is https://ekodi.kr/ekodibiz/marketing-ai.",
-    "Workspace marketing surfaces use https://ekodi.kr/{public_namespace}/marketing, including https://ekodi.kr/jadam/marketing.",
-    "marketing.ekodi.kr is EKODI Marketing Core and consumes ai.ekodi.kr.",
-    "ai.ekodi.kr is the provider-independent EKODI AI Gateway and Orchestrator."
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit super-administrator confirmation that customer pages must use ekodi.kr workspace/service paths, customer-specific AI subdomains are unnecessary, and professional AI/common engines should remain independent implementation boundaries hidden from ordinary customers",
+  "constitutionVersion": "1.4.1",
+  "summary": "Separate user/customer canonical URLs from Marketing Core and AI Gateway topology. Customer identity and requested service stay on ekodi.kr paths; marketing.ekodi.kr and ai.ekodi.kr remain registered engine boundaries.",
+  "affectedAreas": [
+    "domain-topology",
+    "user-surfaces",
+    "workspace-routing",
+    "marketing",
+    "ai-gateway",
+    "admin",
+    "ci",
+    "legacy-aliases"
   ],
-  "migration": {
-    "canonical": {
-      "ekodibizMarketingAi": "https://ekodi.kr/ekodibiz/marketing-ai",
-      "jadamMarketing": "https://ekodi.kr/jadam/marketing",
-      "pizzamaruMarketing": "https://ekodi.kr/pizzamaru/marketing",
-      "yogurtMarketing": "https://ekodi.kr/yogurt/marketing"
-    },
-    "legacyRedirects": {
-      "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam",
-      "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru",
-      "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt",
-      "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma"
-    },
-    "preserveEngineHosts": [
-      "marketing.ekodi.kr",
-      "ai.ekodi.kr"
-    ],
-    "removeMarketingFromLegacyRedirectTargets": true
-  },
-  "rollback": {
-    "mode": "guarded-revert",
-    "dataDestructive": false,
-    "notes": "The change is URL projection and governance only. Existing engine/runtime data and workspace_id identities are preserved. Legacy customer aliases remain available during transition."
-  },
-  "approvalEvidence": "EKODI Platform Super Administrator explicitly approved implementation in the 2026-09-03 conversation after confirming the customer-first URL and hidden-engine principle."
+  "migrationPlan": [
+    "make EKODIBIZ Marketing AI canonical at https://ekodi.kr/ekodibiz/marketing-ai",
+    "mount workspace marketing at https://ekodi.kr/{public_namespace}/marketing",
+    "keep marketing.ekodi.kr as EKODI Marketing Core rather than a customer canonical entry",
+    "keep ai.ekodi.kr as the provider-independent EKODI AI Gateway/Orchestrator",
+    "retain existing customer *.ai.ekodi.kr hostnames only as compatibility execution aliases until canonical path parity is verified",
+    "remove stale user-facing links through a repository-wide user-surface validation gate"
+  ],
+  "stagedRollout": [
+    "isolated-task-worktree",
+    "canonical-path-proxy-tests",
+    "repository-user-surface-audit",
+    "pull-request-ci",
+    "guarded-merge",
+    "compatibility-alias-verification",
+    "guarded-production-promotion"
+  ],
+  "rollbackPlan": "revert v1.4.1 projection/routing changes through the guarded pipeline; workspace_id and service data are unchanged and legacy execution aliases remain available during transition",
+  "rollbackProof": "the change is additive routing/governance plus presentation normalization; no canonical workspace IDs, customer data or provider credentials are destructively migrated",
+  "authority": "ekodi_platform_super_administrator"
 }
