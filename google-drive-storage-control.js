@@ -5,11 +5,16 @@ const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback
 const ADMIN_RETURN = 'https://admin.ekodi.kr/#storage';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
+const CHEONGGYE_SPREADSHEET_ID = '1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo';
+const CHEONGGYE_SHEET_NAME = '웹관리';
+const CHEONGGYE_SCOPE = 'cheonggye-merchant-association';
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPES = [
   'openid', 'email', 'profile',
   'https://www.googleapis.com/auth/drive.file',
   'https://www.googleapis.com/auth/drive.metadata.readonly',
+  'https://www.googleapis.com/auth/spreadsheets',
 ];
 const ROUTES = [
   ['core','01_CORE'], ['church','02_CHURCH'], ['biz','03_BIZ'], ['books','04_BOOKS'],
@@ -86,6 +91,7 @@ async function ensureSchema(db) {
     db.prepare(`CREATE TABLE IF NOT EXISTS storage_connections (id TEXT PRIMARY KEY, provider TEXT NOT NULL DEFAULT 'google_drive', role TEXT NOT NULL, account_email TEXT NOT NULL, account_domain TEXT NOT NULL DEFAULT '', display_name TEXT NOT NULL DEFAULT '', drive_id TEXT NOT NULL DEFAULT '', drive_name TEXT NOT NULL DEFAULT '', drive_root_id TEXT NOT NULL DEFAULT '', archive_root_id TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'connected', credential_ciphertext TEXT NOT NULL, credential_iv TEXT NOT NULL, scopes TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_verified_at TEXT)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS storage_routes (service_key TEXT PRIMARY KEY, folder_key TEXT NOT NULL, folder_name TEXT NOT NULL, folder_id TEXT NOT NULL DEFAULT '', connection_role TEXT NOT NULL DEFAULT 'primary', updated_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS storage_oauth_states (nonce_hash TEXT PRIMARY KEY, admin_email TEXT NOT NULL, connection_role TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS cheonggye_member_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL, member_no INTEGER, admin_email TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)`),
   ]);
   const now = new Date().toISOString();
   const seed = db.prepare(`INSERT OR IGNORE INTO storage_routes(service_key,folder_key,folder_name,connection_role,updated_at) VALUES(?,?,?,'primary',?)`);
@@ -123,6 +129,62 @@ async function driveFetch(access, path, init = {}) {
   return data;
 }
 async function about(access) { return driveFetch(access, '/about?fields=user(displayName,emailAddress,permissionId),storageQuota'); }
+async function sheetsFetch(access, path, init = {}) {
+  const headers = new Headers(init.headers || {}); headers.set('authorization', `Bearer ${access}`);
+  if (init.body && !headers.has('content-type')) headers.set('content-type','application/json');
+  const response = await fetch(`${SHEETS_API}${path}`, {...init,headers});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { const error = new Error(data?.error?.message || `Google Sheets API failed (${response.status})`); error.status=response.status; throw error; }
+  return data;
+}
+function sheetRange(range) { return encodeURIComponent(`'${CHEONGGYE_SHEET_NAME}'!${range}`); }
+async function primaryStorageConnection(env) {
+  return env.DB.prepare(`SELECT * FROM storage_connections WHERE role='primary' AND status IN ('ready','connected') ORDER BY updated_at DESC LIMIT 1`).first();
+}
+async function cheonggyeAccess(env) {
+  const row = await primaryStorageConnection(env);
+  if (!row) throw new Error('CGMA_PRIMARY_GOOGLE_DRIVE_NOT_READY');
+  return { row, access: await accessToken(env,row) };
+}
+async function cheonggyeValues(env) {
+  const { access } = await cheonggyeAccess(env);
+  const data = await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}/values/${sheetRange('A:F')}?majorDimension=ROWS`);
+  return { access, values:Array.isArray(data.values) ? data.values : [] };
+}
+function parseCheonggye(values) {
+  return values.slice(1).map((row,index) => ({ sheetRow:index+2, no:Number(row[0]||0), joinedAt:String(row[1]||''), category:String(row[2]||''), store:String(row[3]||''), name:String(row[4]||''), contact:String(row[5]||'') }))
+    .filter(row => row.no || row.joinedAt || row.category || row.store || row.name || row.contact);
+}
+function normalizeMember(body = {}) {
+  return { joinedAt:String(body.joinedAt||'').trim(), category:String(body.category||'').trim(), store:String(body.store||'').trim(), name:String(body.name||'').trim(), contact:String(body.contact||'').trim() };
+}
+async function cheonggyeAudit(env, session, action, memberNo, detail = '') {
+  await env.DB.prepare(`INSERT INTO cheonggye_member_audit(action,member_no,admin_email,detail,created_at) VALUES(?,?,?,?,?)`)
+    .bind(action,memberNo||null,String(session?.email||''),String(detail).slice(0,500),new Date().toISOString()).run();
+}
+async function cheonggyeList(env) { const { values } = await cheonggyeValues(env); return parseCheonggye(values); }
+async function cheonggyeAppend(env, member) {
+  const { access, values } = await cheonggyeValues(env); const members=parseCheonggye(values);
+  const nextNo=members.reduce((max,row)=>Math.max(max,Number(row.no||0)),0)+1;
+  const body=JSON.stringify({values:[[nextNo,member.joinedAt,member.category,member.store,member.name,member.contact]]});
+  await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}/values/${sheetRange('A:F')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {method:'POST',body});
+  return nextNo;
+}
+async function cheonggyeUpdate(env, no, member) {
+  const { access, values }=await cheonggyeValues(env); const target=parseCheonggye(values).find(row=>Number(row.no)===Number(no));
+  if(!target)return false;
+  const range=sheetRange(`A${target.sheetRow}:F${target.sheetRow}`);
+  const body=JSON.stringify({range:`'${CHEONGGYE_SHEET_NAME}'!A${target.sheetRow}:F${target.sheetRow}`,majorDimension:'ROWS',values:[[no,member.joinedAt,member.category,member.store,member.name,member.contact]]});
+  await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`, {method:'PUT',body}); return true;
+}
+async function cheonggyeDelete(env, no) {
+  const { access, values }=await cheonggyeValues(env); const target=parseCheonggye(values).find(row=>Number(row.no)===Number(no));
+  if(!target)return false;
+  const meta=await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}?fields=sheets(properties(sheetId,title))`);
+  const sheet=(meta.sheets||[]).find(item=>item.properties?.title===CHEONGGYE_SHEET_NAME); if(!sheet)throw new Error('CGMA_SHEET_TAB_NOT_FOUND');
+  const body=JSON.stringify({requests:[{deleteDimension:{range:{sheetId:sheet.properties.sheetId,dimension:'ROWS',startIndex:target.sheetRow-1,endIndex:target.sheetRow}}}]});
+  await sheetsFetch(access, `/${CHEONGGYE_SPREADSHEET_ID}:batchUpdate`, {method:'POST',body}); return true;
+}
 async function connectionRows(env) {
   const rows = await env.DB.prepare(`SELECT id,provider,role,account_email,account_domain,display_name,drive_id,drive_name,drive_root_id,archive_root_id,status,scopes,created_by,created_at,updated_at,last_verified_at FROM storage_connections WHERE status != 'disabled' ORDER BY CASE role WHEN 'primary' THEN 0 ELSE 1 END, created_at`).all();
   return rows.results || [];
@@ -226,7 +288,33 @@ export async function handleGoogleDriveStorageControl(request, env) {
     } catch (error) { console.error('Google Drive OAuth callback failed',error); return html('Google Drive 계정 연결 중 오류가 발생했습니다.'); }
   }
 
+  if (url.pathname === `${BASE}/cheonggye-members/health` && request.method === 'GET') {
+    try { const members=await cheonggyeList(env); return json({ok:true,scope:CHEONGGYE_SCOPE,source:'google-sheets',sheet:CHEONGGYE_SHEET_NAME,count:members.length,checkedAt:new Date().toISOString()}); }
+    catch(error){ console.error('Cheonggye member health failed',error); return json({ok:false,scope:CHEONGGYE_SCOPE,source:'google-sheets',code:'CHEONGGYE_SHEET_UNAVAILABLE'},503); }
+  }
   const auth = await adminSession(request,env); if (!auth.session) return auth.response;
+  if (url.pathname === `${BASE}/cheonggye-members` && request.method === 'GET') {
+    try { const members=await cheonggyeList(env); return json({ok:true,scope:CHEONGGYE_SCOPE,members,count:members.length,source:'google-sheets',sourceUrl:`https://docs.google.com/spreadsheets/d/${CHEONGGYE_SPREADSHEET_ID}/edit`,checkedAt:new Date().toISOString()},200,auth.response.headers); }
+    catch(error){console.error('Cheonggye member list failed',error);return json({error:'청계면상인회 Google Sheet를 읽을 수 없습니다.',code:'CHEONGGYE_SHEET_READ_FAILED'},502,auth.response.headers);}
+  }
+  if (url.pathname === `${BASE}/cheonggye-members` && request.method === 'POST') {
+    const member=normalizeMember(await request.json().catch(()=>({})));
+    if(!member.joinedAt||!member.category||!member.store||!member.name)return json({error:'가입일, 업종, 상호, 성명을 확인해 주세요.',code:'CHEONGGYE_MEMBER_INVALID'},400,auth.response.headers);
+    try{const no=await cheonggyeAppend(env,member);await cheonggyeAudit(env,auth.session,'create',no,`${member.store}/${member.name}`);return json({ok:true,no},201,auth.response.headers);}
+    catch(error){console.error('Cheonggye member create failed',error);return json({error:'Google Sheet에 회원을 등록하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
+  }
+  const cheonggyeMemberMatch=url.pathname.match(new RegExp(`^${BASE}/cheonggye-members/(\\d+)$`));
+  if(cheonggyeMemberMatch&&request.method==='PUT'){
+    const no=Number(cheonggyeMemberMatch[1]);const member=normalizeMember(await request.json().catch(()=>({})));
+    if(!member.joinedAt||!member.category||!member.store||!member.name)return json({error:'가입일, 업종, 상호, 성명을 확인해 주세요.',code:'CHEONGGYE_MEMBER_INVALID'},400,auth.response.headers);
+    try{const found=await cheonggyeUpdate(env,no,member);if(!found)return json({error:'회원 번호를 찾을 수 없습니다.',code:'CHEONGGYE_MEMBER_NOT_FOUND'},404,auth.response.headers);await cheonggyeAudit(env,auth.session,'update',no,`${member.store}/${member.name}`);return json({ok:true,no},200,auth.response.headers);}
+    catch(error){console.error('Cheonggye member update failed',error);return json({error:'Google Sheet의 회원 정보를 수정하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
+  }
+  if(cheonggyeMemberMatch&&request.method==='DELETE'){
+    const no=Number(cheonggyeMemberMatch[1]);
+    try{const found=await cheonggyeDelete(env,no);if(!found)return json({error:'회원 번호를 찾을 수 없습니다.',code:'CHEONGGYE_MEMBER_NOT_FOUND'},404,auth.response.headers);await cheonggyeAudit(env,auth.session,'delete',no,'member row deleted');return json({ok:true,no},200,auth.response.headers);}
+    catch(error){console.error('Cheonggye member delete failed',error);return json({error:'Google Sheet의 회원 정보를 삭제하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
+  }
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
     return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
