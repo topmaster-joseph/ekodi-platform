@@ -442,3 +442,21 @@ html[data-ekodi-user-ui] {
 [data-ekodi-character-host="true"]>[data-ekodi-character][data-mode="hero"]{position:absolute;right:0;bottom:-10px;max-height:100%;opacity:.98}
 @media(max-width:720px){[data-ekodi-character][data-mode="edge"]{width:clamp(86px,24vw,118px);bottom:8px;opacity:.92}[data-ekodi-character][data-mode="hero"]{width:clamp(128px,38vw,190px)!important;opacity:.94}}
 @media(prefers-reduced-motion:no-preference){[data-ekodi-character]{animation:ekodi-character-arrive .5s ease-out both}@keyframes ekodi-character-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:.96;transform:translateY(0)}}}
+
+/* EKODIAN Experience v2: proactive, contextual, restrained companion layer */
+[data-ekodian="true"]{pointer-events:none}
+[data-ekodian="true"] .ekodian-dialog{position:absolute;z-index:2;display:grid;gap:5px;width:min(260px,72vw);padding:12px 13px;border:1px solid color-mix(in srgb,var(--ekodi-service-accent,#315d48) 22%,transparent);border-radius:16px;background:color-mix(in srgb,var(--ekodi-service-paper,#fff) 94%,transparent);box-shadow:0 14px 36px rgba(20,38,28,.12);color:var(--ekodi-service-ink,#18251d);font:500 13px/1.45 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;pointer-events:auto;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+[data-ekodian="true"] .ekodian-name{font-size:11px;letter-spacing:.06em;color:var(--ekodi-service-accent,#315d48)}
+[data-ekodian="true"] .ekodian-name span{font-size:.86em;opacity:.66}
+[data-ekodian="true"] .ekodian-prompt{font-weight:760;font-size:14px;word-break:keep-all}
+[data-ekodian="true"] .ekodian-next{opacity:.72;word-break:keep-all}
+[data-ekodian="true"] .ekodian-action{justify-self:start;margin-top:3px;padding:6px 10px;border:1px solid color-mix(in srgb,var(--ekodi-service-accent,#315d48) 28%,transparent);border-radius:999px;background:transparent;color:inherit;font:700 11px/1.2 inherit;cursor:pointer}
+[data-ekodian="true"] .ekodian-action:hover,[data-ekodian="true"] .ekodian-action:focus-visible{background:color-mix(in srgb,var(--ekodi-service-accent,#315d48) 10%,transparent);outline:2px solid transparent}
+[data-ekodian="true"][data-mode="hero"] .ekodian-dialog{right:62%;bottom:18%;}
+[data-ekodian="true"][data-mode="edge"] .ekodian-dialog{bottom:72%;width:min(230px,70vw);opacity:0;visibility:hidden;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease}
+[data-ekodian="true"][data-mode="edge"]:focus-within .ekodian-dialog,[data-ekodian="true"][data-mode="edge"]:hover .ekodian-dialog,[data-ekodian="true"][data-mode="edge"] .ekodian-dialog.is-open{opacity:1;visibility:visible;transform:none}
+[data-ekodian="true"][data-mode="edge"][data-side="right"] .ekodian-dialog{right:72%}
+[data-ekodian="true"][data-mode="edge"][data-side="left"] .ekodian-dialog{left:72%}
+@media(max-width:720px){[data-ekodian="true"][data-mode="hero"] .ekodian-dialog{right:48%;bottom:8%;width:min(220px,58vw);padding:10px}[data-ekodian="true"] .ekodian-next{display:none}}
+@media(max-width:520px){[data-ekodian="true"][data-mode="edge"] .ekodian-dialog{display:none}[data-ekodian="true"][data-mode="hero"] .ekodian-dialog{position:relative;right:auto;bottom:auto;width:min(100%,260px);margin:-8px auto 0}}
+@media(prefers-reduced-motion:reduce){[data-ekodian="true"] .ekodian-dialog{transition:none!important}}

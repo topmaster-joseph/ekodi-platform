@@ -1,39 +1,24 @@
 (()=>{
 'use strict';
-if(window.__EKODI_CHARACTER_SYSTEM_BOOTED)return;
-window.__EKODI_CHARACTER_SYSTEM_BOOTED=true;
-const current=document.currentScript;
-const service=String(current?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'ekodi').trim().toLowerCase()||'ekodi';
+if(window.__EKODI_CHARACTER_SYSTEM_BOOTED)return;window.__EKODI_CHARACTER_SYSTEM_BOOTED=true;
+const current=document.currentScript,service=String(current?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'ekodi').trim().toLowerCase()||'ekodi';
 const surface=String(current?.dataset?.ekodiSurface||document.documentElement.dataset.ekodiUserSurface||'public').trim().toLowerCase();
-const API='https://shell.ekodi.kr/character/manifest';
-const ALLOWED=new Set(['public','workspace']);
+const API='https://shell.ekodi.kr/character/manifest',ALLOWED=new Set(['public','workspace']);
+const TRAITS=Object.freeze(['proactive','personalized','future-oriented','relationship-oriented','context-aware','companion','restrained','life-giving']);
 const DEFAULTS=['welcome','guide','community','business','current'].map((name,index)=>({id:`bundled-${name}`,kind:'generated',filename:`${name}.webp`,isActive:index===0,assetUrl:`https://shell.ekodi.kr/character-assets/${name}.webp`}));
-function hash(value){let h=2166136261;for(const ch of String(value)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0;}
-function placement(){
-  if(service==='ekodi')return {mode:'hero',side:'right',size:'large'};
-  const business=new Set(['business','biz','marketing','management','trade','invest','mall']);
-  const community=new Set(['church','community','bible','education','life']);
-  if(business.has(service))return {mode:'edge',side:'right',size:'medium',mood:'present'};
-  if(community.has(service))return {mode:'edge',side:'left',size:'medium',mood:'welcome'};
-  return {mode:'edge',side:(hash(service)%2?'right':'left'),size:'small',mood:'guide'};
-}
-function choose(manifest){const variants=Array.isArray(manifest?.variants)&&manifest.variants.length?manifest.variants:DEFAULTS;if(manifest?.active&&variants.length===0)return {...manifest.active,assetUrl:manifest.assetUrl};return variants[hash(`${service}:${location.pathname}`)%variants.length]||DEFAULTS[0];}
+const PROFILES={ekodi:{role:'platform-guide',prompt:'무엇을 함께 시작할까요?',next:'필요한 곳으로 이어드릴게요.'},my:{role:'personal-companion',prompt:'오늘 이어서 할 일을 살펴볼까요?',next:'지금과 다음을 한 흐름으로 이어드릴게요.'},try:{role:'explorer',prompt:'어디부터 둘러볼까요?',next:'안전한 체험 안에서 다음 장면을 안내할게요.'},church:{role:'faith-companion',prompt:'오늘 말씀 앞에 잠시 머물러 보실래요?',next:'말씀과 삶, 공동체가 이어지도록 곁에 있을게요.'},mall:{role:'relationship-curator',prompt:'누구를 생각하며 오셨나요?',next:'상품보다 사람과 상황에 맞는 선택부터 살펴볼게요.'},marketing:{role:'marketing-coach',prompt:'오늘 알리고 싶은 이야기가 있나요?',next:'지금의 콘텐츠가 다음 관계로 이어지도록 준비할게요.'},biz:{role:'business-partner',prompt:'어떤 문제부터 함께 풀어볼까요?',next:'오늘의 선택이 다음 운영으로 이어지게 정리할게요.'},business:{role:'business-partner',prompt:'어떤 문제부터 함께 풀어볼까요?',next:'오늘의 선택이 다음 운영으로 이어지게 정리할게요.'},community:{role:'community-neighbor',prompt:'오늘 누구와 연결되고 싶으신가요?',next:'사람과 사람이 자연스럽게 이어지도록 도울게요.'}};
+function hash(v){let h=2166136261;for(const ch of String(v)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0;}
+function profile(){return PROFILES[service]||{role:'guide',prompt:'지금 필요한 것부터 함께 살펴볼까요?',next:'다음에 필요한 일까지 자연스럽게 이어드릴게요.'};}
+function state(){const forced=document.documentElement.dataset.ekodianState||document.body?.dataset?.ekodianState;if(forced)return forced;if(document.querySelector('[data-empty-state],.empty-state'))return 'help';if(/onboard|start|welcome/.test(location.pathname))return 'onboarding';return surface==='public'?'welcome':'guide';}
+function placement(){if(service==='ekodi')return{mode:'hero',side:'right',size:'large'};if(new Set(['business','biz','marketing','management','trade','invest','mall']).has(service))return{mode:'edge',side:'right',size:'medium'};if(new Set(['church','community','bible','education','life']).has(service))return{mode:'edge',side:'left',size:'medium'};return{mode:'edge',side:(hash(service)%2?'right':'left'),size:'small'};}
+function choose(manifest){const variants=Array.isArray(manifest?.variants)&&manifest.variants.length?manifest.variants:DEFAULTS;return variants[hash(`${service}:${state()}:${location.pathname}`)%variants.length]||DEFAULTS[0];}
 function resolvedAssetUrl(value){const url=String(value||'');if(location.hostname!=='ekodi.kr')return url;return url.replace('https://shell.ekodi.kr/character-assets/','/character-assets/').replace('https://shell.ekodi.kr/character/','/api/public/character/');}
-function mount(asset){
-  if(!asset?.assetUrl||document.querySelector('[data-ekodi-character]'))return;
-  const spec=placement();
-  const host=document.createElement('aside');host.dataset.ekodiCharacter='v1';host.dataset.service=service;host.dataset.mode=spec.mode;host.dataset.side=spec.side;host.dataset.size=spec.size;host.dataset.mood=spec.mood||'welcome';host.setAttribute('aria-label','EKODI 캐릭터 안내');
-  const img=document.createElement('img');img.src=resolvedAssetUrl(asset.assetUrl);img.alt='EKODI 안내 캐릭터';img.loading=service==='ekodi'?'eager':'lazy';img.decoding='async';
-  host.append(img);
-  if(spec.mode==='hero'){
-    const hero=document.querySelector('.hero,.hero-section,[data-hero],main>section');
-    if(hero){hero.dataset.ekodiCharacterHost='true';hero.append(host);}else document.body.append(host);
-  }else document.body.append(host);
-  window.dispatchEvent(new CustomEvent('ekodi:character-ready',{detail:{service,assetId:asset.id,...spec}}));
-}
-async function boot(){
-  if(!ALLOWED.has(surface)||document.documentElement.dataset.ekodiCharacter==='off')return;
-  try{const response=await fetch(API,{cache:'no-store',mode:'cors'});if(!response.ok)return;mount(choose(await response.json()));}catch{}
-}
+function context(){try{return window.EKODIShell?.getContext?.()||{};}catch{return{};}}
+function message(){const p=profile(),ctx=context(),name=String(ctx.personName||'').trim();return{headline:name?`${name}님, ${p.prompt}`:p.prompt,detail:p.next,role:p.role};}
+function nextAction(){return document.querySelector('[data-ekodian-action],.hero a[href]:not([data-ekodi-character] *),.hero button:not([data-ekodi-character] *),[data-hero] a[href],[data-hero] button');}
+function invite(host){const copy=message(),box=document.createElement('div');box.className='ekodian-dialog';box.innerHTML=`<strong class="ekodian-name">에코디언 <span>EKODIAN</span></strong><span class="ekodian-prompt"></span><small class="ekodian-next"></small><button type="button" class="ekodian-action">다음 보기</button>`;box.querySelector('.ekodian-prompt').textContent=copy.headline;box.querySelector('.ekodian-next').textContent=copy.detail;box.querySelector('button').addEventListener('click',()=>{const target=nextAction();window.dispatchEvent(new CustomEvent('ekodi:ekodian-action',{detail:{service,state:state(),role:copy.role,traits:TRAITS,targetFound:Boolean(target)}}));if(target){target.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});target.focus?.({preventScroll:true});}else box.classList.toggle('is-open');});host.append(box);}
+function mount(asset){if(!asset?.assetUrl||document.querySelector('[data-ekodi-character]'))return;const spec=placement(),copy=message(),host=document.createElement('aside');host.dataset.ekodiCharacter='v2';host.dataset.ekodian='true';host.dataset.service=service;host.dataset.mode=spec.mode;host.dataset.side=spec.side;host.dataset.size=spec.size;host.dataset.state=state();host.dataset.role=copy.role;host.setAttribute('aria-label',`에코디언 안내: ${copy.headline}`);const img=document.createElement('img');img.src=resolvedAssetUrl(asset.assetUrl);img.alt='에코디언';img.loading=service==='ekodi'?'eager':'lazy';img.decoding='async';host.append(img);invite(host);if(spec.mode==='hero'){const hero=document.querySelector('.hero,.hero-section,[data-hero],main>section');if(hero){hero.dataset.ekodiCharacterHost='true';hero.append(host);}else document.body.append(host);}else document.body.append(host);window.dispatchEvent(new CustomEvent('ekodi:character-ready',{detail:{name:'EKODIAN',service,assetId:asset.id,state:state(),role:copy.role,traits:TRAITS,...spec}}));}
+async function boot(){if(!ALLOWED.has(surface)||document.documentElement.dataset.ekodiCharacter==='off')return;try{const response=await fetch(API,{cache:'no-store',mode:'cors'});if(response.ok)return mount(choose(await response.json()));}catch{}mount(choose({variants:DEFAULTS}));}
+window.EKODIAN=Object.freeze({name:'EKODIAN',koreanName:'에코디언',traits:TRAITS,getProfile:()=>({...profile()}),getState:state,getContext:context});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else void boot();
 })();
