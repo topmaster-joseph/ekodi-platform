@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -17,6 +17,7 @@
     "verification-first-evolution",
     "security-native-intelligence",
     "evidence-linked-recommendations",
+    "secure-projection-minimum-disclosure",
     "service-local-admin-entrypoints"
   ],
   "systemBoundaries": {
@@ -168,7 +169,20 @@
     ],
     "heavyWorkUsesQueue": true,
     "publicCachePreferred": true,
-    "privateAndAdminCacheRestricted": true
+    "privateAndAdminCacheRestricted": true,
+    "secureProjection": {
+      "enabledByDefault": true,
+      "model": "purpose-bound-minimum-disclosure",
+      "browserHiddenFieldsForbidden": true,
+      "secretsNeverProjected": true,
+      "sourceTopologyNotProjectedToBrowserOrExternalOperationalAi": true,
+      "adminDefaultProfile": "admin_safe",
+      "userSelfProfile": "user_self",
+      "workspaceMemberProfile": "workspace_member",
+      "experienceProfile": "experience_public",
+      "externalAiDefaultProfile": "ai_minimum",
+      "viewExportDownloadApiRawDataSeparated": true
+    }
   },
   "parallelDevelopmentPolicy": {
     "appliesTo": [
@@ -307,7 +321,8 @@
       "automatic_isolation",
       "rollback",
       "backup",
-      "disaster_recovery"
+      "disaster_recovery",
+      "secure_projection"
     ]
   },
   "serviceAdministrationPolicy": {

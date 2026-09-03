@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.4.0
+# EKODI Platform Constitution v1.5.0
 
 Effective: 2026-09-03
 
@@ -54,10 +54,14 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Public content is cache-first; private/admin responses are restricted or no-cache.
 - Edge controls absorb volumetric abuse; EKODI enforces user, tenant, capability and cost-aware limits.
 - Login, signup, upload, AI and other abuse-sensitive endpoints receive dedicated throttling and verification.
+- User, administrator, experience and operational-AI surfaces use purpose-bound secure projection: secrets and source/topology details are never sent to a surface that does not need them.
+- Browser hiding is not a security boundary; restricted fields are removed server-side before serialization. View, export, download, API and raw-data capabilities are separately authorized.
+- Administrator surfaces default to a safe projection. Any deeper diagnostic access remains separately authorized, time-bounded where practical and auditable, and never reveals reusable secrets.
 
 ## 7. AI Constitution
 - AI calls route through provider-independent governance when a gateway exists.
 - AI never owns EKODI identity, authorization, payment or irreversible high-impact decisions.
+- Operational AI receives only the minimum projected context required for the task. Canonical personal identifiers, credentials and internal source/topology details stay inside EKODI unless a separately governed engineering workflow explicitly requires them.
 - Expensive AI work has quota, timeout, retry, circuit-breaker and fallback behavior.
 - Provider unavailability must retain a safe degraded or non-AI path where the service permits it.
 

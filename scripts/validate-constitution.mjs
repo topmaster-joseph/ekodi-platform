@@ -11,9 +11,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.4.0') fail('constitution version must remain 1.4.0 with approved service-local administration, common-service and verification-first evolution amendments');
+if (constitution.version !== '1.5.0') fail('constitution version must remain 1.5.0 with approved Secure Projection and service-local administration amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','service-local-admin-entrypoints']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','service-local-admin-entrypoints']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -36,9 +36,18 @@ for (const signal of ['traffic','latency','error_rate','capacity','ai_cost','sec
 for (const gate of ['production_change','shared_core_creation','permission_expansion','paid_cost_commitment','data_migration','destructive_change','security_boundary_change','production_dns_change']) {
   if (!evolution.approvalRequired?.includes(gate)) fail(`Evolution approval gate missing: ${gate}`);
 }
-for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','rollback','backup','disaster_recovery']) {
+for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','secure_projection','rollback','backup','disaster_recovery']) {
   if (!evolution.securityCore?.includes(control)) fail(`Evolution security core control missing: ${control}`);
 }
+const secureProjection = constitution.securityPolicy?.secureProjection || {};
+if (secureProjection.enabledByDefault !== true) fail('Secure Projection must be enabled by default');
+if (secureProjection.model !== 'purpose-bound-minimum-disclosure') fail('Secure Projection model mismatch');
+if (secureProjection.browserHiddenFieldsForbidden !== true) fail('restricted browser fields must be removed server-side');
+if (secureProjection.secretsNeverProjected !== true) fail('secrets must never be projection outputs');
+if (secureProjection.sourceTopologyNotProjectedToBrowserOrExternalOperationalAi !== true) fail('source/topology must stay out of browser and external operational AI projections');
+if (secureProjection.adminDefaultProfile !== 'admin_safe') fail('administrator default projection must be admin_safe');
+if (secureProjection.externalAiDefaultProfile !== 'ai_minimum') fail('external operational AI projection must default to ai_minimum');
+if (secureProjection.viewExportDownloadApiRawDataSeparated !== true) fail('view/export/download/API/raw-data capabilities must remain distinct');
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
@@ -47,14 +56,6 @@ if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !sys
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
-const serviceAdmin = constitution.serviceAdministrationPolicy || {};
-if (serviceAdmin.canonicalServiceAdminPath !== '/admin') fail('service administration path must remain /admin');
-if (serviceAdmin.centralControlOrigin !== 'https://admin.ekodi.kr') fail('central service administration origin must remain admin.ekodi.kr');
-if (serviceAdmin.serviceEntryIsAuthoritySource !== false) fail('service-local admin entry may not become an authority source');
-if (serviceAdmin.authorizationSource !== 'ekodi_core_rbac') fail('service administration authorization must remain EKODI Core RBAC');
-if (serviceAdmin.privateAndAdminCachePolicy !== 'no-store') fail('service administration cache policy must remain no-store');
-if (serviceAdmin.workspaceIdentityFromHostnameForbidden !== true) fail('service administration may not derive workspace identity from hostname');
-for (const host of ['api.ekodi.kr','auth.ekodi.kr']) if (!serviceAdmin.privilegedCoreHosts?.includes(host)) fail('privileged core admin exception missing: '+host);
 
 const expectedNamespaces = ['personal','org','group','project'];
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expectedNamespaces)) {

@@ -310,8 +310,8 @@
       "category": "knowledge-creation",
       "order": 107,
       "homepage": true,
-      "productionVerified": false,
-      "status": "preparing",
+      "productionVerified": true,
+      "status": "live",
       "adminUrl": "https://journal.ekodi.kr/admin"
     },
     {

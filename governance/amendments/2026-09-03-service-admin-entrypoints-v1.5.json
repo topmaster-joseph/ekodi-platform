@@ -1,11 +1,11 @@
 {
-  "id": "EKODI-CONSTITUTION-2026-09-03-SERVICE-ADMIN-ENTRYPOINTS-V1.4",
+  "id": "EKODI-CONSTITUTION-2026-09-03-SERVICE-ADMIN-ENTRYPOINTS-V1.5",
   "date": "2026-09-03",
   "class": "C2",
   "status": "approved",
   "approvedBy": "topmaster-joseph",
   "approvalSource": "explicit user approval in conversation to standardize each common service administrator under the service subdomain /admin path, followed by the instruction to build it",
-  "constitutionVersion": "1.4.0",
+  "constitutionVersion": "1.5.0",
   "summary": "Standardize service-local administration entrypoints at /admin while preserving admin.ekodi.kr as the central control plane and EKODI Core RBAC as the authorization source of truth.",
   "affectedAreas": [
     "domain",
@@ -24,5 +24,5 @@
     "auth.ekodi.kr"
   ],
   "rolloutPolicy": "additive; existing working admin routes remain valid while newly registered service admin URLs are introduced only when their route is implemented",
-  "rollbackPlan": "remove service adminUrl registrations and local /admin handoffs, revert constitution to 1.3.0, and keep admin.ekodi.kr as the sole administrative entry without changing service public URLs or workspace identity"
+  "rollbackPlan": "remove service adminUrl registrations and local /admin handoffs, revert constitution to 1.4.0, and keep admin.ekodi.kr as the sole administrative entry without changing service public URLs or workspace identity"
 }
