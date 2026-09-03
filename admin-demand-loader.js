@@ -48,7 +48,7 @@
       insert: 'after-aiops',
     },
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
-    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css','c.css'],scripts:['storage-admin.js','c.js'],real:'[data-section="storage"]',hashes:['#storage'],insert:'after-health'},
+    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
     deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
     comm:{scripts:['communication-admin.js'],real:'[data-section="communication"]'},
