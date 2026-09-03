@@ -20,6 +20,11 @@ ALLOWED_ORIGINS = "https://marketing.ekodi.kr,https://my.ekodi.kr,https://cgma.e
 enabled = true
 invocation_logs = true
 
+[[services]]
+binding = "MARKETING_GROWTH"
+service = "ekodi-marketing-growth"
+entrypoint = "MarketingGrowthPublisher"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"

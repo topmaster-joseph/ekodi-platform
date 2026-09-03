@@ -7,6 +7,7 @@ route = { pattern = "marketing-connect-api.ekodi.kr", custom_domain = true }
 [vars]
 ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
 PUBLIC_BASE_URL = "https://marketing-connect-api.ekodi.kr"
+GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 META_GRAPH_VERSION = "v25.0"
 MAX_DAILY_AD_BUDGET_KRW = "100000"
 MAX_TOTAL_AD_BUDGET_KRW = "1000000"
