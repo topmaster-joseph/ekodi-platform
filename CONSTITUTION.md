@@ -26,6 +26,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `marketing.ekodi.kr` is the registered EKODI Marketing Core common-service boundary. It is an engine boundary, not an ordinary customer entry or workspace identity. The public EKODIBIZ Marketing AI product is canonical at `ekodi.kr/ekodibiz/marketing-ai`, while workspace marketing surfaces live at `ekodi.kr/{public_namespace}/marketing`.
 - `ai.ekodi.kr` is the registered provider-independent EKODI AI Gateway and Orchestrator core boundary. Ordinary users do not need to know which AI provider or model is selected behind a professional service unless consent, safety, law or an explicit technical/admin context requires that disclosure.
 - Customer-specific AI subdomains such as `{customer}.ai.ekodi.kr` are forbidden as new canonical addresses. Existing ones are compatibility aliases only and migrate to the customer workspace path.
+- `try.ekodi.kr` is a registered common-service boundary for the EKODI Experience service. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface.
+
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 
