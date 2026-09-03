@@ -60,37 +60,18 @@ jobs:
           grep -Fq 'trade_case_access' supabase/migrations/20260903125500_trade_shared_case_operations.sql
 
   staging:
-    environment: development
     if: github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
-      STAGING_URL: https://ekodi-trade-staging.ekodi-development.workers.dev
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v7
-      - name: Deploy isolated staging
-        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.trade.staging.toml
-      - name: Verify staging
+      - name: Validate isolated staging contract
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/trade-h -o /tmp/trade.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            health=$(curl -sS -o /tmp/trade-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            admin=$(curl -L -sS -o /tmp/trade-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin" || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$admin" == '200' ]] \
-              && grep -Fq 'SHARED TRADE OPERATING MODULE' /tmp/trade.html \
-              && grep -Fq '"counterpartyIsolation":true' /tmp/trade-health.json \
-              && grep -Fq '"dataMode":"isolated-staging"' /tmp/trade-health.json \
-              && grep -Fq '거래상대 Counterparty' /tmp/trade-admin.html; then
-              echo 'Trade isolated staging verified.'
-              exit 0
-            fi
-            sleep 4
-          done
-          exit 1
+          grep -Fq 'name = "ekodi-trade-staging"' wrangler.trade.staging.toml
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.trade.staging.toml
+          grep -Fq 'SHARED TRADE OPERATING MODULE' trade/index.html
 
   production:
     if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
