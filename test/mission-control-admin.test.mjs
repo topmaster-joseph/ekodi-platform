@@ -43,7 +43,7 @@ test('Primary AI Ops does not auto-hydrate Governance, Health or Deployments',as
   assert.match(demand,/scripts: \['system-health-admin\.js'\]/);
   assert.match(demand,/hashes: \['#health'\]/);
   assert.match(demand,/deployments:\s*\{/);
-  assert.match(demand,/scripts: \['release-control-admin\.js'\]/);
+  assert.match(demand,/scripts:\s*\['release-control-admin\.js'\]/);
   assert.match(worker,/'\/mission-control-admin\.css'/);
   assert.match(worker,/'\/mission-control-admin\.js'/);
   assert.match(worker,/ADMIN_ASSETS/);
