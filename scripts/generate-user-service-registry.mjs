@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  applyUserSurfaceOverride,
+  assertEngineBoundarySeparation,
+  assertUserFacingCanonical,
+  loadUserSurfaceContract,
+} from './user-surface-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourcePath = path.join(root, 'config', 'ecosystem-services.json');
@@ -12,8 +18,10 @@ const RESERVED_INTERNAL = new Set([
 ]);
 const AVAILABLE_STATUSES = new Set(['live', 'beta']);
 
+const contract = await loadUserSurfaceContract();
+assertEngineBoundarySeparation(contract);
 const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
-const services = Array.isArray(raw.services) ? raw.services : [];
+const services = Array.isArray(raw.services) ? raw.services.map(service => applyUserSurfaceOverride(service, contract)) : [];
 const normalized = services.map((service) => {
   const id = String(service?.id || '').trim().toLowerCase();
   const sourceUrl = String(service?.url || (service?.domain ? `https://${service.domain}` : '')).trim();
@@ -23,7 +31,7 @@ const normalized = services.map((service) => {
   const productionVerified = service?.productionVerified === true;
   const homepageDefault = service?.homepage === true;
   const homepageOrder = Number.isFinite(Number(service?.order)) ? Math.trunc(Number(service.order)) : 9999;
-  return {
+  const normalizedService = {
     id,
     name: String(service?.name || service?.nameEn || '').trim(),
     nameEn: String(service?.nameEn || '').trim(),
@@ -38,6 +46,8 @@ const normalized = services.map((service) => {
     homepageDefault,
     homepageOrder,
   };
+  assertUserFacingCanonical(normalizedService, contract);
+  return normalizedService;
 });
 
 for (const service of normalized) {
@@ -55,8 +65,8 @@ const ids = normalized.map((service) => service.id);
 if (new Set(ids).size !== ids.length) throw new Error('Duplicate user service id in ecosystem-services.json');
 
 // Subdomain services are unique by hostname. Multiple first-class services may
-// intentionally live under different paths on the EKODI apex, for example
-// /mall and /delivery, so those are unique by their canonical first path.
+// intentionally live under different paths on the EKODI apex, so those are
+// unique by their canonical path.
 const serviceAddresses = normalized.map((service) => {
   if (service.domain !== 'ekodi.kr') return service.domain;
   let parsed = null;
@@ -68,7 +78,7 @@ if (new Set(serviceAddresses).size !== serviceAddresses.length) {
   throw new Error('Duplicate user service address in ecosystem-services.json');
 }
 
-const banner = '// GENERATED from config/ecosystem-services.json. Do not edit by hand.\n';
+const banner = '// GENERATED from config/ecosystem-services.json through config/user-surface-contract.json. Do not edit by hand.\n';
 const payload = JSON.stringify(normalized, null, 2);
 const server = `${banner}export const USER_SERVICES = Object.freeze(${payload});\nexport const USER_SERVICE_IDS = new Set(USER_SERVICES.map((service) => service.id));\nexport function isUserService(value) { return USER_SERVICE_IDS.has(String(value || '').trim().toLowerCase()); }\n`;
 const browser = `${banner}export const USER_SERVICES = Object.freeze(${payload});\nexport const USER_SERVICE_IDS = new Set(USER_SERVICES.map((service) => service.id));\n`;
@@ -76,4 +86,4 @@ const browser = `${banner}export const USER_SERVICES = Object.freeze(${payload})
 fs.mkdirSync(path.dirname(serverPath), { recursive: true });
 fs.writeFileSync(serverPath, server);
 fs.writeFileSync(browserPath, browser);
-console.log(`Generated ${normalized.length} EKODI user services with homepage presentation metadata.`);
+console.log(`Generated ${normalized.length} EKODI user services with constitutional canonical surfaces.`);
