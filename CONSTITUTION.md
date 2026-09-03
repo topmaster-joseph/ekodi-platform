@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.4.0
+# EKODI Platform Constitution v1.5.0
 
 Effective: 2026-09-03
 
@@ -25,6 +25,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `try.ekodi.kr` is a registered common-service boundary for the EKODI Experience service. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
+- CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.

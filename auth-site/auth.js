@@ -6,7 +6,7 @@ const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
 const PERSON_WORKSPACE=`${SUPABASE_URL}/functions/v1/workspace-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const services={
-  cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',origins:['https://cgma.ekodi.kr'],requestable:true},
+  cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://ekodi.kr/cgma/member',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],requestable:true},
   marketing:{name:'마케팅AI',tenant:null,role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
   biz:{name:'에코디비즈',tenant:'ekodibiz',role:'member',returnTo:'https://biz.ekodi.kr',origins:['https://biz.ekodi.kr'],requestable:true},
   trade:{name:'EKODI Global Trading',tenant:'ekodi-biz',role:'member',returnTo:'https://ekodi.kr/org/ekodibiz/trade',origins:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],requestable:false},
@@ -39,7 +39,7 @@ function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
   try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;return (config.origins.includes(target.origin)||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const cgmaPlatform=site==='cgma'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||cgmaPlatform||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);

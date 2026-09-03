@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -260,13 +260,16 @@
     "lab.ekodi.kr": "https://ekodi.kr/org/ekodi-lab",
     "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
     "marketing.ekodi.kr": "https://ekodi.kr/marketing",
-    "cgma.ekodi.kr": "https://ekodi.kr/org/cgma",
+    "cgma.ekodi.kr": "https://ekodi.kr/cgma",
     "cgma.ai.ekodi.kr": "https://ekodi.kr/org/cgma",
     "jadam.ai.ekodi.kr": "https://ekodi.kr/org/jadam",
     "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/org/pizzamaru",
     "yogurt.ai.ekodi.kr": "https://ekodi.kr/org/yogurt",
     "space.ekodi.kr": "https://ekodi.kr",
     "user.ekodi.kr": "https://ekodi.kr"
+  },
+  "customerOwnedDomainMappings": {
+    "cgma.or.kr": "https://ekodi.kr/cgma"
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",

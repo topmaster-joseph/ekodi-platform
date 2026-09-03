@@ -61,7 +61,7 @@ const MARKETING_TENANT_SITES = marketingTenants.tenants.map(row => [
 ]);
 
 const MARKETING_PUBLIC_SITES = marketingTenants.tenants
-  .filter(row => row.publicSiteDomain && row.visibility !== 'private')
+  .filter(row => row.publicSiteDomain)
   .map(row => [
     `marketing-public-${row.tenant}`,
     `${row.name} public site`,

@@ -32,7 +32,7 @@ OPENAI_MODEL = "gpt-5.6-terra"
 # Personal API remains preferred when connected; otherwise EKODI sponsors a small bounded allowance.
 USER_AI_FREE_MONTHLY_REQUESTS = "20"
 USER_AI_FLEX_MONTHLY_REQUESTS = "20"
-ALLOWED_ORIGINS = "https://api.ekodi.kr,https://ekodi.kr,https://www.ekodi.kr,https://my.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://auth.ekodi.kr,https://mail.ekodi.kr,https://author.ekodi.kr,https://marketing.ekodi.kr,https://biz.ekodi.kr,https://trade.ekodi.kr,https://mall.ekodi.kr,https://pay.ekodi.kr,https://books.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://community.ekodi.kr,https://edu.ekodi.kr,https://media.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
+ALLOWED_ORIGINS = "https://api.ekodi.kr,https://ekodi.kr,https://www.ekodi.kr,https://my.ekodi.kr,https://admin.ekodi.kr,https://admin.biz.ekodi.kr,https://admin.church.ekodi.kr,https://admin.lab.ekodi.kr,https://admin.trade.ekodi.kr,https://auth.ekodi.kr,https://mail.ekodi.kr,https://author.ekodi.kr,https://marketing.ekodi.kr,https://biz.ekodi.kr,https://trade.ekodi.kr,https://mall.ekodi.kr,https://pay.ekodi.kr,https://books.ekodi.kr,https://church.ekodi.kr,https://lab.ekodi.kr,https://community.ekodi.kr,https://edu.ekodi.kr,https://media.ekodi.kr,https://cgma.or.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
 
 [observability.logs]
 enabled = true

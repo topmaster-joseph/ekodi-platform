@@ -1,0 +1,22 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-CGMA-PUBLIC-DOMAIN-V1.5",
+  "date": "2026-09-03",
+  "class": "C3",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit super-administrator instruction to change and build CGMA so the EKODI platform route is https://ekodi.kr/cgma, the external public address is cgma.or.kr, and cgma.ekodi.kr is retired from user-facing use",
+  "constitutionVersion": "1.5.0",
+  "summary": "Separate the CGMA customer-owned public domain from EKODI internal routing: cgma.or.kr maps to the CGMA surface, ekodi.kr/cgma is the platform route, and cgma.ekodi.kr becomes a compatibility redirect.",
+  "affectedAreas": ["domain", "workspace-routing", "authentication", "customer-site", "monitoring", "governance"],
+  "migrationPlan": [
+    "deploy and verify the ekodi.kr/cgma gateway first",
+    "change cgma.ekodi.kr from a user-facing site to a path-preserving redirect",
+    "allow both the platform route and customer-owned domain in authentication and CORS during transition",
+    "move cgma.or.kr DNS from the legacy provider to the EKODI edge only after DNS authority is available",
+    "switch remaining compatibility records to cgma.or.kr after HTTPS and callback verification"
+  ],
+  "stagedRollout": ["isolated-task-branch", "contract-tests", "pull-request-merge", "legacy-redirect-smoke", "platform-route-smoke", "external-dns-cutover", "custom-domain-tls-smoke"],
+  "rollbackPlan": "keep cgma.ekodi.kr attached as a compatibility alias until cgma.or.kr is healthy; rollback by reverting v1.5 through the guarded pipeline while preserving the working ekodi.kr/cgma gateway",
+  "rollbackProof": "the first stage is non-destructive and leaves both the Pages upstream and the EKODI platform gateway intact; external DNS is not changed until a verified replacement route exists",
+  "authority": "ekodi_platform_super_administrator"
+}
