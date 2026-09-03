@@ -1,5 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
+import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -413,8 +415,18 @@ export default {
       }
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
+        const page=ekodiBizInvestAdminPage(request);
+        const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
+        return injectEkodiShell(secured, 'biz', 'admin');
+      }
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
+        const page=ekodiBizInvestBusinessPage(request);
+        const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
+        return injectEkodiShell(secured, 'biz', 'public');
+      }
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);
         canonical.pathname = MALL_PREFIX;
