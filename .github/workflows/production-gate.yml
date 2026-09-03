@@ -7,8 +7,9 @@ on:
     paths:
       - 'site-worker.js'
       - 'api-worker.js'
-      - 'control-center.html'
-      - 'control-center.js'
+      - 'admin-shell.html'
+      - 'admin-authenticated-shell.js'
+      - 'admin-central-handoff.js'
       - 'test/**'
       - '.github/workflows/production-gate.yml'
   schedule:
@@ -48,18 +49,31 @@ jobs:
             grep -Fq "$needle" /tmp/body
           }
 
-          verify_no_redirect() {
+          verify_admin() {
             url="$1"
+            route="$2"
             code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
-            echo "ADMIN | $url | HTTP $code"
+            echo "ADMIN | $url | HTTP $code | route $route"
             [ "$code" = '200' ]
-            grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/headers
+            grep -Fiq "x-ekodi-route: $route" /tmp/headers
             ! grep -Fiq '^location:' /tmp/headers
-            grep -Fq 'EKODI Control Center' /tmp/body
+            grep -Fq '<title>EKODI Admin</title>' /tmp/body
           }
 
-          verify_no_redirect 'https://admin.ekodi.kr/'
-          verify_no_redirect 'https://admin.ekodi.kr/control-center.html'
+          verify_retired_admin() {
+            url="$1"
+            code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
+            echo "RETIRED ADMIN | $url | HTTP $code"
+            [ "$code" = '404' ]
+            grep -Fiq 'x-ekodi-route: admin-retired' /tmp/headers
+            ! grep -Fiq '^location:' /tmp/headers
+            grep -Fq 'Not Found' /tmp/body
+          }
+
+          verify_admin 'https://admin.ekodi.kr/' 'admin-shell'
+          verify_admin 'https://admin.ekodi.kr/admin' 'admin-shell'
+          verify_admin 'https://ekodi.kr/admin' 'admin-fallback'
+          verify_retired_admin 'https://admin.ekodi.kr/control-center.html'
           verify_html 'https://cgma.ekodi.kr/' '청계면상인회' 'CLIENT cgma'
           verify_html 'https://jadam.ekodi.kr/' '자담치킨 목포대점' 'CLIENT jadam'
           verify_html 'https://pizzamaru.ekodi.kr/' '피자마루 목포대점' 'CLIENT pizzamaru'
