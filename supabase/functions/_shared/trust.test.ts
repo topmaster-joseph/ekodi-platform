@@ -1,6 +1,7 @@
-import { assert, assertEquals } from "jsr:@std/assert@1";
+import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
 import {
   buildSecurityContext,
+  capabilitySet,
   compareWithLegacy,
   compatibilityDecision,
   evaluatePolicy,
@@ -32,6 +33,22 @@ Deno.test("policy is default deny when no rule matches", () => {
   assertEquals(decision.ruleId, "default-deny");
 });
 
+Deno.test("deny wins over allow at equal priority", () => {
+  const context = buildSecurityContext({
+    subjectId: "user-1",
+    roles: ["member"],
+    service: "trade",
+    resource: "counterparty",
+    action: "view",
+  });
+  const decision = evaluatePolicy(context, [
+    { id: "allow-member", priority: 10, rolesAny: ["member"], allow: true },
+    { id: "deny-member", priority: 10, rolesAny: ["member"], allow: false },
+  ]);
+  assertEquals(decision.allowed, false);
+  assertEquals(decision.ruleId, "deny-member");
+});
+
 Deno.test("shadow mode can never change the live legacy result", () => {
   const trust = compatibilityDecision(false);
   trust.allowed = true;
@@ -41,12 +58,33 @@ Deno.test("shadow mode can never change the live legacy result", () => {
   assertEquals(comparison.parity, false);
 });
 
+Deno.test("enforce mode is impossible without explicit cutover gate", () => {
+  const trust = compatibilityDecision(true);
+  assertThrows(
+    () => compareWithLegacy(true, trust, "enforce"),
+    Error,
+    "trust_cutover_not_allowed",
+  );
+});
+
 Deno.test("compatibility adapter preserves current authorization", () => {
   const trust = compatibilityDecision(true, { capabilities: ["trade.counterparty.view"] });
   const comparison = compareWithLegacy(true, trust, "shadow");
   assertEquals(comparison.effectiveAllowed, true);
   assertEquals(comparison.trustAllowed, true);
   assertEquals(comparison.parity, true);
+});
+
+Deno.test("view permission does not imply export capability", () => {
+  const view = capabilitySet({
+    roles: ["member"],
+    service: "trade",
+    resource: "counterparty",
+    action: "view",
+    legacyAllowed: true,
+  });
+  assert(view.includes("trade.counterparty.view"));
+  assertEquals(view.includes("trade.counterparty.export"), false);
 });
 
 Deno.test("secure projection removes reusable secrets and internal topology recursively", () => {
