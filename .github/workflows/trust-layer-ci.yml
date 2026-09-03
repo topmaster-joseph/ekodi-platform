@@ -34,7 +34,7 @@ jobs:
       - name: Type-check Trust Layer core
         run: deno check supabase/functions/_shared/trust.ts
       - name: Type-check Trust shadow API
-        run: deno check supabase/functions/trust-api/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/trust-api/index.ts
       - name: Run Trust invariants
         run: deno test supabase/functions/_shared/trust.test.ts
       - name: Verify shadow-only cutover guard
