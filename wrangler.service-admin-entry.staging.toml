@@ -1,6 +1,6 @@
 name = "ekodi-service-admin-entry-staging"
 main = "service-admin-entry-worker.js"
-compatibility_date = "2026-09-03"
+compatibility_date = "2026-08-08"
 workers_dev = true
 preview_urls = false
 
