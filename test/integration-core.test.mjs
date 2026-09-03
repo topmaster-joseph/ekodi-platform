@@ -48,7 +48,7 @@ test("fails when canonical context is missing", async () => {
   const mockFetch = async (url) => {
     if (url.endsWith("/.well-known/ekodi-integration.json")) {
       const manifest = { ...validManifest, identity_context: ["user_id"] };
-      return new Response(JSON.stringify(manifest), { status: 200 });
+      return new Response(JSON.stringify(manifest), { status: 200, headers: { "content-type": "application/json" } });
     }
     return new Response("ok", { status: 200 });
   };
@@ -76,4 +76,33 @@ test("public profile endpoint remains readable", async () => {
   const body = await response.json();
   assert.equal(body.profile_id, "marketing-ai");
   assert.equal(body.owner, "EKODI Integration Core");
+});
+
+test("admin projection is closed without an authenticated EKODI identity", async () => {
+  const response = await worker.fetch(new Request("https://admin.ekodi.kr/dev"), {});
+  assert.equal(response.status, 401);
+});
+
+test("admin projection is available to an authenticated EKODI identity", async () => {
+  const response = await worker.fetch(
+    new Request("https://admin.ekodi.kr/dev", {
+      headers: { "cf-access-authenticated-user-email": "admin@example.invalid" },
+    }),
+    {},
+  );
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Developer & Integration Admin/);
+});
+
+test("admin status endpoint reports EKODI governance ownership", async () => {
+  const response = await worker.fetch(
+    new Request("https://admin.ekodi.kr/dev/api/status", {
+      headers: { "cf-access-authenticated-user-email": "admin@example.invalid" },
+    }),
+    {},
+  );
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.governance_owner, "EKODI");
+  assert.equal(body.production_promotion, "EKODI_APPROVAL_REQUIRED");
 });
