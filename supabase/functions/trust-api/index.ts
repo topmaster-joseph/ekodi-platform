@@ -29,7 +29,7 @@ const allowedOrigin = (origin: string | null) => {
         parsed.hostname.endsWith(".ekodi.kr") ||
         parsed.hostname === "ekodibiz.kr" ||
         parsed.hostname.endsWith(".ekodibiz.kr") ||
-        parsed.hostname.endsWith(".pages.dev"))
+        parsed.hostname === "cheonggye-market.pages.dev")
     ) return origin;
   } catch {
     // fall through to canonical origin
@@ -70,7 +70,8 @@ async function authClient(req: Request) {
 }
 
 async function subjectHash(subjectId: string) {
-  const salt = Deno.env.get("TRUST_AUDIT_SALT") || url;
+  const salt = Deno.env.get("TRUST_AUDIT_SALT");
+  if (!salt) throw new Error("trust_audit_salt_missing");
   const bytes = new TextEncoder().encode(`${salt}:${subjectId}`);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -176,7 +177,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    const capabilities = capabilitySet({ roles, service: site, resource, legacyAllowed });
+    const capabilities = capabilitySet({ roles, service: site, resource, action, legacyAllowed });
     const projectionProfile = profileFor(roles, purpose);
     const rules = Array.isArray(policy?.config?.rules) ? policy.config.rules as PolicyRule[] : [];
     const decision = rules.length
