@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "effectiveDate": "2026-09-03",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -153,6 +153,18 @@
     "directExternalProviderCallsFromFeatureModulesForbiddenWhenGatewayExists": true,
     "degradedProviderMustNotCollapseUnrelatedCoreServices": true
   },
+  "paymentPolicy": {
+    "commonServiceBoundary": "pay.ekodi.kr",
+    "workspaceIdentityKey": "workspace_id",
+    "providerModel": "replaceable_adapter",
+    "tenantMerchantAccountPreferred": true,
+    "platformFundPoolingDefaultForbidden": true,
+    "rawCardDataStorageForbidden": true,
+    "irreversibleActionsRequireHumanConfirmation": true,
+    "donationPaymentsDefault": "disabled_until_provider_approval",
+    "rolloutStages": ["off", "shadow", "canary", "on"],
+    "legacyFallbackTarget": "https://ekodi.kr/pay"
+  },
   "securityPolicy": {
     "edgeBeforeOrigin": true,
     "publicOriginForbidden": true,
@@ -270,7 +282,8 @@
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
-    "try.ekodi.kr"
+    "try.ekodi.kr",
+    "pay.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
