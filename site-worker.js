@@ -8,6 +8,7 @@ const MALL_PREFIX = '/mall';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
+  '/character-system.js',
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/ekodi-message-ui.js',
@@ -23,6 +24,8 @@ const ADMIN_HOSTS = new Set([
   'admin.lab.ekodi.kr',
   'admin.trade.ekodi.kr',
 ]);
+const ADMIN_CHARACTER_PREFIX = '/api/control/character';
+const PUBLIC_CHARACTER_PREFIX = '/api/public/character';
 const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
 const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 
@@ -87,6 +90,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-menu-registry.js',
   '/admin-sidebar.js',
   '/admin-menu-runtime.js',
+  '/c.css',
+  '/c.js',
   '/homepage-admin.js',
   '/finance-monitor.js',
   '/admin-compact.css',
@@ -348,6 +353,20 @@ async function proxyAdminStorage(request, env) {
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-storage-proxy');
 }
 
+async function proxyPublicCharacter(request, env) {
+  if (!env.STORAGE?.fetch) return withHostSecurity(new Response('Not Found',{status:404}), PUBLIC_CSP, 'no-store', 'character-storage-unavailable');
+  const upstream=await env.STORAGE.fetch(request);
+  if(upstream.status===404 && new URL(request.url).pathname.endsWith('/current') && env.ASSETS?.fetch){
+    const fallback=await env.ASSETS.fetch(assetRequest(request,'/character-assets/welcome.webp'));
+    const response=new Response(fallback.body,fallback);response.headers.set('X-EKODI-Character-Proxy','bundled-fallback-v1');
+    return withHostSecurity(response,PUBLIC_CSP,'public, max-age=300, stale-while-revalidate=3600','public-character-fallback');
+  }
+  const response=new Response(upstream.body,upstream);response.headers.set('X-EKODI-Character-Proxy','service-binding-v1');
+  const contentType=String(response.headers.get('content-type')||'');
+  const cache=contentType.startsWith('image/')?'public, max-age=300, stale-while-revalidate=3600':'no-store';
+  return withHostSecurity(response,PUBLIC_CSP,cache,'public-character-proxy');
+}
+
 async function proxyAdminMarketingPublishing(request) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_MARKETING_PUBLISHING_PREFIX.length) || '/health';
@@ -377,6 +396,7 @@ export default {
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
+    if (host === PUBLIC_HOST && url.pathname.startsWith(PUBLIC_CHARACTER_PREFIX)) return proxyPublicCharacter(request,env);
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {
@@ -415,6 +435,7 @@ export default {
 
     if (ADMIN_HOSTS.has(host)) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
+      if (url.pathname.startsWith(ADMIN_CHARACTER_PREFIX)) return proxyAdminStorage(request,env);
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
       if (url.pathname === '/auth/start') {

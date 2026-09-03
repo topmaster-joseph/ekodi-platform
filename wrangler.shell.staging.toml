@@ -7,6 +7,10 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "staging"
 
+[[services]]
+binding = "STORAGE"
+service = "ekodi-storage-control"
+
 [assets]
 directory = "./shell"
 binding = "ASSETS"

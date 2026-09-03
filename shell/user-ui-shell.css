@@ -429,3 +429,16 @@ html[data-ekodi-user-ui] {
     animation: none !important;
   }
 }
+
+/* EKODI Character System v1: shared, non-blocking human guide */
+[data-ekodi-character]{z-index:30;pointer-events:none;display:block;box-sizing:border-box}
+[data-ekodi-character] img{display:block;width:100%;height:auto;max-height:100%;object-fit:contain;filter:drop-shadow(0 18px 28px rgba(27,48,37,.12))}
+[data-ekodi-character][data-mode="edge"]{position:fixed;bottom:12px;width:clamp(108px,13vw,176px);max-height:42vh;opacity:.96}
+[data-ekodi-character][data-mode="edge"][data-side="right"]{right:max(8px,env(safe-area-inset-right))}
+[data-ekodi-character][data-mode="edge"][data-side="left"]{left:max(8px,env(safe-area-inset-left))}
+[data-ekodi-character][data-size="small"]{width:clamp(92px,10vw,132px)}
+[data-ekodi-character][data-size="large"]{width:clamp(230px,30vw,390px)}
+[data-ekodi-character-host="true"]{position:relative;overflow:visible}
+[data-ekodi-character-host="true"]>[data-ekodi-character][data-mode="hero"]{position:absolute;right:0;bottom:-10px;max-height:100%;opacity:.98}
+@media(max-width:720px){[data-ekodi-character][data-mode="edge"]{width:clamp(86px,24vw,118px);bottom:8px;opacity:.92}[data-ekodi-character][data-mode="hero"]{width:clamp(128px,38vw,190px)!important;opacity:.94}}
+@media(prefers-reduced-motion:no-preference){[data-ekodi-character]{animation:ekodi-character-arrive .5s ease-out both}@keyframes ekodi-character-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:.96;transform:translateY(0)}}}

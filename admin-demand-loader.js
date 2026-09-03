@@ -54,8 +54,8 @@
     },
     storage: {
       label: 'Storage', icon: '▣',
-      styles: ['storage-admin.css'],
-      scripts: ['storage-admin.js'],
+      styles: ['storage-admin.css','c.css'],
+      scripts: ['storage-admin.js','c.js'],
       real: '[data-section="storage"]',
       hashes: ['#storage'],
       insert: 'after-health',

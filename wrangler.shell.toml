@@ -12,6 +12,10 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 
+[[services]]
+binding = "STORAGE"
+service = "ekodi-storage-control"
+
 [assets]
 directory = "./shell"
 binding = "ASSETS"

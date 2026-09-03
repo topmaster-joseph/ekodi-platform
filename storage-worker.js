@@ -1,5 +1,6 @@
 import { handleGoogleDriveStorageControl } from './google-drive-storage-control.js';
 import { handleR2StorageControl } from './r2-storage-control.js';
+import { handleCharacterAssetsControl } from './character-assets-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
@@ -16,7 +17,6 @@ function withCors(response,request,env){
 }
 function secure(response,request,env){return withCors(applyApiSecurityHeaders(response),request,env);}
 function json(data,status=200,request,env){return secure(new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}}),request,env);}
-
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
@@ -35,6 +35,10 @@ export default {
     if(url.pathname.startsWith('/api/control/storage/r2')){
       try{const response=await handleR2StorageControl(request,env);if(response)return secure(response,request,env);}
       catch(error){console.error('R2 Storage Control error',error);return json({error:'R2 Storage 처리 중 오류가 발생했습니다.',code:'R2_STORAGE_CONTROL_ERROR'},500,request,env);}
+    }
+    if(url.pathname.startsWith('/api/control/character')||url.pathname.startsWith('/api/public/character')){
+      try{const response=await handleCharacterAssetsControl(request,env);if(response)return secure(response,request,env);}
+      catch(error){console.error('Character Assets Control error',error);return json({error:'Character asset 처리 중 오류가 발생했습니다.',code:'CHARACTER_CONTROL_ERROR'},500,request,env);}
     }
     if(url.pathname.startsWith('/api/control/storage/google')){
       try{const response=await handleGoogleDriveStorageControl(request,env);if(response)return secure(response,request,env);}

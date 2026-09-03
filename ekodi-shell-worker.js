@@ -21,21 +21,10 @@ async function bundledShell(request,env){
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,ccmMrResponse,adminShellResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
-    env.ASSETS.fetch(new Request(shellUrl,request)),
-    env.ASSETS.fetch(new Request(navUrl,request)),
-    env.ASSETS.fetch(new Request(contextUrl,request)),
-    env.ASSETS.fetch(new Request(userHeaderUrl,request)),
-    env.ASSETS.fetch(new Request(userFooterUrl,request)),
-    env.ASSETS.fetch(new Request(userLanguageUrl,request)),
-    env.ASSETS.fetch(new Request(ccmMrUrl,request)),
-    env.ASSETS.fetch(new Request(adminShellUrl,request)),
-    env.ASSETS.fetch(new Request(headerUrl,request)),
-    env.ASSETS.fetch(new Request(messageUrl,request)),
-    env.ASSETS.fetch(new Request(illustrationUrl,request)),
-    env.ASSETS.fetch(new Request(designInheritanceUrl,request)),
-    env.ASSETS.fetch(new Request(linkCompatUrl,request)),
-  ]);
+  const characterUrl=new URL(request.url);characterUrl.pathname='/character-system.js';
+  const urls=[shellUrl,navUrl,contextUrl,userHeaderUrl,userFooterUrl,userLanguageUrl,ccmMrUrl,adminShellUrl,headerUrl,messageUrl,illustrationUrl,designInheritanceUrl,linkCompatUrl,characterUrl];
+  const responses=await Promise.all(urls.map(url=>env.ASSETS.fetch(new Request(url,request))));
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,ccmMrResponse,adminShellResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse,characterResponse]=responses;
   if(!shellResponse.ok)return withHeaders(shellResponse);
   const shell=await shellResponse.text();
   const globalNav=navResponse.ok?await navResponse.text():'';
@@ -50,6 +39,7 @@ async function bundledShell(request,env){
   const illustrationSystem=illustrationResponse.ok?await illustrationResponse.text():'';
   const designInheritance=designInheritanceResponse.ok?await designInheritanceResponse.text():'';
   const linkCompat=linkCompatResponse.ok?await linkCompatResponse.text():'';
+  const characterSystem=characterResponse.ok?await characterResponse.text():'';
   const headers=new Headers(shellResponse.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
@@ -62,15 +52,26 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-illustration-system',illustrationSystem?'v1':'missing');
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
+  headers.set('x-ekodi-character-system',characterSystem?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
-  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  const bundle=[USER_SHORTCUT_GUARD,USER_FOOTER_BOOTSTRAP,shell,globalNav,userContext,userHeader,userFooter,userLanguage,ccmMrPlayer,adminShell,fixedHeader,messageUI,illustrationSystem,designInheritance,linkCompat,characterSystem].join('\n');
+  return withHeaders(new Response(`${bundle}\n`,{status:200,headers}));
+}
+async function characterProxy(request,env,url){
+  if(!env.STORAGE?.fetch)return json({error:'character_storage_unavailable'},503,'no-store');
+  const upstreamUrl=new URL(request.url);
+  upstreamUrl.pathname='/api/public/character'+url.pathname.slice('/character'.length);
+  const upstream=await env.STORAGE.fetch(new Request(upstreamUrl,request));
+  return withHeaders(new Response(upstream.body,upstream));
 }
 
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:1,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:1,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:1,linkCompatVersion:1,characterSystemVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname.startsWith('/character-assets/')){const assetUrl=new URL(request.url);assetUrl.pathname='/character/'+url.pathname.slice('/character-assets/'.length);return withHeaders(await env.ASSETS.fetch(new Request(assetUrl,request)));}
+    if(url.pathname.startsWith('/character/'))return characterProxy(request,env,url);
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/user-footer.json')return json(EKODI_USER_FOOTER,200,'public, max-age=300, stale-while-revalidate=3600');
     if(url.pathname==='/service'){

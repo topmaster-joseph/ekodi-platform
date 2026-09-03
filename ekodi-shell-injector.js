@@ -39,6 +39,7 @@ function shellCsp(csp){
   next=extendDirective(next,'script-src',SHELL_ORIGIN);
   next=extendDirective(next,'style-src',SHELL_ORIGIN);
   next=extendDirective(next,'connect-src',SHELL_ORIGIN);
+  next=extendDirective(next,'img-src',SHELL_ORIGIN);
   return next;
 }
 
