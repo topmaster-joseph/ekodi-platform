@@ -1,0 +1,101 @@
+{
+  "version": "1.0.0",
+  "effectiveDate": "2026-09-03",
+  "policy": "User-facing URLs express the user, workspace, business, and requested service. AI providers, models, orchestration topology, and professional engine hosts remain implementation details unless disclosure is required for consent, safety, law, or an explicit technical/admin surface.",
+  "canonicalPatterns": {
+    "workspace": "https://ekodi.kr/{public_namespace}",
+    "workspaceService": "https://ekodi.kr/{public_namespace}/{service}",
+    "businessService": "https://ekodi.kr/{business_namespace}/{service}",
+    "workspaceAdmin": "https://ekodi.kr/{public_namespace}/admin"
+  },
+  "principles": {
+    "workspaceIdentityByPath": true,
+    "workspaceSubdomainsForbidden": true,
+    "customerSpecificAiSubdomainsForbidden": true,
+    "providerOrModelInCustomerCanonicalForbidden": true,
+    "engineHostIsNotCustomerIdentity": true,
+    "engineHostIsNotDefaultUserEntry": true,
+    "providerDetailsHiddenFromOrdinaryUserSurface": true,
+    "providerDetailsAllowedForAdminTechnicalConsentSafetyOrLegalNeed": true,
+    "immutableAuthorityKey": "workspace_id"
+  },
+  "registeredEngineBoundaries": {
+    "marketing": {
+      "host": "marketing.ekodi.kr",
+      "role": "EKODI Marketing Core",
+      "surface": "common-engine",
+      "publicUserEntry": false,
+      "customerCanonical": false,
+      "upstream": "ai.ekodi.kr"
+    },
+    "ai": {
+      "host": "ai.ekodi.kr",
+      "role": "EKODI AI Gateway and Orchestrator",
+      "surface": "core-engine",
+      "publicUserEntry": false,
+      "customerCanonical": false,
+      "providerIndependent": true
+    }
+  },
+  "canonicalServices": {
+    "ekodibiz": "https://ekodi.kr/ekodibiz",
+    "ekodibiz-marketing-ai": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "jadam": "https://ekodi.kr/jadam",
+    "jadam-marketing": "https://ekodi.kr/jadam/marketing",
+    "pizzamaru": "https://ekodi.kr/pizzamaru",
+    "pizzamaru-marketing": "https://ekodi.kr/pizzamaru/marketing",
+    "yogurt": "https://ekodi.kr/yogurt",
+    "yogurt-marketing": "https://ekodi.kr/yogurt/marketing",
+    "cgma": "https://ekodi.kr/cgma"
+  },
+  "publicServiceOverrides": {
+    "marketing": {
+      "url": "https://ekodi.kr/ekodibiz/marketing-ai",
+      "label": "ekodi.kr/ekodibiz/marketing-ai",
+      "name": "마케팅AI",
+      "nameEn": "Marketing AI",
+      "engineHost": "marketing.ekodi.kr"
+    },
+    "biz": {
+      "url": "https://ekodi.kr/ekodibiz",
+      "label": "ekodi.kr/ekodibiz"
+    },
+    "church": {
+      "url": "https://ekodi.kr/ekodichurch",
+      "label": "ekodi.kr/ekodichurch"
+    },
+    "lab": {
+      "url": "https://ekodi.kr/ekodilab",
+      "label": "ekodi.kr/ekodilab"
+    },
+    "mall": {
+      "url": "https://ekodi.kr/ekodibiz/mall",
+      "label": "ekodi.kr/ekodibiz/mall"
+    }
+  },
+  "legacyCustomerAliases": {
+    "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam",
+    "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru",
+    "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt",
+    "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma",
+    "jadam.ekodi.kr": "https://ekodi.kr/jadam",
+    "pizzamaru.ekodi.kr": "https://ekodi.kr/pizzamaru",
+    "yogurt.ekodi.kr": "https://ekodi.kr/yogurt"
+  },
+  "legacyServiceAliases": {
+    "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
+    "church.ekodi.kr": "https://ekodi.kr/ekodichurch",
+    "lab.ekodi.kr": "https://ekodi.kr/ekodilab",
+    "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
+    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall"
+  },
+  "nonLegacyEngineHosts": [
+    "marketing.ekodi.kr",
+    "ai.ekodi.kr"
+  ],
+  "forbiddenCanonicalPatterns": [
+    "*.ai.ekodi.kr",
+    "https://marketing.ekodi.kr",
+    "https://ai.ekodi.kr"
+  ]
+}
