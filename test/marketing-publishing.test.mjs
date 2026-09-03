@@ -70,3 +70,19 @@ test('staging is read-only while production owns the one-minute scheduler', asyn
   assert.match(production, /marketing-publish-api\.ekodi\.kr/);
   assert.match(production, /crons = \["\* \* \* \* \*"\]/);
 });
+
+
+test('central publisher reuses OAuth vault over private service binding and supports YouTube resumable upload', async () => {
+  const [publisher,growth,wrangler] = await Promise.all([read('marketing-publishing-worker.js'),read('marketing-growth-worker.js'),read('wrangler.marketing-publishing.toml')]);
+  assert.match(publisher, /credentialMode === 'oauth-vault'/);
+  assert.match(publisher, /MARKETING_GROWTH\.publishFromVault/);
+  assert.match(publisher, /\['facebook','instagram','threads','youtube'\]/);
+  assert.match(publisher, /oauth2\.googleapis\.com\/token/);
+  assert.match(publisher, /upload\/youtube\/v3\/videos\?uploadType=resumable/);
+  assert.match(publisher, /privacyStatus.*private/);
+  assert.match(growth, /export class MarketingGrowthPublisher extends WorkerEntrypoint/);
+  assert.match(growth, /publishFromVault/);
+  assert.match(wrangler, /binding = "MARKETING_GROWTH"/);
+  assert.match(wrangler, /service = "ekodi-marketing-growth"/);
+  assert.match(wrangler, /entrypoint = "MarketingGrowthPublisher"/);
+});
