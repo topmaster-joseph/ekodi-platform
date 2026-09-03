@@ -1,5 +1,5 @@
 {
-  "version": 41,
+  "version": 42,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -130,17 +130,12 @@
         ],
         "redirect": "follow",
         "expect": [
-          "ekodibizmall",
-          "GIFT AI",
-          "GIFT CONTEXT INTELLIGENCE",
-          "CURATED FOR EVERYDAY"
+          "EKODI MALL",
+          "data-ekodi-service=\"mall\""
         ],
         "rollbackExpect": [
           "EKODI MALL",
-          "SMART SHOPPING",
-          "오늘 필요한 것",
-          "오늘의 상품",
-          "상품 둘러보기"
+          "data-ekodi-service=\"mall\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
@@ -580,16 +575,30 @@
           200
         ],
         "redirect": "manual",
-        "expect": ["EKODI Mail", "권한 있는 메일 계정을 불러오는 중입니다."],
-        "headerExpect": ["x-ekodi-route: mail-hub", "x-ekodi-shell: v2", "cache-control: no-store"]
+        "expect": [
+          "EKODI Mail",
+          "권한 있는 메일 계정을 불러오는 중입니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-route: mail-hub",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://mail.ekodi.kr/admin",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI Mail Admin", "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."],
-        "headerExpect": ["x-ekodi-route: mail-admin", "cache-control: no-store"]
-
+        "expect": [
+          "EKODI Mail Admin",
+          "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-route: mail-admin",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://live.ekodi.kr/",
@@ -671,17 +680,33 @@
       },
       {
         "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EVOLUTION INTELLIGENCE", "/api/control/evolution", "플랫폼 진화 제안"],
-        "headerExpect": ["x-content-type-options: nosniff"]
+        "expect": [
+          "EVOLUTION INTELLIGENCE",
+          "/api/control/evolution",
+          "플랫폼 진화 제안"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ]
       },
       {
         "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI COMMUNICATION ADMIN", "https://mail.ekodi.kr/admin", "https://live.ekodi.kr/"],
-        "headerExpect": ["x-content-type-options: nosniff"]
+        "expect": [
+          "EKODI COMMUNICATION ADMIN",
+          "https://mail.ekodi.kr/admin",
+          "https://live.ekodi.kr/"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ]
       }
     ]
   }
