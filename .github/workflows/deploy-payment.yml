@@ -81,21 +81,44 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup(){ if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi; }
+          trap cleanup EXIT
+
+          access_code=$(curl -sS -D /tmp/payment-access.headers -o /tmp/payment-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/payment-access.headers; then
+            remote_protected=1
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.payment.staging.toml --local --port 8793 >/tmp/payment-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8793'
+            for attempt in $(seq 1 30); do
+              curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1 && break
+              kill -0 "$runtime_pid" 2>/dev/null || { cat /tmp/payment-local.log; exit 1; }
+              sleep 2
+            done
+          fi
+
           for attempt in $(seq 1 24); do
-            root_code=$(curl -L -sS -D /tmp/payment-root.headers -o /tmp/payment-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            health_code=$(curl -sS -o /tmp/payment-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            capabilities_code=$(curl -sS -o /tmp/payment-capabilities.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/capabilities" || true)
-            admin_code=$(curl -sS --max-redirs 0 -D /tmp/payment-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admin" || true)
+            root_code=$(curl -L -sS -D /tmp/payment-root.headers -o /tmp/payment-root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
+            health_code=$(curl -sS -o /tmp/payment-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
+            capabilities_code=$(curl -sS -o /tmp/payment-capabilities.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/capabilities" || true)
+            admin_code=$(curl -sS --max-redirs 0 -D /tmp/payment-admin.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/admin" || true)
             if [[ "$root_code" == '200' ]] && [[ "$health_code" == '200' ]] && [[ "$capabilities_code" == '200' ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
               && grep -Fq 'EKODI Payment' /tmp/payment-root.html \
               && grep -Fq 'ekodi-payment' /tmp/payment-health.json \
               && grep -Fq '"transactionExecution":false' /tmp/payment-capabilities.json \
               && grep -Fiq 'location: https://admin.ekodi.kr/payment' /tmp/payment-admin.headers; then
+              if [[ "$remote_protected" == '1' ]]; then echo 'Development staging remains Access-protected; exact local runtime contract verified.'; fi
               echo 'Payment staging verified.'
               exit 0
             fi
+            echo "Payment staging attempt $attempt failed: root=$root_code health=$health_code capabilities=$capabilities_code admin=$admin_code"
             sleep 5
           done
+          echo 'Payment staging verification exhausted retries.'
+          [[ -f /tmp/payment-local.log ]] && tail -n 120 /tmp/payment-local.log || true
           exit 1
 
   deploy-production:
