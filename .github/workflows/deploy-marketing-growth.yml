@@ -16,6 +16,7 @@ on:
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/ekodi-mall-active-sales-ai.test.mjs'
       - '.github/workflows/deploy-marketing-growth.yml'
+      - '.github/workflows/run-marketing-growth-scheduler.yml'
 
 permissions:
   contents: read
@@ -26,6 +27,7 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
+  SCHEDULER_DERIVATION_LABEL: 'ekodi-marketing-growth-scheduler-v1'
 
 jobs:
   deploy:
@@ -60,6 +62,10 @@ jobs:
           grep -Fq 'paidActivation:false' marketing-growth-worker.js
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
+          grep -Fq '/internal/active-sales/run' marketing-growth-entry.js
+          grep -Fq 'MARKETING_GROWTH_SCHEDULER_TOKEN' marketing-growth-entry.js
+          ! grep -Eq '^\[triggers\]|^crons[[:space:]]*=' wrangler.marketing-growth.toml
+          grep -Fq "cron: '*/20 * * * *'" .github/workflows/run-marketing-growth-scheduler.yml
           grep -Fq "const SUBJECT_KEY = 'ekodibiz'" mall-promotion-automation.js
           grep -Fq "strategy:'opportunity_first'" mall-promotion-automation.js
           grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql
@@ -89,8 +95,20 @@ jobs:
             grep -Fq "$table" /tmp/growth-schema.json
           done
 
-      - name: Deploy growth connector worker
+      - name: Deploy growth connector worker without Cloudflare Cron
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml
+
+      - name: Install zero-cost scheduler credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' | npx --yes wrangler@${WRANGLER_VERSION} secret put MARKETING_GROWTH_SCHEDULER_TOKEN --config wrangler.marketing-growth.toml >/dev/null
+          import hashlib, hmac, os, sys
+          key = os.environ['CLOUDFLARE_API_TOKEN'].encode()
+          label = os.environ['SCHEDULER_DERIVATION_LABEL'].encode()
+          sys.stdout.write(hmac.new(key, label, hashlib.sha256).hexdigest())
+          PY
+          echo 'Derived scheduler credential installed without exposing the Cloudflare token.'
 
       - name: Install provider and intelligence credentials when available
         shell: bash
@@ -113,7 +131,7 @@ jobs:
           put_secret NAVER_API_HUB_CLIENT_ID "$NAVER_API_HUB_CLIENT_ID"
           put_secret NAVER_API_HUB_CLIENT_SECRET "$NAVER_API_HUB_CLIENT_SECRET"
 
-      - name: Verify production growth gateway and active sales scheduler
+      - name: Verify production growth gateway and active sales engine
         shell: bash
         run: |
           set -euo pipefail
