@@ -1,0 +1,19 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-INVEST-COMMON-SERVICE-V1.3.1",
+  "date": "2026-09-03",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit user confirmation that invest.ekodi.kr is the common service while EKODIBIZ-specific investment businesses belong under ekodi.kr/ekodibiz, followed by the instruction to continue",
+  "constitutionVersion": "1.3.1",
+  "summary": "Register invest.ekodi.kr as the independent common Invest service and separate EKODIBIZ investment business surfaces under the EKODIBIZ public workspace namespace.",
+  "affectedAreas": ["domain", "common-service", "workspace-business", "investment", "governance", "deployment"],
+  "registeredBoundary": "invest.ekodi.kr",
+  "businessCanonicalPath": "https://ekodi.kr/ekodibiz/invest",
+  "boundaryReason": "reusable Evidence-First investment research, due diligence and connection engine shared across workspaces without owning any tenant-specific investment business",
+  "workspaceRule": "workspace type remains internal metadata; specific EKODIBIZ investment programs and operations stay under the globally unique public namespace ekodibiz",
+  "transactionBoundary": "analysis, research, diligence, IR and connection support only; no autonomous receipt of investment funds, securities orders, custody, allocation instructions or return guarantees",
+  "migrationPolicy": "additive; existing invest.ekodi.kr behavior remains available while EKODIBIZ-specific business routing is added under the canonical public namespace",
+  "verificationPolicy": "constitution, platform-boundary, route contract, shared-site build, staged release and real-host verification must pass",
+  "rollbackPlan": "remove the EKODIBIZ Invest business route and Invest common-service registration while leaving existing Invest implementation and workspace identity data unchanged"
+}

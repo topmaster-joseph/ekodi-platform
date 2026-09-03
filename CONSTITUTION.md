@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.3.0
+# EKODI Platform Constitution v1.3.1
 
 Effective: 2026-09-03
 
@@ -23,6 +23,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, `public_namespace`, display name and workspace type are routing or presentation metadata, not identity or authorization truth.
 - Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
+- `invest.ekodi.kr` is a registered common-service boundary for reusable investment research, Evidence-First review, due diligence and connection support. EKODIBIZ-specific investment businesses live under `ekodi.kr/ekodibiz/invest...`; other workspaces may consume the same common Invest core without transferring workspace identity or business ownership to the common service.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 

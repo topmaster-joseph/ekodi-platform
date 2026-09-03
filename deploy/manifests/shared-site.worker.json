@@ -1,5 +1,5 @@
 {
-  "version": 40,
+  "version": 41,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -196,6 +196,23 @@
       "x-ekodi-route: public-workspace-namespace",
       "x-ekodi-public-namespace: ekodibiz"
     ]
+  },
+  {
+    "url": "https://ekodi.kr/ekodibiz/invest",
+    "statuses": [200],
+    "redirect": "manual",
+    "expect": [
+      "EKODIBIZ",
+      "EKODIBIZ \u00b7 INVESTMENT BUSINESS",
+      "invest.ekodi.kr",
+      "data-ekodi-business-unit=\"invest\""
+    ],
+    "headerExpect": [
+      "x-ekodi-route: public-ekodibiz-invest",
+      "x-ekodi-shell: v2",
+      "x-content-type-options: nosniff"
+    ],
+    "rollbackVerify": false
   },
   {
     "url": "https://ekodi.kr/ekodichurch",
