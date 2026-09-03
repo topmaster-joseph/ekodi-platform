@@ -121,12 +121,19 @@ jobs:
             grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/proxy-live.html
             grep -Fiq 'x-ekodi-shell: v1' /tmp/proxy-live.headers
           }
-          verify_live 'https://biz.ekodi.kr/'
-          verify_live 'https://church.ekodi.kr/'
-          verify_live 'https://lab.ekodi.kr/'
-          verify_live 'https://mall.ekodi.kr/'
-          verify_live 'https://mall.biz.ekodi.kr/'
-          echo 'Shared user-facing proxy routes verified after Shell promotion.'
+          for attempt in $(seq 1 12); do
+            echo "production route verification attempt=$attempt"
+            if verify_live 'https://biz.ekodi.kr/' \
+              && verify_live 'https://church.ekodi.kr/' \
+              && verify_live 'https://lab.ekodi.kr/' \
+              && verify_live 'https://mall.ekodi.kr/' \
+              && verify_live 'https://mall.biz.ekodi.kr/'; then
+              echo 'Shared user-facing proxy routes verified after Shell promotion.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
       - name: Observe legacy external redirect routes without blocking Shell promotion
         shell: bash
         run: |
