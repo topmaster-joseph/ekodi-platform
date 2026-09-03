@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.4.0
+# EKODI Platform Constitution v1.5.0
 
 Effective: 2026-09-03
 
@@ -23,6 +23,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
 - `try.ekodi.kr` is a registered common-service boundary for the EKODI Experience service. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface.
+- `pay.ekodi.kr` is the registered provider-neutral EKODI Payment common-service boundary. Payment ownership and authorization resolve from immutable `workspace_id`; provider accounts, merchant IDs and settlement accounts remain workspace-scoped and replaceable. Platform fund pooling is forbidden by default, raw card credentials are never stored, and charging, refunds and donation payments remain guarded high-impact actions.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 
@@ -42,6 +43,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 ## 5. Provider Constitution
 - Use free tiers first, but never make a free quota the architectural ceiling.
 - Google Workspace is a collaboration provider; Cloudflare is edge/system-object infrastructure; AI vendors are replaceable compute providers.
+- Payment providers and payment orchestration vendors are replaceable adapters behind the EKODI Payment contract; they never become payment ownership, workspace identity or business-domain truth.
 - Use gateways where provider churn or critical dependency justifies them: identity, AI, storage and communications.
 - Use lightweight adapters for lower-risk integrations rather than universal abstraction.
 - A provider outage must degrade only its dependent capability where practical.
@@ -90,6 +92,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 
 ## 10. Legacy Migration Rule
 Existing feature and workspace aliases are not deleted merely to satisfy the canonical grammar. They migrate through canonical paths plus redirects/compatibility routes. In particular, legacy `/people/{slug}` maps to `/personal/{slug}` and legacy `/biz/{slug}` tenant/workspace paths map to `/org/{slug}`. Any deployed `space.ekodi.kr` or `user.ekodi.kr` workspace alias must redirect to the equivalent `ekodi.kr` path. Migration proceeds without breaking existing users, OAuth callbacks or external links, and redirect rules must be verified before an alias is retired.
+
+For the initial `pay.ekodi.kr` common-service rollout, the existing shared-site payment origin remains registered as a temporary rollback target while a dedicated Payment Worker is introduced through a more specific guarded route. The legacy origin may be retired only after production health, rollback and dependent-service verification are stable.
 
 ## 11. Enforcement
 `npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy and governance records. `npm run check` includes it. GitHub CI runs the same check on constitutional and platform changes.
