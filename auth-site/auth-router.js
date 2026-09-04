@@ -56,7 +56,7 @@ async function loadClientAuth(){
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
-if(site==='admin')await import('./admin-auth.js?v=20260823-mobile-handoff-1');
+if(site==='admin')await import('./admin-auth.js?v=20260904-centered-popup-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
 else if(privateClientSites.has(site))await loadClientAuth();

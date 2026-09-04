@@ -9,7 +9,6 @@ $('serviceBadge').textContent='관리자 전용';
 
 const ua=String(navigator.userAgent||'');
 const isAndroid=/Android/i.test(ua);
-const isIos=/iPhone|iPad|iPod/i.test(ua);
 const isEmbeddedWebView=/\bwv\b|;\s*wv\)|ChatGPT|FBAN|FBAV|Instagram|KAKAOTALK|NAVER\(inapp|Line\//i.test(ua);
 
 function show(id,on=true){$(id)?.classList.toggle('hide',!on)}
@@ -21,13 +20,6 @@ function loginFailureMessage(error){
   if(error?.status===403)return error?.data?.error||'이 Google 계정은 EKODI 관리자 권한이 없습니다.';
   if(error?.status===503)return'Google 관리자 인증 서버가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.';
   return error?.data?.error||'관리자 인증을 완료하지 못했습니다. 다시 시도해 주세요.';
-}
-function supportsFedCmButton(){
-  if(isEmbeddedWebView||isIos)return false;
-  const match=ua.match(/Chrome\/(\d+)/i);
-  if(!match||/EdgA?|OPR|SamsungBrowser/i.test(ua))return false;
-  const major=Number(match[1]||0);
-  return isAndroid?major>=128:major>=125;
 }
 function currentAuthUrl(){
   const u=new URL(location.href);
@@ -75,7 +67,7 @@ function navigateToAdmin(result){
   }
 }
 async function prepare(){
-  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice(directEntry?'Google 관리자 계정 선택창을 준비하고 있습니다.':'관리자 전용 Google 인증을 준비하고 있습니다.');
+  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice(directEntry?'중앙 Google 로그인 버튼을 준비하고 있습니다.':'관리자 전용 Google 인증을 준비하고 있습니다.');
   if(isEmbeddedWebView){renderExternalBrowserGate();return;}
   try{
     const [config,challenge]=await Promise.all([request('/api/google/config'),request('/api/google/challenge',{method:'POST'}),loadGoogleLibrary()]).then(([config,challenge])=>[config,challenge]);
@@ -85,7 +77,7 @@ async function prepare(){
       client_id:config.clientId,
       nonce:challenge.nonce,
       auto_select:false,
-      use_fedcm_for_button:supportsFedCmButton(),
+      use_fedcm_for_button:false,
       button_auto_select:false,
       ux_mode:'popup',
       context:'signin',
@@ -109,10 +101,8 @@ async function prepare(){
       }
     });
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
-    if(directEntry){
-      notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택창을 자동으로 엽니다.');
-      try{window.google.accounts.id.prompt()}catch(error){console.warn('admin direct Google prompt',error)}
-    }else notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택 후 EKODI 관리자 허용목록을 다시 확인합니다.');
+    if(directEntry)notice('등록된 관리자 Google 계정을 선택하려면 중앙의 Google 로그인 버튼을 눌러 주세요.');
+    else notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택 후 EKODI 관리자 허용목록을 다시 확인합니다.');
   }catch(e){console.error('admin central auth',e);notice('관리자 Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true)}
 }
 $('googleRetry').addEventListener('click',prepare);
