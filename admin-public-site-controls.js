@@ -2,6 +2,7 @@
 'use strict';
 const PANEL_ID = 'publicSiteControlsPanel';
 const API = '/api/control/public-sites';
+const SECTION = 'public-site-controls';
 const LABELS = {
   public: '정상 공개',
   maintenance: '임시페이지',
@@ -37,15 +38,34 @@ async function api(path = '', options = {}) {
   return payload;
 }
 
-function ensureNavLink() {
-  const nav = document.querySelector('.sidebar nav');
-  if (!nav || nav.querySelector('[data-admin-link="public-site-controls"]')) return;
-  const link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>임시페이지 설정</span></button>');
-  nav.appendChild(link);
-  link.addEventListener('click', () => {
+function isPublicSiteNav(item) {
+  return item?.dataset?.adminLink === SECTION || item?.dataset?.section === SECTION || item?.dataset?.lazySection === SECTION;
+}
+
+function bindNavLink(link) {
+  if (!link) return;
+  link.dataset.adminLink = SECTION;
+  link.dataset.section = SECTION;
+  if (!link.querySelector('span')) link.innerHTML = '<span>임시페이지 설정</span>';
+  if (link.dataset.publicSiteControlsBound === 'true') return;
+  link.dataset.publicSiteControlsBound = 'true';
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
     location.hash = '#public-site-controls';
     activate();
-  });
+  }, true);
+}
+
+function ensureNavLink() {
+  const nav = document.querySelector('.sidebar nav');
+  if (!nav) return;
+  let link = nav.querySelector('[data-admin-link="public-site-controls"], [data-section="public-site-controls"], [data-lazy-section="public-site-controls"]');
+  if (!link) {
+    link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>임시페이지 설정</span></button>');
+    nav.appendChild(link);
+  }
+  bindNavLink(link);
 }
 
 function ensurePanel() {
@@ -182,9 +202,11 @@ function activate() {
   if (!panel) return;
   document.querySelectorAll('#app .content > .section, .content > .section').forEach(section => {
     const targets = String(section.dataset?.panel || '').split(/\s+/);
-    section.hidden = section.id !== PANEL_ID && !targets.includes('public-site-controls');
+    section.hidden = section.id !== PANEL_ID && !targets.includes(SECTION);
   });
-  document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', item.dataset.adminLink === 'public-site-controls' || item.dataset.section === 'public-site-controls'));
+  document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', isPublicSiteNav(item)));
+  const title = document.querySelector('#pageTitle');
+  if (title) title.textContent = '임시페이지 설정';
   load();
 }
 
