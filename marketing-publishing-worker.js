@@ -73,16 +73,19 @@ async function authSubject(request, env, { write = false } = {}) {
 async function schemaReady(env) {
   if (!env.DB) return false;
   try {
-    const row = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='marketing_publication_jobs'").first();
-    return Boolean(row?.name);
+    await env.DB.prepare('SELECT 1 FROM marketing_publication_jobs LIMIT 0').all();
+    return true;
   } catch { return false; }
 }
 
 async function channelSchemaReady(env) {
   if (!env.DB) return false;
   try {
-    const result=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('channel_automation_profiles','channel_oauth_connections')").all();
-    return new Set((result.results||[]).map(row=>row.name)).size===2;
+    await env.DB.batch([
+      env.DB.prepare('SELECT 1 FROM channel_automation_profiles LIMIT 0'),
+      env.DB.prepare('SELECT 1 FROM channel_oauth_connections LIMIT 0')
+    ]);
+    return true;
   } catch { return false; }
 }
 
@@ -462,12 +465,17 @@ async function processJob(env, row) {
 }
 
 async function runScheduler(env) {
-  if (!(await schemaReady(env))) return {processed:0,schemaReady:false};
   const now = nowIso();
-  const result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.config_json,ch.status AS channel_status
-    FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
-    WHERE j.status IN ('scheduled','queued','retrying') AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
-    ORDER BY j.scheduled_at ASC LIMIT 25`).bind(now,now).all();
+  let result;
+  try {
+    result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.config_json,ch.status AS channel_status
+      FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
+      WHERE j.status IN ('scheduled','queued','retrying') AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
+      ORDER BY j.scheduled_at ASC LIMIT 25`).bind(now,now).all();
+  } catch (error) {
+    if (/no such table/i.test(String(error?.message || error))) return { processed:0, schemaReady:false };
+    throw error;
+  }
   const rows = result.results || [];
   for (const row of rows) await processJob(env,row);
   return {processed:rows.length,schemaReady:true};
