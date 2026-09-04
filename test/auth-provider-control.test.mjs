@@ -28,16 +28,17 @@ test('provider policy exposes public routing state and super-admin management on
   assert.match(source, /최소 하나의 로그인 방식을 활성화해야 합니다/);
 });
 
-test('admin UI exposes multi-login, default provider and provider readiness controls', async () => {
-  const [ui, shell, postbuild] = await Promise.all([
+test('admin asset preserves maintenance controls and adds login provider settings', async () => {
+  const [ui, shell, build] = await Promise.all([
     read('admin-public-site-controls.js'),
     read('admin-authenticated-shell.js'),
-    read('scripts/admin-thin-postbuild.mjs')
+    read('scripts/build.mjs')
   ]);
+  assert.match(ui, /임시페이지 설정/);
   assert.match(ui, /멀티 로그인 사용/);
   assert.match(ui, /기본 로그인 방식/);
   assert.match(ui, /현재 기본값은 Google 단일 로그인/);
   assert.match(ui, /\/api\/admin\/auth\/providers/);
   assert.match(shell, /admin-public-site-controls\.js/);
-  assert.match(postbuild, /admin-public-site-controls\.js/);
+  assert.match(build, /admin-public-site-controls\.js/);
 });
