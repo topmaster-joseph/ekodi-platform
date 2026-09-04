@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(13);
 
 select has_table('public', 'jubilee_policy_events', 'Jubilee policy audit table exists');
 select has_table('public', 'jubilee_support_events', 'Jubilee support event table exists');
