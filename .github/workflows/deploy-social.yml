@@ -49,7 +49,7 @@ jobs:
 
   deploy-staging:
     environment: development
-    if: github.ref != 'refs/heads/main'
+    if: always() && needs.validate.result == 'success'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -78,6 +78,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/social-access.headers -o /tmp/social-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/social-access.headers; then
+            echo "Social staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 12); do
             root_code=$(curl -L -sS -o /tmp/social.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -o /tmp/social-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
@@ -95,7 +100,7 @@ jobs:
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, deploy-staging]
     runs-on: ubuntu-latest
     timeout-minutes: 14
     env:

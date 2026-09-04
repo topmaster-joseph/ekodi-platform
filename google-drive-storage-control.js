@@ -2,7 +2,8 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
 const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
-export const MARKETING_YOUTUBE_REDIRECT_URI = 'https://marketing-connect-api.ekodi.kr/oauth/youtube/callback';
+const MARKETING_YOUTUBE_CALLBACK = 'https://marketing-connect-api.ekodi.kr/oauth/youtube/callback';
+const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly'];
 const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
 const ADMIN_RETURN_PATH = '/#storage';
 const ADMIN_RETURN = `${ADMIN_ORIGIN}${ADMIN_RETURN_PATH}`;
@@ -113,6 +114,7 @@ async function ensureSchema(db) {
     db.prepare(`CREATE TABLE IF NOT EXISTS storage_connections (id TEXT PRIMARY KEY, provider TEXT NOT NULL DEFAULT 'google_drive', role TEXT NOT NULL, account_email TEXT NOT NULL, account_domain TEXT NOT NULL DEFAULT '', display_name TEXT NOT NULL DEFAULT '', drive_id TEXT NOT NULL DEFAULT '', drive_name TEXT NOT NULL DEFAULT '', drive_root_id TEXT NOT NULL DEFAULT '', archive_root_id TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'connected', credential_ciphertext TEXT NOT NULL, credential_iv TEXT NOT NULL, scopes TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_verified_at TEXT)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS storage_routes (service_key TEXT PRIMARY KEY, folder_key TEXT NOT NULL, folder_name TEXT NOT NULL, folder_id TEXT NOT NULL DEFAULT '', connection_role TEXT NOT NULL DEFAULT 'primary', updated_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS storage_oauth_states (nonce_hash TEXT PRIMARY KEY, admin_email TEXT NOT NULL, connection_role TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS storage_google_oauth_tickets (ticket_hash TEXT PRIMARY KEY, credential_ciphertext TEXT NOT NULL, credential_iv TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS cheonggye_member_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL, member_no INTEGER, admin_email TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)`),
   ]);
   const now = new Date().toISOString();
@@ -184,15 +186,22 @@ async function tokenRequest(env, body) {
   }
   return data;
 }
-export async function exchangeGoogleAuthorizationCode(env,{code,redirectUri}={}) {
-  const redirect=String(redirectUri||'').trim();
-  if(redirect!==MARKETING_YOUTUBE_REDIRECT_URI) throw Object.assign(new Error('GOOGLE_OAUTH_REDIRECT_FORBIDDEN'),{code:'GOOGLE_OAUTH_REDIRECT_FORBIDDEN'});
-  if(!googleClientId(env)||!env.GOOGLE_DRIVE_CLIENT_SECRET) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
-  return tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code:String(code||''),grant_type:'authorization_code',redirect_uri:redirect});
-}
 export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
   if(!googleClientId(env)||!env.GOOGLE_DRIVE_CLIENT_SECRET) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   return tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),refresh_token:String(refreshToken||''),grant_type:'refresh_token'});
+}
+export async function startMarketingYouTubeOAuth(env,{state}={}) {
+  if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
+  await ensureSchema(env.DB); const marketingState=String(state||'').trim(); if(!marketingState) throw new Error('MARKETING_STATE_REQUIRED');
+  const signed=await signState(env,{purpose:'marketing_youtube',marketingState,exp:Date.now()+10*60*1000});
+  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
+  return {authorizationUrl:`${AUTH_URL}?${params}`};
+}
+export async function consumeMarketingYouTubeTicket(env,{ticket}={}) {
+  await ensureSchema(env.DB); const raw=String(ticket||'').trim(); if(!raw) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
+  const hash=await nonceHash(raw); const row=await env.DB.prepare('SELECT * FROM storage_google_oauth_tickets WHERE ticket_hash=? AND expires_at>?').bind(hash,new Date().toISOString()).first();
+  if(!row) throw new Error('GOOGLE_OAUTH_TICKET_INVALID'); await env.DB.prepare('DELETE FROM storage_google_oauth_tickets WHERE ticket_hash=?').bind(hash).run();
+  return decryptCredential(env,row);
 }
 async function accessToken(env, row) {
   const credential = await decryptCredential(env, row);
@@ -394,6 +403,19 @@ export async function handleGoogleDriveStorageControl(request, env) {
     const payload = await readState(env,url.searchParams.get('state'));
     const code = url.searchParams.get('code');
     if (!payload || !code || Number(payload.exp || 0) < Date.now()) return html('연결 요청이 만료되었거나 올바르지 않습니다.');
+    if(payload.purpose==='marketing_youtube'){
+      try{
+        const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:REDIRECT_URI});
+        if(!token.access_token||!token.refresh_token)return html('YouTube 장기 연결 토큰을 받지 못했습니다. 다시 연결해 주세요.');
+        const ticket=b64url(crypto.getRandomValues(new Uint8Array(32)));
+        const encrypted=await encryptCredential(env,{accessToken:String(token.access_token),refreshToken:String(token.refresh_token),expiresIn:Number(token.expires_in||0)});
+        const now=new Date(), exp=new Date(now.getTime()+5*60*1000);
+        await env.DB.prepare('DELETE FROM storage_google_oauth_tickets WHERE expires_at<=?').bind(now.toISOString()).run();
+        await env.DB.prepare('INSERT INTO storage_google_oauth_tickets(ticket_hash,credential_ciphertext,credential_iv,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(ticket),encrypted.ciphertext,encrypted.iv,exp.toISOString(),now.toISOString()).run();
+        const target=new URL(MARKETING_YOUTUBE_CALLBACK); target.searchParams.set('state',String(payload.marketingState||'')); target.searchParams.set('ticket',ticket);
+        return new Response(null,{status:303,headers:{location:target.toString(),'cache-control':'no-store','referrer-policy':'no-referrer'}});
+      }catch(error){console.error('Marketing YouTube OAuth broker callback failed',error);return html('YouTube 채널 연결 중 오류가 발생했습니다.');}
+    }
     const hash = await nonceHash(payload.nonce);
     const stateRow = await env.DB.prepare('SELECT * FROM storage_oauth_states WHERE nonce_hash=? AND expires_at>?').bind(hash,new Date().toISOString()).first();
     if (!stateRow) return html('이미 사용되었거나 만료된 연결 요청입니다.');

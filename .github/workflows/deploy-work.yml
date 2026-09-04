@@ -21,7 +21,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  staging_gate:
+    uses: ./.github/workflows/deploy-work-staging.yml
+    secrets: inherit
+
   deploy:
+    needs: staging_gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -52,8 +57,8 @@ jobs:
           grep -Fq '/api/opportunities' work-worker.js
           grep -Fq 'work_passports' supabase/work-workforce-os.sql
           grep -Fq 'DATA_ENABLED = "true"' wrangler.work.toml
-          grep -Fq "'work':{name:'EKODI Work'" auth-site/client-auth.js
-          grep -Fq "site==='work'" auth-site/auth-router.js
+          grep -Fq "work:{name:'EKODI Work'" auth-site/client-auth.js
+          grep -Fq "isRegistryUserService||trustedEkodiReturn" auth-site/auth-router.js
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -66,9 +71,9 @@ jobs:
             code=$(curl -sS -o /tmp/work-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
             router=$(curl -sS -o /tmp/work-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
             if [[ "$code" == "200" ]] && [[ "$router" == "200" ]] \
-              && grep -Fq "'work':{name:'EKODI Work'" /tmp/work-client-auth.js \
+              && grep -Fq "work:{name:'EKODI Work'" /tmp/work-client-auth.js \
               && grep -Fq "returnTo:'https://work.ekodi.kr/'" /tmp/work-client-auth.js \
-              && grep -Fq "site==='work'" /tmp/work-auth-router.js; then
+              && grep -Fq "isRegistryUserService||trustedEkodiReturn" /tmp/work-auth-router.js; then
               echo 'Central Work auth realm is live.'
               break
             fi

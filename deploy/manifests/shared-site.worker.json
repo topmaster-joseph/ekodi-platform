@@ -394,7 +394,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "admin-auth.js?v=20260823-mobile-handoff-1",
+          "admin-auth.js?v=20260904-direct-bridge-1",
           "business-auth.js?v=20260826-free-fallback-1",
           "client-auth.js?v=20260904-direct-login-1",
           "isRegistryUserService",
@@ -457,7 +457,9 @@
         ],
         "redirect": "manual",
         "expect": [
-          "use_fedcm_for_button:supportsFedCmButton()",
+          "use_fedcm_for_button:false",
+          "ux_mode:'popup'",
+          "directEntry",
           "button_auto_select:false",
           "isEmbeddedWebView",
           "Chrome에서 관리자 로그인 열기",

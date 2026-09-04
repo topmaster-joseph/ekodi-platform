@@ -55,7 +55,8 @@ jobs:
               test/admin-system-map.test.mjs \
               test/admin-preauth-shell.test.mjs \
               test/admin-performance-hardening.test.mjs \
-              test/admin-readable-command.test.mjs
+              test/admin-readable-command.test.mjs \
+              test/admin-os-foundation.test.mjs
             npm run build
 
             for asset in \

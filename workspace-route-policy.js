@@ -16,7 +16,10 @@ export function isPublicWorkspacePath(pathname){
   return Boolean(workspaceSlugFromPublicPath(path));
 }
 export function isWorkspaceAdminPathShape(pathname){
-  const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(String(pathname||''));
-  return Boolean(match&&isWorkspaceSlug(match[1]));
+  const path=String(pathname||'');
+  const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
+  if(match&&isWorkspaceSlug(match[1]))return true;
+  const mallMarketingChannels=/^\/([^/]+)\/mall\/admin\/marketing\/channels\/?$/i.exec(path);
+  return Boolean(mallMarketingChannels&&isWorkspaceSlug(mallMarketingChannels[1]));
 }
 

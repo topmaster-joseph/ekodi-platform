@@ -10,14 +10,18 @@
     (()=>{
       const p=new URLSearchParams(location.search);
       const interactive=p.get('manage')==='1'||p.get('review')==='1';
+      const directAdmin=p.get('site')==='admin'&&p.get('direct')==='1';
       document.documentElement.dataset.identityManage=p.get('manage')==='1'?'1':'0';
       document.documentElement.dataset.seamlessSso=interactive?'0':'1';
+      document.documentElement.dataset.adminDirectBridge=directAdmin?'1':'0';
     })();
   </script>
   <link rel="stylesheet" href="/auth.css?v=20260815-membership-1" />
   <link rel="stylesheet" href="/auth-workspaces.css?v=20260817-workspace-label-1" />
   <style>
     html:not([data-identity-manage="1"]) #identityPanel{display:none!important}
+    html[data-admin-direct-bridge="1"] .auth-card{visibility:hidden;pointer-events:none}
+    html[data-admin-direct-bridge="1"] body{cursor:progress}
     html[data-seamless-sso="1"] body{min-height:100vh;min-height:100dvh;background:#f7f8f4}
     html[data-seamless-sso="1"] .topbar,
     html[data-seamless-sso="1"] .intro,

@@ -1,6 +1,7 @@
 name: Stage Shared Site Shell
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'site-worker.js'
@@ -20,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: shared-site-shell-staging-${{ github.event.pull_request.number }}
+  group: shared-site-shell-staging-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 env:

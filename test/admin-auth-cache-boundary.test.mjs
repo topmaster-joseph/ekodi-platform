@@ -31,7 +31,7 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(workspaceTarget);
   assert.ok(admin);
   assert.ok(root.expect.includes('/auth-router.js?v=20260904-direct-login-1'));
-  assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
+  assert.ok(router.expect.includes('admin-auth.js?v=20260904-direct-bridge-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
   assert.ok(router.expect.includes('client-auth.js?v=20260904-direct-login-1'));
   assert.ok(router.expect.includes('isRegistryUserService'));
@@ -41,7 +41,9 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));
   assert.ok(workspaceTarget.expect.includes('serviceOrigins'));
   assert.ok(workspaceTarget.headerExpect.includes('cache-control: no-store'));
-  assert.ok(admin.expect.includes('use_fedcm_for_button:supportsFedCmButton()'));
+  assert.ok(admin.expect.includes('use_fedcm_for_button:false'));
+  assert.ok(admin.expect.includes("ux_mode:'popup'"));
+  assert.ok(admin.expect.includes('directEntry'));
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
   assert.ok(admin.expect.includes('Chrome에서 관리자 로그인 열기'));
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
