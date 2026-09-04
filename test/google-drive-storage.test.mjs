@@ -54,6 +54,16 @@ test('admin browser uses same-origin Storage API and localized failure UX', () =
   assert.match(admin, /t\('저장소','Storage'\)/);
 });
 
+test('successful Google Drive OAuth returns directly to the exact admin route without an intermediate success page', () => {
+  assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
+  assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
+  assert.ok(control.includes("const returnTo = safeAdminReturnPath(body.returnTo);"));
+  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()})"));
+  assert.ok(control.includes("return adminRedirect(payload.returnTo);"));
+  assert.ok(control.includes("status:303"));
+  assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
+  assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
+});
 test('Admin Worker proxies Storage through a Cloudflare service binding', () => {
   assert.match(siteConfig, /\[\[services\]\]/);
   assert.match(siteConfig, /binding = "STORAGE"/);
@@ -134,4 +144,16 @@ test('Cheonggye 웹관리 A:F contract preserves 비고 as column F', () => {
   assert.match(cheonggyeAdmin, /name="note"/);
   assert.match(cheonggyeAdmin, /data-sort="note">비고/);
   assert.doesNotMatch(cheonggyeAdmin, /연락처/);
+});
+
+test('Cheonggye admin polling uses short-lived R2 auth validation cache instead of reading D1 every 15 seconds', () => {
+  assert.match(control, /CHEONGGYE_ADMIN_SESSION_CACHE_PREFIX = 'control\/cheonggye\/admin-session\/'/);
+  assert.match(control, /CHEONGGYE_ADMIN_SESSION_FRESH_MS = 5 \* 60 \* 1000/);
+  assert.match(control, /CHEONGGYE_ADMIN_SESSION_STALE_MS = 30 \* 60 \* 1000/);
+  assert.match(control, /outageFallbackAllowed/);
+  assert.match(control, /b64url\(await sha256\(token\)\)/);
+  assert.match(control, /writeCheonggyeAdminSessionCache/);
+  assert.match(control, /env\.R2_BUCKET\.put\(key/);
+  assert.match(control, /isCheonggyeRoute \? await cheonggyeAdminSession/);
+  assert.match(control, /using bounded cached validation after D1 exception/);
 });

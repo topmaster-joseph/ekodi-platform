@@ -164,9 +164,9 @@ test('Conversation release is additive, isolated, ordered and guarded',async()=>
   ]);
   assert.match(workflow,/name: Release EKODI Conversation Foundation/);
   assert.match(workflow,/workspace-staging:/);
-  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
+  assert.match(workflow,/control-staging:\r?\n\s+needs: workspace-staging/);
   assert.match(workflow,/production-workspace:/);
-  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
+  assert.match(workflow,/production-control:\r?\n\s+needs: production-workspace/);
   assert.match(workflow,/ekodi-workspace-staging/);
   assert.match(workflow,/ekodi-conversation-control-staging/);
   assert.match(workflow,/apply-d1-migrations-with-retry\.sh ekodi-auth wrangler\.workspace-platform\.toml/);

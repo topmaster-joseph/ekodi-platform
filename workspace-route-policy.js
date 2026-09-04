@@ -10,8 +10,13 @@ export function workspaceSlugFromPublicPath(pathname){
   const match=/^\/([^/]+)\/?$/.exec(String(pathname||''));
   return match&&isWorkspaceSlug(match[1])?match[1].toLowerCase():null;
 }
-export function isPublicWorkspacePath(pathname){return Boolean(workspaceSlugFromPublicPath(pathname))}
+export function isPublicWorkspacePath(pathname){
+  const path=String(pathname||'');
+  if(path==='/deployment-probe')return true;
+  return Boolean(workspaceSlugFromPublicPath(path));
+}
 export function isWorkspaceAdminPathShape(pathname){
   const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(String(pathname||''));
   return Boolean(match&&isWorkspaceSlug(match[1]));
 }
+

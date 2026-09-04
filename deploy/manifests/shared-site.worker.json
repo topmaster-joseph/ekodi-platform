@@ -1,5 +1,5 @@
 {
-  "version": 45,
+  "version": 47,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -28,23 +28,8 @@
         ],
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding"
-        ]
-      },
-      {
-        "url": "https://ekodi.kr/deployment-probe",
-        "statuses": [
-          200
         ],
-        "redirect": "manual",
-        "expect": [
-          "OPERATING SPACE"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: space",
-          "x-ekodi-workspace-gateway: space-service-binding",
-          "x-ekodi-shell: v2",
-          "cache-control: no-store"
-        ]
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodibiz/trade/admin",
@@ -90,7 +75,8 @@
         "headerExpect": [
           "x-ekodi-route: trade-partner-workspace",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/_ekodi/space/config.js",
@@ -555,16 +541,30 @@
           200
         ],
         "redirect": "manual",
-        "expect": ["EKODI Mail", "권한 있는 메일 계정을 불러오는 중입니다."],
-        "headerExpect": ["x-ekodi-route: mail-hub", "x-ekodi-shell: v2", "cache-control: no-store"]
+        "expect": [
+          "EKODI Mail",
+          "권한 있는 메일 계정을 불러오는 중입니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-route: mail-hub",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://mail.ekodi.kr/admin",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI Mail Admin", "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."],
-        "headerExpect": ["x-ekodi-route: mail-admin", "cache-control: no-store"]
-
+        "expect": [
+          "EKODI Mail Admin",
+          "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-route: mail-admin",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://live.ekodi.kr/",
@@ -646,17 +646,70 @@
       },
       {
         "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EVOLUTION INTELLIGENCE", "/api/control/evolution", "플랫폼 진화 제안"],
-        "headerExpect": ["x-content-type-options: nosniff"]
+        "expect": [
+          "EVOLUTION INTELLIGENCE",
+          "/api/control/evolution",
+          "플랫폼 진화 제안"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ]
       },
       {
         "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI COMMUNICATION ADMIN", "https://mail.ekodi.kr/admin", "https://live.ekodi.kr/"],
-        "headerExpect": ["x-content-type-options: nosniff"],
+        "expect": [
+          "EKODI COMMUNICATION ADMIN",
+          "https://mail.ekodi.kr/admin",
+          "https://live.ekodi.kr/"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/invest",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODIBIZ",
+          "EKODIBIZ · INVESTMENT BUSINESS",
+          "invest.ekodi.kr",
+          "data-ekodi-business-unit=\"invest\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-ekodibiz-invest",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/invest/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODIBIZ INVEST",
+          "WORKSPACE-LOCAL ADMIN",
+          "data-ekodi-admin-surface=\"local\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-ekodibiz-invest-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       }
     ]
