@@ -44,6 +44,7 @@ export const JUBILEE_RUNTIME = Object.freeze({
     supportMustNotCreatePublicVulnerabilityLabel: true,
     preferUserFitOverPlatformMargin: true,
     preserveMultipleViableOptions: true,
+    preserveProviderChoiceDiversity: true,
   }),
 });
 
@@ -100,11 +101,7 @@ export function evaluateJubileeRecommendation(input = {}) {
   const evaluated = rawCandidates.map((candidate, index) => evaluateCandidate(candidate, index, audit));
   const eligible = evaluated.filter(candidate => candidate.eligible && candidate.viable);
 
-  eligible.sort((a, b) => {
-    if (b.userFit !== a.userFit) return b.userFit - a.userFit;
-    if (b.serviceQuality !== a.serviceQuality) return b.serviceQuality - a.serviceQuality;
-    return a.originalIndex - b.originalIndex;
-  });
+  eligible.sort(compareCandidates);
 
   const externalAlternativeLookupRequired = Boolean(
     market.externalAlternativesKnown
@@ -116,7 +113,7 @@ export function evaluateJubileeRecommendation(input = {}) {
     audit.rulesTriggered.push('external_alternative_lookup_required');
   }
 
-  const choiceSet = preserveChoiceSet(eligible);
+  const choiceSet = preserveChoiceSet(eligible, audit);
   if (choiceSet.some(candidate => candidate.source === 'external')) {
     audit.rulesTriggered.push('external_alternatives_preserved');
   }
@@ -190,18 +187,55 @@ function evaluateCandidate(rawCandidate, originalIndex, audit) {
   };
 }
 
-function preserveChoiceSet(eligible) {
+function compareCandidates(a, b) {
+  if (b.userFit !== a.userFit) return b.userFit - a.userFit;
+  if (b.serviceQuality !== a.serviceQuality) return b.serviceQuality - a.serviceQuality;
+  return a.originalIndex - b.originalIndex;
+}
+
+function preserveChoiceSet(eligible, audit) {
   if (eligible.length <= 1) return eligible;
 
   const topFit = eligible[0].userFit;
   const nearTop = eligible.filter(candidate => candidate.userFit >= Math.max(0, topFit - 0.15));
   const selected = nearTop.slice(0, 5);
 
-  const hasExternal = selected.some(candidate => candidate.source === 'external');
-  const bestExternal = eligible.find(candidate => candidate.source === 'external');
-  if (!hasExternal && bestExternal && selected.length < 5) selected.push(bestExternal);
+  // A Jubilee recommendation must not become a one-provider funnel merely because
+  // the top candidates cluster tightly. When both EKODI and external viable options
+  // exist, preserve the best candidate from each source while keeping the best-fit
+  // option first. This provides meaningful choice without using platform margin.
+  for (const source of ['external', 'ekodi']) {
+    const bestForSource = eligible.find(candidate => candidate.source === source);
+    if (!bestForSource || selected.some(candidate => candidate.source === source)) continue;
+
+    if (selected.length < 5) {
+      selected.push(bestForSource);
+    } else {
+      const replacementIndex = findReplaceableProviderDuplicate(selected, source);
+      if (replacementIndex >= 0) selected[replacementIndex] = bestForSource;
+    }
+  }
+
+  selected.sort(compareCandidates);
+
+  if (
+    selected.some(candidate => candidate.source === 'external')
+    && selected.some(candidate => candidate.source === 'ekodi')
+  ) {
+    audit.rulesTriggered.push('provider_choice_diversity_preserved');
+  }
 
   return selected;
+}
+
+function findReplaceableProviderDuplicate(selected, incomingSource) {
+  for (let index = selected.length - 1; index >= 0; index -= 1) {
+    const candidate = selected[index];
+    if (candidate.source === incomingSource) continue;
+    const sameSourceCount = selected.filter(item => item.source === candidate.source).length;
+    if (sameSourceCount > 1) return index;
+  }
+  return -1;
 }
 
 function normalizeNeedSignals(rawSignals, audit) {
