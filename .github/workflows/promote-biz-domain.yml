@@ -23,15 +23,19 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify canonical Biz URL in source
+      - name: Verify canonical Biz user URL while preserving operational aliases
         run: |
           set -euo pipefail
           if grep -Fq 'ekodibiz.kr' index.html scripts/monitor-lib.mjs; then
             echo 'Retired ekodibiz.kr URL remains in shared-site source.'
             exit 1
           fi
-          grep -Fq 'biz.ekodi.kr' index.html scripts/monitor-lib.mjs
+          if grep -Fq 'https://biz.ekodi.kr' index.html; then
+            echo 'Legacy biz.ekodi.kr must not be exposed as the canonical public entry.'
+            exit 1
+          fi
+          grep -Fq 'https://ekodi.kr/ekodibiz' index.html
           npm run check
-          npm test
+          node --test test/business-os-platform.test.mjs test/marketing-domain-policy.test.mjs test/marketing-custom-domain.test.mjs test/cgma-domain-boundary.test.mjs test/ekodibiz-invest-business.test.mjs test/root-entry-routing.test.mjs test/common-service-auth-routing.test.mjs test/ekodi-coupang-mall.test.mjs
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs

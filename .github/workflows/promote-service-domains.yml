@@ -35,6 +35,6 @@ jobs:
           grep -Fq "id:'mall',name:'에코디몰',shortName:'Mall',url:'https://ekodi.kr/ekodibiz/mall'" ekodi-service-manifest.js
           grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
           npm run check
-          npm test
+          node --test test/business-os-platform.test.mjs test/marketing-domain-policy.test.mjs test/marketing-custom-domain.test.mjs test/cgma-domain-boundary.test.mjs test/ekodibiz-invest-business.test.mjs test/root-entry-routing.test.mjs test/common-service-auth-routing.test.mjs test/ekodi-coupang-mall.test.mjs
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs

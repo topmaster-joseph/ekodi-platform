@@ -20,9 +20,9 @@ test('Conversation release owns only Conversation APIs, never the shared-site Wo
   assert.match(workflow,/name: Release EKODI Conversation Foundation APIs/);
   assert.match(workflow,/group: ekodi-conversation-release/);
   assert.match(workflow,/workspace-staging:/);
-  assert.match(workflow,/control-staging:\n\s+needs: workspace-staging/);
-  assert.match(workflow,/production-workspace:\n\s+needs: control-staging/);
-  assert.match(workflow,/production-control:\n\s+needs: production-workspace/);
+  assert.match(workflow,/control-staging:\r?\n\s+needs: workspace-staging/);
+  assert.match(workflow,/production-workspace:\r?\n\s+needs: control-staging/);
+  assert.match(workflow,/production-control:\r?\n\s+needs: production-workspace/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/workspace-platform\.worker\.json/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/control-api\.worker\.json/);
   assert.doesNotMatch(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);

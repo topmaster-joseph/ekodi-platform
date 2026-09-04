@@ -11,7 +11,7 @@ test('shared runtime mail verifier follows the current EKODI Mail user app contr
     '<title>EKODI Mail</title>',
     'id="accountLabel"',
     'id="searchForm"',
-    'id="gmailLink"',
+    'id="providerLink"',
   ];
 
   for (const marker of markers) {
