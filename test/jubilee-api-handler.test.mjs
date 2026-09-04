@@ -31,6 +31,42 @@ test('rejects unauthorized callers', async () => {
   assert.equal(response.status, 401);
 });
 
+test('requests the exact capability for evaluation', async () => {
+  const requestedCapabilities = [];
+  const request = new Request('https://api.ekodi.kr/api/jubilee/v1/evaluate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ candidates: [] }),
+  });
+
+  const response = await handleJubileeApi(request, {}, {
+    authorize: async (_request, requirement) => {
+      requestedCapabilities.push(requirement.capability);
+      return { allowed: true };
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(requestedCapabilities, ['jubilee.evaluate']);
+});
+
+test('policy read requires jubilee.policy.read rather than evaluation authority', async () => {
+  const requestedCapabilities = [];
+  const request = new Request('https://api.ekodi.kr/api/jubilee/v1/policy', { method: 'GET' });
+
+  const response = await handleJubileeApi(request, {}, {
+    authorize: async (_request, requirement) => {
+      requestedCapabilities.push(requirement.capability);
+      return { allowed: requirement.capability === 'jubilee.policy.read' };
+    },
+  });
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.version, '1.0.0');
+  assert.deepEqual(requestedCapabilities, ['jubilee.policy.read']);
+});
+
 test('returns a Jubilee evaluation and emits privacy-minimized audit metadata', async () => {
   const audits = [];
   const request = new Request('https://api.ekodi.kr/api/jubilee/v1/evaluate', {
@@ -38,6 +74,7 @@ test('returns a Jubilee evaluation and emits privacy-minimized audit metadata', 
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       workspace_id: 'ws_test',
+      purpose: 'mall_recommendation',
       context: {
         needSignals: [{ type: 'affordability_constraint', source: 'user_provided' }],
       },
@@ -65,7 +102,11 @@ test('returns a Jubilee evaluation and emits privacy-minimized audit metadata', 
   assert.ok(payload.supportActions.includes('consider_jubilee_credit'));
   assert.equal(audits.length, 1);
   assert.equal(audits[0].workspaceId, 'ws_test');
+  assert.equal(audits[0].purpose, 'mall_recommendation');
   assert.equal('needSignals' in audits[0], false);
+  assert.equal('actorId' in audits[0], false);
+  assert.equal('context' in audits[0], false);
+  assert.equal('candidates' in audits[0], false);
 });
 
 test('blocks sensitive inference at the API boundary', async () => {
