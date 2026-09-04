@@ -187,11 +187,26 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL,
       FOREIGN KEY (job_id) REFERENCES hybrid_execution_jobs(id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS hybrid_execution_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0,1)),
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER
+    )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_hybrid_jobs_queue ON hybrid_execution_jobs(status, priority DESC, created_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_hybrid_jobs_device ON hybrid_execution_jobs(assigned_device_id, status, lease_expires_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_hybrid_nodes_ready ON hybrid_execution_nodes(auto_execute, enabled, last_heartbeat_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_hybrid_events_job ON hybrid_execution_events(job_id, created_at DESC)'),
   ]);
+}
+
+async function readFabricSettings(env) {
+  const row = await env.DB.prepare('SELECT enabled, updated_at, updated_by FROM hybrid_execution_settings WHERE id=1').first();
+  return {
+    enabled: row ? Number(row.enabled) === 1 : true,
+    updatedAt: row?.updated_at || null,
+    updatedBy: row?.updated_by || null,
+  };
 }
 
 async function event(env, jobId, deviceId, eventType, detail = {}) {
@@ -275,6 +290,8 @@ async function activeCounts(env) {
 
 async function assignPending(env) {
   await requeueExpired(env);
+  const fabric = await readFabricSettings(env);
+  if (!fabric.enabled) return;
   const nodes = await readyNodes(env);
   if (!nodes.length) return;
 
@@ -363,8 +380,10 @@ export async function claimHybridFallback(request, env) {
   const device = await authenticateDevice(request, env);
   if (!device) return json({ error:'기기 인증에 실패했습니다.', code:'DEVICE_AUTH_REQUIRED' }, 401);
   await syncNode(env, device);
+  const fabric = await readFabricSettings(env);
+  if (!fabric.enabled) return json({ command:null, execution:{ enabled:false } }, 200);
   await assignPending(env);
-  return json({ command:await claimAssigned(env, device.id) }, 200);
+  return json({ command:await claimAssigned(env, device.id), execution:{ enabled:true } }, 200);
 }
 
 export async function handleHybridAgentResult(request, env, commandId) {
@@ -421,6 +440,7 @@ export async function handleHybridAgentResult(request, env, commandId) {
 
 async function listDashboard(env) {
   await requeueExpired(env);
+  const fabric = await readFabricSettings(env);
   const [nodeRows, jobRows, eventRows] = await Promise.all([
     env.DB.prepare(`SELECT n.*, d.label, d.hostname, d.platform, d.agent_version, d.last_seen_at AS device_last_seen_at,
       d.revoked_at,
@@ -478,6 +498,7 @@ async function listDashboard(env) {
     detail:parseJson(row.detail_json, {}), createdAt:row.created_at,
   }));
   return {
+    fabric,
     nodes, jobs, events,
     summary:{
       onlineNodes:nodes.filter(node => node.online).length,
@@ -496,7 +517,44 @@ async function handleAdmin(request, env) {
   const path = new URL(request.url).pathname;
 
   if (request.method === 'GET' && (path === ADMIN_PREFIX || path === `${ADMIN_PREFIX}/dashboard`)) {
-    return json(await listDashboard(env), 200);
+    const dashboard = await listDashboard(env);
+    dashboard.fabric.canManage = auth.session.role === 'super_admin';
+    return json(dashboard, 200);
+  }
+
+  if (request.method === 'PATCH' && path === `${ADMIN_PREFIX}/settings`) {
+    if (auth.session.role !== 'super_admin') {
+      return json({ error:'실행 인프라 전체 정책은 최고관리자만 변경할 수 있습니다.', code:'EXECUTION_FABRIC_SUPER_ADMIN_REQUIRED' }, 403);
+    }
+    const body = await readJson(request) || {};
+    if (typeof body.enabled !== 'boolean') return json({ error:'실행 인프라 가동 여부가 필요합니다.' }, 400);
+    if (body.confirmed !== true) {
+      return json({ error:'실행 인프라 전체 정책 변경은 관리자 확인이 필요합니다.', code:'EXECUTION_FABRIC_CONFIRM_REQUIRED' }, 409);
+    }
+    const now = new Date().toISOString();
+    const actorId = await adminId(env, auth.session);
+    const enabled = body.enabled ? 1 : 0;
+    await env.DB.prepare(`INSERT INTO hybrid_execution_settings (id, enabled, updated_at, updated_by)
+      VALUES (1, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET enabled=excluded.enabled, updated_at=excluded.updated_at, updated_by=excluded.updated_by`)
+      .bind(enabled, now, actorId).run();
+
+    if (!enabled) {
+      const assigned = await env.DB.prepare(`SELECT id, assigned_device_id FROM hybrid_execution_jobs
+        WHERE status='assigned'`).all();
+      await env.DB.prepare(`UPDATE hybrid_execution_jobs
+        SET status='pending', last_device_id=assigned_device_id, assigned_device_id=NULL,
+            lease_expires_at=NULL, last_error='fabric_paused', updated_at=?
+        WHERE status='assigned'`).bind(now).run();
+      for (const job of assigned.results || []) {
+        await event(env, job.id, job.assigned_device_id, 'requeued', { reason:'fabric_paused' });
+      }
+    } else {
+      await assignPending(env);
+    }
+
+    await audit(env, auth.session, 'hybrid.fabric.update', 'execution-fabric', enabled ? 'enabled' : 'paused');
+    return json({ ok:true, fabric:{ enabled:Boolean(enabled), updatedAt:now, updatedBy:actorId } }, 200);
   }
 
   const nodeMatch = path.match(/^\/api\/control\/hybrid-execution\/nodes\/([^/]+)$/);
@@ -605,6 +663,8 @@ export async function handleHybridExecution(request, env) {
 export const HYBRID_EXECUTION_POLICY = Object.freeze({
   maxAttempts:MAX_ATTEMPTS,
   newNodesAutoExecute:false,
+  globalExecutionGate:true,
+  pauseKeepsLeasedJobsRunning:true,
   arbitraryShell:false,
   taskTypes:Object.keys(TASK_POLICIES),
 });
