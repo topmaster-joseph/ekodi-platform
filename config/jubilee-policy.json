@@ -57,6 +57,7 @@
   "recommendation_rules": {
     "single_moral_score": false,
     "preserve_multiple_viable_options": true,
+    "preserve_provider_choice_diversity": true,
     "external_candidates_allowed": true,
     "explain_material_reasons": true,
     "show_material_conflicts_of_interest": true,
