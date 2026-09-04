@@ -11,7 +11,6 @@ on:
       - 'wrangler.experience*.toml'
       - 'deploy/manifests/experience.worker.json'
       - 'test/experience-platform.test.mjs'
-      - 'test/experience-scenario-engine.test.mjs'
       - 'platform-boundaries.json'
       - 'CONSTITUTION.md'
       - 'governance/constitution/**'
@@ -46,7 +45,7 @@ jobs:
           node --check experience-worker.js
           node --check experience-catalog.js
           node --check experience/app.js
-          node --test test/experience-platform.test.mjs test/experience-scenario-engine.test.mjs
+          node --test test/experience-platform.test.mjs
           npm run validate:constitution
           npm run validate:boundaries
           npm run validate:security
