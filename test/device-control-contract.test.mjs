@@ -167,6 +167,20 @@ test('hybrid execution uses an opt-in bounded queue with capacity-aware assignme
   assert.doesNotMatch(api, /shell\.exec|powershell\.exec|command\.script/);
 });
 
+test('Device Control collapses refresh storms and duplicate active work', () => {
+  assert.match(admin, /const inFlightRequests = new Map\(\)/);
+  assert.match(admin, /retry-after/);
+  assert.match(admin, /MAX_GET_RETRIES = 2/);
+  assert.match(admin, /loadDevicesPromise/);
+  assert.match(admin, /POLL_INTERVAL_MS = 15000/);
+  assert.match(api, /RECONCILE_MIN_INTERVAL_MS = 2500/);
+  assert.match(api, /DUPLICATE_REQUEST_WINDOW_MS = 30 \* 1000/);
+  assert.match(api, /async function reconcileJobsOnce/);
+  assert.match(api, /async function ensureSchemaOnce/);
+  assert.match(api, /deduplicated: true/);
+  assert.match(api, /reconcileJobsOnce\(env, \{ force: true \}\)/);
+});
+
 test('portable computers and non-PC types are excluded from automatic execution nodes', () => {
   assert.match(agent, /Win32_Battery/);
   assert.match(agent, /Win32_ComputerSystem/);

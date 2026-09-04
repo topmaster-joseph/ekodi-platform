@@ -36,27 +36,88 @@
     'startup.disable': '이 시작 프로그램을 비활성화할까요? EKODI가 복원 정보를 로컬에 보관합니다.',
     'startup.restore': '이 시작 프로그램을 다시 활성화할까요?',
   };
+  const REQUEST_TIMEOUT_MS = 12000;
+  const POLL_INTERVAL_MS = 15000;
+  const MAX_GET_RETRIES = 2;
+  const inFlightRequests = new Map();
   let timer = null;
   let currentEnrollmentUrl = '';
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   let activeType = 'all';
+  let loadDevicesPromise = null;
+  let refreshBlockedUntil = 0;
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
     return { authorization: `Bearer ${token}`, ...(json ? { 'content-type': 'application/json' } : {}) };
   }
 
+  function sleep(ms) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
+
+  function retryDelay(response, attempt = 0) {
+    const value = response?.headers?.get('retry-after') || '';
+    const seconds = Number(value);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(60000, Math.ceil(seconds * 1000));
+    const date = Date.parse(value);
+    if (Number.isFinite(date)) return Math.max(0, Math.min(60000, date - Date.now()));
+    return Math.min(30000, (1000 * (2 ** attempt)) + Math.floor(Math.random() * 250));
+  }
+
   async function request(path, options = {}) {
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers: { ...authHeaders(Boolean(options.body)), ...(options.headers || {}) },
-      cache: 'no-store',
-    });
-    let data = {};
-    try { data = await response.json(); } catch {}
-    if (!response.ok) throw new Error(data.error || `Device Control API 오류 (${response.status})`);
-    return data;
+    const method = String(options.method || 'GET').toUpperCase();
+    const requestKey = method === 'GET' ? `${method}:${path}` : '';
+    if (requestKey && inFlightRequests.has(requestKey)) return inFlightRequests.get(requestKey);
+
+    const run = async () => {
+      const attempts = method === 'GET' ? MAX_GET_RETRIES + 1 : 1;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: { ...authHeaders(Boolean(options.body)), ...(options.headers || {}) },
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+        } catch (error) {
+          if (attempt + 1 < attempts && (error?.name === 'AbortError' || error instanceof TypeError)) {
+            await sleep(Math.min(5000, 750 * (2 ** attempt)));
+            continue;
+          }
+          if (error?.name === 'AbortError') throw new Error('Device Control API 응답 시간이 초과되었습니다.');
+          throw error;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+
+        let data = {};
+        try { data = await response.json(); } catch {}
+        if (response.ok) return data;
+
+        const delay = retryDelay(response, attempt);
+        if (response.status === 429) refreshBlockedUntil = Math.max(refreshBlockedUntil, Date.now() + delay);
+        if (method === 'GET' && [429, 502, 503, 504].includes(response.status) && attempt + 1 < attempts) {
+          await sleep(delay);
+          continue;
+        }
+        const error = new Error(data.error || `Device Control API 오류 (${response.status})`);
+        error.status = response.status;
+        error.retryAfterMs = delay;
+        throw error;
+      }
+      throw new Error('Device Control API 요청을 완료하지 못했습니다.');
+    };
+
+    const promise = run();
+    if (requestKey) {
+      inFlightRequests.set(requestKey, promise);
+      const clear = () => { if (inFlightRequests.get(requestKey) === promise) inFlightRequests.delete(requestKey); };
+      promise.then(clear, clear);
+    }
+    return promise;
   }
 
   function setPageTitle(value) {
@@ -394,12 +455,32 @@
   async function loadDevices() {
     const list = document.querySelector('#ekodiDeviceList');
     if (!list || !sessionStorage.getItem(TOKEN_KEY)) return;
-    try {
-      const data = await request('/api/control/devices');
-      if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
-      renderDevices(data.devices || []); renderJobs(data.jobs || []);
-      const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
-    } catch (error) { list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>'; list.querySelector('p').textContent = error.message; }
+    if (loadDevicesPromise) return loadDevicesPromise;
+    if (Date.now() < refreshBlockedUntil) {
+      const stamp = document.querySelector('#deviceGeneratedAt');
+      if (stamp) stamp.textContent = `요청 보호 중 · ${Math.max(1, Math.ceil((refreshBlockedUntil - Date.now()) / 1000))}초 후 자동 갱신`;
+      return;
+    }
+
+    loadDevicesPromise = (async () => {
+      try {
+        const data = await request('/api/control/devices');
+        if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
+        renderDevices(data.devices || []); renderJobs(data.jobs || []);
+        const stamp = document.querySelector('#deviceGeneratedAt');
+        if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
+      } catch (error) {
+        const stamp = document.querySelector('#deviceGeneratedAt');
+        if (stamp) stamp.textContent = error.status === 429 ? '요청 보호 중 · 자동 재시도 예정' : `갱신 지연 · ${error.message}`;
+        if (!currentDevices.length) {
+          list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>';
+          list.querySelector('p').textContent = error.message;
+        }
+      } finally {
+        loadDevicesPromise = null;
+      }
+    })();
+    return loadDevicesPromise;
   }
 
   async function createEnrollment() {
@@ -480,7 +561,9 @@
 
     if (location.hash === '#devices') showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
-    timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
+    timer = window.setInterval(() => {
+      if (!document.hidden && !panel.classList.contains('hidden-panel')) loadDevices();
+    }, POLL_INTERVAL_MS);
   }
 
   installPanel();

@@ -7,6 +7,11 @@ const DEVICE_ONLINE_MS = 90 * 1000;
 const DEVICE_STALE_MS = 10 * 60 * 1000;
 const COMMAND_CLAIM_TIMEOUT_MS = 60 * 60 * 1000;
 const JOB_ASSIGNMENT_TIMEOUT_MS = 65 * 60 * 1000;
+const RECONCILE_MIN_INTERVAL_MS = 2500;
+const DUPLICATE_REQUEST_WINDOW_MS = 30 * 1000;
+let reconcilePromise = null;
+let lastReconcileAt = 0;
+let schemaReadyPromise = null;
 
 const DEVICE_TYPE_POLICIES = Object.freeze({
   pc: Object.freeze({
@@ -225,6 +230,16 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_jobs_queue ON device_jobs(status, priority DESC, requested_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_inventory_type ON device_inventory(device_type, archived_at)'),
   ]);
+}
+
+async function ensureSchemaOnce(db) {
+  if (!schemaReadyPromise) {
+    schemaReadyPromise = ensureSchema(db).catch(error => {
+      schemaReadyPromise = null;
+      throw error;
+    });
+  }
+  return schemaReadyPromise;
 }
 
 async function sha256(value) {
@@ -611,13 +626,28 @@ async function reconcileJobs(env) {
   }
 }
 
+async function reconcileJobsOnce(env, { force = false } = {}) {
+  if (!force && Date.now() - lastReconcileAt < RECONCILE_MIN_INTERVAL_MS) return;
+  if (reconcilePromise) return reconcilePromise;
+  const running = (async () => {
+    await reconcileJobs(env);
+    lastReconcileAt = Date.now();
+  })();
+  reconcilePromise = running;
+  try {
+    return await running;
+  } finally {
+    if (reconcilePromise === running) reconcilePromise = null;
+  }
+}
+
 async function handleAdmin(request, env) {
   const auth = await adminSession(request, env);
   if (!auth.session) return auth.response;
   const path = new URL(request.url).pathname;
 
   if (request.method === 'GET' && path === ADMIN_PREFIX) {
-    await reconcileJobs(env);
+    await reconcileJobsOnce(env);
     return json({ devices: await listDevices(env), jobs: await listJobs(env), catalog: deviceCatalog(), generatedAt: new Date().toISOString() }, 200, request, env);
   }
 
@@ -656,15 +686,25 @@ async function handleAdmin(request, env) {
     if (!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(targetGroup)) return json({ error: '기기 그룹이 유효하지 않습니다.' }, 400, request, env);
     const priority = Math.max(1, Math.min(100, Number(body.priority) || 50));
     const actorId = await adminId(env, auth.session);
+    const payloadJson = JSON.stringify(payload);
+    const duplicateCutoff = new Date(Date.now() - DUPLICATE_REQUEST_WINDOW_MS).toISOString();
+    const existing = await env.DB.prepare(`SELECT id, status, requested_at FROM device_jobs
+      WHERE command_type = ? AND payload_json = ? AND tenant_id = ? AND target_group = ? AND priority = ?
+        AND requested_by = ? AND status IN ('queued','assigned') AND requested_at >= ?
+      ORDER BY requested_at DESC LIMIT 1`)
+      .bind(commandType, payloadJson, tenantId, targetGroup, priority, actorId, duplicateCutoff).first();
+    if (existing) {
+      return json({ job: { id: existing.id, type: commandType, targetGroup, priority, status: existing.status, requestedAt: existing.requested_at }, deduplicated: true }, 202, request, env);
+    }
     const jobId = `job_${crypto.randomUUID()}`;
     const requestedAt = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO device_jobs
       (id, command_type, payload_json, tenant_id, target_group, priority, status, requested_at, requested_by)
       VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`)
-      .bind(jobId, commandType, JSON.stringify(payload), tenantId, targetGroup, priority, requestedAt, actorId).run();
+      .bind(jobId, commandType, payloadJson, tenantId, targetGroup, priority, requestedAt, actorId).run();
     await audit(env, auth.session, 'device.job.create', jobId, `${commandType} → ${targetGroup} [${policy.risk}]`);
-    await reconcileJobs(env);
-    return json({ job: { id: jobId, type: commandType, targetGroup, priority, status: 'queued', requestedAt } }, 202, request, env);
+    await reconcileJobsOnce(env, { force: true });
+    return json({ job: { id: jobId, type: commandType, targetGroup, priority, status: 'queued', requestedAt }, deduplicated: false }, 202, request, env);
   }
 
   const managementMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/management$/);
@@ -795,14 +835,24 @@ async function handleAdmin(request, env) {
       return json({ error: `${deviceTypePolicy(deviceType).label} 유형에서는 이 원격 작업을 허용하지 않습니다.`, code: 'DEVICE_TYPE_COMMAND_BLOCKED' }, 403, request, env);
     }
     const actorId = await adminId(env, auth.session);
+    const payloadJson = JSON.stringify(payload);
+    const duplicateCutoff = new Date(Date.now() - DUPLICATE_REQUEST_WINDOW_MS).toISOString();
+    const existing = await env.DB.prepare(`SELECT id, status, issued_at FROM device_commands
+      WHERE device_id = ? AND command_type = ? AND payload_json = ? AND issued_by = ?
+        AND status IN ('queued','claimed') AND issued_at >= ?
+      ORDER BY issued_at DESC LIMIT 1`)
+      .bind(deviceId, commandType, payloadJson, actorId, duplicateCutoff).first();
+    if (existing) {
+      return json({ command: { id: existing.id, deviceId, type: commandType, risk: policy.risk, deviceType, status: existing.status, issuedAt: existing.issued_at }, deduplicated: true }, 202, request, env);
+    }
     const commandId = `cmd_${crypto.randomUUID()}`;
     const issuedAt = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO device_commands
       (id, device_id, command_type, payload_json, status, issued_at, issued_by)
       VALUES (?, ?, ?, ?, 'queued', ?, ?)`)
-      .bind(commandId, deviceId, commandType, JSON.stringify(payload), issuedAt, actorId).run();
+      .bind(commandId, deviceId, commandType, payloadJson, issuedAt, actorId).run();
     await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType} [${policy.risk}] type=${deviceType}`);
-    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, deviceType, status: 'queued', issuedAt } }, 202, request, env);
+    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, deviceType, status: 'queued', issuedAt }, deduplicated: false }, 202, request, env);
   }
 
   const revokeMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/revoke$/);
@@ -905,7 +955,7 @@ async function heartbeat(request, env, device) {
 }
 
 async function nextCommand(request, env, device) {
-  await reconcileJobs(env);
+  await reconcileJobsOnce(env);
   const staleClaim = new Date(Date.now() - COMMAND_CLAIM_TIMEOUT_MS).toISOString();
   await env.DB.prepare(`UPDATE device_commands SET status = 'queued', claimed_at = NULL
     WHERE device_id = ? AND status = 'claimed' AND claimed_at < ?`).bind(device.id, staleClaim).run();
@@ -1010,7 +1060,7 @@ export async function handleDeviceControl(request, env) {
   if (!path.startsWith(ADMIN_PREFIX) && !path.startsWith(AGENT_PREFIX)) return null;
   if (!env.DB) return json({ error: 'Device Control 데이터베이스가 연결되지 않았습니다.' }, 503, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request, env) });
-  await ensureSchema(env.DB);
+  await ensureSchemaOnce(env.DB);
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);
 }
