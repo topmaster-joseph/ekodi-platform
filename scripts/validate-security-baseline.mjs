@@ -3,12 +3,14 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [edge, entry, site, wrangler, adminAuth, customerEntry, projection, coreApi, externalAi, openAi, claude, gemini, aiContractRaw] = await Promise.all([
+const [edge, entry, site, wrangler, adminAuth, adminSession, authorization, customerEntry, projection, coreApi, externalAi, openAi, claude, gemini, aiContractRaw] = await Promise.all([
   read('security-edge.js'),
   read('mission-control-entry-worker.js'),
   read('site-worker.js'),
   read('wrangler.api.toml'),
   read('admin-google-auth.js'),
+  read('admin-session-fastpath.js'),
+  read('ekodi-authorization.js'),
   read('customer-entry-worker.js'),
   read('secure-projection.js'),
   read('core-api.js'),
@@ -57,7 +59,27 @@ for (const marker of [
   'account.google_sub !== payload.sub',
   "status = 'active'",
   "DELETE FROM sessions WHERE admin_id = ?",
+  'admin_privileged_sessions',
+  'PRIVILEGED_MINUTES = 15',
+  'ELEVATION_REQUIRED',
+  'session.elevated',
+  "'/api/admin-access/elevation'",
 ]) assert(adminAuth.includes(marker), `Google admin auth control missing: ${marker}`);
+
+for (const marker of [
+  'identity-context-capability',
+  'explicitDenyWins: true',
+  'contextSwitchGrantsAuthority: false',
+  "'admin:accounts.write'",
+  'authorizeEkodiAction',
+  'scopeAllows',
+]) assert(authorization.includes(marker), `Admin authorization contract missing: ${marker}`);
+
+for (const marker of [
+  "from './ekodi-authorization.js'",
+  'adminAuthorityForRole',
+  'elevated_until',
+]) assert(adminSession.includes(marker), `Admin session authority projection missing: ${marker}`);
 
 for (const marker of [
   "'/api/login'",
@@ -105,7 +127,7 @@ assert(!edge.includes('authorization.slice(7).trim().slice('), 'raw bearer token
 assert(edge.includes("crypto.subtle.digest('SHA-256'"), 'rate-limit identities must be hashed');
 assert(edge.includes("return { available: false, allowed: false }"), 'protected routes must fail closed when rate limiting is unavailable');
 
-console.log('Security baseline valid: fail-closed edge throttling, browser headers, Google allowlist, session revocation, password shutdown and Secure Projection enforced.');
+console.log('Security baseline valid: fail-closed edge throttling, capability-scoped Admin OS authority, temporary Google elevation, browser headers, session revocation, password shutdown and Secure Projection enforced.');
 
 function assert(condition, message) {
   if (!condition) {
