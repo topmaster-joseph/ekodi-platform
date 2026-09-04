@@ -40,11 +40,15 @@ This is a security boundary, not a staging failure. CI first proves that the Wor
 
 Do not disable Access merely to make unauthenticated smoke tests pass. If deeper automated application checks are required later, use a narrowly scoped Cloudflare Access service token rather than making Development public.
 
-## Current temporary exception
+## Marketing preview boundary
 
-`stage-marketing-pages-shell.yml` still creates Cloudflare Pages preview deployments in the Production account. This is a temporary, explicit exception because the existing Development deploy token was created for Workers and may not yet have Cloudflare Pages Edit permission. The boundary audit allows only Pages preview deployment in this file and rejects Worker deployment there.
+Marketing UI previews are non-production workloads and therefore run only in **EKODI Development**.
 
-Move the Pages preview projects to EKODI Development after the Development token has Cloudflare Pages Edit and the four preview projects have been created there.
+- `stage-marketing-pages-shell.yml` uses `environment: development`, the fixed Development account ID and `CLOUDFLARE_DEVELOPMENT_API_TOKEN`.
+- The built Marketing UI tree is served by a Development-only Worker Static Assets deployment, so no additional Cloudflare Pages permission is required.
+- Preview deployment never uses Production Cloudflare credentials, routes, custom domains or data bindings.
+- An unauthenticated probe may be accepted as healthy when Cloudflare Access returns the expected protected challenge.
+- A dedicated CI boundary contract prevents this preview from reverting to Production credentials or `wrangler pages deploy`.
 
 ## Production staging residue cleanup
 

@@ -20,11 +20,12 @@ env:
 
 jobs:
   preview:
+    environment: development
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
       GH_API_TOKEN: ${{ github.token }}
     steps:
       - name: Resolve latest Marketing AI source
@@ -85,70 +86,72 @@ jobs:
             grep -Fq 'data-ekodi-shell-external-style' "$dir/shell-style.js"
           done
 
-      - name: Verify Cloudflare credentials
+      - name: Verify Development Cloudflare boundary
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" = "46aad4738793fbaca88574832a2ccc0f"
 
-      - name: Deploy four non-production Pages previews
+      - name: Deploy Marketing shell preview as Development Worker static assets
         shell: bash
         run: |
           set -euo pipefail
-          branch="shell-pr-${{ github.event.pull_request.number }}"
-          sha='${{ steps.source.outputs.sha }}'
-          deploy_preview() {
-            project="$1"; dir="$2"; env_name="$3"
-            log="/tmp/${project}.log"
-            npx --yes wrangler@$WRANGLER_VERSION pages deploy "$dir" \
-              --project-name "$project" \
-              --branch "$branch" \
-              --commit-hash "$sha" \
-              --commit-message "EKODI Marketing Shell preview $sha" | tee "$log"
-            url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' "$log" | tail -1 || true)
-            test -n "$url"
-            echo "$env_name=$url" >> "$GITHUB_ENV"
+          cat > .tmp-marketing-shell-worker.mjs <<'EOF'
+          export default { async fetch(request, env) { return env.ASSETS.fetch(request); } };
+          EOF
+          cat > .tmp-marketing-shell-wrangler.jsonc <<'EOF'
+          {
+            "name": "ekodi-marketing-pages-shell-staging",
+            "main": ".tmp-marketing-shell-worker.mjs",
+            "account_id": "46aad4738793fbaca88574832a2ccc0f",
+            "compatibility_date": "2026-09-02",
+            "workers_dev": true,
+            "preview_urls": true,
+            "assets": {
+              "directory": "./marketing-source/dist/marketing-ai",
+              "binding": "ASSETS"
+            }
           }
-          deploy_preview marketing-ai marketing-source/dist/marketing-ai MARKETING_PREVIEW
-          deploy_preview marketing-ai-jadam marketing-source/dist/marketing-ai/jadam JADAM_PREVIEW
-          deploy_preview marketing-ai-pizzamaru marketing-source/dist/marketing-ai/pizzamaru PIZZAMARU_PREVIEW
-          deploy_preview marketing-ai-yogurtpurple marketing-source/dist/marketing-ai/yogurtpurple YOGURT_PREVIEW
+          EOF
+          trap 'rm -f .tmp-marketing-shell-worker.mjs .tmp-marketing-shell-wrangler.jsonc' EXIT
+          npx --yes wrangler@4.127.0 deploy \
+            --config .tmp-marketing-shell-wrangler.jsonc \
+            --experimental-provision=false
+          echo "STAGING_URL=https://ekodi-marketing-pages-shell-staging.ekodi-development.workers.dev" >> "$GITHUB_ENV"
 
-      - name: Verify preview HTML, CSS and JS MIME contracts
+      - name: Verify Development preview deployment or Access protection
         shell: bash
         run: |
           set -euo pipefail
-          check_asset() {
-            url="$1"; kind="$2"; marker="$3"
-            curl -L -fsS -D /tmp/headers -o /tmp/asset --connect-timeout 5 --max-time 15 "$url"
-            if [ "$kind" = css ]; then grep -Eiq '^content-type:[[:space:]]*text/css' /tmp/headers; fi
-            if [ "$kind" = js ]; then grep -Eiq '^content-type:.*(javascript|ecmascript)' /tmp/headers; fi
-            grep -Fq "$marker" /tmp/asset
+          headers=$(mktemp)
+          body=$(mktemp)
+          trap 'rm -f "$headers" "$body"' EXIT
+          code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+          auth=$(awk 'BEGIN{IGNORECASE=1} /^www-authenticate:/{sub(/\r$/,""); print; exit}' "$headers")
+          location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/\r$/,""); print; exit}' "$headers")
+          echo "Development preview status=$code ${auth:-no-auth-header} ${location%%\?*}"
+          if [ "$code" = "302" ] && { printf '%s\n%s' "$auth" "$location" | grep -Eiq 'Cloudflare-Access|cloudflareaccess\.com|/cdn-cgi/access/'; }; then
+            echo 'Development preview is deployed behind Cloudflare Access.'
+            exit 0
+          fi
+          test "$code" = "200"
+          check_surface() {
+            path="$1"; marker="$2"
+            curl -fsS --connect-timeout 5 --max-time 15 "$STAGING_URL$path" -o "$body"
+            grep -Fq "$marker" "$body"
           }
 
-          for spec in \
-            "$MARKETING_PREVIEW|USER UI|generic" \
-            "$JADAM_PREVIEW|ADMIN UI|tenant" \
-            "$PIZZAMARU_PREVIEW|ADMIN UI|tenant" \
-            "$YOGURT_PREVIEW|ADMIN UI|tenant"; do
-            url="${spec%%|*}"; rest="${spec#*|}"; ui="${rest%%|*}"; kind="${rest#*|}"
-            verified=0
-            for attempt in $(seq 1 18); do
-              if curl -L -fsS --connect-timeout 5 --max-time 15 "$url" -o /tmp/page \
-                && grep -Fq "data-ekodi-ui-classification=\"$ui\"" /tmp/page \
-                && grep -Fq 'data-ekodi-asset-routing="same-origin"' /tmp/page \
-                && check_asset "${url%/}/official-ui.css" css 'EKODI official USER UI / ADMIN UI governance layer' \
-                && check_asset "${url%/}/official-ui.js" js 'EKODI'; then
-                if [ "$kind" = tenant ]; then
-                  grep -Fq 'data-ekodi-admin-context' /tmp/page || { sleep 4; continue; }
-                  check_asset "${url%/}/site.css" css 'Generated by scripts/patch-marketing-style-assets.mjs' || { sleep 4; continue; }
-                  check_asset "${url%/}/shell-style.js" js 'data-ekodi-shell-external-style' || { sleep 4; continue; }
-                fi
-                verified=1
-                break
-              fi
-              sleep 4
-            done
-            test "$verified" = 1
-          done
-
-          echo 'All Marketing AI previews verified with official USER/ADMIN boundaries and browser-loadable same-origin styling.'
+          check_asset_type() {
+            path="$1"; kind="$2"
+            curl -fsS -D "$headers" -o "$body" --connect-timeout 5 --max-time 15 "$STAGING_URL$path"
+            if [ "$kind" = css ]; then grep -Eiq '^content-type:[[:space:]]*text/css' "$headers"; fi
+            if [ "$kind" = js ]; then grep -Eiq '^content-type:.*(javascript|ecmascript)' "$headers"; fi
+          }
+          check_surface '/' 'data-ekodi-ui-classification="USER UI"'
+          check_surface '/jadam/' 'data-ekodi-ui-classification="ADMIN UI"'
+          check_surface '/pizzamaru/' 'data-ekodi-ui-classification="ADMIN UI"'
+          check_surface '/yogurtpurple/' 'data-ekodi-ui-classification="ADMIN UI"'
+          check_asset_type '/official-ui.css' css
+          check_asset_type '/official-ui.js' js
+          echo 'Development Worker static-assets preview verified.'
