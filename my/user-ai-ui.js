@@ -7,25 +7,26 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
-const ACTIONS={attention:'#home',continue:'#creator',workspace:'#platforms',discover:'#platforms',calm:'#home'};
+const ACTIONS={attention:'#home',continue:'#creator',workspace:'#workspaces',discover:'#platforms',calm:'#workspaces'};
 
 function collectContext(){
+  const workspaces=$$('#workspaceList .workspace-card');
   const recentItems=$$('#creatorList .portfolio-card').slice(0,3).map(card=>({title:card.querySelector('h3')?.textContent?.trim()||''}));
   const services=$$('#platformList .platform-card').filter(card=>{
     const text=card.textContent||'';
     return text.includes('현재 공간')||text.includes('연결 가능');
   });
-  return {workspaces:[],recentItems,notifications:[],services};
+  return {workspaces,recentItems,notifications:[],services};
 }
 
-function activeWorkspaceHint(){
-  try{return String(localStorage.getItem('ekodi_my_active_workspace')||'').trim()}catch{return''}
-}
 function investSuggestion(){
+  const selected=$('#workspaceList .workspace-card.selected')||$('#workspaceList .workspace-card');
+  const workspace=selected?.dataset?.workspaceKey||'';
+  const kind=selected?.querySelector('small')?.textContent?.trim()?.toLowerCase()||'personal';
   const url=new URL('https://invest.ekodi.kr/');
-  const workspace=activeWorkspaceHint();
-  if(workspace)url.searchParams.set('workspace',workspace);
-  return `<article class="recommendation-card" data-user-ai-suggestion="invest"><small>맞춤 분석 · EKODI Invest</small><h3>내 투자 관점으로 보기</h3><p>현재 이용 맥락을 힌트로 전달하고, Invest가 승인된 대상을 다시 확인한 뒤 공식자료를 읽습니다.</p><a class="text-link" href="${esc(url.href)}">Invest 열기 →</a></article>`;
+  if(workspace&&kind!=='personal')url.searchParams.set('workspace',workspace);
+  const organization=['business','organization','tenant'].includes(kind);
+  return `<article class="recommendation-card" data-user-ai-suggestion="invest"><small>맞춤 분석 · EKODI Invest</small><h3>${organization?'현재 조직의 투자 관점으로 보기':'내 투자 관점으로 보기'}</h3><p>${organization?'현재 Workspace의 자금 성격·정책·유동성·승인구조를 기준으로 공식자료를 다시 읽습니다.':'개인의 목적·기간·유동성·위험 관점에서 공식자료를 다시 읽습니다.'}</p><a class="text-link" href="${esc(url.href)}">Invest 열기 →</a></article>`;
 }
 
 function renderSuggestions(){
@@ -37,7 +38,7 @@ function renderSuggestions(){
     return;
   }
   const regular=buildUserSuggestions(collectContext()).map((item,index)=>{
-    const href=ACTIONS[item.type]||'#platforms';
+    const href=ACTIONS[item.type]||'#workspaces';
     const label=index===0?'지금':'제안';
     return `<article class="recommendation-card" data-user-ai-suggestion="${esc(item.type)}"><small>${label} · ${esc(EKODI_USER_AI.name)}</small><h3>${esc(item.title)}</h3><p>${esc(item.body)}</p><a class="text-link" href="${esc(href)}">${esc(item.action)} →</a></article>`;
   }).join('');
@@ -62,7 +63,7 @@ function scheduleRender(){
 }
 
 const observer=new MutationObserver(scheduleRender);
-['#identityName','#platformList','#creatorList'].forEach(selector=>{
+['#identityName','#workspaceList','#platformList','#creatorList'].forEach(selector=>{
   const node=$(selector);
   if(node)observer.observe(node,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
 });

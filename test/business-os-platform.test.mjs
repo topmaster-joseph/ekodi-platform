@@ -15,19 +15,16 @@ const migration=readFileSync(new URL('../supabase/migrations/20260817003000_busi
 const staging=readFileSync(new URL('../wrangler.business-staging.toml',import.meta.url),'utf8');
 const production=readFileSync(new URL('../wrangler.business.toml',import.meta.url),'utf8');
 
-test('Business OS keeps EKODIBIZ and Jadam tenant workspaces behind internal routing',()=>{
-  for(const term of ['BUSINESS OS','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
+test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
+  for(const term of ['BUSINESS OS','에코디비즈','자담치킨 목포대점','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
   assert.match(worker,/ekodibiz/);
   assert.match(worker,/jadam/);
-  assert.match(worker,/\/api\/workspaces/);
-  assert.match(worker,/\/api\/workspace\//);
-  assert.match(app,/routeWorkspaceId/);
-  assert.match(app,/selectWorkspace/);
-  assert.doesNotMatch(html,/workspacePicker|workspaceSelect|workspace-picker/);
-  assert.doesNotMatch(app,/renderWorkspaceSelector|workspaceSelect/);
+  assert.match(worker,/https:\/\/biz\.ekodi\.kr/);
+  assert.match(worker,/https:\/\/jadam\.ai\.ekodi\.kr/);
   assert.match(worker,/external_client/);
   assert.match(worker,/internal/);
 });
+
 test('Business OS starts from a customer problem instead of a module catalog',()=>{
   for(const term of ['사업하면서 지금 가장 해결하고 싶은 것은 무엇인가요','매출을 늘리고 싶어요','단골을 늘리고 싶어요','홍보를 맡기고 싶어요','비용을 줄이고 싶어요','사람이 필요해요','잘 모르겠어요. 한번 봐주세요','에코디가 해주세요']) assert.match(html,new RegExp(term));
   assert.match(html,/id="problemGrid"/);
@@ -51,15 +48,15 @@ test('customer-first layer monetizes execution rather than inventing a subscript
   assert.doesNotMatch(html,/무조건 자동 실행/);
 });
 
-test('public Business OS header stays local without workspace chooser chrome',()=>{
-  assert.match(html,/class="brand" href="\/"/);
+test('public Business OS header stays local and keeps workspace chrome behind sign-in',()=>{
+  assert.match(html,/class="brand" href="\/" aria-label="Business OS 홈으로 이동"/);
   assert.doesNotMatch(html,/class="brand" href="https:\/\/ekodi\.kr"/);
-  assert.doesNotMatch(html,/workspacePicker|workspaceSelect|workspace-picker|WORKSPACE<\/label>/);
+  assert.match(html,/class="workspace-picker session-only"/);
+  assert.match(html,/:has\(#authLink\[href="#logout"\]\)/);
   assert.match(html,/<nav class="top-actions"[^>]*>[\s\S]*id="authLink"[\s\S]*Sign in/);
   assert.match(html,/id="publicLink"[\s\S]*id="marketingLink"/);
-  assert.match(app,/routeWorkspaceId/);
-  assert.match(app,/ekodi-business-workspace/);
 });
+
 test('Business OS does not present fabricated sample metrics as live data',()=>{
   assert.doesNotMatch(html,/기능 검증용 샘플/);
   assert.doesNotMatch(app,/1284000|sample\.sales|sample\.customers/);

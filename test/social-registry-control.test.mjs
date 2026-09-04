@@ -30,7 +30,7 @@ test('Social workspace switcher consumes one-time handoff and revalidates person
     readFile(new URL('../social/app.js',import.meta.url),'utf8'),
     readFile(new URL('../social-worker.js',import.meta.url),'utf8'),
   ]);
-  assert.doesNotMatch(html,/workspaceSwitch|workspaceSelect|workspace-picker/);
+  assert.match(html,/id="workspaceSwitch"/);
   assert.match(app,/functions\/v1\/workspace-api/);
   assert.match(app,/\$\{WORKSPACE_API\}\/workspaces\?site=social/);
   assert.match(app,/verifyOtp\(\{token_hash:token/);

@@ -23,6 +23,7 @@ const marketingOnboarding=read('auth-site/marketing-onboarding.js');
 const myHtml=read('my/index.html');
 const myApp=read('my/app.js');
 const myUserAiUi=read('my/user-ai-ui.js');
+const userUiShellCss=read('shell/user-ui-shell.css');
 
 test('person and login identity schema stays separate from organization membership',()=>{
   assert.match(migration,/create table if not exists public\.people/i);
@@ -152,10 +153,11 @@ test('targeted workspace routing is available across shared and person-scoped EK
   assert.match(authTarget,/workspace_key:requested/);
 });
 
-test('My EKODI is the signed-in user home and routes connected platforms with internal workspace context',()=>{
+test('My EKODI keeps workspace context internal while shared Shell suppresses chooser UI',()=>{
   assert.match(myHtml,/MY EKODI · USER UI/);
   assert.match(myHtml,/data-ekodi-ui="USER"/);
-  assert.doesNotMatch(myHtml,/workspaceList|workspaceSwitcher|workspace-selector-sync|workspace-selector-shell|href="#workspaces"/);
+  assert.match(myHtml,/id="workspaceList"/);
+  assert.match(myHtml,/workspace-selector-sync\.js/);
   assert.match(myHtml,/user-ai-ui\.js/);
   assert.match(myHtml,/id="recommendationList"/);
   assert.match(myApp,/ekodi_my_active_workspace/);
@@ -164,7 +166,8 @@ test('My EKODI is the signed-in user home and routes connected platforms with in
   assert.match(myApp,/searchParams\.set\('workspace'/);
   assert.match(myUserAiUi,/function renderSuggestions\(\)/);
   assert.match(myUserAiUi,/buildUserSuggestions/);
-  assert.doesNotMatch(myUserAiUi,/#workspaceList|#workspaces/);
+  assert.match(userUiShellCss,/data-ekodi-service="my"\] #workspaces/);
+  assert.match(userUiShellCss,/a\[href="#workspaces"\]/);
 });
 
 test('browser auth and My router scripts parse as JavaScript',()=>{

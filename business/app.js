@@ -64,6 +64,11 @@ function statusClass(status){return status==='available'?'live':status==='next'?
 function dataText(value,formatter){return value==null?'—':formatter?formatter(value):String(value)}
 function money(n){return new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(Number(n||0))}
 
+function renderWorkspaceSelector(){
+  const select=$('workspaceSelect');select.replaceChildren();
+  state.workspaces.forEach(workspace=>{const option=document.createElement('option');option.value=workspace.id;option.textContent=workspace.name;select.append(option)});
+  if(state.current)select.value=state.current.id;
+}
 function effectiveModules(workspace,snapshot){
   return(workspace.modules||[]).map(module=>{
     if(module.code==='CRM'&&snapshot?.sources?.salesConnected)return{...module,status:'available',statusLabel:'주문행동 집계 연결'};
@@ -120,7 +125,7 @@ function renderWorkspace(payload,snapshot=null,error=null){
   $('workspaceName').textContent=workspace.name;$('workspaceEnglish').textContent=workspace.englishName;$('workspaceKind').textContent=workspaceLabel(workspace);$('heroCopy').textContent=workspace.description;
   $('dataNotice').textContent=dataNoticeText(workspace,snapshot,error);
   $('publicLink').href=workspace.publicUrl;$('publicLink').textContent=workspace.scope==='store'?'전용 AI':'에코디비즈';$('marketingLink').href=workspace.marketingUrl;
-  renderMetrics(state.metrics);renderModules(effectiveModules(workspace,snapshot));refreshBrief();syncAuthLink();
+  renderWorkspaceSelector();renderMetrics(state.metrics);renderModules(effectiveModules(workspace,snapshot));refreshBrief();syncAuthLink();
 }
 
 function fallbackBrief(){
@@ -168,6 +173,7 @@ async function boot(){
   catch(error){console.error(error);$('dataNotice').textContent='Business OS 워크스페이스 구성을 불러오지 못했습니다. 민감한 실행은 계속 차단됩니다.';renderBrief(fallbackBrief(),'safe fallback')}
 }
 
+$('workspaceSelect').addEventListener('change',event=>selectWorkspace(event.target.value));
 $('refreshBrief').addEventListener('click',refreshBrief);$('checkAction').addEventListener('click',checkAction);
 $('authLink').addEventListener('click',event=>{if(state.session?.accessToken){event.preventDefault();logout()}});
 window.addEventListener('popstate',()=>selectWorkspace(routeWorkspaceId(),{push:false}).catch(console.error));

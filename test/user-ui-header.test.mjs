@@ -30,6 +30,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/window\.EKODIUserUIHeader/);
   assert.match(header,/ekodi:shell-theme/);
   assert.match(header,/data-ekodi-header-title/);
+  assert.match(header,/ROUTING_CHOOSER_SELECTORS/);
+  assert.match(header,/suppressRoutingChooserChrome/);
+  assert.match(header,/data-ekodi-routing-chooser/);
+  assert.match(header,/ekodiRoutingChooser='hidden'/);
   assert.doesNotMatch(header,/body\s*\{[^}]*text-align\s*:\s*center/is);
 
   assert.equal(EKODI_USER_FOOTER.version,3);
@@ -85,6 +89,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/text-align:\s*center/);
   assert.match(sharedCss,/justify-content:\s*center/);
   assert.match(sharedCss,/\.ekodi-user-language\s*\{/);
+  assert.match(sharedCss,/#workspaceSwitch/);
+  assert.match(sharedCss,/#workspacePicker/);
+  assert.match(sharedCss,/data-ekodi-path-selector/);
   assert.match(sharedCss,/z-index:\s*2147483400/);
   assert.match(sharedCss,/overflow:\s*visible/);
   assert.match(userLanguage,/z-index:2147483400!important/);

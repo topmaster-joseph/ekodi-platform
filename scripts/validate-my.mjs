@@ -12,6 +12,8 @@ const files={
   membershipJs:'my/membership-summary.js',
   membershipCss:'my/membership-summary.css',
   userServices:'my/user-services.js',
+  workspaceSync:'my/workspace-selector-sync.js',
+  workspaceCss:'my/workspace-selector-shell.css',
   deviceCareHtml:'my/device-care/index.html',
   deviceCareJs:'my/device-care.js',
   deviceCareCss:'my/device-care.css',
@@ -34,8 +36,7 @@ execFileSync(process.execPath,['--check',files.accessContext],{stdio:'inherit'})
 must('html','My EKODI');
 must('html','data-ekodi-ui="USER"');
 must('html','EKODI USER AI');
-mustNot('html','MY SPACES');
-mustNot('html','href="#workspaces"');
+must('html','MY SPACES');
 must('html','MY PLATFORMS');
 must('html','CREATOR PORTFOLIO');
 must('html','내 선택이 우선');
@@ -84,10 +85,9 @@ must('membershipCss','.membership-service-state');
 must('membershipCss','.membership-summary-warning');
 must('userServices','USER_SERVICES');
 must('userServices','"id": "support"');
-mustNot('html','workspace-selector-sync');
-mustNot('html','workspace-selector-shell');
-mustNot('app','function workspaceUi(');
-mustNot('app','function enterWorkspace(');
+must('workspaceSync','window.EKODIShell');
+must('workspaceSync','ekodiWorkspaceOrder');
+must('workspaceCss','--ekodi-shell-accent');
 must('deviceCareHtml','FREE MEMBER');
 must('deviceCareHtml','무료회원');
 must('deviceCareHtml','PC·POS·키오스크·태블릿');
@@ -129,7 +129,8 @@ must('creatorMigration',"visibility text not null default 'private'");
 must('creatorPrivate','private.current_person_id');
 must('creatorOptimized','(select private.current_person_id())');
 
-if(/workspaceList|workspaceSwitcher|workspace-selector-sync|workspace-selector-shell/.test(content.html))throw new Error('My EKODI validation failed: workspace chooser chrome must remain removed');
+const visibleWorkspaceChooserCount=(content.html.match(/id="workspaceList"/g)||[]).length;
+if(visibleWorkspaceChooserCount!==1)throw new Error(`My EKODI validation failed: expected one visible Workspace chooser, found ${visibleWorkspaceChooserCount}`);
 
 const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){

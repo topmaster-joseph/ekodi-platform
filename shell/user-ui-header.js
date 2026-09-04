@@ -36,6 +36,12 @@ const CENTER_SELECTORS=[
   '.brand-title',
   'h1'
 ];
+const ROUTING_CHOOSER_SELECTORS=[
+  '#workspaceSwitch','#workspaceSwitcher','#workspacePicker','#workspaceSelect',
+  '.workspace-picker','.workspace-switch','[data-ekodi-workspace-selector]',
+  '#pathSelect','#pathSwitcher','[data-ekodi-path-selector]',
+  'html[data-ekodi-service="my"] #workspaces','html[data-ekodi-service="my"] a[href="#workspaces"]'
+];
 
 let activeHeader=null;
 let activeCenter=null;
@@ -111,6 +117,17 @@ function installStyle(){
   (document.head||document.documentElement).append(style);
 }
 
+function suppressRoutingChooserChrome(){
+  for(const selector of ROUTING_CHOOSER_SELECTORS){
+    for(const node of document.querySelectorAll(selector)){
+      node.hidden=true;
+      node.setAttribute('aria-hidden','true');
+      node.setAttribute('data-ekodi-routing-chooser','suppressed');
+      if('inert' in node)node.inert=true;
+    }
+  }
+  document.documentElement.dataset.ekodiRoutingChooser='hidden';
+}
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase();}
 function mode(){
   const htmlMode=String(document.documentElement.dataset.ekodiUserHeader||'').toLowerCase();
@@ -231,6 +248,7 @@ function attach(header){
 function reconcile(){
   scheduled=false;
   installStyle();
+  suppressRoutingChooserChrome();
   if(!shouldEnable()){detach();removeFallback();return;}
   const header=findHeader();
   if(header){if(activeHeader===fallbackHeader)detach();removeFallback();attach(header);return;}
