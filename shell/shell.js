@@ -9,6 +9,7 @@ const MANIFEST_URL=`${SHELL_ORIGIN}/manifest.json`;
 const THEME_URL=`${SHELL_ORIGIN}/theme.json`;
 const AUTH='https://auth.ekodi.kr/';
 const MY='https://my.ekodi.kr/';
+const TRAFFIC_TELEMETRY='https://api.ekodi.kr/api/telemetry/visit';
 const explicitService=String(script?.dataset?.ekodiService||'').trim().toLowerCase();
 const hidden=script?.dataset?.ekodiShell==='off';
 const requestedSurface=normalizeSurface(script?.dataset?.ekodiSurface||'workspace');
@@ -81,6 +82,21 @@ function inferredWorkspaceName(key){if(!key)return'공간 선택';if(key.startsW
 function isDynamicSurface(value=surface){return (theme.rules?.dynamicSurfaces||[]).includes(value);}
 function isPublicSurface(value=surface){return (theme.rules?.publicSurfaces||['public']).includes(value);}
 function serviceTheme(){return theme.services?.[service?.id]||{};}
+function trafficDailySessionId(){
+  const day=new Date().toISOString().slice(0,10);const key=`ekodi_traffic_daily:${service?.id||explicitService||'site'}:${day}`;
+  for(const storage of [localStorage,sessionStorage]){try{const existing=storage.getItem(key);if(existing)return existing;}catch{}}
+  try{const prefix=`ekodi_traffic_daily:${service?.id||explicitService||'site'}:`;for(let i=localStorage.length-1;i>=0;i--){const oldKey=localStorage.key(i)||'';if(oldKey.startsWith(prefix)&&oldKey!==key)localStorage.removeItem(oldKey);}}catch{}
+  let sid='';try{sid=crypto.randomUUID().replace(/-/g,'_');}catch{const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);sid=[...bytes].map(v=>v.toString(16).padStart(2,'0')).join('');}
+  for(const storage of [localStorage,sessionStorage]){try{storage.setItem(key,sid);break;}catch{}}
+  return sid;
+}
+function sendTrafficBeacon(){
+  if(!service||navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
+  if(surface==='admin'||surface==='data'||surface==='document'||surface==='form')return;
+  const sid=trafficDailySessionId();if(!sid)return;const body=JSON.stringify({sid,site_id:service.id,surface});
+  try{if(navigator.sendBeacon?.(TRAFFIC_TELEMETRY,body))return;}catch{}
+  try{fetch(TRAFFIC_TELEMETRY,{method:'POST',mode:'cors',keepalive:true,headers:{'content-type':'text/plain;charset=UTF-8'},body}).catch(()=>{});}catch{}
+}
 
 function hashText(value){
   let hash=2166136261;
@@ -354,7 +370,7 @@ async function boot(){
   if(handedTenant)state.tenantId=handedTenant.slice(0,120);
   if(handedStore)state.storeId=handedStore.slice(0,120);
   if(!state.workspaceName&&state.workspaceKey)state.workspaceName=inferredWorkspaceName(state.workspaceKey);
-  writeStored();applyHostTokens();buildUi();startCycleRefresh();
+  writeStored();applyHostTokens();buildUi();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
 }
 window.EKODIShell={
   setContext:mergeContext,

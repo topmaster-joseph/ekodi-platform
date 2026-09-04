@@ -18,6 +18,7 @@ import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
@@ -82,6 +83,11 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = incoming.pathname;
+
+    if (path === '/api/telemetry/visit') {
+      try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Traffic telemetry error', error); return applyApiSecurityHeaders(new Response(null, { status:204 })); }
+    }
 
     if (path.startsWith('/api/storage/v1')) {
       try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
@@ -153,6 +159,11 @@ export default {
     if (path.startsWith('/api/control/secrets')) {
       try { const response = await handleCloudflareSecretControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Cloudflare secret control error', error); return errorResponse('Cloudflare Secret 처리 중 오류가 발생했습니다.', 'CLOUDFLARE_SECRET_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/traffic-intelligence') {
+      try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/system-health')) {
