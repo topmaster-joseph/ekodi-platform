@@ -6,6 +6,22 @@
   "completedOn": "2026-08-20",
   "completionEvidence": "config/ekodi-core-completion.json",
   "purpose": "Keep EKODI-owned identity, organization, authorization, audit and service contracts independent from replaceable infrastructure providers.",
+  "architectureAlignment": {
+    "layer": "core",
+    "responsibilityClass": "ekodi-responsible",
+    "architectureRegistry": "governance/architecture/ekodi-os-architecture.json",
+    "osRelationship": "EKODI OS coordinates platform-wide execution; EKODI Core provides stable shared contracts, authority and controls.",
+    "deploymentTopologyIndependent": true,
+    "rule": "Core is not the container for every business capability. Responsible Independent Services keep explicit domain contracts even when they share a modular-monolith deployment."
+  },
+  "serviceConnectionModel": {
+    "crossBoundaryContractRequired": true,
+    "directPrivateDatabaseCouplingAcrossIndependentServices": false,
+    "externalConnectionsUseReviewedAdaptersOrContracts": true,
+    "minimumPurposeBoundProjection": true,
+    "providerCredentialsServerSide": true,
+    "safeDisconnectionRequired": true
+  },
   "canonicalHosts": {
     "api": "api.ekodi.kr",
     "admin": "admin.ekodi.kr",
@@ -64,7 +80,8 @@
     "data-portability",
     "graceful-degradation",
     "observable-operations",
-    "human-agency"
+    "human-agency",
+    "standardized-connections"
   ],
   "completionGates": [
     "core-contract-validation-passes",
