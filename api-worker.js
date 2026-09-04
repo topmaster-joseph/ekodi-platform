@@ -24,9 +24,30 @@ const SERVICE_CATALOG = [
   { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
+const PUBLIC_SITE_CATALOG = [
+  {
+    id: 'cgma',
+    workspaceId: 'cgma',
+    name: 'CGMA',
+    domain: 'cgma.or.kr',
+    defaultPublicStatus: 'maintenance',
+    defaultMaintenanceDisplayType: 'default',
+    defaultMaintenanceRedirectUrl: '',
+    defaultMaintenanceTitle: '현재 사이트 개발중입니다',
+    defaultMaintenanceMessage: '더 좋은 서비스로 준비 중입니다.',
+    defaultRedirectMode: 'button'
+  }
+];
+
 const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
+const PUBLIC_SITE_BY_ID = new Map(PUBLIC_SITE_CATALOG.map(site => [site.id, site]));
+const PUBLIC_SITE_BY_DOMAIN = new Map(PUBLIC_SITE_CATALOG.map(site => [site.domain, site]));
 const VALID_STATES = new Set(['planned', 'active', 'paused']);
+const VALID_PUBLIC_STATUSES = new Set(['public', 'maintenance']);
+const VALID_MAINTENANCE_DISPLAY_TYPES = new Set(['default', 'url']);
+const VALID_REDIRECT_MODES = new Set(['button', 'auto']);
 const CONTROL_PREFIX = '/api/control';
+const PUBLIC_SITE_PREFIX = `${CONTROL_PREFIX}/public-sites`;
 const DEVELOPMENT_WORKER = 'https://ekodi-platform-development.ekodi-development.workers.dev';
 const ACCOUNT_SERVICE_TARGETS = Object.freeze(EKODI_SERVICE_MANIFEST.services
   .filter(service => service.state !== 'planned')
@@ -47,6 +68,72 @@ function controlJson(data, status, headers = new Headers()) {
     if (value) responseHeaders.set(name, value);
   }
   return new Response(JSON.stringify(data), { status, headers: responseHeaders });
+}
+
+function siteHtml(data, status = 200, extraHeaders = {}) {
+  const headers = new Headers({
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'strict-origin-when-cross-origin',
+    ...extraHeaders
+  });
+  return new Response(data, { status, headers });
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function validPublicRedirectUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (!['https:', 'http:'].includes(url.protocol)) return '';
+    return url.toString();
+  } catch {
+    return '';
+  }
+}
+
+function maintenancePage(site) {
+  const title = escapeHtml(site.maintenanceTitle || '현재 사이트 개발중입니다');
+  const message = escapeHtml(site.maintenanceMessage || '더 좋은 서비스로 준비 중입니다.');
+  const redirectUrl = validPublicRedirectUrl(site.maintenanceRedirectUrl);
+  const showButton = site.maintenanceDisplayType === 'url' && redirectUrl && site.redirectMode !== 'auto';
+  return `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${title}</title>
+  <style>
+    :root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at top,#f3f8ff,#e9edf3 52%,#dde4ee);color:#152033}
+    main{width:min(92vw,560px);padding:42px 28px;border:1px solid rgba(80,105,135,.18);border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 22px 70px rgba(25,50,80,.14);text-align:center;backdrop-filter:blur(16px)}
+    .eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#edf5ff;color:#35628e;font-size:13px;font-weight:700;letter-spacing:.04em}
+    h1{margin:18px 0 10px;font-size:clamp(28px,5vw,42px);line-height:1.12;letter-spacing:-.04em}
+    p{margin:0 auto;color:#536273;font-size:17px;line-height:1.65;word-break:keep-all}
+    a{display:inline-flex;margin-top:26px;padding:13px 18px;border-radius:14px;background:#163454;color:#fff;text-decoration:none;font-weight:800}
+    footer{margin-top:28px;color:#8390a1;font-size:12px}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">CGMA</div>
+    <h1>${title}</h1>
+    <p>${message}</p>
+    ${showButton ? `<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>` : ''}
+    <footer>cgma.or.kr</footer>
+  </main>
+</body>
+</html>`;
 }
 
 async function ensureControlSchema(db) {
@@ -81,6 +168,19 @@ async function ensureControlSchema(db) {
       detail TEXT NOT NULL DEFAULT '',
       checked_at TEXT NOT NULL,
       PRIMARY KEY (environment, service_id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS public_site_controls (
+      site_id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL,
+      domain TEXT NOT NULL UNIQUE,
+      public_status TEXT NOT NULL DEFAULT 'maintenance',
+      maintenance_display_type TEXT NOT NULL DEFAULT 'default',
+      maintenance_redirect_url TEXT NOT NULL DEFAULT '',
+      maintenance_title TEXT NOT NULL DEFAULT '현재 사이트 개발중입니다',
+      maintenance_message TEXT NOT NULL DEFAULT '더 좋은 서비스로 준비 중입니다.',
+      redirect_mode TEXT NOT NULL DEFAULT 'button',
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER
     )`)
   ]);
 
@@ -94,6 +194,62 @@ async function ensureControlSchema(db) {
     service.defaultMonitor ? 1 : 0,
     now
   )));
+
+  const siteSeed = db.prepare(`INSERT OR IGNORE INTO public_site_controls
+    (site_id, workspace_id, domain, public_status, maintenance_display_type, maintenance_redirect_url, maintenance_title, maintenance_message, redirect_mode, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  await db.batch(PUBLIC_SITE_CATALOG.map(site => siteSeed.bind(
+    site.id,
+    site.workspaceId,
+    site.domain,
+    site.defaultPublicStatus,
+    site.defaultMaintenanceDisplayType,
+    site.defaultMaintenanceRedirectUrl,
+    site.defaultMaintenanceTitle,
+    site.defaultMaintenanceMessage,
+    site.defaultRedirectMode,
+    now
+  )));
+}
+
+function normalizePublicSiteRow(row, fallback) {
+  return {
+    id: row?.site_id || fallback.id,
+    workspaceId: row?.workspace_id || fallback.workspaceId,
+    name: fallback.name,
+    domain: row?.domain || fallback.domain,
+    publicStatus: row?.public_status || fallback.defaultPublicStatus,
+    maintenanceDisplayType: row?.maintenance_display_type || fallback.defaultMaintenanceDisplayType,
+    maintenanceRedirectUrl: row?.maintenance_redirect_url || fallback.defaultMaintenanceRedirectUrl,
+    maintenanceTitle: row?.maintenance_title || fallback.defaultMaintenanceTitle,
+    maintenanceMessage: row?.maintenance_message || fallback.defaultMaintenanceMessage,
+    redirectMode: row?.redirect_mode || fallback.defaultRedirectMode,
+    updatedAt: row?.updated_at || '',
+    updatedBy: row?.updated_by || null
+  };
+}
+
+async function publicSiteSnapshot(env) {
+  await ensureControlSchema(env.DB);
+  const rows = await env.DB.prepare('SELECT * FROM public_site_controls').all();
+  const byId = new Map(rows.results.map(row => [row.site_id, row]));
+  return PUBLIC_SITE_CATALOG.map(site => normalizePublicSiteRow(byId.get(site.id), site));
+}
+
+async function handlePublicDomainRequest(request, env) {
+  if (!env.DB) return null;
+  const host = new URL(request.url).hostname.toLowerCase();
+  const catalog = PUBLIC_SITE_BY_DOMAIN.get(host);
+  if (!catalog) return null;
+  await ensureControlSchema(env.DB);
+  const row = await env.DB.prepare('SELECT * FROM public_site_controls WHERE domain = ?').bind(host).first();
+  const site = normalizePublicSiteRow(row, catalog);
+  if (site.publicStatus !== 'maintenance') return null;
+  const redirectUrl = validPublicRedirectUrl(site.maintenanceRedirectUrl);
+  if (site.maintenanceDisplayType === 'url' && redirectUrl && site.redirectMode === 'auto') {
+    return Response.redirect(redirectUrl, 302);
+  }
+  return siteHtml(maintenancePage(site));
 }
 
 async function probeEnvironmentService(environment, target) {
@@ -415,7 +571,7 @@ async function evolutionSnapshot(env, force = false) {
   ]);
   return {
     schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
+    generatedAt: recommendation?.verifiedAt || new Date().toISOString(),
     policy: 'verification_first_security_native_self_evolving',
     live,
     store,
@@ -434,6 +590,38 @@ async function handleControl(request, env) {
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === PUBLIC_SITE_PREFIX) {
+    return controlJson({ sites: await publicSiteSnapshot(env) }, 200, auth.response.headers);
+  }
+
+  const publicSiteMatch = path.match(/^\/api\/control\/public-sites\/([a-z0-9-]+)$/);
+  if (publicSiteMatch && request.method === 'PUT') {
+    const siteId = publicSiteMatch[1];
+    const catalog = PUBLIC_SITE_BY_ID.get(siteId);
+    if (!catalog) return controlJson({ error: '관리 대상 공개 사이트가 아닙니다.' }, 404, auth.response.headers);
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object') return controlJson({ error: '공개 사이트 설정 형식을 확인해 주세요.' }, 400, auth.response.headers);
+    const publicStatus = String(body.publicStatus || catalog.defaultPublicStatus).trim();
+    const displayType = String(body.maintenanceDisplayType || catalog.defaultMaintenanceDisplayType).trim();
+    const redirectMode = String(body.redirectMode || catalog.defaultRedirectMode).trim();
+    if (!VALID_PUBLIC_STATUSES.has(publicStatus)) return controlJson({ error: '공개 상태는 public 또는 maintenance 중 하나여야 합니다.' }, 400, auth.response.headers);
+    if (!VALID_MAINTENANCE_DISPLAY_TYPES.has(displayType)) return controlJson({ error: '임시페이지 방식은 default 또는 url 중 하나여야 합니다.' }, 400, auth.response.headers);
+    if (!VALID_REDIRECT_MODES.has(redirectMode)) return controlJson({ error: '연결 방식은 button 또는 auto 중 하나여야 합니다.' }, 400, auth.response.headers);
+    const title = String(body.maintenanceTitle || catalog.defaultMaintenanceTitle).trim().slice(0, 80) || catalog.defaultMaintenanceTitle;
+    const message = String(body.maintenanceMessage || catalog.defaultMaintenanceMessage).trim().slice(0, 300) || catalog.defaultMaintenanceMessage;
+    const redirectUrl = validPublicRedirectUrl(body.maintenanceRedirectUrl);
+    if (displayType === 'url' && !redirectUrl) return controlJson({ error: '지정 주소 연결 방식에는 올바른 http 또는 https 주소가 필요합니다.' }, 400, auth.response.headers);
+    const adminId = await adminIdForSession(env, auth.session);
+    const updatedAt = new Date().toISOString();
+    await env.DB.prepare(`UPDATE public_site_controls
+      SET public_status = ?, maintenance_display_type = ?, maintenance_redirect_url = ?, maintenance_title = ?, maintenance_message = ?, redirect_mode = ?, updated_at = ?, updated_by = ?
+      WHERE site_id = ?`)
+      .bind(publicStatus, displayType, redirectUrl, title, message, redirectMode, updatedAt, adminId, siteId).run();
+    await writeAudit(env, auth.session, 'public_site.update', catalog.domain, JSON.stringify({ publicStatus, displayType, redirectMode, redirectUrl }));
+    const sites = await publicSiteSnapshot(env);
+    return controlJson({ site: sites.find(item => item.id === siteId) }, 200, auth.response.headers);
   }
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/evolution`) {
@@ -549,6 +737,8 @@ async function handleControl(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const publicDomainResponse = await handlePublicDomainRequest(request, env);
+    if (publicDomainResponse) return publicDomainResponse;
     if (url.pathname.startsWith('/api/mail/control')) {
       try {
         const response = await handleMailControl(request, env);
