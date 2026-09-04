@@ -164,18 +164,23 @@ jobs:
             slug=$(printf '%s' "$url" | tr -cd 'a-zA-Z0-9')
             headers="/tmp/${slug}.headers"
             body="/tmp/${slug}.html"
-            code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/" || true)
-            echo "$url http=$code"
-            if [[ "$code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' "$headers"; then
-              echo "$url is deployed and correctly protected by Cloudflare Access."
-              return 0
-            fi
-            test "$code" = '200'
-            grep -Fq "$needle" "$body"
-            grep -Fq 'data-ekodi-asset-routing="same-origin"' "$body"
-            grep -Fq 'https://shell.ekodi.kr/shell.js' "$body"
-            asset_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/$asset" || true)
-            test "$asset_code" = '200'
+            for attempt in $(seq 1 10); do
+              code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/" || true)
+              echo "$url attempt=$attempt http=$code"
+              if [[ "$code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' "$headers"; then
+                echo "$url is deployed and correctly protected by Cloudflare Access."
+                return 0
+              fi
+              if [[ "$code" == '200' ]] && grep -Fq "$needle" "$body" \
+                && grep -Fq 'data-ekodi-asset-routing="same-origin"' "$body" \
+                && grep -Fq 'https://shell.ekodi.kr/shell.js' "$body"; then
+                asset_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/$asset" || true)
+                if [[ "$asset_code" == '200' ]]; then return 0; fi
+              fi
+              sleep 3
+            done
+            echo "$url did not become ready within the staging propagation window."
+            return 1
           }
 
           verify_stage "$HUB_STAGING_URL" '마케팅AI' 'official-ui.css'
