@@ -49,6 +49,8 @@ on:
       - 'admin-public-site-controls.js'
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
+      - 'system-health-admin.js'
+      - 'system-health-admin.css'
       - 'communication-admin.js'
       - 'communication-admin.css'
       - 'storage-admin.js'

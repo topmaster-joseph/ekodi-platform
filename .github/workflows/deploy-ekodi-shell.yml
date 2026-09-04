@@ -64,6 +64,8 @@ jobs:
           node --check admin-authenticated-shell.js
           node --check config/user-footer.js
           node --check shell/shell.js
+          grep -Fq 'TRAFFIC_TELEMETRY' shell/shell.js
+          grep -Fq 'globalPrivacyControl' shell/shell.js
           node --check shell/user-ui-header.js
           node --check shell/user-ui-footer.js
           node --check shell/user-language.js

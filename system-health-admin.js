@@ -141,6 +141,33 @@
       <p class="code-health-policy">자동 수정하지 않습니다. 관찰 → 원인분석 → 수정안 → 테스트·영향검증 → 관리자 승인 → 가역적 적용 → 운영 재검증 순서를 지킵니다.</p>
     </div>
 
+    <div class="system-health-divider"><span>TRAFFIC INTELLIGENCE</span></div>
+    <div class="traffic-intelligence-toolbar">
+      <div><strong>실사용 · 검색 · 내부자동화 · 기타봇 분리</strong><small data-traffic-intelligence-status>분류 집계를 확인합니다.</small></div>
+      <label>사이트 <select data-traffic-site><option value="">전체 사이트</option></select></label>
+    </div>
+    <div class="traffic-intelligence-grid" aria-label="Traffic Intelligence 요약">
+      <article data-traffic-card="human"><small>👤 사람 추정 세션</small><strong data-traffic-human>—</strong><span>실제 브라우저 실행 신호 · 개인 식별/방문자 수 아님</span></article>
+      <article data-traffic-card="search"><small>🔎 검색 · AI 크롤러</small><strong data-traffic-search>—</strong><span>Google · Bing · OAI · Claude 등</span></article>
+      <article data-traffic-card="internal"><small>⚙️ EKODI 시스템</small><strong data-traffic-internal>—</strong><span>Monitor · Control · Load Test 등</span></article>
+      <article data-traffic-card="bot"><small>🤖 기타 봇 · 스캐너</small><strong data-traffic-bot>—</strong><span>curl · Headless · 보안스캐너 등</span></article>
+    </div>
+    <div class="traffic-intelligence-meta">
+      <span>미분류 요청 <strong data-traffic-unknown>—</strong></span>
+      <span>자동분류 커버리지 <strong data-traffic-coverage>—</strong></span>
+      <span>분류기 <strong data-traffic-version>—</strong></span>
+    </div>
+    <div class="traffic-intelligence-columns">
+      <article class="health-diagram-card">
+        <div class="health-diagram-head"><div><small>SITES</small><strong>사이트별 요청 구성</strong></div><span data-traffic-site-count>—</span></div>
+        <div class="traffic-intelligence-sites" data-traffic-sites><p class="operations-loading">집계 대기</p></div>
+      </article>
+      <article class="health-diagram-card">
+        <div class="health-diagram-head"><div><small>HUMAN COUNTRIES</small><strong>사람 추정 세션 국가</strong></div><span>IP 원문 저장 안 함</span></div>
+        <div class="traffic-intelligence-countries" data-traffic-countries><p class="operations-loading">Beacon 집계 대기</p></div>
+      </article>
+    </div>
+
     <div class="system-health-divider"><span>TRAFFIC HEALTH</span></div>
     <div class="system-health-overall" data-health-overall data-state="pending">
       <span class="system-health-dot" aria-hidden="true"></span>
@@ -188,6 +215,10 @@
   const overallLabel = get('[data-health-overall-label]');
   const chart = get('[data-health-chart]');
   const refresh = get('[data-health-refresh]');
+  const trafficStatus = get('[data-traffic-intelligence-status]');
+  const trafficSiteSelect = get('[data-traffic-site]');
+  let selectedTrafficSite = '';
+  let trafficSiteCatalog = [];
   let days = 7;
   let metric = 'bandwidthBytes';
   let latestData = null;
@@ -266,6 +297,70 @@
     get('[data-request-cache-label]').textContent = total ? `${cachePercent}%` : '—';
     get('[data-request-origin-label]').textContent = total ? `${originPercent}%` : '—';
     get('[data-request-threats]').textContent = total ? compact(threats) : '—';
+  }
+
+  function regionName(code) {
+    if (!code || code === 'XX') return '알 수 없음';
+    try { return new Intl.DisplayNames(['ko'], { type:'region' }).of(code) || code; } catch { return code; }
+  }
+
+  function populateTrafficSites(sites = []) {
+    if (!trafficSiteSelect || selectedTrafficSite) return;
+    trafficSiteCatalog = sites.slice();
+    trafficSiteSelect.textContent = '';
+    const all = document.createElement('option'); all.value = ''; all.textContent = '전체 사이트'; trafficSiteSelect.append(all);
+    for (const site of trafficSiteCatalog) {
+      const option = document.createElement('option'); option.value = site.siteId; option.textContent = site.siteId || site.hosts?.[0] || 'unknown';
+      trafficSiteSelect.append(option);
+    }
+  }
+
+  function renderTrafficIntelligence(result) {
+    const sitesHost = get('[data-traffic-sites]');
+    const countriesHost = get('[data-traffic-countries]');
+    if (!result?.ok) {
+      trafficStatus.textContent = `분류 조회 실패 · ${result?.error?.message || '연결 확인 필요'}`;
+      for (const selector of ['[data-traffic-human]','[data-traffic-search]','[data-traffic-internal]','[data-traffic-bot]','[data-traffic-unknown]','[data-traffic-coverage]','[data-traffic-version]']) get(selector).textContent = '—';
+      sitesHost.innerHTML = '<p class="operations-error">Traffic Intelligence 집계를 확인하지 못했습니다.</p>';
+      countriesHost.innerHTML = '<p class="operations-error">실사용 세션 국가 집계를 확인하지 못했습니다.</p>';
+      return;
+    }
+    const data = result.data || {};
+    const summary = data.summary || {};
+    get('[data-traffic-human]').textContent = compact(summary.humanSessions || 0);
+    get('[data-traffic-search]').textContent = compact(summary.searchBotRequests || 0);
+    get('[data-traffic-internal]').textContent = compact(summary.ekodiInternalRequests || 0);
+    get('[data-traffic-bot]').textContent = compact(summary.otherBotRequests || 0);
+    get('[data-traffic-unknown]').textContent = compact(summary.unclassifiedRequests || 0);
+    get('[data-traffic-coverage]').textContent = `${Number(summary.classifiedCoveragePercent || 0).toFixed(1)}%`;
+    get('[data-traffic-version]').textContent = data.classifierVersion || '—';
+    const state = data.state || {};
+    trafficStatus.textContent = state.status === 'ok'
+      ? `${state.zoneCount || 0}개 Zone · ${state.hostCount || 0}개 Host · ${time(state.lastSuccessAt)}`
+      : state.message || '첫 Traffic Intelligence 집계를 기다리는 중입니다.';
+    if (!selectedTrafficSite) populateTrafficSites(data.sites || []);
+
+    sitesHost.textContent = '';
+    const sites = data.sites || [];
+    get('[data-traffic-site-count]').textContent = `${sites.length}개`;
+    if (!sites.length) sitesHost.innerHTML = '<p class="operations-loading">분류할 사이트 집계를 기다리는 중입니다.</p>';
+    for (const site of sites.slice(0, 20)) {
+      const row = document.createElement('div'); row.className = 'traffic-intelligence-site-row';
+      const name = document.createElement('div'); const strong = document.createElement('strong'); strong.textContent = site.siteId || 'unknown';
+      const small = document.createElement('small'); small.textContent = (site.hosts || []).join(' · '); name.append(strong, small);
+      const meta = document.createElement('span'); meta.textContent = `요청 ${compact(site.requestTotal)} · 사람추정 ${compact(site.humanSessions)}`;
+      row.append(name, meta); sitesHost.append(row);
+    }
+
+    countriesHost.textContent = '';
+    const countries = data.humanCountries || [];
+    if (!countries.length) countriesHost.innerHTML = '<p class="operations-loading">브라우저 Beacon 데이터가 쌓이면 사람 추정 세션의 국가가 표시됩니다.</p>';
+    for (const item of countries.slice(0, 12)) {
+      const row = document.createElement('div'); row.className = 'traffic-intelligence-country-row';
+      const label = document.createElement('span'); label.textContent = regionName(item.country);
+      const value = document.createElement('strong'); value.textContent = compact(item.sessions);
+      row.append(label, value); countriesHost.append(row);
+    }
   }
 
   function render(data) {
@@ -590,8 +685,9 @@
     get('[data-core-overall-label]').textContent = '확인 중';
     get('[data-core-status]').textContent = 'Core 운영 계약과 복구 상태를 확인하는 중입니다.';
 
-    const [health, codeHealth, core, ai, recovery, overview] = await Promise.all([
+    const [health, trafficIntel, codeHealth, core, ai, recovery, overview] = await Promise.all([
       attempt('System Health', () => fetchJson(`/api/control/system-health?days=${days}`, true)),
+      attempt('Traffic Intelligence', () => fetchJson(`/api/control/traffic-intelligence?days=${days}${selectedTrafficSite ? `&site=${encodeURIComponent(selectedTrafficSite)}` : ''}`, true)),
       attempt('Code Health', () => fetchJson('/api/control/system-health/code', true)),
       attempt('Core', () => fetchJson('/api/core/v1/status')),
       attempt('AI Gateway', () => fetchJson('/api/core/v1/ai/status')),
@@ -600,6 +696,7 @@
     ]);
 
     renderCore({ core, ai, recovery, overview });
+    renderTrafficIntelligence(trafficIntel);
     renderCodeHealth(codeHealth);
     if (health.ok) {
       loaded = true;
@@ -641,6 +738,12 @@
     section.querySelectorAll('[data-health-metric]').forEach(item => item.classList.toggle('is-active', item === metricButton));
     if (latestData) render(latestData);
   }));
+
+  trafficSiteSelect?.addEventListener('change', () => {
+    selectedTrafficSite = trafficSiteSelect.value || '';
+    loaded = false;
+    load(true);
+  });
 
   refresh.addEventListener('click', () => load(true));
   button.addEventListener('click', activate);

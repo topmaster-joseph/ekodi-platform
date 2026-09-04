@@ -108,6 +108,8 @@ jobs:
           ! grep -Fq 'PerformanceObserver' dist/admin-central-handoff.js
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
           grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
+          grep -Fq 'data-traffic-intelligence-status' dist/system-health-admin.js
+          grep -Fq '.traffic-intelligence-grid' dist/system-health-admin.css
           grep -Fq '.system-health-overall' dist/system-health-admin.css
           echo "Admin production verification contract ready: version=$version"
 
@@ -169,6 +171,8 @@ jobs:
               && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '시스템 건강'" \
+              && verify_asset 'system-health-admin.js' 'data-traffic-intelligence-status' \
+              && verify_asset 'system-health-admin.css' '.traffic-intelligence-grid' \
               && verify_asset 'system-health-admin.css' '.system-health-overall' \
               && verify_asset 'admin-lazy-features.js' "actionType:'ui.change_request'" \
               && verify_asset 'admin-lazy-features.js' '전문 기능 선택을 관리자에게 넘기지 않습니다' \
