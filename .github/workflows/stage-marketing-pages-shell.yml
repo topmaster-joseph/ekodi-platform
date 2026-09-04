@@ -9,6 +9,16 @@ on:
       source_sha:
         required: true
         type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/stage-marketing-pages-shell.yml'
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Optional jadam-maru commit SHA; empty uses latest main'
+        required: false
+        type: string
   pull_request:
     paths:
       - '.github/workflows/deploy-marketing-pages.yml'
@@ -44,6 +54,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = 'workflow_call' ]; then
+            sha='${{ inputs.source_sha }}'
+          elif [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ inputs.source_sha }}" ]; then
             sha='${{ inputs.source_sha }}'
           else
             sha=$(curl -fsS \
@@ -102,7 +114,7 @@ jobs:
           done
 
       - name: Verify Development account boundary
-        if: github.event_name == 'workflow_call'
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -110,7 +122,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
 
       - name: Deploy isolated Marketing Pages staging Workers
-        if: github.event_name == 'workflow_call'
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -140,7 +152,7 @@ jobs:
           deploy_stage ekodi-marketing-yogurt-staging ./dist/marketing-ai/yogurtpurple
 
       - name: Verify isolated Marketing Pages staging
-        if: github.event_name == 'workflow_call'
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
