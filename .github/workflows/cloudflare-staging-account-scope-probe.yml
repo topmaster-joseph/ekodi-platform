@@ -1,0 +1,55 @@
+name: Cloudflare Staging Account Scope Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-staging-account-scope-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: development
+    env:
+      DEV_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      DEV_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      PROD_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROD_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Read-only inventory of staging-capable resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEV_TOKEN"
+          test -n "$PROD_TOKEN"
+          test "$DEV_ACCOUNT_ID" != "$PROD_ACCOUNT_ID"
+          api='https://api.cloudflare.com/client/v4'
+
+          probe() {
+            label="$1"; account="$2"; token="$3"; path="$4"; extractor="$5"
+            out="/tmp/${label}.json"
+            code=$(curl -sS -o "$out" -w '%{http_code}' --connect-timeout 8 --max-time 30 \
+              -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+              "$api/accounts/$account/$path" || true)
+            success=$(jq -r '.success // false' "$out" 2>/dev/null || echo false)
+            echo "$label HTTP=$code success=$success"
+            if [[ "$code" == 200 && "$success" == true ]]; then
+              jq -r "$extractor" "$out" | sort -u | sed "s/^/$label ITEM=/"
+            else
+              jq -c '{errors:(.errors // []),messages:(.messages // [])}' "$out" 2>/dev/null || true
+            fi
+          }
+
+          probe DEV_PAGES "$DEV_ACCOUNT_ID" "$DEV_TOKEN" 'pages/projects' '.result[]?.name // empty'
+          probe PROD_PAGES "$PROD_ACCOUNT_ID" "$PROD_TOKEN" 'pages/projects' '.result[]?.name // empty'
+          probe DEV_D1 "$DEV_ACCOUNT_ID" "$DEV_TOKEN" 'd1/database' '.result[]?.name // empty'
+          probe PROD_D1 "$PROD_ACCOUNT_ID" "$PROD_TOKEN" 'd1/database' '.result[]?.name // empty'
+          probe DEV_KV "$DEV_ACCOUNT_ID" "$DEV_TOKEN" 'storage/kv/namespaces' '.result[]?.title // empty'
+          probe PROD_KV "$PROD_ACCOUNT_ID" "$PROD_TOKEN" 'storage/kv/namespaces' '.result[]?.title // empty'
+          probe DEV_R2 "$DEV_ACCOUNT_ID" "$DEV_TOKEN" 'r2/buckets' '.result.buckets[]?.name // .result[]?.name // empty'
+          probe PROD_R2 "$PROD_ACCOUNT_ID" "$PROD_TOKEN" 'r2/buckets' '.result.buckets[]?.name // .result[]?.name // empty'
