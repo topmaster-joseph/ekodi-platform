@@ -46,6 +46,17 @@ function renderExternalBrowserGate(message='이 앱 안의 브라우저에서는
   notice(`${message} 외부 브라우저에서 다시 열면 인증 후 관리자 화면으로 자동 이동합니다.`,'error');
   show('googleRetry',false);
 }
+function preparationFailureMessage(error){
+  if(error?.data?.code==='AUTH_STORE_DAILY_LIMIT'){
+    let reset='';
+    try{
+      if(error.data.retryAt)reset=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(error.data.retryAt));
+    }catch{}
+    return reset?'관리자 인증 저장소의 일일 사용량 한도에 도달했습니다. '+reset+' 이후 다시 시도해 주세요.':'관리자 인증 저장소의 일일 사용량 한도에 도달했습니다. 저장소 한도가 초기화된 뒤 다시 시도해 주세요.';
+  }
+  if(error?.status===503)return error?.data?.error||'관리자 Google 인증 서버가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.';
+  return '관리자 Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+}
 function showNavigationFallback(targetHref){
   const host=$('googleButtonHost');
   host.replaceChildren();
@@ -117,7 +128,7 @@ async function prepare(){
         });
       }catch(error){console.warn('admin direct Google prompt',error);revealDirectFallback()}
     }else notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택 후 EKODI 관리자 허용목록을 다시 확인합니다.');
-  }catch(e){console.error('admin central auth',e);if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice('관리자 Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true)}
+  }catch(e){console.error('admin central auth',e);if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice(preparationFailureMessage(e),'error');show('googleRetry',true)}
 }
 $('googleRetry').addEventListener('click',prepare);
 show('signedOut',true);show('signedIn',false);await prepare();

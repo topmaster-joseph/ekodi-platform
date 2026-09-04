@@ -9,6 +9,7 @@ const SESSION_HOURS = 8;
 const PRIVILEGED_MINUTES = 15;
 const JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 let jwksCache = { keys: [], expiresAt: 0 };
+const schemaInitCache = new WeakMap();
 
 function bytesToHex(bytes) {
   return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -72,6 +73,24 @@ function configuredGoogleClientId(env) {
 
 function workspaceDomain(env) {
   return String(env.ADMIN_WORKSPACE_DOMAIN || '').trim().toLowerCase();
+}
+
+function isD1DailyReadLimit(error) {
+  const code = String(error?.code || error?.cause?.code || '');
+  const message = String(error?.message || error?.cause?.message || error || '');
+  return code === '7500' || /daily row read limit/i.test(message) || /\bcode[:=\s]*7500\b/i.test(message);
+}
+
+function nextD1DailyResetIso(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0)).toISOString();
+}
+
+function d1DailyLimitResponse(request, env) {
+  return json({
+    error: '관리자 인증 저장소의 일일 사용량 한도에 도달했습니다. 저장소 한도가 초기화된 뒤 다시 시도해 주세요.',
+    code: 'AUTH_STORE_DAILY_LIMIT',
+    retryAt: nextD1DailyResetIso(),
+  }, 503, request, env);
 }
 
 async function ensureSchema(db, env) {
@@ -147,6 +166,19 @@ async function ensureSchema(db, env) {
       VALUES (?, ?, 'super_admin', 'active', ?, ?)`)
       .bind(email, requiredHd, now, now).run();
   }
+}
+
+async function ensureSchemaOnce(db, env) {
+  if (!db || (typeof db !== 'object' && typeof db !== 'function')) return ensureSchema(db, env);
+  let pending = schemaInitCache.get(db);
+  if (!pending) {
+    pending = ensureSchema(db, env).catch(error => {
+      schemaInitCache.delete(db);
+      throw error;
+    });
+    schemaInitCache.set(db, pending);
+  }
+  return pending;
 }
 
 async function writeAudit(db, adminId, action, resource, detail = '') {
@@ -500,16 +532,19 @@ export async function handleAdminGoogleAuth(request, env) {
   const origin = request.headers.get('origin');
   if (!isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
-  if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
-  await ensureSchema(env.DB, env);
   const url = new URL(request.url);
   const path = url.pathname;
 
+  // This route is environment-backed. It must not consume D1 reads just to render the Google sign-in entry.
   if (request.method === 'GET' && path === '/api/google/config') {
     const clientId = configuredGoogleClientId(env);
     return json({ enabled: Boolean(clientId), clientId, mode: clientId ? 'google_allowlist' : 'password_fallback' }, 200, request, env);
   }
-  if (request.method === 'POST' && path === '/api/google/challenge') {
+  if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
+
+  try {
+    await ensureSchemaOnce(env.DB, env);
+    if (request.method === 'POST' && path === '/api/google/challenge') {
     if (!configuredGoogleClientId(env)) return json({ error: 'Google 관리자 로그인이 아직 연결되지 않았습니다.' }, 503, request, env);
     const nonce = bytesToHex(crypto.getRandomValues(new Uint8Array(24)));
     const nonceHash = await sha256(nonce);
@@ -531,5 +566,9 @@ export async function handleAdminGoogleAuth(request, env) {
   const match = path.match(/^\/api\/admin-access\/google-accounts\/(\d+)$/);
   if (request.method === 'PUT' && match) return updateAccount(request, env, Number(match[1]));
   if (request.method === 'DELETE' && match) return removeAccount(request, env, Number(match[1]));
-  return json({ error: 'Google 관리자 인증 경로를 찾을 수 없습니다.' }, 404, request, env);
+    return json({ error: 'Google 관리자 인증 경로를 찾을 수 없습니다.' }, 404, request, env);
+  } catch (error) {
+    if (isD1DailyReadLimit(error)) return d1DailyLimitResponse(request, env);
+    throw error;
+  }
 }
