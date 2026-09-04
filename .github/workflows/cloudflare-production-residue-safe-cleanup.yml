@@ -1,5 +1,6 @@
 name: Cloudflare Production Residue Safe Cleanup
 
+# Staging-to-development safe cleanup trigger: 2026-09-04
 on:
   push:
     branches: [main]
