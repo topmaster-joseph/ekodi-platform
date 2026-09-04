@@ -59,7 +59,7 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/mall\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -115,7 +115,7 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
@@ -139,6 +139,13 @@ test('client auth reuses the central EKODI session instead of forcing Google log
   assert.match(clientAuth,/\/session\/handoff/);
   assert.match(clientAuth,/sb\.auth\.verifyOtp/);
   assert.match(clientAuth,/handoffExistingSession/);
+});
+
+test('direct login mode opens the Google prompt without a second intermediate click',()=>{
+  assert.match(clientAuth,/DIRECT_LOGIN=params\.get\('direct'\)==='1'/);
+  assert.match(clientAuth,/window\.google\.accounts\.id\.prompt/);
+  assert.match(clientAuth,/isNotDisplayed/);
+  assert.match(clientAuth,/isSkippedMoment/);
 });
 
 test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
