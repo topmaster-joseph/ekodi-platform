@@ -55,7 +55,7 @@ jobs:
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
           grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/index.html
-          grep -Fq "admin-auth.js?v=20260904-centered-popup-1" auth-site/auth-router.js
+          grep -Fq "admin-auth.js?v=20260904-direct-bridge-1" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "marketing-auth-hotfix.js?v=20260824-return-origin-1" auth-site/auth-router.js
