@@ -23,7 +23,7 @@ test('3단계 서비스 선택 뒤 실제 가상 시나리오가 여러 장면�
 
 test('사용자모드 서비스 선택은 몰입형 체험공간과 진행 엔진으로 이어진다',()=>{
   const app=read('experience/app.js');
-  assert.match(app,/selectService\(service\.id,true\)/);
+  assert.ok((app.match(/selectService\(service\.id,true\)/g)||[]).length>=2,'all user service selectors should enter the guided room');
   assert.match(app,/defaultRoomForService/);
   assert.match(app,/advanceRoomScenario/);
   assert.match(app,/가상 AI가 다음 장면을 구성하고 있습니다/);
