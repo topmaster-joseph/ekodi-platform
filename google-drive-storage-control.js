@@ -2,6 +2,7 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
 const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
+export const MARKETING_YOUTUBE_REDIRECT_URI = 'https://marketing-connect-api.ekodi.kr/oauth/youtube/callback';
 const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
 const ADMIN_RETURN_PATH = '/#storage';
 const ADMIN_RETURN = `${ADMIN_ORIGIN}${ADMIN_RETURN_PATH}`;
@@ -182,6 +183,16 @@ async function tokenRequest(env, body) {
     throw error;
   }
   return data;
+}
+export async function exchangeGoogleAuthorizationCode(env,{code,redirectUri}={}) {
+  const redirect=String(redirectUri||'').trim();
+  if(redirect!==MARKETING_YOUTUBE_REDIRECT_URI) throw Object.assign(new Error('GOOGLE_OAUTH_REDIRECT_FORBIDDEN'),{code:'GOOGLE_OAUTH_REDIRECT_FORBIDDEN'});
+  if(!googleClientId(env)||!env.GOOGLE_DRIVE_CLIENT_SECRET) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
+  return tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code:String(code||''),grant_type:'authorization_code',redirect_uri:redirect});
+}
+export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
+  if(!googleClientId(env)||!env.GOOGLE_DRIVE_CLIENT_SECRET) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
+  return tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),refresh_token:String(refreshToken||''),grant_type:'refresh_token'});
 }
 async function accessToken(env, row) {
   const credential = await decryptCredential(env, row);
