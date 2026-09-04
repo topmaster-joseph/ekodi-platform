@@ -21,6 +21,6 @@ test('Mission Control routes enabled Jubilee mode into capability authorization'
   assert.equal(response.status, 403);
   const payload = await response.json();
   assert.equal(payload.code, 'JUBILEE_FORBIDDEN');
-  assert.equal(response.headers.get('x-ekodi-jubilee-mode'), null);
+  assert.equal(response.headers.get('x-ekodi-jubilee-mode'), 'shadow');
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
 });
