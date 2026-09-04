@@ -80,6 +80,12 @@ export default {
     const incoming = new URL(request.url);
     const host = requestHost(request, env, incoming);
 
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      return Response.redirect(target.toString(), 307);
+    }
+
     if (host === 'biz.ekodi.kr' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
       return injectEkodiShell(businessHub(), 'biz');
     }

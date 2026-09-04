@@ -10,6 +10,7 @@ const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url),
 const accessScript = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../migrations/0038_google_drive_storage.sql', import.meta.url), 'utf8');
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
+const cheonggyeAdmin = await readFile(new URL('../cheonggye-members-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
 
 test('Google Drive credentials are encrypted and never committed', () => {
@@ -101,4 +102,36 @@ test('canonical EKODI archive folders are source-controlled', () => {
 
 test('new storage worker may bootstrap exactly through explicit manifest opt-in', () => {
   assert.match(manifest, /"allowFirstDeploy": true/);
+});
+
+
+test('Cheonggye merchant members use Google Sheets as the single source of truth', () => {
+  assert.match(control, /CHEONGGYE_SPREADSHEET_ID = '1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo'/);
+  assert.match(control, /CHEONGGYE_SHEET_NAME = '웹관리'/);
+  assert.match(control, /auth\/spreadsheets/);
+  assert.match(control, /sheets\.googleapis\.com\/v4\/spreadsheets/);
+  assert.match(control, /cheonggye-members/);
+  assert.match(control, /cheonggye_member_audit/);
+  assert.match(cheonggyeAdmin, /\/api\/control\/storage\/google\/cheonggye-members/);
+  assert.doesNotMatch(cheonggyeAdmin, /localStorage\.setItem/);
+  assert.doesNotMatch(cheonggyeAdmin, /INITIAL_ROWS/);
+});
+
+test('Cheonggye realtime member path survives D1 read quota by using encrypted R2 credential cache', () => {
+  assert.match(control, /CHEONGGYE_CONNECTION_CACHE_KEY = 'control\/cheonggye\/storage-connection\.json'/);
+  assert.match(control, /readCheonggyeConnectionCache/);
+  assert.match(control, /env\.R2_BUCKET\.get\(CHEONGGYE_CONNECTION_CACHE_KEY\)/);
+  assert.match(control, /writeCheonggyeConnectionCache/);
+  assert.match(control, /audit\/cheonggye-members/);
+  assert.match(control, /const isCheonggyeRoute = url\.pathname\.startsWith/);
+  assert.match(control, /if \(!isCheonggyeRoute\)/);
+});
+
+test('Cheonggye 웹관리 A:F contract preserves 비고 as column F', () => {
+  assert.match(control, /name:String\(row\[4\]/);
+  assert.match(control, /note:String\(row\[5\]/);
+  assert.match(control, /member\.name,member\.note/);
+  assert.match(cheonggyeAdmin, /name="note"/);
+  assert.match(cheonggyeAdmin, /data-sort="note">비고/);
+  assert.doesNotMatch(cheonggyeAdmin, /연락처/);
 });

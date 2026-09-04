@@ -1,10 +1,14 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
+import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
-const MALL_PREFIX = '/mall';
+const MALL_PREFIX = '/ekodibiz/mall';
+const LEGACY_MALL_PREFIX = '/mall';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
@@ -106,6 +110,8 @@ const ADMIN_ASSETS = new Set([
   '/mission-control-admin.js',
   '/work-admin.css',
   '/work-admin.js',
+  '/communication-admin.css',
+  '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
@@ -226,6 +232,20 @@ function isMallPath(pathname) {
   return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
 }
 
+function isLegacyMallPath(pathname) {
+  return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
+}
+
+function redirectLegacyMallPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
+  const response = Response.redirect(target.toString(), 308);
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-legacy-canonical-redirect');
+  return response;
+}
+
 function mallUpstreamPath(pathname) {
   const suffix = pathname.slice(MALL_PREFIX.length);
   return suffix || '/';
@@ -257,8 +277,8 @@ async function proxyMallService(request) {
   }
   headers.set('x-ekodi-edge', 'mall-path-gateway');
   headers.set('x-ekodi-service', 'mall');
-  const adminSurface = incoming.pathname === '/mall/admin' || incoming.pathname.startsWith('/mall/admin/');
-  const apiSurface = incoming.pathname === '/mall/api' || incoming.pathname.startsWith('/mall/api/');
+  const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
+  const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
   const cacheControl = adminSurface || apiSurface ? 'no-store' : 'public, max-age=0, must-revalidate';
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
   const response = withHostSecurity(new Response(upstreamResponse.body, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), MALL_CSP, cacheControl, route);
@@ -377,15 +397,39 @@ export default {
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
+    if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      return response;
+    }
+
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
       }
+      if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
+      if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
+        const page=ekodiBizInvestAdminPage(request);
+        const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
+        return injectEkodiShell(secured, 'biz', 'admin');
+      }
+      if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
+        const page=ekodiBizInvestBusinessPage(request);
+        const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
+        return injectEkodiShell(secured, 'biz', 'public');
+      }
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);
-        canonical.pathname = '/mall';
+        canonical.pathname = MALL_PREFIX;
         const response = Response.redirect(canonical.toString(), 308);
         applyBaseSecurityHeaders(response.headers);
         return response;

@@ -21,3 +21,5 @@
 /privacy /pages/privacy/ 301
 /terms /pages/terms/ 301
 /contact /pages/contact/ 301
+/admin https://admin.ekodi.kr/?source=mall.ekodi.kr 302
+/admin/ https://admin.ekodi.kr/?source=mall.ekodi.kr 302

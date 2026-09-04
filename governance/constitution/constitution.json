@@ -1,6 +1,6 @@
 {
-  "version": "1.3.0",
-  "effectiveDate": "2026-09-03",
+  "version": "1.5.1",
+  "effectiveDate": "2026-09-04",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -16,7 +16,8 @@
     "isolated-parallel-development",
     "verification-first-evolution",
     "security-native-intelligence",
-    "evidence-linked-recommendations"
+    "evidence-linked-recommendations",
+    "secure-projection-minimum-disclosure"
   ],
   "systemBoundaries": {
     "production": [
@@ -37,16 +38,10 @@
     "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
   },
   "publicNamespaces": [
-    "personal",
-    "org",
-    "group",
-    "project"
+    "workspace-root-slug"
   ],
   "canonicalWorkspacePatterns": [
-    "https://ekodi.kr/personal/{slug}",
-    "https://ekodi.kr/org/{slug}",
-    "https://ekodi.kr/group/{slug}",
-    "https://ekodi.kr/project/{slug}"
+    "https://ekodi.kr/{slug}"
   ],
   "organizationSubtypes": [
     "business",
@@ -67,7 +62,9 @@
     "identityKey": "workspace_id",
     "slugIsLocatorOnly": true,
     "workspaceSubdomainsForbidden": true,
-    "personalHomeSubdomainException": "my.ekodi.kr"
+    "personalHomeSubdomainException": "my.ekodi.kr",
+    "kindEncodedInUrl": false,
+    "reservedRootSlugsManagedBy": "platform_route_registry"
   },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
@@ -78,10 +75,8 @@
     "legacyAliasesMustBeRegistered": true
   },
   "legacyPathAliases": {
-    "/people/{slug}": "/personal/{slug}",
-    "/biz/{slug}": "/org/{slug}",
-    "https://space.ekodi.kr/{path}": "https://ekodi.kr/{path}",
-    "https://user.ekodi.kr/{path}": "https://ekodi.kr/{path}"
+    "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
+    "https://user.ekodi.kr/{slug}": "https://ekodi.kr/{slug}"
   },
   "legacyDomainAllowlist": [
     "shell.ekodi.kr",
@@ -167,7 +162,20 @@
     ],
     "heavyWorkUsesQueue": true,
     "publicCachePreferred": true,
-    "privateAndAdminCacheRestricted": true
+    "privateAndAdminCacheRestricted": true,
+    "secureProjection": {
+      "enabledByDefault": true,
+      "model": "purpose-bound-minimum-disclosure",
+      "browserHiddenFieldsForbidden": true,
+      "secretsNeverProjected": true,
+      "sourceTopologyNotProjectedToBrowserOrExternalOperationalAi": true,
+      "adminDefaultProfile": "admin_safe",
+      "userSelfProfile": "user_self",
+      "workspaceMemberProfile": "workspace_member",
+      "experienceProfile": "experience_public",
+      "externalAiDefaultProfile": "ai_minimum",
+      "viewExportDownloadApiRawDataSeparated": true
+    }
   },
   "parallelDevelopmentPolicy": {
     "appliesTo": [
@@ -217,8 +225,8 @@
   "legacyDomainTargets": {
     "shell.ekodi.kr": "https://my.ekodi.kr",
     "management.ekodi.kr": "https://my.ekodi.kr/management",
-    "mall.ekodi.kr": "https://ekodi.kr/mall",
-    "mall.biz.ekodi.kr": "https://ekodi.kr/mall",
+    "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
+    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "cafe.ekodi.kr": "https://ekodi.kr/cafe",
     "books.ekodi.kr": "https://ekodi.kr/books",
     "publishing.ekodi.kr": "https://ekodi.kr/publish",
@@ -241,21 +249,23 @@
     "trade.ekodi.kr": "https://ekodi.kr/trade",
     "mail.ekodi.kr": "https://my.ekodi.kr/mail",
     "live.ekodi.kr": "https://ekodi.kr/live",
-    "biz.ekodi.kr": "https://ekodi.kr/org/ekodi-biz",
-    "church.ekodi.kr": "https://ekodi.kr/org/ekodi-church",
-    "lab.ekodi.kr": "https://ekodi.kr/org/ekodi-lab",
+    "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
+    "church.ekodi.kr": "https://ekodi.kr/ekodi-church",
+    "lab.ekodi.kr": "https://ekodi.kr/ekodi-lab",
     "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
     "marketing.ekodi.kr": "https://ekodi.kr/marketing",
-    "cgma.ekodi.kr": "https://ekodi.kr/org/cgma",
-    "cgma.ai.ekodi.kr": "https://ekodi.kr/org/cgma",
-    "jadam.ai.ekodi.kr": "https://ekodi.kr/org/jadam",
-    "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/org/pizzamaru",
-    "yogurt.ai.ekodi.kr": "https://ekodi.kr/org/yogurt",
+    "cgma.ekodi.kr": "https://ekodi.kr/cgma",
+    "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma",
+    "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam",
+    "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru",
+    "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt",
     "space.ekodi.kr": "https://ekodi.kr",
     "user.ekodi.kr": "https://ekodi.kr"
   },
   "registeredCommonServiceBoundaries": [
-    "journal.ekodi.kr"
+    "journal.ekodi.kr",
+    "try.ekodi.kr",
+    "invest.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
@@ -306,7 +316,13 @@
       "automatic_isolation",
       "rollback",
       "backup",
-      "disaster_recovery"
+      "disaster_recovery",
+      "secure_projection"
     ]
-  }
+  },
+  "canonicalWorkspaceServicePatterns": [
+    "https://ekodi.kr/{slug}/{service}",
+    "https://ekodi.kr/{slug}/admin",
+    "https://ekodi.kr/{slug}/{service}/admin"
+  ]
 }

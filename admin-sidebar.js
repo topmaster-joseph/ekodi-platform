@@ -225,22 +225,22 @@ function renderContextTabs(nav, shell, group, section, locale) {
   if (!tabs) return;
   if (title) title.textContent = getAdminMenuGroupLabel(group, locale);
   const ids = availableIds(nav, group);
-  const signature = `${locale}|${group}|${section}|${ids.join(',')}`;
-  if (tabs.dataset.renderSignature === signature) return;
-  tabs.dataset.renderSignature = signature;
-  const nodes = ids.map(id => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'admin-context-tab';
-    button.dataset.adminContextSection = id;
-    button.setAttribute('role', 'tab');
-    const selected = id === section;
+  const signature = `${locale}|${group}|${ids.join(',')}`;
+  if (tabs.dataset.renderSignature !== signature) {
+    tabs.dataset.renderSignature = signature;
+    const nodes = ids.map(id => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'admin-context-tab';
+      button.dataset.adminContextSection = id; button.setAttribute('role', 'tab');
+      button.textContent = getAdminMenuLabel(id, locale); return button;
+    });
+    tabs.replaceChildren(...nodes);
+  }
+  for (const button of tabs.querySelectorAll('[data-admin-context-section]')) {
+    const selected = button.dataset.adminContextSection === section;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-selected', selected ? 'true' : 'false');
-    button.textContent = getAdminMenuLabel(id, locale);
-    return button;
-  });
-  tabs.replaceChildren(...nodes);
+  }
 }
 
 function syncWorkbenchState(nav, locale, preferredSection = '') {

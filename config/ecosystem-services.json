@@ -128,8 +128,8 @@
       "nameEn": "EKODI Mall",
       "descriptionKo": "생활에 필요한 상품을 쉽고 빠르게 만나는 에코디 쇼핑몰",
       "descriptionEn": "EKODI shopping mall for useful everyday products",
-      "url": "https://ekodi.kr/mall",
-      "label": "ekodi.kr/mall",
+      "url": "https://ekodi.kr/ekodibiz/mall",
+      "label": "ekodi.kr/ekodibiz/mall",
       "icon": "mall",
       "category": "business-growth",
       "order": 60,
@@ -299,8 +299,8 @@
       "category": "knowledge-creation",
       "order": 107,
       "homepage": true,
-      "productionVerified": false,
-      "status": "preparing"
+      "productionVerified": true,
+      "status": "live"
     },
     {
       "id": "author",

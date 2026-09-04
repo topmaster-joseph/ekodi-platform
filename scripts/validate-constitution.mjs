@@ -11,9 +11,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.3.0') fail('constitution version must remain 1.3.0 with approved common-service and verification-first evolution amendments');
+if (constitution.version !== '1.5.1') fail('constitution version must remain 1.5.1 with approved orgless workspace routing and Invest common-service amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -36,9 +36,18 @@ for (const signal of ['traffic','latency','error_rate','capacity','ai_cost','sec
 for (const gate of ['production_change','shared_core_creation','permission_expansion','paid_cost_commitment','data_migration','destructive_change','security_boundary_change','production_dns_change']) {
   if (!evolution.approvalRequired?.includes(gate)) fail(`Evolution approval gate missing: ${gate}`);
 }
-for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','rollback','backup','disaster_recovery']) {
+for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','secure_projection','rollback','backup','disaster_recovery']) {
   if (!evolution.securityCore?.includes(control)) fail(`Evolution security core control missing: ${control}`);
 }
+const secureProjection = constitution.securityPolicy?.secureProjection || {};
+if (secureProjection.enabledByDefault !== true) fail('Secure Projection must be enabled by default');
+if (secureProjection.model !== 'purpose-bound-minimum-disclosure') fail('Secure Projection model mismatch');
+if (secureProjection.browserHiddenFieldsForbidden !== true) fail('restricted browser fields must be removed server-side');
+if (secureProjection.secretsNeverProjected !== true) fail('secrets must never be projection outputs');
+if (secureProjection.sourceTopologyNotProjectedToBrowserOrExternalOperationalAi !== true) fail('source/topology must stay out of browser and external operational AI projections');
+if (secureProjection.adminDefaultProfile !== 'admin_safe') fail('administrator default projection must be admin_safe');
+if (secureProjection.externalAiDefaultProfile !== 'ai_minimum') fail('external operational AI projection must default to ai_minimum');
+if (secureProjection.viewExportDownloadApiRawDataSeparated !== true) fail('view/export/download/API/raw-data capabilities must remain distinct');
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
@@ -47,8 +56,9 @@ if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !sys
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
+if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
 
-const expectedNamespaces = ['personal','org','group','project'];
+const expectedNamespaces = ['workspace-root-slug'];
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expectedNamespaces)) {
   fail(`public workspace namespaces must be ${expectedNamespaces.join(', ')}`);
 }
@@ -57,21 +67,18 @@ if (constitution.workspaceRoutingPolicy?.identityKey !== 'workspace_id') fail('w
 if (constitution.workspaceRoutingPolicy?.workspaceSubdomainsForbidden !== true) fail('workspace subdomains must be forbidden');
 if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainException !== 'my.ekodi.kr') fail('My EKODI must remain the personal-home subdomain exception');
 
-const canonicalPatterns = new Set(constitution.canonicalWorkspacePatterns || []);
-for (const pattern of [
-  'https://ekodi.kr/personal/{slug}',
-  'https://ekodi.kr/org/{slug}',
-  'https://ekodi.kr/group/{slug}',
-  'https://ekodi.kr/project/{slug}'
-]) {
-  if (!canonicalPatterns.has(pattern)) fail(`canonical workspace pattern missing: ${pattern}`);
+const canonicalPatterns = constitution.canonicalWorkspacePatterns || [];
+if (JSON.stringify(canonicalPatterns) !== JSON.stringify(['https://ekodi.kr/{slug}'])) fail('canonical workspace pattern must be https://ekodi.kr/{slug}');
+if (constitution.workspaceRoutingPolicy?.kindEncodedInUrl !== false) fail('workspace kind/type must not be encoded in public URLs');
+if (constitution.workspaceRoutingPolicy?.reservedRootSlugsManagedBy !== 'platform_route_registry') fail('workspace root slug collisions must be controlled by the platform route registry');
+const servicePatterns = new Set(constitution.canonicalWorkspaceServicePatterns || []);
+for (const pattern of ['https://ekodi.kr/{slug}/{service}','https://ekodi.kr/{slug}/admin','https://ekodi.kr/{slug}/{service}/admin']) {
+  if (!servicePatterns.has(pattern)) fail(`canonical workspace service pattern missing: ${pattern}`);
 }
 
 const legacyPathAliases = constitution.legacyPathAliases || {};
-if (legacyPathAliases['/people/{slug}'] !== '/personal/{slug}') fail('legacy /people path must redirect to /personal');
-if (legacyPathAliases['/biz/{slug}'] !== '/org/{slug}') fail('legacy /biz workspace path must redirect to /org');
-if (legacyPathAliases['https://space.ekodi.kr/{path}'] !== 'https://ekodi.kr/{path}') fail('space.ekodi.kr must map to ekodi.kr path');
-if (legacyPathAliases['https://user.ekodi.kr/{path}'] !== 'https://ekodi.kr/{path}') fail('user.ekodi.kr must map to ekodi.kr path');
+if (legacyPathAliases['https://space.ekodi.kr/{slug}'] !== 'https://ekodi.kr/{slug}') fail('space.ekodi.kr slug alias must map directly to ekodi.kr/{slug}');
+if (legacyPathAliases['https://user.ekodi.kr/{slug}'] !== 'https://ekodi.kr/{slug}') fail('user.ekodi.kr slug alias must map directly to ekodi.kr/{slug}');
 
 for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
   for (const domain of service.domains || []) {
@@ -90,17 +97,18 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 2) fail('service workspace policy schemaVersion must be 2');
+if (workspace.schemaVersion !== 3) fail('service workspace policy schemaVersion must be 3');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
 if (workspace.publicWorkspaceRouting?.canonicalHost !== 'ekodi.kr') fail('service workspace public canonical host must be ekodi.kr');
 if (workspace.publicWorkspaceRouting?.workspaceIdentityKey !== 'workspace_id') fail('service workspace identity key must be workspace_id');
 if (workspace.publicWorkspaceRouting?.workspaceSubdomains !== 'forbidden') fail('service workspace subdomains must be forbidden');
-const routeNamespaces = workspace.publicWorkspaceRouting?.namespaces || {};
-for (const [kind, expected] of Object.entries({personal:'/personal/{slug}', organization:'/org/{slug}', group:'/group/{slug}', project:'/project/{slug}'})) {
-  if (routeNamespaces[kind] !== expected) fail(`service workspace route mismatch for ${kind}: expected ${expected}`);
-}
+if (workspace.publicWorkspaceRouting?.canonicalPattern !== '/{slug}') fail('service workspace canonical route must be /{slug}');
+if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fail('service workspace child service route must be /{slug}/{service}');
+if (workspace.publicWorkspaceRouting?.adminPattern !== '/{slug}/admin') fail('service workspace admin route must be /{slug}/admin');
+if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== '/{slug}/{service}/admin') fail('service workspace child admin route must be /{slug}/{service}/admin');
+if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
 if (workspace.subdomainExceptions?.personalHome !== 'my.ekodi.kr') fail('service workspace policy must preserve my.ekodi.kr exception');
 if (workspace.subdomainExceptions?.administration !== 'admin.ekodi.kr') fail('service workspace policy must preserve admin.ekodi.kr exception');
 if (workspace.subdomainExceptions?.authentication !== 'auth.ekodi.kr') fail('service workspace policy must preserve auth.ekodi.kr exception');
@@ -130,6 +138,6 @@ console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
-console.log('- canonical user spaces: /personal, /org, /group, /project on ekodi.kr');
+console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
 console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');
