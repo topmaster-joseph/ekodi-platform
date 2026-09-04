@@ -47,6 +47,8 @@ A person, organization, group or project operating context identified by immutab
 
 The two registries intentionally do not collapse into one file.
 
+Provider-neutral implementations use `governance/architecture/capability-provider-contract.v1.json` as the common registration and runtime-envelope contract.
+
 ## 4. Connection rules
 
 1. Cross-boundary access uses public or explicitly declared APIs, events, webhooks, adapters or equivalent reviewed contracts.
