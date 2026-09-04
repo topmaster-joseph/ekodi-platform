@@ -22,7 +22,6 @@
   let barIndex=0;
   let started=false;
   let wanted=true;
-  let gestureArmed=false;
   const LABELS=Object.freeze({
     'ko-KR':{play:'♫ MR 재생',stop:'♫ MR 끄기',playAria:'배경 CCM MR 재생',stopAria:'배경 CCM MR 끄기'},
     en:{play:'♫ Play MR',stop:'♫ Stop MR',playAria:'Play background CCM instrumental',stopAria:'Stop background CCM instrumental'},
@@ -169,21 +168,6 @@
     button.setAttribute('aria-label',active?labels.stopAria:labels.playAria);
     button.title=active?labels.stopAria:labels.playAria;
   }
-  function armGesture(){
-    if(gestureArmed||!wanted)return;
-    gestureArmed=true;
-    const resume=async event=>{
-      if(event?.target?.closest?.(`#${buttonId}`))return;
-      const ok=await startAudio();
-      if(ok){
-        document.removeEventListener('pointerdown',resume,true);
-        document.removeEventListener('keydown',resume,true);
-        gestureArmed=false;
-      }
-    };
-    document.addEventListener('pointerdown',resume,true);
-    document.addEventListener('keydown',resume,true);
-  }
   function header(){
     return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback])')||document.querySelector('[data-ekodi-user-header-root]')||document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]');
   }
@@ -219,19 +203,16 @@
       }
       wanted=true;
       remember('on');
-      const ok=await startAudio();
-      if(!ok)armGesture();
+      await startAudio();
       updateButton();
     });
     document.body.append(button);
     placeButton(button);
     updateButton();
   }
-  async function boot(){
+  function boot(){
     installButton();
-    if(!wanted)return;
-    const ok=await startAudio();
-    if(!ok)armGesture();
+    updateButton();
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
@@ -246,7 +227,7 @@
     if(document.hidden){
       context.suspend().catch(()=>{});
     }else{
-      context.resume().then(()=>{if(started)scheduler();}).catch(()=>armGesture());
+      context.resume().then(()=>{if(started)scheduler();}).catch(()=>{stopAudio();});
     }
   });
   window.addEventListener('pagehide',stopAudio,{once:true});

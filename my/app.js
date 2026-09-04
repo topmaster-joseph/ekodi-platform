@@ -53,9 +53,15 @@ async function handoff(){
  history.replaceState({},document.title,`${location.pathname}${location.search}`);
  if(error)throw error;
 }
+function setAuthState(){
+ const state=session?.access_token?'member':'guest';
+ if(document.body)document.body.dataset.authState=state;
+ document.documentElement.dataset.ekodiAuthState=state;
+}
 function authUi(){
+ setAuthState();
  const label=session?'로그아웃':'Google로 시작';
- for(const b of [$('#authButton'),$('#accountAuthButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
+ for(const b of [$('#authButton'),$('#guestAuthButton'),$('#accountAuthButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
 }
 function uniqueWorkspaces(){
  const map=new Map();
@@ -282,7 +288,7 @@ async function saveProfile(event){
 function announceSession(){window.dispatchEvent(new CustomEvent('ekodi:my-session',{detail:{signedIn:Boolean(session?.access_token)}}))}
 async function authAction(){if(!enabled)return;if(!session){const target=new URL(authUrl);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href);return}await sb.auth.signOut();session=null;await loadAll();authUi();announceSession()}
 
-$('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#profileForm').addEventListener('submit',saveProfile);
+for(const button of [$('#authButton'),$('#guestAuthButton'),$('#accountAuthButton')])button?.addEventListener('click',authAction);$('#profileForm')?.addEventListener('submit',saveProfile);
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
 
 const discoveryButton=$('#discoverServicesButton');

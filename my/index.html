@@ -12,13 +12,24 @@
   <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
 </head>
-<body data-ekodi-ui="USER">
+<body data-ekodi-ui="USER" data-auth-state="pending">
   <header class="topbar">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
     <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">내 에코디</a><a href="/journey/">나의 여정</a><a href="#account">내 정보</a></nav>
-    <button id="authButton" class="ghost" type="button">Google로 시작</button>
+    <div class="topbar-actions" data-ekodi-header-actions>
+      <button id="authButton" class="ghost" type="button">Google로 시작</button>
+    </div>
   </header>
 
+  <section id="guestGate" class="guest-gate" aria-live="polite">
+    <div class="guest-gate-card">
+      <p class="eyebrow">MY EKODI</p>
+      <h1>&#45208;&#51032; EKODI&#47196; &#49884;&#51089;&#54616;&#44592;</h1>
+      <p>&#50616;&#50612;&#50752; &#51020;&#50501;&#51008; &#47196;&#44536;&#51064; &#51204;&#50640;&#46020; &#49440;&#53469;&#54624; &#49688; &#51080;&#49845;&#45768;&#45796;. &#44060;&#51064; &#44277;&#44036;&#44284; &#54876;&#46041; &#45936;&#51060;&#53552;&#45716; Google &#47196;&#44536;&#51064; &#54980;&#50640;&#47564; &#50676;&#47549;&#45768;&#45796;.</p>
+      <button id="guestAuthButton" class="primary guest-auth" type="button">Google&#47196; &#49884;&#51089;</button>
+      <small>&#44277;&#44060;&#45716; &#50504;&#45236;&#44620;&#51648;, &#44060;&#51064; &#51060;&#50857;&#51008; &#47196;&#44536;&#51064; &#54980;&#48512;&#53552;.</small>
+    </div>
+  </section>
   <main id="home">
     <section class="welcome-shell">
       <div class="welcome-copy">
