@@ -8,7 +8,7 @@
   const medium = String(params.get('utm_medium') || '').slice(0, 80);
   const content = String(params.get('utm_content') || '').slice(0, 160);
   const test = params.get('ekodi_test') === '1' || campaign.startsWith('test_');
-  const base = { campaign, source, medium, content, landing_path: '/mall', test };
+  const base = { campaign, source, medium, content, landing_path: '/ekodibiz/mall', test };
 
   function send(event_type, extra = {}) {
     const body = JSON.stringify({ ...base, event_type, ...extra });

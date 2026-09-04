@@ -28,7 +28,7 @@ jobs:
           VERIFY_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          url="https://ekodi.kr/mall?footer_guard=${VERIFY_SHA}"
+          url="https://ekodi.kr/ekodibiz/mall?footer_guard=${VERIFY_SHA}"
           for attempt in $(seq 1 12); do
             code=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/mall.html -w '%{http_code}' "$url" || true)
             if [ "$code" = "200" ]; then

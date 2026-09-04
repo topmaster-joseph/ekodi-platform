@@ -42,7 +42,7 @@
 
   function sortedRows() {
     const needle = query.toLocaleLowerCase('ko-KR');
-    const filtered = needle ? rows.filter(row => [row.no,row.joinedAt,row.category,row.store,row.name,row.contact]
+    const filtered = needle ? rows.filter(row => [row.no,row.joinedAt,row.category,row.store,row.name,row.note]
       .some(value => String(value || '').toLocaleLowerCase('ko-KR').includes(needle))) : rows.slice();
     const collator = new Intl.Collator('ko-KR', { numeric:true, sensitivity:'base' });
     return filtered.sort((a, b) => {
@@ -61,7 +61,7 @@
     body.innerHTML = view.length ? view.map(row => `
       <tr data-no="${esc(row.no)}">
         <td>${esc(row.no)}</td><td>${esc(row.joinedAt)}</td><td>${esc(row.category)}</td>
-        <td>${esc(row.store)}</td><td>${esc(row.name)}</td><td>${esc(row.contact)}</td>
+        <td>${esc(row.store)}</td><td>${esc(row.name)}</td><td>${esc(row.note)}</td>
         <td><button class="table-edit" type="button" data-edit="${esc(row.no)}">수정</button></td>
         <td><button class="table-delete" type="button" data-delete="${esc(row.no)}">삭제</button></td>
       </tr>`).join('') : '<tr><td colspan="8" class="cheonggye-empty">표시할 회원이 없습니다.</td></tr>';
@@ -153,20 +153,20 @@
       <form id="cheonggyeMembersForm" class="cheonggye-members-form">
         <label>가입일<input name="joinedAt" placeholder="26.09.03" required></label><label>업종<input name="category" placeholder="음식점" required></label>
         <label>상호<input name="store" placeholder="상호" required></label><label>성명<input name="name" placeholder="성명" required></label>
-        <label>연락처<input name="contact" inputmode="tel" placeholder="01012345678"></label>
+        <label>비고<input name="note" placeholder="가입비포함 등"></label>
         <div class="cheonggye-members-actions"><button class="primary" type="submit">등록</button><button class="secondary" id="cheonggyeCancelEdit" type="button" hidden>수정 취소</button></div>
       </form>`;
 
     section.insertAdjacentHTML('beforeend', `
       <div class="cheonggye-members-toolbar">
-        <label class="cheonggye-search">검색<input id="cheonggyeMemberSearch" type="search" placeholder="상호·성명·업종·연락처"></label>
+        <label class="cheonggye-search">검색<input id="cheonggyeMemberSearch" type="search" placeholder="상호·성명·업종·비고"></label>
         <div><button type="button" id="cheonggyeRefresh">새로고침</button><button type="button" id="cheonggyeExportCsv">CSV 복사</button>
         <a id="cheonggyeSheetLink" href="https://docs.google.com/spreadsheets/d/1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo/edit" target="_blank" rel="noopener noreferrer">원본 Sheet 열기</a></div>
       </div>
       <div class="cheonggye-members-table-wrap"><table class="cheonggye-members-table"><thead><tr>
         <th><button type="button" data-sort="no">연번</button></th><th><button type="button" data-sort="joinedAt">가입일</button></th>
         <th><button type="button" data-sort="category">업종</button></th><th><button type="button" data-sort="store">상호</button></th>
-        <th><button type="button" data-sort="name">성명</button></th><th><button type="button" data-sort="contact">연락처</button></th><th>수정</th><th>삭제</th>
+        <th><button type="button" data-sort="name">성명</button></th><th><button type="button" data-sort="note">비고</button></th><th>수정</th><th>삭제</th>
       </tr></thead><tbody id="cheonggyeMembersBody"><tr><td colspan="8" class="cheonggye-empty">Google Sheet 연결을 확인하는 중입니다.</td></tr></tbody></table></div>`);
     content.append(section);
 
@@ -188,7 +188,7 @@
     const form = event.currentTarget;
     const data = {
       joinedAt: normalizeDate(form.joinedAt.value), category: normalize(form.category.value),
-      store: normalize(form.store.value), name: normalize(form.name.value), contact: normalize(form.contact.value),
+      store: normalize(form.store.value), name: normalize(form.name.value), note: normalize(form.note.value),
     };
     if (!data.joinedAt || !data.category || !data.store || !data.name) return flash('가입일, 업종, 상호, 성명을 모두 입력해 주세요.', true);
     const submit = form.querySelector('button[type="submit"]');
@@ -219,7 +219,7 @@
     const form = document.querySelector('#cheonggyeMembersForm');
     if (!row || !form) return;
     editingNo = Number(row.no);
-    for (const key of ['joinedAt','category','store','name','contact']) form[key].value = row[key] || '';
+    for (const key of ['joinedAt','category','store','name','note']) form[key].value = row[key] || '';
     form.querySelector('button[type="submit"]').textContent = '수정 저장';
     document.querySelector('#cheonggyeCancelEdit').hidden = false;
     form.scrollIntoView({ behavior:'smooth', block:'nearest' });
@@ -247,8 +247,8 @@
   }
 
   async function copyCsv() {
-    const header = ['연번','가입일','업종','상호','성명','연락처'];
-    const lines = [header, ...sortedRows().map(row => [row.no,row.joinedAt,row.category,row.store,row.name,row.contact])]
+    const header = ['연번','가입일','업종','상호','성명','비고'];
+    const lines = [header, ...sortedRows().map(row => [row.no,row.joinedAt,row.category,row.store,row.name,row.note])]
       .map(cols => cols.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','));
     try { await navigator.clipboard.writeText(lines.join('\n')); flash('현재 실시간 명단을 CSV 형식으로 복사했습니다.'); }
     catch { flash('브라우저가 복사를 막았습니다.', true); }

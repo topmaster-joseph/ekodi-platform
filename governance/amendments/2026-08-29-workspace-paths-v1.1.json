@@ -1,16 +1,8 @@
 {
-  "id": "EKODI-CONSTITUTION-2026-08-29-WORKSPACE-PATHS-V1.1",
+  "id": "2026-08-29-workspace-paths-v1.1",
   "date": "2026-08-29",
-  "class": "C2",
-  "status": "approved",
-  "approvedBy": "topmaster-joseph",
-  "approvalSource": "explicit user instruction to remove space/user workspace subdomains, use direct ekodi.kr path namespaces consistently, preserve common/core/admin/My EKODI subdomain exceptions, and record the rule in the EKODI constitution",
-  "constitutionVersion": "1.1.0",
-  "summary": "Canonicalize person, organization, group and project spaces directly under ekodi.kr paths while reserving subdomains for justified system/common/core boundaries.",
-  "affectedAreas": ["domain", "workspace-routing", "identity", "legacy-migration", "governance"],
-  "canonicalWorkspacePaths": ["/personal/{slug}", "/org/{slug}", "/group/{slug}", "/project/{slug}"],
-  "subdomainExceptions": ["my.ekodi.kr", "admin.ekodi.kr", "auth.ekodi.kr", "api.ekodi.kr", "status.ekodi.kr", "registered common/core service boundaries"],
-  "migrationPolicy": "non-breaking; /people/{slug} redirects to /personal/{slug}, tenant-style /biz/{slug} redirects to /org/{slug}, and any deployed space.ekodi.kr or user.ekodi.kr alias redirects to the equivalent ekodi.kr path while preserving workspace_id as the canonical internal identity",
-  "verificationPolicy": "constitutional validation, platform-boundary validation, security baseline and deployment guardrails must pass; protected-file PR must carry the constitution-approved label",
-  "rollbackPlan": "revert the v1.1.0 constitution, machine-readable governance and validator commits; legacy aliases remain available so rollback does not require destructive DNS or identity changes"
+  "status": "superseded",
+  "supersededBy": "EKODI-CONSTITUTION-2026-09-03-V1.5-ORGLESS-WORKSPACE-ROUTING",
+  "summary": "Historical typed workspace-path amendment. Its public route grammar is retired and intentionally omitted from the current source tree. Full prior text remains recoverable from Git history.",
+  "currentRule": "Public workspace routing is slug-rooted; workspace kind is internal metadata bound to workspace_id."
 }
