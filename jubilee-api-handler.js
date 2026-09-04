@@ -48,6 +48,15 @@ export async function handleJubileeApi(request, env = {}, options = {}) {
     }, 200, headers);
   }
 
+  const audit = typeof options.audit === 'function' ? options.audit : null;
+  const requireAudit = options.requireAudit === true;
+  if (requireAudit && !audit) {
+    return jsonResponse({
+      error: 'Jubilee durable audit persistence is required before evaluation can run.',
+      code: 'JUBILEE_AUDIT_ADAPTER_REQUIRED',
+    }, 503, headers);
+  }
+
   const contentLength = Number(request.headers.get('content-length') || 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
     return jsonResponse({ error: 'Request body is too large.', code: 'JUBILEE_BODY_TOO_LARGE' }, 413, headers);
@@ -83,23 +92,36 @@ export async function handleJubileeApi(request, env = {}, options = {}) {
 
   const result = evaluateJubileeRecommendation(evaluationInput);
   const requestId = globalThis.crypto?.randomUUID?.() || `jubilee_${Date.now()}`;
+  const actorRefHash = auth.actorId ? await sha256Hex(`jubilee-actor:${String(auth.actorId).slice(0, 160)}`) : null;
 
-  if (typeof options.audit === 'function') {
-    await options.audit({
-      requestId,
-      workspaceId: safeWorkspaceId(body.workspace_id),
-      purpose: safePurpose(body.purpose),
-      status: result.status,
-      decisionStatus: result.status,
-      policyVersion: result.policyVersion,
-      rulesTriggered: result.audit.rulesTriggered,
-      warningCount: result.audit.warnings.length,
-      candidateCount: body.candidates.length,
-      choiceCount: result.choiceSet.length,
-      supportActionCount: result.supportActions.length,
-      externalAlternativeLookupRequired: result.externalAlternativeLookupRequired,
-      humanReviewRequired: result.humanReviewRequired,
-    });
+  if (audit) {
+    try {
+      await audit({
+        requestId,
+        workspaceId: safeWorkspaceId(body.workspace_id),
+        purpose: safePurpose(body.purpose),
+        status: result.status,
+        decisionStatus: result.status,
+        policyVersion: result.policyVersion,
+        rulesTriggered: result.audit.rulesTriggered,
+        warningCount: result.audit.warnings.length,
+        candidateCount: body.candidates.length,
+        choiceCount: result.choiceSet.length,
+        supportActionCount: result.supportActions.length,
+        externalAlternativeLookupRequired: result.externalAlternativeLookupRequired,
+        humanReviewRequired: result.humanReviewRequired,
+        actorRefHash,
+      });
+    } catch (error) {
+      console.error('Jubilee durable audit persistence failed', String(error?.message || error));
+      if (requireAudit) {
+        return jsonResponse({
+          error: 'Jubilee evaluation was not released because durable audit persistence failed.',
+          code: 'JUBILEE_AUDIT_PERSISTENCE_FAILED',
+        }, 503, headers);
+      }
+      throw error;
+    }
   }
 
   return jsonResponse({
@@ -118,6 +140,12 @@ function safeWorkspaceId(value) {
 function safePurpose(value) {
   const purpose = String(value || 'recommendation').trim().toLowerCase();
   return /^[a-z0-9:_-]{1,80}$/.test(purpose) ? purpose : 'recommendation';
+}
+
+async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(String(value));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function baseHeaders() {
