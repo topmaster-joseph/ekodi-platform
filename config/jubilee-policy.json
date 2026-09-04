@@ -1,0 +1,80 @@
+{
+  "version": "1.0.0",
+  "name": "EKODI Jubilee Policy",
+  "purpose": "Operationalize Jubilee spirit across recommendation, access, support, connection and benefit sharing without capturing user choice or stigmatizing people.",
+  "priority": [
+    "human_dignity_and_agency",
+    "safety_legality_and_privacy",
+    "non_captive_choice",
+    "fair_access_and_non_stigmatizing_support",
+    "community_benefit_and_reciprocity",
+    "service_quality_and_continuity",
+    "sustainable_operation",
+    "revenue"
+  ],
+  "hard_rules": {
+    "never_hide_better_external_option": true,
+    "never_boost_for_undisclosed_commercial_relationship": true,
+    "commercial_relationship_requires_disclosure": true,
+    "sponsorship_must_not_secretly_change_ranking": true,
+    "support_must_not_require_public_vulnerability_label": true,
+    "sensitive_trait_inference_for_support_or_ranking": false,
+    "retaliation_for_exit_or_external_choice": false,
+    "artificial_lock_in": false,
+    "cross_tenant_private_profiling": false
+  },
+  "allowed_need_signals": [
+    "affordability_constraint",
+    "access_barrier",
+    "language_support_required",
+    "mobility_access_required",
+    "digital_access_constraint",
+    "time_access_constraint"
+  ],
+  "need_signal_rules": {
+    "source": ["user_provided", "consented", "program_eligibility_verified"],
+    "store_minimum_only": true,
+    "never_expose_support_reason_to_unnecessary_parties": true,
+    "never_translate_need_signals_into_social_status_labels": true
+  },
+  "support_actions": {
+    "affordability_constraint": ["consider_fee_waiver", "consider_jubilee_credit", "show_lower_cost_alternatives"],
+    "access_barrier": ["priority_access_review", "offer_assisted_channel"],
+    "language_support_required": ["offer_language_support"],
+    "mobility_access_required": ["offer_remote_or_accessible_option"],
+    "digital_access_constraint": ["offer_low_friction_or_assisted_channel"],
+    "time_access_constraint": ["offer_async_or_flexible_option"]
+  },
+  "recommendation_dimensions": [
+    "user_fit",
+    "affordability",
+    "accessibility",
+    "service_quality",
+    "continuity",
+    "community_benefit",
+    "provider_independence"
+  ],
+  "recommendation_rules": {
+    "single_moral_score": false,
+    "preserve_multiple_viable_options": true,
+    "external_candidates_allowed": true,
+    "explain_material_reasons": true,
+    "show_material_conflicts_of_interest": true,
+    "prefer_user_fit_over_platform_margin": true
+  },
+  "jubilee_pool": {
+    "enabled": true,
+    "purpose": ["access_support", "fee_relief", "community_reinvestment", "connection_support"],
+    "funding_sources": ["platform_allocation", "voluntary_contribution", "partner_cofunding"],
+    "beneficiary_experience": "normal_service_experience_without_stigmatizing_badges",
+    "allocation_requires_audit": true
+  },
+  "governance": {
+    "policy_version_required_in_every_decision": true,
+    "audit_trace_required": true,
+    "policy_change_requires_review": true,
+    "material_reduction_of_user_choice_requires_human_gate": true,
+    "material_support_rule_change_requires_human_gate": true,
+    "public_principles_internal_thresholds": true
+  }
+}
