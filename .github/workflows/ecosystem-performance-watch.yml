@@ -76,8 +76,8 @@ jobs:
           }
 
           probe homepage 'https://ekodi.kr/' '<title>EKODI'
-          probe admin 'https://admin.ekodi.kr/' 'EKODI Control Center'
-          probe admin_fallback 'https://ekodi.kr/admin' 'EKODI Control Center'
+          probe admin 'https://admin.ekodi.kr/' '<title>EKODI Admin</title>'
+          probe admin_fallback 'https://ekodi.kr/admin' '<title>EKODI Admin</title>'
           probe support 'https://support.ekodi.kr/' 'EKODI SUPPORT · OPPORTUNITY FIRST'
           probe support_health 'https://support.ekodi.kr/health' '"service":"ekodi-support-opportunity"'
 

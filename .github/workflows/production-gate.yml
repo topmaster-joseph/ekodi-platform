@@ -48,18 +48,23 @@ jobs:
             grep -Fq "$needle" /tmp/body
           }
 
-          verify_no_redirect() {
+          verify_admin_shell() {
             url="$1"
             code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
             echo "ADMIN | $url | HTTP $code"
             [ "$code" = '200' ]
-            grep -Fiq 'x-ekodi-route: admin-control-center' /tmp/headers
+            grep -Fiq 'x-ekodi-route: admin-shell' /tmp/headers
             ! grep -Fiq '^location:' /tmp/headers
-            grep -Fq 'EKODI Control Center' /tmp/body
+            grep -Fq '<title>EKODI Admin</title>' /tmp/body
           }
 
-          verify_no_redirect 'https://admin.ekodi.kr/'
-          verify_no_redirect 'https://admin.ekodi.kr/control-center.html'
+          verify_admin_shell 'https://admin.ekodi.kr/'
+          verify_admin_shell 'https://admin.ekodi.kr/admin'
+          retired_code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/control-center.html')
+          echo "ADMIN RETIRED | https://admin.ekodi.kr/control-center.html | HTTP $retired_code"
+          [ "$retired_code" = '404' ]
+          grep -Fiq 'x-ekodi-route: admin-retired' /tmp/headers
+          ! grep -Fiq '^location:' /tmp/headers
           verify_html 'https://ekodi.kr/cgma/' '청계면상인회' 'CLIENT cgma'
           verify_html 'https://jadam.ekodi.kr/' '자담치킨 목포대점' 'CLIENT jadam'
           verify_html 'https://pizzamaru.ekodi.kr/' '피자마루 목포대점' 'CLIENT pizzamaru'
