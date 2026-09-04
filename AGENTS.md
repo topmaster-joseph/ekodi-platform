@@ -174,3 +174,13 @@ The lightweight Constitution Check is different by design: it surfaces likely co
 ## 15. Quality bar
 
 Optimize for an ecosystem people and paying customers can trust. Visual polish matters, but mission fidelity, human dignity and agency, correctness, clarity, speed, security, observability, maintainability, sustainable economics and measurable beneficiary outcomes come first.
+
+## 16. Verified service truth before current-state assertions
+
+For any claim about the **current** existence, canonical URL, admin URL, domain or route, deployment state, operational state, public exposure, authentication route or service boundary of EKODI, use the provider-neutral policy in `config/service-truth-policy.json`.
+
+Do not infer current EKODI facts from model memory, prior conversation, naming conventions, repository names or example URLs. Repository evidence proves implementation only. A deploy record proves a deployment event only. Neither alone proves that the canonical service is currently operational.
+
+When available, resolve the declared topology from `platform-boundaries.json` and constitutional governance, then consult fresh runtime evidence from the Control API service snapshot or equivalent verified health evidence. If fresh runtime evidence cannot be obtained, distinguish what is declared or implemented from what is currently verified and label the runtime state `unverified` rather than guessing.
+
+This rule applies equally to ChatGPT/GPT, Codex, Claude, Gemini, Copilot, future AI providers and human operators. AI providers consume EKODI truth; they do not define it.
