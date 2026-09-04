@@ -47,9 +47,12 @@ function installStyle(){
   (document.head||document.documentElement).append(style);
 }
 function parseRgb(value){
-  const match=String(value||'').match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
-  if(!match)return null;
-  return [Number(match[1]),Number(match[2]),Number(match[3])].map(value=>Math.max(0,Math.min(255,value)));
+  const raw=String(value||'');
+  const rgb=raw.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+  if(rgb)return [Number(rgb[1]),Number(rgb[2]),Number(rgb[3])].map(value=>Math.max(0,Math.min(255,value)));
+  const srgb=raw.match(/color\(\s*srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/i);
+  if(srgb)return [Number(srgb[1]),Number(srgb[2]),Number(srgb[3])].map(value=>Math.max(0,Math.min(255,value*255)));
+  return null;
 }
 function luminance(rgb){
   const channels=rgb.map(value=>{const v=value/255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});
