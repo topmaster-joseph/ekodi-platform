@@ -27,12 +27,12 @@ test('admin Google button uses explicit popup UX instead of browser-controlled F
   assert.doesNotMatch(adminAuth, /use_fedcm_for_prompt/);
 });
 
-test('admin direct entry keeps account selection user-triggered from the centered Google button', () => {
+test('admin direct entry automatically opens Google account selection and keeps a manual fallback', () => {
   assert.match(handoff, /site=admin&direct=1&return_to=/);
   assert.match(adminAuth, /const directEntry=params\.get\('direct'\)==='1'/);
-  assert.match(adminAuth, /중앙의 Google 로그인 버튼/);
-  assert.match(adminAuth, /window\.google\.accounts\.id\.renderButton\(/);
-  assert.doesNotMatch(adminAuth, /window\.google\.accounts\.id\.prompt\(\)/);
+  assert.match(adminAuth, /window\.google\.accounts\.id\.prompt\(/);
+  assert.match(adminAuth, /revealDirectFallback/);
+  assert.match(adminAuth, /adminDirectBridge='fallback'/);
   assert.match(adminAuth, /auto_select:false/);
 });
 
@@ -40,5 +40,5 @@ test('admin auth recovers from expired challenges and shows allowlist failures c
   assert.match(adminAuth, /GOOGLE_ACCOUNT_NOT_ALLOWED/);
   assert.match(adminAuth, /expired_challenge/);
   assert.match(adminAuth, /setTimeout\(prepare,350\)/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260904-centered-popup-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260904-direct-bridge-1/);
 });

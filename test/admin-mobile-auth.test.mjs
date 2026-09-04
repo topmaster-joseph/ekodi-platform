@@ -14,7 +14,7 @@ test('admin auth detects unsupported embedded webviews and offers external brows
   assert.match(adminAuth, /기본 브라우저에서 관리자 로그인 열기/);
 });
 
-test('admin auth disables browser-controlled FedCM button UX and keeps explicit popup mode', () => {
+test('admin auth keeps explicit Google button popup mode while direct entry can auto-prompt', () => {
   assert.match(adminAuth, /use_fedcm_for_button:false/);
   assert.match(adminAuth, /ux_mode:'popup'/);
   assert.match(adminAuth, /button_auto_select:false/);
@@ -32,5 +32,5 @@ test('successful admin login navigates with replace and provides a delayed manua
 test('admin destination still accepts the same handoff token and router cache is bumped', () => {
   assert.match(handoff, /hash\.get\('ekodi_admin_token'\)/);
   assert.match(handoff, /sessionStorage\.setItem\('ekodi-auth-token'/);
-  assert.match(router, /admin-auth\.js\?v=20260904-centered-popup-1/);
+  assert.match(router, /admin-auth\.js\?v=20260904-direct-bridge-1/);
 });

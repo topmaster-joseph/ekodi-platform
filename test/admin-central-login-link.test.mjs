@@ -7,7 +7,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 test('current admin shell ships the central-admin link before JavaScript runs', async () => {
   const html = await read('admin-shell.html');
   assert.match(html, /id="centralAdminLogin"/);
-  assert.match(html, /href="https:\/\/auth\.ekodi\.kr\/\?site=admin&amp;return_to=https%3A%2F%2Fadmin\.ekodi\.kr%2F"/);
+  assert.match(html, /href="https:\/\/auth\.ekodi\.kr\/\?site=admin&amp;direct=1&amp;return_to=https%3A%2F%2Fadmin\.ekodi\.kr%2F"/);
   assert.match(html, /<form id="loginForm" hidden>/);
   assert.match(html, /<script src="admin-central-handoff\.js"><\/script>/);
   assert.match(html, /<script src="admin-authenticated-shell\.js(?:\?v=[^"]+)?"[^>]*><\/script>/);
@@ -64,4 +64,17 @@ test('authenticated shell keeps the app hidden until the requested menu runtime 
   assert.ok(source.includes("if(requestedHash&&location.hash!==requestedHash)history.replaceState"));
   assert.ok(source.indexOf('await Promise.resolve(window.EKODIAdminPanels.activate(requestedSection()))') < source.indexOf('announceReady();loadDeferredEnhancements()'));
   assert.doesNotMatch(source, /waitForMenuRuntime|canonicalizeLegacyEntry|\/legacy/);
+});
+
+test('all user-facing platform admin entries use the silent direct auth bridge', async () => {
+  const [myRoleUi, taxPortal, worker] = await Promise.all([
+    read('my/site-activity-role-ui.js'),
+    read('tax-portal-worker.js'),
+    read('site-worker.js'),
+  ]);
+  assert.match(myRoleUi, /\?site=admin&direct=1&return_to=/);
+  assert.match(taxPortal, /\?site=admin&direct=1&return_to=/);
+  assert.doesNotMatch(myRoleUi, /\?site=admin&return_to=/);
+  assert.doesNotMatch(taxPortal, /\?site=admin&return_to=/);
+  assert.equal((worker.match(/target\.searchParams\.set\('direct', '1'\);/g) || []).length >= 2, true);
 });

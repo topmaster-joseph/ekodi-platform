@@ -1,6 +1,8 @@
 const ADMIN_API='https://api.ekodi.kr';
 const params=new URLSearchParams(location.search);
 const directEntry=params.get('direct')==='1';
+const directBridgeRoot=document.documentElement;
+let directFallbackTimer=0;
 const rawReturn=params.get('return_to')||'https://admin.ekodi.kr/';
 const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:')return'https://admin.ekodi.kr/';if(u.origin==='https://admin.ekodi.kr')return u.href;if(u.origin==='https://ai.ekodi.kr'&&u.pathname==='/')return u.href;if(u.origin==='https://tax.ekodi.kr'&&(u.pathname==='/'||u.pathname==='/index.html'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/admin'||u.pathname==='/admin/'||u.pathname==='/ekodibiz/mall/admin'||u.pathname==='/ekodibiz/mall/admin/'))return u.href;return'https://admin.ekodi.kr/'}catch{return'https://admin.ekodi.kr/'}})();
 const $=id=>document.getElementById(id);
@@ -12,6 +14,7 @@ const isAndroid=/Android/i.test(ua);
 const isEmbeddedWebView=/\bwv\b|;\s*wv\)|ChatGPT|FBAN|FBAV|Instagram|KAKAOTALK|NAVER\(inapp|Line\//i.test(ua);
 
 function show(id,on=true){$(id)?.classList.toggle('hide',!on)}
+function revealDirectFallback(message='Google 계정 선택창이 자동으로 열리지 않았습니다. 아래 Google 로그인 버튼을 눌러 주세요.'){if(directFallbackTimer){window.clearTimeout(directFallbackTimer);directFallbackTimer=0}if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice(message,'error')}
 function notice(text,type=''){const el=$('authStatus');el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
 async function request(path,options={}){const headers={...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${ADMIN_API}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data}
 function loadGoogleLibrary(){if(window.google?.accounts?.id)return Promise.resolve();return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.defer=true;s.addEventListener('load',resolve,{once:true});s.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(s)})}
@@ -67,8 +70,9 @@ function navigateToAdmin(result){
   }
 }
 async function prepare(){
-  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice(directEntry?'중앙 Google 로그인 버튼을 준비하고 있습니다.':'관리자 전용 Google 인증을 준비하고 있습니다.');
-  if(isEmbeddedWebView){renderExternalBrowserGate();return;}
+  if(directFallbackTimer){window.clearTimeout(directFallbackTimer);directFallbackTimer=0}
+  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice(directEntry?'Google 관리자 계정 선택창을 바로 연결하고 있습니다.':'관리자 전용 Google 인증을 준비하고 있습니다.');
+  if(isEmbeddedWebView){if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';renderExternalBrowserGate();return;}
   try{
     const [config,challenge]=await Promise.all([request('/api/google/config'),request('/api/google/challenge',{method:'POST'}),loadGoogleLibrary()]).then(([config,challenge])=>[config,challenge]);
     if(!config.clientId||!challenge.nonce)throw new Error('admin_google_not_ready');
@@ -82,6 +86,7 @@ async function prepare(){
       ux_mode:'popup',
       context:'signin',
       callback:async response=>{
+        if(directFallbackTimer){window.clearTimeout(directFallbackTimer);directFallbackTimer=0}
         notice('관리자 Google 계정과 허용목록을 확인하고 있습니다.');
         try{
           if(!response?.credential)throw new Error('google_credential_missing');
@@ -101,9 +106,18 @@ async function prepare(){
       }
     });
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
-    if(directEntry)notice('등록된 관리자 Google 계정을 선택하려면 중앙의 Google 로그인 버튼을 눌러 주세요.');
-    else notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택 후 EKODI 관리자 허용목록을 다시 확인합니다.');
-  }catch(e){console.error('admin central auth',e);notice('관리자 Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true)}
+    if(directEntry){
+      notice('등록된 관리자 Google 계정 선택창을 여는 중입니다.');
+      directFallbackTimer=window.setTimeout(()=>revealDirectFallback(),4000);
+      try{
+        window.google.accounts.id.prompt(moment=>{
+          const notDisplayed=moment?.isNotDisplayed?.()===true;
+          const skipped=moment?.isSkippedMoment?.()===true;
+          if(notDisplayed||skipped)revealDirectFallback()
+        });
+      }catch(error){console.warn('admin direct Google prompt',error);revealDirectFallback()}
+    }else notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택 후 EKODI 관리자 허용목록을 다시 확인합니다.');
+  }catch(e){console.error('admin central auth',e);if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice('관리자 Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true)}
 }
 $('googleRetry').addEventListener('click',prepare);
 show('signedOut',true);show('signedIn',false);await prepare();
