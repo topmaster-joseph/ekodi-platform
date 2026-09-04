@@ -80,6 +80,8 @@ jobs:
           set -euo pipefail
           node --check my-worker.js
           node --check my/app.js
+          node --check my/approval-brief.js
+          node --check my/approvals/app.js
           node --check my/private-workspace-router.js
           node --check my/journey/app.js
           node --check my/membership-summary.js
@@ -127,6 +129,7 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/my-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             private_code=$(curl -sS -D /tmp/my-stage-private.headers -o /tmp/my-stage-private.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/w/person:deployment-probe" || true)
             journey_code=$(curl -L -sS -o /tmp/my-stage-journey.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/journey/" || true)
+            approval_code=$(curl -L -sS -o /tmp/my-stage-approvals.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/approvals/" || true)
             journey_app_code=$(curl -sS -o /tmp/my-stage-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/journey/app.js" || true)
             config_code=$(curl -sS -o /tmp/my-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             app_code=$(curl -sS -o /tmp/my-stage-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/app.js" || true)
@@ -135,7 +138,7 @@ jobs:
             user_services_code=$(curl -sS -o /tmp/my-stage-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/user-services.js" || true)
             manifest_code=$(curl -sS -o /tmp/my-stage-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/service-manifest.json" || true)
             health_code=$(curl -sS -o /tmp/my-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'membership-summary.js' /tmp/my-stage.html \
@@ -144,6 +147,7 @@ jobs:
               && grep -Eiq '^x-ekodi-private-workspace:[[:space:]]*v1' /tmp/my-stage-private.headers \
               && grep -Eiq '^x-robots-tag:[[:space:]]*noindex, nofollow, noarchive' /tmp/my-stage-private.headers \
               && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-stage-journey.html \
+              && grep -Fq 'MY APPROVAL · DECISION INBOX' /tmp/my-stage-approvals.html \
               && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-stage-journey.html \
               && grep -Fq 'current_site_access' /tmp/my-stage-journey-app.js \
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-stage-journey-app.js \
@@ -156,6 +160,7 @@ jobs:
               && grep -Fq '"dataEnabled":false' /tmp/my-stage-config.js \
               && grep -Fq '"privateWorkspaceRouting":true' /tmp/my-stage-health.json \
               && grep -Fq '"manifestDrivenServices":true' /tmp/my-stage-health.json \
+              && grep -Fq '"approvalHub":true' /tmp/my-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/my-stage-health.json; then
               echo 'My EKODI staging verified in the Development account with private workspace routes, Life Journey, universal membership, manifest-driven services and production personal data disabled.'
               exit 0
@@ -255,6 +260,7 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
             private_code=$(curl -sS -D /tmp/my-private.headers -o /tmp/my-private.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/w/person:deployment-probe' || true)
             journey_code=$(curl -L -sS -o /tmp/my-journey.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/' || true)
+            approval_code=$(curl -L -sS -o /tmp/my-approvals.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/approvals/' || true)
             journey_app_code=$(curl -sS -o /tmp/my-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/app.js' || true)
             config_code=$(curl -sS -o /tmp/my-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/config.js' || true)
             app_code=$(curl -sS -o /tmp/my-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/app.js' || true)
@@ -263,7 +269,7 @@ jobs:
             user_services_code=$(curl -sS -o /tmp/my-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/user-services.js' || true)
             manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/service-manifest.json' || true)
             health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
-            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'membership-summary.js' /tmp/my.html \
@@ -272,6 +278,7 @@ jobs:
               && grep -Eiq '^x-ekodi-private-workspace:[[:space:]]*v1' /tmp/my-private.headers \
               && grep -Eiq '^x-robots-tag:[[:space:]]*noindex, nofollow, noarchive' /tmp/my-private.headers \
               && grep -Fq 'MY JOURNEY · PERSON FIRST' /tmp/my-journey.html \
+              && grep -Fq 'MY APPROVAL · DECISION INBOX' /tmp/my-approvals.html \
               && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-journey.html \
               && grep -Fq 'current_site_access' /tmp/my-journey-app.js \
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-journey-app.js \
@@ -284,6 +291,7 @@ jobs:
               && grep -Fq '"dataMode":"production"' /tmp/my-health.json \
               && grep -Fq '"privateWorkspaceRouting":true' /tmp/my-health.json \
               && grep -Fq '"manifestDrivenServices":true' /tmp/my-health.json \
+              && grep -Fq '"approvalHub":true' /tmp/my-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/my-health.json; then
               echo 'My EKODI production verified with private workspace routes, Life Journey, universal membership and manifest-driven service registry.'
               exit 0
