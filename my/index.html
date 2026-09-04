@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="로그인 후 모든 일반사용자를 위한 EKODI 개인 홈, Workspace 전환 허브와 맞춤형 개인비서">
+  <meta name="description" content="로그인 후 모든 일반사용자를 위한 EKODI 개인 홈과 맞춤형 개인비서">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="ekodi-ui-type" content="USER">
   <title>My EKODI | 나의 에코디</title>
   <link rel="stylesheet" href="/styles.css?v=20260821-user-ui-1">
   <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
-  <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
 </head>
 <body data-ekodi-ui="USER">
   <header class="topbar">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="/journey/">나의 여정</a><a href="#workspaces">내 공간</a><a href="#platforms">서비스</a><a href="/device-care/">내 PC</a><a href="#account">내 정보</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="/journey/">나의 여정</a><a href="#platforms">서비스</a><a href="/device-care/">내 PC</a><a href="#account">내 정보</a></nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
   </header>
 
@@ -61,11 +60,6 @@
       <p id="lifeChannelStatus" class="section-note">&#49444;&#51221;&#51008; &#51060; &#48652;&#46972;&#50864;&#51200;&#51032; My EKODI &#44060;&#51064; &#44277;&#44036;&#50640; &#51200;&#51109;&#46121;&#45768;&#45796;. &#48124;&#44048;&#54620; &#47700;&#49884;&#51648; &#50896;&#47928;&#51060;&#45208; &#51064;&#51613;&#51221;&#48372;&#45716; &#51200;&#51109;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p>
     </section>
 
-    <section id="workspaces" class="section workspace-section">
-      <div class="section-head"><div><p class="eyebrow">MY SPACES</p><h2>내 공간</h2></div><p>공간 선택은 여기 한 곳에서만 합니다. 선택한 공간은 다른 EKODI 서비스로 이동할 때 기본 컨텍스트로 이어집니다.</p></div>
-      <div id="workspaceList" class="workspace-grid"><div class="empty"><strong>Workspace가 아직 연결되지 않았습니다.</strong><p>로그인 후 개인·사업장·교회·기관 공간을 불러옵니다.</p></div></div>
-    </section>
-
     <section class="summary" aria-label="My EKODI 요약">
       <article><span id="workspaceCount">0</span><small>내 공간</small></article>
       <article><span id="serviceCount">0</span><small>연결 서비스</small></article>
@@ -76,7 +70,7 @@
     <section id="platforms" class="section">
       <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 쓰는 EKODI</h2></div><p>한 번 로그인하면 현재 공간의 권한으로 필요한 서비스를 이어서 사용할 수 있습니다.</p></div>
       <div id="platformList" class="platform-grid"><div class="empty"><strong>로그인하면 내 플랫폼 상태를 확인할 수 있습니다.</strong><p>서비스마다 다시 가입하지 않고 현재 EKODI 사용자의 접근권한을 불러옵니다.</p></div></div>
-      <p class="section-note">서비스별 데이터와 권한은 Workspace 단위로 분리되며 My EKODI는 이동과 선택을 연결합니다.</p>
+      <p class="section-note">서비스별 데이터와 권한은 내부 공간 단위로 분리되며 My EKODI가 필요한 서비스 연결 맥락을 자동으로 이어갑니다.</p>
     </section>
 
     <section id="personal-brand" class="section soft-section">
@@ -108,7 +102,6 @@
   <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="/journey/">My Journey ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js?v=20260821-user-ui-1"></script>
-  <script type="module" src="/workspace-selector-sync.js?v=20260822-shell-sync-1"></script>
   <script type="module" src="/user-ai-ui.js?v=20260822-user-ai-1"></script>
   <script type="module" src="/membership-summary.js?v=20260822-universal-membership-1"></script>
   <script type="module" src="/life-communication.js?v=20260824-life-ai-1"></script>

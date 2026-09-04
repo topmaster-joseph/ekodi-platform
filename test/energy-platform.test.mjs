@@ -28,7 +28,7 @@ test('consumer connection starts with central auth and does not imply address-on
 });
 
 test('Energy workspace switcher consumes one-time handoff and revalidates person workspace',()=>{
-  assert.match(html,/id="workspaceSwitch"/);
+  assert.doesNotMatch(html,/workspaceSwitch|workspaceSelect|workspace-picker/);
   assert.match(app,/functions\/v1\/workspace-api/);
   assert.match(app,/\$\{WORKSPACE_API\}\/workspaces\?site=energy/);
   assert.match(app,/verifyOtp\(\{token_hash:token/);

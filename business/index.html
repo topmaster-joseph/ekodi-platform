@@ -9,7 +9,6 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/customer-next.css">
-  <style>.workspace-picker.session-only{display:none}.topbar:has(#authLink[href="#logout"]) .workspace-picker.session-only{display:flex}</style>
 </head>
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
@@ -18,13 +17,6 @@
       <span class="brand-mark">E</span>
       <span><strong>BUSINESS OS</strong></span>
     </a>
-    <div class="workspace-picker session-only" id="workspacePicker">
-      <label for="workspaceSelect">WORKSPACE</label>
-      <select id="workspaceSelect" aria-label="Business OS 워크스페이스 선택">
-        <option value="ekodibiz">에코디비즈</option>
-        <option value="jadam">자담치킨 목포대점</option>
-      </select>
-    </div>
     <nav class="top-actions" aria-label="상단 메뉴">
       <span hidden aria-hidden="true"><a id="publicLink" href="https://biz.ekodi.kr">에코디비즈</a><a id="marketingLink" href="https://marketing.ekodi.kr">Marketing AI</a></span>
       <a id="authLink" class="primary-link" href="https://auth.ekodi.kr/?site=business&amp;return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F">Sign in</a>

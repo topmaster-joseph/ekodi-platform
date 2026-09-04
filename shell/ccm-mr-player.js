@@ -23,6 +23,20 @@
   let started=false;
   let wanted=true;
   let gestureArmed=false;
+  const ROOT_POLICY_PATHS=new Set(['privacy','terms','history','admin','login','signin','signup']);
+  function currentSurface(){return String(script?.dataset?.ekodiSurface||document.documentElement.dataset.ekodiUserSurface||document.documentElement.dataset.ekodiShellSurface||surface||'').trim().toLowerCase();}
+  function currentService(){return String(script?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'').trim().toLowerCase();}
+  function userHomepageControlAllowed(){
+    const liveSurface=currentSurface();
+    if(liveSurface&&!new Set(['public','workspace']).has(liveSurface))return false;
+    if(/^(admin|auth|shell|api|control|core|finance|security|workspace-api)\./.test(host))return false;
+    const path=String(location.pathname||'/').replace(/\/{2,}/g,'/').replace(/\/$/,'')||'/';
+    if(path==='/'||path==='/index.html')return true;
+    if(host!=='ekodi.kr'&&host!=='www.ekodi.kr')return false;
+    const service=currentService();
+    const parts=path.split('/').filter(Boolean);
+    return Boolean(service&&service!=='ekodi'&&parts.length===1&&!ROOT_POLICY_PATHS.has(parts[0]));
+  }
   const LABELS=Object.freeze({
     'ko-KR':{play:'♫ MR 재생',stop:'♫ MR 끄기',playAria:'배경 CCM MR 재생',stopAria:'배경 CCM MR 끄기'},
     en:{play:'♫ Play MR',stop:'♫ Stop MR',playAria:'Play background CCM instrumental',stopAria:'Stop background CCM instrumental'},
@@ -192,6 +206,7 @@
   }
   function placeButton(button=document.getElementById(buttonId)){
     if(!button||!document.body)return;
+    if(!userHomepageControlAllowed()){if(started)stopAudio();button.remove();return;}
     const target=header();
     if(!target){button.dataset.ekodiFloating='true';if(button.parentElement!==document.body)document.body.append(button);return;}
     const parent=actionContainer(target);
@@ -201,6 +216,7 @@
     else if(button.parentElement!==parent)parent?.append(button);
   }
   function installButton(){
+    if(!userHomepageControlAllowed()){document.getElementById(buttonId)?.remove();if(started)stopAudio();return;}
     if(document.getElementById(buttonId)){placeButton();return;}
     const style=document.createElement('style');
     style.dataset.ekodiCcmMr='v2';
@@ -228,6 +244,7 @@
     updateButton();
   }
   async function boot(){
+    if(!userHomepageControlAllowed()){document.getElementById(buttonId)?.remove();return;}
     installButton();
     if(!wanted)return;
     const ok=await startAudio();
@@ -238,6 +255,8 @@
   else boot();
   window.addEventListener('ekodi:user-header-ready',()=>placeButton());
   window.addEventListener('ekodi:locale-change',()=>{updateButton();placeButton();});
+  window.addEventListener('ekodi:shell-theme',()=>{installButton();placeButton();});
+  window.addEventListener('popstate',()=>{installButton();placeButton();});
   window.setTimeout(()=>placeButton(),250);
   window.setTimeout(()=>placeButton(),1200);
 

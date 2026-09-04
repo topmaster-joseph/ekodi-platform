@@ -29,6 +29,22 @@ const COPY=Object.freeze({
 let activeLocale='ko-KR';
 let observer=null;
 let scheduled=false;
+const runtimeScript=document.currentScript;
+const ROOT_POLICY_PATHS=new Set(['privacy','terms','history','admin','login','signin','signup']);
+function runtimeSurface(){return String(runtimeScript?.dataset?.ekodiSurface||document.documentElement.dataset.ekodiUserSurface||document.documentElement.dataset.ekodiShellSurface||'').trim().toLowerCase();}
+function runtimeService(){return String(runtimeScript?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'').trim().toLowerCase();}
+function userHomepageControlAllowed(){
+  const liveSurface=runtimeSurface();
+  if(liveSurface&&!new Set(['public','workspace']).has(liveSurface))return false;
+  const host=String(location.hostname||'').toLowerCase();
+  if(/^(admin|auth|shell|api|control|core|finance|security|workspace-api)\./.test(host))return false;
+  const path=String(location.pathname||'/').replace(/\/{2,}/g,'/').replace(/\/$/,'')||'/';
+  if(path==='/'||path==='/index.html')return true;
+  if(host!=='ekodi.kr'&&host!=='www.ekodi.kr')return false;
+  const service=runtimeService();
+  const parts=path.split('/').filter(Boolean);
+  return Boolean(service&&service!=='ekodi'&&parts.length===1&&!ROOT_POLICY_PATHS.has(parts[0]));
+}
 
 function normalize(value){
   const raw=String(value||'').trim();
@@ -147,6 +163,7 @@ function actionContainer(target){
 }
 function placeControl(){
   if(!document.body)return;
+  if(!userHomepageControlAllowed()){for(const node of document.querySelectorAll('[data-ekodi-language-control]'))node.remove();return;}
   let control=document.querySelector('[data-ekodi-language-control]');
   const target=header();
   if(!target)return;

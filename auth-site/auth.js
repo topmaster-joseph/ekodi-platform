@@ -152,37 +152,6 @@ async function handoffToService(workspaceKey=null){
   location.assign(target.href);
 }
 
-async function openWorkspace(item,button){
-  if(button){button.disabled=true;button.classList.add('loading')}
-  try{
-    if(item.requires_handoff===false&&marketing){location.assign(marketingFreeTarget());return;}
-    await handoffToService(item.workspace_key);
-  }catch(e){
-    console.error('workspace handoff',e);
-    notice('accessStatus','선택한 공간으로 연결하지 못했습니다. 다른 공간을 선택하거나 다시 인증해 주세요.','error');
-    if(button){button.disabled=false;button.classList.remove('loading')}
-  }
-}
-
-function renderWorkspacePanel(items){
-  currentWorkspaces=Array.isArray(items)?items:[];
-  const list=$('workspaceList');list.replaceChildren();
-  if(!currentWorkspaces.length){show('workspacePanel',false);return;}
-  show('workspacePanel',true);$('workspaceCount').textContent=`${currentWorkspaces.length}개`;
-  for(const item of currentWorkspaces){
-    const button=document.createElement('button');button.type='button';button.className='workspace-card';
-    const text=document.createElement('span');text.className='workspace-copy';
-    const name=document.createElement('strong');name.textContent=item.workspace_name||item.store_name||'내 공간';
-    const meta=document.createElement('span');meta.className='workspace-meta';
-    const parts=[workspaceKindLabel(item.workspace_kind),workspacePlanLabel(item.plan)];
-    if(item.store_name&&item.store_name!==item.workspace_name)parts.push(item.store_name);
-    meta.textContent=parts.join(' · ');
-    text.append(name,meta);
-    const arrow=document.createElement('span');arrow.className='workspace-arrow';arrow.textContent='→';
-    button.append(text,arrow);button.addEventListener('click',()=>openWorkspace(item,button));list.append(button);
-  }
-}
-
 async function loadWorkspaces(){
   const data=await api(`/workspaces?site=${encodeURIComponent(site)}`);
   currentWorkspaces=Array.isArray(data.workspaces)?data.workspaces:[];
@@ -288,14 +257,14 @@ async function loadReviewConsole(){
 }
 
 async function renderInteractiveAccess(s,workspaces){
-  routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();
+  routing=false;showSignedIn(s);resetSignedInPanels();await loadLinkedIdentities();
   const authorized=authorizedWorkspaces(workspaces);fallbackWorkspaceKey=authorized[0]?.workspace_key||null;
   if(manageMode&&site==='portal'){
     $('serviceBadge').textContent='계정 관리';notice('accessStatus','한 사람에게 연결된 로그인 계정을 관리합니다. 서비스 권한과 데이터는 각 공간에 그대로 분리되어 있습니다.');
   }else if(authorized.length){
     $('serviceBadge').textContent=workspaces.length>1?`${workspaces.length}개 공간`:`${workspacePlanLabel(authorized[0].plan)} 이용중`;
-    notice('accessStatus',workspaces.length>1?'사용할 개인·사업장·단체 공간을 선택해 주세요.':`${config.name} 이용 권한이 확인되었습니다.`);
-    if(workspaces.length===1)show('approvedActions',true);
+    notice('accessStatus',`${config.name} 이용 권한이 확인되었습니다. 연결 맥락은 자동으로 유지됩니다.`);
+    show('approvedActions',true);
   }else if(marketing){
     $('serviceBadge').textContent='무료회원';notice('accessStatus','개인 Marketing AI 공간은 바로 사용할 수 있습니다. 사업장이나 단체용 Pro 공간은 별도로 신청할 수 있습니다.');show('freeActions',true);
   }else{
@@ -325,10 +294,10 @@ async function renderAccess(s){
       try{await handoffToService();return;}
       catch(e){
         console.error('seamless central handoff',e);
-        routing=false;showSignedIn(s);resetSignedInPanels();renderWorkspacePanel(workspaces);await loadLinkedIdentities();
+        routing=false;showSignedIn(s);resetSignedInPanels();await loadLinkedIdentities();
         $('serviceBadge').textContent=workspaces.length>1?`${workspaces.length}개 공간`:'연결 재시도';
-        notice('accessStatus','자동 복귀가 지연되어 사용할 공간을 선택할 수 있게 열었습니다.','warn');
-        if(workspaces.length===1)show('approvedActions',true);
+        notice('accessStatus','자동 복귀가 지연되었습니다. 현재 권한 맥락으로 다시 연결하거나 재인증해 주세요.','warn');
+        show('approvedActions',true);
         return;
       }
     }

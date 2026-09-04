@@ -41,8 +41,9 @@ test('ordinary common-service members land in My EKODI while platform admins kee
   assert.match(identity, /ekodiId/);
 });
 
-test('workspace selector stays hidden before an authenticated service session', () => {
-  assert.match(shell, /function workspaceUiAvailable\(\)/);
-  assert.match(shell, /ekodiWorkspaceSelector=available\?'member':'hidden'/);
-  assert.match(shell, /\.pill\[hidden\]\{display:none!important\}/);
+test('global workspace and path selector chrome stays removed for all service sessions', () => {
+  assert.match(shell, /function workspaceUiAvailable\(\)\{return false;\}/);
+  assert.match(shell, /ekodiWorkspaceSelector='removed'/);
+  assert.match(shell, /function buildUi\(\)\{/);
+  assert.doesNotMatch(shell, /space.dataset.space='1'/);
 });

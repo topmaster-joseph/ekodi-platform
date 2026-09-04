@@ -86,35 +86,12 @@ function serviceRoute(id,url){
  if(current&&TARGETABLE_WORKSPACE_SITES.has(id)&&(current.services?.includes(id)||open))target.searchParams.set('workspace',current.workspace_key);
  return target.href;
 }
-function workspaceDestination(workspace){
- if(!workspace)return null;
- const contextual=requestedReturnTarget();
- if(contextual&&(workspace.services?.includes(contextual.id)||OPEN_SSO_SITES.has(contextual.id)))return contextual;
- const exactSites=(workspace.targets||[]).filter(target=>target.requires_handoff&&TARGETABLE_WORKSPACE_SITES.has(target.site)&&['active','pre_registered'].includes(String(target.status||''))).map(target=>target.site);
- const exactId=WORKSPACE_ENTRY_PRIORITY.find(id=>exactSites.includes(id));
- if(exactId){const service=serviceDefinition(exactId);return service?{id:service[0],url:service[2]}:null}
- if(workspace.workspace_kind==='personal')return null;
- const fallbackId=WORKSPACE_ENTRY_PRIORITY.find(id=>workspace.services?.includes(id)&&connected(id))||workspace.services?.find(id=>connected(id));
- const fallback=serviceDefinition(fallbackId);
- return fallback?{id:fallback[0],url:fallback[2]}:null;
-}
-function setActiveWorkspace(key){
- const selected=uniqueWorkspaces().find(w=>w.workspace_key===key);
- if(!selected)return null;
- activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();return selected;
-}
-function enterWorkspace(key){
- const selected=setActiveWorkspace(key);
- if(!selected)return;
- const destination=workspaceDestination(selected);
- if(destination)location.assign(serviceRoute(destination.id,destination.url));
-}
 function identityUi(){
  const email=session?.user?.email||'',meta=session?.user?.user_metadata||{},current=activeWorkspace();
  $('#identityName').textContent=session?(profile?.display_name||meta.full_name||meta.name||email.split('@')[0]||'EKODI Member'):'로그인 전';
  $('#identityEmail').textContent=session?'EKODI 통합 로그인 연결됨':'Google 인증 후 연결됩니다.';
  $('#workspaceKey').textContent=current?.workspace_key||(session?'workspace: connected':'workspace:…');
- $('#workspaceSummary').textContent=current?`${current.workspace_name||'내 Workspace'} · ${plan(current.plan)} · ${current.role||'member'}`:'로그인하면 마지막으로 사용한 공간을 기억하고 다른 공간으로 즉시 전환할 수 있습니다.';
+ $('#workspaceSummary').textContent=current?`${current.workspace_name||'내 공간'} · ${plan(current.plan)} · ${current.role||'member'}`:'로그인하면 마지막 이용 맥락을 기억하고 필요한 서비스에 자동으로 이어집니다.';
  const paidCount=[...access.values()].filter(a=>paid(a.plan)).length;
  $('#accountPlan').textContent=session?(paidCount?`${paidCount} Paid Plan${paidCount>1?'s':''}`:'Free Member'):'Guest';
  $('#accountLoginText').textContent=email?`${email}로 EKODI 통합 로그인에 연결되어 있습니다. 다른 서비스에서는 이 로그인 상태를 재사용합니다.`:'로그인 전입니다.';
@@ -134,15 +111,6 @@ function summaryUi(){
  $('#paidCount').textContent=String(SERVICES.filter(([id])=>paid(access.get(id)?.plan)||(workspaces.get(id)||[]).some(w=>paid(w.plan))).length);
  $('#workspaceCount').textContent=String(uniqueWorkspaces().length);
  $('#creatorCount').textContent=String(items.length);
-}
-function workspaceUi(){
- const host=$('#workspaceList');
- if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 실제 Workspace를 읽지 않습니다.</strong></div>';return}
- if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 Workspace를 확인할 수 있습니다.</strong></div>';return}
- const rows=uniqueWorkspaces();ensureActiveWorkspace();
- if(!rows.length){host.innerHTML='<div class="empty"><strong>아직 연결된 Workspace가 없습니다.</strong><p>개인 서비스를 시작하거나 기관 초대를 받으면 여기에 나타납니다.</p></div>';return}
- host.innerHTML=rows.map(w=>{const destination=workspaceDestination(w),action=destination?'열기 →':w.workspace_kind==='personal'?'현재 My 공간':'선택';return `<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}<span>${esc(action)}</span></span></span></button>`}).join('');
- host.querySelectorAll('[data-workspace-key]').forEach(button=>button.addEventListener('click',()=>enterWorkspace(button.dataset.workspaceKey||'')));
 }
 function platformUi(){
  const host=$('#platformList');
@@ -194,7 +162,7 @@ async function loadPortfolio(){
  if(error)throw error;items=data||[];
 }
 async function loadAll(){
- await Promise.all([loadAccess(),loadPortfolio(),loadProfile()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();
+ await Promise.all([loadAccess(),loadPortfolio(),loadProfile()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();platformUi();portfolioUi();
 }
 async function saveProfile(event){
  event.preventDefault();

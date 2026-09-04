@@ -8,7 +8,7 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(html,/data-ekodi-ui="USER"/);
   assert.match(html,/EKODI USER AI/);
   assert.match(html,/MY PLATFORMS/);
-  assert.match(html,/MY SPACES/);
+  assert.doesNotMatch(html,/MY SPACES|href="#workspaces"/);
   assert.match(html,/내 선택이 우선/);
   assert.match(html,/공간별 데이터/);
   assert.match(app,/current_site_access/);
@@ -20,9 +20,9 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(userAi,/specialistDirectControl:false/);
 });
 
-test('My EKODI has one visible workspace selector path and no dead hidden controls',async()=>{
+test('My EKODI keeps workspace context internal and exposes no workspace selector chrome',async()=>{
   const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
-  assert.match(html,/id="workspaceList"/);
+  assert.doesNotMatch(html,/workspaceList|workspace-selector-sync|workspace-selector-shell|workspaceSwitcher|workspaceControl/);
   assert.doesNotMatch(html,/workspaceSwitcher|workspaceControl|refreshButton/);
   assert.doesNotMatch(app,/workspaceSwitcher|workspaceControl|refreshButton|function refresh\(/);
   assert.doesNotMatch(app,/function recommendationUi\(/);
@@ -40,25 +40,26 @@ test('My EKODI reuses central identity and inherits registry-driven one-login ha
   assert.match(router,/loadClientAuth/);
 });
 
-test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
+test('My workspace context is selected internally and passed only when opening a compatible service',async()=>{
   const app=await read('my/app.js');
-  assert.match(app,/function workspaceDestination\(workspace\)/);
-  assert.match(app,/requires_handoff/);
-  assert.match(app,/function enterWorkspace\(key\)/);
-  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
-  assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
+  assert.match(app,/ensureActiveWorkspace/);
+  assert.match(app,/activeWorkspaceKey/);
+  assert.match(app,/rememberWorkspace/);
+  assert.match(app,/TARGETABLE_WORKSPACE_SITES/);
+  assert.match(app,/target\.searchParams\.set\('workspace',current\.workspace_key\)/);
   assert.match(app,/return_to/);
   assert.match(app,/new URL\(url\)\.origin===target\.origin/);
+  assert.doesNotMatch(app,/data-workspace-key[\s\S]*enterWorkspace|function enterWorkspace\(/);
 });
 
-test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
+test('My keeps the active workspace internally when opening Social or Energy',async()=>{
   const app=await read('my/app.js');
   assert.match(app,/OPEN_SSO_SITES=new Set\(\['social','energy'\]\)/);
   assert.match(app,/TARGETABLE_WORKSPACE_SITES=new Set\(\[[^\]]*'social','energy'/);
   assert.match(app,/\(!connected\(id\)&&!open\)/);
-  assert.match(app,/current\.services\?\.includes\(id\)\|\|open/);
-  assert.match(app,/workspace\.services\?\.includes\(contextual\.id\)\|\|OPEN_SSO_SITES\.has\(contextual\.id\)/);
-  assert.match(app,/open\?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.'/);
+  assert.match(app,/current&&TARGETABLE_WORKSPACE_SITES\.has\(id\)&&\(current\.services\?\.includes\(id\)\|\|open\)/);
+  assert.match(app,/target\.searchParams\.set\('workspace',current\.workspace_key\)/);
+  assert.doesNotMatch(app,/workspaceSwitch|workspaceList|function enterWorkspace\(/);
 });
 
 test('Logged-out My EKODI reports zero connected platforms and does not count open SSO services as connected',async()=>{

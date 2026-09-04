@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -102,14 +103,16 @@ test('person workspace api aggregates verified workspaces for open SSO services'
   assert.doesNotMatch(workspaceApi,/SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test('auth center is workspace-first and hides linked login identities outside account management',()=>{
-  assert.match(authHtml,/id="workspacePanel"/);
+test('auth center keeps workspace routing internal and hides workspace chooser UI',()=>{
+  assert.doesNotMatch(authHtml,/id="workspacePanel"|id="workspaceList"|공간 선택/);
   assert.match(authHtml,/id="identityPanel"/);
   assert.match(authHtml,/data-identity-manage/);
-  assert.match(authHtml,/Workspace|내 공간/);
-  assert.match(authJs,/renderWorkspacePanel/);
-  assert.match(authJs,/prepareLinkGoogle/);
+  assert.match(authJs,/loadWorkspaces/);
+  assert.match(authJs,/authorizedWorkspaces/);
+  assert.match(authJs,/fallbackWorkspaceKey/);
+  assert.match(authJs,/handoffToService/);
   assert.match(authJs,/workspace_key/);
+  assert.match(authJs,/prepareLinkGoogle/);
 });
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
@@ -149,25 +152,24 @@ test('targeted workspace routing is available across shared and person-scoped EK
   assert.match(authTarget,/workspace_key:requested/);
 });
 
-test('My EKODI is the signed-in workspace home and routes connected platforms through central auth',()=>{
+test('My EKODI is the signed-in user home and routes connected platforms with internal workspace context',()=>{
   assert.match(myHtml,/MY EKODI · USER UI/);
   assert.match(myHtml,/data-ekodi-ui="USER"/);
-  assert.match(myHtml,/id="workspaceList"/);
-  assert.doesNotMatch(myHtml,/id="workspaceSwitcher"/);
-  assert.match(myHtml,/workspace-selector-sync\.js/);
+  assert.doesNotMatch(myHtml,/workspaceList|workspaceSwitcher|workspace-selector-sync|workspace-selector-shell|href="#workspaces"/);
   assert.match(myHtml,/user-ai-ui\.js/);
   assert.match(myHtml,/id="recommendationList"/);
   assert.match(myApp,/ekodi_my_active_workspace/);
+  assert.match(myApp,/ensureActiveWorkspace/);
   assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
   assert.match(myApp,/searchParams\.set\('workspace'/);
-  assert.match(myApp,/setActiveWorkspace/);
   assert.match(myUserAiUi,/function renderSuggestions\(\)/);
   assert.match(myUserAiUi,/buildUserSuggestions/);
+  assert.doesNotMatch(myUserAiUi,/#workspaceList|#workspaces/);
 });
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
   for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
-    const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
+    const result=spawnSync(process.execPath,['--check',fileURLToPath(new URL(`../${path}`,import.meta.url))],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
 });
