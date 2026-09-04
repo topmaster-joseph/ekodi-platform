@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildInvestLens } from '../invest-personalization-runtime.js';
 import { officialDataConnections, createOfficialProfileDataBinding } from '../profile-official-data-adapter.js';
+import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -72,12 +73,22 @@ test('Invest page preserves legacy review flow while adding evidence-first perso
   assert.match(page,/매수·매도 지시/);
 });
 
-test('My EKODI passes only a workspace hint and Invest resolves it against authorized subjects',async()=>{
-  const my=await read('my/user-ai-ui.js');
+test('My EKODI keeps Invest inside progressive discovery and passes only an authorized workspace hint',async()=>{
+  const userAi=await read('my/user-ai-ui.js');
+  const app=await read('my/app.js');
+  const worker=await read('my-worker.js');
   const subject=await read('invest-subject-ui.js');
-  assert.match(my,/https:\/\/invest\.ekodi\.kr\//);
-  assert.match(my,/searchParams\.set\('workspace'/);
-  assert.doesNotMatch(my,/searchParams\.set\('subject_key'/);
+  const invest=EKODI_SERVICE_MANIFEST.services.find(service=>service.id==='invest');
+  assert.equal(invest?.url,'https://invest.ekodi.kr/');
+  assert.equal(invest?.sso,true);
+  assert.equal(invest?.targetable,true);
+  assert.match(userAi,/data-personalization-recommended/);
+  assert.doesNotMatch(userAi,/https:\/\/invest\.ekodi\.kr\//,'User AI must not hard-code Invest as a fixed recommendation');
+  assert.match(app,/function serviceRoute\(id,url\)/);
+  assert.match(app,/TARGETABLE_WORKSPACE_SITES\.has\(id\)/);
+  assert.match(app,/searchParams\.set\('workspace',current\.workspace_key\)/);
+  assert.doesNotMatch(app,/searchParams\.set\('subject_key'/);
+  assert.match(worker,/service\.targetable===true/);
   assert.match(subject,/\/v1\/invest\/subjects/);
   assert.match(subject,/matchesHint/);
   assert.match(subject,/location\.replace/);

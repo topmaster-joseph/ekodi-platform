@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="ekodi-ui-type" content="USER">
   <title>My EKODI | 나의 에코디</title>
-  <link rel="stylesheet" href="/styles.css?v=20260821-user-ui-1">
+  <link rel="stylesheet" href="/styles.css?v=20260904-progressive-personalization-1">
   <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
   <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
@@ -15,7 +15,7 @@
 <body data-ekodi-ui="USER">
   <header class="topbar">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="/journey/">나의 여정</a><a href="#workspaces">내 공간</a><a href="#platforms">서비스</a><a href="/device-care/">내 PC</a><a href="#account">내 정보</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">내 에코디</a><a href="/journey/">나의 여정</a><a href="#account">내 정보</a></nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
   </header>
 
@@ -44,7 +44,14 @@
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
     </section>
 
-    <section id="journey-preview" class="section soft-section">
+    <section class="intent-shelf" aria-label="관심 시작점">
+      <div><p class="eyebrow">START FROM NEED</p><h2>지금 무엇이 필요하세요?</h2><p>기능 이름을 먼저 알 필요는 없습니다. 관심을 보인 영역만 My EKODI가 다음 단계로 꺼내 보여줍니다.</p></div>
+      <div class="intent-actions">
+        <button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-intent-service="marketing">알리기</button>
+      </div>
+    </section>
+
+    <section id="journey-preview" class="section soft-section" data-progressive-services="work,edu" hidden>
       <div class="section-head"><div><p class="eyebrow">MY JOURNEY</p><h2>서비스보다 먼저, 나의 다음 단계</h2></div><p>입시·학습과 유학·취업과 진로·창업과 사업·생활과 정착을 하나의 강제된 코스로 만들지 않습니다. 지금 필요한 단계만 선택하고 기존 EKODI 전문 플랫폼으로 이어갑니다.</p></div>
       <div class="recommendation-grid">
         <article class="recommendation-card"><small>01 · PERSON FIRST</small><h3>한 사람의 맥락</h3><p>서비스를 바꿀 때마다 처음부터 다시 시작하지 않도록 My EKODI가 로그인과 선택 맥락을 이어갑니다.</p></article>
@@ -53,7 +60,7 @@
       </div>
     </section>
 
-    <section id="life-channels" class="section life-channel-section">
+    <section id="life-channels" class="section life-channel-section" data-progressive-services="life,community,social" hidden>
       <div class="section-head"><div><p class="eyebrow">LIFE CONNECTIONS</p><h2>&#49373;&#54876; &#52292;&#45328; &#50672;&#44208;</h2></div><p>&#47700;&#51068;&#183;&#47928;&#51088;&#183;&#47700;&#49888;&#51200;&#183;SNS&#47484; &#54596;&#50836;&#54620; &#47564;&#53372;&#47564; &#50672;&#44208;&#54616;&#44256;, EKODI User AI&#44032; &#44288;&#44228;&#183;&#51068;&#51221;&#183;&#52712;&#48120;&#183;&#48176;&#50880;&#183;&#49457;&#52272;&#51032; &#45796;&#51020; &#54665;&#46041;&#51012; &#47676;&#51200; &#51228;&#50504;&#54616;&#46020;&#47197; &#49444;&#51221;&#54633;&#45768;&#45796;. &#50672;&#44208;&#54616;&#51648; &#50506;&#51008; &#52292;&#45328;&#51008; &#51069;&#44144;&#45208; &#48516;&#49437;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p></div>
       <div class="life-ai-policy"><div><small>PROACTIVE AI</small><h3>&#47676;&#51200; &#50508;&#50500;&#52264;&#47532;&#46104;, &#44208;&#51221;&#51008; &#45236;&#44032;</h3><p>&#51312;&#54924;&#183;&#51221;&#47532;&#183;&#52628;&#52380;&#51008; &#54728;&#50857; &#48276;&#50948;&#50640;&#49436; &#51456;&#48708;&#54616;&#44256;, &#47700;&#49884;&#51648; &#48156;&#49569;&#183;&#50696;&#50557;&#183;&#44208;&#51228;&#183;&#49325;&#51228;&#183;&#50808;&#48512; &#51228;&#52636;&#51008; &#48324;&#46020;&#51032; &#49324;&#50857;&#51088; &#49849;&#51064; &#50630;&#51060; &#49892;&#54665;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p></div><label>&#49440;&#51228; &#51228;&#50504; &#44053;&#46020;<select id="lifeProactiveLevel"><option value="quiet">&#51312;&#50857;&#55176;</option><option value="balanced" selected>&#51201;&#45817;&#55176;</option><option value="active">&#51201;&#44537;&#51201;&#51004;&#47196;</option></select></label></div>
       <div id="lifeChannelGrid" class="life-channel-grid" aria-live="polite"></div>
@@ -74,12 +81,14 @@
     </section>
 
     <section id="platforms" class="section">
-      <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 쓰는 EKODI</h2></div><p>한 번 로그인하면 현재 공간의 권한으로 필요한 서비스를 이어서 사용할 수 있습니다.</p></div>
-      <div id="platformList" class="platform-grid"><div class="empty"><strong>로그인하면 내 플랫폼 상태를 확인할 수 있습니다.</strong><p>서비스마다 다시 가입하지 않고 현재 EKODI 사용자의 접근권한을 불러옵니다.</p></div></div>
-      <p class="section-note">서비스별 데이터와 권한은 Workspace 단위로 분리되며 My EKODI는 이동과 선택을 연결합니다.</p>
+      <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 꺼내 쓰는 EKODI</h2></div><p>현재 쓰는 것과 지금 관심이 생긴 것만 먼저 보여줍니다. 서비스 전체 목록은 내가 찾을 때만 엽니다.</p></div>
+      <div id="platformList"><div class="empty"><strong>로그인하면 필요한 서비스만 나타납니다.</strong><p>연결 상태와 관심 신호를 바탕으로 꼭 필요한 만큼만 제안합니다.</p></div></div>
+      <div class="service-discovery-control"><button id="discoverServicesButton" class="secondary" type="button" aria-expanded="false" hidden>필요한 서비스 찾기</button><span>전체 목록은 내가 원할 때만 펼칩니다.</span><details class="my-utility-discovery"><summary>개인 도구</summary><a class="text-link" href="/device-care/">내 PC</a></details></div>
+      <div id="serviceDiscoveryList" class="service-discovery" hidden></div>
+      <p class="section-note">추천과 화면 노출은 접근권한을 만들지 않습니다. 서비스 권한은 기존 Workspace·Membership·RBAC 기준을 그대로 따릅니다.</p>
     </section>
 
-    <section id="personal-brand" class="section soft-section">
+    <section id="personal-brand" class="section soft-section" data-progressive-services="marketing" hidden>
       <div class="section-head"><div><p class="eyebrow">PERSONAL BRAND MARKETING</p><h2>나도 하나의 브랜드</h2></div><p>소속이 없어도 개인 이름과 활동을 기준으로 Marketing AI를 사용할 수 있습니다. 필요한 경우에만 시작하세요.</p></div>
       <div class="recommendation-grid">
         <article class="recommendation-card"><small>01 · PROFILE</small><h3>나를 한 문장으로 정리</h3><p>이름, 활동 분야, 소개와 알리고 싶은 주제를 개인 프로필로 관리합니다.</p><a class="text-link" href="#account">내 기본정보 확인 →</a></article>
@@ -88,7 +97,7 @@
       </div>
     </section>
 
-    <section id="creator" class="section">
+    <section id="creator" class="section" data-progressive-services="author,publishing,books" hidden>
       <div class="section-head"><div><p class="eyebrow">CREATOR PORTFOLIO</p><h2>내가 만든 것</h2></div><p>Creator AI에서 승인해 My EKODI로 보낸 작업을 한곳에서 이어봅니다. 새 항목은 기본 비공개입니다.</p></div>
       <div id="creatorFilters" class="filters" role="group" aria-label="창작물 필터"><button class="chip active" data-filter="all" type="button">전체</button><button class="chip" data-filter="writer" type="button">글</button><button class="chip" data-filter="video" type="button">영상</button><button class="chip" data-filter="podcast" type="button">오디오</button><button class="chip" data-filter="lecture" type="button">교육</button><button class="chip" data-filter="research" type="button">연구</button><button class="chip" data-filter="visual" type="button">디자인</button><button class="chip" data-filter="mission" type="button">사역</button><button class="chip" data-filter="ai" type="button">AI</button></div>
       <div id="creatorList" class="portfolio-grid"><div class="empty"><strong>아직 My EKODI에 연결된 창작물이 없습니다.</strong><p>Creator AI에서 작업을 최종 승인한 뒤 My EKODI에 등록하면 여기에 나타납니다.</p></div></div>
@@ -107,9 +116,9 @@
 
   <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="/journey/">My Journey ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
-  <script type="module" src="/app.js?v=20260821-user-ui-1"></script>
+  <script type="module" src="/app.js?v=20260904-progressive-personalization-1"></script>
   <script type="module" src="/workspace-selector-sync.js?v=20260822-shell-sync-1"></script>
-  <script type="module" src="/user-ai-ui.js?v=20260822-user-ai-1"></script>
+  <script type="module" src="/user-ai-ui.js?v=20260904-progressive-personalization-1"></script>
   <script type="module" src="/membership-summary.js?v=20260822-universal-membership-1"></script>
   <script type="module" src="/approval-brief.js?v=20260904-approval-hub-1"></script>
   <script type="module" src="/life-communication.js?v=20260824-life-ai-1"></script>

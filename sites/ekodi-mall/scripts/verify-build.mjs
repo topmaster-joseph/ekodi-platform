@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const checks = [
-  ['index.html', ['EKODI MALL', 'MARKETPLACE', '7·8·9', '상품 하나부터', '/assets/marketplace-live.js']],
+  ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js']],
+  ['assets/context-curator.js', ['api.ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt']],
+  ['assets/context-curator.css', ['context-hero', 'context-result-grid', 'discover-grid', 'buyer-mobile']],
   ['seller/index.html', ['OPEN SELLER STUDIO', 'PERSONAL PRODUCT STUDIO', 'sellerDraftForm', 'Google로 무료 시작', '7%', '8%', '9%', 'STOREFRONT', 'ANALYTICS', '/assets/seller-readiness.js', '/assets/seller-analytics.js', '/assets/seller-storefronts.js', '/assets/analytics.css']],
   ['checkout/index.html', ['INQUIRY BASKET', 'basketItems', '/assets/commerce.js']],
   ['stores/ekodi-select/index.html', ['EKODI Select', 'STORE COLLECTION']],
