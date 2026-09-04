@@ -341,7 +341,15 @@
   giftResults?.addEventListener('click',event=>{const followup=event.target.closest('[data-gift-followup]');if(followup){askGift(followup.dataset.giftFollowup||followup.textContent);return}const button=event.target.closest('.gift-ai-product');if(!button)return;const product=state.products.find(item=>String(item.id)===String(button.dataset.productId||''));if(product)openProductDialog(product)});
 
   const catalogReady = loadProducts();
-  const initialGift = String(new URLSearchParams(location.search).get('gift') || '').trim().slice(0, 500);
+  const searchParams = new URLSearchParams(location.search);
+  const initialProduct = String(searchParams.get('product') || '').trim().slice(0, 160);
+  if (initialProduct) {
+    catalogReady.then(() => {
+      const product = state.products.find(item => item.productId === initialProduct);
+      if (product) openProductDialog(product);
+    }).catch(() => {});
+  }
+  const initialGift = String(searchParams.get('gift') || '').trim().slice(0, 500);
   if (initialGift) {
     location.hash = 'gift-ai';
     catalogReady.then(() => askGift(initialGift)).catch(() => {});

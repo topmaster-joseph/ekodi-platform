@@ -14,6 +14,13 @@ const [api, automation, router, html, js, css, migration, registryText] = await 
   read('config/ecosystem-services.json'),
 ]);
 const registry = JSON.parse(registryText);
+const [offerRegistry, offerControl, offerSources, offerMigration, entryWorker] = await Promise.all([
+  read('offer-registry.js'),
+  read('offer-registry-control.js'),
+  read('offer-registry-sources.js'),
+  read('migrations/0056_ekodi_offer_registry.sql'),
+  read('customer-entry-worker.js'),
+]);
 
 test('EKODI Mall remains a root storefront separate from shared Shop platform', () => {
   const mall = registry.services.find(service => service.id === 'mall');
@@ -94,7 +101,7 @@ test('contextual Gift AI ranks only live affiliate catalog products', () => {
   assert.match(html, /id="gift-ai"/);
   assert.match(js, /GIFT_DIRECT_TERMS/);
   assert.match(js, /pickGiftRecommendations/);
-  assert.match(js, /URLSearchParams\(location\.search\)\.get\('gift'\)/);
+  assert.match(js, /searchParams\.get\('gift'\)/);
   assert.match(js, /dialogBuy\.href = product\.clickUrl/);
   assert.doesNotMatch(js, /https:\/\/link\.coupang\.com/);
 });
@@ -119,6 +126,64 @@ test('automatic product search and partner link issuance are connected', () => {
   assert.match(api, /runAffiliateAutomation/);
   assert.match(api, /public-empty/);
   assert.match(api, /public-stale/);
+});
+
+test('on-demand ingest adds requested products without replacing the batch catalog', () => {
+  assert.match(automation, /ingestAffiliateProductsOnDemand/);
+  assert.match(automation, /selectionSource: 'on-demand'/);
+  assert.match(automation, /ON_DEMAND_TTL_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(automation, /selection_source <> 'on-demand'/);
+  const start = automation.indexOf('export async function ingestAffiliateProductsOnDemand');
+  const end = automation.indexOf('export const AFFILIATE_AUTOMATION_DEFAULTS', start);
+  const onDemand = automation.slice(start, end);
+  assert.doesNotMatch(onDemand, /UPDATE affiliate_storefront_products SET status = 'inactive'/);
+  const authIndex = api.indexOf('const auth = await sessionCheck');
+  const ingestIndex = api.indexOf("path === `${PREFIX}/ingest`");
+  assert.ok(ingestIndex > authIndex);
+  assert.match(api, /publicProductView/);
+  assert.match(api, /affiliate\.product\.ingest/);
+});
+
+test('Mall products project into a provider-neutral EKODI Offer Registry', () => {
+  assert.match(offerRegistry, /'product', 'service', 'program', 'provider', 'common_service'/);
+  assert.match(offerRegistry, /affiliateProductOffer/);
+  assert.match(offerRegistry, /upsertOffer/);
+  assert.match(offerRegistry, /listPublicOffers/);
+  assert.match(offerRegistry, /mall\?product=/);
+  assert.match(js, /searchParams\.get\('product'\)/);
+  assert.match(automation, /upsertOffer\(env\.DB, offer\)/);
+  assert.match(automation, /UPDATE ekodi_offers SET status = 'inactive'/);
+  for (const field of ['offer_type', 'owner_type', 'source_provider', 'source_id', 'canonical_url', 'discovery_keywords_json']) {
+    assert.match(offerMigration, new RegExp(field));
+  }
+});
+
+test('Offer discovery bootstraps the existing Mall catalog without remote provider search', () => {
+  assert.match(automation, /bootstrapAffiliateOffersFromCatalog/);
+  assert.match(automation, /LEFT JOIN ekodi_offers/);
+  assert.match(automation, /p\.status = 'active' AND o\.offer_id IS NULL/);
+  const start = automation.indexOf('export async function bootstrapAffiliateOffersFromCatalog');
+  const end = automation.indexOf('export async function ingestAffiliateProductsOnDemand', start);
+  const bootstrap = automation.slice(start, end);
+  assert.doesNotMatch(bootstrap, /searchSeed\(/);
+  assert.doesNotMatch(bootstrap, /coupangRequest\(/);
+  assert.match(bootstrap, /NOT EXISTS/);
+  assert.match(offerSources, /bootstrapAffiliateOffersFromCatalog/);
+  assert.match(offerSources, /offerType === 'product'/);
+  assert.match(offerControl, /bootstrapOfferSources/);
+  assert.match(offerControl, /sourceProvider/);
+  assert.match(offerControl, /searchParams\.get\('provider'\)/);
+  assert.match(offerControl, /searchParams\.get\('kind'\)/);
+  assert.match(offerRegistry, /source_provider = \?/);
+});
+test('public Offer discovery is read-only and routed independently from affiliate admin ingest', () => {
+  assert.match(offerControl, /\/api\/offers/);
+  assert.match(offerControl, /\/discover/);
+  assert.match(offerControl, /listPublicOffers/);
+  assert.match(offerControl, /request\.method !== 'GET'/);
+  assert.doesNotMatch(offerControl, /upsertOffer/);
+  assert.match(entryWorker, /handleOfferRegistryRequest/);
+  assert.match(entryWorker, /path\.startsWith\('\/api\/offers'\)/);
 });
 
 test('public product, image and click paths run before admin authentication', () => {

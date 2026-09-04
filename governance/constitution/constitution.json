@@ -1,5 +1,5 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "effectiveDate": "2026-09-04",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -324,5 +324,8 @@
     "https://ekodi.kr/{slug}/{service}",
     "https://ekodi.kr/{slug}/admin",
     "https://ekodi.kr/{slug}/{service}/admin"
-  ]
+  ],
+  "customerOwnedDomainMappings": {
+    "cgma.or.kr": "https://ekodi.kr/cgma"
+  }
 }

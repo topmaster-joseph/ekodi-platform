@@ -301,6 +301,7 @@ jobs:
             'https://cgma.or.kr/',
             'https://www.cgma.or.kr/',
             'https://cgma.ekodi.kr/',
+            'https://ekodi.kr/cgma/',
             'https://biz.ekodi.kr/',
             'https://trade.biz.ekodi.kr/',
             'https://pay.ekodi.kr/',
@@ -430,7 +431,7 @@ jobs:
             echo '' >> "$GITHUB_STEP_SUMMARY"
             echo '| Menu | Group | Result | Duration |' >> "$GITHUB_STEP_SUMMARY"
             echo '|---|---|---|---:|' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.results[] | "| \(.id) | \(.group) | ✅ | \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "| \(.id) | \(.group) | ??| \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived E2E session

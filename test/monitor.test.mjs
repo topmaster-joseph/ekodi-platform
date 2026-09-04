@@ -73,8 +73,10 @@ test('monitor covers official services, shared infrastructure, Connect dependenc
   assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
-  assert.equal(byId.get('marketing-private-cgma')?.[2], 'cgma.ekodi.kr');
-  assert.equal(byId.has('marketing-public-cgma'), false);
+  assert.equal(byId.has('marketing-private-cgma'), false);
+  assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.or.kr');
+  assert.equal(byId.get('marketing-public-cgma')?.[3], 'https://cgma.or.kr/');
+  assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-cgma-')));
   assert.equal(byId.get('prelaunch-mail')?.[2], 'mail.ekodi.kr');
   assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
   assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');
