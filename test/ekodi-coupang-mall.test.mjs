@@ -246,3 +246,14 @@ test('root router publishes Mall under EKODIBIZ and redirects the legacy root pa
   assert.match(router, /'\/mall\.css'/);
   assert.match(router, /'\/mall\.js'/);
 });
+
+test('public affiliate catalog degrades safely when background refresh throws', () => {
+  const start = api.indexOf('async function publicProducts');
+  const end = api.indexOf('function coupangImageUrl', start);
+  const publicCatalog = api.slice(start, end);
+  assert.match(publicCatalog, /try \{/);
+  assert.match(publicCatalog, /runAffiliateAutomation/);
+  assert.match(publicCatalog, /status: 'degraded'/);
+  assert.match(publicCatalog, /AUTOMATION_REFRESH_FAILED/);
+  assert.match(publicCatalog, /return json\(\{ storefront:/);
+});
