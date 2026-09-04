@@ -1,5 +1,5 @@
 import { createOpenAiProvider } from './openai-provider-adapter.js';
-import { affiliateProductOffer, upsertOffer } from './offer-registry.js';
+import { affiliateProductOffer, ensureOfferRegistrySchema, upsertOffer } from './offer-registry.js';
 
 const COUPANG_HOST = 'https://api-gateway.coupang.com';
 const SEARCH_PATH = '/v2/providers/affiliate_open_api/apis/openapi/v1/products/search';
@@ -497,6 +497,58 @@ export async function runAffiliateAutomation(env = {}, { force = false, reason =
   }
 }
 
+export async function bootstrapAffiliateOffersFromCatalog(env = {}) {
+  if (!env.DB?.prepare) return { ok: false, status: 'database_required', projectedCount: 0, deactivatedCount: 0 };
+  await ensureSchema(env.DB);
+  await ensureOfferRegistrySchema(env.DB);
+
+  const rows = await env.DB.prepare(`SELECT p.product_id, p.product_name, p.price_krw, p.image_url, p.source_keyword, p.category,
+      p.provider_rank, p.selection_score, p.selection_source, p.is_rocket, p.is_free_shipping
+    FROM affiliate_storefront_products p
+    LEFT JOIN ekodi_offers o
+      ON o.offer_type = 'product' AND o.source_provider = 'coupang_partners' AND o.source_id = p.product_id AND o.status = 'active'
+    WHERE p.account_id = ? AND p.storefront_slug = ? AND p.status = 'active' AND o.offer_id IS NULL
+    ORDER BY p.selection_score DESC, p.id DESC
+    LIMIT 200`).bind(ACCOUNT_ID, STOREFRONT).all();
+
+  let projectedCount = 0;
+  for (const row of rows.results || []) {
+    const offer = affiliateProductOffer({
+      productId: row.product_id,
+      productName: row.product_name,
+      productPrice: Number(row.price_krw || 0),
+      productImage: row.image_url,
+      keyword: row.source_keyword,
+      category: row.category,
+      rank: Number(row.provider_rank || 0),
+      selectionScore: Number(row.selection_score || 0),
+      selectionSource: row.selection_source,
+      isRocket: Boolean(row.is_rocket),
+      isFreeShipping: Boolean(row.is_free_shipping),
+    });
+    if (offer && await upsertOffer(env.DB, offer)) projectedCount += 1;
+  }
+
+  const stale = await env.DB.prepare(`SELECT COUNT(*) AS count FROM ekodi_offers o
+    WHERE o.offer_type = 'product' AND o.source_provider = 'coupang_partners'
+      AND o.owner_type = 'business' AND o.owner_key = 'ekodibiz' AND o.status = 'active'
+      AND NOT EXISTS (
+        SELECT 1 FROM affiliate_storefront_products p
+        WHERE p.account_id = ? AND p.storefront_slug = ? AND p.status = 'active' AND p.product_id = o.source_id
+      )`).bind(ACCOUNT_ID, STOREFRONT).first();
+  const deactivatedCount = Number(stale?.count || 0);
+  if (deactivatedCount > 0) {
+    await env.DB.prepare(`UPDATE ekodi_offers SET status = 'inactive', updated_at = ?
+      WHERE offer_type = 'product' AND source_provider = 'coupang_partners'
+        AND owner_type = 'business' AND owner_key = 'ekodibiz' AND status = 'active'
+        AND NOT EXISTS (
+          SELECT 1 FROM affiliate_storefront_products p
+          WHERE p.account_id = ? AND p.storefront_slug = ? AND p.status = 'active' AND p.product_id = ekodi_offers.source_id
+        )`).bind(isoNow(), ACCOUNT_ID, STOREFRONT).run();
+  }
+
+  return { ok: true, status: projectedCount || deactivatedCount ? 'synchronized' : 'current', projectedCount, deactivatedCount };
+}
 export async function ingestAffiliateProductsOnDemand(env = {}, { query = '', category = '추천', limit = 3, reason = 'on-demand' } = {}) {
   if (!env.DB?.prepare) return { ok: false, status: 'database_required', selectedCount: 0, products: [], offers: [] };
   await ensureSchema(env.DB);

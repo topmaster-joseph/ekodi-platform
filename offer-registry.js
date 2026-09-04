@@ -121,14 +121,16 @@ export function affiliateProductOffer(product = {}) {
   });
 }
 
-export async function listPublicOffers(db, { query = '', offerType = '', limit = 20 } = {}) {
+export async function listPublicOffers(db, { query = '', offerType = '', sourceProvider = '', limit = 20 } = {}) {
   await ensureOfferRegistrySchema(db);
   const safeLimit = Math.max(1, Math.min(50, Math.trunc(Number(limit) || 20)));
   const type = OFFER_TYPES.has(offerType) ? offerType : '';
   const needle = cleanText(query, 120);
+  const provider = cleanText(sourceProvider, 120);
   const clauses = ["visibility = 'public'", "status = 'active'"];
   const binds = [];
   if (type) { clauses.push('offer_type = ?'); binds.push(type); }
+  if (provider) { clauses.push('source_provider = ?'); binds.push(provider); }
   if (needle) {
     clauses.push('(title LIKE ? OR summary LIKE ? OR category LIKE ? OR discovery_keywords_json LIKE ?)');
     const like = `%${needle.replace(/[%_]/g, '')}%`;
@@ -141,5 +143,6 @@ export async function listPublicOffers(db, { query = '', offerType = '', limit =
     sourceProvider: row.source_provider, sourceId: row.source_id, title: row.title, summary: row.summary,
     category: row.category, priceAmount: Number(row.price_amount || 0), priceCurrency: row.price_currency,
     canonicalUrl: row.canonical_url, imageUrl: row.image_url, actionKind: row.action_kind, updatedAt: row.updated_at,
+    metadata: (() => { try { const value = JSON.parse(row.metadata_json || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; } catch { return {}; } })(),
   }));
 }

@@ -1,4 +1,5 @@
 import { listPublicOffers } from './offer-registry.js';
+import { bootstrapOfferSources } from './offer-registry-sources.js';
 
 const PREFIX = '/api/offers';
 
@@ -29,15 +30,18 @@ export async function handleOfferRegistryRequest(request, env) {
 
   if (url.pathname === `${PREFIX}/discover`) {
     const query = cleanText(url.searchParams.get('q'));
-    const requestedType = cleanText(url.searchParams.get('type'), 40);
+    const requestedType = cleanText(url.searchParams.get('type') || url.searchParams.get('kind'), 40);
     const offerType = new Set(['product', 'service', 'program', 'provider', 'common_service']).has(requestedType) ? requestedType : '';
     const limit = Math.max(1, Math.min(50, Math.trunc(Number(url.searchParams.get('limit')) || 20)));
-    const offers = await listPublicOffers(env.DB, { query, offerType, limit });
+    const sourceProvider = cleanText(url.searchParams.get('provider'), 120);
+    await bootstrapOfferSources(env, { offerType });
+    const offers = await listPublicOffers(env.DB, { query, offerType, sourceProvider, limit });
     return json({
       registry: 'ekodi-offer-registry',
       version: 'v1',
       query,
       offerType: offerType || 'all',
+      sourceProvider: sourceProvider || 'all',
       count: offers.length,
       offers,
     });
