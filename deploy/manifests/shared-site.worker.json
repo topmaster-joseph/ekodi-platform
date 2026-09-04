@@ -1,5 +1,5 @@
 {
-  "version": 48,
+  "version": 49,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -134,6 +134,22 @@
       },
       {
         "url": "https://ekodi.kr/ekodibiz/mall/admin/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Workspace Admin",
+          "workspace-admin.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: workspace-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/mall/admin/marketing/channels/",
         "statuses": [
           200
         ],
@@ -457,7 +473,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "use_fedcm_for_button:supportsFedCmButton()",
+          "use_fedcm_for_button:false",
           "button_auto_select:false",
           "isEmbeddedWebView",
           "Chrome에서 관리자 로그인 열기",
