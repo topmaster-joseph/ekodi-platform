@@ -14,6 +14,7 @@ async function bundledShell(request,env){
   const userHeaderUrl=new URL(request.url);userHeaderUrl.pathname='/user-ui-header.js';
   const userFooterUrl=new URL(request.url);userFooterUrl.pathname='/user-ui-footer.js';
   const userLanguageUrl=new URL(request.url);userLanguageUrl.pathname='/user-language.js';
+  const userCharacterUrl=new URL(request.url);userCharacterUrl.pathname='/user-character.js';
   const ccmMrUrl=new URL(request.url);ccmMrUrl.pathname='/ccm-mr-player.js';
   const adminShellUrl=new URL(request.url);adminShellUrl.pathname='/admin-ui-shell.js';
   const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
@@ -28,6 +29,7 @@ async function bundledShell(request,env){
     env.ASSETS.fetch(new Request(userHeaderUrl,request)),
     env.ASSETS.fetch(new Request(userFooterUrl,request)),
     env.ASSETS.fetch(new Request(userLanguageUrl,request)),
+    env.ASSETS.fetch(new Request(userCharacterUrl,request)),
     env.ASSETS.fetch(new Request(ccmMrUrl,request)),
     env.ASSETS.fetch(new Request(adminShellUrl,request)),
     env.ASSETS.fetch(new Request(headerUrl,request)),
@@ -43,6 +45,7 @@ async function bundledShell(request,env){
   const userHeader=userHeaderResponse.ok?await userHeaderResponse.text():'';
   const userFooter=userFooterResponse.ok?await userFooterResponse.text():'';
   const userLanguage=userLanguageResponse.ok?await userLanguageResponse.text():'';
+  const userCharacter=userCharacterResponse.ok?await userCharacterResponse.text():'';
   const ccmMrPlayer=ccmMrResponse.ok?await ccmMrResponse.text():'';
   const adminShell=adminShellResponse.ok?await adminShellResponse.text():'';
   const fixedHeader=headerResponse.ok?await headerResponse.text():'';
@@ -56,6 +59,7 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-user-ui-header',userHeader?'v1':'missing');
   headers.set('x-ekodi-user-ui-footer',userFooter?`v${EKODI_USER_FOOTER.version}`:'missing');
   headers.set('x-ekodi-user-language',userLanguage?'v1':'missing');
+  headers.set('x-ekodi-user-character',userCharacter?'v1':'missing');
   headers.set('x-ekodi-ccm-mr',ccmMrPlayer?'v1':'missing');
   headers.set('x-ekodi-admin-ui-shell',adminShell?'v1':'missing');
   headers.set('x-ekodi-message-ui',messageUI?'v1':'missing');

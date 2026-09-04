@@ -16,11 +16,12 @@ test('EKODI-owned brands are never classified as external clients', () => {
   assert.ok(!apiWorker.includes('에코디선교회'), 'retired formal mission organization label must not reappear in Control API source');
 });
 
-test('admin worker never reintroduces the static-assets redirect loop', () => {
-  assert.ok(siteWorker.includes("assetRequest(request, '/control-center')"));
+test('admin worker serves the official shell and never reintroduces retired Static Assets loops', () => {
+  assert.ok(siteWorker.includes("assetRequest(request, '/admin-shell')"));
   assert.ok(!siteWorker.includes("assetRequest(request, '/control-center.html')"));
   assert.ok(!siteWorker.includes("assetRequest(request, '/admin.html')"));
-  assert.match(siteWorker, /LEGACY_ALIASES[\s\S]*assetRequest\(request, '\/control-center'\)/);
+  assert.match(siteWorker, /const RETIRED_ADMIN_PATHS = new Set/);
+  assert.match(siteWorker, /function retiredAdminResponse\(\)/);
   assert.ok(siteWorker.includes("'X-EKODI-Route', routeName"));
 });
 

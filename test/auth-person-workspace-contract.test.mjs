@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -57,7 +58,7 @@ test('Mall gives every verified Google member an active free personal seller han
 test('legacy Mall seller login is normalized back to Seller Studio through the current router',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
-  assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
+  assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/mall\/seller\//);
   assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
 });
 
@@ -167,7 +168,7 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
   for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
-    const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
+    const result=spawnSync(process.execPath,['--check',fileURLToPath(new URL(`../${path}`,import.meta.url))],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
 });
