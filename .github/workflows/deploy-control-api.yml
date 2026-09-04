@@ -54,6 +54,8 @@ on:
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'coupang-partners-automation.js'
+      - 'offer-registry.js'
+      - 'offer-registry-control.js'
       - 'test/ekodi-coupang-mall.test.mjs'
       - 'social-registry-api.js'
       - 'mail-control.js'
@@ -123,6 +125,8 @@ on:
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
       - 'coupang-partners-automation.js'
+      - 'offer-registry.js'
+      - 'offer-registry-control.js'
       - 'test/ekodi-coupang-mall.test.mjs'
       - 'social-registry-api.js'
       - 'mail-control.js'
@@ -167,7 +171,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js coupang-partners-automation.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js coupang-partners-automation.js offer-registry.js offer-registry-control.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs

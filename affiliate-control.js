@@ -1,5 +1,5 @@
 import authWorker from './auth-worker.js';
-import { getAffiliateAutomationStatus, runAffiliateAutomation } from './coupang-partners-automation.js';
+import { getAffiliateAutomationStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation } from './coupang-partners-automation.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
@@ -108,6 +108,21 @@ async function readPublicRows(env, limit) {
   } catch { return []; }
 }
 
+function publicProductView(request, row) {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    productName: row.product_name,
+    priceKrw: Number(row.price_krw || 0),
+    imageUrl: new URL(`${PREFIX}/public/image/${row.id}?storefront=${PUBLIC_STOREFRONT_SLUG}`, request.url).toString(),
+    clickUrl: new URL(`${PREFIX}/public/click/${row.id}?storefront=${PUBLIC_STOREFRONT_SLUG}`, request.url).toString(),
+    category: row.category || '추천',
+    isRocket: Boolean(row.is_rocket),
+    isFreeShipping: Boolean(row.is_free_shipping),
+    selectedAt: row.selected_at || null,
+  };
+}
+
 async function publicProducts(request, env, url) {
   const storefront = cleanText(url.searchParams.get('storefront') || PUBLIC_STOREFRONT_SLUG, 80);
   if (storefront !== PUBLIC_STOREFRONT_SLUG) return json({ error: '지원하지 않는 공개 쇼핑몰입니다.' }, 404, publicHeaders(request));
@@ -125,18 +140,7 @@ async function publicProducts(request, env, url) {
     automation = await getAffiliateAutomationStatus(env);
   }
   const rows = await readPublicRows(env, limit);
-  const products = rows.map(row => ({
-    id: row.id,
-    productId: row.product_id,
-    productName: row.product_name,
-    priceKrw: Number(row.price_krw || 0),
-    imageUrl: new URL(`${PREFIX}/public/image/${row.id}?storefront=${PUBLIC_STOREFRONT_SLUG}`, request.url).toString(),
-    clickUrl: new URL(`${PREFIX}/public/click/${row.id}?storefront=${PUBLIC_STOREFRONT_SLUG}`, request.url).toString(),
-    category: row.category || '추천',
-    isRocket: Boolean(row.is_rocket),
-    isFreeShipping: Boolean(row.is_free_shipping),
-    selectedAt: row.selected_at || null,
-  }));
+  const products = rows.map(row => publicProductView(request, row));
   const automationStatus = products.length ? 'ready' : (automation.status || 'warming');
   return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: 'coupang_partners', automationStatus, disclosureText, products }, 200, publicHeaders(request));
 }
@@ -233,6 +237,8 @@ async function overview(env) {
       manualLinkRegistry: true,
       manualPerformanceLedger: true,
       automaticProductSearch: true,
+      onDemandProductIngest: true,
+      offerRegistryAdapter: true,
       automaticDeepLink: true,
       automaticClickTracking: true,
       automaticPerformanceSync: false,
@@ -350,6 +356,24 @@ export async function handleAffiliateRequest(request, env) {
     const result = await runAffiliateAutomation(env, { force: true, reason: 'admin' });
     await audit(env, auth.session, 'affiliate.automation.run', PUBLIC_STOREFRONT_SLUG, JSON.stringify({ status: result.status, selectedCount: result.selectedCount || 0 }));
     return json(result, result.ok ? 200 : 409, auth.response.headers);
+  }
+  if (request.method === 'POST' && path === `${PREFIX}/ingest`) {
+    const body = await readJson(request);
+    if (!body) return json({ error: '올바른 JSON 요청이 필요합니다.' }, 400, auth.response.headers);
+    const query = cleanText(body.query, 120);
+    const category = cleanText(body.category, 80) || '추천';
+    const limit = Math.max(1, Math.min(5, Math.trunc(Number(body.limit) || 3)));
+    const result = await ingestAffiliateProductsOnDemand(env, { query, category, limit, reason: 'admin-on-demand' });
+    const cards = [];
+    for (const product of result.products || []) {
+      const row = await env.DB.prepare(`SELECT id, product_id, product_name, price_krw, image_url, category, is_rocket, is_free_shipping, selected_at
+        FROM affiliate_storefront_products WHERE account_id = ? AND storefront_slug = ? AND product_id = ? LIMIT 1`)
+        .bind(DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG, product.productId).first();
+      if (row) cards.push(publicProductView(request, row));
+    }
+    await audit(env, auth.session, 'affiliate.product.ingest', PUBLIC_STOREFRONT_SLUG, JSON.stringify({ query, category, status: result.status, selectedCount: result.selectedCount || 0 }));
+    const status = result.status === 'invalid_query' ? 400 : (result.ok ? 200 : 409);
+    return json({ ok: result.ok, status: result.status, query, selectedCount: cards.length, cards, offers: result.offers || [], error: result.error || '' }, status, auth.response.headers);
   }
   if (request.method === 'GET' && path === `${PREFIX}/providers`) {
     const rows = await env.DB.prepare('SELECT * FROM affiliate_providers ORDER BY provider_key').all();
