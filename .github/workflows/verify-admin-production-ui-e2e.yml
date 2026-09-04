@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           npm install --no-save --no-package-lock playwright
           npx playwright install --with-deps chromium
-      - name: Verify all 24 production Admin menu paths
+      - name: Verify production Admin menu paths
         shell: bash
         env:
           ADMIN_URL: https://admin.ekodi.kr/
