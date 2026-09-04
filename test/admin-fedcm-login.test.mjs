@@ -33,7 +33,7 @@ test('admin login opens central auth as a popup and hands the session back to th
   assert.match(handoff, /window\.open\(target,AUTH_POPUP_NAME,popupFeatures\(\)\)/);
   assert.match(handoff, /event\.origin!==AUTH_ORIGIN\|\|event\.source!==authPopup/);
   assert.match(handoff, /payload\.type!=='ekodi-admin-auth-success'/);
-  assert.match(handoff, /\^\[a-f0-9\]\{64\}\$/i/);
+  assert.ok(handoff.includes("if(!/^[a-f0-9]{64}$/i.test(value))return"));
   assert.match(adminAuth, /const popupEntry=params\.get\('popup'\)==='1'/);
   assert.match(adminAuth, /window\.opener\.postMessage\(\{type:'ekodi-admin-auth-success'/);
   assert.match(adminAuth, /new URL\(safeReturn\)\.origin/);
@@ -54,5 +54,5 @@ test('admin auth recovers from expired challenges and shows allowlist failures c
   assert.match(adminAuth, /GOOGLE_ACCOUNT_NOT_ALLOWED/);
   assert.match(adminAuth, /expired_challenge/);
   assert.match(adminAuth, /setTimeout\(prepareGoogle,350\)/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260904-admin-popup-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260823-mobile-handoff-1/);
 });
