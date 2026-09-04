@@ -1,6 +1,8 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { SUPPORT_STAGES, OPPORTUNITY_SERVICES, analyzeGuidanceChange, scoreOpportunity, fillOfficialForm, buildNextActions, requiresHumanGate, rankOpportunities, buildProactiveBrief } from './support/core.js';
 import { officialSourceStatus, fetchBizinfoNotices } from './support/sources.js';
+import { buildSupportJubileeSignalRequest } from './support-jubilee-boundary.js';
+import { executeJubileeCapabilityRequest } from './jubilee-capability-provider.js';
 
 const SPECIALIST_PATHS=new Set(OPPORTUNITY_SERVICES.map(service=>service.path));
 function centralIdentityConfig(env={}){
@@ -39,14 +41,25 @@ function securityHeaders(env={}){
 function json(data,status=200,env={}){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}})}
 function withHeaders(response,env={}){const headers=new Headers(response.headers);for(const[key,value]of Object.entries(securityHeaders(env)))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 async function body(request){try{return await request.json()}catch{return null}}
-function runtimeConfig(env){const sources=officialSourceStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=support',centralIdentity:centralIdentityConfig(env),officialSourceRequired:true,officialSources:sources.map(({id,name,mode})=>({id,name,mode})),specialistServices:OPPORTUNITY_SERVICES.map(({id,path,label,sourceStatus})=>({id,path,label,sourceStatus})),submissionExecution:false,humanGateRequired:true,persistence:'browser-local-first',proactiveBriefing:true,sharedOpportunityCore:true,specialistWorkspace:true}}
+function runtimeConfig(env){const sources=officialSourceStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=support',centralIdentity:centralIdentityConfig(env),officialSourceRequired:true,officialSources:sources.map(({id,name,mode})=>({id,name,mode})),specialistServices:OPPORTUNITY_SERVICES.map(({id,path,label,sourceStatus})=>({id,path,label,sourceStatus})),submissionExecution:false,humanGateRequired:true,persistence:'browser-local-first',proactiveBriefing:true,sharedOpportunityCore:true,specialistWorkspace:true,jubileeBoundaryMode:jubileeBoundaryMode(env),jubileeNeedScoreShared:false,jubileeBeneficiaryIdentityShared:false}}
 async function getOfficialNotices(env,url){const source=url.searchParams.get('source')||'bizinfo';if(source!=='bizinfo')return{ok:false,source,reason:'source_not_enabled',items:[]};return fetchBizinfoNotices(env,{limit:url.searchParams.get('limit')||100,category:url.searchParams.get('category')||'',hashtags:url.searchParams.get('hashtags')||''})}
 async function serveOpportunityApp(request,env,assetPath='/index.html'){const assetUrl=new URL(assetPath,request.url);const response=await env.ASSETS.fetch(new Request(assetUrl,{method:'GET',headers:request.headers}));return injectEkodiShell(withHeaders(response,env),'support')}
+function jubileeBoundaryMode(env={}){const requested=String(env.JUBILEE_BOUNDARY_MODE||'off').trim().toLowerCase();return requested==='shadow'&&(env.DATA_MODE||'')!=='production'?'shadow':'off'}
+async function previewJubileeBoundary(request,env){
+  if(jubileeBoundaryMode(env)!=='shadow')return json({error:'not_found'},404,env);
+  const p=await body(request);if(!p)return json({error:'invalid_json'},400,env);
+  try{
+    const envelope=buildSupportJubileeSignalRequest({requestId:p.requestId||`support-jubilee-${crypto.randomUUID()}`,consent:p.consent,jubileeConsent:p.jubileeConsent,assessment:p.assessment||{}});
+    const result=await executeJubileeCapabilityRequest(envelope);
+    return json({mode:'shadow',result},result.status==='ok'?200:422,env);
+  }catch(error){return json({error:'jubilee_preview_rejected',code:String(error?.message||'rejected').slice(0,160)},400,env)}
+}
 
 export default{async fetch(request,env){
   const url=new URL(request.url);
-  if(url.pathname==='/health')return json({ok:true,service:'ekodi-support-opportunity',surface:'support-platform',stages:SUPPORT_STAGES,specialistServices:OPPORTUNITY_SERVICES.map(({id,path,label})=>({id,path,label})),sharedOpportunityCore:true,specialistWorkspace:true,officialSourceRequired:true,officialSources:officialSourceStatus(env).map(({id,mode})=>({id,mode})),submissionExecution:false,humanGateRequired:true,centralIdentityEnabled:centralIdentityConfig(env).enabled,dataMode:runtimeConfig(env).dataMode,ekodiShell:true},200,env);
+  if(url.pathname==='/health')return json({ok:true,service:'ekodi-support-opportunity',surface:'support-platform',stages:SUPPORT_STAGES,specialistServices:OPPORTUNITY_SERVICES.map(({id,path,label})=>({id,path,label})),sharedOpportunityCore:true,specialistWorkspace:true,officialSourceRequired:true,officialSources:officialSourceStatus(env).map(({id,mode})=>({id,mode})),submissionExecution:false,humanGateRequired:true,centralIdentityEnabled:centralIdentityConfig(env).enabled,dataMode:runtimeConfig(env).dataMode,jubileeBoundaryMode:jubileeBoundaryMode(env),jubileeNeedScoreShared:false,ekodiShell:true},200,env);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_SUPPORT_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
+  if(url.pathname==='/api/jubilee/context-preview'&&request.method==='POST')return previewJubileeBoundary(request,env);
   if(url.pathname==='/api/services'&&request.method==='GET')return json({services:OPPORTUNITY_SERVICES,sharedOpportunityCore:true,specialistWorkspace:true},200,env);
   if(url.pathname==='/api/sources/status'&&request.method==='GET')return json({sources:officialSourceStatus(env)},200,env);
   if(url.pathname==='/api/opportunities'&&request.method==='GET'){const result=await getOfficialNotices(env,url);return json(result,result.ok?200:result.reason==='credential_required'?503:502,env)}

@@ -11,6 +11,7 @@ custom_domain = true
 
 [vars]
 DATA_MODE = "production"
+JUBILEE_BOUNDARY_MODE = "off"
 AUTH_URL = "https://auth.ekodi.kr/?site=support"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"

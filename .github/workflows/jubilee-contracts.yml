@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'jubilee-*.js'
+      - 'support-jubilee-boundary.js'
       - 'mall-jubilee-adapter.js'
       - 'mall-market-discovery.js'
       - 'mission-control-entry-worker.js'
@@ -19,6 +20,7 @@ on:
     branches: [main]
     paths:
       - 'jubilee-*.js'
+      - 'support-jubilee-boundary.js'
       - 'mall-jubilee-adapter.js'
       - 'mall-market-discovery.js'
       - 'mission-control-entry-worker.js'
@@ -41,7 +43,7 @@ jobs:
           node-version: '24'
       - name: Syntax check
         run: |
-          for file in jubilee-*.js mall-jubilee-adapter.js mall-market-discovery.js; do
+          for file in jubilee-*.js support-jubilee-boundary.js mall-jubilee-adapter.js mall-market-discovery.js; do
             node --check "$file"
           done
       - name: Jubilee contract tests

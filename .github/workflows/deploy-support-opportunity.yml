@@ -6,6 +6,8 @@ on:
     paths:
       - 'support/**'
       - 'support-worker.js'
+      - 'support-jubilee-boundary.js'
+      - 'jubilee-*.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
@@ -18,6 +20,8 @@ on:
     paths:
       - 'support/**'
       - 'support-worker.js'
+      - 'support-jubilee-boundary.js'
+      - 'jubilee-*.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
@@ -50,6 +54,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check support-worker.js
+          node --check support-jubilee-boundary.js
+          node --check jubilee-capability-provider.js
           node --check support/core.js
           node --check support/sources.js
           node --check support/app.js
@@ -95,6 +101,7 @@ jobs:
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/sources/status" || true)
             notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$STAGING_URL/api/opportunities?limit=5" || true)
+            jubilee=$(curl -sS -o /tmp/support-jubilee.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST -H 'content-type: application/json' -d '{"jubileeConsent":true,"assessment":{"needScore":0.99,"beneficiaryIdentity":{"name":"private"},"supportSignals":[{"type":"affordability_constraint","source":"consented","reason":"private"}]}}' "$STAGING_URL/api/jubilee/context-preview" || true)
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
               code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/$path" || true)
@@ -103,16 +110,22 @@ jobs:
                 specialist_ok=false
               fi
             done
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$specialist_ok" == 'true' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$jubilee" == '200' && "$specialist_ok" == 'true' ]] \
               && grep -Fq 'GRANT WORKSPACE' /tmp/support.html \
               && grep -Fq 'OFFICIAL FEED' /tmp/support.html \
               && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json \
+              && grep -Fq '"jubileeBoundaryMode":"shadow"' /tmp/support-health.json \
+              && grep -Fq '"jubileeNeedScoreShared":false' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
               && grep -Fq '"ok":true' /tmp/support-notices.json \
               && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json \
               && grep -Fq '"official":true' /tmp/support-notices.json \
+              && grep -Fq '"mode":"shadow"' /tmp/support-jubilee.json \
+              && grep -Fq 'affordability_constraint' /tmp/support-jubilee.json \
+              && ! grep -Fq 'needScore' /tmp/support-jubilee.json \
+              && ! grep -Fq 'beneficiaryIdentity' /tmp/support-jubilee.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then
               echo 'Support root, APIs and all seven specialist staging routes verified.'
               exit 0
@@ -171,6 +184,7 @@ jobs:
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/api/sources/status' || true)
             notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 'https://support.ekodi.kr/api/opportunities?limit=5' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/admin' || true)
+            jubilee=$(curl -sS -o /tmp/support-jubilee-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST -H 'content-type: application/json' -d '{"jubileeConsent":true,"assessment":{"supportSignals":[]}}' 'https://support.ekodi.kr/api/jubilee/context-preview' || true)
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
               code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://support.ekodi.kr/$path" || true)
@@ -179,10 +193,12 @@ jobs:
                 specialist_ok=false
               fi
             done
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$specialist_ok" == 'true' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$jubilee" == '404' && "$specialist_ok" == 'true' ]] \
               && grep -Fq 'GRANT WORKSPACE' /tmp/support.html \
               && grep -Fq 'OFFICIAL FEED' /tmp/support.html \
               && grep -Fq '"dataMode":"production"' /tmp/support-health.json \
+              && grep -Fq '"jubileeBoundaryMode":"off"' /tmp/support-health.json \
+              && grep -Fq '"jubileeNeedScoreShared":false' /tmp/support-health.json \
               && grep -Fq '"submissionExecution":false' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
