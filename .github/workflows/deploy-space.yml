@@ -6,6 +6,7 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
