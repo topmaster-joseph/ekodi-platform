@@ -390,7 +390,9 @@
       "order": 145,
       "homepage": false,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "userVisible": false,
+      "registryRole": "internal-workspace-engine"
     },
     {
       "id": "work",

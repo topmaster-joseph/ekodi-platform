@@ -376,21 +376,6 @@ export const USER_SERVICES = Object.freeze([
     "homepageOrder": 140
   },
   {
-    "id": "space",
-    "name": "운영공간",
-    "nameEn": "Operating Space",
-    "label": "space.ekodi.kr",
-    "url": "https://space.ekodi.kr/",
-    "domain": "space.ekodi.kr",
-    "group": "work-life",
-    "status": "live",
-    "productionVerified": true,
-    "available": true,
-    "homepageEligible": true,
-    "homepageDefault": false,
-    "homepageOrder": 145
-  },
-  {
     "id": "work",
     "name": "에코디 워크",
     "nameEn": "EKODI Work",

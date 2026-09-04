@@ -133,7 +133,8 @@ jobs:
               root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
               health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
               route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/deployment-probe' || true)
-              if [[ "$root" == '200' && "$health" == '200' && "$route" == '200' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-live.html && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
+              root_location=$(curl -sSI --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' | tail -1)
+              if [[ "$root" == '308' && "$root_location" == 'https://my.ekodi.kr/' && "$health" == '200' && "$route" == '200' ]] && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
                 echo 'Operating Space production bootstrap verified.'
                 exit 0
               fi

@@ -136,80 +136,28 @@ function maintenancePage(site) {
 </html>`;
 }
 
-async function ensureControlSchema(db) {
-  await db.batch([
-    db.prepare(`CREATE TABLE IF NOT EXISTS service_controls (
-      service_id TEXT PRIMARY KEY,
-      state TEXT NOT NULL DEFAULT 'planned',
-      monitor_enabled INTEGER NOT NULL DEFAULT 0,
-      note TEXT NOT NULL DEFAULT '',
-      updated_at TEXT NOT NULL,
-      updated_by INTEGER
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS service_checks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      service_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      http_status INTEGER,
-      response_ms INTEGER,
-      detail TEXT NOT NULL DEFAULT '',
-      checked_at TEXT NOT NULL
-    )`),
-    db.prepare('CREATE INDEX IF NOT EXISTS idx_service_checks_service_time ON service_checks(service_id, checked_at DESC)'),
-    db.prepare('CREATE INDEX IF NOT EXISTS idx_service_checks_time ON service_checks(checked_at DESC)'),
-    db.prepare(`CREATE TABLE IF NOT EXISTS cloudflare_environment_checks (
-      environment TEXT NOT NULL,
-      service_id TEXT NOT NULL,
-      service_name TEXT NOT NULL,
-      host TEXT NOT NULL,
-      status TEXT NOT NULL,
-      http_status INTEGER,
-      response_ms INTEGER,
-      detail TEXT NOT NULL DEFAULT '',
-      checked_at TEXT NOT NULL,
-      PRIMARY KEY (environment, service_id)
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS public_site_controls (
-      site_id TEXT PRIMARY KEY,
-      workspace_id TEXT NOT NULL,
-      domain TEXT NOT NULL UNIQUE,
-      public_status TEXT NOT NULL DEFAULT 'maintenance',
-      maintenance_display_type TEXT NOT NULL DEFAULT 'default',
-      maintenance_redirect_url TEXT NOT NULL DEFAULT '',
-      maintenance_title TEXT NOT NULL DEFAULT '현재 사이트 개발중입니다',
-      maintenance_message TEXT NOT NULL DEFAULT '더 좋은 서비스로 준비 중입니다.',
-      redirect_mode TEXT NOT NULL DEFAULT 'button',
-      updated_at TEXT NOT NULL,
-      updated_by INTEGER
-    )`)
-  ]);
-
-  const now = new Date().toISOString();
-  const seed = db.prepare(`INSERT OR IGNORE INTO service_controls
-    (service_id, state, monitor_enabled, note, updated_at)
-    VALUES (?, ?, ?, '', ?)`);
-  await db.batch(SERVICE_CATALOG.map(service => seed.bind(
-    service.id,
-    service.defaultState,
-    service.defaultMonitor ? 1 : 0,
-    now
-  )));
-
-  const siteSeed = db.prepare(`INSERT OR IGNORE INTO public_site_controls
-    (site_id, workspace_id, domain, public_status, maintenance_display_type, maintenance_redirect_url, maintenance_title, maintenance_message, redirect_mode, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  await db.batch(PUBLIC_SITE_CATALOG.map(site => siteSeed.bind(
-    site.id,
-    site.workspaceId,
-    site.domain,
-    site.defaultPublicStatus,
-    site.defaultMaintenanceDisplayType,
-    site.defaultMaintenanceRedirectUrl,
-    site.defaultMaintenanceTitle,
-    site.defaultMaintenanceMessage,
-    site.defaultRedirectMode,
-    now
-  )));
+let controlCatalogSeedPromise;
+async function ensureControlCatalog(db) {
+  if (controlCatalogSeedPromise) return controlCatalogSeedPromise;
+  controlCatalogSeedPromise = (async () => {
+    const now = new Date().toISOString();
+    const seed = db.prepare(`INSERT OR IGNORE INTO service_controls
+      (service_id, state, monitor_enabled, note, updated_at)
+      VALUES (?, ?, ?, '', ?)`);
+    await db.batch(SERVICE_CATALOG.map(service => seed.bind(
+      service.id, service.defaultState, service.defaultMonitor ? 1 : 0, now
+    )));
+    const siteSeed = db.prepare(`INSERT OR IGNORE INTO public_site_controls
+      (site_id, workspace_id, domain, public_status, maintenance_display_type, maintenance_redirect_url, maintenance_title, maintenance_message, redirect_mode, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    await db.batch(PUBLIC_SITE_CATALOG.map(site => siteSeed.bind(
+      site.id, site.workspaceId, site.domain, site.defaultPublicStatus,
+      site.defaultMaintenanceDisplayType, site.defaultMaintenanceRedirectUrl,
+      site.defaultMaintenanceTitle, site.defaultMaintenanceMessage, site.defaultRedirectMode, now
+    )));
+  })();
+  try { await controlCatalogSeedPromise; }
+  catch (error) { controlCatalogSeedPromise = null; throw error; }
 }
 
 function normalizePublicSiteRow(row, fallback) {
@@ -230,7 +178,7 @@ function normalizePublicSiteRow(row, fallback) {
 }
 
 async function publicSiteSnapshot(env) {
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
   const rows = await env.DB.prepare('SELECT * FROM public_site_controls').all();
   const byId = new Map(rows.results.map(row => [row.site_id, row]));
   return PUBLIC_SITE_CATALOG.map(site => normalizePublicSiteRow(byId.get(site.id), site));
@@ -241,7 +189,7 @@ async function handlePublicDomainRequest(request, env) {
   const host = new URL(request.url).hostname.toLowerCase();
   const catalog = PUBLIC_SITE_BY_DOMAIN.get(host);
   if (!catalog) return null;
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
   const row = await env.DB.prepare('SELECT * FROM public_site_controls WHERE domain = ?').bind(host).first();
   const site = normalizePublicSiteRow(row, catalog);
   if (site.publicStatus !== 'maintenance') return null;
@@ -291,7 +239,7 @@ async function mapWithConcurrency(items, limit, operation) {
 }
 
 async function runCloudflareEnvironmentChecks(env) {
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
   const jobs = [
     ...ACCOUNT_SERVICE_TARGETS.map(target => ({ environment: 'production', target })),
     ...ACCOUNT_SERVICE_TARGETS.map(target => ({ environment: 'development', target }))
@@ -337,7 +285,7 @@ function environmentSummary(environment, rows) {
 }
 
 async function cloudflareAccountSnapshot(env, force = false) {
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
   const latest = await env.DB.prepare('SELECT MAX(checked_at) AS checked_at FROM cloudflare_environment_checks').first();
   const stale = !latest?.checked_at || Date.now() - Date.parse(latest.checked_at) > 30 * 60 * 1000;
   if (force || stale) await runCloudflareEnvironmentChecks(env);
@@ -420,66 +368,88 @@ async function probeService(service) {
   }
 }
 
+function serviceCheckHour(iso) {
+  return `${String(iso || "").slice(0, 13)}:00:00.000Z`;
+}
+
 async function runChecks(env) {
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
   const controls = await env.DB.prepare('SELECT * FROM service_controls').all();
   const byId = new Map(controls.results.map(row => [row.service_id, row]));
   const targets = SERVICE_CATALOG.filter(service => {
     const control = byId.get(service.id);
     return control?.state === 'active' && Boolean(control?.monitor_enabled);
   });
-
   const checks = await Promise.all(targets.map(probeService));
   if (checks.length) {
-    const insert = env.DB.prepare(`INSERT INTO service_checks
+    const raw = env.DB.prepare(`INSERT INTO service_checks
       (service_id, status, http_status, response_ms, detail, checked_at)
       VALUES (?, ?, ?, ?, ?, ?)`);
-    await env.DB.batch(checks.map(check => insert.bind(
-      check.serviceId,
-      check.status,
-      check.httpStatus,
-      check.responseMs,
-      check.detail,
-      check.checkedAt
-    )));
+    const latest = env.DB.prepare(`INSERT INTO service_check_latest
+      (service_id, status, http_status, response_ms, detail, checked_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(service_id) DO UPDATE SET
+        status=excluded.status, http_status=excluded.http_status, response_ms=excluded.response_ms,
+        detail=excluded.detail, checked_at=excluded.checked_at`);
+    const hourly = env.DB.prepare(`INSERT INTO service_check_hourly
+      (service_id, bucket_start, checks, online_checks, degraded_checks, offline_checks, response_ms_total, max_response_ms)
+      VALUES (?, ?, 1, ?, ?, ?, ?, ?)
+      ON CONFLICT(service_id, bucket_start) DO UPDATE SET
+        checks=service_check_hourly.checks+1,
+        online_checks=service_check_hourly.online_checks+excluded.online_checks,
+        degraded_checks=service_check_hourly.degraded_checks+excluded.degraded_checks,
+        offline_checks=service_check_hourly.offline_checks+excluded.offline_checks,
+        response_ms_total=service_check_hourly.response_ms_total+excluded.response_ms_total,
+        max_response_ms=CASE
+          WHEN excluded.max_response_ms IS NULL THEN service_check_hourly.max_response_ms
+          WHEN service_check_hourly.max_response_ms IS NULL THEN excluded.max_response_ms
+          ELSE MAX(service_check_hourly.max_response_ms, excluded.max_response_ms)
+        END`);
+    const statements = [];
+    for (const check of checks) {
+      const values = [check.serviceId, check.status, check.httpStatus, check.responseMs, check.detail, check.checkedAt];
+      statements.push(raw.bind(...values), latest.bind(...values));
+      statements.push(hourly.bind(check.serviceId, serviceCheckHour(check.checkedAt), check.status==='online'?1:0,
+        check.status==='degraded'?1:0, check.status==='offline'?1:0, Number(check.responseMs || 0), check.responseMs));
+    }
+    await env.DB.batch(statements);
   }
   const retentionCutoff = new Date(Date.now() - 30 * 86400000).toISOString();
-  await env.DB.prepare('DELETE FROM service_checks WHERE checked_at < ?').bind(retentionCutoff).run();
+  const rollupCutoff = new Date(Date.now() - 32 * 86400000).toISOString();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM service_checks WHERE checked_at < ?').bind(retentionCutoff),
+    env.DB.prepare('DELETE FROM service_check_hourly WHERE bucket_start < ?').bind(rollupCutoff)
+  ]);
   return checks;
 }
 
 async function newestCheckTime(env) {
-  const row = await env.DB.prepare('SELECT MAX(checked_at) AS checked_at FROM service_checks').first();
+  const row = await env.DB.prepare('SELECT checked_at FROM service_check_latest ORDER BY checked_at DESC LIMIT 1').first();
   return row?.checked_at || null;
 }
 
 async function serviceSnapshot(env) {
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
+  const statsSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  statsSince.setUTCMinutes(0, 0, 0);
   const [controls, latest, stats] = await Promise.all([
     env.DB.prepare('SELECT * FROM service_controls').all(),
-    env.DB.prepare(`SELECT c.* FROM service_checks c
-      INNER JOIN (
-        SELECT service_id, MAX(id) AS max_id
-        FROM service_checks
-        GROUP BY service_id
-      ) latest ON latest.max_id = c.id`).all(),
+    env.DB.prepare('SELECT * FROM service_check_latest').all(),
     env.DB.prepare(`SELECT service_id,
-        COUNT(*) AS checks,
-        SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) AS online_checks,
-        SUM(CASE WHEN status = 'degraded' THEN 1 ELSE 0 END) AS degraded_checks,
-        SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) AS offline_checks,
-        ROUND(AVG(response_ms)) AS avg_response_ms,
-        MAX(response_ms) AS max_response_ms
-      FROM service_checks
-      WHERE checked_at >= ?
+        SUM(checks) AS checks,
+        SUM(online_checks) AS online_checks,
+        SUM(degraded_checks) AS degraded_checks,
+        SUM(offline_checks) AS offline_checks,
+        ROUND(CASE WHEN SUM(checks) > 0 THEN CAST(SUM(response_ms_total) AS REAL) / SUM(checks) ELSE NULL END) AS avg_response_ms,
+        MAX(max_response_ms) AS max_response_ms
+      FROM service_check_hourly
+      WHERE bucket_start >= ?
       GROUP BY service_id`)
-      .bind(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).all()
+      .bind(statsSince.toISOString()).all()
   ]);
-
   const controlById = new Map(controls.results.map(row => [row.service_id, row]));
   const latestById = new Map(latest.results.map(row => [row.service_id, row]));
   const statsById = new Map(stats.results.map(row => [row.service_id, row]));
-
   return SERVICE_CATALOG.map(service => {
     const control = controlById.get(service.id);
     const check = latestById.get(service.id);
@@ -487,29 +457,17 @@ async function serviceSnapshot(env) {
     const checks = Number(metric?.checks || 0);
     const availableChecks = Number(metric?.online_checks || 0) + Number(metric?.degraded_checks || 0);
     return {
-      id: service.id,
-      name: service.name,
-      domain: service.domain,
-      url: service.url,
-      group: service.group,
+      id: service.id, name: service.name, domain: service.domain, url: service.url, group: service.group,
       state: control?.state || service.defaultState,
-      monitorEnabled: Boolean(control?.monitor_enabled),
-      note: control?.note || '',
-      updatedAt: control?.updated_at || '',
-      latest: check ? {
-        status: check.status,
-        httpStatus: check.http_status,
-        responseTime: check.response_ms,
-        detail: check.detail || '',
-        checkedAt: check.checked_at
-      } : null,
+      monitorEnabled: Boolean(control?.monitor_enabled), note: control?.note || '', updatedAt: control?.updated_at || '',
+      latest: check ? { status: check.status, httpStatus: check.http_status, responseTime: check.response_ms,
+        detail: check.detail || '', checkedAt: check.checked_at } : null,
       stats24h: {
         checks,
         availabilityPercent: checks ? Math.round((availableChecks / checks) * 10000) / 100 : null,
         averageResponseTime: metric?.avg_response_ms ?? null,
         maxResponseTime: metric?.max_response_ms ?? null,
-        online: Number(metric?.online_checks || 0),
-        degraded: Number(metric?.degraded_checks || 0),
+        online: Number(metric?.online_checks || 0), degraded: Number(metric?.degraded_checks || 0),
         offline: Number(metric?.offline_checks || 0)
       }
     };
@@ -517,7 +475,7 @@ async function serviceSnapshot(env) {
 }
 
 async function overview(env) {
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
   const newest = await newestCheckTime(env);
   const stale = !newest || Date.now() - new Date(newest).getTime() > 12 * 60 * 1000;
   if (stale) await runChecks(env);
@@ -583,7 +541,7 @@ async function handleControl(request, env) {
   if (!env.DB) return controlJson({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
-  await ensureControlSchema(env.DB);
+  await ensureControlCatalog(env.DB);
 
   const url = new URL(request.url);
   const path = url.pathname;

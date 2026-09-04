@@ -6,24 +6,48 @@
     "requests": [
       {
         "url": "https://space.ekodi.kr/",
-        "statuses": [200],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
-        "expect": ["OPERATING SPACE", "로그인하고 내 공간 보기", "workspace ID"],
-        "headerExpect": ["x-ekodi-service: space", "cache-control: no-store", "x-robots-tag: noindex, nofollow, noarchive"]
+        "headerExpect": [
+          "location: https://my.ekodi.kr/",
+          "cache-control: no-store",
+          "x-ekodi-legacy-alias: space.ekodi.kr"
+        ]
       },
       {
         "url": "https://space.ekodi.kr/health",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["ekodi-space", "operating-space", "workspace-id", "personal", "org", "group", "project"],
-        "headerExpect": ["x-ekodi-service: space", "cache-control: no-store"]
+        "expect": [
+          "ekodi-space",
+          "operating-space",
+          "workspace-id",
+          "root-slug"
+        ],
+        "headerExpect": [
+          "x-ekodi-service: space",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://space.ekodi.kr/deployment-probe",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["OPERATING SPACE", "실제 데이터·권한 연결"],
-        "headerExpect": ["x-ekodi-service: space", "x-ekodi-route: space-workspace", "cache-control: no-store"]
+        "expect": [
+          "OPERATING SPACE",
+          "실제 데이터·권한 연결"
+        ],
+        "headerExpect": [
+          "x-ekodi-service: space",
+          "x-ekodi-route: space-workspace",
+          "cache-control: no-store"
+        ]
       }
     ]
   }

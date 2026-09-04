@@ -43,7 +43,7 @@ Service URLs are defined in code rather than editable through the browser. This 
 
 ## Monitoring
 
-The API Worker runs a Cloudflare scheduled job every ten minutes. It records checks in D1 and keeps 30 days of operational health history. The admin dashboard receives monitoring data through the API instead of reading the GitHub monitoring snapshot directly.
+The API Worker runs a Cloudflare scheduled job every ten minutes. It keeps the raw `service_checks` log for 30-day audit/history, while normal dashboard reads use compact `service_check_latest` and `service_check_hourly` read models. Database schema is owned by guarded additive migrations, not request-time `CREATE TABLE` or `CREATE INDEX` probes. The admin dashboard receives monitoring data through the API instead of reading the GitHub monitoring snapshot directly.
 
 The existing GitHub monitoring workflow can remain temporarily as an independent fallback during migration. It should no longer be the admin dashboard's system of record after v4 is accepted.
 

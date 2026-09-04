@@ -43,6 +43,11 @@ async function appShell(request,env,route='space-home'){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    const legacyAlias=url.hostname.toLowerCase()==='space.ekodi.kr';
+    const canonicalRedirect=()=>{
+      const target=new URL(url.pathname+url.search,'https://ekodi.kr');
+      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
+    };
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug'],dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
@@ -50,8 +55,12 @@ export default{
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
       return authRedirect(request,env);
     }
+    if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://my.ekodi.kr/','cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
-    if(isPublicWorkspacePath(url.pathname))return appShell(request,env,'space-workspace');
+    if(isPublicWorkspacePath(url.pathname)){
+      if(legacyAlias&&url.pathname!=='/deployment-probe')return canonicalRedirect();
+      return appShell(request,env,'space-workspace');
+    }
     return withHeaders(env,await env.ASSETS.fetch(request),'space-asset');
   }
 };
