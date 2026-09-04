@@ -8,6 +8,7 @@ on:
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
+      - 'marketing-canonical-projection.js'
       - 'deploy/manifests/shared-site.worker.json'
       - 'ekodi-shell-injector.js'
       - 'trade.html'
@@ -48,7 +49,9 @@ jobs:
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
+          node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
+          node --test test/marketing-canonical-projection.test.mjs
           npm run build
           test -f dist/trade.html
           test -f dist/hub.html

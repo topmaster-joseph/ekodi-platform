@@ -1,5 +1,5 @@
 {
-  "version": 48,
+  "version": 49,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -28,6 +28,86 @@
         ],
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/marketing-ai",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "id=\"freeTrialForm\"",
+          "data-ekodi-service=\"marketing\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: marketing-canonical-projection",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jadam/marketing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-ekodi-customer-prereg",
+          "data-tenant-hero=\"jadam\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: marketing-canonical-projection",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru/marketing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-ekodi-customer-prereg",
+          "data-tenant-hero=\"pizzamaru\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: marketing-canonical-projection",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/yogurt/marketing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-ekodi-customer-prereg",
+          "data-tenant-hero=\"yogurtpurple\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: marketing-canonical-projection",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cgma/marketing",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "<title>",
+          "PAUSED"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: marketing-canonical-projection",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
