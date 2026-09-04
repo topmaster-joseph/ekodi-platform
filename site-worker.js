@@ -176,7 +176,7 @@ const ADMIN_CSP = [
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
   "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
-  "frame-src https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -358,6 +358,7 @@ function adminAuthRedirect(returnPath) {
   const safePath = safeAdminReturnPath(returnPath);
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
   const response = new Response(null, {
     status: 302,
@@ -374,6 +375,7 @@ function adminAuthRedirect(returnPath) {
 function adminApexAuthUrl() {
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', 'https://ekodi.kr/admin');
   return target.toString();
 }

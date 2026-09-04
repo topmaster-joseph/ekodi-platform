@@ -136,7 +136,7 @@
   }
 
   function bind() {
-    $$('[data-auth-href]').forEach(el => el.addEventListener('click', () => openTarget(el.dataset.authHref, el.dataset.authTarget || '_self')));
+    $('[data-auth-href]').forEach(el => el.addEventListener('click', event => { event.preventDefault(); openTarget(el.dataset.authHref || el.getAttribute('href'), el.dataset.authTarget || el.getAttribute('target') || '_self'); }));
     $$('[data-locale]').forEach(btn => btn.addEventListener('click', () => { try { localStorage.setItem('ekodi.locale', btn.dataset.locale); } catch {} applyLocale(btn.dataset.locale); $('#languageMenu').open=false; }));
     document.addEventListener('click', e => { const menu=$('#languageMenu'); if (menu?.open && !menu.contains(e.target)) menu.open=false; });
     const profile=$('#profileBtn'); if (profile) new MutationObserver(() => { if (signedIn()) $$('.public-person').forEach(el=>el.remove()); else renderPublicPeople(); applyLocale(); resumePending(); }).observe(profile,{attributes:true,attributeFilter:['hidden']});

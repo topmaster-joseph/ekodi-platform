@@ -15,6 +15,7 @@ test('tenant and service admins use site-local canonical paths', async () => {
   const js = await workspaceAdminScript().text();
   assert.ok(!js.includes('/'+'org'+'/'));
   assert.match(js, /const base=`\/\$\{workspace\}`/);
+  assert.ok(js.startsWith('const __name=(target)=>target;'));
   assert.match(js, /marketing-connect-api\.ekodi\.kr/);
   assert.ok(js.includes('Google로 YouTube 연결'));
   assert.match(js, /subject_type=tenant/);

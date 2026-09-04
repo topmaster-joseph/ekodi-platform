@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
 const root = new URL('../', import.meta.url);
@@ -49,7 +50,7 @@ test('administrator reporting and rollback evidence are mandatory', async () => 
 
 test('deterministic advisor works without an AI provider and respects service autonomy', async () => {
   const script = new URL('../scripts/seasonal-design-advisor.mjs', import.meta.url);
-  const { stdout } = await execFileAsync(process.execPath, [script.pathname, '--date', '2026-08-19', '--service', 'community']);
+  const { stdout } = await execFileAsync(process.execPath, [fileURLToPath(script), '--date', '2026-08-19', '--service', 'community']);
   const plan = JSON.parse(stdout);
   assert.equal(plan.mode, 'deterministic_core');
   assert.equal(plan.season, 'summer');

@@ -1,0 +1,24 @@
+{
+  "id": "2026-09-04-marketing-user-surface-engine-separation-v1.6.1",
+  "constitutionVersion": "1.6.1",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-04",
+  "changeClass": "C2",
+  "summary": "Clarify Marketing AI user-surface, Marketing Core and AI Gateway boundaries on top of v1.6.0.",
+  "preserves": [
+    "v1.6.0 EKODI OS layered responsibility architecture",
+    "CGMA customer-owned public domain mapping",
+    "immutable workspace_id routing"
+  ],
+  "canonical": {
+    "product": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "workspacePattern": "https://ekodi.kr/{slug}/marketing",
+    "marketingCore": "https://marketing.ekodi.kr",
+    "aiGateway": "https://ai.ekodi.kr"
+  },
+  "legacy": {
+    "customerAiSubdomains": "compatibility execution aliases only"
+  },
+  "rollback": "Revert this amendment commit; do not alter workspace_id, CGMA public domain ownership, or existing compatibility aliases during rollback."
+}

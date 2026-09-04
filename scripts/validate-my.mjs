@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 const files={
   html:'my/index.html',
   app:'my/app.js',
+  personalization:'my/progressive-personalization.js',
   accessContext:'my/access-context.js',
   userAi:'my/user-ai.js',
   userAiUi:'my/user-ai-ui.js',
@@ -25,7 +26,8 @@ const files={
   manifest:'deploy/manifests/my.worker.json',
   creatorMigration:'supabase/migrations/20260816155146_creator_ai_my_ekodi.sql',
   creatorPrivate:'supabase/migrations/20260816155454_creator_portfolio_private_person_helper.sql',
-  creatorOptimized:'supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql'
+  creatorOptimized:'supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql',
+  personalizationMigration:'supabase/migrations/20260904171000_my_progressive_personalization.sql'
 };
 const content=Object.fromEntries(await Promise.all(Object.entries(files).map(async([key,path])=>[key,await readFile(path,'utf8')])));
 function must(key,marker){if(!content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} missing ${marker}`)}
@@ -46,11 +48,23 @@ must('html','/user-ui.css');
 must('html','/user-ai-ui.js');
 must('html','/membership-summary.js');
 must('html','/membership-summary.css');
+const topNav=content.html.match(/<nav aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
+if(topNav.includes('href="/device-care/"'))throw new Error('My EKODI validation failed: Device Care must stay out of the fixed top navigation');
+must('html','class="my-utility-discovery"');
 must('html','href="/device-care/">내 PC</a>');
+must('html','id="discoverServicesButton"');
+must('html','data-intent-service="support"');
 must('app','creator_portfolio_items');
 must('app','current_site_access');
 must('app','current_site_workspaces');
 must('app','ekodi_token');
+must('app','buildPersonalizedServiceView');
+must('app','set_my_personalization_preference');
+must('personalization','PERSONALIZATION_STATES');
+must('personalization','recommendationLimit=2');
+must('personalizationMigration','my_personalization_preferences');
+must('personalizationMigration','my_personalization_signals');
+must('personalizationMigration','Never grants service authorization');
 must('accessContext','current_site_access');
 must('accessContext','current_site_workspaces');
 must('accessContext','요청한 공간을 바로 열 수 없습니다.');

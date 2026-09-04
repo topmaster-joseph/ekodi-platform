@@ -42,8 +42,10 @@ test('watchdog verifies production Control health and deployed Hybrid admin asse
   assert.match(monitor, /control_health_failed/);
 });
 
-test('watchdog never treats the safe default of zero auto nodes as an incident', () => {
-  assert.match(monitor, /configuredAutoNodes > 0 && signals\.onlineAutoNodes === 0/);
+test('watchdog never treats paused fabric or the safe default of zero auto nodes as an incident', () => {
+  assert.match(monitor, /readFabricEnabled/);
+  assert.match(monitor, /signals\.fabricEnabled && signals\.configuredAutoNodes > 0 && signals\.onlineAutoNodes === 0/);
+  assert.match(monitor, /signals\.fabricEnabled && signals\.backlogCount > 0/);
 });
 
 test('monitor API stays behind the existing administrator session boundary', () => {

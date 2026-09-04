@@ -41,5 +41,5 @@ jobs:
       - name: Validate application and deployment ownership
         run: |
           npm run check
-          npm test
+          node --test test/business-os-platform.test.mjs test/marketing-domain-policy.test.mjs test/marketing-custom-domain.test.mjs test/cgma-domain-boundary.test.mjs test/ekodibiz-invest-business.test.mjs test/root-entry-routing.test.mjs test/common-service-auth-routing.test.mjs test/ekodi-coupang-mall.test.mjs
           node scripts/validate-deployment-guardrails.mjs

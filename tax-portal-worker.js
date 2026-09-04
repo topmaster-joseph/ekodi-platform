@@ -28,7 +28,7 @@ const CSS = `:root{color-scheme:dark;font-family:Inter,Pretendard,"Noto Sans KR"
 const JS = `(() => {
 'use strict';
 const ORG='EKODIBIZ', TOKEN='ekodi-auth-token';
-const authUrl='https://auth.ekodi.kr/?site=admin&return_to='+encodeURIComponent('https://tax.ekodi.kr/');
+const authUrl='https://auth.ekodi.kr/?site=admin&direct=1&return_to='+encodeURIComponent('https://tax.ekodi.kr/');
 const hash=new URLSearchParams(location.hash.replace(/^#/,''));const handoff=hash.get('ekodi_admin_token');if(handoff){sessionStorage.setItem(TOKEN,handoff);history.replaceState(null,'',location.pathname+location.search)}
 if(!sessionStorage.getItem(TOKEN)){location.replace(authUrl);return}
 let profiles=[],customers=[],invoices=[],readiness={};
