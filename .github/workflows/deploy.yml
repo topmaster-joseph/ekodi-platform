@@ -45,7 +45,7 @@ jobs:
             community=$(curl -fsS --connect-timeout 5 --max-time 12 'https://community.ekodi.kr/health' || true)
             social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://social.ekodi.kr/health' || true)
             if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
-              && verify_html 'https://admin.ekodi.kr/' 'EKODI Control Center' \
+              && verify_html 'https://admin.ekodi.kr/' '<title>EKODI Admin</title>' \
               && verify_html 'https://auth.ekodi.kr/' 'EKODI 로그인' \
               && verify_html 'https://marketing.ekodi.kr/' '마케팅AI' \
               && verify_html 'https://books.ekodi.kr/' 'EKODI' \
