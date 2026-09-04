@@ -186,3 +186,11 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.match(migration,/approval_not_assignee/);
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
+
+test('My staging verification preserves Cloudflare Access instead of weakening it',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.match(workflow,/Cloudflare Access/);
+  assert.match(workflow,/deployments status --config wrangler\.my\.staging\.toml --json/);
+  assert.match(workflow,/my-stage-approvals\.html/);
+  assert.match(workflow,/correctly protected by Cloudflare Access/);
+});

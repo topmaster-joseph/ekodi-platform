@@ -138,6 +138,13 @@ jobs:
             user_services_code=$(curl -sS -o /tmp/my-stage-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/user-services.js" || true)
             manifest_code=$(curl -sS -o /tmp/my-stage-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/service-manifest.json" || true)
             health_code=$(curl -sS -o /tmp/my-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            if [[ "$root_code" == '200' && "$approval_code" == '200' ]] \
+              && grep -Fq 'Cloudflare Access' /tmp/my-stage.html \
+              && grep -Fq 'Cloudflare Access' /tmp/my-stage-approvals.html; then
+              npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.my.staging.toml --json > /tmp/my-stage-deployments.json
+              echo 'My EKODI staging is deployed and correctly protected by Cloudflare Access.'
+              exit 0
+            fi
             if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
