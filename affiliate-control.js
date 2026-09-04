@@ -1,5 +1,6 @@
 import authWorker from './auth-worker.js';
 import { getAffiliateAutomationStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation } from './coupang-partners-automation.js';
+import { archiveMarketplaceOffer, listMarketplaceProducts, MULTI_AFFILIATE_DISCLOSURE, publicMarketplaceClick, registerMarketplaceProduct } from './affiliate-marketplace.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
@@ -120,6 +121,10 @@ function publicProductView(request, row) {
     isRocket: Boolean(row.is_rocket),
     isFreeShipping: Boolean(row.is_free_shipping),
     selectedAt: row.selected_at || null,
+    providerKey: 'coupang_partners',
+    providerName: 'Coupang',
+    buyLabel: '쿠팡에서 구매',
+    disclosureText: DEFAULT_DISCLOSURE,
   };
 }
 
@@ -140,9 +145,14 @@ async function publicProducts(request, env, url) {
     automation = await getAffiliateAutomationStatus(env);
   }
   const rows = await readPublicRows(env, limit);
-  const products = rows.map(row => publicProductView(request, row));
+  const coupangProducts = rows.map(row => publicProductView(request, row));
+  const marketplaceProducts = await listMarketplaceProducts(request, env, limit).catch(() => []);
+  const products = [...coupangProducts, ...marketplaceProducts].slice(0, limit);
   const automationStatus = products.length ? 'ready' : (automation.status || 'warming');
-  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: 'coupang_partners', automationStatus, disclosureText, products }, 200, publicHeaders(request));
+  const providers = [...new Map(products.map(item => [item.providerKey || 'unknown', item.providerName || item.providerKey || '제휴 판매처'])).entries()]
+    .map(([providerKey, providerName]) => ({ providerKey, providerName }));
+  const combinedDisclosure = marketplaceProducts.length ? `${disclosureText} ${MULTI_AFFILIATE_DISCLOSURE}` : disclosureText;
+  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: marketplaceProducts.length ? 'multi_affiliate' : 'coupang_partners', providers, automationStatus, disclosureText: combinedDisclosure, products }, 200, publicHeaders(request));
 }
 
 function coupangImageUrl(value) {
@@ -213,11 +223,13 @@ async function publicClick(request, env, url) {
 
 async function overview(env) {
   const automation = await getAffiliateAutomationStatus(env);
-  const [accounts, links, metrics, tracked] = await Promise.all([
+  const [accounts, links, metrics, tracked, marketplaceTracked, marketplaceProducts] = await Promise.all([
     env.DB.prepare('SELECT * FROM affiliate_accounts ORDER BY provider_key, id').all(),
     env.DB.prepare(`SELECT COUNT(*) AS total_links, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_links FROM affiliate_links`).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(orders), 0) AS orders, COALESCE(SUM(revenue_krw), 0) AS revenue_krw FROM affiliate_daily_metrics WHERE metric_date >= date('now', '-29 day')`).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_storefront_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
+    env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_link_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM ekodi_offers WHERE offer_type = 'product' AND visibility = 'public' AND status = 'active' AND source_provider <> 'coupang_partners'`).first().catch(() => ({ count: 0 })),
   ]);
   return {
     generatedAt: new Date().toISOString(),
@@ -228,8 +240,8 @@ async function overview(env) {
       accounts: accounts.results.length,
       activeLinks: Number(links?.active_links || 0),
       totalLinks: Number(links?.total_links || 0),
-      activeProducts: Number(automation.activeProducts || 0),
-      clicks30d: Number(tracked?.clicks || 0),
+      activeProducts: Number(automation.activeProducts || 0) + Number(marketplaceProducts?.count || 0),
+      clicks30d: Number(tracked?.clicks || 0) + Number(marketplaceTracked?.clicks || 0),
       orders30d: Number(metrics?.orders || 0),
       revenue30dKrw: Number(metrics?.revenue_krw || 0),
     },
@@ -239,6 +251,8 @@ async function overview(env) {
       automaticProductSearch: true,
       onDemandProductIngest: true,
       offerRegistryAdapter: true,
+      multiProviderCatalog: true,
+      manualMarketplaceProductRegistration: true,
       automaticDeepLink: true,
       automaticClickTracking: true,
       automaticPerformanceSync: false,
@@ -305,6 +319,7 @@ async function handleLinks(request, env, auth, path, url) {
     if (!existing) return json({ error: '제휴 링크를 찾을 수 없습니다.' }, 404, auth.response.headers);
     const now = new Date().toISOString();
     await env.DB.prepare("UPDATE affiliate_links SET status = 'archived', updated_at = ? WHERE id = ?").bind(now, Number(archive[1])).run();
+    await archiveMarketplaceOffer(env.DB, Number(archive[1]));
     await audit(env, auth.session, 'affiliate.link.archive', String(archive[1]), existing.product_name);
     const row = await env.DB.prepare('SELECT * FROM affiliate_links WHERE id = ?').bind(Number(archive[1])).first();
     return json({ link: linkView(row) }, 200, auth.response.headers);
@@ -345,6 +360,8 @@ export async function handleAffiliateRequest(request, env) {
   if (imageResponse) return imageResponse;
   const clickResponse = await publicClick(request, env, url);
   if (clickResponse) return clickResponse;
+  const marketplaceClickResponse = await publicMarketplaceClick(request, env, url);
+  if (marketplaceClickResponse) return marketplaceClickResponse;
 
   const auth = await sessionCheck(request, env);
   if (!auth.session) return auth.response;
@@ -374,6 +391,15 @@ export async function handleAffiliateRequest(request, env) {
     await audit(env, auth.session, 'affiliate.product.ingest', PUBLIC_STOREFRONT_SLUG, JSON.stringify({ query, category, status: result.status, selectedCount: result.selectedCount || 0 }));
     const status = result.status === 'invalid_query' ? 400 : (result.ok ? 200 : 409);
     return json({ ok: result.ok, status: result.status, query, selectedCount: cards.length, cards, offers: result.offers || [], error: result.error || '' }, status, auth.response.headers);
+  }
+  if (request.method === 'POST' && path === `${PREFIX}/products`) {
+    const body = await readJson(request);
+    if (!body) return json({ error: '올바른 JSON 요청이 필요합니다.' }, 400, auth.response.headers);
+    const createdBy = await adminId(env, auth.session);
+    const result = await registerMarketplaceProduct(env, body, { createdBy });
+    if (!result.ok) return json({ error: result.error || '제휴상품을 등록하지 못했습니다.' }, 400, auth.response.headers);
+    await audit(env, auth.session, 'affiliate.marketplace.product.create', `${result.providerKey}:${result.linkId}`, body.productName || '');
+    return json(result, 201, auth.response.headers);
   }
   if (request.method === 'GET' && path === `${PREFIX}/providers`) {
     const rows = await env.DB.prepare('SELECT * FROM affiliate_providers ORDER BY provider_key').all();
