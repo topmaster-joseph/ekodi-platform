@@ -74,11 +74,18 @@ jobs:
             grep -Fiq 'x-ekodi-shell: v1' /tmp/proxy-stage.headers
             if [[ -n "$marker" ]]; then grep -Fq "$marker" /tmp/proxy-stage.html; fi
           }
+          verify_redirect() {
+            host="$1"; expected="$2"
+            headers=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 20 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
+            echo "$host redirect"
+            echo "$headers" | tr -d '\r' | grep -Fqi "location: $expected"
+          }
           for attempt in $(seq 1 12); do
             if verify_html 'biz.ekodi.kr' 'EKODI BIZ' \
               && verify_html 'church.ekodi.kr' '' \
               && verify_html 'lab.ekodi.kr' '' \
-              && verify_html 'mall.ekodi.kr' ''; then
+              && verify_redirect 'mall.ekodi.kr' 'https://ekodi.kr/ekodibiz/mall' \
+              && verify_redirect 'mall.biz.ekodi.kr' 'https://ekodi.kr/ekodibiz/mall'; then
               redirect=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 \
                 -H 'x-ekodi-staging-host: live.church.ekodi.kr' "$STAGING_URL/" || true)
               echo "$redirect" | tr -d '\r' | grep -Fqi 'location: https://www.youtube.com/@ekodichurch/live'
@@ -124,8 +131,6 @@ jobs:
           verify_live 'https://biz.ekodi.kr/'
           verify_live 'https://church.ekodi.kr/'
           verify_live 'https://lab.ekodi.kr/'
-          verify_live 'https://mall.ekodi.kr/'
-          verify_live 'https://mall.biz.ekodi.kr/'
           echo 'Shared user-facing proxy routes verified after Shell promotion.'
       - name: Observe legacy external redirect routes without blocking Shell promotion
         shell: bash
@@ -140,5 +145,7 @@ jobs:
               echo "::warning::Legacy redirect did not expose the expected Location header during Shell release verification: $url"
             fi
           }
+          observe_redirect 'https://mall.ekodi.kr/' 'https://ekodi.kr/ekodibiz/mall'
+          observe_redirect 'https://mall.biz.ekodi.kr/' 'https://ekodi.kr/ekodibiz/mall'
           observe_redirect 'https://live.church.ekodi.kr/' 'https://www.youtube.com/@ekodichurch/live'
           observe_redirect 'https://mail.church.ekodi.kr/' 'https://mail.google.com/'

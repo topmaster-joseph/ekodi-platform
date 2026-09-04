@@ -12,7 +12,7 @@
     { type: '교육', name: '에코디교육', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
     { type: '커뮤니티', name: '커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
     { type: '소셜', name: '에코디 소셜', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
-    { type: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services', group: 'business' },
+    { type: '몰', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/mall', section: 'services', group: 'business' },
     { type: '마케팅', name: '마케팅 AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },
     { type: '무역', name: '에코디 트레이딩', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
     { type: '결제', name: '에코디 페이', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
