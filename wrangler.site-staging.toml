@@ -7,6 +7,14 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "staging"
 
+[[services]]
+binding = "SPACE"
+service = "ekodi-space-staging"
+
+[[services]]
+binding = "EKODIBIZ"
+service = "ekodibiz-revenue-os-staging"
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"

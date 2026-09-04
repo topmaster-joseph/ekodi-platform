@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import siteWorker from '../site-worker.js';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 const [api, automation, router, html, js, css, migration, registryText] = await Promise.all([
@@ -14,12 +15,15 @@ const [api, automation, router, html, js, css, migration, registryText] = await 
   read('config/ecosystem-services.json'),
 ]);
 const registry = JSON.parse(registryText);
-const [offerRegistry, offerControl, offerSources, offerMigration, entryWorker] = await Promise.all([
+const [offerRegistry, offerControl, offerSources, offerMigration, entryWorker, marketplace, multiMigration, marketingAdmin] = await Promise.all([
   read('offer-registry.js'),
   read('offer-registry-control.js'),
   read('offer-registry-sources.js'),
   read('migrations/0056_ekodi_offer_registry.sql'),
   read('customer-entry-worker.js'),
+  read('affiliate-marketplace.js'),
+  read('migrations/0057_affiliate_multi_provider_clicks.sql'),
+  read('marketing-funnel-admin.js'),
 ]);
 
 test('EKODI Mall remains a root storefront separate from shared Shop platform', () => {
@@ -46,6 +50,13 @@ test('public storefront reads as a normal shopping mall', () => {
 
 test('official storefront canonical is ekodi.kr/ekodibiz/mall', () => {
   assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz\/mall">/);
+});
+
+test('legacy /mall redirects safely to the canonical EKODIBIZ storefront', async () => {
+  const response = await siteWorker.fetch(new Request('https://ekodi.kr/mall?source=legacy'), {});
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/ekodibiz/mall?source=legacy');
+  assert.equal(response.headers.get('x-ekodi-route'), 'mall-legacy-canonical-redirect');
 });
 
 test('affiliate and seller disclosures are centered inside the header and absent from footer', () => {
@@ -176,6 +187,26 @@ test('Offer discovery bootstraps the existing Mall catalog without remote provid
   assert.match(offerControl, /searchParams\.get\('kind'\)/);
   assert.match(offerRegistry, /source_provider = \?/);
 });
+test('multi-provider affiliate products can be registered, displayed and click-tracked', () => {
+  assert.match(marketplace, /registerMarketplaceProduct/);
+  assert.match(marketplace, /INSERT INTO affiliate_providers/);
+  assert.match(marketplace, /INSERT INTO affiliate_accounts/);
+  assert.match(marketplace, /upsertOffer/);
+  assert.match(marketplace, /publicMarketplaceClick/);
+  assert.match(marketplace, /affiliate_link_clicks/);
+  assert.match(multiMigration, /affiliate_link_clicks/);
+  assert.match(api, /listMarketplaceProducts/);
+  assert.match(api, /publicMarketplaceClick/);
+  assert.match(api, /path === `\$\{PREFIX\}\/products`/);
+  assert.match(api, /multiProviderCatalog: true/);
+  assert.match(marketingAdmin, /id="affiliateExternalProductForm"/);
+  assert.match(marketingAdmin, /\/api\/affiliate\/products/);
+  assert.match(js, /providerName/);
+  assert.match(js, /buyLabel/);
+  assert.match(html, /id="productDialogSource"/);
+  assert.match(html, /id="productDialogDisclosure"/);
+});
+
 test('public Offer discovery is read-only and routed independently from affiliate admin ingest', () => {
   assert.match(offerControl, /\/api\/offers/);
   assert.match(offerControl, /\/discover/);
@@ -192,6 +223,7 @@ test('public product, image and click paths run before admin authentication', ()
   assert.ok(api.indexOf("url.pathname === `${PREFIX}/public/products`") < authIndex);
   assert.ok(api.indexOf('publicImage(request, env, url)') < authIndex);
   assert.ok(api.indexOf('publicClick(request, env, url)') < authIndex);
+  assert.ok(api.indexOf('publicMarketplaceClick(request, env, url)') < authIndex);
   assert.match(api, /status: 302/);
 });
 

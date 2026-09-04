@@ -1,7 +1,7 @@
 # Admin site rollout: password recovery interface
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
 # Mall canonical release: publish ekodi.kr/ekodibiz/mall disclosures and centered footer
-# CGMA maintenance mode: route public association domain through the platform router.
+# CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
 name = "shy-thunder-39a4"
 main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"
@@ -17,14 +17,6 @@ custom_domain = true
 
 [[routes]]
 pattern = "www.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "cgma.or.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "www.cgma.or.kr"
 custom_domain = true
 
 [[routes]]

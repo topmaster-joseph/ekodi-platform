@@ -61,6 +61,10 @@ jobs:
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'youtubeConfigured' marketing-growth-worker.js
+          grep -Fq 'GOOGLE_OAUTH_BROKER' marketing-growth-worker.js
+          grep -Fq 'MARKETING_OAUTH_VAULT_KEY' marketing-growth-worker.js
+          grep -Fq 'binding = "GOOGLE_OAUTH_BROKER"' wrangler.marketing-growth.toml
+          grep -Fq 'entrypoint = "GoogleOAuthBroker"' wrangler.marketing-growth.toml
           grep -Fq 'paidActivation:false' marketing-growth-worker.js
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
@@ -97,6 +101,19 @@ jobs:
       - name: Deploy growth connector worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml
 
+      - name: Ensure persistent Marketing OAuth vault key
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.marketing-growth.toml > /tmp/marketing-secret-list.txt
+          if grep -Fq 'MARKETING_OAUTH_VAULT_KEY' /tmp/marketing-secret-list.txt; then
+            echo 'Marketing OAuth vault key already exists; keeping it unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put MARKETING_OAUTH_VAULT_KEY --config wrangler.marketing-growth.toml >/dev/null
+            echo 'Generated the persistent Marketing OAuth vault key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f /tmp/marketing-secret-list.txt
+
       - name: Install provider and intelligence credentials when available
         shell: bash
         run: |
@@ -130,6 +147,7 @@ jobs:
               && grep -Fq '"schemaReady":true' /tmp/growth-health.json \
               && grep -Fq '"oauthBroker":true' /tmp/growth-health.json \
               && grep -Fq '"encryptedVault":true' /tmp/growth-health.json \
+              && grep -Fq '"youtubeConfigured":true' /tmp/growth-health.json \
               && grep -Fq '"organicPublishing":true' /tmp/growth-health.json \
               && grep -Fq '"paidActivation":false' /tmp/growth-health.json \
               && grep -Fq '"mallPromotionAutomation"' /tmp/growth-health.json \

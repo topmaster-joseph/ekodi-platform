@@ -84,6 +84,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-finance.css',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
+  '/admin-public-site-controls.js',
   '/admin-demand-loader.js',
   '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
@@ -241,7 +242,7 @@ function isLegacyMallPath(pathname) {
 function redirectLegacyMallPath(request) {
   const target = new URL(request.url);
   target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
-  const response = Response.redirect(target.toString(), 308);
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
   applyBaseSecurityHeaders(response.headers);
   response.headers.set('Cache-Control', 'no-store');
   response.headers.set('X-EKODI-Route', 'mall-legacy-canonical-redirect');
@@ -448,7 +449,7 @@ export default {
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);
         canonical.pathname = MALL_PREFIX;
-        const response = Response.redirect(canonical.toString(), 308);
+        const response = new Response(null, { status: 308, headers: { Location: canonical.toString() } });
         applyBaseSecurityHeaders(response.headers);
         return response;
       }
