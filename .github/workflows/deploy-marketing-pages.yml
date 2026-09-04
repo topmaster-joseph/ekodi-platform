@@ -26,9 +26,13 @@ env:
   WRANGLER_VERSION: '4.119.0'
 
 jobs:
-  sync:
+  plan:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 8
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      deploy_needed: ${{ steps.plan.outputs.deploy_needed }}
     env:
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -50,6 +54,83 @@ jobs:
           test ${#sha} -eq 40
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "Latest jadam-maru/main: $sha"
+
+      - name: Verify Cloudflare credentials
+        if: github.event_name != 'pull_request'
+        run: |
+          test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+
+      - name: Plan idempotent Pages sync
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            echo 'deploy_needed=true' >> "$GITHUB_OUTPUT"
+            echo 'PR validation: build contracts only; no production Cloudflare mutation.'
+            exit 0
+          fi
+
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          target='${{ steps.source.outputs.sha }}'
+          all_current=1
+          : > /tmp/previous.tsv
+
+          for project in marketing-ai marketing-ai-jadam marketing-ai-pizzamaru marketing-ai-yogurtpurple; do
+            curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/deployments?env=production&per_page=1" > "/tmp/$project-deployments.json"
+            PROJECT="$project" python - <<'PY' >> /tmp/previous.tsv
+          import json, os
+          project=os.environ['PROJECT']
+          rows=json.load(open('/tmp/'+project+'-deployments.json')).get('result') or []
+          row=rows[0] if rows else {}
+          trigger=(row.get('deployment_trigger') or {}).get('metadata') or {}
+          print('\t'.join([project, str(row.get('id') or ''), str(trigger.get('commit_hash') or '')]))
+          PY
+          done
+
+          while IFS=$'\t' read -r project deployment_id commit_hash; do
+            echo "$project current_commit=${commit_hash:-unknown} deployment=${deployment_id:-none}"
+            if [ "$commit_hash" != "$target" ]; then all_current=0; fi
+          done < /tmp/previous.tsv
+
+          if [ "$all_current" -eq 1 ]; then
+            echo 'deploy_needed=false' >> "$GITHUB_OUTPUT"
+            echo 'All Marketing AI Pages projects already match latest source; no build or deploy needed.'
+          else
+            echo 'deploy_needed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+  staging_gate:
+    needs: plan
+    if: needs.plan.result == 'success' && needs.plan.outputs.deploy_needed == 'true'
+    uses: ./.github/workflows/stage-marketing-pages-shell.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+    secrets: inherit
+
+  sync:
+    needs: [plan, staging_gate]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.deploy_needed == 'true' && needs.staging_gate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_API_TOKEN: ${{ github.token }}
+    steps:
+      - name: Use staged Marketing AI source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha='${{ needs.plan.outputs.source_sha }}'
+          test ${#sha} -eq 40
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Using Marketing AI source proven by staging: $sha"
 
       - name: Verify Cloudflare credentials
         if: github.event_name != 'pull_request'
