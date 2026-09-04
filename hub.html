@@ -8,6 +8,7 @@
   <style>
     :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e8eef8;background:#07101d;color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 0%,#17345c 0,transparent 38%),linear-gradient(180deg,#07101d,#0b1220);padding:28px}a{color:inherit;text-decoration:none}.shell{max-width:1100px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:56px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.04em}.mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#fff;color:#07101d}.home{font-size:14px;color:#b8c6da;padding:10px 14px;border:1px solid #30435f;border-radius:999px}.eyebrow{color:#84b9ff;font-weight:800;letter-spacing:.16em;font-size:12px;text-transform:uppercase}.hero h1{font-size:clamp(34px,6vw,68px);line-height:1.02;margin:10px 0 18px;letter-spacing:-.05em}.hero p{max-width:720px;color:#afbed2;font-size:17px;line-height:1.7;margin:0}.context{display:inline-flex;margin-top:18px;padding:7px 10px;border-radius:999px;background:#13233a;color:#cfe2ff;font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:42px}.grid.mail-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:760px}.card{min-height:180px;padding:22px;border:1px solid #253853;border-radius:22px;background:linear-gradient(180deg,rgba(22,38,61,.86),rgba(11,18,32,.86));display:flex;flex-direction:column;justify-content:space-between;transition:.18s transform,.18s border-color}.card:hover{transform:translateY(-3px);border-color:#638dcc}.card.primary{border-color:#4d7fba;background:linear-gradient(145deg,rgba(24,57,94,.96),rgba(11,24,43,.94))}.icon{font-size:28px}.card strong{display:block;font-size:19px;margin-top:18px}.card small{display:block;color:#96a8c2;margin-top:7px;line-height:1.5}.arrow{align-self:flex-end;color:#8fbcff}.note{margin-top:22px;padding:16px 18px;border-left:3px solid #568ee8;background:#101d30;color:#a9bad0;border-radius:0 14px 14px 0;font-size:13px;line-height:1.6}.domain-panel{display:none;margin-top:24px;padding:20px;border:1px solid #263b58;border-radius:18px;background:rgba(11,24,42,.72)}.domain-panel.visible{display:block}.domain-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:14px}.domain-head strong{font-size:16px}.domain-head span{font-size:11px;color:#7f93ae}.domain-row{display:grid;grid-template-columns:160px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)}.domain-row:first-of-type{border-top:0}.domain-name{font-weight:800;font-size:14px}.domain-detail{font-size:12px;line-height:1.55;color:#9fb1c8}.status{font-size:10px;font-weight:800;letter-spacing:.04em;padding:6px 9px;border-radius:999px;white-space:nowrap}.status.live{color:#bff5d2;background:#153827}.status.ready{color:#cfe4ff;background:#173659}.alias-note{margin-top:11px;padding-top:13px;border-top:1px solid rgba(255,255,255,.07);font-size:12px;line-height:1.65;color:#9fb1c8}.admin-links{display:none;margin-top:20px;gap:14px;align-items:center;font-size:11px;color:#7186a2}.admin-links.visible{display:flex}.admin-links a:hover{color:#b8d6ff}.footer{margin-top:42px;color:#6f829d;font-size:12px}@media(max-width:760px){body{padding:20px}.top{margin-bottom:38px}.grid,.grid.mail-grid{grid-template-columns:1fr;max-width:none}.hero p{font-size:15px}.domain-row{grid-template-columns:1fr auto}.domain-detail{grid-column:1/-1}.domain-head{align-items:flex-start;flex-direction:column;gap:5px}}
   </style>
+  <style>body.pay-public-minimal .shell{max-width:760px}body.pay-public-minimal .top{display:none}body.pay-public-minimal .hero{padding-top:72px}body.pay-public-minimal .grid{grid-template-columns:1fr;max-width:420px;margin-top:34px}body.pay-public-minimal .card{min-height:0;padding:18px 20px}body.pay-public-minimal .card strong{margin-top:8px}body.pay-public-minimal .note,body.pay-public-minimal .domain-panel,body.pay-public-minimal .admin-links{display:none!important}</style>
 </head>
 <body>
   <main class="shell">
@@ -21,7 +22,7 @@
   </main>
   <script>
     const host = location.hostname.toLowerCase();
-    const card = (icon,title,detail,href,kind='') => ({icon,title,detail,href,kind});
+    const card = (icon,title,detail,href,kind='',sameTab=false) => ({icon,title,detail,href,kind,sameTab});
     const common = {
       admin: card('⌘','EKODI Admin','통합 관리 콘솔','https://admin.ekodi.kr'),
       root: card('E','EKODI Portal','전체 서비스 정문','https://ekodi.kr'),
@@ -29,13 +30,11 @@
     let model;
     if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
       model = {
-        eyebrow:'PAYMENT GATE', title:'EKODI Pay', context:host,
-        description:'상품, 교육, 무역, 서비스 결제는 하나의 주소 체계에서 연결하고 실제 회계 귀속은 조직과 사업부별로 분리합니다.',
-        note:'에코디비즈 상거래 결제는 기존 Toss Payments 계약을 기준으로 연결합니다. 교회·비영리 자금은 사업 결제·회계와 섞지 않고 별도 계약과 정산 체계를 사용합니다.',
+        eyebrow:'PAYMENT SERVICE', title:'EKODI Pay', context:'', minimal:true, noindex:true,
+        description:'안전한 결제 서비스를 제공합니다. 결제는 연결된 EKODI 서비스에서 시작해 주세요.',
+        note:'',
         cards:[
-          card('₩','에코디비즈 결제','서비스별 결제 화면으로 연결','https://biz.ekodi.kr'),
-          card('▦','결제 · 회계 관제','Toss 상태와 사업부별 원장','https://admin.ekodi.kr/#finance'),
-          common.admin, common.root
+          card('E','EKODI로 돌아가기','EKODI 서비스로 이동','https://ekodi.kr','primary',true)
         ]
       };
     } else if (host.startsWith('mail.')) {
@@ -100,15 +99,17 @@
         ]
       };
     }
+    document.body.classList.toggle('pay-public-minimal', Boolean(model.minimal));
+    if (model.noindex) { const meta = document.createElement('meta'); meta.name='robots'; meta.content='noindex,nofollow,noarchive'; document.head.append(meta); }
     document.title = `${model.title} · EKODI`;
     document.querySelector('#eyebrow').textContent = model.eyebrow;
     document.querySelector('#title').textContent = model.title;
     document.querySelector('#description').textContent = model.description;
-    document.querySelector('#context').textContent = model.context;
-    document.querySelector('#note').textContent = model.note;
+    const contextEl = document.querySelector('#context'); contextEl.textContent = model.context || ''; contextEl.hidden = !model.context;
+    const noteEl = document.querySelector('#note'); noteEl.textContent = model.note || ''; noteEl.hidden = !model.note;
     const cards = document.querySelector('#cards');
     cards.classList.toggle('mail-grid',host.startsWith('mail.'));
-    cards.innerHTML = model.cards.map(x => `<a class="card ${x.kind || ''}" href="${x.href}" target="_blank" rel="noopener"><div><span class="icon">${x.icon}</span><strong>${x.title}</strong><small>${x.detail}</small></div><span class="arrow">↗</span></a>`).join('');
+    cards.innerHTML = model.cards.map(x => `<a class="card ${x.kind || ''}" href="${x.href}"${x.sameTab ? '' : ' target="_blank" rel="noopener"'}><div><span class="icon">${x.icon}</span><strong>${x.title}</strong><small>${x.detail}</small></div><span class="arrow">↗</span></a>`).join('');
     const domainPanel = document.querySelector('#domainPanel');
     if (model.domains?.length) {
       domainPanel.classList.add('visible');
