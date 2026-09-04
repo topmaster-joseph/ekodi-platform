@@ -84,6 +84,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-finance.css',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
+  '/admin-public-site-controls.js',
   '/admin-demand-loader.js',
   '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
