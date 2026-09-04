@@ -31,3 +31,8 @@ test('common Invest admin keeps the existing central service-admin handoff contr
   assert.ok(probe);assert.deepEqual(probe.statuses,[307]);
   assert.ok(probe.headerExpect.some(value=>value.includes('location: https://admin.ekodi.kr/')));
 });
+
+test('entry router does not swallow EKODIBIZ Invest admin as generic workspace admin',async()=>{
+  const source=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(source,/isWorkspaceAdminPath\(url\.pathname\)&&!isEkodiBizInvestAdminPath\(url\.pathname\)/);
+});

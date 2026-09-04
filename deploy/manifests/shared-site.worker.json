@@ -1,5 +1,5 @@
 {
-  "version": 46,
+  "version": 47,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -75,7 +75,8 @@
         "headerExpect": [
           "x-ekodi-route: trade-partner-workspace",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/_ekodi/space/config.js",
