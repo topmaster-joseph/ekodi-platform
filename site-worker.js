@@ -358,6 +358,7 @@ function adminAuthRedirect(returnPath) {
   const safePath = safeAdminReturnPath(returnPath);
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
   const response = new Response(null, {
     status: 302,
@@ -374,6 +375,7 @@ function adminAuthRedirect(returnPath) {
 function adminApexAuthUrl() {
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', 'https://ekodi.kr/admin');
   return target.toString();
 }
