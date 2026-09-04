@@ -54,5 +54,5 @@ test('admin auth recovers from expired challenges and shows allowlist failures c
   assert.match(adminAuth, /GOOGLE_ACCOUNT_NOT_ALLOWED/);
   assert.match(adminAuth, /expired_challenge/);
   assert.match(adminAuth, /setTimeout\(prepareGoogle,350\)/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260823-mobile-handoff-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260904-admin-popup-1/);
 });
