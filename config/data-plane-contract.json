@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "status": "enforced-foundation",
   "principles": {
     "workspaceIdentityField": "workspace_id",
@@ -10,33 +10,58 @@
     "unknownProviderAction": "deny",
     "providerFallbackDefault": "none",
     "databaseIsNotFileStorage": true,
-    "fileStorageIsNotDatabase": true
+    "fileStorageIsNotDatabase": true,
+    "portableCloudFirst": true,
+    "providerSpecificCanonicalIdsForbidden": true,
+    "providerNativeCriticalCallsRequireAdapter": true,
+    "multiProviderReady": true,
+    "activeActiveMultiCloudDefault": false,
+    "criticalProviderExitPlanRequired": true
   },
   "accountProfiles": {
     "development": {
       "physicalBoundary": "cloudflare-development-account",
       "productionDataAllowed": false,
       "purpose": "Build, preview, staging and destructive test workloads",
-      "allowedDataClasses": ["workspace-record", "private-document", "public-asset", "hot-metadata"]
+      "allowedDataClasses": [
+        "workspace-record",
+        "private-document",
+        "public-asset",
+        "hot-metadata"
+      ]
     },
     "production-core": {
       "physicalBoundary": "cloudflare-production-account",
       "logicalBoundary": "core-control-plane",
       "purpose": "Identity, authorization, billing, audit, workspace registry and protected shared APIs",
-      "allowedDataClasses": ["core-record", "workspace-record", "private-document", "hot-metadata", "audit-record"],
+      "allowedDataClasses": [
+        "core-record",
+        "workspace-record",
+        "private-document",
+        "hot-metadata",
+        "audit-record"
+      ],
       "publicAssetOrigin": false
     },
     "production-public": {
       "physicalBoundary": "cloudflare-production-account",
       "logicalBoundary": "public-delivery-plane",
       "purpose": "Public sites, static assets, cached public metadata and high-volume delivery",
-      "allowedDataClasses": ["public-asset", "public-metadata"],
+      "allowedDataClasses": [
+        "public-asset",
+        "public-metadata"
+      ],
       "coreDatabaseReachable": false
     },
     "isolated-workload": {
       "physicalBoundary": "dedicated-account-or-provider-when-threshold-reached",
       "purpose": "High-volume, high-risk or independently billed workloads",
-      "allowedDataClasses": ["workspace-record", "private-document", "public-asset", "hot-metadata"],
+      "allowedDataClasses": [
+        "workspace-record",
+        "private-document",
+        "public-asset",
+        "hot-metadata"
+      ],
       "activation": "explicit-capacity-or-risk-decision"
     }
   },
@@ -45,42 +70,74 @@
       "adapterKind": "database",
       "scope": "core",
       "defaultProvider": "d1-core",
-      "examples": ["identity", "authorization", "billing", "workspace-registry"]
+      "examples": [
+        "identity",
+        "authorization",
+        "billing",
+        "workspace-registry"
+      ],
+      "canonicalData": true
     },
     "workspace-record": {
       "adapterKind": "database",
       "scope": "workspace",
       "defaultProvider": "d1-workspace",
-      "examples": ["tenant-state", "relationships", "workflow-state", "document-metadata"]
+      "examples": [
+        "tenant-state",
+        "relationships",
+        "workflow-state",
+        "document-metadata"
+      ],
+      "canonicalData": true
     },
     "audit-record": {
       "adapterKind": "database",
       "scope": "workspace",
       "defaultProvider": "d1-core",
-      "appendOnly": true
+      "appendOnly": true,
+      "canonicalData": true
     },
     "private-document": {
       "adapterKind": "file",
       "scope": "workspace",
       "defaultProvider": "google-drive-workspace",
-      "examples": ["source-documents", "reports", "pdf", "office-documents", "private-media"]
+      "examples": [
+        "source-documents",
+        "reports",
+        "pdf",
+        "office-documents",
+        "private-media"
+      ],
+      "canonicalData": true
     },
     "public-asset": {
       "adapterKind": "file",
       "scope": "public",
       "defaultProvider": "r2-public",
-      "examples": ["public-images", "downloads", "site-assets"]
+      "examples": [
+        "public-images",
+        "downloads",
+        "site-assets"
+      ],
+      "canonicalData": false
     },
     "public-metadata": {
       "adapterKind": "cache",
       "scope": "public",
-      "defaultProvider": "kv-hot"
+      "defaultProvider": "kv-hot",
+      "canonicalData": false
     },
     "hot-metadata": {
       "adapterKind": "cache",
       "scope": "workspace",
       "defaultProvider": "kv-hot",
-      "examples": ["menus", "feature-flags", "service-catalog", "read-mostly-metadata"]
+      "examples": [
+        "menus",
+        "feature-flags",
+        "service-catalog",
+        "read-mostly-metadata"
+      ],
+      "canonicalData": false
     }
   },
   "providers": {
@@ -88,40 +145,115 @@
       "adapterKind": "database",
       "provider": "cloudflare-d1",
       "scope": "core",
-      "portable": true
+      "portable": true,
+      "portability": {
+        "class": "adapter-portable",
+        "runtimeContract": "ekodi-database-adapter",
+        "dataExit": "sqlite-or-sql-export",
+        "canonicalDataAllowed": true
+      }
     },
     "d1-workspace": {
       "adapterKind": "database",
       "provider": "cloudflare-d1",
       "scope": "workspace",
       "portable": true,
-      "shardingKey": "workspace_id"
+      "shardingKey": "workspace_id",
+      "portability": {
+        "class": "adapter-portable",
+        "runtimeContract": "ekodi-database-adapter",
+        "dataExit": "sqlite-or-sql-export",
+        "canonicalDataAllowed": true
+      }
     },
     "postgres-workspace": {
       "adapterKind": "database",
       "provider": "postgres-compatible",
       "scope": "workspace",
       "portable": true,
-      "activation": "optional-capacity-provider"
+      "activation": "optional-capacity-provider",
+      "portability": {
+        "class": "standard-native",
+        "runtimeContract": "postgresql",
+        "dataExit": "pg-dump-or-sql",
+        "canonicalDataAllowed": true
+      }
     },
     "google-drive-workspace": {
       "adapterKind": "file",
       "provider": "google-drive",
       "scope": "workspace",
       "portable": true,
-      "activation": "requires-server-side-workspace-credential"
+      "activation": "requires-server-side-workspace-credential",
+      "portability": {
+        "class": "export-portable",
+        "runtimeContract": "ekodi-file-adapter",
+        "dataExit": "file-export-plus-ekodi-metadata",
+        "canonicalDataAllowed": true
+      }
     },
     "r2-public": {
       "adapterKind": "file",
       "provider": "cloudflare-r2",
       "scope": "public",
-      "portable": true
+      "portable": true,
+      "portability": {
+        "class": "standard-native",
+        "runtimeContract": "s3-compatible-object",
+        "dataExit": "object-copy-plus-metadata",
+        "canonicalDataAllowed": false
+      }
     },
     "kv-hot": {
       "adapterKind": "cache",
       "provider": "cloudflare-kv-or-cache",
       "scope": "workspace-or-public",
-      "portable": true
+      "portable": true,
+      "portability": {
+        "class": "adapter-portable",
+        "runtimeContract": "ekodi-cache-adapter",
+        "dataExit": "rebuildable-cache",
+        "canonicalDataAllowed": false
+      }
+    },
+    "gcp-cloud-sql-postgres": {
+      "adapterKind": "database",
+      "provider": "google-cloud-sql-postgres",
+      "scope": "workspace",
+      "portable": true,
+      "activation": "optional-provider",
+      "portability": {
+        "class": "standard-native",
+        "runtimeContract": "postgresql",
+        "dataExit": "pg-dump-or-sql",
+        "canonicalDataAllowed": true
+      }
+    },
+    "gcs-object": {
+      "adapterKind": "file",
+      "provider": "google-cloud-storage",
+      "scope": "workspace-or-system",
+      "portable": true,
+      "activation": "optional-provider",
+      "portability": {
+        "class": "adapter-portable",
+        "runtimeContract": "ekodi-object-storage-adapter",
+        "dataExit": "object-copy-plus-metadata",
+        "canonicalDataAllowed": true
+      }
+    },
+    "s3-object": {
+      "adapterKind": "file",
+      "provider": "s3-compatible",
+      "scope": "workspace-or-system",
+      "portable": true,
+      "activation": "optional-provider",
+      "portability": {
+        "class": "standard-native",
+        "runtimeContract": "s3-compatible-object",
+        "dataExit": "object-copy-plus-metadata",
+        "canonicalDataAllowed": true
+      }
     }
   },
   "trafficProtection": {

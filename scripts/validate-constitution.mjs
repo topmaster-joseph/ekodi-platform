@@ -10,11 +10,32 @@ const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
+const cloudPortability = json('config/cloud-portability-policy.json');
+const dataPlane = json('config/data-plane-contract.json');
 
-if (constitution.version !== '1.5.1') fail('constitution version must remain 1.5.1 with approved orgless workspace routing and Invest common-service amendments');
+if (constitution.version !== '1.6.0') fail('constitution version must remain 1.6.0 with the approved Portable Cloud First amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','portable-cloud-first']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
+}
+
+const cloud = constitution.cloudPortabilityPolicy || {};
+if (cloud.mode !== 'portable_cloud_first') fail('cloud portability mode must remain portable_cloud_first');
+if (cloud.providerRole !== 'replaceable_execution_or_integration_infrastructure') fail('cloud providers must remain replaceable infrastructure');
+if (cloud.canonicalIdentityProviderNeutral !== true) fail('canonical identity must remain provider-neutral');
+if (cloud.canonicalBusinessLogicProviderNeutral !== true) fail('canonical business logic must remain provider-neutral');
+if (cloud.canonicalDataFormatsPortable !== true) fail('canonical data formats must remain portable');
+if (cloud.providerNativeCriticalDependencyRequiresAdapter !== true) fail('critical provider-native dependencies require adapters');
+if (cloud.multiProviderReady !== true || cloud.activeActiveMultiCloudDefault !== false) fail('EKODI must be multi-provider ready without default active-active multi-cloud');
+if (cloud.criticalProviderExitPlanRequired !== true) fail('critical providers require an exit plan');
+if (cloud.freeCreditMayDetermineArchitecture !== false) fail('free credits may not determine architecture');
+if (cloud.policyFile !== 'config/cloud-portability-policy.json') fail('cloud portability policy file mismatch');
+if (cloudPortability.mode !== 'portable-cloud-first') fail('cloud portability config mode mismatch');
+if (cloudPortability.principles?.providerNativeCriticalCallsRequireAdapter !== true) fail('cloud portability config must require adapters for critical provider-native calls');
+if (cloudPortability.principles?.freeCreditsNeverDefineArchitecture !== true) fail('cloud credits must never define architecture');
+if (dataPlane.version < 2 || dataPlane.principles?.portableCloudFirst !== true) fail('data plane must enforce Portable Cloud First');
+for (const [providerId, provider] of Object.entries(dataPlane.providers || {})) {
+  if (!provider.portability?.class) fail(`data-plane provider missing portability class: ${providerId}`);
 }
 
 const parallel = constitution.parallelDevelopmentPolicy || {};
@@ -121,6 +142,10 @@ if (alignment.structuredOperationalData !== 'ekodi_controlled_database') fail('s
 if (alignment.legacyCanonicalStore !== storage.canonicalStore) fail('storage transition must name the currently active legacy canonical store');
 if (storage.principles?.externalModulesMayAccessDriveDirectly !== false) fail('external modules may not bypass storage gateway');
 if (storage.principles?.providerSecretsStayServerSide !== true) fail('provider secrets must remain server-side');
+if (storage.principles?.portableProviderContractRequired !== true) fail('storage must require portable provider contracts');
+if (storage.principles?.providerNativeIdsAreMetadataOnly !== true) fail('provider-native IDs must remain metadata only');
+if (storage.principles?.criticalProviderExitPlanRequired !== true) fail('storage critical providers require exit plans');
+if (storage.principles?.freeCreditsNeverDefineArchitecture !== true) fail('storage architecture may not be defined by free credits');
 
 const amendmentDir = path.join(root, 'governance/amendments');
 const amendments = fs.readdirSync(amendmentDir).filter(name => name.endsWith('.json')).map(name => json(`governance/amendments/${name}`));
@@ -140,4 +165,4 @@ console.log(`- ${legacy.size} legacy domains registered with canonical migration
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
 console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
-console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');
+console.log('- data sovereignty, tenant authority, Portable Cloud First and storage transition rules checked');

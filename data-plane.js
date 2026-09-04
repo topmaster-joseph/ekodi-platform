@@ -91,6 +91,11 @@ export function validateDataPlanePolicy(policy) {
   requireObject(policy.providers, 'policy.providers');
   requireObject(policy.trafficProtection, 'policy.trafficProtection');
 
+  if (Number(policy.version) < 2) throw new DataPlaneBoundaryError('Data-plane policy version 2 or newer is required');
+  if (policy.principles.portableCloudFirst !== true) throw new DataPlaneBoundaryError('Portable Cloud First must be enabled');
+  if (policy.principles.providerSpecificCanonicalIdsForbidden !== true) throw new DataPlaneBoundaryError('Provider-specific canonical IDs must be forbidden');
+  if (policy.principles.providerNativeCriticalCallsRequireAdapter !== true) throw new DataPlaneBoundaryError('Critical provider-native calls must use adapters');
+
   if (policy.principles.workspaceIdentityField !== 'workspace_id') {
     throw new DataPlaneBoundaryError('workspace_id must remain the canonical workspace identity');
   }
@@ -107,12 +112,17 @@ export function validateDataPlanePolicy(policy) {
     throw new DataPlaneBoundaryError('Public delivery requests must not reach the core database');
   }
 
+  for (const [providerId, provider] of Object.entries(policy.providers)) {
+    const portability = provider.portability;
+    if (!portability || !['standard-native', 'adapter-portable', 'export-portable', 'provider-bound'].includes(portability.class)) throw new DataPlaneBoundaryError(`Provider ${providerId} must declare a valid portability class`);
+    if (!portability.runtimeContract || !portability.dataExit) throw new DataPlaneBoundaryError(`Provider ${providerId} must declare runtimeContract and dataExit`);
+  }
   for (const [dataClass, rule] of Object.entries(policy.dataClasses)) {
     const provider = policy.providers[rule.defaultProvider];
     if (!provider) throw new DataPlaneBoundaryError(`Unknown default provider for ${dataClass}`);
-    if (provider.adapterKind !== rule.adapterKind) {
-      throw new DataPlaneBoundaryError(`Adapter kind mismatch for ${dataClass}`);
-    }
+    if (provider.adapterKind !== rule.adapterKind) throw new DataPlaneBoundaryError(`Adapter kind mismatch for ${dataClass}`);
+    if (rule.canonicalData === true && provider.portability?.canonicalDataAllowed !== true) throw new DataPlaneBoundaryError(`Canonical data class ${dataClass} cannot use provider ${rule.defaultProvider}`);
+    if (rule.canonicalData === true && provider.portability?.class === 'provider-bound') throw new DataPlaneBoundaryError(`Canonical data class ${dataClass} cannot default to provider-bound infrastructure`);
   }
   return true;
 }
@@ -151,6 +161,7 @@ export function createDataPlane({ policy, registry = new ProviderRegistry(), wor
       scope: rule.scope,
       adapterKind: rule.adapterKind,
       providerId,
+      providerPortability: Object.freeze({ ...providerPolicy.portability }),
       adapter,
     });
   }
