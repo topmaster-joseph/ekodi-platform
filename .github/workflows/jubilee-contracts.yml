@@ -1,0 +1,53 @@
+name: Jubilee Contracts
+
+on:
+  pull_request:
+    paths:
+      - 'jubilee-*.js'
+      - 'mall-jubilee-adapter.js'
+      - 'mall-market-discovery.js'
+      - 'mission-control-entry-worker.js'
+      - 'test/jubilee-*.test.mjs'
+      - 'test/mall-jubilee-adapter.test.mjs'
+      - 'test/mall-market-discovery*.test.mjs'
+      - 'test/ekodibiz-payment-architecture.test.mjs'
+      - 'supabase/migrations/*jubilee*.sql'
+      - 'supabase/tests/*jubilee*.sql'
+      - 'docs/EKODI-JUBILEE-*.md'
+      - '.github/workflows/jubilee-contracts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'jubilee-*.js'
+      - 'mall-jubilee-adapter.js'
+      - 'mall-market-discovery.js'
+      - 'mission-control-entry-worker.js'
+      - 'test/jubilee-*.test.mjs'
+      - 'test/mall-jubilee-adapter.test.mjs'
+      - 'test/mall-market-discovery*.test.mjs'
+      - 'test/ekodibiz-payment-architecture.test.mjs'
+      - 'supabase/migrations/*jubilee*.sql'
+      - 'supabase/tests/*jubilee*.sql'
+      - 'docs/EKODI-JUBILEE-*.md'
+      - '.github/workflows/jubilee-contracts.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax check
+        run: |
+          for file in jubilee-*.js mall-jubilee-adapter.js mall-market-discovery.js; do
+            node --check "$file"
+          done
+      - name: Jubilee contract tests
+        run: |
+          node --test test/jubilee-*.test.mjs \
+            test/mall-jubilee-adapter.test.mjs \
+            test/mall-market-discovery.test.mjs \
+            test/mall-market-discovery-integration.test.mjs \
+            test/ekodibiz-payment-architecture.test.mjs
