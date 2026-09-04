@@ -8,8 +8,12 @@ const fail = message => failures.push(message);
 
 const architectureFile = 'governance/architecture/ekodi-os-architecture.json';
 const boundariesFile = 'platform-boundaries.json';
+const capabilityContractFile = 'governance/architecture/capability-provider-contract.v1.json';
 const architecture = readJson(architectureFile);
 const boundaries = readJson(boundariesFile);
+const capabilityContract = readJson(capabilityContractFile);
+const core = readJson('config/ekodi-core-contract.json');
+const workspacePolicy = readJson('config/service-workspace-policy.json');
 
 if (architecture.schemaVersion !== 1) fail('architecture schemaVersion must be 1');
 if (architecture.status !== 'active') fail('architecture registry must be active');
@@ -93,6 +97,35 @@ if (workspace.workspaceKindIsIdentity !== false) fail('workspace kind must not b
 if (workspace.workspaceOwnsServiceSelection !== true) fail('workspace must own compatible service selection');
 if (workspace.serviceDisconnectMustPreserveWorkspaceIdentity !== true) fail('service disconnection must preserve workspace identity');
 
+const workspaceSelection = workspacePolicy.serviceImplementationSelection || {};
+if (workspacePolicy.publicWorkspaceRouting?.workspaceIdentityKey !== 'workspace_id') fail('workspace policy must keep workspace_id authority');
+if (workspaceSelection.workspaceMaySelectCompatibleImplementation !== true) fail('workspace policy must allow compatible implementation selection');
+if (workspaceSelection.externalImplementationRequiresStandardContract !== true) fail('workspace policy must require standard contracts for external implementations');
+if (workspaceSelection.externalImplementationDirectPrivateDatabaseAccess !== false) fail('workspace policy must forbid direct private database access for external implementations');
+if (workspaceSelection.disconnectPreservesWorkspaceIdentity !== true) fail('workspace policy must preserve identity after implementation disconnect');
+for (const authority of ['user', 'workspace-admin', 'ekodi-orchestrator-policy']) {
+  if (!workspaceSelection.selectionAuthorities?.includes(authority)) fail(`workspace selection authority missing: ${authority}`);
+}
+
+if (core.architectureAlignment?.layer !== 'core') fail('EKODI Core must declare the core architecture layer');
+if (core.architectureAlignment?.responsibilityClass !== 'ekodi-responsible') fail('EKODI Core must remain EKODI-responsible');
+if (core.architectureAlignment?.architectureRegistry !== architectureFile) fail('EKODI Core architecture registry path mismatch');
+if (core.architectureAlignment?.deploymentTopologyIndependent !== true) fail('Core responsibility boundaries must be deployment-topology independent');
+if (core.serviceConnectionModel?.crossBoundaryContractRequired !== true) fail('Core must require cross-boundary contracts');
+if (core.serviceConnectionModel?.directPrivateDatabaseCouplingAcrossIndependentServices !== false) fail('Core must forbid direct private database coupling across independent services');
+if (core.serviceConnectionModel?.externalConnectionsUseReviewedAdaptersOrContracts !== true) fail('Core must require reviewed external adapters/contracts');
+if (core.serviceConnectionModel?.safeDisconnectionRequired !== true) fail('Core must require safe disconnection');
+
+if (capabilityContract.schemaVersion !== 1) fail('capability provider contract schemaVersion must be 1');
+if (capabilityContract.contractId !== 'ekodi.capability-provider.v1') fail('capability provider contract id mismatch');
+if (capabilityContract.status !== 'active') fail('capability provider contract must be active');
+for (const providerType of ['ekodi-responsible', 'external-provider-responsible']) {
+  if (!capabilityContract.providerTypes?.includes(providerType)) fail(`capability contract provider type missing: ${providerType}`);
+}
+if (capabilityContract.authorization?.workspaceAuthority !== 'ekodi') fail('capability contract must preserve EKODI workspace authority');
+if (capabilityContract.authorization?.directPrivateDatabaseAccessForExternalProviders !== false) fail('capability contract must forbid direct private DB access for external providers');
+if (capabilityContract.selection?.compatibleImplementationsMayCoexist !== true) fail('capability contract must allow compatible implementations to coexist');
+
 const connectionRules = architecture.connectionRules || [];
 const requiredConnectionRules = [
   'Cross-boundary access uses a public or explicitly declared contract.',
@@ -111,4 +144,5 @@ if (failures.length) {
 console.log('EKODI OS architecture: OK');
 console.log(`- ${platformIds.length} EKODI deployment boundaries classified`);
 console.log(`- ${Object.keys(external).length} external connected service families registered`);
+console.log('- Core, Workspace and capability-provider contracts aligned');
 console.log('- responsibility: integrated; execution: distributed; connections: standardized');
