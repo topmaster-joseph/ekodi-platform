@@ -12,6 +12,7 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(growth,/consumeYouTubeTicket/);
   assert.match(growth,/oauth\/youtube\/callback/);
   assert.match(growth,/GOOGLE_OAUTH_BROKER/);
+  assert.match(growth,/host === 'ekodi\.kr'/);
   assert.match(growth,/MARKETING_OAUTH_VAULT_KEY/);
   assert.match(growth,/refreshYouTubeAccessToken/);
   assert.match(growth,/token_ciphertext/);
