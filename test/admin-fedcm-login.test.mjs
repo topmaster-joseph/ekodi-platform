@@ -18,21 +18,21 @@ test('admin Google auth modules remain syntactically valid', () => {
   }
 });
 
-test('admin Google button enables FedCM only on supported browser versions', () => {
-  assert.match(adminAuth, /function supportsFedCmButton\(\)/);
-  assert.match(adminAuth, /isEmbeddedWebView\|\|isIos/);
-  assert.match(adminAuth, /return isAndroid\?major>=128:major>=125/);
-  assert.match(adminAuth, /use_fedcm_for_button:supportsFedCmButton\(\)/);
+test('admin Google button uses explicit popup UX instead of browser-controlled FedCM button UX', () => {
+  assert.match(adminAuth, /use_fedcm_for_button:false/);
   assert.match(adminAuth, /button_auto_select:false/);
-  assert.doesNotMatch(adminAuth, /use_fedcm_for_prompt/);
+  assert.match(adminAuth, /ux_mode:'popup'/);
   assert.match(adminAuth, /disableAutoSelect/);
+  assert.doesNotMatch(adminAuth, /supportsFedCmButton/);
+  assert.doesNotMatch(adminAuth, /use_fedcm_for_prompt/);
 });
 
-test('admin direct entry opens the Google account chooser without a second auth-page click', () => {
+test('admin direct entry automatically opens Google account selection and keeps a manual fallback', () => {
   assert.match(handoff, /site=admin&direct=1&return_to=/);
   assert.match(adminAuth, /const directEntry=params\.get\('direct'\)==='1'/);
-  assert.match(adminAuth, /if\(directEntry\)/);
-  assert.match(adminAuth, /window\.google\.accounts\.id\.prompt\(\)/);
+  assert.match(adminAuth, /window\.google\.accounts\.id\.prompt\(/);
+  assert.match(adminAuth, /revealDirectFallback/);
+  assert.match(adminAuth, /adminDirectBridge='fallback'/);
   assert.match(adminAuth, /auto_select:false/);
 });
 
@@ -40,5 +40,5 @@ test('admin auth recovers from expired challenges and shows allowlist failures c
   assert.match(adminAuth, /GOOGLE_ACCOUNT_NOT_ALLOWED/);
   assert.match(adminAuth, /expired_challenge/);
   assert.match(adminAuth, /setTimeout\(prepare,350\)/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260823-mobile-handoff-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260904-direct-bridge-1/);
 });

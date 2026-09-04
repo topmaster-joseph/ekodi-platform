@@ -1,11 +1,14 @@
 name: Stage Shared Site Shell
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'site-worker.js'
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
+      - 'platform-router-entry-worker.js'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'ekodi-shell-injector.js'
       - 'trade.html'
       - 'hub.html'
@@ -18,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: shared-site-shell-staging-${{ github.event.pull_request.number }}
+  group: shared-site-shell-staging-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -44,6 +47,7 @@ jobs:
           node --check site-worker.js
           node --check site-shell-worker.js
           node --check platform-router-worker.js
+          node --check platform-router-entry-worker.js
           node --check ekodi-shell-injector.js
           npm run build
           test -f dist/trade.html
@@ -65,6 +69,14 @@ jobs:
             echo "Shared-site staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
             exit 0
           fi
+          verify_public_path() {
+            path="$1"; needle="$2"; header_needle="$3"
+            code=$(curl -sS -D /tmp/shared-path.headers -o /tmp/shared-path.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL$path" || true)
+            echo "$path -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq "$needle" /tmp/shared-path.html
+            grep -Fiq "$header_needle" /tmp/shared-path.headers
+          }
           verify_shell() {
             host="$1"; needle="$2"
             code=$(curl -sS -D /tmp/shared-stage.headers -o /tmp/shared-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
@@ -79,8 +91,12 @@ jobs:
               && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
-              && verify_shell 'invest.ekodi.kr' 'EKODI Investment'; then
-              echo 'Shared-site Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'
+              && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
+              && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
+              && verify_public_path '/ekodibiz/invest' 'EKODIBIZ · INVESTMENT BUSINESS' 'x-ekodi-route: public-ekodibiz-invest' \
+              && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin'; then
+              echo 'Shared-site core, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
               exit 0
             fi
             sleep 4

@@ -105,7 +105,7 @@ async function encryptionKey(secret) {
 }
 function providerSecret(env, provider) {
   if (provider === THREADS_PROVIDER) return String(env.THREADS_APP_SECRET || env.META_APP_SECRET || '');
-  if (provider === YOUTUBE_PROVIDER) return String(env.GOOGLE_CLIENT_SECRET || '');
+  if (provider === YOUTUBE_PROVIDER) return String(env.MARKETING_OAUTH_VAULT_KEY || env.GOOGLE_CLIENT_SECRET || '');
   return String(env.META_APP_SECRET || '');
 }
 async function encryptToken(env, provider, token) {
@@ -156,7 +156,7 @@ async function schemaReady(env) {
 }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
-function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET); }
+function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
 
 async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
   const state = randomState();
@@ -203,19 +203,11 @@ async function startThreads(request, env, identity, subject) {
   return json(request,env,{authorizationUrl:url.href,provider:'threads',mode:'publish'});
 }
 async function startYouTube(request, env, identity, subject) {
-  if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET'},503);
+  if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'Google OAuth broker + encrypted Marketing vault'},503);
   const body = await readJson(request) || {};
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
-  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.searchParams.set('client_id',String(env.GOOGLE_CLIENT_ID));
-  url.searchParams.set('redirect_uri',callbackUrl(env,YOUTUBE_PROVIDER));
-  url.searchParams.set('state',state);
-  url.searchParams.set('response_type','code');
-  url.searchParams.set('scope','https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
-  url.searchParams.set('access_type','offline');
-  url.searchParams.set('prompt','consent');
-  url.searchParams.set('include_granted_scopes','true');
-  return json(request,env,{authorizationUrl:url.href,provider:'youtube',mode:'publish'});
+  const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state});
+  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish'});
 }
 async function fetchJson(url, init = {}) {
   const response = await fetch(url,init);
@@ -225,6 +217,10 @@ async function fetchJson(url, init = {}) {
     throw new Error(message || `HTTP_${response.status}`);
   }
   return data;
+}
+async function refreshYouTubeAccessToken(env, refreshToken) {
+  if(!env.GOOGLE_OAUTH_BROKER?.refreshAccessToken) throw new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED');
+  return env.GOOGLE_OAUTH_BROKER.refreshAccessToken({refreshToken:String(refreshToken||'')});
 }
 function graphBase(env) { return `https://graph.facebook.com/${clean(env.META_GRAPH_VERSION || 'v25.0',16)}`; }
 async function upsertConnection(env, subject, {provider,resourceType,externalId,displayName,token,expiresAt='',scopes=[],metadata={}}) {
@@ -351,10 +347,9 @@ async function youtubeCallback(request, env) {
   if (!state) return new Response('Invalid or expired OAuth state',{status:400});
   if (url.searchParams.get('error')) return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)});
   try {
-    const code = clean(url.searchParams.get('code'),4096);
-    if (!code) throw new Error('AUTHORIZATION_CODE_MISSING');
-    const form = new URLSearchParams({client_id:String(env.GOOGLE_CLIENT_ID),client_secret:String(env.GOOGLE_CLIENT_SECRET),code,redirect_uri:callbackUrl(env,YOUTUBE_PROVIDER),grant_type:'authorization_code'});
-    const tokenData = await fetchJson('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
+    const ticket = clean(url.searchParams.get('ticket'),512);
+    if (!ticket) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
+    const tokenData = await env.GOOGLE_OAUTH_BROKER.consumeYouTubeTicket({ticket});
     const accessToken = String(tokenData.access_token || '');
     const refreshToken = String(tokenData.refresh_token || '');
     if (!accessToken || !refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
@@ -478,8 +473,7 @@ async function youtubeAccessToken(env, connection) {
   const saved = safeParse(connection.token,{});
   const refreshToken = String(saved.refreshToken || '');
   if (!refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
-  const form = new URLSearchParams({client_id:String(env.GOOGLE_CLIENT_ID),client_secret:String(env.GOOGLE_CLIENT_SECRET),refresh_token:refreshToken,grant_type:'refresh_token'});
-  const data = await fetchJson('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
+  const data = await refreshYouTubeAccessToken(env,refreshToken);
   if (!data.access_token) throw new Error('YOUTUBE_ACCESS_TOKEN_MISSING');
   return String(data.access_token);
 }

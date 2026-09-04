@@ -12,6 +12,10 @@ META_GRAPH_VERSION = "v25.0"
 MAX_DAILY_AD_BUDGET_KRW = "100000"
 MAX_TOTAL_AD_BUDGET_KRW = "1000000"
 
+[[services]]
+binding = "GOOGLE_OAUTH_BROKER"
+service = "ekodi-storage-control"
+entrypoint = "GoogleOAuthBroker"
 
 [[d1_databases]]
 binding = "DB"

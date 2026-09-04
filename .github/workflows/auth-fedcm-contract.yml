@@ -54,12 +54,12 @@ jobs:
           grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq '/auth-router.js?v=20260826-universal-sso-1' auth-site/index.html
-          grep -Fq "admin-auth.js?v=20260823-mobile-handoff-1" auth-site/auth-router.js
+          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/index.html
+          grep -Fq "admin-auth.js?v=20260904-direct-bridge-1" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "marketing-auth-hotfix.js?v=20260824-return-origin-1" auth-site/auth-router.js
-          grep -Fq "client-auth.js?v=20260829-stale-session-recovery-1" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20260904-direct-login-1" auth-site/auth-router.js
           grep -Fq "auth.js?v=20260824-return-origin-1" auth-site/auth-router.js
           grep -Fq "marketing-onboarding.js?v=20260817-workspace-label-1" auth-site/auth-router.js
           grep -Fq "'author-auth.js'" scripts/build.mjs
@@ -78,6 +78,8 @@ jobs:
           grep -Fq 'google_library_timeout' auth-site/client-auth.js
           grep -Fq 'use_fedcm_for_button:true' auth-site/client-auth.js
           grep -Fq 'button_auto_select:false' auth-site/client-auth.js
+          grep -Fq "DIRECT_LOGIN=params.get('direct')==='1'" auth-site/client-auth.js
+          grep -Fq 'window.google.accounts.id.prompt' auth-site/client-auth.js
           if grep -Fq 'use_fedcm_for_prompt' auth-site/client-auth.js; then
             echo 'Deprecated Google FedCM prompt flag must not be used in universal client auth.'
             exit 1

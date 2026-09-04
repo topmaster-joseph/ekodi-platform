@@ -1,4 +1,5 @@
-import { handleGoogleDriveStorageControl } from './google-drive-storage-control.js';
+import { WorkerEntrypoint } from 'cloudflare:workers';
+import { handleGoogleDriveStorageControl, startMarketingYouTubeOAuth, consumeMarketingYouTubeTicket, refreshGoogleAccessToken } from './google-drive-storage-control.js';
 import { handleR2StorageControl } from './r2-storage-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
@@ -44,3 +45,9 @@ export default {
     return json({error:'Storage Control endpoint not found'},404,request,env);
   }
 };
+
+export class GoogleOAuthBroker extends WorkerEntrypoint {
+  async startYouTubeOAuth(input={}) { return startMarketingYouTubeOAuth(this.env,input); }
+  async consumeYouTubeTicket(input={}) { return consumeMarketingYouTubeTicket(this.env,input); }
+  async refreshAccessToken(input={}) { return refreshGoogleAccessToken(this.env,input); }
+}

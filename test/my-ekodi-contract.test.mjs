@@ -160,3 +160,43 @@ test('Production rollout migrates legacy My EKODI before future guarded promotio
   assert.match(workflow,/Existing production .*satisfies.*My EKODI hub contract/);
   assert.match(workflow,/guarded-worker-release\.mjs/);
 });
+
+
+test('My EKODI approval hub keeps unified visibility and person-scoped decision authority',async()=>{
+  const [home,approvalHtml,approvalApp,worker,migration]=await Promise.all([
+    read('my/index.html'),
+    read('my/approvals/index.html'),
+    read('my/approvals/app.js'),
+    read('my-worker.js'),
+    read('supabase/migrations/20260904150000_approval_core.sql')
+  ]);
+  assert.match(home,/approval-brief\.js/);
+  assert.match(approvalHtml,/MY APPROVAL · DECISION INBOX/);
+  assert.match(approvalHtml,/data-ekodi-ui="USER"/);
+  assert.match(approvalApp,/my_approval_person_id/);
+  assert.match(approvalApp,/decide_approval/);
+  assert.match(approvalApp,/cancel_approval/);
+  assert.match(approvalApp,/AI 참고 요약 · 결재 판단 아님/);
+  assert.match(worker,/approvalHub:true/);
+  assert.match(worker,/pathname==='\/approvals'/);
+  assert.match(migration,/requester_person_id = \(select private\.current_person_id\(\)\)/);
+  assert.match(migration,/assignee_person_id = \(select private\.current_person_id\(\)\)/);
+  assert.match(migration,/create table if not exists public\.approval_events/);
+  assert.match(migration,/create table if not exists public\.approval_executions/);
+  assert.match(migration,/approval_not_assignee/);
+  assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test('My staging verification preserves Cloudflare Access instead of weakening it',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.match(workflow,/Cloudflare Access/);
+  assert.match(workflow,/deployments status --config wrangler\.my\.staging\.toml --json/);
+  assert.match(workflow,/my-stage-approvals\.html/);
+  assert.match(workflow,/correctly protected by Cloudflare Access/);
+});
+test('My deployment verification derives Trade route from the live service manifest',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.doesNotMatch(workflow,/https:\/\/trade\.ekodi\.kr\//);
+  assert.equal((workflow.match(/m\.services\.find\(v=>v\.id===\"trade\"\)/g)||[]).length,2);
+  assert.equal((workflow.match(/JSON\.stringify\(\[s\.id,s\.name,s\.url\]\)/g)||[]).length,2);
+});

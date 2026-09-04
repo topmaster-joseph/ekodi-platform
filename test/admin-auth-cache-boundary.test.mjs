@@ -15,7 +15,7 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
     assert.ok(siteConfig.includes(`"${asset}"`), `${asset} must be Worker-first so candidate and production security headers match`);
   }
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
-  assert.match(authIndex, /auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authIndex, /auth-router\.js\?v=20260904-direct-login-1/);
 });
 
 test('guarded production release verifies current auth entry and workspace handoff assets', () => {
@@ -30,10 +30,10 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(client);
   assert.ok(workspaceTarget);
   assert.ok(admin);
-  assert.ok(root.expect.includes('/auth-router.js?v=20260826-universal-sso-1'));
-  assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
+  assert.ok(root.expect.includes('/auth-router.js?v=20260904-direct-login-1'));
+  assert.ok(router.expect.includes('admin-auth.js?v=20260904-direct-bridge-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
-  assert.ok(router.expect.includes('client-auth.js?v=20260829-stale-session-recovery-1'));
+  assert.ok(router.expect.includes('client-auth.js?v=20260904-direct-login-1'));
   assert.ok(router.expect.includes('isRegistryUserService'));
   assert.ok(client.expect.includes('/session/handoff'));
   assert.ok(client.expect.includes('session_timeout'));

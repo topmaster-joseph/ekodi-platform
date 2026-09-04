@@ -97,7 +97,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  staging_gate:
+    uses: ./.github/workflows/stage-shared-site-shell.yml
+    secrets: inherit
+
   deploy:
+    needs: staging_gate
     runs-on: ubuntu-latest
     timeout-minutes: 22
     env:
@@ -160,8 +165,8 @@ jobs:
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
-          grep -Fq 'communication-admin.js' admin-demand-loader.js
-          grep -Fq "['communication','comm']" admin-menu-layout.js
+          ! grep -Fq "comm:{scripts:['communication-admin.js']" admin-demand-loader.js
+          grep -Fq "section==='communication')return import('./communication-admin.js')" admin-menu-layout.js
           grep -Fq "['campus','campus']" admin-menu-layout.js
           grep -Fq "requestDemand('campus')" admin-menu-layout.js
           grep -Fq 'position:fixed!important' admin-shell.css
@@ -171,7 +176,7 @@ jobs:
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             grep -Fq "pattern = \"$host\"" wrangler.site.toml
           done
 
@@ -235,7 +240,7 @@ jobs:
           payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain missing: $host"
               needs_sync=true
@@ -250,7 +255,7 @@ jobs:
             npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
             payload=$(read_domains)
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"
@@ -288,6 +293,11 @@ jobs:
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
             'https://ekodi.kr/ekodibiz/mall',
+            'https://ekodi.kr/ekodibiz/marketing-ai',
+            'https://ekodi.kr/jadam/marketing',
+            'https://ekodi.kr/pizzamaru/marketing',
+            'https://ekodi.kr/yogurt/marketing',
+            'https://ekodi.kr/cgma/marketing',
             'https://ekodi.kr/admin',
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
@@ -301,6 +311,7 @@ jobs:
             'https://cgma.or.kr/',
             'https://www.cgma.or.kr/',
             'https://cgma.ekodi.kr/',
+            'https://ekodi.kr/cgma/',
             'https://biz.ekodi.kr/',
             'https://trade.biz.ekodi.kr/',
             'https://pay.ekodi.kr/',
@@ -318,6 +329,16 @@ jobs:
             [ -n "$url" ] || continue
             check "$url" || failed=1
           done < "$urls_file"
+
+          : > /tmp/mail-body
+          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
+            grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body || failed=1
+            grep -Fq 'id="accountLabel"' /tmp/mail-body || failed=1
+            grep -Fq 'id="searchForm"' /tmp/mail-body || failed=1
+            grep -Fq 'id="providerLink"' /tmp/mail-body || failed=1
+          else
+            failed=1
+          fi
 
           for asset in \
             'https://admin.ekodi.kr/admin-shell.css' \
@@ -430,7 +451,7 @@ jobs:
             echo '' >> "$GITHUB_STEP_SUMMARY"
             echo '| Menu | Group | Result | Duration |' >> "$GITHUB_STEP_SUMMARY"
             echo '|---|---|---|---:|' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.results[] | "| \(.id) | \(.group) | ✅ | \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "| \(.id) | \(.group) | ??| \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived E2E session

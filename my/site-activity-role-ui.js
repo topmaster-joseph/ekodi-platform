@@ -2,9 +2,9 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const OWNED_SITE_URLS=Object.freeze({
-  church:'https://church.ekodi.kr/',
-  biz:'https://biz.ekodi.kr/',
-  lab:'https://lab.ekodi.kr/',
+  church:'https://ekodi.kr/ekodichurch',
+  biz:'https://ekodi.kr/ekodibiz',
+  lab:'https://ekodi.kr/ekodilab',
   trade:'https://trade.ekodi.kr/',
 });
 const ROLE_FALLBACK=Object.freeze({
@@ -75,7 +75,7 @@ function renderAdminContext(){
   if(existing)return;
   const link=document.createElement('a');
   link.className='workspace-card workspace-button platform-admin-workspace';
-  link.href='https://auth.ekodi.kr/?site=admin&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+  link.href='https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
   link.dataset.platformAdminContext='1';
   link.dataset.authorityScope='platform';
   link.innerHTML='<span class="workspace-icon">관</span><span class="workspace-body"><small>platform · 별도 관리자 모드</small><h3>EKODI 생태계 관리자</h3><p>전체 생태계 제어와 운영을 위한 독립 컨텍스트</p><span class="meta"><span>Platform</span><span>최고관리자</span><span>전역 권한</span><span>관리자 열기 →</span></span></span>';

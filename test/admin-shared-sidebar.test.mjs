@@ -40,7 +40,7 @@ test('left navigation is a reusable shared module backed only by the registry', 
   assert.match(sidebar, /getAdminMenuLabel\(id, locale\)/);
   assert.match(sidebar, /window\.EKODIAdminSidebar/);
   assert.match(layout, /import\('\.\/admin-sidebar\.js'\)/);
-  assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
+  assert.match(layout, /const ORDER=Object\.freeze\(adminMenuOrder\(\)\)/);
 });
 
 test('contextual subservices render as a sticky top tab strip and source nav stays hidden', () => {
@@ -81,8 +81,15 @@ test('menu labels and tab state are repaired when features are installed or sect
   assert.doesNotMatch(sidebar, /subtree: true/);
 });
 
+test('context tabs keep working when the authenticated shell replaces main', () => {
+  assert.match(sidebar, /const contextClick = event =>/);
+  assert.match(sidebar, /root\.addEventListener\?\.\('click', contextClick, true\)/);
+  assert.match(sidebar, /root\.removeEventListener\?\.\('click', contextClick, true\)/);
+  assert.doesNotMatch(sidebar, /main\?\.addEventListener\('click',[\s\S]*data-admin-context-section/);
+});
+
 test('internal operational capabilities stay off the global work areas as direct items', () => {
-  assert.match(layout, /INTERNAL_ONLY_SECTIONS = new Set\(\['services', 'deployments', 'policies'\]\)/);
+  assert.match(layout, /const INTERNAL=new Set\(\['services','deployments','policies'\]\)/);
   assert.match(layout, /#campus:campus/);
   assert.match(layout, /campus:#campus/);
   assert.match(layout, /requestedSection = 'campus'/);

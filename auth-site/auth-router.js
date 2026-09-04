@@ -52,11 +52,11 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20260829-stale-session-recovery-1')}
+  try{return await import('./client-auth.js?v=20260904-direct-login-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
-if(site==='admin')await import('./admin-auth.js?v=20260823-mobile-handoff-1');
+if(site==='admin')await import('./admin-auth.js?v=20260904-direct-bridge-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
 else if(privateClientSites.has(site))await loadClientAuth();

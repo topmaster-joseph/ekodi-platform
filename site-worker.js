@@ -9,6 +9,7 @@ const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
 const MALL_PREFIX = '/ekodibiz/mall';
 const LEGACY_MALL_PREFIX = '/mall';
+const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
@@ -84,6 +85,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-finance.css',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
+  '/admin-public-site-controls.js',
   '/admin-demand-loader.js',
   '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
@@ -174,7 +176,7 @@ const ADMIN_CSP = [
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
   "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
-  "frame-src https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -238,10 +240,24 @@ function isLegacyMallPath(pathname) {
   return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
 }
 
+function isLegacyEkodiBizPath(pathname) {
+  return pathname === LEGACY_EKODIBIZ_PREFIX || pathname.startsWith(`${LEGACY_EKODIBIZ_PREFIX}/`);
+}
+
+function redirectLegacyEkodiBizPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `/ekodibiz${target.pathname.slice(LEGACY_EKODIBIZ_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'ekodibiz-legacy-canonical-redirect');
+  return response;
+}
+
 function redirectLegacyMallPath(request) {
   const target = new URL(request.url);
   target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
-  const response = Response.redirect(target.toString(), 308);
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
   applyBaseSecurityHeaders(response.headers);
   response.headers.set('Cache-Control', 'no-store');
   response.headers.set('X-EKODI-Route', 'mall-legacy-canonical-redirect');
@@ -342,6 +358,7 @@ function adminAuthRedirect(returnPath) {
   const safePath = safeAdminReturnPath(returnPath);
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
   const response = new Response(null, {
     status: 302,
@@ -358,6 +375,7 @@ function adminAuthRedirect(returnPath) {
 function adminApexAuthUrl() {
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', 'https://ekodi.kr/admin');
   return target.toString();
 }
@@ -438,6 +456,7 @@ export default {
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
         return injectEkodiShell(secured, 'biz', 'admin');
       }
+      if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
@@ -448,7 +467,7 @@ export default {
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);
         canonical.pathname = MALL_PREFIX;
-        const response = Response.redirect(canonical.toString(), 308);
+        const response = new Response(null, { status: 308, headers: { Location: canonical.toString() } });
         applyBaseSecurityHeaders(response.headers);
         return response;
       }
