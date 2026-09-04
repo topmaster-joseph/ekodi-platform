@@ -78,6 +78,16 @@ test('staging is read-only while production owns the one-minute scheduler', asyn
 });
 
 
+test('staging health verifier accepts only explicit Cloudflare Access protection', async () => {
+  const workflow = await read('.github/workflows/deploy-marketing-publishing.yml');
+  assert.match(workflow, /-D \/tmp\/publish-stage\.headers/);
+  assert.match(workflow, /\[\[ \"\$code\" == '302' \]\]/);
+  assert.match(workflow, /www-authenticate:\[\[:space:\]\]\*Cloudflare-Access/);
+  assert.match(workflow, /cloudflareaccess\.com\/cdn-cgi\/access\/login/);
+  assert.match(workflow, /\[\[ \"\$code\" == '200' \]\]/);
+  assert.match(workflow, /\"mutations\":false/);
+});
+
 test('central publisher reuses OAuth vault over private service binding and supports YouTube resumable upload', async () => {
   const [publisher,growth,wrangler] = await Promise.all([read('marketing-publishing-worker.js'),read('marketing-growth-worker.js'),read('wrangler.marketing-publishing.toml')]);
   assert.match(publisher, /credentialMode === 'oauth-vault'/);

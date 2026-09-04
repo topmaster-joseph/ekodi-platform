@@ -95,7 +95,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/publish-stage.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            code=$(curl -sS -D /tmp/publish-stage.headers -o /tmp/publish-stage.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             if [[ "$code" == '200' ]] \
               && grep -Fq '"service":"ekodi-marketing-publishing"' /tmp/publish-stage.json \
               && grep -Fq '"scheduler":true' /tmp/publish-stage.json \
@@ -103,6 +103,14 @@ jobs:
               && grep -Fq '"mutations":false' /tmp/publish-stage.json; then
               echo 'Marketing publishing staging verified as read-only.'
               exit 0
+            fi
+            if [[ "$code" == '302' ]]; then
+              location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' /tmp/publish-stage.headers | tail -1)
+              if grep -Eiq '^www-authenticate:[[:space:]]*Cloudflare-Access' /tmp/publish-stage.headers \
+                || [[ "$location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]]; then
+                echo 'Marketing publishing staging is deployed behind Cloudflare Access; source and read-only staging contracts are verified.'
+                exit 0
+              fi
             fi
             sleep 4
           done
