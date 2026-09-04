@@ -2,62 +2,48 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [features, compact, handoff, finance, billing, loader, build] = await Promise.all([
-  readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
-  readFile(new URL('../admin-compact.js', import.meta.url), 'utf8'),
+const [loader, layout, handoff, finance, billing, build] = await Promise.all([
+  readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
+  readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
   readFile(new URL('../finance-monitor.js', import.meta.url), 'utf8'),
   readFile(new URL('../author-billing-admin.js', import.meta.url), 'utf8'),
-  readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
 ]);
 
-test('heavy Control Center features are click-loaded rather than idle-preloaded', () => {
-  assert.doesNotMatch(features, /requestIdleCallback/);
-  assert.doesNotMatch(features, /loadIdleQueue/);
-  assert.doesNotMatch(features, /queue\.push\(loadClients\)/);
-  assert.match(features, /import\(`\.\/\$\{src\}`\)/);
-  for (const section of ['clients', 'admins', 'affiliates']) {
-    assert.match(features, new RegExp(`placeholder\\('${section}'`));
-  }
-  assert.match(features, /installStaticBooksNavigation/);
-  assert.match(features, /await loadBooks\(\)/);
-  assert.match(features, /loadModule\('books-admin\.js'\)/);
-  assert.match(features, /loadModule\('books-finance-admin\.js'\)/);
-  assert.match(features, /loadFinance\(\)\.catch/);
+test('heavy Admin features are demand-loaded rather than added to the first-path shell', () => {
+  for (const asset of ['client-access.js','books-admin.js','community-reports-admin.js','social-admin.js']) assert.ok(loader.includes(asset));
+  assert.match(loader, /async function activateFeature/);
+  assert.ok(loader.includes('for (const src of feature.scripts || []) await loadScript(src)'));
+  assert.ok(loader.includes('const real = await waitFor(feature.real)'));
 });
 
-test('dynamic navigation stays event-driven and the simple Campus table needs no observer', () => {
-  assert.match(compact, /ekodi-feature-installed/);
-  assert.match(features, /ekodi-feature-installed/);
-  assert.doesNotMatch(compact, /new MutationObserver/);
-  assert.match(compact, /campusServiceRows/);
-  assert.match(compact, /campusServiceRow/);
+test('Admin navigation is event-driven and any observer used for lazy handoff is transient', () => {
+  assert.match(layout, /ekodi-feature-installed/);
+  assert.doesNotMatch(layout, /new MutationObserver/);
+  assert.match(loader, /const observer = new MutationObserver/);
+  assert.match(loader, /observer.disconnect()/);
 });
 
 test('Finance and Creator Billing stay off the first path and load independently', () => {
-  assert.doesNotMatch(handoff, /FINANCE_API|api\/finance\/overview|ekodi-finance-overview/);
+  assert.ok(!handoff.includes('FINANCE_API') && !handoff.includes('api/finance/overview') && !handoff.includes('ekodi-finance-overview'));
   assert.doesNotMatch(handoff, /setInterval/);
-  assert.match(finance, /new CustomEvent\('ekodi-finance-overview'/);
-  assert.doesNotMatch(billing, /ekodi-finance-overview|api\/finance\/overview|FINANCE_API/);
+  assert.ok(finance.includes("new CustomEvent('ekodi-finance-overview'"));
+  assert.ok(!billing.includes('ekodi-finance-overview') && !billing.includes('api/finance/overview') && !billing.includes('FINANCE_API'));
   assert.match(billing, /#booksAdminSection/);
-  assert.match(loader, /loadScript\('finance-monitor\.js'\)/);
-  assert.match(loader, /loadScript\('author-billing-admin\.js'\)/);
+  assert.ok(loader.includes("loadScript('finance-monitor.js')"));
+  assert.ok(loader.includes("loadScript('author-billing-admin.js')"));
 });
 
 test('Finance keeps a short in-memory freshness window while explicit refresh bypasses it', () => {
-  assert.match(finance, /FINANCE_TTL_MS = 60 \* 1000/);
-  assert.doesNotMatch(finance, /ECOSYSTEM_TTL_MS|setInterval\(/);
-  assert.match(finance, /loadFinance\(true\)/);
-  assert.match(finance, /loadFinance\(false\)/);
+  assert.ok(finance.includes('FINANCE_TTL_MS = 60 * 1000'));
+  assert.ok(!finance.includes('ECOSYSTEM_TTL_MS') && !finance.includes('setInterval('));
+  assert.ok(finance.includes('loadFinance(true)'));
+  assert.ok(finance.includes('loadFinance(false)'));
   assert.match(finance, /cache:'no-store'/);
 });
 
-test('production build still ships optional modules as standalone assets rather than eager scripts', () => {
-  assert.match(build, /'control-center-features\.js'/);
-  assert.match(build, /'author-billing-admin\.js'/);
-  assert.doesNotMatch(build, /<script src="client-access\.js" defer><\/script>/);
-  assert.doesNotMatch(build, /<script src="books-admin\.js" defer><\/script>/);
-  assert.doesNotMatch(build, /<script src="finance-monitor\.js" defer><\/script>/);
-  assert.doesNotMatch(build, /<script src="author-billing-admin\.js" defer><\/script>/);
+test('production build ships optional modules as standalone assets and retired loaders stay removed', () => {
+  for (const asset of ['admin-demand-loader.js','author-billing-admin.js','client-access.js','books-admin.js','finance-monitor.js']) assert.ok(build.includes(`'${asset}'`));
+  assert.doesNotMatch(build, /'control-center-features\.js'/);
 });

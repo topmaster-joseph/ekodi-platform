@@ -38,6 +38,7 @@ const realms={
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
+const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
 const requestedWorkspaceRaw=String(params.get('workspace')||'').trim();
 const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspaceRaw)?requestedWorkspaceRaw:'';
 async function manifestRealm(id){
@@ -223,7 +224,12 @@ async function renderGoogle(){
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
-    notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    if(DIRECT_LOGIN){
+      notice('Google 계정 선택창을 여는 중입니다.');
+      window.google.accounts.id.prompt(notification=>{
+        if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
+      });
+    }else notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     showRetry('Google 로그인을 준비하지 못했습니다. 다시 시도해 주세요.');

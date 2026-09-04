@@ -53,7 +53,7 @@ function businessHub() {
 </head>
 <body>
 <main class="shell">
-<header class="top"><a class="brand" href="https://biz.ekodi.kr"><span class="mark">B</span><span>EKODI BIZ</span></a><a class="root" href="https://ekodi.kr">EKODI ↗</a></header>
+<header class="top"><a class="brand" href="https://ekodi.kr/ekodibiz"><span class="mark">B</span><span>EKODI BIZ</span></a><a class="root" href="https://ekodi.kr">EKODI ↗</a></header>
 <section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 하나의 계층형 도메인 체계로 운영합니다.</p><span class="context">biz.ekodi.kr · EKODI → BIZ → SERVICE</span></section>
 <section class="grid" aria-label="EKODI BIZ 서비스">
 <a class="card" href="https://trade.biz.ekodi.kr"><div><span class="icon">T</span><strong>Global Trading</strong><small>글로벌 B2B 무역 · GPU · AI Server · Components</small></div><span class="arrow">↗</span></a>

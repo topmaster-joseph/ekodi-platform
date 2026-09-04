@@ -176,7 +176,7 @@ const ADMIN_CSP = [
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
   "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
-  "frame-src https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

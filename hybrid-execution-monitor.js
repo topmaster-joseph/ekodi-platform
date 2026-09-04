@@ -49,6 +49,15 @@ function num(row, key = 'count') {
   return Number(row?.[key]) || 0;
 }
 
+async function readFabricEnabled(db) {
+  try {
+    const row = await db.prepare('SELECT enabled FROM hybrid_execution_settings WHERE id=1').first();
+    return row ? Number(row.enabled) === 1 : true;
+  } catch {
+    return true;
+  }
+}
+
 async function adminSession(request, env) {
   const url = new URL(request.url);
   url.pathname = '/api/session';
@@ -167,6 +176,7 @@ async function collectSignals(env, nowMs) {
   const staleCutoff = new Date(nowMs - NODE_STALE_MS).toISOString();
   const backlogCutoff = new Date(nowMs - BACKLOG_MS).toISOString();
   const failureCutoff = new Date(nowMs - FAILURE_WINDOW_MS).toISOString();
+  const fabricEnabled = await readFabricEnabled(env.DB);
 
   const [configuredAuto, onlineAuto, staleAutoRows, backlog, failures, requeues, external] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count
@@ -197,6 +207,7 @@ async function collectSignals(env, nowMs) {
   ]);
 
   return {
+    fabricEnabled,
     configuredAutoNodes:num(configuredAuto),
     onlineAutoNodes:num(onlineAuto),
     staleAutoNodes:(staleAutoRows.results || []).map(row => ({
@@ -220,7 +231,7 @@ async function collectSignals(env, nowMs) {
 function incidentsForSignals(signals) {
   const incidents = [];
 
-  if (signals.configuredAutoNodes > 0 && signals.onlineAutoNodes === 0) {
+  if (signals.fabricEnabled && signals.configuredAutoNodes > 0 && signals.onlineAutoNodes === 0) {
     incidents.push({
       key:'no_ready_nodes', category:'nodes', severity:'critical',
       title:'자동 실행 노드가 모두 오프라인입니다.',
@@ -228,7 +239,7 @@ function incidentsForSignals(signals) {
     });
   }
 
-  if (signals.staleAutoNodes.length > 0) {
+  if (signals.fabricEnabled && signals.staleAutoNodes.length > 0) {
     incidents.push({
       key:'stale_auto_nodes', category:'nodes', severity:'warning',
       title:`자동 실행 노드 ${signals.staleAutoNodes.length}대의 heartbeat가 지연되었습니다.`,
@@ -236,7 +247,7 @@ function incidentsForSignals(signals) {
     });
   }
 
-  if (signals.backlogCount > 0) {
+  if (signals.fabricEnabled && signals.backlogCount > 0) {
     incidents.push({
       key:'pending_backlog', category:'queue', severity:signals.backlogCount >= 5 ? 'critical' : 'warning',
       title:`15분 이상 대기 중인 작업이 ${signals.backlogCount}건 있습니다.`,

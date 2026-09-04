@@ -288,6 +288,11 @@ jobs:
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
             'https://ekodi.kr/ekodibiz/mall',
+            'https://ekodi.kr/ekodibiz/marketing-ai',
+            'https://ekodi.kr/jadam/marketing',
+            'https://ekodi.kr/pizzamaru/marketing',
+            'https://ekodi.kr/yogurt/marketing',
+            'https://ekodi.kr/cgma/marketing',
             'https://ekodi.kr/admin',
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
@@ -319,6 +324,16 @@ jobs:
             [ -n "$url" ] || continue
             check "$url" || failed=1
           done < "$urls_file"
+
+          : > /tmp/mail-body
+          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
+            grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body || failed=1
+            grep -Fq 'id="accountLabel"' /tmp/mail-body || failed=1
+            grep -Fq 'id="searchForm"' /tmp/mail-body || failed=1
+            grep -Fq 'id="providerLink"' /tmp/mail-body || failed=1
+          else
+            failed=1
+          fi
 
           for asset in \
             'https://admin.ekodi.kr/admin-shell.css' \

@@ -381,7 +381,7 @@
         "expect": [
           "통합 인증센터",
           "dataset.seamlessSso",
-          "/auth-router.js?v=20260826-universal-sso-1"
+          "/auth-router.js?v=20260904-direct-login-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
@@ -396,7 +396,7 @@
         "expect": [
           "admin-auth.js?v=20260823-mobile-handoff-1",
           "business-auth.js?v=20260826-free-fallback-1",
-          "client-auth.js?v=20260829-stale-session-recovery-1",
+          "client-auth.js?v=20260904-direct-login-1",
           "isRegistryUserService",
           "manifestService"
         ],
