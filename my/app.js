@@ -1,4 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { applyPreferenceAction, buildPersonalizedServiceView, normalizePreference, normalizeSignal } from './progressive-personalization.js';
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -15,6 +16,7 @@ const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableK
 const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
 let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='',profile=null,linkedIdentities=[],profileError='';
+let personalizationPreferences=new Map(),personalizationSignals=[],ephemeralSignals=[],discoveryOpen=false;
 window.EKODI_MY_AUTH={getAccessToken:()=>session?.access_token||''};
 window.EKODI_MY_AUTH=Object.freeze({getAccessToken:()=>String(session?.access_token||''),isSignedIn:()=>Boolean(session?.access_token)});
 
@@ -78,6 +80,22 @@ function activeWorkspace(){return uniqueWorkspaces().find(w=>w.workspace_key===a
 function connected(id){
  const a=access.get(id)||{},rows=workspaces.get(id)||[];
  return ['active','pre_registered'].includes(a.status)||rows.some(r=>r.source==='synthetic'||r.status==='active');
+}
+const PERSONALIZATION_STORAGE_PREFIX='ekodi_my_personalization_v1';
+const personalizationStorageKey=()=>session?.user?.id?`${PERSONALIZATION_STORAGE_PREFIX}:${session.user.id}`:'';
+const serviceObjects=()=>SERVICES.map(([id,name,url],index)=>({id,name,url,order:index}));
+const knownService=id=>SERVICES.some(([serviceId])=>serviceId===id);
+function readLocalPreferences(){
+ const key=personalizationStorageKey();if(!key)return new Map();
+ try{const rows=JSON.parse(localStorage.getItem(key)||'[]');return new Map((Array.isArray(rows)?rows:[]).map(row=>{const pref=normalizePreference(row);return[pref.service_id,pref]}).filter(([id])=>knownService(id)))}catch{return new Map()}
+}
+function writeLocalPreferences(){
+ const key=personalizationStorageKey();if(!key)return;
+ try{localStorage.setItem(key,JSON.stringify([...personalizationPreferences.values()]))}catch{}
+}
+function personalizationView(){
+ const current=activeWorkspace();
+ return buildPersonalizedServiceView({services:serviceObjects(),connectedIds:SERVICES.filter(([id])=>connected(id)).map(([id])=>id),workspaceIds:current?.services||[],preferences:[...personalizationPreferences.values()],signals:[...personalizationSignals,...ephemeralSignals]});
 }
 function serviceRoute(id,url){
  const open=OPEN_SSO_SITES.has(id);
@@ -146,17 +164,66 @@ function workspaceUi(){
  host.innerHTML=rows.map(w=>{const destination=workspaceDestination(w),action=destination?'열기 →':w.workspace_kind==='personal'?'현재 My 공간':'선택';return `<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}<span>${esc(action)}</span></span></span></button>`}).join('');
  host.querySelectorAll('[data-workspace-key]').forEach(button=>button.addEventListener('click',()=>enterWorkspace(button.dataset.workspaceKey||'')));
 }
+async function loadPersonalization(){
+ personalizationPreferences=readLocalPreferences();personalizationSignals=[];ephemeralSignals=[];
+ if(!sb||!session)return;
+ const [prefResult,signalResult]=await Promise.all([
+  sb.from('my_personalization_preferences').select('service_id,state,interest_score,last_engaged_at,dismissed_until,activated_at,updated_at'),
+  sb.from('my_personalization_signals').select('service_id,source,signal_type,weight,created_at,expires_at').order('created_at',{ascending:false}).limit(100)
+ ]);
+ if(!prefResult.error){personalizationPreferences=new Map((prefResult.data||[]).map(row=>{const pref=normalizePreference(row);return[pref.service_id,pref]}));writeLocalPreferences()}else console.warn('personalization preferences fallback',prefResult.error);
+ if(!signalResult.error)personalizationSignals=(signalResult.data||[]).map(normalizeSignal).filter(Boolean);else console.warn('personalization signals unavailable',signalResult.error);
+}
+async function personalize(serviceId,action){
+ if(!session||!knownService(serviceId))return;
+ const current=personalizationPreferences.get(serviceId)||{service_id:serviceId};
+ const optimistic=applyPreferenceAction(current,action);
+ personalizationPreferences.set(serviceId,optimistic);writeLocalPreferences();platformUi();
+ window.dispatchEvent(new CustomEvent('ekodi:personalization-updated',{detail:{serviceId,action,view:personalizationView()}}));
+ if(!sb)return;
+ const {data,error}=await sb.rpc('set_my_personalization_preference',{p_service_id:serviceId,p_action:action});
+ if(error){console.warn('personalization preference fallback',error);return}
+ const row=Array.isArray(data)?data[0]:data;if(row){const saved=normalizePreference(row);personalizationPreferences.set(saved.service_id,saved);writeLocalPreferences();platformUi()}
+}
+function progressiveSurfaceUi(){
+ const selected=new Set([...personalizationPreferences.values()].filter(pref=>['active','pinned'].includes(pref.state)).map(pref=>pref.service_id));
+ document.querySelectorAll('[data-progressive-services]').forEach(section=>{
+  const ids=String(section.dataset.progressiveServices||'').split(',').map(value=>value.trim()).filter(Boolean);
+  const direct=location.hash===`#${section.id}`;
+  const hasContent=section.id==='creator'&&items.length>0;
+  section.hidden=!(direct||hasContent||ids.some(id=>selected.has(id)));
+ });
+}
+function serviceCard(item,{recommended=false,discovery=false}={}){
+ const {id,name,url}=item,a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),open=OPEN_SSO_SITES.has(id),ready=on||open,current=activeWorkspace();
+ const best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free',route=serviceRoute(id,url);
+ const inCurrent=Boolean(current?.services?.includes(id))||open;
+ const description=recommended?'최근 관심과 현재 맥락을 바탕으로 제안합니다. 추가하기 전에는 홈에 고정하지 않습니다.':open?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.':on?(inCurrent?'현재 Workspace와 연결된 서비스입니다.':'통합 로그인으로 연결된 서비스입니다.'):'필요할 때 자유롭게 시작할 수 있습니다.';
+ const badge=item.state==='pinned'?'고정':recommended?'추천':ready?plan(p):'Available';
+ const pinAction=item.state==='pinned'?'unpin':'pin',pinLabel=item.state==='pinned'?'고정 해제':'항상 보기';
+ const primary=ready?'열기':'둘러보기';
+ const actions=recommended?`<button class="mini-action primary-mini" type="button" data-personalize-action="activate" data-service-id="${esc(id)}">내 에코디에 추가</button><button class="mini-action" type="button" data-personalize-action="dismiss" data-service-id="${esc(id)}">지금은 숨기기</button>`:`<button class="mini-action" type="button" data-personalize-action="${pinAction}" data-service-id="${esc(id)}">${pinLabel}</button>${!on&&item.state==='active'?`<button class="mini-action" type="button" data-personalize-action="dismiss" data-service-id="${esc(id)}">홈에서 숨기기</button>`:''}`;
+ const restore=discovery&&item.dismissed?`<button class="mini-action" type="button" data-personalize-action="restore" data-service-id="${esc(id)}">다시 제안받기</button>`:'';
+ return `<article class="platform-card${recommended?' recommended-card':''}" data-service-card="${esc(id)}"${recommended?' data-personalization-recommended="true"':''}><div class="platform-head"><h3>${esc(name)}</h3><span class="plan">${esc(badge)}</span></div><p>${esc(description)}</p><div class="meta"><span>${ready?'연결 가능':'미연결'}</span>${inCurrent?'<span>현재 공간</span>':''}${item.faded?'<span>오래 사용하지 않음</span>':''}</div><div class="platform-actions">${actions}${restore}<a class="card-link" data-service-link="${esc(id)}" href="${esc(route)}">${primary} →</a></div></article>`;
+}
+function bindPersonalizationActions(){
+ document.querySelectorAll('[data-personalize-action][data-service-id]').forEach(button=>button.onclick=()=>personalize(button.dataset.serviceId||'',button.dataset.personalizeAction||''));
+ document.querySelectorAll('[data-service-link]').forEach(link=>link.addEventListener('click',()=>{void personalize(link.dataset.serviceLink||'','engage')}));
+}
 function platformUi(){
- const host=$('#platformList');
- if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 개인 접근권한을 읽지 않습니다.</strong><p>UI와 인증 계약만 검증합니다.</p></div>';return}
- if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 내 플랫폼 상태를 볼 수 있습니다.</strong><p>한 번 로그인하면 각 서비스의 접근권한과 플랜을 확인합니다.</p></div>';return}
- const current=activeWorkspace();
- host.innerHTML=SERVICES.map(([id,name,url])=>{
-  const a=access.get(id)||{},rows=workspaces.get(id)||[],on=connected(id),open=OPEN_SSO_SITES.has(id),available=on||open,best=rows.find(w=>w.workspace_key===current?.workspace_key)||rows.find(w=>paid(w.plan))||rows[0],p=best?.plan||a.plan||'free',route=serviceRoute(id,url);
-  const inCurrent=Boolean(current?.services?.includes(id))||open;
-  const description=open?'현재 Workspace를 유지한 채 바로 열 수 있는 공용 서비스입니다.':on?(inCurrent?'현재 Workspace와 연결된 서비스입니다.':'통합 로그인으로 연결된 서비스입니다.'):'필요할 때 자유롭게 시작할 수 있습니다.';
-  return `<article class="platform-card"><div class="platform-head"><h3>${esc(name)}</h3><span class="plan plan-${esc(String(p).toLowerCase())}">${esc(on?plan(p):open?'Workspace':'Available')}</span></div><p>${esc(description)}</p><div class="meta"><span>${available?'연결 가능':'미연결'}</span><span>${rows.length} Workspace</span>${inCurrent?'<span>현재 공간</span>':''}</div><a class="card-link" href="${esc(route)}">${available?'열기':'둘러보기'} →</a></article>`;
- }).join('');
+ const host=$('#platformList'),discovery=$('#serviceDiscoveryList'),toggle=$('#discoverServicesButton');
+ if(!host)return;
+ if(!enabled){host.innerHTML='<div class="empty"><strong>격리 스테이징에서는 개인 접근권한을 읽지 않습니다.</strong><p>점진적 맞춤 UI와 인증 계약만 검증합니다.</p></div>';if(discovery)discovery.hidden=true;return}
+ if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 필요한 서비스만 나타납니다.</strong><p>처음부터 전체 기능을 펼쳐놓지 않습니다.</p></div>';if(discovery)discovery.hidden=true;if(toggle)toggle.hidden=true;progressiveSurfaceUi();return}
+ const view=personalizationView(),primary=[...view.pinned,...view.active],sections=[];
+ if(primary.length)sections.push(`<div class="personalization-group"><div class="personalization-label">지금 쓰는 서비스</div><div class="platform-grid">${primary.map(item=>serviceCard(item)).join('')}</div></div>`);
+ if(view.recommended.length)sections.push(`<div class="personalization-group"><div class="personalization-label">관심이 보일 때만 제안</div><div class="platform-grid">${view.recommended.map(item=>serviceCard(item,{recommended:true})).join('')}</div></div>`);
+ if(!sections.length)sections.push('<div class="empty"><strong>아직 홈에 꺼내둔 서비스가 없습니다.</strong><p>아래 관심 시작점을 누르거나, 필요한 기능이 생길 때 찾아보세요.</p></div>');
+ host.innerHTML=sections.join('');
+ if(toggle){toggle.hidden=false;toggle.textContent=discoveryOpen?'서비스 목록 닫기':'필요한 서비스 찾기';toggle.setAttribute('aria-expanded',String(discoveryOpen))}
+ if(discovery){discovery.hidden=!discoveryOpen;discovery.innerHTML=discoveryOpen?`<div class="platform-grid discovery-grid">${view.available.map(item=>serviceCard(item,{discovery:true})).join('')||'<div class="empty"><strong>추가로 둘러볼 서비스가 없습니다.</strong></div>'}</div>`:''}
+ bindPersonalizationActions();progressiveSurfaceUi();
+ window.dispatchEvent(new CustomEvent('ekodi:personalization-rendered',{detail:{recommended:view.recommended.map(({id,name})=>({id,name})),active:primary.map(({id})=>id)}}));
 }
 function portfolioUi(){
  const host=$('#creatorList'),visible=filter==='all'?items:items.filter(i=>mode(i.creator_mode)===filter);
@@ -196,7 +263,7 @@ async function loadPortfolio(){
  if(error)throw error;items=data||[];
 }
 async function loadAll(){
- await Promise.all([loadAccess(),loadPortfolio(),loadProfile()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();
+ await Promise.all([loadAccess(),loadPortfolio(),loadProfile(),loadPersonalization()]);ensureActiveWorkspace();identityUi();profileUi();summaryUi();workspaceUi();platformUi();portfolioUi();progressiveSurfaceUi();
 }
 async function saveProfile(event){
  event.preventDefault();
@@ -217,6 +284,18 @@ async function authAction(){if(!enabled)return;if(!session){const target=new URL
 
 $('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#profileForm').addEventListener('submit',saveProfile);
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
+
+const discoveryButton=$('#discoverServicesButton');
+if(discoveryButton)discoveryButton.addEventListener('click',()=>{discoveryOpen=!discoveryOpen;platformUi()});
+$$('[data-intent-service]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.intentService||'';void personalize(id,'interest');setTimeout(()=>$('#platforms')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}));
+window.addEventListener('ekodi:personalization-signal',event=>{
+ const raw=event?.detail||{},signal=normalizeSignal({...raw,created_at:raw.created_at||new Date().toISOString()});
+ if(!session||!signal||!knownService(signal.service_id))return;
+ ephemeralSignals=[signal,...ephemeralSignals.filter(item=>!(item.service_id===signal.service_id&&item.source===signal.source&&item.signal_type===signal.signal_type))].slice(0,30);
+ platformUi();
+});
+window.addEventListener('hashchange',progressiveSurfaceUi);
+
 if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
  const {data}=await sb.auth.getSession();session=data.session;authUi();announceSession();
