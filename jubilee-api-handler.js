@@ -11,8 +11,14 @@ export async function handleJubileeApi(request, env = {}, options = {}) {
   const headers = baseHeaders();
 
   if (request.method === 'OPTIONS') {
-    headers.set('allow', 'POST, OPTIONS');
+    headers.set('allow', 'GET, POST, OPTIONS');
     return new Response(null, { status: 204, headers });
+  }
+
+  const isPolicyRead = request.method === 'GET' && url.pathname === `${JUBILEE_API_PREFIX}/policy`;
+  const isEvaluation = request.method === 'POST' && url.pathname === `${JUBILEE_API_PREFIX}/evaluate`;
+  if (!isPolicyRead && !isEvaluation) {
+    return jsonResponse({ error: 'Jubilee API endpoint not found.', code: 'JUBILEE_NOT_FOUND' }, 404, headers);
   }
 
   const authorize = typeof options.authorize === 'function' ? options.authorize : null;
@@ -23,15 +29,16 @@ export async function handleJubileeApi(request, env = {}, options = {}) {
     }, 503, headers);
   }
 
-  const auth = await authorize({ request, env, capability: 'jubilee.evaluate' });
+  const capability = isPolicyRead ? 'jubilee.policy.read' : 'jubilee.evaluate';
+  const auth = await authorize(request, { env, capability });
   if (!auth?.allowed) {
     return jsonResponse({
-      error: 'Not authorized for Jubilee evaluation.',
+      error: 'Not authorized for this Jubilee capability.',
       code: 'JUBILEE_FORBIDDEN',
     }, auth?.status || 403, headers);
   }
 
-  if (request.method === 'GET' && url.pathname === `${JUBILEE_API_PREFIX}/policy`) {
+  if (isPolicyRead) {
     return jsonResponse({
       version: JUBILEE_RUNTIME.version,
       principle: JUBILEE_RUNTIME.principle,
@@ -39,10 +46,6 @@ export async function handleJubileeApi(request, env = {}, options = {}) {
       recommendationRole: JUBILEE_RUNTIME.recommendationRole,
       rules: JUBILEE_RUNTIME.rules,
     }, 200, headers);
-  }
-
-  if (request.method !== 'POST' || url.pathname !== `${JUBILEE_API_PREFIX}/evaluate`) {
-    return jsonResponse({ error: 'Jubilee API endpoint not found.', code: 'JUBILEE_NOT_FOUND' }, 404, headers);
   }
 
   const contentLength = Number(request.headers.get('content-length') || 0);
@@ -85,8 +88,9 @@ export async function handleJubileeApi(request, env = {}, options = {}) {
     await options.audit({
       requestId,
       workspaceId: safeWorkspaceId(body.workspace_id),
-      actorId: auth.actorId ? String(auth.actorId).slice(0, 160) : null,
+      purpose: safePurpose(body.purpose),
       status: result.status,
+      decisionStatus: result.status,
       policyVersion: result.policyVersion,
       rulesTriggered: result.audit.rulesTriggered,
       warningCount: result.audit.warnings.length,
@@ -109,6 +113,11 @@ function safeWorkspaceId(value) {
   const id = String(value || '').trim();
   if (!id) return null;
   return /^[A-Za-z0-9:_-]{1,160}$/.test(id) ? id : null;
+}
+
+function safePurpose(value) {
+  const purpose = String(value || 'recommendation').trim().toLowerCase();
+  return /^[a-z0-9:_-]{1,80}$/.test(purpose) ? purpose : 'recommendation';
 }
 
 function baseHeaders() {
