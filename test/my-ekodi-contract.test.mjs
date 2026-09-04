@@ -194,3 +194,9 @@ test('My staging verification preserves Cloudflare Access instead of weakening i
   assert.match(workflow,/my-stage-approvals\.html/);
   assert.match(workflow,/correctly protected by Cloudflare Access/);
 });
+test('My deployment verification derives Trade route from the live service manifest',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.doesNotMatch(workflow,/https:\/\/trade\.ekodi\.kr\//);
+  assert.equal((workflow.match(/m\.services\.find\(v=>v\.id===\"trade\"\)/g)||[]).length,2);
+  assert.equal((workflow.match(/JSON\.stringify\(\[s\.id,s\.name,s\.url\]\)/g)||[]).length,2);
+});
