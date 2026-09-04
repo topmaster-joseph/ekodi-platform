@@ -67,6 +67,22 @@ test('policy read requires jubilee.policy.read rather than evaluation authority'
   assert.deepEqual(requestedCapabilities, ['jubilee.policy.read']);
 });
 
+test('required durable audit adapter fails closed before evaluation', async () => {
+  const request = new Request('https://api.ekodi.kr/api/jubilee/v1/evaluate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ candidates: [] }),
+  });
+
+  const response = await handleJubileeApi(request, {}, {
+    authorize: allow,
+    requireAudit: true,
+  });
+  assert.equal(response.status, 503);
+  const payload = await response.json();
+  assert.equal(payload.code, 'JUBILEE_AUDIT_ADAPTER_REQUIRED');
+});
+
 test('returns a Jubilee evaluation and emits privacy-minimized audit metadata', async () => {
   const audits = [];
   const request = new Request('https://api.ekodi.kr/api/jubilee/v1/evaluate', {
@@ -103,10 +119,29 @@ test('returns a Jubilee evaluation and emits privacy-minimized audit metadata', 
   assert.equal(audits.length, 1);
   assert.equal(audits[0].workspaceId, 'ws_test');
   assert.equal(audits[0].purpose, 'mall_recommendation');
+  assert.match(audits[0].actorRefHash, /^[a-f0-9]{64}$/);
   assert.equal('needSignals' in audits[0], false);
   assert.equal('actorId' in audits[0], false);
   assert.equal('context' in audits[0], false);
   assert.equal('candidates' in audits[0], false);
+});
+
+test('required durable audit persistence failure suppresses evaluation response', async () => {
+  const request = new Request('https://api.ekodi.kr/api/jubilee/v1/evaluate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ candidates: [{ id: 'candidate', source: 'external', userFit: 0.9 }] }),
+  });
+
+  const response = await handleJubileeApi(request, {}, {
+    authorize: allow,
+    requireAudit: true,
+    audit: async () => { throw new Error('storage unavailable'); },
+  });
+
+  assert.equal(response.status, 503);
+  const payload = await response.json();
+  assert.equal(payload.code, 'JUBILEE_AUDIT_PERSISTENCE_FAILED');
 });
 
 test('blocks sensitive inference at the API boundary', async () => {
