@@ -22,7 +22,8 @@
       {"url":"https://messenger.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
       {"url":"https://tax.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
       {"url":"https://management.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
-      {"url":"https://marketing-api.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]}
+      {"url":"https://marketing-api.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
+      {"url":"https://admin.ekodi.kr/experience","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr","cache-control: no-store","x-ekodi-admin-entry: central-handoff-v1"]}
     ]
   }
 }

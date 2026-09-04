@@ -114,7 +114,7 @@ jobs:
           grep -Fq 'synthetic-only' /tmp/experience-health.json
           grep -Fq 'productionWrites' /tmp/experience-catalog.json
           grep -Fiq 'x-ekodi-shell: v2' /tmp/experience-root.headers
-          grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/experience-admin.headers
+          grep -Fiq 'location: https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr' /tmp/experience-admin.headers
           if [[ "$remote_protected" == '1' ]]; then echo 'Development staging is Cloudflare Access-protected; exact Worker contract verified locally.'; else echo 'Development staging is reachable; exact Worker contract verified locally.'; fi
 
   deploy-production:
@@ -148,7 +148,7 @@ jobs:
               && grep -Fq 'experience_public' /tmp/health.json \
               && grep -Fq 'productionWrites' /tmp/catalog.json \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/root.headers \
-              && grep -Fiq 'location: https://admin.ekodi.kr/experience' /tmp/admin.headers; then
+              && grep -Fiq 'location: https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr' /tmp/admin.headers; then
               echo 'EKODI Experience production verified.'
               exit 0
             fi

@@ -27,7 +27,7 @@
         "url": "https://try.ekodi.kr/admin",
         "statuses": [301, 302, 307, 308],
         "redirect": "manual",
-        "headerExpect": ["location: https://admin.ekodi.kr/experience"]
+        "headerExpect": ["location: https://admin.ekodi.kr/?route=campus&source=try.ekodi.kr"]
       }
     ],
     "allowFirstDeploy": true

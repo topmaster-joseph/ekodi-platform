@@ -1,5 +1,6 @@
 const CENTRAL_ADMIN = 'https://admin.ekodi.kr/';
 const ADMIN_ROOTS = new Set(['/admin', '/admin/']);
+const EXPERIENCE_LEGACY_PREFIX = '/experience';
 
 function securityHeaders(headers) {
   headers.set('Cache-Control', 'no-store');
@@ -12,6 +13,18 @@ function securityHeaders(headers) {
   return headers;
 }
 
+function experienceLegacyHandoff(request) {
+  if (!['GET', 'HEAD'].includes(request.method)) {
+    return new Response('Method Not Allowed', { status: 405, headers: securityHeaders(new Headers({ Allow: 'GET, HEAD' })) });
+  }
+  const target = new URL(CENTRAL_ADMIN);
+  target.searchParams.set('route', 'campus');
+  target.searchParams.set('source', 'try.ekodi.kr');
+  const redirect = Response.redirect(target.toString(), 307);
+  const response = new Response(redirect.body, redirect);
+  securityHeaders(response.headers);
+  return response;
+}
 function centralHandoff(request, url) {
   if (!['GET', 'HEAD'].includes(request.method)) {
     return new Response('Method Not Allowed', { status: 405, headers: securityHeaders(new Headers({ Allow: 'GET, HEAD' })) });
@@ -27,6 +40,9 @@ function centralHandoff(request, url) {
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+    if (url.hostname.toLowerCase() === 'admin.ekodi.kr' && (url.pathname === EXPERIENCE_LEGACY_PREFIX || url.pathname.startsWith(`${EXPERIENCE_LEGACY_PREFIX}/`))) {
+      return experienceLegacyHandoff(request);
+    }
     if (url.pathname === '/__health') {
       return new Response(JSON.stringify({ ok: true, service: 'ekodi-service-admin-entry', mode: 'central-handoff-v1' }), {
         headers: securityHeaders(new Headers({ 'Content-Type': 'application/json; charset=utf-8' })),
