@@ -571,7 +571,7 @@ async function evolutionSnapshot(env, force = false) {
   ]);
   return {
     schemaVersion: 1,
-    generatedAt: recommendation?.verifiedAt || new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
     policy: 'verification_first_security_native_self_evolving',
     live,
     store,
