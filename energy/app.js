@@ -149,7 +149,7 @@ function installDistributedEnergyPlatform(){
         <div class="fleet-row" role="row"><b>Site D · 12kW</b><span>9.8 kW</span><em class="ok">정상</em><span>관찰</span></div>
       </div>
     </article>
-    <article class="revenue-loop panel"><div><span class="eyebrow">REVENUE LOOP</span><h3>무료 진단 → 실제 연결 → 관리 → 개선 → 거래</h3><p>가정용 무료 진단은 유입구, 사업장·설치업체 SaaS는 첫 매출, 태양광·ESS·EV 개선 연계는 거래 수익, DR·VPP는 충분한 자원이 모인 뒤 제휴로 확장합니다.</p></div><a class="primary-action secondary" href="https://biz.ekodi.kr">파일럿 상담</a></article>`;
+    <article class="revenue-loop panel"><div><span class="eyebrow">REVENUE LOOP</span><h3>무료 진단 → 실제 연결 → 관리 → 개선 → 거래</h3><p>가정용 무료 진단은 유입구, 사업장·설치업체 SaaS는 첫 매출, 태양광·ESS·EV 개선 연계는 거래 수익, DR·VPP는 충분한 자원이 모인 뒤 제휴로 확장합니다.</p></div><a class="primary-action secondary" href="https://ekodi.kr/ekodibiz">파일럿 상담</a></article>`;
 
   overview?.after(connect);
   $('insightsView')?.before(business);

@@ -110,5 +110,19 @@
   "identityAuthority": "ekodi",
   "linkedIdentityProviders": [
     "google"
-  ]
+  ],
+  "userSurfaceTopologyPolicy": {
+    "customerSpecificAiSubdomains": "forbidden_as_canonical",
+    "marketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "workspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
+    "marketingCore": "https://marketing.ekodi.kr",
+    "aiGateway": "https://ai.ekodi.kr",
+    "providerTopologyVisibleToOrdinaryUsers": false,
+    "examples": {
+      "jadamMarketing": "https://ekodi.kr/jadam/marketing",
+      "pizzamaruMarketing": "https://ekodi.kr/pizzamaru/marketing",
+      "yogurtMarketing": "https://ekodi.kr/yogurt/marketing",
+      "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
+    }
+  }
 }

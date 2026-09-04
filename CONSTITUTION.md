@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.6.0
+# EKODI Platform Constitution v1.6.1
 
 Effective: 2026-09-04
 
@@ -11,7 +11,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Heavy or retryable work uses queue/worker execution rather than long synchronous requests.
 
 ## 1A. Governance, OS, Core, Service, Connection and Workspace Constitution
-- The canonical operating principle is **Integrated responsibility, distributed execution, standardized connections** (`?�합??책임, 분산???�행, ?��??�된 ?�결`).
+- The canonical operating principle is **Integrated responsibility, distributed execution, standardized connections** (`?�합??책임, 분산???�행, ?��??�된 ?�결`).
 - Governance owns constitution, policy, responsibility, approval and change-control authority.
 - EKODI OS defines platform-wide execution order, orchestration, routing context, service cooperation and guarded operational coordination. OS is an operating model, not a business service.
 - EKODI Core implements the stable shared contracts and controls required for independent capabilities to cooperate safely, including identity and authorization contracts, immutable `workspace_id` authority, service contracts, integration gateways, audit, security policy, provider independence and shared fallback rules.
@@ -38,6 +38,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
 - `try.ekodi.kr` is a registered common-service boundary for the EKODI Experience service. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface.
 - `invest.ekodi.kr` is the registered common Invest Core for Evidence-First research, diligence, IR and connection support; workspace-specific investment businesses remain under `ekodi.kr/{slug}/invest`.
+- `marketing.ekodi.kr` is the registered EKODI Marketing Core engine boundary. It is not the ordinary product or customer entry; the product entry is `ekodi.kr/ekodibiz/marketing-ai`, and workspace marketing uses `ekodi.kr/{slug}/marketing`.
+- `ai.ekodi.kr` is the registered provider-independent AI Gateway/Core boundary. Customer-specific `*.ai.ekodi.kr` addresses are compatibility execution aliases only and must not be presented as canonical user URLs.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 - CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
