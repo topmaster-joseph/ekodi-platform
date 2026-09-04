@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { adminAuthorityForRole, authorizeEkodiAction, hasEkodiCapability } from '../ekodi-authorization.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
@@ -74,6 +75,20 @@ for (const marker of [
   'authorizeEkodiAction',
   'scopeAllows',
 ]) assert(authorization.includes(marker), `Admin authorization contract missing: ${marker}`);
+
+const normalSuperAdmin = adminAuthorityForRole('super_admin');
+assert(authorizeEkodiAction({ authority: normalSuperAdmin, requiredCapabilities:['admin:accounts.read'] }).allowed === true,
+  'super admin read capability must work without elevation');
+const protectedWrite = authorizeEkodiAction({ authority: normalSuperAdmin, requiredCapabilities:['admin:accounts.write'] });
+assert(protectedWrite.allowed === false && protectedWrite.code === 'ELEVATION_REQUIRED',
+  'sensitive admin writes must require temporary elevation');
+const elevatedSuperAdmin = adminAuthorityForRole('super_admin', { elevated:true, elevatedUntil:'2099-01-01T00:00:00.000Z' });
+assert(authorizeEkodiAction({ authority:elevatedSuperAdmin, requiredCapabilities:['admin:accounts.write'] }).allowed === true,
+  'elevated super admin must be allowed to perform admin account writes');
+assert(hasEkodiCapability(['admin:*'], 'admin:accounts.write', ['admin:accounts.write']) === false,
+  'explicit capability deny must win over wildcard allow');
+assert(authorizeEkodiAction({ authority:adminAuthorityForRole('operator'), requiredCapabilities:['admin:accounts.read'] }).code === 'CAPABILITY_FORBIDDEN',
+  'operator must not inherit super-admin account authority');
 
 for (const marker of [
   "from './ekodi-authorization.js'",
