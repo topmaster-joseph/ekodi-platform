@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [features, adminJs, adminCss, domainsJs, build, worker] = await Promise.all([
-  readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
+const [registry, adminJs, adminCss, domainsJs, build, worker] = await Promise.all([
+  readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8'),
   readFile(new URL('../google-admin-auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../google-admin-auth.css', import.meta.url), 'utf8'),
   readFile(new URL('../domains-hub.js', import.meta.url), 'utf8'),
@@ -11,11 +11,9 @@ const [features, adminJs, adminCss, domainsJs, build, worker] = await Promise.al
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
 ]);
 
-test('sidebar uses short Admin and Domains labels', () => {
-  assert.ok(features.includes("placeholder('admins', '◈', 'Admin')"));
-  assert.ok(features.includes("placeholder('domains', '◎', 'Domains')"));
-  assert.ok(features.includes("setShortLabel('admins', 'Admin')"));
-  assert.ok(features.includes("setShortLabel('domains', 'Domains')"));
+test('Admin navigation keeps administrator access and retires the old Domains menu axis', () => {
+  assert.match(registry, /id: 'admins'[\s\S]*en: 'Administrators & Access'/);
+  assert.doesNotMatch(registry, /id: 'domains'/);
 });
 
 test('Admin screen uses top preregistration toolbar, two-column account cards and guarded permission removal', () => {
