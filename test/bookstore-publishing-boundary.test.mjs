@@ -42,7 +42,11 @@ test('cross-service relationship is explicit contract only',()=>{
 
 test('publishing staging accepts only verified Cloudflare Access protection',()=>{
   const flow=fs.readFileSync(new URL('../.github/workflows/publishing-boundary-ci.yml',import.meta.url),'utf8');
-  assert.match(flow,/health_contract=0/);
+  assert.match(flow,/is_access_protected/);
   assert.match(flow,/www-authenticate: Cloudflare-Access/i);
-  assert.match(flow,/cloudflareaccess\\.com\/cdn-cgi\/access\/login/);
+  assert.equal(flow.includes('-D /tmp/root-h'),true);
+  assert.equal(flow.includes('-D /tmp/studio-h'),true);
+  assert.equal(flow.includes('-D /tmp/health-h'),true);
+  assert.doesNotMatch(flow,/root=\$\(curl -L/);
+  assert.match(flow,/verified behind Cloudflare Access/);
 });

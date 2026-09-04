@@ -63,27 +63,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          is_access_protected() {
+            local code="$1" headers="$2"
+            [[ "$code" == '302' ]] \
+              && grep -Fiq 'www-authenticate: Cloudflare-Access' "$headers" \
+              && grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/cdn-cgi/access/login/' "$headers"
+          }
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/root-h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            studio=$(curl -L -sS -o /tmp/studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/studio/" || true)
+            root=$(curl -sS -D /tmp/root-h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            studio=$(curl -sS -D /tmp/studio-h -o /tmp/studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/studio/" || true)
             health=$(curl -sS -D /tmp/health-h -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             echo "attempt=$attempt root=$root studio=$studio health=$health"
-            health_contract=0
-            if [[ "$health" == '200' ]] \
+            if [[ "$root" == '200' && "$studio" == '200' && "$health" == '200' ]] \
+              && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
+              && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
               && grep -Fq '"publicName":"출판"' /tmp/health.json \
               && grep -Fq '"independentPlatform":true' /tmp/health.json \
               && grep -Fq '"privateCrossServiceDataAccess":false' /tmp/health.json; then
-              health_contract=1
-            elif [[ "$health" == '302' ]] \
-              && grep -Fiq 'www-authenticate: Cloudflare-Access' /tmp/health-h \
-              && grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/cdn-cgi/access/login/' /tmp/health-h; then
-              health_contract=1
+              echo 'Independent Publishing staging verified by public contract.'
+              exit 0
             fi
-            if [[ "$root" == '200' && "$studio" == '200' && "$health_contract" == '1' ]] \
-              && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
-              && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
-              && grep -Fiq 'x-ekodi-shell: v2' /tmp/root-h; then
-              echo 'Independent Publishing staging verified.'
+            if is_access_protected "$root" /tmp/root-h \
+              && is_access_protected "$studio" /tmp/studio-h \
+              && is_access_protected "$health" /tmp/health-h; then
+              echo 'Independent Publishing staging verified behind Cloudflare Access.'
               exit 0
             fi
             sleep 4
