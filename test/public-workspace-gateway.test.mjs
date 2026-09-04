@@ -20,9 +20,10 @@ test('canonical public workspace paths use the isolated Space service binding',a
     assert.ok(wrangler.includes(`"${route}"`),route);
   }
   const manifest=JSON.parse(manifestText);
-  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/deployment-probe');
-  assert.ok(probe);
-  assert.ok(probe.headerExpect.includes('x-ekodi-workspace-gateway: space-service-binding'));
+  assert.ok(!manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/deployment-probe'));
+  const spaceConfig=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/_ekodi/space/config.js');
+  assert.ok(spaceConfig);
+  assert.ok(spaceConfig.headerExpect.includes('x-ekodi-workspace-gateway: space-service-binding'));
   for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
 });
 
