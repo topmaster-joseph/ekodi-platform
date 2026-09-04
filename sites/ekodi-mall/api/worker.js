@@ -1,5 +1,5 @@
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://mall.ekodi.kr',
+  'https://ekodi.kr',
   'https://ekodi-mall.pages.dev'
 ];
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
@@ -171,7 +171,7 @@ export function normalizeProductInput(body = {}) {
 }
 
 export function makePublicUrl(baseUrl, shareCode) {
-  return `${String(baseUrl || 'https://mall.ekodi.kr').replace(/\/$/, '')}/p/${encodeURIComponent(shareCode)}`;
+  return `${String(baseUrl || 'https://ekodi.kr/ekodibiz/mall').replace(/\/$/, '')}/p/${encodeURIComponent(shareCode)}`;
 }
 
 export function makeAttributedUrl(baseUrl, shareCode, refCode) {

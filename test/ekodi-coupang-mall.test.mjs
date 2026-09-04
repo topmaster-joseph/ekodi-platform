@@ -143,6 +143,9 @@ test('root router publishes Mall under EKODIBIZ and redirects the legacy root pa
   assert.match(router, /const LEGACY_MALL_PREFIX = '\/mall'/);
   assert.match(router, /mall-legacy-canonical-redirect/);
   assert.match(router, /public-ekodi-mall/);
+  assert.match(router, /rewriteMallHtmlDocument/);
+  assert.match(router, /MALL_PREFIX\}\/\$\{suffix/);
+  assert.match(router, /responseBody = rewriteMallHtmlDocument/);
   assert.match(router, /'\/mall\.css'/);
   assert.match(router, /'\/mall\.js'/);
 });

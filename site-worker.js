@@ -156,15 +156,17 @@ const MALL_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "script-src 'self' 'unsafe-inline' https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com",
+  "connect-src 'self' https://api.ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
   "frame-src https://*.tosspayments.com",
-  "img-src 'self' data: https:",
+  "img-src 'self' data: blob: https:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://*.tosspayments.com",
+  "form-action 'self' https://ekodibiz.kr https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
+
+const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://admin.ekodi.kr');
 
 const ADMIN_CSP = [
   "default-src 'self'",
@@ -251,6 +253,12 @@ function mallUpstreamPath(pathname) {
   return suffix || '/';
 }
 
+function rewriteMallHtmlDocument(html) {
+  return String(html || '').replace(
+    /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/mall(?:\/|["']))([^"']*)\2/gi,
+    (_, attribute, quote, suffix) => `${attribute}=${quote}${MALL_PREFIX}/${suffix}${quote}`,
+  );
+}
 async function proxyMallService(request) {
   const incoming = new URL(request.url);
   const upstream = new URL(request.url);
@@ -275,13 +283,23 @@ async function proxyMallService(request) {
       }
     } catch {}
   }
+  let responseBody = upstreamResponse.body;
+  if ((headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text());
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+    headers.delete('etag');
+  }
   headers.set('x-ekodi-edge', 'mall-path-gateway');
   headers.set('x-ekodi-service', 'mall');
   const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
   const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
-  const cacheControl = adminSurface || apiSurface ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const adminEmbed = incoming.searchParams.get('embed') === 'admin';
+  const cacheControl = adminSurface || apiSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
-  const response = withHostSecurity(new Response(upstreamResponse.body, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), MALL_CSP, cacheControl, route);
+  const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
+  const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
+  if (adminEmbed) response.headers.delete('X-Frame-Options');
   return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
 

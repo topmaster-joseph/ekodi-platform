@@ -2,7 +2,7 @@
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const DRAFT_KEY = 'ekodiMallSellerStudioDraftV4';
-  const PRODUCT_BASE_URL = 'https://mall.ekodi.kr/p/';
+  const PRODUCT_BASE_URL = 'https://ekodi.kr/ekodibiz/mall/p/';
   const INDIVIDUAL_FEES = Object.freeze({
     direct: { ratePercent: 7, label: '직접 공유 판매' },
     marketplace: { ratePercent: 8, label: 'EKODI Mall 판매' },
