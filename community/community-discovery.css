@@ -17,8 +17,9 @@ body,button,a,p,h1,h2,h3,small,span,label{word-break:keep-all;overflow-wrap:brea
 @media(max-width:620px){
   .topbar{gap:10px}
   .top-actions{gap:5px}
-  .language-menu summary{width:34px;justify-content:center;padding:0}
-  .language-menu summary b{display:none}
+  .language-menu summary{width:46px;justify-content:center;padding:0 7px;gap:4px}
+  .language-menu summary span{display:none}
+  .language-menu summary b{display:inline;font-size:10px;letter-spacing:.04em}
   .language-options{right:-42px}
   .section-intro{margin-top:-8px}
 }
