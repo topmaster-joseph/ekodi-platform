@@ -69,9 +69,16 @@ async function authClient(req: Request) {
   return { db, user: data.user };
 }
 
+async function auditSalt() {
+  const configured = Deno.env.get("TRUST_AUDIT_SALT")?.trim();
+  if (configured) return configured;
+  const { data, error } = await admin.rpc("trust_runtime_audit_salt");
+  if (error || typeof data !== "string" || data.length < 32) throw new Error("trust_audit_salt_missing");
+  return data;
+}
+
 async function subjectHash(subjectId: string) {
-  const salt = Deno.env.get("TRUST_AUDIT_SALT");
-  if (!salt) throw new Error("trust_audit_salt_missing");
+  const salt = await auditSalt();
   const bytes = new TextEncoder().encode(`${salt}:${subjectId}`);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
