@@ -14,7 +14,7 @@ A customer's public website and its AI workspace are separate products and may u
 
 Example:
 
-- `cgma.ekodi.kr` = 청계면상인회 official/public website.
+- `cgma.or.kr` = 청계면상인회 external public domain; EKODI platform route is `https://ekodi.kr/cgma`.
 - `marketing.ekodi.kr/cgma` = shared/Basic Marketing AI entry model.
 - `cgma.ai.ekodi.kr` = dedicated Marketing AI workspace when the organization has the dedicated entitlement.
 

@@ -19,3 +19,15 @@ test('tenant and service admins use site-local canonical paths', async () => {
   assert.ok(js.includes('Google로 YouTube 연결'));
   assert.match(js, /subject_type=tenant/);
 });
+
+
+test('entry gateway redirects legacy Mall admin to the canonical site-local admin', async () => {
+  const source = await fs.readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8');
+  assert.match(source, /url\.pathname==='\/mall\/admin'\|\|url\.pathname\.startsWith\('\/mall\/admin\/'\)/);
+  const manifest = JSON.parse(await fs.readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/mall/admin/');
+  assert.ok(probe);
+  assert.deepEqual(probe.statuses, [308]);
+  assert.equal(probe.rollbackVerify, false);
+  assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/ekodibiz/mall/admin/'));
+});

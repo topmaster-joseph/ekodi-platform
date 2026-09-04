@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.5.0
+# EKODI Platform Constitution v1.6.0
 
 Effective: 2026-09-04
 
@@ -9,6 +9,20 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Start as a modular monolith with explicit module contracts. Split services only for measurable scale, security or isolation needs.
 - External providers are integrations, not the platform identity.
 - Heavy or retryable work uses queue/worker execution rather than long synchronous requests.
+
+## 1A. Governance, OS, Core, Service, Connection and Workspace Constitution
+- The canonical operating principle is **Integrated responsibility, distributed execution, standardized connections** (`?µí•©??ì±…ìž„, ë¶„ì‚°???¤í–‰, ?œì??”ëœ ?°ê²°`).
+- Governance owns constitution, policy, responsibility, approval and change-control authority.
+- EKODI OS defines platform-wide execution order, orchestration, routing context, service cooperation and guarded operational coordination. OS is an operating model, not a business service.
+- EKODI Core implements the stable shared contracts and controls required for independent capabilities to cooperate safely, including identity and authorization contracts, immutable `workspace_id` authority, service contracts, integration gateways, audit, security policy, provider independence and shared fallback rules.
+- An **EKODI Responsible Independent Service** is an EKODI-offered capability for which EKODI remains responsible for service quality, security, privacy controls, observability, fallback design, maintenance and user protection while preserving an explicit service boundary and independent lifecycle readiness.
+- An **External Connected Service** remains the responsibility of its external provider for provider-side availability and internal operation. EKODI remains responsible for the connector contract, authorization scope, minimum data projection, error handling, retry, fallback or degraded path, user-facing connection status and safe disconnection.
+- A Workspace is a person, organization, group or project operating context identified by immutable `workspace_id`. A Workspace is not a service implementation and must survive service replacement or disconnection without identity loss.
+- Modular monolith is the default deployment topology, while Responsible Independent Service is a responsibility and capability boundary. They are complementary, not competing, concepts. A service may remain in a shared deployment while its contract, data boundary and extraction path stay explicit.
+- Cross-boundary access uses public or explicitly declared APIs, events, webhooks, adapters or equivalent reviewed contracts. Direct private database coupling across Responsible Independent Service boundaries is forbidden.
+- The same capability may have more than one compatible implementation, including an EKODI implementation and one or more external implementations. User choice, workspace policy or EKODI Orchestrator policy may select or combine compatible implementations within authorization, privacy, quality, cost, availability and safety constraints.
+- External implementations never gain direct private database access merely by implementing a capability contract. They receive the minimum purpose-bound projection and capability-scoped authorization required for the task.
+- Machine-readable architecture authority is `governance/architecture/ekodi-os-architecture.json`; `platform-boundaries.json` remains the deployment-boundary registry and does not by itself define responsibility ownership.
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
@@ -26,6 +40,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `invest.ekodi.kr` is the registered common Invest Core for Evidence-First research, diligence, IR and connection support; workspace-specific investment businesses remain under `ekodi.kr/{slug}/invest`.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
+- CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.
@@ -93,9 +108,10 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 Workspace type-prefixed public routes are retired and are not part of the runtime routing grammar. Any maintained `space.ekodi.kr` or `user.ekodi.kr` workspace alias maps a workspace slug directly to `ekodi.kr/{slug}`. Workspace type remains internal metadata bound to immutable `workspace_id`; it is not a public path component. Root-route collisions are prevented by the platform route registry and verified before release.
 
 ## 11. Enforcement
-`npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy and governance records. `npm run check` includes it. GitHub CI runs the same check on constitutional and platform changes.
+`npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy and governance records. `npm run validate:architecture` validates the Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace responsibility registry and capability-routing rules. `npm run check` includes both. GitHub CI runs the same checks on constitutional and platform changes.
 
-Machine-readable authority: `governance/constitution/constitution.json`.
+Machine-readable constitutional authority: `governance/constitution/constitution.json`.
+Machine-readable architecture authority: `governance/architecture/ekodi-os-architecture.json`.
 
 ## 12. Verification-First Intelligent Evolution Constitution
 - EKODI is a verification-first, security-native and continuously evolving intelligent platform; novelty alone is never an adoption reason.

@@ -38,7 +38,7 @@
     { domain:'mail.ekodi.kr', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', aliases:['에코디메일','메일','mail'] },
     { domain:'live.ekodi.kr', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', aliases:['에코디라이브','라이브','live'] },
     { domain:'cloud.ekodi.kr', name:'에코디 클라우드', group:'Communication & Cloud', role:'파일·문서·협업 자료', aliases:['에코디클라우드','클라우드','cloud'] },
-    { domain:'cgma.ekodi.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', aliases:['청계면상인회','청계상권','상인회','cgma'] },
+    { domain:'cgma.ekodi.kr', url:'https://ekodi.kr/cgma/', label:'ekodi.kr/cgma · cgma.or.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', aliases:['청계면상인회','청계상권','상인회','cgma'] },
     { domain:'jadam.ekodi.kr', name:'자담치킨 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['자담치킨','자담','jadam'] },
     { domain:'pizzamaru.ekodi.kr', name:'피자마루 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['피자마루','pizzamaru'] },
     { domain:'yogurt.ekodi.kr', name:'요거트퍼플 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['요거트퍼플','요거트','yogurt'] },
@@ -366,7 +366,7 @@
     if (includeReview) actions.push({ type:'review', label:'Council Review', primary:true });
     if (site) {
       actions.push({ type:'manage', domain:site.domain, label:'Manage' });
-      actions.push({ type:'open', domain:site.domain, label:'Open ↗' });
+      actions.push({ type:'open', domain:site.domain, url:site.url||'', label:'Open ↗' });
       actions.push({ type:'scope', domain:site.domain, label:'이 사이트로 대화' });
     }
     if (includeDecision) actions.push({ type:'decision', label:'Decision Gate', primary:true });
@@ -571,7 +571,7 @@
     if (!action) return;
     if (action.type === 'prompt') return sendPrompt(action.prompt || action.label);
     if (action.type === 'scope') return setScope(action.domain);
-    if (action.type === 'open' && action.domain) return window.open(`https://${action.domain}`, '_blank', 'noopener');
+    if (action.type === 'open' && action.domain) return window.open(action.url || `https://${action.domain}`, '_blank', 'noopener');
     if (action.type === 'decision') return document.querySelector('#aiDecisionBlock')?.scrollIntoView({ behavior:'smooth', block:'center' });
     if (action.type === 'review') return sendPrompt('전체 즉시 점검해줘');
     if (action.type === 'manage' && action.domain) {

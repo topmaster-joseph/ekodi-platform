@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import siteWorker from '../site-worker.js';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 const [api, automation, router, html, js, css, migration, registryText] = await Promise.all([
@@ -14,6 +15,16 @@ const [api, automation, router, html, js, css, migration, registryText] = await 
   read('config/ecosystem-services.json'),
 ]);
 const registry = JSON.parse(registryText);
+const [offerRegistry, offerControl, offerSources, offerMigration, entryWorker, marketplace, multiMigration, marketingAdmin] = await Promise.all([
+  read('offer-registry.js'),
+  read('offer-registry-control.js'),
+  read('offer-registry-sources.js'),
+  read('migrations/0056_ekodi_offer_registry.sql'),
+  read('customer-entry-worker.js'),
+  read('affiliate-marketplace.js'),
+  read('migrations/0057_affiliate_multi_provider_clicks.sql'),
+  read('marketing-funnel-admin.js'),
+]);
 
 test('EKODI Mall remains a root storefront separate from shared Shop platform', () => {
   const mall = registry.services.find(service => service.id === 'mall');
@@ -30,7 +41,7 @@ test('public storefront reads as a normal shopping mall', () => {
   assert.match(html, /SMART SHOPPING/);
   assert.match(html, /오늘 필요한 것/);
   assert.match(html, /오늘의 상품/);
-  assert.match(html, /상품 둘러보기/);
+  assert.match(html, /상황에 맞는 선물 찾기/);
   assert.match(html, /새 상품을 준비하고 있습니다/);
   assert.doesNotMatch(html, /COUPANG AFFILIATE CURATION/);
   assert.doesNotMatch(html, /추천링크 클릭 후 검색하세요/);
@@ -39,6 +50,13 @@ test('public storefront reads as a normal shopping mall', () => {
 
 test('official storefront canonical is ekodi.kr/ekodibiz/mall', () => {
   assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz\/mall">/);
+});
+
+test('legacy /mall redirects safely to the canonical EKODIBIZ storefront', async () => {
+  const response = await siteWorker.fetch(new Request('https://ekodi.kr/mall?source=legacy'), {});
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/ekodibiz/mall?source=legacy');
+  assert.equal(response.headers.get('x-ekodi-route'), 'mall-legacy-canonical-redirect');
 });
 
 test('affiliate and seller disclosures are centered inside the header and absent from footer', () => {
@@ -90,6 +108,15 @@ test('catalog supports registered popularity and price sorting', () => {
   assert.match(css, /\.sort-box select/);
 });
 
+test('contextual Gift AI ranks only live affiliate catalog products', () => {
+  assert.match(html, /id="gift-ai"/);
+  assert.match(js, /GIFT_DIRECT_TERMS/);
+  assert.match(js, /pickGiftRecommendations/);
+  assert.match(js, /searchParams\.get\('gift'\)/);
+  assert.match(js, /dialogBuy\.href = product\.clickUrl/);
+  assert.doesNotMatch(js, /https:\/\/link\.coupang\.com/);
+});
+
 test('mall has no fake or generic fallback products', () => {
   assert.doesNotMatch(js, /FALLBACK_PRODUCTS/);
   assert.doesNotMatch(js, /cwWXWm/);
@@ -104,9 +131,90 @@ test('automatic product search and partner link issuance are connected', () => {
   assert.match(automation, /issuePartnerLinks/);
   assert.match(automation, /createOpenAiProvider/);
   assert.match(automation, /balancedRules/);
+  assert.match(automation, /GIFT_SEEDS/);
+  assert.match(automation, /\uD64D\uC0BC \uC120\uBB3C\uC138\uD2B8/);
+  assert.match(automation, /expectedKeywords/);
   assert.match(api, /runAffiliateAutomation/);
   assert.match(api, /public-empty/);
   assert.match(api, /public-stale/);
+});
+
+test('on-demand ingest adds requested products without replacing the batch catalog', () => {
+  assert.match(automation, /ingestAffiliateProductsOnDemand/);
+  assert.match(automation, /selectionSource: 'on-demand'/);
+  assert.match(automation, /ON_DEMAND_TTL_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(automation, /selection_source <> 'on-demand'/);
+  const start = automation.indexOf('export async function ingestAffiliateProductsOnDemand');
+  const end = automation.indexOf('export const AFFILIATE_AUTOMATION_DEFAULTS', start);
+  const onDemand = automation.slice(start, end);
+  assert.doesNotMatch(onDemand, /UPDATE affiliate_storefront_products SET status = 'inactive'/);
+  const authIndex = api.indexOf('const auth = await sessionCheck');
+  const ingestIndex = api.indexOf("path === `${PREFIX}/ingest`");
+  assert.ok(ingestIndex > authIndex);
+  assert.match(api, /publicProductView/);
+  assert.match(api, /affiliate\.product\.ingest/);
+});
+
+test('Mall products project into a provider-neutral EKODI Offer Registry', () => {
+  assert.match(offerRegistry, /'product', 'service', 'program', 'provider', 'common_service'/);
+  assert.match(offerRegistry, /affiliateProductOffer/);
+  assert.match(offerRegistry, /upsertOffer/);
+  assert.match(offerRegistry, /listPublicOffers/);
+  assert.match(offerRegistry, /mall\?product=/);
+  assert.match(js, /searchParams\.get\('product'\)/);
+  assert.match(automation, /upsertOffer\(env\.DB, offer\)/);
+  assert.match(automation, /UPDATE ekodi_offers SET status = 'inactive'/);
+  for (const field of ['offer_type', 'owner_type', 'source_provider', 'source_id', 'canonical_url', 'discovery_keywords_json']) {
+    assert.match(offerMigration, new RegExp(field));
+  }
+});
+
+test('Offer discovery bootstraps the existing Mall catalog without remote provider search', () => {
+  assert.match(automation, /bootstrapAffiliateOffersFromCatalog/);
+  assert.match(automation, /LEFT JOIN ekodi_offers/);
+  assert.match(automation, /p\.status = 'active' AND o\.offer_id IS NULL/);
+  const start = automation.indexOf('export async function bootstrapAffiliateOffersFromCatalog');
+  const end = automation.indexOf('export async function ingestAffiliateProductsOnDemand', start);
+  const bootstrap = automation.slice(start, end);
+  assert.doesNotMatch(bootstrap, /searchSeed\(/);
+  assert.doesNotMatch(bootstrap, /coupangRequest\(/);
+  assert.match(bootstrap, /NOT EXISTS/);
+  assert.match(offerSources, /bootstrapAffiliateOffersFromCatalog/);
+  assert.match(offerSources, /offerType === 'product'/);
+  assert.match(offerControl, /bootstrapOfferSources/);
+  assert.match(offerControl, /sourceProvider/);
+  assert.match(offerControl, /searchParams\.get\('provider'\)/);
+  assert.match(offerControl, /searchParams\.get\('kind'\)/);
+  assert.match(offerRegistry, /source_provider = \?/);
+});
+test('multi-provider affiliate products can be registered, displayed and click-tracked', () => {
+  assert.match(marketplace, /registerMarketplaceProduct/);
+  assert.match(marketplace, /INSERT INTO affiliate_providers/);
+  assert.match(marketplace, /INSERT INTO affiliate_accounts/);
+  assert.match(marketplace, /upsertOffer/);
+  assert.match(marketplace, /publicMarketplaceClick/);
+  assert.match(marketplace, /affiliate_link_clicks/);
+  assert.match(multiMigration, /affiliate_link_clicks/);
+  assert.match(api, /listMarketplaceProducts/);
+  assert.match(api, /publicMarketplaceClick/);
+  assert.match(api, /path === `\$\{PREFIX\}\/products`/);
+  assert.match(api, /multiProviderCatalog: true/);
+  assert.match(marketingAdmin, /id="affiliateExternalProductForm"/);
+  assert.match(marketingAdmin, /\/api\/affiliate\/products/);
+  assert.match(js, /providerName/);
+  assert.match(js, /buyLabel/);
+  assert.match(html, /id="productDialogSource"/);
+  assert.match(html, /id="productDialogDisclosure"/);
+});
+
+test('public Offer discovery is read-only and routed independently from affiliate admin ingest', () => {
+  assert.match(offerControl, /\/api\/offers/);
+  assert.match(offerControl, /\/discover/);
+  assert.match(offerControl, /listPublicOffers/);
+  assert.match(offerControl, /request\.method !== 'GET'/);
+  assert.doesNotMatch(offerControl, /upsertOffer/);
+  assert.match(entryWorker, /handleOfferRegistryRequest/);
+  assert.match(entryWorker, /path\.startsWith\('\/api\/offers'\)/);
 });
 
 test('public product, image and click paths run before admin authentication', () => {
@@ -115,6 +223,7 @@ test('public product, image and click paths run before admin authentication', ()
   assert.ok(api.indexOf("url.pathname === `${PREFIX}/public/products`") < authIndex);
   assert.ok(api.indexOf('publicImage(request, env, url)') < authIndex);
   assert.ok(api.indexOf('publicClick(request, env, url)') < authIndex);
+  assert.ok(api.indexOf('publicMarketplaceClick(request, env, url)') < authIndex);
   assert.match(api, /status: 302/);
 });
 
@@ -131,6 +240,9 @@ test('root router publishes Mall under EKODIBIZ and redirects the legacy root pa
   assert.match(router, /const LEGACY_MALL_PREFIX = '\/mall'/);
   assert.match(router, /mall-legacy-canonical-redirect/);
   assert.match(router, /public-ekodi-mall/);
+  assert.match(router, /rewriteMallHtmlDocument/);
+  assert.match(router, /MALL_PREFIX\}\/\$\{suffix/);
+  assert.match(router, /responseBody = rewriteMallHtmlDocument/);
   assert.match(router, /'\/mall\.css'/);
   assert.match(router, /'\/mall\.js'/);
 });

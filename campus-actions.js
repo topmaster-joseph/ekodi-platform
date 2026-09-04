@@ -12,7 +12,7 @@
     { type: '교육', name: '에코디교육', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
     { type: '커뮤니티', name: '커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
     { type: '소셜', name: '에코디 소셜', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
-    { type: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services', group: 'business' },
+    { type: '몰', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/mall', section: 'services', group: 'business' },
     { type: '마케팅', name: '마케팅 AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },
     { type: '무역', name: '에코디 트레이딩', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
     { type: '결제', name: '에코디 페이', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
@@ -24,7 +24,7 @@
     { type: '라이브', name: '에코디 라이브', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '클라우드', name: '에코디 클라우드', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '미디어', name: '에코디미디어', domain: 'media.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
-    { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
+    { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://ekodi.kr/cgma/', label: 'ekodi.kr/cgma · cgma.or.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
@@ -138,7 +138,7 @@
     }
     const link = document.createElement('a');
     link.className = 'primary campus-row-action';
-    link.href = `https://${site.domain}`;
+    link.href = site.url || `https://${site.domain}`;
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = 'Open ↗';
@@ -176,11 +176,11 @@
     const domain = site.lifecycle === 'planned' ? document.createElement('span') : document.createElement('a');
     domain.className = 'campus-site-domain';
     if (domain.tagName === 'A') {
-      domain.href = `https://${site.domain}`;
+      domain.href = site.url || `https://${site.domain}`;
       domain.target = '_blank';
       domain.rel = 'noopener';
     }
-    domain.textContent = site.domain;
+    domain.textContent = site.label || site.domain;
     return domain;
   }
 

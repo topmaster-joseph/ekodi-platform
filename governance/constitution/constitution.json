@@ -1,5 +1,5 @@
 {
-  "version": "1.5.1",
+  "version": "1.6.0",
   "effectiveDate": "2026-09-04",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -17,8 +17,28 @@
     "verification-first-evolution",
     "security-native-intelligence",
     "evidence-linked-recommendations",
-    "secure-projection-minimum-disclosure"
+    "secure-projection-minimum-disclosure",
+    "integrated-responsibility-distributed-execution-standardized-connections",
+    "layered-governance-os-core-services-connections-workspaces"
   ],
+  "architectureModel": {
+    "registry": "governance/architecture/ekodi-os-architecture.json",
+    "platformBoundaryRegistry": "platform-boundaries.json",
+    "deploymentTopology": "modular-monolith-first",
+    "layers": [
+      "governance",
+      "os",
+      "core",
+      "responsible-independent-service",
+      "external-connected-service",
+      "workspace"
+    ],
+    "responsibilityClasses": [
+      "ekodi-responsible",
+      "external-provider-responsible"
+    ],
+    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries."
+  },
   "systemBoundaries": {
     "production": [
       "ekodi.kr",
@@ -324,5 +344,8 @@
     "https://ekodi.kr/{slug}/{service}",
     "https://ekodi.kr/{slug}/admin",
     "https://ekodi.kr/{slug}/{service}/admin"
-  ]
+  ],
+  "customerOwnedDomainMappings": {
+    "cgma.or.kr": "https://ekodi.kr/cgma"
+  }
 }

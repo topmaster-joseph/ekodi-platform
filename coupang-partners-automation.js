@@ -1,4 +1,5 @@
 import { createOpenAiProvider } from './openai-provider-adapter.js';
+import { affiliateProductOffer, ensureOfferRegistrySchema, upsertOffer } from './offer-registry.js';
 
 const COUPANG_HOST = 'https://api-gateway.coupang.com';
 const SEARCH_PATH = '/v2/providers/affiliate_open_api/apis/openapi/v1/products/search';
@@ -9,6 +10,7 @@ const STOREFRONT = 'ekodi-mall';
 const TARGET_PRODUCTS = 24;
 const REFRESH_MS = 4 * 60 * 60 * 1000;
 const LOCK_MS = 10 * 60 * 1000;
+const ON_DEMAND_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const BASE_SEEDS = Object.freeze([
   { keyword: '생필품', category: '생활' },
@@ -16,6 +18,12 @@ const BASE_SEEDS = Object.freeze([
   { keyword: '간편식', category: '식품' },
   { keyword: '건강용품', category: '건강' },
   { keyword: '디지털 액세서리', category: '디지털' },
+]);
+
+const GIFT_SEEDS = Object.freeze([
+  { keyword: '감사 선물세트', category: '선물' },
+  { keyword: '홍삼 선물세트', category: '선물' },
+  { keyword: '건강 선물세트', category: '선물' },
 ]);
 
 const SEASONAL_SEEDS = Object.freeze({
@@ -100,7 +108,7 @@ async function coupangRequest(env, { method = 'GET', path, query = new URLSearch
 }
 
 function seedsForNow(now = new Date()) {
-  return [...BASE_SEEDS, ...(SEASONAL_SEEDS[now.getUTCMonth() + 1] || [])];
+  return [...BASE_SEEDS, ...GIFT_SEEDS, ...(SEASONAL_SEEDS[now.getUTCMonth() + 1] || [])];
 }
 
 async function searchSeed(env, seed) {
@@ -160,12 +168,15 @@ function balancedRules(candidates, limit = TARGET_PRODUCTS) {
     .map(product => ({ ...product, selectionScore: baseScore(product) }))
     .sort((a, b) => b.selectionScore - a.selectionScore || a.rank - b.rank || a.productName.localeCompare(b.productName, 'ko'));
   const counts = new Map();
+  const keywordCounts = new Map();
   const selected = [];
   for (const product of scored) {
     const count = counts.get(product.category) || 0;
-    if (count >= 6) continue;
+    const keywordCount = keywordCounts.get(product.keyword) || 0;
+    if (count >= 6 || keywordCount >= 2) continue;
     selected.push(product);
     counts.set(product.category, count + 1);
+    keywordCounts.set(product.keyword, keywordCount + 1);
     if (selected.length >= limit) break;
   }
   if (selected.length < limit) {
@@ -346,10 +357,15 @@ async function lastRun(db) {
   } catch { return null; }
 }
 
-function runIsFresh(row) {
+function runIsFresh(row, now = new Date()) {
   if (!row || row.status !== 'success' || !row.finished_at) return false;
   const timestamp = Date.parse(row.finished_at);
-  return Number.isFinite(timestamp) && (Date.now() - timestamp) < REFRESH_MS;
+  if (!Number.isFinite(timestamp) || (now.getTime() - timestamp) >= REFRESH_MS) return false;
+  let previousKeywords = [];
+  try { previousKeywords = JSON.parse(row.keywords_json || '[]'); } catch {}
+  const expectedKeywords = seedsForNow(now).map(seed => seed.keyword);
+  return Array.isArray(previousKeywords) && previousKeywords.length === expectedKeywords.length
+    && expectedKeywords.every((keyword, index) => previousKeywords[index] === keyword);
 }
 
 export async function getAffiliateAutomationStatus(env = {}) {
@@ -425,8 +441,10 @@ export async function runAffiliateAutomation(env = {}, { force = false, reason =
     if (!linked.length) throw new Error('COUPANG_NO_PARTNER_LINKS');
 
     const now = isoNow();
+    const onDemandCutoff = new Date(Date.now() - ON_DEMAND_TTL_MS).toISOString();
     const statements = [
-      env.DB.prepare("UPDATE affiliate_storefront_products SET status = 'inactive', last_seen_at = ? WHERE account_id = ? AND storefront_slug = ? AND status = 'active'").bind(now, ACCOUNT_ID, STOREFRONT),
+      env.DB.prepare("UPDATE affiliate_storefront_products SET status = 'inactive', last_seen_at = ? WHERE account_id = ? AND storefront_slug = ? AND status = 'active' AND selection_source <> 'on-demand'").bind(now, ACCOUNT_ID, STOREFRONT),
+      env.DB.prepare("UPDATE affiliate_storefront_products SET status = 'inactive' WHERE account_id = ? AND storefront_slug = ? AND status = 'active' AND selection_source = 'on-demand' AND last_seen_at < ?").bind(ACCOUNT_ID, STOREFRONT, onDemandCutoff),
     ];
     for (const item of linked) {
       statements.push(env.DB.prepare(`INSERT INTO affiliate_storefront_products (
@@ -452,6 +470,14 @@ export async function runAffiliateAutomation(env = {}, { force = false, reason =
           item.rank, item.selectionScore, item.selectionSource, item.isRocket ? 1 : 0, item.isFreeShipping ? 1 : 0, now, now));
     }
     await env.DB.batch(statements);
+    for (const item of linked) {
+      const offer = affiliateProductOffer(item);
+      if (offer) await upsertOffer(env.DB, offer);
+    }
+    await env.DB.prepare(`UPDATE ekodi_offers SET status = 'inactive', updated_at = ?
+      WHERE offer_type = 'product' AND source_provider = 'coupang_partners' AND owner_type = 'business' AND owner_key = 'ekodibiz'
+        AND source_id NOT IN (SELECT product_id FROM affiliate_storefront_products WHERE account_id = ? AND storefront_slug = ? AND status = 'active')`)
+      .bind(now, ACCOUNT_ID, STOREFRONT).run();
 
     const mode = ai?.mode || 'rules';
     if (runId) {
@@ -471,11 +497,109 @@ export async function runAffiliateAutomation(env = {}, { force = false, reason =
   }
 }
 
+export async function bootstrapAffiliateOffersFromCatalog(env = {}) {
+  if (!env.DB?.prepare) return { ok: false, status: 'database_required', projectedCount: 0, deactivatedCount: 0 };
+  await ensureSchema(env.DB);
+  await ensureOfferRegistrySchema(env.DB);
+
+  const rows = await env.DB.prepare(`SELECT p.product_id, p.product_name, p.price_krw, p.image_url, p.source_keyword, p.category,
+      p.provider_rank, p.selection_score, p.selection_source, p.is_rocket, p.is_free_shipping
+    FROM affiliate_storefront_products p
+    LEFT JOIN ekodi_offers o
+      ON o.offer_type = 'product' AND o.source_provider = 'coupang_partners' AND o.source_id = p.product_id AND o.status = 'active'
+    WHERE p.account_id = ? AND p.storefront_slug = ? AND p.status = 'active' AND o.offer_id IS NULL
+    ORDER BY p.selection_score DESC, p.id DESC
+    LIMIT 200`).bind(ACCOUNT_ID, STOREFRONT).all();
+
+  let projectedCount = 0;
+  for (const row of rows.results || []) {
+    const offer = affiliateProductOffer({
+      productId: row.product_id,
+      productName: row.product_name,
+      productPrice: Number(row.price_krw || 0),
+      productImage: row.image_url,
+      keyword: row.source_keyword,
+      category: row.category,
+      rank: Number(row.provider_rank || 0),
+      selectionScore: Number(row.selection_score || 0),
+      selectionSource: row.selection_source,
+      isRocket: Boolean(row.is_rocket),
+      isFreeShipping: Boolean(row.is_free_shipping),
+    });
+    if (offer && await upsertOffer(env.DB, offer)) projectedCount += 1;
+  }
+
+  const stale = await env.DB.prepare(`SELECT COUNT(*) AS count FROM ekodi_offers o
+    WHERE o.offer_type = 'product' AND o.source_provider = 'coupang_partners'
+      AND o.owner_type = 'business' AND o.owner_key = 'ekodibiz' AND o.status = 'active'
+      AND NOT EXISTS (
+        SELECT 1 FROM affiliate_storefront_products p
+        WHERE p.account_id = ? AND p.storefront_slug = ? AND p.status = 'active' AND p.product_id = o.source_id
+      )`).bind(ACCOUNT_ID, STOREFRONT).first();
+  const deactivatedCount = Number(stale?.count || 0);
+  if (deactivatedCount > 0) {
+    await env.DB.prepare(`UPDATE ekodi_offers SET status = 'inactive', updated_at = ?
+      WHERE offer_type = 'product' AND source_provider = 'coupang_partners'
+        AND owner_type = 'business' AND owner_key = 'ekodibiz' AND status = 'active'
+        AND NOT EXISTS (
+          SELECT 1 FROM affiliate_storefront_products p
+          WHERE p.account_id = ? AND p.storefront_slug = ? AND p.status = 'active' AND p.product_id = ekodi_offers.source_id
+        )`).bind(isoNow(), ACCOUNT_ID, STOREFRONT).run();
+  }
+
+  return { ok: true, status: projectedCount || deactivatedCount ? 'synchronized' : 'current', projectedCount, deactivatedCount };
+}
+export async function ingestAffiliateProductsOnDemand(env = {}, { query = '', category = '추천', limit = 3, reason = 'on-demand' } = {}) {
+  if (!env.DB?.prepare) return { ok: false, status: 'database_required', selectedCount: 0, products: [], offers: [] };
+  await ensureSchema(env.DB);
+  if (!configured(env)) return { ok: false, status: 'setup_required', selectedCount: 0, products: [], offers: [] };
+  const keyword = cleanText(query, 120);
+  if (keyword.length < 2) return { ok: false, status: 'invalid_query', selectedCount: 0, products: [], offers: [] };
+  const safeLimit = Math.max(1, Math.min(5, Math.trunc(Number(limit) || 3)));
+  const safeCategory = cleanText(category, 80) || '추천';
+  try {
+    const candidates = await searchSeed(env, { keyword, category: safeCategory });
+    const deduped = [...new Map(candidates.map(item => [item.productId, item])).values()]
+      .sort((a, b) => baseScore(b) - baseScore(a) || a.rank - b.rank);
+    const selected = deduped.slice(0, safeLimit).map(item => ({
+      ...item,
+      selectionScore: baseScore(item) + 20,
+      selectionSource: 'on-demand',
+    }));
+    const linked = (await issuePartnerLinks(env, selected)).filter(item => isPartnerUrl(item.affiliateUrl));
+    if (!linked.length) return { ok: true, status: 'empty', selectedCount: 0, products: [], offers: [] };
+    const now = isoNow();
+    const statements = linked.map(item => env.DB.prepare(`INSERT INTO affiliate_storefront_products (
+      account_id, storefront_slug, product_id, product_name, price_krw, image_url, affiliate_url, source_keyword, category,
+      provider_rank, selection_score, selection_source, is_rocket, is_free_shipping, status, selected_at, last_seen_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    ON CONFLICT(account_id, storefront_slug, product_id) DO UPDATE SET
+      product_name=excluded.product_name, price_krw=excluded.price_krw, image_url=excluded.image_url,
+      affiliate_url=excluded.affiliate_url, source_keyword=excluded.source_keyword, category=excluded.category,
+      provider_rank=excluded.provider_rank, selection_score=excluded.selection_score,
+      selection_source='on-demand', is_rocket=excluded.is_rocket, is_free_shipping=excluded.is_free_shipping,
+      status='active', last_seen_at=excluded.last_seen_at`)
+      .bind(ACCOUNT_ID, STOREFRONT, item.productId, item.productName, item.productPrice, item.productImage,
+        item.affiliateUrl, item.keyword, item.category, item.rank, item.selectionScore, item.selectionSource,
+        item.isRocket ? 1 : 0, item.isFreeShipping ? 1 : 0, now, now));
+    await env.DB.batch(statements);
+    const offers = [];
+    for (const item of linked) {
+      const offer = affiliateProductOffer(item);
+      if (offer) offers.push(await upsertOffer(env.DB, offer));
+    }
+    return { ok: true, status: 'success', reason: cleanText(reason, 80), query: keyword, selectedCount: linked.length, products: linked, offers: offers.filter(Boolean) };
+  } catch (error) {
+    return { ok: false, status: 'failed', selectedCount: 0, products: [], offers: [], error: cleanText(error?.message || error, 500) };
+  }
+}
+
 export const AFFILIATE_AUTOMATION_DEFAULTS = Object.freeze({
   accountId: ACCOUNT_ID,
   storefront: STOREFRONT,
   targetProducts: TARGET_PRODUCTS,
   refreshMs: REFRESH_MS,
+  onDemandTtlMs: ON_DEMAND_TTL_MS,
   searchPath: SEARCH_PATH,
   deepLinkPath: DEEPLINK_PATH,
 });

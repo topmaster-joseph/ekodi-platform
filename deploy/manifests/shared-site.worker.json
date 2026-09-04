@@ -1,5 +1,5 @@
 {
-  "version": 47,
+  "version": 48,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -147,6 +147,18 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/mall/admin/",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodibiz/mall/admin/",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/admin",
