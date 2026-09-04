@@ -344,5 +344,8 @@
     "https://ekodi.kr/{slug}/{service}",
     "https://ekodi.kr/{slug}/admin",
     "https://ekodi.kr/{slug}/{service}/admin"
-  ]
+  ],
+  "customerOwnedDomainMappings": {
+    "cgma.or.kr": "https://ekodi.kr/cgma"
+  }
 }

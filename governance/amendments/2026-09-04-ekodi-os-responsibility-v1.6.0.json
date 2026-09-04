@@ -4,7 +4,7 @@
   "class": "C2",
   "status": "approved",
   "approvedBy": "topmaster-joseph",
-  "approvalSource": "Explicit EKODI Platform Super Administrator instruction in the ChatGPT conversation to adopt and implement the Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace architecture, including the principle '통합된 책임, 분산된 실행, 표준화된 연결.' and selectable internal/external Marketing AI implementations through standard contracts.",
+  "approvalSource": "Explicit EKODI Platform Super Administrator instruction in the ChatGPT conversation to adopt and implement the Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace architecture, including the principle '?�합??책임, 분산???�행, ?��??�된 ?�결.' and selectable internal/external Marketing AI implementations through standard contracts.",
   "constitutionVersion": "1.6.0",
   "summary": "Establish the canonical EKODI layered responsibility architecture. EKODI-owned services remain operationally accountable to EKODI while execution boundaries stay independently deployable or extraction-ready; external providers remain provider-responsible and connect through governed contracts.",
   "affectedAreas": [
@@ -18,5 +18,5 @@
     "ci-architecture-validation"
   ],
   "migrationPolicy": "Additive architectural classification and automated conformance validation. Existing modular-monolith-first deployment topology, canonical workspace_id authority, domain grammar, service data ownership and guarded deployment rules remain intact. Existing service boundaries are classified without forced microservice extraction.",
-  "rollbackPlan": "Revert the v1.6.0 architecture registry, architecture validator, CI hook and constitutional v1.6.0 additions. Restore constitution validation to v1.5.1. No data migration or production topology change is required for rollback."
+  "rollbackPlan": "Revert the v1.6.0 architecture registry, architecture validator, CI hook and constitutional v1.6.0 additions. Restore constitution validation to v1.5.2 while preserving the approved CGMA public-domain amendment. No data migration or production topology change is required for rollback."
 }

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "constitution:check": "node scripts/constitution-check.mjs",
     "normalize:display-names": "node scripts/normalize-platform-ai-names.mjs",
     "generate:user-services": "node scripts/generate-user-service-registry.mjs",
     "prebuild": "npm run normalize:display-names && npm run generate:user-services",

@@ -11,7 +11,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Heavy or retryable work uses queue/worker execution rather than long synchronous requests.
 
 ## 1A. Governance, OS, Core, Service, Connection and Workspace Constitution
-- The canonical operating principle is **Integrated responsibility, distributed execution, standardized connections** (`통합된 책임, 분산된 실행, 표준화된 연결`).
+- The canonical operating principle is **Integrated responsibility, distributed execution, standardized connections** (`?�합??책임, 분산???�행, ?��??�된 ?�결`).
 - Governance owns constitution, policy, responsibility, approval and change-control authority.
 - EKODI OS defines platform-wide execution order, orchestration, routing context, service cooperation and guarded operational coordination. OS is an operating model, not a business service.
 - EKODI Core implements the stable shared contracts and controls required for independent capabilities to cooperate safely, including identity and authorization contracts, immutable `workspace_id` authority, service contracts, integration gateways, audit, security policy, provider independence and shared fallback rules.
@@ -40,6 +40,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `invest.ekodi.kr` is the registered common Invest Core for Evidence-First research, diligence, IR and connection support; workspace-specific investment businesses remain under `ekodi.kr/{slug}/invest`.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
+- CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.
