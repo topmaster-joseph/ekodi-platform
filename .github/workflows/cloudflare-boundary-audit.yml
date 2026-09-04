@@ -195,6 +195,19 @@ jobs:
           if 'max-parallel: 4' not in shell_verify:
               errors.append('verify-shared-shell-production.yml missing bounded production matrix parallelism')
 
+          core_release = (root / 'deploy-site-core.yml').read_text(encoding='utf-8')
+          for marker in (
+              'staging_gate:',
+              'uses: ./.github/workflows/stage-shared-site-shell.yml',
+              'needs: staging_gate',
+              'secrets: inherit',
+          ):
+              if marker not in core_release:
+                  errors.append(f'deploy-site-core.yml missing staging promotion gate marker: {marker}')
+
+          core_stage = (root / 'stage-shared-site-shell.yml').read_text(encoding='utf-8')
+          if 'workflow_call:' not in core_stage:
+              errors.append('stage-shared-site-shell.yml must remain reusable by the production promotion gate')
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
