@@ -30,7 +30,8 @@ test('admin Google button enables FedCM only on supported browser versions', () 
 
 test('admin login opens central auth as a popup and hands the session back to the opener', () => {
   assert.match(handoff, /site=admin&direct=1&popup=1&return_to=/);
-  assert.match(handoff, /window\.open\(target,AUTH_POPUP_NAME,popupFeatures\(\)\)/);
+  assert.match(handoff, /AUTH_POPUP_FEATURES='popup=yes,width=480,height=680,resizable=yes,scrollbars=yes'/);
+  assert.match(handoff, /window\.open\(target,AUTH_POPUP_NAME,AUTH_POPUP_FEATURES\)/);
   assert.match(handoff, /event\.origin!==AUTH_ORIGIN\|\|event\.source!==authPopup/);
   assert.match(handoff, /payload\.type!=='ekodi-admin-auth-success'/);
   assert.ok(handoff.includes("if(!/^[a-f0-9]{64}$/i.test(value))return"));
