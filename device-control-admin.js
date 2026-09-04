@@ -29,6 +29,7 @@
   const CONFIRM_MESSAGES = {
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
+    'maintenance.safe_optimize': '전후 상태를 측정하고 7일 이상 지난 임시파일만 정리합니다. 시작프로그램·업데이트·전원·레지스트리·재부팅은 건드리지 않습니다. 안전 최적화를 진행할까요?',
     'updates.install': '대기 중인 Windows 소프트웨어 업데이트를 설치합니다. EKODI는 자동 재부팅하지 않습니다. 진행할까요?',
     'profile.workstation.apply': '바탕화면과 시작 메뉴에 EKODI 업무 바로가기를 구성할까요?',
     'profile.workstation.restore': 'EKODI가 만든 업무 바로가기를 제거할까요?',
@@ -94,7 +95,7 @@
       'lock.resume_off': '복귀 잠금 해제', 'lock.resume_on': '복귀 잠금 사용', 'autologon.open': '자동로그인 관리',
       'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
-      'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
+      'maintenance.safe_optimize': '안전 최적화', 'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트',
     };
     return labels[type] || type;
@@ -164,13 +165,28 @@
     return button;
   }
 
+  function commandResultText(command) {
+    const result = command?.result || {};
+    if (command?.type === 'maintenance.safe_optimize' && command.status === 'succeeded') {
+      const parts = [];
+      if (result.freedMB != null) parts.push(`${result.freedMB}MB 확보`);
+      if (result.beforeMinFreePct != null && result.afterMinFreePct != null) parts.push(`최소 여유 ${result.beforeMinFreePct}% → ${result.afterMinFreePct}%`);
+      if (result.removedFiles != null) parts.push(`${result.removedFiles}개 파일 정리`);
+      return parts.join(' · ') || result.message || '';
+    }
+    return result.message || '';
+  }
+
   function latestCommandMarkup(commands = []) {
     if (!commands.length) return '<p class="device-command-empty">아직 실행한 작업이 없습니다.</p>';
-    return `<div class="device-command-history">${commands.slice(0, 4).map(command => `
+    return `<div class="device-command-history">${commands.slice(0, 4).map(command => {
+      const detail = commandResultText(command);
+      return `
       <div class="device-command-row" data-status="${command.status}">
         <span>${commandLabel(command.type)}</span><strong>${commandStatus(command.status)}</strong>
-        <small>${timeLabel(command.completedAt || command.claimedAt || command.issuedAt)}${command.result?.message ? ` · ${escapeHtml(command.result.message)}` : ''}</small>
-      </div>`).join('')}</div>`;
+        <small>${timeLabel(command.completedAt || command.claimedAt || command.issuedAt)}${detail ? ` · ${escapeHtml(detail)}` : ''}</small>
+      </div>`;
+    }).join('')}</div>`;
   }
 
   function healthMarkup(device) {
@@ -313,7 +329,8 @@
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid';
     mainActions.append(
-      makeActionButton(device, 'diagnostics.collect', '🩺 전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
+      makeActionButton(device, 'maintenance.safe_optimize', '✨ 안전 최적화', 'primary', {}, !capability(device, 'storageMaintenance')),
+      makeActionButton(device, 'diagnostics.collect', '🩺 전체 진단', 'secondary', {}, !capability(device, 'diagnostics')),
       makeActionButton(device, 'maintenance.temp_cleanup', '🧹 임시파일 정리', 'ghost', {}, !capability(device, 'storageMaintenance')),
       makeActionButton(device, 'updates.scan', '🔄 업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
       makeActionButton(device, 'updates.install', '⬆ 업데이트 설치', 'ghost', {}, !capability(device, 'windowsUpdate')),
@@ -453,7 +470,7 @@
       </div>
       <section class="device-job-console">
         <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 후보가 됩니다. POS·키오스크·태블릿·센서·로봇은 자동 실행 대상에서 제외합니다.</p></div>
-        <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
+        <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.safe_optimize">안전 최적화</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
         <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
       </section>
       <div class="device-onboarding-grid">

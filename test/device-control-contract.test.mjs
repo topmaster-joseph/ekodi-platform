@@ -15,7 +15,7 @@ const [api, agent, admin, build, entry, security, bootstrap] = await Promise.all
 const commands = [
   'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
   'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-  'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
+  'maintenance.temp_cleanup','maintenance.safe_optimize','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
 ];
 
 test('Device Control routes are behind the mission control entry worker', () => {
@@ -54,7 +54,7 @@ test('cloud operations use a fixed capability allowlist and never expose arbitra
 
 test('maintain and privileged actions require explicit admin confirmation', () => {
   assert.match(api, /DEVICE_COMMAND_CONFIRM_REQUIRED/);
-  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update']) {
+  for (const command of ['autologon.open','maintenance.temp_cleanup','maintenance.safe_optimize','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update']) {
     const escaped = command.replaceAll('.', '\\.');
     assert.match(api, new RegExp(`'${escaped}'[^\n]*confirm: true`));
   }
@@ -93,6 +93,18 @@ test('Windows Update install never triggers automatic reboot', () => {
   assert.doesNotMatch(agent, /Restart-Computer|shutdown\.exe\s+\/r|shutdown\s+-r/i);
 });
 
+test('safe optimization is bounded to diagnostics and old temporary-file cleanup', () => {
+  const safeOptimize = agent.match(/function Invoke-SafeOptimization[\s\S]*?function Write-InternetShortcut/)?.[0] || '';
+  assert.match(safeOptimize, /Get-LightHealth/);
+  assert.match(safeOptimize, /Clear-SafeTempFiles/);
+  assert.match(safeOptimize, /Get-FullDiagnostic/);
+  assert.match(safeOptimize, /beforeMinFreePct/);
+  assert.match(safeOptimize, /afterMinFreePct/);
+  assert.doesNotMatch(safeOptimize, /Install-WindowsUpdates|Disable-StartupItem|Invoke-PowerCfg|Set-ItemProperty|Restart-Computer/);
+  assert.match(admin, /안전 최적화/);
+  assert.match(admin, /시작프로그램·업데이트·전원·레지스트리·재부팅은 건드리지 않습니다/);
+});
+
 test('one-click device protocol is bounded to EKODI enrollment and official API', () => {
   assert.match(api, /ekodi-device:\/\/enroll\?code=/);
   assert.match(agent, /\$ProtocolScheme = 'ekodi-device'/);
@@ -106,7 +118,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade in place instead of creating duplicate enrollment', () => {
-  assert.match(agent, /\$AgentVersion = '2\.1\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.2\.0'/);
   assert.match(agent, /Stop-ExistingAgentProcesses/);
   assert.match(agent, /Stop-ScheduledTask/);
   assert.match(agent, /Get-CimInstance Win32_Process/);

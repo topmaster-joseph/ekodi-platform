@@ -68,6 +68,7 @@ const COMMAND_POLICIES = Object.freeze({
   'startup.disable': { risk: 'maintain', confirm: true, payload: 'startup-item' },
   'startup.restore': { risk: 'maintain', confirm: true, payload: 'startup-item' },
   'maintenance.temp_cleanup': { risk: 'maintain', confirm: true },
+  'maintenance.safe_optimize': { risk: 'maintain', confirm: true },
   'updates.scan': { risk: 'observe' },
   'updates.install': { risk: 'privileged', confirm: true },
   'profile.workstation.apply': { risk: 'maintain', confirm: true },
@@ -91,6 +92,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'printers.diagnose': 'printerDiagnostics',
   'startup.scan': 'startupManagement',
   'maintenance.temp_cleanup': 'storageMaintenance',
+  'maintenance.safe_optimize': 'storageMaintenance',
   'updates.scan': 'windowsUpdate',
   'updates.install': 'windowsUpdate',
   'profile.workstation.apply': 'workstationProfile',
@@ -365,7 +367,7 @@ function deviceHealth(settings = {}, diagnostics = {}) {
     level: minFree <= 10 ? 'high' : 'medium',
     title: '저장공간 정리가 필요합니다.',
     detail: `가장 여유가 적은 드라이브의 남은 공간이 ${Math.round(minFree)}%입니다.`,
-    action: 'maintenance.temp_cleanup',
+    action: 'maintenance.safe_optimize',
   });
   if (memory !== null && memory >= 80) recommendations.push({
     level: memory >= 90 ? 'high' : 'medium',
@@ -414,7 +416,7 @@ function deviceHealth(settings = {}, diagnostics = {}) {
 
 function summarizeCommandResult(result = {}) {
   const summary = {};
-  for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
+  for (const key of ['message', 'freedMB', 'removedFiles', 'beforeMinFreePct', 'afterMinFreePct', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
   }
   return summary;
@@ -934,7 +936,7 @@ async function nextCommand(request, env, device) {
 }
 
 function mergeDiagnosticResult(device, commandType, result) {
-  if (commandType === 'diagnostics.collect' && result.diagnostics && typeof result.diagnostics === 'object') {
+  if (['diagnostics.collect', 'maintenance.safe_optimize'].includes(commandType) && result.diagnostics && typeof result.diagnostics === 'object') {
     return result.diagnostics;
   }
   const current = parseJson(device.diagnostics_json);
