@@ -33,6 +33,7 @@ const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
+const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
 
 function resolvedHost(request,env){
@@ -120,6 +121,11 @@ async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
   return new HTMLRewriter().on('link[href]',{element:e=>{const v=e.getAttribute('href')||'';if(v==='/style.css'||v.startsWith('/style.css?'))e.setAttribute('href',EKODIBIZ_ASSET_PREFIX+'style.css'+v.slice('/style.css'.length));}}).transform(routed);
 }
+async function routeDeploymentProbe(request,env){
+  if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
+  const upstream=await env.SPACE.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
+  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
+}
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
@@ -172,6 +178,7 @@ export default {
       }
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
+      if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
       if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname))return routePublicWorkspace(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
