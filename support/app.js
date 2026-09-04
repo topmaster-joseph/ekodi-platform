@@ -2,11 +2,11 @@ import {SUPPORT_STAGES,OPPORTUNITY_SERVICES,getOpportunityService,resolveOpportu
 
 const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
-const stageLabels={discovery:'발굴','fit-review':'적합도 검토','application-prep':'신청 준비',submitted:'신청 완료','document-review':'서류평가',presentation:'발표평가',selected:'선정',agreement:'협약',execution:'수행','mid-review':'중간점검','change-control':'변경관리','final-report':'결과보고',settlement:'정산',completed:'완료','follow-up':'후속사업'};
+const stageLabels={discovery:'발굴','fit-review':'적합도 검토','application-prep':'신청 준비',submitted:'신청 완료','document-review':'서류평가',presentation:'발표평가',selected:'선정',agreement:'협약',execution:'수행','mid-review':'중간점검','change-control':'변경관리',final-report:'결과보고',settlement:'정산',completed:'완료',follow-up:'후속사업'};
 const statusLabels={live:'공식 연결 운영',expanding:'공식 원천 확장 중',planned:'전문 원천 준비 중'};
 const savedWorkspace=JSON.parse(localStorage.getItem('ekodi.support.workspace')||'{}');
 const savedProfile=JSON.parse(localStorage.getItem('ekodi.support.profile')||'null')||savedWorkspace.profile||{};
-const profile={profileType:savedProfile.profileType||'개인',region:savedProfile.region||'',need:savedProfile.need||'',interests:Array.isArray(savedProfile.interests)?savedProfile.interests:[],industry:savedProfile.industry||'',businessType:savedProfile.businessType||'',businessName:savedProfile.businessName||'',registrationNumber:savedProfile.registrationNumber||'',summary:savedProfile.summary||'',recentRevenue:savedProfile.recentRevenue||'',proactiveBenefits:Boolean(savedProfile.proactiveBenefits)};
+const profile={profileType:savedProfile.profileType||'',region:savedProfile.region||'',need:savedProfile.need||'',interests:Array.isArray(savedProfile.interests)?savedProfile.interests:[],industry:savedProfile.industry||'',businessType:savedProfile.businessType||'',businessName:savedProfile.businessName||'',registrationNumber:savedProfile.registrationNumber||'',summary:savedProfile.summary||'',recentRevenue:savedProfile.recentRevenue||'',proactiveBenefits:Boolean(savedProfile.proactiveBenefits)};
 const project={id:savedWorkspace.id||'primary',name:savedWorkspace.name||'새 지원기회',stage:savedWorkspace.stage||'discovery'};
 const pathService=resolveOpportunityService(location.pathname,'all');
 const queryService=new URLSearchParams(location.search).get('service');
@@ -44,7 +44,6 @@ function readProfile(){
   profile.interests=$('interests').value.split(',').map(v=>v.trim()).filter(Boolean);
   profile.proactiveBenefits=Boolean($('proactiveBenefits')?.checked);
   profile.keywords=[profile.need,...profile.interests].filter(Boolean);
-  if(profile.profileType==='사업자'&&!profile.businessType)profile.businessType='소상공인';
   return profile;
 }
 
