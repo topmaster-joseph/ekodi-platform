@@ -2,7 +2,9 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
 const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
-const ADMIN_RETURN = 'https://admin.ekodi.kr/#storage';
+const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
+const ADMIN_RETURN_PATH = '/#storage';
+const ADMIN_RETURN = `${ADMIN_ORIGIN}${ADMIN_RETURN_PATH}`;
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -44,6 +46,20 @@ function html(message, ok = false) {
   return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${message}</p><p><a href="${ADMIN_RETURN}">EKODI 관리자 Storage로 돌아가기</a></p></body></html>`, {
     status:ok ? 200 : 400, headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}
   });
+}
+
+function safeAdminReturnPath(value) {
+  const candidate = String(value || '').trim();
+  if (!candidate || candidate.length > 2048 || !candidate.startsWith('/') || candidate.startsWith('//')) return ADMIN_RETURN_PATH;
+  try {
+    const target = new URL(candidate, ADMIN_ORIGIN);
+    if (target.origin !== ADMIN_ORIGIN) return ADMIN_RETURN_PATH;
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch { return ADMIN_RETURN_PATH; }
+}
+function adminRedirect(returnTo = ADMIN_RETURN_PATH) {
+  const location = new URL(safeAdminReturnPath(returnTo), ADMIN_ORIGIN).toString();
+  return new Response(null, { status:303, headers:{ location, 'cache-control':'no-store', 'referrer-policy':'no-referrer' } });
 }
 
 function splitList(value) { return String(value || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean); }
@@ -362,7 +378,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
       await env.DB.prepare(`INSERT INTO storage_connections(id,provider,role,account_email,account_domain,display_name,status,credential_ciphertext,credential_iv,scopes,created_by,created_at,updated_at,last_verified_at) VALUES(?,'google_drive',?,?,?,?, 'connected',?,?,?,?,?,?,?)`)
         .bind(id,payload.role,email,domain,String(profile.user?.displayName || ''),encrypted.ciphertext,encrypted.iv,SCOPES.join(' '),payload.adminEmail,now,now,now).run();
       if (payload.role === 'primary') await writeCheonggyeConnectionCache(env,{id,status:'connected',credential_ciphertext:encrypted.ciphertext,credential_iv:encrypted.iv});
-      return html(`${email} 계정이 ${payload.role === 'primary' ? 'EKODI 기본 저장소' : '보조 저장소'}로 연결되었습니다. 이제 사용할 Drive를 선택하고 EKODI 폴더를 확인할 수 있습니다.`,true);
+      return adminRedirect(payload.returnTo);
     } catch (error) { console.error('Google Drive OAuth callback failed',error); return html('Google Drive 계정 연결 중 오류가 발생했습니다.'); }
   }
 
@@ -402,11 +418,11 @@ export async function handleGoogleDriveStorageControl(request, env) {
   }
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
-    const body = await request.json().catch(() => ({})); const role = body.role === 'secondary' ? 'secondary' : 'primary';
+    const body = await request.json().catch(() => ({})); const role = body.role === 'secondary' ? 'secondary' : 'primary'; const returnTo = safeAdminReturnPath(body.returnTo);
     const nonce=b64url(crypto.getRandomValues(new Uint8Array(24))); const now=new Date(); const exp=new Date(now.getTime()+10*60*1000);
     await env.DB.prepare('DELETE FROM storage_oauth_states WHERE expires_at<=?').bind(now.toISOString()).run();
     await env.DB.prepare('INSERT INTO storage_oauth_states(nonce_hash,admin_email,connection_role,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(nonce),auth.session.email,role,exp.toISOString(),now.toISOString()).run();
-    const state=await signState(env,{nonce,role,adminEmail:auth.session.email,exp:exp.getTime()});
+    const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()});
     const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
     return json({authorizeUrl:`${AUTH_URL}?${params}`,role},200,auth.response.headers);
   }
