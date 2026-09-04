@@ -7,8 +7,9 @@ on:
     paths:
       - 'site-worker.js'
       - 'api-worker.js'
-      - 'control-center.html'
-      - 'control-center.js'
+      - 'admin-shell.html'
+      - 'admin-authenticated-shell.js'
+      - 'admin-central-handoff.js'
       - 'test/**'
       - '.github/workflows/production-gate.yml'
   schedule:
@@ -48,18 +49,20 @@ jobs:
             grep -Fq "$needle" /tmp/body
           }
 
-          verify_admin_shell() {
+          verify_admin() {
             url="$1"
+            route="$2"
             code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
             echo "ADMIN | $url | HTTP $code"
             [ "$code" = '200' ]
-            grep -Fiq 'x-ekodi-route: admin-shell' /tmp/headers
+            grep -Fiq "x-ekodi-route: $route" /tmp/headers
             ! grep -Fiq '^location:' /tmp/headers
             grep -Fq '<title>EKODI Admin</title>' /tmp/body
           }
 
-          verify_admin_shell 'https://admin.ekodi.kr/'
-          verify_admin_shell 'https://admin.ekodi.kr/admin'
+          verify_admin 'https://admin.ekodi.kr/' 'admin-shell'
+          verify_admin 'https://admin.ekodi.kr/admin' 'admin-shell'
+          verify_admin 'https://ekodi.kr/admin' 'admin-fallback'
           retired_code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/control-center.html')
           echo "ADMIN RETIRED | https://admin.ekodi.kr/control-center.html | HTTP $retired_code"
           [ "$retired_code" = '404' ]

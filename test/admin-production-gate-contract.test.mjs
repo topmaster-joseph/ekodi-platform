@@ -9,13 +9,18 @@ const deploy = read('.github/workflows/deploy.yml');
 const performance = read('.github/workflows/ecosystem-performance-watch.yml');
 
 test('production verification follows the current Admin Shell contract', () => {
-  assert.match(production, /x-ekodi-route: admin-shell/);
+  assert.match(production, /x-ekodi-route: \$route/);
   assert.match(production, /<title>EKODI Admin<\/title>/);
   assert.match(production, /https:\/\/admin\.ekodi\.kr\/admin/);
+  assert.match(production, /https:\/\/ekodi\.kr\/admin/);
+  assert.match(production, /admin-shell\.html/);
+  assert.match(production, /admin-authenticated-shell\.js/);
+  assert.match(production, /admin-fallback/);
   assert.match(production, /retired_code.*control-center\.html/);
   assert.match(production, /x-ekodi-route: admin-retired/);
   assert.match(production, /\[ "\$retired_code" = '404' \]/);
   assert.doesNotMatch(production, /admin-control-center/);
+  assert.doesNotMatch(production, /control-center\.js/);
 });
 
 test('admin monitors use the same current shell marker', () => {
