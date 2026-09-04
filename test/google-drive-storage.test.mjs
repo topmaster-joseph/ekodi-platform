@@ -54,6 +54,16 @@ test('admin browser uses same-origin Storage API and localized failure UX', () =
   assert.match(admin, /t\('저장소','Storage'\)/);
 });
 
+test('successful Google Drive OAuth returns directly to the exact admin route without an intermediate success page', () => {
+  assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
+  assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
+  assert.ok(control.includes("const returnTo = safeAdminReturnPath(body.returnTo);"));
+  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()})"));
+  assert.ok(control.includes("return adminRedirect(payload.returnTo);"));
+  assert.ok(control.includes("status:303"));
+  assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
+  assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
+});
 test('Admin Worker proxies Storage through a Cloudflare service binding', () => {
   assert.match(siteConfig, /\[\[services\]\]/);
   assert.match(siteConfig, /binding = "STORAGE"/);
