@@ -26,6 +26,25 @@ test('preserves a better external option instead of favoring EKODI margin', () =
   assert.equal(result.status, 'ready');
   assert.equal(result.choiceSet[0].id, 'external-option');
   assert.ok(result.choiceSet.some(item => item.id === 'ekodi-option'));
+  assert.ok(result.audit.rulesTriggered.includes('provider_choice_diversity_preserved'));
+});
+
+test('keeps one viable cross-provider alternative even when five near-top options come from one source', () => {
+  const result = evaluateJubileeRecommendation({
+    candidates: [
+      { id: 'external-1', source: 'external', userFit: 0.99 },
+      { id: 'external-2', source: 'external', userFit: 0.98 },
+      { id: 'external-3', source: 'external', userFit: 0.97 },
+      { id: 'external-4', source: 'external', userFit: 0.96 },
+      { id: 'external-5', source: 'external', userFit: 0.95 },
+      { id: 'ekodi-option', source: 'ekodi', userFit: 0.7 },
+    ],
+  });
+
+  assert.equal(result.choiceSet.length, 5);
+  assert.equal(result.choiceSet[0].id, 'external-1');
+  assert.ok(result.choiceSet.some(item => item.id === 'ekodi-option'));
+  assert.ok(result.choiceSet.some(item => item.source === 'external'));
 });
 
 test('excludes an undisclosed commercial relationship', () => {
