@@ -2,12 +2,16 @@
   "version": 1,
   "canonical": {
     "root": "https://ekodi.kr/",
-    "mall": "https://ekodi.kr/mall",
+    "mall": "https://ekodi.kr/ekodibiz/mall",
     "admin": "https://admin.ekodi.kr/",
-    "auth": "https://auth.ekodi.kr/"
+    "auth": "https://auth.ekodi.kr/",
+    "ekodichurch": "https://ekodi.kr/ekodichurch",
+    "ekodichurchMarketing": "https://ekodi.kr/ekodichurch/marketing",
+    "cgma": "https://ekodi.kr/cgma",
+    "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
   },
   "policy": {
-    "mallPublicUrl": "https://ekodi.kr/mall",
+    "mallPublicUrl": "https://ekodi.kr/ekodibiz/mall",
     "legacyMallUrlsAllowed": false,
     "sharedSiteProductionOwner": "deploy-site-core.yml"
   }

@@ -2,12 +2,15 @@ import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js
 
 const ORIGINS = Object.freeze({
   'church.ekodi.kr': 'ekodi-church.pages.dev',
-  'lab.ekodi.kr': 'ekodilab.pages.dev',
-  'mall.ekodi.kr': 'ekodi-mall.pages.dev',
-  'mall.biz.ekodi.kr': 'ekodi-mall.pages.dev'
+  'lab.ekodi.kr': 'ekodilab.pages.dev'
 });
 
 const GMAIL = 'https://mail.google.com/';
+const MALL_CANONICAL = 'https://ekodi.kr/ekodibiz/mall';
+const CANONICAL_REDIRECTS = Object.freeze({
+  'mall.ekodi.kr': MALL_CANONICAL,
+  'mall.biz.ekodi.kr': MALL_CANONICAL
+});
 
 const REDIRECTS = Object.freeze({
   'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live',
@@ -29,7 +32,7 @@ const BIZ_CSP = [
   "object-src 'none'"
 ].join('; ');
 
-const STAGING_HOSTS = new Set(['biz.ekodi.kr', ...Object.keys(ORIGINS), ...Object.keys(REDIRECTS)]);
+const STAGING_HOSTS = new Set(['biz.ekodi.kr', ...Object.keys(ORIGINS), ...Object.keys(REDIRECTS), ...Object.keys(CANONICAL_REDIRECTS)]);
 function requestHost(request, env, incoming) {
   if (env?.ENVIRONMENT !== 'staging') return incoming.hostname;
   const requested = String(request.headers.get('x-ekodi-staging-host') || '').trim().toLowerCase();
@@ -50,11 +53,11 @@ function businessHub() {
 </head>
 <body>
 <main class="shell">
-<header class="top"><a class="brand" href="https://biz.ekodi.kr"><span class="mark">B</span><span>EKODI BIZ</span></a><a class="root" href="https://ekodi.kr">EKODI ↗</a></header>
+<header class="top"><a class="brand" href="https://ekodi.kr/ekodibiz"><span class="mark">B</span><span>EKODI BIZ</span></a><a class="root" href="https://ekodi.kr">EKODI ↗</a></header>
 <section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 하나의 계층형 도메인 체계로 운영합니다.</p><span class="context">biz.ekodi.kr · EKODI → BIZ → SERVICE</span></section>
 <section class="grid" aria-label="EKODI BIZ 서비스">
 <a class="card" href="https://trade.biz.ekodi.kr"><div><span class="icon">T</span><strong>Global Trading</strong><small>글로벌 B2B 무역 · GPU · AI Server · Components</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://mall.biz.ekodi.kr"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/ekodibiz/mall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://pay.biz.ekodi.kr"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://mail.biz.ekodi.kr"><div><span class="icon">@</span><strong>Business Mail</strong><small>Google Workspace 기반 비즈니스 메일 로비</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://live.biz.ekodi.kr"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
@@ -79,6 +82,21 @@ export default {
   async fetch(request, env = {}) {
     const incoming = new URL(request.url);
     const host = requestHost(request, env, incoming);
+
+    const canonicalBase = CANONICAL_REDIRECTS[host];
+    if (canonicalBase) {
+      const target = new URL(canonicalBase);
+      const suffix = incoming.pathname === '/' ? '' : incoming.pathname;
+      target.pathname = `${target.pathname.replace(/\/$/, '')}${suffix}`;
+      target.search = incoming.search;
+      return Response.redirect(target.toString(), 308);
+    }
+
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      return Response.redirect(target.toString(), 307);
+    }
 
     if (host === 'biz.ekodi.kr' && (incoming.pathname === '/' || incoming.pathname === '/index.html')) {
       return injectEkodiShell(businessHub(), 'biz');

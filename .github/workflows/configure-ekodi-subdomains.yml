@@ -81,6 +81,6 @@ jobs:
       - name: Note reserved EKODI addresses
         run: |
           echo 'Active/attached in this workflow: church.ekodi.kr, lab.ekodi.kr'
-          echo 'Mall canonical URL: https://ekodi.kr/mall'
+          echo 'Mall canonical URL: https://ekodi.kr/ekodibiz/mall'
           echo 'Already managed by Wrangler: books.ekodi.kr'
           echo 'Reserved for service deployment: biz.ekodi.kr, trade.ekodi.kr, ins.ekodi.kr, pay.ekodi.kr, mission.ekodi.kr, community.ekodi.kr, edu.ekodi.kr, media.ekodi.kr, event.ekodi.kr, give.ekodi.kr, admin.ekodi.kr, api.ekodi.kr'

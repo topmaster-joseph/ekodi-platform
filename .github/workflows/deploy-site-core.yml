@@ -12,7 +12,16 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'ekodibiz-invest-business.js'
+      - 'ekodibiz-invest-admin-page.js'
       - 'platform-router-entry-worker.js'
+      - 'workspace-route-policy.js'
+      - 'workspace-admin-page.js'
+      - 'workspace-trade-admin-page.js'
+      - 'workspace-trade-portal.js'
+      - 'ai-gateway-page.js'
+      - 'mail-user-page.js'
+      - 'mail-admin-page.js'
       - 'tax-portal-worker.js'
       - 'tax-service-worker.js'
       - 'finance-entry-worker.js'
@@ -37,6 +46,13 @@ on:
       - 'admin-ai-governor.js'
       - 'admin-secret-generator.js'
       - 'admin-demand-loader.js'
+      - 'admin-public-site-controls.js'
+      - 'ai-ops-admin.js'
+      - 'ai-ops-admin.css'
+      - 'communication-admin.js'
+      - 'communication-admin.css'
+      - 'storage-admin.js'
+      - 'storage-admin.css'
       - 'admin-menu-registry.js'
       - 'admin-menu-layout.js'
       - 'admin-sidebar.js'
@@ -51,6 +67,7 @@ on:
       - '_headers'
       - 'auth-site/**'
       - 'marketing-ai-admin.js'
+      - 'marketing-ai-channel-manager.js'
       - 'marketing-ai-admin.css'
       - 'config/ecosystem-services.json'
       - 'scripts/ecosystem-registry.mjs'
@@ -102,9 +119,10 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js admin-demand-loader.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/validate-user-ui-dna.mjs; do
+          for f in site-worker.js platform-router-entry-worker.js workspace-admin-page.js workspace-trade-admin-page.js workspace-trade-portal.js ai-gateway-page.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js admin-demand-loader.js admin-public-site-controls.js ai-ops-admin.js communication-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/validate-user-ui-dna.mjs; do
             node --check "$f"
           done
+          node --test test/admin-communication.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/public-workspace-gateway.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
           if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
@@ -112,12 +130,25 @@ jobs:
           test -f mall.html
           test -f mall.css
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/mall' config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
           fi
           test -f marketing-ai-admin.css
+          test -f admin-public-site-controls.js
+          test -f ai-ops-admin.css
+          test -f communication-admin.css
+          grep -Fq 'EKODI COMMUNICATION ADMIN' communication-admin.js
+          grep -Fq 'https://mail.ekodi.kr/admin' communication-admin.js
+          grep -Fq 'https://live.ekodi.kr/' communication-admin.js
+          grep -Fq "const API='/api/control/storage/google'" storage-admin.js
+          ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' storage-admin.js
+          grep -Fq '/api/control/public-sites' admin-public-site-controls.js
+          grep -Fq 'admin-public-site-controls.js' admin-authenticated-shell.js
+          grep -Fq 'EVOLUTION INTELLIGENCE' ai-ops-admin.js
+          grep -Fq '/api/control/evolution' ai-ops-admin.js
+          grep -Fq '.ai-evolution-block' ai-ops-admin.css
           test -f campus-actions.css
           test -f admin-shell.html
           test -f admin-shell.css
@@ -129,6 +160,8 @@ jobs:
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
+          ! grep -Fq "comm:{scripts:['communication-admin.js']" admin-demand-loader.js
+          grep -Fq "section==='communication')return import('./communication-admin.js')" admin-menu-layout.js
           grep -Fq "['campus','campus']" admin-menu-layout.js
           grep -Fq "requestDemand('campus')" admin-menu-layout.js
           grep -Fq 'position:fixed!important' admin-shell.css
@@ -152,10 +185,20 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
+          for f in dist/index.html dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/communication-admin.js dist/communication-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
             test -f "$f"
           done
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
+          grep -Fq '/api/control/public-sites' dist/admin-public-site-controls.js
+          grep -Fq 'admin-public-site-controls.js' dist/admin-authenticated-shell.js
+          grep -Fq 'EVOLUTION INTELLIGENCE' dist/ai-ops-admin.js
+          grep -Fq '/api/control/evolution' dist/ai-ops-admin.js
+          grep -Fq '.ai-evolution-block' dist/ai-ops-admin.css
+          grep -Fq 'EKODI COMMUNICATION ADMIN' dist/communication-admin.js
+          grep -Fq 'https://mail.ekodi.kr/admin' dist/communication-admin.js
+          grep -Fq 'https://live.ekodi.kr/' dist/communication-admin.js
+          grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js
+          grep -Fq 'currentAdminReturnPath' dist/storage-admin.js
           grep -Fq 'serviceOrigins' dist/auth-workspace-target.js
           grep -Fq "button.dataset.section = 'marketing-ai'" dist/marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' dist/marketing-ai-admin.js
@@ -172,7 +215,7 @@ jobs:
           grep -Fq "section.id = 'campusPanel'" dist/campus-actions.js
           grep -Fq "section.dataset.panel = 'campus'" dist/campus-actions.js
           grep -Fq "button.dataset.section = 'campus'" dist/campus-actions.js
-          grep -Fq "demand('campus')" dist/admin-menu-layout.js
+          grep -Fq 'EKODIAdminDemand.activate' dist/admin-menu-layout.js
           grep -Fq 'position:fixed!important' dist/admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
@@ -244,7 +287,12 @@ jobs:
           const urls=new Set([
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
-            'https://ekodi.kr/mall',
+            'https://ekodi.kr/ekodibiz/mall',
+            'https://ekodi.kr/ekodibiz/marketing-ai',
+            'https://ekodi.kr/jadam/marketing',
+            'https://ekodi.kr/pizzamaru/marketing',
+            'https://ekodi.kr/yogurt/marketing',
+            'https://ekodi.kr/cgma/marketing',
             'https://ekodi.kr/admin',
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
@@ -255,7 +303,10 @@ jobs:
             'https://live.church.ekodi.kr/',
             'https://cloud.ekodi.kr/',
             'https://marketing.ekodi.kr/',
+            'https://cgma.or.kr/',
+            'https://www.cgma.or.kr/',
             'https://cgma.ekodi.kr/',
+            'https://ekodi.kr/cgma/',
             'https://biz.ekodi.kr/',
             'https://trade.biz.ekodi.kr/',
             'https://pay.ekodi.kr/',
@@ -274,6 +325,16 @@ jobs:
             check "$url" || failed=1
           done < "$urls_file"
 
+          : > /tmp/mail-body
+          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
+            grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body || failed=1
+            grep -Fq 'id="accountLabel"' /tmp/mail-body || failed=1
+            grep -Fq 'id="searchForm"' /tmp/mail-body || failed=1
+            grep -Fq 'id="providerLink"' /tmp/mail-body || failed=1
+          else
+            failed=1
+          fi
+
           for asset in \
             'https://admin.ekodi.kr/admin-shell.css' \
             'https://admin.ekodi.kr/admin-demand-loader.js' \
@@ -282,6 +343,7 @@ jobs:
             'https://admin.ekodi.kr/admin-sidebar.js' \
             'https://admin.ekodi.kr/campus-actions.js' \
             'https://admin.ekodi.kr/marketing-ai-admin.js' \
+            'https://admin.ekodi.kr/admin-public-site-controls.js' \
             'https://auth.ekodi.kr/auth-workspace-target.js'; do
             check "$asset" || failed=1
           done
@@ -384,7 +446,7 @@ jobs:
             echo '' >> "$GITHUB_STEP_SUMMARY"
             echo '| Menu | Group | Result | Duration |' >> "$GITHUB_STEP_SUMMARY"
             echo '|---|---|---|---:|' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.results[] | "| \(.id) | \(.group) | ✅ | \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "| \(.id) | \(.group) | ??| \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived E2E session

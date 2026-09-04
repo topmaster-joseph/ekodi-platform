@@ -6,6 +6,7 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
@@ -53,7 +55,7 @@ jobs:
           grep -Fq 'tenant_members+RLS' supabase/functions/workspace-api/index.ts
           grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/resolve' space/app.js
-          grep -Fq '/personal/{slug} | /org/{slug} | /group/{slug} | /project/{slug}' space-worker.js
+          grep -Fq "routeModel:'/{slug}'" space-worker.js
           test -f deploy/manifests/space.worker.json
 
   staging:
@@ -130,7 +132,7 @@ jobs:
             for attempt in $(seq 1 18); do
               root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
               health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
-              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/org/deployment-probe' || true)
+              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/deployment-probe' || true)
               if [[ "$root" == '200' && "$health" == '200' && "$route" == '200' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-live.html && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
                 echo 'Operating Space production bootstrap verified.'
                 exit 0

@@ -47,3 +47,14 @@ Security-sensitive code is expected to preserve:
 - automated security-baseline validation in CI.
 
 A security control must not be bypassed merely to make a release pass.
+
+## Secure projection
+
+EKODI uses purpose-bound minimum disclosure. Restricted data must be removed before serialization rather than hidden with CSS or client-side conditions.
+
+- secrets, reusable credentials and private keys are never projection outputs;
+- source paths, repositories, branches, internal endpoints, storage artifacts and infrastructure topology do not cross ordinary user/admin/experience or external operational-AI boundaries;
+- user-self, workspace-member, safe-admin, experience and external-AI profiles are distinct;
+- canonical audit and storage records stay inside EKODI while outbound AI identifiers are pseudonymized;
+- view permission does not imply export, download, API or raw-data permission;
+- deeper diagnostic access must use a separately governed path and must not reveal reusable secrets.

@@ -17,26 +17,22 @@ test('EKODIBIZ stays separate from common Business OS', () => {
   assert.match(adapter, /from '\.\/ekodibiz-worker\.js'/);
 });
 
-test('conversation-first UI exposes the revenue loop', () => {
-  assert.match(html, /무엇을 이루고 싶으세요/);
-  assert.match(html, /가치를 발견하고, 사업으로 만들고, 수익이 흐르게 합니다/);
-  for (const label of ['발견','상품화','홍보','상담·판매','결제','실행','성장']) assert.match(html, new RegExp(label));
-  assert.match(app, /\/api\/consult/);
-  assert.match(app, /\/api\/offers/);
-  assert.match(app, /\/api\/checkout-intent/);
-  assert.match(app, /\/api\/ops\/status/);
+test('public UI stays simple while the revenue engine remains available behind operations', () => {
+  assert.match(html, /WHAT WE DO/);
+  assert.match(html, /관계자 로그인/);
+  assert.match(html, /https:\/\/ekodi\.kr\/ekodibiz\/trade/);
+  assert.doesNotMatch(html, /무엇을 이루고 싶으세요/);
+  assert.doesNotMatch(html, /id="goalForm"/);
+  for (const endpoint of ['/api/consult','/api/offers','/api/checkout-intent','/api/ops/status']) assert.match(app, new RegExp(endpoint.replaceAll('/','\\/')));
 });
 
-test('guided start separates direct input from selectable goals and pins compact progress', () => {
-  assert.match(html, /직접 입력하기/);
-  assert.match(html, /더 많은 종류에서 선택하기/);
-  assert.match(html, /선택만으로 실행하지 않고/);
-  assert.match(html, /data-progress-step="discover"/);
-  assert.match(app, /journey-started/);
-  assert.match(app, /IntersectionObserver/);
-  assert.match(app, /state\.selectedPrompt/);
-  assert.match(css, /body\.journey-started \.flow/);
+test('public company page separates open information from the private partner workspace', () => {
+  assert.match(html, /PRIVATE PARTNER WORKSPACE/);
+  assert.match(html, /공개 정보는 간결하게/);
+  assert.match(html, /공식 거래기록/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz">/);
   assert.match(css, /position:sticky/);
+  assert.match(css, /@media\(max-width:600px\)/);
 });
 
 test('personalized catalog offers several repeatable revenue paths', () => {
@@ -51,8 +47,8 @@ test('shared user footer stays centered and keeps legal and contact routes visib
   assert.match(html, /이용약관/);
   assert.match(html, /mailto:ekodibiz@gmail\.com/);
   assert.match(html, /Turn value into a business/);
-  assert.match(css, /\.site-footer/);
-  assert.match(css, /text-align:center/);
+  assert.match(css, /\.footer/);
+  assert.match(css, /grid-template-columns/);
 });
 
 test('high impact actions are approval-gated and prices are not invented', () => {
@@ -88,8 +84,9 @@ test('free-tier operations stay event-driven without consuming a dedicated cron 
   assert.match(worker, /ctx\?\.waitUntil\(processSafeTasks\(env\)\)/);
 });
 
-test('anonymous intake is disclosed and UI forwards lead identity without contact data', () => {
-  assert.match(html, /이 단계에서는 이름·전화번호·이메일을 수집하지 않습니다/);
-  assert.match(app, /leadId:state\.leadId/);
+test('public page collects no anonymous intake while backend safeguards remain explicit', () => {
+  assert.doesNotMatch(html, /<form/i);
+  assert.doesNotMatch(html, /name=["'](?:email|phone|name)["']/i);
   assert.match(worker, /containsContactData: false/);
+  assert.match(worker, /personalDataMode: 'anonymous-goal-only'/);
 });

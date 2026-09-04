@@ -23,6 +23,13 @@
   let started=false;
   let wanted=true;
   let gestureArmed=false;
+  const LABELS=Object.freeze({
+    'ko-KR':{play:'♫ MR 재생',stop:'♫ MR 끄기',playAria:'배경 CCM MR 재생',stopAria:'배경 CCM MR 끄기'},
+    en:{play:'♫ Play MR',stop:'♫ Stop MR',playAria:'Play background CCM instrumental',stopAria:'Stop background CCM instrumental'},
+    'zh-CN':{play:'♫ 播放 MR',stop:'♫ 关闭 MR',playAria:'播放背景 CCM 伴奏',stopAria:'关闭背景 CCM 伴奏'},
+    ja:{play:'♫ MR 再生',stop:'♫ MR 停止',playAria:'背景 CCM MR を再生',stopAria:'背景 CCM MR を停止'}
+  });
+  function locale(){const raw=String(window.EKODIUserLanguage?.getLocale?.()||document.documentElement.lang||'ko-KR').toLowerCase();if(raw.startsWith('en'))return'en';if(raw.startsWith('zh'))return'zh-CN';if(raw.startsWith('ja'))return'ja';return'ko-KR';}
 
   const progression=[
     {root:48,notes:[60,64,67]},
@@ -156,10 +163,11 @@
     const button=document.getElementById(buttonId);
     if(!button)return;
     const active=wanted&&started;
-    button.textContent=active?'♫ MR 끄기':'♫ MR 재생';
+    const labels=LABELS[locale()]||LABELS['ko-KR'];
+    button.textContent=active?labels.stop:labels.play;
     button.setAttribute('aria-pressed',active?'true':'false');
-    button.setAttribute('aria-label',active?'배경 CCM MR 끄기':'배경 CCM MR 재생');
-    button.title=active?'배경 CCM MR 끄기':'배경 CCM MR 재생';
+    button.setAttribute('aria-label',active?labels.stopAria:labels.playAria);
+    button.title=active?labels.stopAria:labels.playAria;
   }
   function armGesture(){
     if(gestureArmed||!wanted)return;
@@ -177,7 +185,7 @@
     document.addEventListener('keydown',resume,true);
   }
   function header(){
-    return document.querySelector('[data-ekodi-user-header-root]')||document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]');
+    return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback])')||document.querySelector('[data-ekodi-user-header-root]')||document.querySelector('header[role="banner"],body > header,.site-header,.topbar,.app-header,.main-header,[data-ekodi-fixed-header]');
   }
   function actionContainer(target){
     return target?.querySelector?.('.ekodi-user-ui-fallback-header__nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions,#main-nav,nav')||target;
@@ -195,13 +203,13 @@
   function installButton(){
     if(document.getElementById(buttonId)){placeButton();return;}
     const style=document.createElement('style');
-    style.dataset.ekodiCcmMr='v1';
-    style.textContent=`#${buttonId}{position:static;z-index:auto;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:86px;min-height:34px;margin-inline-start:2px;padding:0 10px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:999px;background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 92%,transparent);color:inherit;font:700 12px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:none;backdrop-filter:blur(10px);cursor:pointer;touch-action:manipulation}#${buttonId}:hover{background:color-mix(in srgb,var(--ekodi-user-chrome-bg,#fff) 98%,transparent)}#${buttonId}:focus-visible{outline:2px solid color-mix(in srgb,var(--ekodi-user-chrome-link,#2563eb) 32%,transparent);outline-offset:2px}#${buttonId}[data-ekodi-floating="true"]{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:2147482500;min-height:40px;background:rgba(255,255,255,.94);color:#0f172a;box-shadow:0 8px 24px rgba(15,23,42,.12)}@media(max-width:480px){#${buttonId}{min-width:72px;min-height:32px;padding:0 8px;font-size:11px}#${buttonId}[data-ekodi-floating="true"]{right:10px;bottom:10px;min-width:86px}}`;
+    style.dataset.ekodiCcmMr='v2';
+    style.textContent=`#${buttonId}{position:static!important;z-index:auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;min-width:92px!important;min-height:36px!important;margin-inline-start:2px!important;padding:0 12px!important;border:1px solid rgba(37,82,61,.22)!important;border-radius:999px!important;background:#fbfcfa!important;color:#20362b!important;-webkit-text-fill-color:#20362b!important;font:750 12px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif!important;box-shadow:0 1px 2px rgba(20,45,34,.05)!important;text-shadow:none!important;backdrop-filter:blur(10px)!important;cursor:pointer!important;touch-action:manipulation!important}#${buttonId}:hover{background:#f5f8f5!important;border-color:rgba(37,82,61,.32)!important}#${buttonId}[aria-pressed="true"]{background:#edf5f0!important;color:#173d2d!important;-webkit-text-fill-color:#173d2d!important;border-color:#8fb4a0!important}#${buttonId}:focus-visible{outline:2px solid rgba(49,93,72,.34)!important;outline-offset:2px!important}#${buttonId}[data-ekodi-floating="true"]{position:fixed!important;right:max(14px,env(safe-area-inset-right))!important;bottom:max(14px,env(safe-area-inset-bottom))!important;z-index:2147482500!important;min-height:40px!important;background:#fff!important;color:#173d2d!important;box-shadow:0 8px 24px rgba(15,23,42,.12)!important}@media(max-width:480px){#${buttonId}{min-width:78px!important;min-height:32px!important;padding:0 9px!important;font-size:11px!important}#${buttonId}[data-ekodi-floating="true"]{right:10px!important;bottom:10px!important;min-width:86px!important}}`;
     document.head.append(style);
     const button=document.createElement('button');
     button.type='button';
     button.id=buttonId;
-    button.dataset.ekodiCcmMr='v1';
+    button.dataset.ekodiCcmMr='v2';
     button.addEventListener('click',async()=>{
       if(wanted&&started){
         wanted=false;
@@ -229,7 +237,7 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
   window.addEventListener('ekodi:user-header-ready',()=>placeButton());
-  window.addEventListener('ekodi:locale-change',()=>placeButton());
+  window.addEventListener('ekodi:locale-change',()=>{updateButton();placeButton();});
   window.setTimeout(()=>placeButton(),250);
   window.setTimeout(()=>placeButton(),1200);
 

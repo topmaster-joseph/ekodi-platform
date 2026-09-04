@@ -396,7 +396,7 @@
       "id": "mall",
       "name": "에코디몰",
       "domain": "ekodi.kr",
-      "url": "https://ekodi.kr/mall",
+      "url": "https://ekodi.kr/ekodibiz/mall",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 143,

@@ -1,0 +1,19 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-03-VERIFICATION-FIRST-EVOLUTION-V1.3",
+  "date": "2026-09-03",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit super-administrator instruction to systemize and production-deploy verification-first, security-native platform evolution intelligence",
+  "constitutionVersion": "1.3.0",
+  "summary": "Make EKODI a verification-first, security-native and continuously evolving intelligent platform that combines external technology evidence with internal operational telemetry and presents traceable recommendations to the platform super administrator.",
+  "affectedAreas": ["ai-governance", "security", "observability", "operations", "architecture", "cost-control", "release"],
+  "evidencePolicy": {
+    "recommendationLinksRequired": true,
+    "crossVerificationPreferred": true,
+    "sourceMetadataRequired": ["title", "publisher", "url", "verifiedAt"],
+    "unsupportedRecommendationMustNotPublish": true
+  },
+  "authority": "ekodi_platform_super_administrator",
+  "rollbackPlan": "revert the v1.3 constitutional and runtime changes through the guarded release pipeline; preserve existing AI Ops and Control API behavior while disabling Evolution Intelligence adapters"
+}

@@ -1,7 +1,7 @@
 (() => {
   const API = 'https://api.ekodi.kr';
   const ACCOUNT = 'coupang-ekodibiz';
-  const MALL = 'https://ekodi.kr/mall';
+  const MALL = 'https://ekodi.kr/ekodibiz/mall';
   const TRACKING_URL = 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/mall_sales_events';
   const TRACKING_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';
@@ -139,6 +139,30 @@
         <div class="integration-security-note"><strong>보안 원칙</strong><span>Access Key와 Secret Key는 브라우저나 데이터베이스에 저장하지 않고 서버의 암호화된 Worker Secret으로만 사용합니다.</span></div>
       </article>
 
+      <article class="integration-provider" aria-labelledby="multiAffiliateTitle">
+        <div class="integration-provider-top">
+          <div class="integration-provider-brand"><span class="integration-provider-logo">＋</span><div><small>MULTI AFFILIATE MARKETPLACE</small><strong id="multiAffiliateTitle">다른 제휴 판매처 상품 연결</strong><p id="affiliateProviderSummary">등록된 제휴처를 확인하는 중입니다.</p></div></div>
+          <span class="integration-status connected">공통 커넥터</span>
+        </div>
+        <form id="affiliateExternalProductForm" class="integration-account-form">
+          <div class="integration-form-heading"><div><strong>제휴상품 등록</strong><p>제휴처 API가 없어도 구매 링크만 있으면 에코디몰에 즉시 연결할 수 있습니다.</p></div><span class="integration-mode">MANUAL</span></div>
+          <div class="integration-form-grid">
+            <label>제휴처 코드<input name="providerKey" maxlength="80" placeholder="예: linkprice" required></label>
+            <label>제휴처 이름<input name="providerName" maxlength="120" placeholder="예: LinkPrice" required></label>
+            <label>상품명<input name="productName" maxlength="240" required></label>
+            <label>카테고리<input name="category" maxlength="120" placeholder="건강 · 식품 · 생활"></label>
+            <label>가격(원)<input name="priceKrw" type="number" min="0" step="1" placeholder="0"></label>
+            <label>제휴처 상품 ID<input name="sourceId" maxlength="160" placeholder="선택"></label>
+            <label class="integration-wide">제휴 구매 링크<input name="affiliateUrl" type="url" inputmode="url" placeholder="https://..." required></label>
+            <label class="integration-wide">원본 상품 링크<input name="destinationUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
+            <label class="integration-wide">상품 이미지 링크<input name="imageUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
+            <label class="integration-wide">제휴 고지 문구<textarea name="disclosureText" maxlength="1000" rows="2" placeholder="판매처별 제휴 고지 문구가 있으면 입력"></textarea></label>
+          </div>
+          <div class="integration-form-actions"><button class="primary" type="submit">에코디몰에 상품 등록</button><span id="affiliateExternalProductState"></span></div>
+        </form>
+        <div class="integration-security-note"><strong>운영 원칙</strong><span>판매처와 제휴 관계를 투명하게 표시하고, 판매 수수료보다 사용자 상황과 적합성을 우선해 추천합니다.</span></div>
+      </article>
+
       <div class="integration-summary-grid" aria-label="에코디몰 최근 운영 현황">
         <article><small>운영 상품</small><strong id="affiliateProducts30d">—</strong></article>
         <article><small>제휴 원장 클릭</small><strong id="affiliateClicks30d">—</strong></article>
@@ -149,6 +173,7 @@
     content.append(panel);
 
     const accountForm = document.querySelector('#affiliateAccountForm');
+    const externalProductForm = document.querySelector('#affiliateExternalProductForm');
     const message = document.querySelector('#affiliateMessage');
     const trackingMessage = document.querySelector('#mallTrackingMessage');
     const runButton = document.querySelector('#affiliateAutomationRun');
@@ -206,7 +231,13 @@
       document.querySelector('#affiliateRevenue30d').textContent = `${Number(s.revenue30dKrw || 0).toLocaleString('ko-KR')}원`;
       renderAutomation(automation);
 
-      const account = (data.accounts || []).find(item => item.id === ACCOUNT) || (data.accounts || [])[0];
+      const accounts = data.accounts || [];
+      const account = accounts.find(item => item.id === ACCOUNT) || accounts[0];
+      const providerSummary = document.querySelector('#affiliateProviderSummary');
+      if (providerSummary) {
+        const names = [...new Set(accounts.map(item => item.displayName || item.providerKey).filter(Boolean))];
+        providerSummary.textContent = names.length ? `현재 ${names.length}개 연결 · ${names.join(' · ')}` : '등록된 제휴처가 없습니다.';
+      }
       const state = document.querySelector('#affiliateConnectionState');
       const mode = document.querySelector('#affiliateConnectionMode');
       const capabilities = document.querySelector('#affiliateCapabilities');
@@ -293,6 +324,33 @@
         await loadOverview();
       } catch (error) {
         setMessage(error.message, true);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    externalProductForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const state = document.querySelector('#affiliateExternalProductState');
+      submit.disabled = true;
+      if (state) state.textContent = '등록 중…';
+      try {
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.priceKrw = Number(payload.priceKrw || 0);
+        const data = await api('/api/affiliate/products', { method: 'POST', body: JSON.stringify(payload) });
+        setMessage(`${data.providerName} 상품을 에코디몰에 등록했습니다.`);
+        if (state) state.textContent = `등록 완료 · 링크 #${data.linkId}`;
+        const keep = { providerKey: form.elements.providerKey.value, providerName: form.elements.providerName.value, disclosureText: form.elements.disclosureText.value };
+        form.reset();
+        form.elements.providerKey.value = keep.providerKey;
+        form.elements.providerName.value = keep.providerName;
+        form.elements.disclosureText.value = keep.disclosureText;
+        await loadOverview();
+      } catch (error) {
+        setMessage(error.message, true);
+        if (state) state.textContent = '등록 실패';
       } finally {
         submit.disabled = false;
       }

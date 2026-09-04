@@ -1,7 +1,17 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
+import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
+const MALL_PREFIX = '/ekodibiz/mall';
+const LEGACY_MALL_PREFIX = '/mall';
+const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
+const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
+const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
@@ -75,6 +85,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-finance.css',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
+  '/admin-public-site-controls.js',
   '/admin-demand-loader.js',
   '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
@@ -101,6 +112,8 @@ const ADMIN_ASSETS = new Set([
   '/mission-control-admin.js',
   '/work-admin.css',
   '/work-admin.js',
+  '/communication-admin.css',
+  '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
@@ -143,15 +156,19 @@ const PUBLIC_CSP = [
 
 const MALL_CSP = [
   "default-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co",
-  "img-src 'self' data: https:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com",
+  "connect-src 'self' https://api.ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "frame-src https://*.tosspayments.com",
+  "img-src 'self' data: blob: https:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://ekodibiz.kr https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
+
+const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://admin.ekodi.kr');
 
 const ADMIN_CSP = [
   "default-src 'self'",
@@ -159,7 +176,7 @@ const ADMIN_CSP = [
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
   "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
-  "frame-src https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -213,6 +230,93 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
+}
+
+function isMallPath(pathname) {
+  return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
+}
+
+function isLegacyMallPath(pathname) {
+  return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
+}
+
+function isLegacyEkodiBizPath(pathname) {
+  return pathname === LEGACY_EKODIBIZ_PREFIX || pathname.startsWith(`${LEGACY_EKODIBIZ_PREFIX}/`);
+}
+
+function redirectLegacyEkodiBizPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `/ekodibiz${target.pathname.slice(LEGACY_EKODIBIZ_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'ekodibiz-legacy-canonical-redirect');
+  return response;
+}
+
+function redirectLegacyMallPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-legacy-canonical-redirect');
+  return response;
+}
+
+function mallUpstreamPath(pathname) {
+  const suffix = pathname.slice(MALL_PREFIX.length);
+  return suffix || '/';
+}
+
+function rewriteMallHtmlDocument(html) {
+  return String(html || '').replace(
+    /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/mall(?:\/|["']))([^"']*)\2/gi,
+    (_, attribute, quote, suffix) => `${attribute}=${quote}${MALL_PREFIX}/${suffix}${quote}`,
+  );
+}
+async function proxyMallService(request) {
+  const incoming = new URL(request.url);
+  const upstream = new URL(request.url);
+  upstream.protocol = 'https:';
+  upstream.hostname = MALL_ORIGIN_HOST;
+  upstream.port = '';
+  upstream.pathname = mallUpstreamPath(incoming.pathname);
+
+  const upstreamRequest = new Request(upstream.toString(), request);
+  upstreamRequest.headers.set(MALL_PROXY_HEADER, 'apex-mall-v1');
+  const upstreamResponse = await fetch(upstreamRequest, { redirect: 'manual' });
+  const headers = new Headers(upstreamResponse.headers);
+  const location = headers.get('location');
+  if (location) {
+    try {
+      const redirect = new URL(location, upstream);
+      if (redirect.hostname === MALL_ORIGIN_HOST) {
+        redirect.protocol = 'https:';
+        redirect.hostname = PUBLIC_HOST;
+        redirect.pathname = redirect.pathname === '/' ? MALL_PREFIX : `${MALL_PREFIX}${redirect.pathname}`;
+        headers.set('location', redirect.toString());
+      }
+    } catch {}
+  }
+  let responseBody = upstreamResponse.body;
+  if ((headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text());
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+    headers.delete('etag');
+  }
+  headers.set('x-ekodi-edge', 'mall-path-gateway');
+  headers.set('x-ekodi-service', 'mall');
+  const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
+  const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
+  const adminEmbed = incoming.searchParams.get('embed') === 'admin';
+  const cacheControl = adminSurface || apiSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
+  const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
+  const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
+  if (adminEmbed) response.headers.delete('X-Frame-Options');
+  return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
 
 function retiredAdminResponse() {
@@ -327,16 +431,45 @@ export default {
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
+    if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      return response;
+    }
+
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
       }
-      if (url.pathname === '/mall' || url.pathname === '/mall/' || url.pathname === '/mall.html') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/mall'));
-        return withHostSecurity(response, MALL_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
+      if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
+      if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
+        const page=ekodiBizInvestAdminPage(request);
+        const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
+        return injectEkodiShell(secured, 'biz', 'admin');
       }
+      if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
+      if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
+        const page=ekodiBizInvestBusinessPage(request);
+        const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
+        return injectEkodiShell(secured, 'biz', 'public');
+      }
+      if (url.pathname === '/mall.html') {
+        const canonical = new URL(request.url);
+        canonical.pathname = MALL_PREFIX;
+        const response = new Response(null, { status: 308, headers: { Location: canonical.toString() } });
+        applyBaseSecurityHeaders(response.headers);
+        return response;
+      }
+      if (isMallPath(url.pathname)) return proxyMallService(request);
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
         const rewritten = rewriteAdminApexLogin(response);

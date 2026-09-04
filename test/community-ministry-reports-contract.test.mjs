@@ -82,7 +82,7 @@ test('AI drafting syncs recorded Community evidence and does not infer future pl
 test('community admin UI is lazy-loaded, source-aware and secured as an admin asset', async () => {
   const [ui, features, build, site, entry] = await Promise.all([
     read('community-reports-admin.js'),
-    read('control-center-features.js'),
+    read('admin-demand-loader.js'),
     read('scripts/build.mjs'),
     read('site-worker.js'),
     read('customer-entry-worker.js'),
@@ -90,8 +90,8 @@ test('community admin UI is lazy-loaded, source-aware and secured as an admin as
   for (const marker of ['Ministry Reports', 'Approve & Send', 'Sync + AI Draft', 'Sync Sources', 'Community Source Evidence', '/sources/refresh', '본부 수신 이메일']) {
     assert.ok(ui.includes(marker), `missing UI marker: ${marker}`);
   }
-  assert.ok(features.includes('loadCommunity'));
-  assert.ok(features.includes("placeholder('community'"));
+  assert.match(features, /community:\s*\{[^}]*scripts:\['community-reports-admin\.js'\]/);
+  assert.match(features, /styles:\['community-reports-admin\.css'\]/);
   assert.ok(build.includes('community-reports-admin.js'));
   assert.ok(build.includes('community-reports-admin.css'));
   assert.ok(site.includes("'/community'"));

@@ -1,4 +1,5 @@
 ﻿import { getSponsoredAiAllowance, normalizeOpenAiUsage, recordProviderUsage } from './api-usage-meter.js';
+import { projectForExternalAi } from './secure-projection.js';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.6-terra';
@@ -104,6 +105,11 @@ export function createOpenAiProvider(env = {}, options = {}) {
     async invoke({ taskName, context = {} } = {}) {
       if (!available) throw new Error('OPENAI_PROVIDER_NOT_CONFIGURED');
       await budgetGuard(env);
+      const projectedContext = await projectForExternalAi(context, {
+        profile: 'ai_minimum',
+        purpose: 'admin-ai-assist',
+        salt: crypto.randomUUID(),
+      });
       const response = await fetchImpl(OPENAI_RESPONSES_URL, {
         method: 'POST',
         headers: {
@@ -114,7 +120,7 @@ export function createOpenAiProvider(env = {}, options = {}) {
           model,
           store: false,
           instructions: ADMIN_AI_INSTRUCTIONS,
-          input: buildAdminInput(context),
+          input: buildAdminInput(projectedContext),
           max_output_tokens: 1_200,
           metadata: {
             ekodi_surface: 'admin',

@@ -5,7 +5,7 @@ const allowedOrigin=(origin:string|null)=>{
   if(!origin) return "https://auth.ekodi.kr";
   try{
     const u=new URL(origin);
-    if(u.protocol==="https:"&&(u.hostname==="ekodi.kr"||u.hostname.endsWith(".ekodi.kr")||u.hostname==="ekodibiz.kr"||u.hostname.endsWith(".ekodibiz.kr")||u.hostname==="cheonggye-market.pages.dev"))return origin;
+    if(u.protocol==="https:"&&(u.hostname==="ekodi.kr"||u.hostname.endsWith(".ekodi.kr")||u.hostname==="ekodibiz.kr"||u.hostname.endsWith(".ekodibiz.kr")||u.hostname==="cgma.or.kr"||u.hostname==="www.cgma.or.kr"||u.hostname==="cheonggye-market.pages.dev"))return origin;
   }catch{}
   return "https://auth.ekodi.kr";
 };
@@ -65,11 +65,11 @@ function validMarketingOrigin(origin:string){
 }
 function validHandoff(site:string,raw:string){
   const origins:Record<string,string[]>={
-    cgma:["https://cgma.ekodi.kr"],
+    cgma:["https://ekodi.kr","https://cgma.or.kr","https://cgma.ekodi.kr"],
     marketing:["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"],
     biz:["https://biz.ekodi.kr"],
-    trade:["https://trade.ekodi.kr"],
-    mall:["https://mall.ekodi.kr"],
+    trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"],
+    mall:["https://ekodi.kr"],
     pay:["https://pay.ekodi.kr"],
     books:["https://books.ekodi.kr"],
     church:["https://church.ekodi.kr"],
@@ -85,7 +85,8 @@ function validHandoff(site:string,raw:string){
     const target=new URL(raw);
     if(target.protocol!=="https:"||target.username||target.password)return null;
     if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
-    return (origins[site]||[]).includes(target.origin)?target.href:null;
+    const cgmaPlatform=site==="cgma"&&target.origin==="https://ekodi.kr"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/"));
+    return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||cgmaPlatform)?target.href:null;
   }catch{return null}
 }
 function tenantSlugBase(name:string,email:string){

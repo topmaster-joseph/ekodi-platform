@@ -6,7 +6,7 @@ const INVITE_HOURS = 72;
 const encoder = new TextEncoder();
 
 export const CUSTOMER_TENANTS = Object.freeze([
-  { slug: 'cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr' },
+  { slug: 'cgma', name: '청계면상인회', domain: 'cgma.or.kr' },
   { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr' },
   { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr' },
   { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr' },

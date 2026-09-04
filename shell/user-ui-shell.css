@@ -117,12 +117,17 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
   right: 0 !important;
   width: 100% !important;
   max-width: none !important;
-  z-index: 2147482000 !important;
+  z-index: 2147483000 !important;
+  overflow: visible !important;
   box-sizing: border-box !important;
   min-height: var(--ekodi-user-header-min-height, var(--ekodi-user-header-fallback-height)) !important;
   padding-top: calc(var(--ekodi-user-header-base-padding-top, 0px) + env(safe-area-inset-top, 0px)) !important;
   transform: none !important;
   isolation: isolate;
+}
+
+.ekodi-user-ui-header :where(nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions) {
+  overflow: visible !important;
 }
 
 .ekodi-user-ui-header .ekodi-user-ui-header-center {
@@ -189,11 +194,14 @@ html[data-ekodi-user-ui] {
 
 /* One language control is inherited by every public/workspace user surface. */
 .ekodi-user-language {
+  position: relative;
+  z-index: 2147483400;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
   margin-inline-start: 8px;
+  overflow: visible;
   color: inherit;
   font: inherit;
 }

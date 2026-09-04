@@ -1,0 +1,23 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-02-JOURNAL-COMMON-SERVICE-V1.2",
+  "date": "2026-09-02",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit user approval in conversation to establish journal.ekodi.kr as the EKODI common journal service, followed by the instruction to build it",
+  "constitutionVersion": "1.3.0",
+  "summary": "Register journal.ekodi.kr as a justified common-service boundary for public editorial records, feeds and reusable journal publishing contracts while preserving ekodi.kr path namespaces for user-operated journals.",
+  "affectedAreas": [
+    "domain",
+    "common-service",
+    "publishing",
+    "governance",
+    "deployment"
+  ],
+  "registeredBoundary": "journal.ekodi.kr",
+  "boundaryReason": "independently operated common journal service with its own release, cache, feed and editorial contract; it does not represent a person, organization, group or project identity",
+  "workspaceRule": "tenant and user journal surfaces remain canonical under ekodi.kr personal, org, group or project paths and resolve authority from workspace_id",
+  "migrationPolicy": "additive; no existing domain, route, identity or workspace address is removed or reassigned",
+  "verificationPolicy": "constitution, platform-boundary, security, isolated journal tests, guarded deploy and real-host verification must pass",
+  "rollbackPlan": "remove the journal Worker route and service registration, revert constitution 1.2.0 registration to 1.1.0, and keep all existing workspace paths and services unchanged"
+}

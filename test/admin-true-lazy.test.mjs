@@ -14,7 +14,10 @@ test('admin startup keeps only shell, navigation and demand loader on the critic
   assert.match(deferredBlock, /ekodi-message-ui\.js/);
   assert.match(deferredBlock, /google-admin-auth\.js/);
   assert.match(shell, /requestAnimationFrame\(\(\)=>requestAnimationFrame/);
-  assert.match(shell, /for\(let i=0;i<8/);
+  assert.match(shell, /for\(const src of criticalPostAuthScripts\)/);
+  assert.match(shell, /await loadScript\(src\)/);
+  assert.match(shell, /window\.EKODIAdminPanels\.activate\(requestedSection\(\)\)/);
+  assert.doesNotMatch(shell, /for\(let i=0;i<8|waitForMenuRuntime/);
   for (const heavy of ['ai-ops-admin.js', 'admin-lazy-features.js', 'release-control-admin.js', 'work-admin.js', 'marketing-ai-admin.js']) {
     assert.doesNotMatch(criticalBlock, new RegExp(heavy.replaceAll('.', '\\.')));
   }

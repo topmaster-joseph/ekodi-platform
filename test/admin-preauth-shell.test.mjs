@@ -27,17 +27,22 @@ test('generated admin HTML ends with content-fingerprinted first-path assets', (
   assert.doesNotMatch(build, /html = html\.replace\('<\/body>', '<script src="campus-actions\.js"/);
 });
 
-test('post-auth loader starts only when the authenticated app is visible and uses auth events instead of a persistent observer', () => {
+test('post-auth loader starts only after authenticated mount and reveals only after menu activation', () => {
   assert.match(shell, /return Boolean\(token\(\) && app && !app\.hidden\)/);
-  const guard = shell.indexOf('if (started || !authenticated()) return');
+  const guard = shell.indexOf('if(started||!authenticated())return');
+  const hidden = shell.indexOf("app.style.visibility='hidden'");
   const criticalLoad = shell.indexOf('for(const src of criticalPostAuthScripts)');
+  const activate = shell.indexOf('window.EKODIAdminPanels.activate(requestedSection())');
+  const ready = shell.indexOf('announceReady();loadDeferredEnhancements()');
   assert.ok(guard >= 0, 'authenticated shell guard must exist');
-  assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after the authenticated app is visible');
+  assert.ok(hidden >= 0 && hidden < criticalLoad, 'authenticated app must stay hidden while critical runtime loads');
+  assert.ok(criticalLoad > guard, 'critical post-auth scripts must load only after authenticated mount');
+  assert.ok(activate > criticalLoad && ready > activate, 'requested menu must activate before shell reveal');
   assert.match(shell, /await loadScript\(src\)/);
   assert.match(shell, /dataset\.ekodiAdminBootAsset=src/);
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',onStateChange\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
-  assert.doesNotMatch(shell, /new MutationObserver/);
+  assert.doesNotMatch(shell, /new MutationObserver|for\(let i=0;i<8/);
   assert.match(shell, /const requestedHash=location\.hash/);
   assert.match(shell, /history\.replaceState/);
   assert.match(handoff, /function normalizeEntryRoute\(\)/);

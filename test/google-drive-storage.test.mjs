@@ -10,6 +10,7 @@ const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url),
 const accessScript = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../migrations/0038_google_drive_storage.sql', import.meta.url), 'utf8');
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
+const cheonggyeAdmin = await readFile(new URL('../cheonggye-members-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
 
 test('Google Drive credentials are encrypted and never committed', () => {
@@ -51,6 +52,27 @@ test('admin browser uses same-origin Storage API and localized failure UX', () =
   assert.doesNotMatch(admin, /drive\.ekodi\.kr\/api\/control\/storage\/google/);
   assert.match(admin, /저장소 연결을 확인할 수 없습니다/);
   assert.match(admin, /t\('저장소','Storage'\)/);
+});
+
+test('successful Google Drive OAuth returns directly to the exact admin route without an intermediate success page', () => {
+  assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
+  assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
+  assert.ok(control.includes("const returnTo = safeAdminReturnPath(body.returnTo);"));
+  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()})"));
+  assert.ok(control.includes("return adminRedirect(payload.returnTo);"));
+  assert.ok(control.includes("status:303"));
+  assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
+  assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
+});
+test('Storage exposes a private Google OAuth broker for the Marketing YouTube callback without exposing the client secret', () => {
+  assert.match(control, /MARKETING_YOUTUBE_REDIRECT_URI = 'https:\/\/marketing-connect-api\.ekodi\.kr\/oauth\/youtube\/callback'/);
+  assert.match(control, /GOOGLE_OAUTH_REDIRECT_FORBIDDEN/);
+  assert.match(control, /exchangeGoogleAuthorizationCode/);
+  assert.match(control, /refreshGoogleAccessToken/);
+  assert.match(worker, /export class GoogleOAuthBroker extends WorkerEntrypoint/);
+  assert.match(worker, /exchangeAuthorizationCode/);
+  assert.match(worker, /refreshAccessToken/);
+  assert.doesNotMatch(config, /GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+"/);
 });
 
 test('Admin Worker proxies Storage through a Cloudflare service binding', () => {
@@ -101,4 +123,63 @@ test('canonical EKODI archive folders are source-controlled', () => {
 
 test('new storage worker may bootstrap exactly through explicit manifest opt-in', () => {
   assert.match(manifest, /"allowFirstDeploy": true/);
+});
+
+
+test('Cheonggye merchant members use Google Sheets as the single source of truth', () => {
+  assert.match(control, /CHEONGGYE_SPREADSHEET_ID = '1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo'/);
+  assert.match(control, /CHEONGGYE_SHEET_NAME = '웹관리'/);
+  assert.match(control, /auth\/spreadsheets/);
+  assert.match(control, /sheets\.googleapis\.com\/v4\/spreadsheets/);
+  assert.match(control, /cheonggye-members/);
+  assert.match(control, /cheonggye_member_audit/);
+  assert.match(cheonggyeAdmin, /\/api\/control\/storage\/google\/cheonggye-members/);
+  assert.doesNotMatch(cheonggyeAdmin, /localStorage\.setItem/);
+  assert.doesNotMatch(cheonggyeAdmin, /INITIAL_ROWS/);
+});
+
+test('Cheonggye realtime member path survives D1 read quota by using encrypted R2 credential cache', () => {
+  assert.match(control, /CHEONGGYE_CONNECTION_CACHE_KEY = 'control\/cheonggye\/storage-connection\.json'/);
+  assert.match(control, /readCheonggyeConnectionCache/);
+  assert.match(control, /env\.R2_BUCKET\.get\(CHEONGGYE_CONNECTION_CACHE_KEY\)/);
+  assert.match(control, /writeCheonggyeConnectionCache/);
+  assert.match(control, /audit\/cheonggye-members/);
+  assert.match(control, /const isCheonggyeRoute = url\.pathname\.startsWith/);
+  assert.match(control, /if \(!isCheonggyeRoute\)/);
+});
+
+test('Cheonggye 웹관리 A:F contract preserves 비고 as column F', () => {
+  assert.match(control, /name:String\(row\[4\]/);
+  assert.match(control, /note:String\(row\[5\]/);
+  assert.match(control, /member\.name,member\.note/);
+  assert.match(cheonggyeAdmin, /name="note"/);
+  assert.match(cheonggyeAdmin, /data-sort="note">비고/);
+  assert.doesNotMatch(cheonggyeAdmin, /연락처/);
+});
+
+test('Cheonggye admin polling uses short-lived R2 auth validation cache instead of reading D1 every 15 seconds', () => {
+  assert.match(control, /CHEONGGYE_ADMIN_SESSION_CACHE_PREFIX = 'control\/cheonggye\/admin-session\/'/);
+  assert.match(control, /CHEONGGYE_ADMIN_SESSION_FRESH_MS = 5 \* 60 \* 1000/);
+  assert.match(control, /CHEONGGYE_ADMIN_SESSION_STALE_MS = 30 \* 60 \* 1000/);
+  assert.match(control, /outageFallbackAllowed/);
+  assert.match(control, /b64url\(await sha256\(token\)\)/);
+  assert.match(control, /writeCheonggyeAdminSessionCache/);
+  assert.match(control, /env\.R2_BUCKET\.put\(key/);
+  assert.match(control, /isCheonggyeRoute \? await cheonggyeAdminSession/);
+  assert.match(control, /using bounded cached validation after D1 exception/);
+});
+
+
+test('Google storage automatically reconnects only when Google credentials require reauthorization', () => {
+  assert.match(control, /GOOGLE_REAUTH_REQUIRED/);
+  assert.match(control, /data\.error === 'invalid_grant'/);
+  assert.match(control, /insufficient\.\*scope/i);
+  assert.match(control, /reconnectRole:role/);
+  assert.match(control, /login_hint/);
+  assert.match(admin, /AUTO_RECONNECT_COOLDOWN_MS=5\*60\*1000/);
+  assert.match(admin, /currentAdminReturnPath/);
+  assert.match(admin, /accountHintedAuthorizeUrl/);
+  assert.match(cheonggyeAdmin, /startAutoReconnect/);
+  assert.match(cheonggyeAdmin, /GOOGLE_REAUTH_REQUIRED/);
+  assert.match(cheonggyeAdmin, /returnTo:currentAdminReturnPath\(\)/);
 });
