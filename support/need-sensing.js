@@ -87,7 +87,9 @@ export function assessNeedState(profile={},context={}){
   const contextualSignals=acceptedSignals.filter(signal=>signal.weight<0.7);
   const evidenceScore=(explicitNeed?48:0)+Math.min(interests.length*6,12)+Math.min(strongSignals.reduce((sum,signal)=>sum+signal.weight*18,0),27)+Math.min(contextualSignals.reduce((sum,signal)=>sum+signal.weight*8,0),8);
   const needScore=Math.round(Math.min(100,evidenceScore+(categories[0]?.score||0)*0.22));
-  const confidence=Math.min(1,0.18+(explicitNeed?0.42:0)+(profile.profileType?0.1:0)+(profile.region?0.1:0)+Math.min(strongSignals.length*0.12,0.24)+Math.min(contextualSignals.length*0.03,0.06));
+  const strongSignalConfidence=Math.min(strongSignals.reduce((sum,signal)=>sum+signal.weight*0.2,0),0.28);
+  const contextualSignalConfidence=Math.min(contextualSignals.reduce((sum,signal)=>sum+signal.weight*0.08,0),0.06);
+  const confidence=Math.min(1,0.18+(explicitNeed?0.42:0)+(profile.profileType?0.1:0)+(profile.region?0.1:0)+strongSignalConfidence+contextualSignalConfidence);
 
   const reasons=[];
   if(explicitNeed)reasons.push('사용자가 지원이 필요한 상황을 직접 입력했습니다.');
