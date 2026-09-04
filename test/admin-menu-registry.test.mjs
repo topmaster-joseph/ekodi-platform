@@ -48,10 +48,11 @@ test('admin locale is deliberately limited to Korean and English', () => {
   assert.equal(normalizeAdminLocale('ja-JP'), 'ko');
 });
 
-test('admin access runtime uses protected Google administrator API and shared locale cookie', async () => {
+test('admin access runtime uses protected API, authority-aware context and shared locale cookie', async () => {
   const source = await readFile(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
   assert.match(source, /\/api\/admin-access\/google-accounts/);
-  assert.match(source, /session\.role === 'super_admin'/);
+  assert.match(source, /withPrivilege\(\(\) => api\('\/api\/admin-access\/google-accounts/);
+  assert.ok(source.includes('authority:currentSession?.authority || null'));
   assert.match(source, /Domain=\.ekodi\.kr/);
 });
 
