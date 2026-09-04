@@ -28,10 +28,24 @@ test('admin Google button enables FedCM only on supported browser versions', () 
   assert.match(adminAuth, /disableAutoSelect/);
 });
 
-test('admin direct entry opens the Google account chooser without a second auth-page click', () => {
-  assert.match(handoff, /site=admin&direct=1&return_to=/);
-  assert.match(adminAuth, /const directEntry=params\.get\('direct'\)==='1'/);
-  assert.match(adminAuth, /if\(directEntry\)/);
+test('admin login opens central auth as a popup and hands the session back to the opener', () => {
+  assert.match(handoff, /site=admin&direct=1&popup=1&return_to=/);
+  assert.match(handoff, /window\.open\(target,AUTH_POPUP_NAME,popupFeatures\(\)\)/);
+  assert.match(handoff, /event\.origin!==AUTH_ORIGIN\|\|event\.source!==authPopup/);
+  assert.match(handoff, /payload\.type!=='ekodi-admin-auth-success'/);
+  assert.match(handoff, /\^\[a-f0-9\]\{64\}\$/i/);
+  assert.match(adminAuth, /const popupEntry=params\.get\('popup'\)==='1'/);
+  assert.match(adminAuth, /window\.opener\.postMessage\(\{type:'ekodi-admin-auth-success'/);
+  assert.match(adminAuth, /new URL\(safeReturn\)\.origin/);
+  assert.match(adminAuth, /window\.setTimeout\(\(\)=>window\.close\(\),80\)/);
+});
+
+test('single admin provider starts directly while multiple providers render a selector', () => {
+  assert.match(adminAuth, /ADMIN_LOGIN_PROVIDERS=Object\.freeze/);
+  assert.match(adminAuth, /id:'google',label:'Google',enabled:true,start:prepareGoogle/);
+  assert.match(adminAuth, /if\(providers\.length===1\)return providers\[0\]\.start\(\)/);
+  assert.match(adminAuth, /renderProviderChoice\(providers\)/);
+  assert.match(adminAuth, /관리자 로그인 방식을 선택해 주세요/);
   assert.match(adminAuth, /window\.google\.accounts\.id\.prompt\(\)/);
   assert.match(adminAuth, /auto_select:false/);
 });
@@ -39,6 +53,6 @@ test('admin direct entry opens the Google account chooser without a second auth-
 test('admin auth recovers from expired challenges and shows allowlist failures clearly', () => {
   assert.match(adminAuth, /GOOGLE_ACCOUNT_NOT_ALLOWED/);
   assert.match(adminAuth, /expired_challenge/);
-  assert.match(adminAuth, /setTimeout\(prepare,350\)/);
+  assert.match(adminAuth, /setTimeout\(prepareGoogle,350\)/);
   assert.match(authRouter, /admin-auth\.js\?v=20260823-mobile-handoff-1/);
 });
