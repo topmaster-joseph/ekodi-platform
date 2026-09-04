@@ -4,6 +4,8 @@ import {
   requiresServiceTruth,
   normalizeServiceTruth,
   resolveServiceTruth,
+  resolveDeclaredService,
+  verifyDeclaredService,
   buildVerifiedServiceContext
 } from '../service-truth-gateway.js';
 
@@ -55,4 +57,28 @@ test('resolves by service name and creates model context', () => {
   const context = buildVerifiedServiceContext(truth);
   assert.equal(context.verified, true);
   assert.equal(context.service.id, 'mall');
+});
+
+test('shared catalog resolves the declared EKODI Mall canonical route', () => {
+  const service = resolveDeclaredService('에코디몰 주소');
+  assert.equal(service?.id, 'mall');
+  assert.equal(service?.url, 'https://ekodi.kr/ekodibiz/mall');
+});
+
+test('direct runtime probe verifies a reachable declared service before model reasoning', async () => {
+  const truth = await verifyDeclaredService('에코디몰 주소', {
+    fetchFn: async () => new Response('ok', { status: 200 })
+  });
+  assert.equal(truth.id, 'mall');
+  assert.equal(truth.runtimeState, 'operational');
+  assert.equal(truth.evidence.source, 'direct_runtime_probe');
+  assert.equal(buildVerifiedServiceContext(truth).verified, true);
+});
+
+test('network probe failure remains unverified rather than guessing offline', async () => {
+  const truth = await verifyDeclaredService('에코디몰 운영 상태', {
+    fetchFn: async () => { throw new Error('network unavailable'); }
+  });
+  assert.equal(truth.runtimeState, 'unverified');
+  assert.equal(buildVerifiedServiceContext(truth).verified, false);
 });

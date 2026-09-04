@@ -15,6 +15,7 @@
   ],
   "authoritative_sources": {
     "declared_topology": "platform-boundaries.json",
+    "declared_service_catalog": "ekodi-service-catalog.js",
     "constitutional_domain_rules": "governance/constitution/constitution.json",
     "runtime_service_controls": "GET /api/control/services",
     "runtime_overview": "GET /api/control/overview",

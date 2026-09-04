@@ -1,5 +1,6 @@
 import {AI_CONTROL_POLICY,buildExecutionPlan,createTaskId,evaluateTaskMissionPolicy,normalizeTaskInput,rolePrompt,summarizeRuns} from './ai-control-core.js';
 import {invokeProvider,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
+import {buildVerifiedServiceContext,requiresServiceTruth,verifyDeclaredService} from './service-truth-gateway.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -13,6 +14,11 @@ function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SU
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
 function safeId(value){const id=clean(value).toLowerCase();return /^[a-z0-9][a-z0-9._-]{2,79}$/.test(id)?id:''}
 function safeProviders(values){return [...new Set((Array.isArray(values)?values:[]).map(v=>clean(v).toLowerCase()).filter(v=>['codex','gemini-cli','claude-code'].includes(v)))]}
+export async function truthContextForTask(task,options={}){
+  if(!requiresServiceTruth(task?.prompt))return null;
+  const truth=await verifyDeclaredService(task.prompt,options);
+  return buildVerifiedServiceContext(truth);
+}
 async function sha256(value){const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 function randomToken(bytes=32){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return btoa(String.fromCharCode(...data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function randomPairCode(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const data=new Uint8Array(10);crypto.getRandomValues(data);return [...data].map(v=>alphabet[v%alphabet.length]).join('')}
@@ -99,9 +105,10 @@ async function execute(env,id){
   const currentMission=evaluateTaskMissionPolicy(task);
   if(currentMission.forbidden){await patchTask(env,id,{state:'blocked_policy',updated_at:now(),error:`mission_policy:${currentMission.reason}`});return}
   task={...task,missionDecision:currentMission};
+  const truthContext=await truthContextForTask(task);
   await patchTask(env,id,{state:'allocating',updated_at:now(),error:''});
   try{const branch=await allocateBranch(env,task);if(branch){await patchTask(env,id,{branch,updated_at:now()});task={...task,branch}}const nodes=await onlineNodeProviders(env);const plan=buildExecutionPlan(task,providerCapabilities(env,nodes));if(!plan.length)throw new Error('no_provider_available');await patchTask(env,id,{state:'running',updated_at:now()});
-    for(const entry of plan){const prompt=rolePrompt(task,entry.role,{branch:task.branch,missionDecision:task.missionDecision});if(entry.providerId.startsWith('node:'))await enqueueNodeRun(env,task,entry,prompt);else await executeDirectRun(env,task,entry,prompt)}await finalizeTask(env,id);
+    for(const entry of plan){const prompt=rolePrompt(task,entry.role,{branch:task.branch,missionDecision:task.missionDecision,truthContext});if(entry.providerId.startsWith('node:'))await enqueueNodeRun(env,task,entry,prompt);else await executeDirectRun(env,task,entry,prompt)}await finalizeTask(env,id);
   }catch(error){await patchTask(env,id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});throw error}
 }
 async function leaseNodeJob(request,env,node){

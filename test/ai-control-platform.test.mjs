@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {AI_CONTROL_POLICY,availableProviderIds,buildExecutionPlan,createTaskId,evaluateTaskMissionPolicy,normalizeTaskInput,rolePrompt,summarizeRuns} from '../ai-control-core.js';
 import {providerCapabilities,providerStatus} from '../ai-control-provider-router.js';
+import {truthContextForTask} from '../ai-control-worker.js';
 
 test('coding work requests an isolated branch and stays in development',()=>{
   const task=normalizeTaskInput({prompt:'관리자 페이지 코딩을 수정하고 Git 브랜치에서 검증해',mode:'primary-review'});
@@ -74,4 +75,33 @@ test('high-impact actions remain analysis-only behind a human gate',()=>{
 test('delegated reversible preflighted actions may pass the autonomous gate',()=>{
   const task=normalizeTaskInput({prompt:'update isolated preview',governance:{agentId:'platform',area:'bounded_preview_update',delegated:true,reversible:true,logged:true,preflightVerified:true}}); const d=evaluateTaskMissionPolicy(task);
   assert.equal(d.tier,'execute_reversible'); assert.equal(d.autonomousActionAllowed,true); assert.equal(d.analysisOnly,false);
+});
+
+test('role prompt carries verified EKODI truth context ahead of provider reasoning',()=>{
+  const task=normalizeTaskInput({prompt:'에코디몰 주소가 뭐야?'});
+  const truthContext={
+    verified:true,
+    service:{id:'mall',canonicalUrl:'https://ekodi.kr/ekodibiz/mall',runtimeState:'operational'},
+    instruction:'Use these EKODI service facts as the current verified context.'
+  };
+  const prompt=rolePrompt(task,'primary',{truthContext});
+  assert.match(prompt,/Verified EKODI service context/);
+  assert.match(prompt,/https:\/\/ekodi\.kr\/ekodibiz\/mall/);
+  assert.match(prompt,/current verified context/);
+});
+
+test('AI control prefetches EKODI truth before provider execution',async()=>{
+  const task=normalizeTaskInput({prompt:'에코디몰 주소가 뭐야?'});
+  const context=await truthContextForTask(task,{
+    fetchFn:async()=>new Response('ok',{status:200})
+  });
+  assert.equal(context?.verified,true);
+  assert.equal(context?.service?.id,'mall');
+  assert.equal(context?.service?.canonicalUrl,'https://ekodi.kr/ekodibiz/mall');
+});
+
+test('AI control skips truth probing for unrelated prompts',async()=>{
+  const task=normalizeTaskInput({prompt:'일반적인 글을 검토해줘'});
+  const context=await truthContextForTask(task,{fetchFn:async()=>{throw new Error('must not run')}});
+  assert.equal(context,null);
 });
