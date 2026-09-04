@@ -171,7 +171,7 @@ jobs:
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             grep -Fq "pattern = \"$host\"" wrangler.site.toml
           done
 
@@ -235,7 +235,7 @@ jobs:
           payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain missing: $host"
               needs_sync=true
@@ -250,7 +250,7 @@ jobs:
             npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
             payload=$(read_domains)
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"

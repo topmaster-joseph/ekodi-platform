@@ -4,6 +4,9 @@ import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence-runtime.js';
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
 import { handleInvestPersonalizationApi } from './invest-personalization-runtime.js';
+import { handleDesignProfileApi } from './design-profile-runtime.js';
+
+async function designProfileSchemaReady(env){if(!env?.DB)return false;try{return Boolean(await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='site_design_profiles'").first())}catch{return false}}
 
 async function conversationSchemaReady(env){
   if(!env?.DB)return false;
@@ -37,6 +40,10 @@ export default {
       const response=await handleInvestPersonalizationApi(request,env);
       if(response)return response;
     }
+    if(url.pathname.startsWith('/v1/design-profiles')){
+      const response=await handleDesignProfileApi(request,env);
+      if(response)return response;
+    }
     if(url.pathname.startsWith('/v1/messenger/')){
       scheduleOutboxRecovery(env,ctx,8);
       const response=await handleWorkspaceMessengerV2(request,env,ctx);
@@ -46,9 +53,9 @@ export default {
       const response=await legacyWorkspaceWorker.fetch(request,env,ctx);
       try{
         const data=await response.clone().json();
-        const [foundationReady,profileReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env)]);
+        const [foundationReady,profileReady,designReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env)]);
         const connections=officialDataConnections(env).map(({id,status})=>({id,status}));
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investDataConnections:connections}),{status:response.status,headers:response.headers});
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);
