@@ -30,7 +30,7 @@ test('public storefront reads as a normal shopping mall', () => {
   assert.match(html, /SMART SHOPPING/);
   assert.match(html, /오늘 필요한 것/);
   assert.match(html, /오늘의 상품/);
-  assert.match(html, /상품 둘러보기/);
+  assert.match(html, /상황에 맞는 선물 찾기/);
   assert.match(html, /새 상품을 준비하고 있습니다/);
   assert.doesNotMatch(html, /COUPANG AFFILIATE CURATION/);
   assert.doesNotMatch(html, /추천링크 클릭 후 검색하세요/);
@@ -90,6 +90,15 @@ test('catalog supports registered popularity and price sorting', () => {
   assert.match(css, /\.sort-box select/);
 });
 
+test('contextual Gift AI ranks only live affiliate catalog products', () => {
+  assert.match(html, /id="gift-ai"/);
+  assert.match(js, /GIFT_DIRECT_TERMS/);
+  assert.match(js, /pickGiftRecommendations/);
+  assert.match(js, /URLSearchParams\(location\.search\)\.get\('gift'\)/);
+  assert.match(js, /dialogBuy\.href = product\.clickUrl/);
+  assert.doesNotMatch(js, /https:\/\/link\.coupang\.com/);
+});
+
 test('mall has no fake or generic fallback products', () => {
   assert.doesNotMatch(js, /FALLBACK_PRODUCTS/);
   assert.doesNotMatch(js, /cwWXWm/);
@@ -104,6 +113,9 @@ test('automatic product search and partner link issuance are connected', () => {
   assert.match(automation, /issuePartnerLinks/);
   assert.match(automation, /createOpenAiProvider/);
   assert.match(automation, /balancedRules/);
+  assert.match(automation, /GIFT_SEEDS/);
+  assert.match(automation, /\uD64D\uC0BC \uC120\uBB3C\uC138\uD2B8/);
+  assert.match(automation, /expectedKeywords/);
   assert.match(api, /runAffiliateAutomation/);
   assert.match(api, /public-empty/);
   assert.match(api, /public-stale/);

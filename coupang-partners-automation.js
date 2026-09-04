@@ -18,6 +18,12 @@ const BASE_SEEDS = Object.freeze([
   { keyword: '디지털 액세서리', category: '디지털' },
 ]);
 
+const GIFT_SEEDS = Object.freeze([
+  { keyword: '감사 선물세트', category: '선물' },
+  { keyword: '홍삼 선물세트', category: '선물' },
+  { keyword: '건강 선물세트', category: '선물' },
+]);
+
 const SEASONAL_SEEDS = Object.freeze({
   1: [{ keyword: '겨울용품', category: '계절' }, { keyword: '보온용품', category: '계절' }],
   2: [{ keyword: '신학기 준비물', category: '계절' }],
@@ -100,7 +106,7 @@ async function coupangRequest(env, { method = 'GET', path, query = new URLSearch
 }
 
 function seedsForNow(now = new Date()) {
-  return [...BASE_SEEDS, ...(SEASONAL_SEEDS[now.getUTCMonth() + 1] || [])];
+  return [...BASE_SEEDS, ...GIFT_SEEDS, ...(SEASONAL_SEEDS[now.getUTCMonth() + 1] || [])];
 }
 
 async function searchSeed(env, seed) {
@@ -160,12 +166,15 @@ function balancedRules(candidates, limit = TARGET_PRODUCTS) {
     .map(product => ({ ...product, selectionScore: baseScore(product) }))
     .sort((a, b) => b.selectionScore - a.selectionScore || a.rank - b.rank || a.productName.localeCompare(b.productName, 'ko'));
   const counts = new Map();
+  const keywordCounts = new Map();
   const selected = [];
   for (const product of scored) {
     const count = counts.get(product.category) || 0;
-    if (count >= 6) continue;
+    const keywordCount = keywordCounts.get(product.keyword) || 0;
+    if (count >= 6 || keywordCount >= 2) continue;
     selected.push(product);
     counts.set(product.category, count + 1);
+    keywordCounts.set(product.keyword, keywordCount + 1);
     if (selected.length >= limit) break;
   }
   if (selected.length < limit) {
@@ -346,10 +355,15 @@ async function lastRun(db) {
   } catch { return null; }
 }
 
-function runIsFresh(row) {
+function runIsFresh(row, now = new Date()) {
   if (!row || row.status !== 'success' || !row.finished_at) return false;
   const timestamp = Date.parse(row.finished_at);
-  return Number.isFinite(timestamp) && (Date.now() - timestamp) < REFRESH_MS;
+  if (!Number.isFinite(timestamp) || (now.getTime() - timestamp) >= REFRESH_MS) return false;
+  let previousKeywords = [];
+  try { previousKeywords = JSON.parse(row.keywords_json || '[]'); } catch {}
+  const expectedKeywords = seedsForNow(now).map(seed => seed.keyword);
+  return Array.isArray(previousKeywords) && previousKeywords.length === expectedKeywords.length
+    && expectedKeywords.every((keyword, index) => previousKeywords[index] === keyword);
 }
 
 export async function getAffiliateAutomationStatus(env = {}) {
