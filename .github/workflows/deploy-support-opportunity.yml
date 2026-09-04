@@ -9,6 +9,7 @@ on:
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
+      - 'test/support-need-sensing.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -21,6 +22,7 @@ on:
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
+      - 'test/support-need-sensing.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -52,11 +54,12 @@ jobs:
           node --check support-worker.js
           node --check support/core.js
           node --check support/sources.js
+          node --check support/need-sensing.js
           node --check support/app.js
           node --check support/service.js
           node --check support/specialists.js
           node --check ekodi-service-manifest.js
-          node --test test/support-opportunity.test.mjs
+          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
