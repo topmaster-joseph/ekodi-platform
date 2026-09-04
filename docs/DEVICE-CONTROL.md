@@ -28,6 +28,19 @@ The first release supports Windows only. Android Enterprise and Apple MDM are de
 - Laptops, tablets, and other portable chassis are never eligible for automatic work. The Agent reports battery, PC system type, and chassis evidence; the cloud independently requires a confirmed desktop classification before enabling or assigning work.
 - Timed-out jobs are reassigned at most three times; queue and result state remain in the cloud database.
 
+## Request-pressure protection
+
+Device Control treats repeated refreshes and retries as one flow rather than multiplying work.
+
+- Concurrent browser GETs for the same Device Control route are coalesced into one in-flight request.
+- GET requests use a bounded timeout and retry only transient failures (`429`, `502`, `503`, `504`), honoring `Retry-After` when present.
+- Mutating POST requests are never automatically replayed by the browser request helper.
+- The admin page pauses periodic refreshes while the tab is hidden and uses a 15-second polling interval.
+- Queue reconciliation is coalesced and rate-clamped per Worker isolate; newly created jobs can explicitly force one reconciliation pass.
+- Identical active commands and jobs from the same administrator are deduplicated for a short 30-second window.
+- Device bearer authentication is still validated against the registry on every Agent request so revocation is not weakened by an authentication cache.
+- Schema initialization is reused inside a Worker isolate instead of replaying the full idempotent DDL batch on every heartbeat or poll.
+
 ## Windows commands
 
 | Command | Behavior |
