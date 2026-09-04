@@ -18,6 +18,14 @@ import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScri
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 
 const PUBLIC_HOST='ekodi.kr';
+const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
+const CGMA_SITE=Object.freeze({
+  id:'cgma',
+  workspaceId:'cgma',
+  domain:'cgma.or.kr',
+  title:'현재 사이트 개발중입니다',
+  message:'더 좋은 서비스로 준비 중입니다.'
+});
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
@@ -52,6 +60,52 @@ function workspaceAuthRedirect(request){
   const url=new URL(request.url);const returnTo=safeWorkspaceReturnTo(url.searchParams.get('return_to'));if(!returnTo)return null;
   const target=new URL('https://auth.ekodi.kr/');target.searchParams.set('site','space');target.searchParams.set('return_to',returnTo.toString());
   return new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'auth-handoff'}});
+}
+function escapeHtml(value){return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function validPublicRedirectUrl(value){
+  const raw=String(value||'').trim();if(!raw)return'';
+  try{const url=new URL(raw);if(!['https:','http:'].includes(url.protocol))return'';return url.toString()}catch{return''}
+}
+function maintenanceHtml(site){
+  const title=escapeHtml(site.maintenanceTitle||site.title||CGMA_SITE.title);
+  const message=escapeHtml(site.maintenanceMessage||site.message||CGMA_SITE.message);
+  const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
+  const showButton=site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode!=='auto';
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at top,#f3f8ff,#e9edf3 52%,#dde4ee);color:#152033}main{width:min(92vw,560px);padding:42px 28px;border:1px solid rgba(80,105,135,.18);border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 22px 70px rgba(25,50,80,.14);text-align:center;backdrop-filter:blur(16px)}.eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:#edf5ff;color:#35628e;font-size:13px;font-weight:700;letter-spacing:.04em}h1{margin:18px 0 10px;font-size:clamp(28px,5vw,42px);line-height:1.12;letter-spacing:-.04em}p{margin:0 auto;color:#536273;font-size:17px;line-height:1.65;word-break:keep-all}a{display:inline-flex;margin-top:26px;padding:13px 18px;border-radius:14px;background:#163454;color:#fff;text-decoration:none;font-weight:800}footer{margin-top:28px;color:#8390a1;font-size:12px}</style></head><body><main><div class="eyebrow">CGMA</div><h1>${title}</h1><p>${message}</p>${showButton?`<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>`:''}<footer>cgma.or.kr</footer></main></body></html>`;
+}
+function maintenanceResponse(site,status=200){return new Response(maintenanceHtml(site),{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-ekodi-public-site-mode':'maintenance'}})}
+async function ensurePublicSiteControlSchema(env){
+  if(!env?.DB)return;
+  const now=new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS public_site_controls (site_id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,domain TEXT NOT NULL UNIQUE,public_status TEXT NOT NULL DEFAULT 'maintenance',maintenance_display_type TEXT NOT NULL DEFAULT 'default',maintenance_redirect_url TEXT NOT NULL DEFAULT '',maintenance_title TEXT NOT NULL DEFAULT '현재 사이트 개발중입니다',maintenance_message TEXT NOT NULL DEFAULT '더 좋은 서비스로 준비 중입니다.',redirect_mode TEXT NOT NULL DEFAULT 'button',updated_at TEXT NOT NULL,updated_by INTEGER)`),
+    env.DB.prepare(`INSERT OR IGNORE INTO public_site_controls (site_id,workspace_id,domain,public_status,maintenance_display_type,maintenance_redirect_url,maintenance_title,maintenance_message,redirect_mode,updated_at) VALUES ('cgma','cgma','cgma.or.kr','maintenance','default','','현재 사이트 개발중입니다','더 좋은 서비스로 준비 중입니다.','button',?)`).bind(now)
+  ]);
+}
+async function readCgmaSiteControl(env){
+  if(!env?.DB)return{...CGMA_SITE,publicStatus:'maintenance',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:CGMA_SITE.title,maintenanceMessage:CGMA_SITE.message,redirectMode:'button'};
+  try{
+    await ensurePublicSiteControlSchema(env);
+    const row=await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id = ? OR domain = ? ORDER BY site_id = ? DESC LIMIT 1').bind('cgma','cgma.or.kr','cgma').first();
+    return{...CGMA_SITE,publicStatus:row?.public_status||'maintenance',maintenanceDisplayType:row?.maintenance_display_type||'default',maintenanceRedirectUrl:row?.maintenance_redirect_url||'',maintenanceTitle:row?.maintenance_title||CGMA_SITE.title,maintenanceMessage:row?.maintenance_message||CGMA_SITE.message,redirectMode:row?.redirect_mode||'button'};
+  }catch(error){
+    console.error('CGMA public site control fallback',error);
+    return{...CGMA_SITE,publicStatus:'maintenance',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:CGMA_SITE.title,maintenanceMessage:CGMA_SITE.message,redirectMode:'button'};
+  }
+}
+function cgmaCanonicalRedirect(request){
+  const source=new URL(request.url);
+  const target=new URL('https://ekodi.kr/cgma');
+  if(source.pathname&&source.pathname!=='/')target.pathname=`/cgma${source.pathname}`.replace(/\/+/g,'/');
+  target.search=source.search;
+  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'public-redirect'}});
+}
+async function routeCgmaPublic(request,env){
+  const site=await readCgmaSiteControl(env);
+  if(site.publicStatus!=='maintenance')return cgmaCanonicalRedirect(request);
+  const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
+  if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
+  return maintenanceResponse(site);
 }
 async function routeWorkspaceAsset(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
@@ -102,6 +156,8 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+
+    if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
       if(request.method==='GET'){
