@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
-          payload='{"site_url":"https://cgma.ekodi.kr","uri_allow_list":"https://cgma.ekodi.kr/member,https://cgma.ekodi.kr/member/**,https://cheonggye-market.pages.dev/member,https://cheonggye-market.pages.dev/member/**"}'
+          payload='{"site_url":"https://ekodi.kr/cgma","uri_allow_list":"https://ekodi.kr/cgma/member,https://ekodi.kr/cgma/member/**,https://cgma.or.kr/member,https://cgma.or.kr/member/**,https://cgma.ekodi.kr/member,https://cgma.ekodi.kr/member/**,https://cheonggye-market.pages.dev/member,https://cheonggye-market.pages.dev/member/**"}'
           code=$(curl -sS -o /tmp/auth.json -w '%{http_code}' -X PATCH "$api" \
             -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" \
             -H 'Content-Type: application/json' \
@@ -71,7 +71,7 @@ jobs:
           site=d.get('site_url')
           allow=d.get('uri_allow_list') or ''
           print('site_url=', site)
-          print('cgma_member_allowed=', 'https://cgma.ekodi.kr/member' in allow)
-          if site != 'https://cgma.ekodi.kr' or 'https://cgma.ekodi.kr/member' not in allow:
+          print('cgma_member_allowed=', 'https://ekodi.kr/cgma/member' in allow)
+          if site != 'https://ekodi.kr/cgma' or 'https://ekodi.kr/cgma/member' not in allow or 'https://cgma.or.kr/member' not in allow:
               sys.exit(1)
           PY

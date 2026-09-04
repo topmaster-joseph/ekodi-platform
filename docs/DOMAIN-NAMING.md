@@ -179,7 +179,7 @@ Use the pattern:
 
 Examples:
 
-- 청계면상인회 official site: `cgma.ekodi.kr`
+- 청계면상인회 official site: `cgma.or.kr` (EKODI route: `https://ekodi.kr/cgma`)
 - 청계면상인회 AI workspace: `cgma.ai.ekodi.kr`
 - Store Plus/Pro workspace: `jadam.ai.ekodi.kr`
 
