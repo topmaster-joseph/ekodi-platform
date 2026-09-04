@@ -55,6 +55,22 @@ export function createR2FileStorageAdapter(binding, { providerId = 'r2-public', 
   });
 }
 
+export function createObjectStorageAdapter({ providerId, transport, prefix = 'objects' } = {}) {
+  if (!providerId || typeof providerId !== 'string') throw new TypeError('providerId is required');
+  if (!transport || typeof transport !== 'object') throw new ProviderNotConfiguredError(providerId, 'file');
+  for (const method of ['get', 'put', 'delete']) if (typeof transport[method] !== 'function') throw new ProviderNotConfiguredError(providerId, 'file');
+  const objectKey = key => `${String(prefix).replace(/\/+$/, '')}/${String(key).replace(/^\/+/, '')}`;
+  return Object.freeze({ get: key => transport.get(objectKey(key)), put: (key, value, options = undefined) => transport.put(objectKey(key), value, options), delete: key => transport.delete(objectKey(key)) });
+}
+
+export function createGoogleCloudStorageAdapter({ transport, prefix = 'objects' } = {}) {
+  return createObjectStorageAdapter({ providerId: 'gcs-object', transport, prefix });
+}
+
+export function createS3CompatibleFileStorageAdapter({ transport, prefix = 'objects' } = {}) {
+  return createObjectStorageAdapter({ providerId: 's3-object', transport, prefix });
+}
+
 export function createWorkspaceFileStorageAdapter({ providerId, transport, namespace = 'files' }) {
   if (!transport || typeof transport !== 'object') {
     throw new ProviderNotConfiguredError(providerId || 'workspace-file-provider', 'file');
@@ -95,8 +111,8 @@ export function createGoogleDriveFileStorageAdapter({ transport } = {}) {
   });
 }
 
-export function createPostgresDatabaseAdapter({ query } = {}) {
-  if (typeof query !== 'function') throw new ProviderNotConfiguredError('postgres-workspace', 'database');
+export function createPostgresDatabaseAdapter({ query, providerId = 'postgres-workspace' } = {}) {
+  if (typeof query !== 'function') throw new ProviderNotConfiguredError(providerId, 'database');
   return Object.freeze({
     async read({ text, values = [] }) {
       if (typeof text !== 'string' || !text.trim()) throw new TypeError('text is required');
@@ -107,4 +123,8 @@ export function createPostgresDatabaseAdapter({ query } = {}) {
       return query(text, values, { mode: 'write' });
     },
   });
+}
+
+export function createGoogleCloudSqlPostgresAdapter({ query } = {}) {
+  return createPostgresDatabaseAdapter({ query, providerId: 'gcp-cloud-sql-postgres' });
 }

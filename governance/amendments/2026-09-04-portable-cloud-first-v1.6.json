@@ -1,0 +1,20 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-04-V1.6-PORTABLE-CLOUD-FIRST",
+  "date": "2026-09-04",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "Explicit EKODI Platform Super Administrator confirmation in the ChatGPT conversation after reviewing the Portable Cloud First architecture: cloud services may be used, but EKODI must not become dependent on Google Cloud or any other provider.",
+  "constitutionVersion": "1.6.0",
+  "summary": "Adopt Portable Cloud First: providers remain replaceable infrastructure, critical provider-native calls use EKODI contracts, canonical IDs and business logic remain provider-neutral, and critical providers require verified exit paths.",
+  "affectedAreas": [
+    "provider-governance",
+    "data-plane",
+    "storage",
+    "cloud-provider-selection",
+    "google-cloud-integration",
+    "constitutional-validation"
+  ],
+  "migrationPolicy": "Additive architecture guardrail only. Existing Cloudflare, Google Workspace and storage routes remain operational. Google Cloud SQL PostgreSQL and Google Cloud Storage are registered only as optional provider targets behind EKODI adapters; no production data migration or provider cutover is performed by this amendment.",
+  "rollbackPlan": "Revert v1.6 policy, validators and optional provider registrations to the prior v1.5.1 provider rules. Existing provider routes and canonical EKODI identifiers remain unchanged, so rollback requires no data migration."
+}

@@ -22,7 +22,10 @@ const protectedPrefixes = [
   'governance/constitution/',
   'config/core-data-boundaries.json',
   'config/storage-policy.json',
-  'config/service-workspace-policy.json'
+  'config/service-workspace-policy.json',
+  'config/cloud-portability-policy.json',
+  'config/data-plane-contract.json',
+  'scripts/validate-cloud-portability.mjs'
 ];
 const protectedChanged = changed.filter(file => protectedPrefixes.some(prefix => file === prefix || file.startsWith(prefix)));
 if (!protectedChanged.length) {

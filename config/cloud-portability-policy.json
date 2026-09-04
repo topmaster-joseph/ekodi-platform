@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "status": "enforced-foundation",
+  "mode": "portable-cloud-first",
+  "principles": {
+    "cloudProvidersAreReplaceableInfrastructure": true,
+    "canonicalIdentityProviderNeutral": true,
+    "canonicalBusinessLogicProviderNeutral": true,
+    "canonicalDataFormatsPortable": true,
+    "providerNativeCriticalCallsRequireAdapter": true,
+    "multiProviderReady": true,
+    "activeActiveMultiCloudDefault": false,
+    "criticalProviderExitPlanRequired": true,
+    "freeCreditsNeverDefineArchitecture": true,
+    "providerSecretsStayServerSide": true
+  },
+  "preferredStandards": [
+    "https",
+    "oauth2-oidc",
+    "oci-container-image",
+    "postgresql",
+    "s3-compatible-object-semantics",
+    "sql-or-open-export",
+    "json",
+    "webhook"
+  ],  "providerClasses": {
+    "standard-native": {
+      "description": "Uses a broadly portable protocol or data standard without changing EKODI canonical IDs.",
+      "allowedForCanonicalData": true
+    },
+    "adapter-portable": {
+      "description": "Provider-specific API is isolated behind an EKODI adapter with a documented export path.",
+      "allowedForCanonicalData": true
+    },
+    "export-portable": {
+      "description": "Runtime is provider-specific but durable content can be exported with EKODI metadata intact.",
+      "allowedForCanonicalData": true
+    },
+    "provider-bound": {
+      "description": "Critical semantics or durable state cannot move without redesign.",
+      "allowedForCanonicalData": false,
+      "requiresC2Approval": true
+    }
+  },
+  "criticalContracts": {
+    "identity": "EKODI Identity Gateway",
+    "ai": "EKODI AI Gateway",
+    "storage": "EKODI Storage Gateway",
+    "database": "EKODI Data Plane Adapter",
+    "communications": "EKODI Communications Gateway"
+  },  "providerUsageRules": {
+    "directProviderSdkInCoreFeature": "forbidden-when-contract-exists",
+    "providerNativeIdentifierAsCanonicalId": "forbidden",
+    "providerSpecificCanonicalDataFormat": "forbidden-without-approved-exception",
+    "singlePrimaryProviderPerCapability": "allowed",
+    "alternateProviderMustBeDocumentedForCriticalCapability": true,
+    "automaticCrossProviderFallback": "only-when-semantics-and-data-safety-are-verified"
+  },
+  "requiredExitArtifacts": [
+    "data-export-format",
+    "alternate-import-target",
+    "rollback-pointer",
+    "credential-revocation-plan",
+    "cost-baseline",
+    "provider-object-id-to-ekodi-id-mapping"
+  ],
+  "verification": {
+    "newCriticalProviderRequiresContractTest": true,
+    "providerBoundCriticalUseRequiresApproval": true,
+    "providerMigrationRequiresCutoverVerification": true,
+    "providerMigrationRequiresRollbackProof": true,
+    "exitReadinessReview": "at-least-annually-or-before-major-provider-renewal"
+  },
+  "googleCloudRole": {
+    "classification": "optional-replaceable-provider",
+    "workspaceDependency": false,
+    "approvedPortableTargets": [
+      "cloud-sql-postgresql",
+      "cloud-storage-via-ekodi-object-adapter",
+      "container-or-http-compute-behind-ekodi-service-contract"
+    ],    "forbiddenAsArchitectureAuthority": [
+      "canonical-ekodi-identity",
+      "canonical-authorization",
+      "core-business-logic",
+      "ekodi-orchestration-authority",
+      "non-exportable-canonical-data-format"
+    ]
+  }
+}

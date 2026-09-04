@@ -8,6 +8,7 @@ on:
       - 'platform-boundaries.json'
       - 'config/**'
       - 'scripts/validate-constitution*.mjs'
+      - 'scripts/validate-cloud-portability.mjs'
       - '.github/workflows/**'
       - 'package.json'
   push:
@@ -18,6 +19,7 @@ on:
       - 'platform-boundaries.json'
       - 'config/**'
       - 'scripts/validate-constitution*.mjs'
+      - 'scripts/validate-cloud-portability.mjs'
       - '.github/workflows/**'
       - 'package.json'
 
@@ -37,6 +39,10 @@ jobs:
           node-version: '24'
       - name: Validate constitution
         run: node scripts/validate-constitution.mjs
+      - name: Validate cloud portability
+        run: node scripts/validate-cloud-portability.mjs
+      - name: Test cloud portability
+        run: node --test test/data-plane.test.mjs test/cloud-portability.test.mjs
       - name: Validate existing platform boundaries
         run: node scripts/validate-platform-boundaries.mjs
       - name: Validate security baseline

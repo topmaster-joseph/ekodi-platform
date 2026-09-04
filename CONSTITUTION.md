@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.5.0
+# EKODI Platform Constitution v1.6.0
 
 Effective: 2026-09-04
 
@@ -41,11 +41,14 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Provider export or migration must remain possible without changing EKODI canonical IDs.
 
 ## 5. Provider Constitution
-- Use free tiers first, but never make a free quota the architectural ceiling.
-- Google Workspace is a collaboration provider; Cloudflare is edge/system-object infrastructure; AI vendors are replaceable compute providers.
-- Use gateways where provider churn or critical dependency justifies them: identity, AI, storage and communications.
+- **Portable Cloud First**: use cloud services when they provide verified operational value, while every cloud provider remains replaceable execution or integration infrastructure rather than EKODI's architectural owner.
+- Use free tiers and credits first when useful, but price incentives never determine architecture, canonical identifiers or source-of-truth placement.
+- Google Workspace is a collaboration provider; Cloudflare is edge/system-object infrastructure; Google Cloud, AWS and other clouds may serve as replaceable compute, database or object providers; AI vendors are replaceable compute providers.
+- No provider may own EKODI canonical user/workspace IDs, authorization truth, core business logic, orchestration authority or a non-exportable canonical data format.
+- Critical provider-native APIs are consumed behind EKODI gateways or adapters. Prefer open or widely portable contracts such as HTTP, OAuth/OIDC, OCI, PostgreSQL and S3-compatible object semantics.
+- EKODI is multi-provider ready, not active-active multi-cloud by default. One primary provider per capability is acceptable when an exit path, alternate target and rollback are verified.
 - Use lightweight adapters for lower-risk integrations rather than universal abstraction.
-- A provider outage must degrade only its dependent capability where practical.
+- A provider outage must degrade only its dependent capability where practical, and critical providers require a documented export, restore and credential-revocation exit plan.
 
 ## 6. Security and Traffic Constitution
 - Internet traffic reaches EKODI through the edge security boundary before origin services.

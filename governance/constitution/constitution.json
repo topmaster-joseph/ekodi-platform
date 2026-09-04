@@ -1,5 +1,5 @@
 {
-  "version": "1.5.1",
+  "version": "1.6.0",
   "effectiveDate": "2026-09-04",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -17,7 +17,8 @@
     "verification-first-evolution",
     "security-native-intelligence",
     "evidence-linked-recommendations",
-    "secure-projection-minimum-disclosure"
+    "secure-projection-minimum-disclosure",
+    "portable-cloud-first"
   ],
   "systemBoundaries": {
     "production": [
@@ -217,7 +218,10 @@
       "config/storage-policy.json",
       "config/service-workspace-policy.json",
       "scripts/validate-constitution.mjs",
-      ".github/workflows/constitution-check.yml"
+      ".github/workflows/constitution-check.yml",
+      "config/cloud-portability-policy.json",
+      "config/data-plane-contract.json",
+      "scripts/validate-cloud-portability.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -324,5 +328,18 @@
     "https://ekodi.kr/{slug}/{service}",
     "https://ekodi.kr/{slug}/admin",
     "https://ekodi.kr/{slug}/{service}/admin"
-  ]
+  ],
+  "cloudPortabilityPolicy": {
+    "mode": "portable_cloud_first",
+    "providerRole": "replaceable_execution_or_integration_infrastructure",
+    "canonicalIdentityProviderNeutral": true,
+    "canonicalBusinessLogicProviderNeutral": true,
+    "canonicalDataFormatsPortable": true,
+    "providerNativeCriticalDependencyRequiresAdapter": true,
+    "multiProviderReady": true,
+    "activeActiveMultiCloudDefault": false,
+    "criticalProviderExitPlanRequired": true,
+    "freeCreditMayDetermineArchitecture": false,
+    "policyFile": "config/cloud-portability-policy.json"
+  }
 }
