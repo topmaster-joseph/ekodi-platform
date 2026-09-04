@@ -33,14 +33,14 @@ async function api(path = '', options = {}) {
   if (token) headers.set('authorization', `Bearer ${token}`);
   const response = await fetch(`${API}${path}`, { ...options, headers, credentials: 'include' });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || '공개 사이트 설정을 처리하지 못했습니다.');
+  if (!response.ok) throw new Error(payload.error || '임시페이지 설정을 처리하지 못했습니다.');
   return payload;
 }
 
 function ensureNavLink() {
   const nav = document.querySelector('.sidebar nav');
   if (!nav || nav.querySelector('[data-admin-link="public-site-controls"]')) return;
-  const link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>공개상태</span></button>');
+  const link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>임시페이지 설정</span></button>');
   nav.appendChild(link);
   link.addEventListener('click', () => {
     location.hash = '#public-site-controls';
@@ -54,10 +54,10 @@ function ensurePanel() {
   const content = document.querySelector('#app .content') || document.querySelector('.content');
   if (!content) return null;
   panel = el(`
-    <section id="${PANEL_ID}" class="section" hidden>
+    <section id="${PANEL_ID}" class="section" hidden data-panel="public-site-controls">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <h2>공개 사이트 상태 관리</h2>
+          <h2>임시페이지 설정</h2>
           <p class="muted">cgma.or.kr 같은 공개 도메인을 정상 공개 또는 임시페이지 모드로 전환합니다.</p>
         </div>
         <button type="button" class="btn" data-public-site-refresh>새로고침</button>
@@ -155,7 +155,7 @@ function render(panel, sites) {
         fillForm(form, result.site);
         const badge = form.querySelector('[data-public-site-status-badge]');
         if (badge) badge.textContent = LABELS[result.site.publicStatus] || result.site.publicStatus;
-        setMessage(panel, `${result.site.domain} 공개 상태를 저장했습니다.`);
+        setMessage(panel, `${result.site.domain} 임시페이지 설정을 저장했습니다.`);
       } catch (error) {
         setMessage(panel, error.message || '저장하지 못했습니다.', true);
       }
@@ -167,11 +167,11 @@ function render(panel, sites) {
 async function load() {
   const panel = ensurePanel();
   if (!panel) return;
-  setMessage(panel, '공개 사이트 설정을 불러오는 중입니다.');
+  setMessage(panel, '임시페이지 설정을 불러오는 중입니다.');
   try {
     const data = await api();
     render(panel, data.sites || []);
-    setMessage(panel, '설정 상태를 확인했습니다.');
+    setMessage(panel, '임시페이지 설정 상태를 확인했습니다.');
   } catch (error) {
     setMessage(panel, error.message || '설정을 불러오지 못했습니다.', true);
   }
@@ -181,9 +181,10 @@ function activate() {
   const panel = ensurePanel();
   if (!panel) return;
   document.querySelectorAll('#app .content > .section, .content > .section').forEach(section => {
-    section.hidden = section.id !== PANEL_ID;
+    const targets = String(section.dataset?.panel || '').split(/\s+/);
+    section.hidden = section.id !== PANEL_ID && !targets.includes('public-site-controls');
   });
-  document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', item.dataset.adminLink === 'public-site-controls'));
+  document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', item.dataset.adminLink === 'public-site-controls' || item.dataset.section === 'public-site-controls'));
   load();
 }
 
