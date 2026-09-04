@@ -215,6 +215,13 @@ jobs:
               stage_text = (root / stage_name).read_text(encoding='utf-8')
               if 'workflow_call:' not in stage_text:
                   errors.append(f'{stage_name} must remain reusable by the production promotion gate')
+          social_release = (root / 'deploy-social.yml').read_text(encoding='utf-8')
+          if "if: github.ref != 'refs/heads/main'" in social_release:
+              errors.append('deploy-social.yml still skips staging on main')
+          if not re.search(r'deploy-production:\s*\n(?:.*\n){0,4}?\s*needs:\s*\[[^\]]*deploy-staging[^\]]*\]', social_release):
+              errors.append('deploy-social.yml production deployment does not depend on deploy-staging')
+          if 'environment: development' not in social_release or 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN' not in social_release:
+              errors.append('deploy-social.yml staging job lost the Development Cloudflare boundary')
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)

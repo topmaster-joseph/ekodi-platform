@@ -49,7 +49,7 @@ jobs:
 
   deploy-staging:
     environment: development
-    if: github.ref != 'refs/heads/main'
+    if: always() && needs.validate.result == 'success'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -95,7 +95,7 @@ jobs:
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, deploy-staging]
     runs-on: ubuntu-latest
     timeout-minutes: 14
     env:
