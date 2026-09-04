@@ -45,7 +45,7 @@ await page.route('https://api.ekodi.kr/api/session', async route => {
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
-  await page.waitForFunction(() => document.querySelectorAll('[data-admin-global-group]').length >= 8, null, { timeout: 30000 });
+  await page.waitForFunction(() => document.querySelectorAll('button[data-admin-global-group]').length >= 8, null, { timeout: 30000 });
   await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
 }
 
@@ -89,7 +89,7 @@ if (missingSources.length) throw new Error(`Missing production menu source(s): $
 const results = [];
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
-  const global = page.locator(`[data-admin-global-group="${group}"]`);
+  const global = page.locator(`button[data-admin-global-group="${group}"]`);
   await global.waitFor({ state: 'visible', timeout: 10000 });
   await global.click({ timeout: 10000 });
 
