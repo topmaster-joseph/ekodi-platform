@@ -12,7 +12,7 @@ const realms={
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
-  mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodibiz/mall',origins:['https://ekodi.kr','https://mall.ekodi.kr'],open:true,kind:'mall'},
+  mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodibiz/mall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
   pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
@@ -31,7 +31,7 @@ const realms={
   live:{name:'EKODI Live',returnTo:'https://live.ekodi.kr/',open:true,kind:'live'},
   cloud:{name:'EKODI Cloud',returnTo:'https://cloud.ekodi.kr/',open:true,kind:'cloud'},
   cafe:{name:'EKODI Cafe',returnTo:'https://cafe.ekodi.kr/',open:true,kind:'cafe'},
-  'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/',origins:['https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
+  'cgma-client':{name:'청계상권 고객관리',returnTo:'https://ekodi.kr/cgma/client/',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ai.ekodi.kr/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ai.ekodi.kr/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr'],open:false,kind:'pizzamaru-client'},
   'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ai.ekodi.kr/',origins:['https://yogurt.ai.ekodi.kr','https://yogurt.ekodi.kr'],open:false,kind:'yogurt-client'}
@@ -70,7 +70,8 @@ function safeReturn(raw){
     const target=new URL(raw);
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
     const hostname=target.hostname.toLowerCase();
-    const internalEkodi=hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr');
+    const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
+    const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
     if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi))return fallback.href;
     target.hash='';
     return target.href;
