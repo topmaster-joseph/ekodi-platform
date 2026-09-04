@@ -122,7 +122,7 @@ jobs:
           for f in site-worker.js platform-router-entry-worker.js workspace-admin-page.js workspace-trade-admin-page.js workspace-trade-portal.js ai-gateway-page.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js admin-demand-loader.js admin-public-site-controls.js ai-ops-admin.js communication-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/validate-user-ui-dna.mjs; do
             node --check "$f"
           done
-          node --test test/admin-communication.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/public-workspace-gateway.test.mjs
+          node --test test/admin-communication.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/public-workspace-gateway.test.mjs test/cgma-worker-route-existing-dns.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
           if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
@@ -171,9 +171,12 @@ jobs:
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             grep -Fq "pattern = \"$host\"" wrangler.site.toml
           done
+          grep -Fq 'pattern = "cgma.or.kr/*"' wrangler.site.toml
+          grep -Fq 'pattern = "www.cgma.or.kr/*"' wrangler.site.toml
+          grep -Fq 'zone_name = "cgma.or.kr"' wrangler.site.toml
 
       - name: Verify Cloudflare credentials
         run: |
@@ -235,7 +238,7 @@ jobs:
           payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain missing: $host"
               needs_sync=true
@@ -250,7 +253,7 @@ jobs:
             npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
             payload=$(read_domains)
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr cgma.or.kr www.cgma.or.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"

@@ -20,12 +20,12 @@ pattern = "www.ekodi.kr"
 custom_domain = true
 
 [[routes]]
-pattern = "cgma.or.kr"
-custom_domain = true
+pattern = "cgma.or.kr/*"
+zone_name = "cgma.or.kr"
 
 [[routes]]
-pattern = "www.cgma.or.kr"
-custom_domain = true
+pattern = "www.cgma.or.kr/*"
+zone_name = "cgma.or.kr"
 
 [[routes]]
 pattern = "trade.ekodi.kr"
