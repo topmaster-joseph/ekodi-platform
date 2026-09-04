@@ -15,6 +15,7 @@ const CHEONGGYE_CONNECTION_CACHE_KEY = 'control/cheonggye/storage-connection.jso
 const CHEONGGYE_ADMIN_SESSION_CACHE_PREFIX = 'control/cheonggye/admin-session/';
 const CHEONGGYE_ADMIN_SESSION_FRESH_MS = 5 * 60 * 1000;
 const CHEONGGYE_ADMIN_SESSION_STALE_MS = 30 * 60 * 1000;
+const GOOGLE_REAUTH_REQUIRED = 'GOOGLE_REAUTH_REQUIRED';
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPES = [
   'openid', 'email', 'profile',
@@ -174,24 +175,40 @@ async function cheonggyeAdminSession(request,env) {
 async function tokenRequest(env, body) {
   const response = await fetch(TOKEN_URL, { method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'}, body:new URLSearchParams(body) });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Google OAuth token exchange failed (${response.status})`);
+  if (!response.ok) {
+    const error = new Error(data.error_description || `Google OAuth token exchange failed (${response.status})`);
+    error.code = data.error === 'invalid_grant' ? GOOGLE_REAUTH_REQUIRED : 'GOOGLE_TOKEN_EXCHANGE_FAILED';
+    error.googleError = String(data.error || '');
+    throw error;
+  }
   return data;
 }
 async function accessToken(env, row) {
   const credential = await decryptCredential(env, row);
-  if (!credential.refreshToken) throw new Error('Google refresh token missing');
+  if (!credential.refreshToken) {
+    const error = new Error('Google refresh token missing'); error.code = GOOGLE_REAUTH_REQUIRED; throw error;
+  }
   const token = await tokenRequest(env, {
     client_id:googleClientId(env), client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),
     refresh_token:credential.refreshToken, grant_type:'refresh_token'
   });
   return token.access_token;
 }
+function needsGoogleReauth(error) { return String(error?.code || '') === GOOGLE_REAUTH_REQUIRED; }
+function googleReauthResponse(error, role = 'primary', sourceHeaders = new Headers()) {
+  if (!needsGoogleReauth(error)) return null;
+  return json({error:'Google 연결을 자동으로 다시 확인합니다.',code:GOOGLE_REAUTH_REQUIRED,reconnectRole:role},401,sourceHeaders);
+}
 async function driveFetch(access, path, init = {}) {
   const headers = new Headers(init.headers || {}); headers.set('authorization', `Bearer ${access}`);
   if (init.body && !headers.has('content-type')) headers.set('content-type','application/json');
   const response = await fetch(`${DRIVE_API}${path}`, {...init,headers});
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Google Drive API failed (${response.status})`);
+  if (!response.ok) {
+    const error = new Error(data?.error?.message || `Google Drive API failed (${response.status})`);
+    if (response.status === 401) error.code = GOOGLE_REAUTH_REQUIRED;
+    throw error;
+  }
   return data;
 }
 async function about(access) { return driveFetch(access, '/about?fields=user(displayName,emailAddress,permissionId),storageQuota'); }
@@ -200,7 +217,12 @@ async function sheetsFetch(access, path, init = {}) {
   if (init.body && !headers.has('content-type')) headers.set('content-type','application/json');
   const response = await fetch(`${SHEETS_API}${path}`, {...init,headers});
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) { const error = new Error(data?.error?.message || `Google Sheets API failed (${response.status})`); error.status=response.status; throw error; }
+  if (!response.ok) {
+    const message = data?.error?.message || `Google Sheets API failed (${response.status})`;
+    const error = new Error(message); error.status=response.status;
+    if (response.status === 401 || (response.status === 403 && /insufficient.*scope/i.test(message))) error.code = GOOGLE_REAUTH_REQUIRED;
+    throw error;
+  }
   return data;
 }
 function sheetRange(range) { return encodeURIComponent(`'${CHEONGGYE_SHEET_NAME}'!${range}`); }
@@ -384,7 +406,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
 
   if (url.pathname === `${BASE}/cheonggye-members/health` && request.method === 'GET') {
     try { const members=await cheonggyeList(env); return json({ok:true,scope:CHEONGGYE_SCOPE,source:'google-sheets',sheet:CHEONGGYE_SHEET_NAME,count:members.length,checkedAt:new Date().toISOString()}); }
-    catch(error){ console.error('Cheonggye member health failed',error); return json({ok:false,scope:CHEONGGYE_SCOPE,source:'google-sheets',code:'CHEONGGYE_SHEET_UNAVAILABLE'},503); }
+    catch(error){ console.error('Cheonggye member health failed',error); return googleReauthResponse(error,'primary') || json({ok:false,scope:CHEONGGYE_SCOPE,source:'google-sheets',code:'CHEONGGYE_SHEET_UNAVAILABLE'},503); }
   }
   let auth;
   try { auth=isCheonggyeRoute ? await cheonggyeAdminSession(request,env) : await adminSession(request,env); }
@@ -392,25 +414,25 @@ export async function handleGoogleDriveStorageControl(request, env) {
   if (!auth.session) return auth.response;
   if (url.pathname === `${BASE}/cheonggye-members` && request.method === 'GET') {
     try { const members=await cheonggyeList(env); return json({ok:true,scope:CHEONGGYE_SCOPE,members,count:members.length,source:'google-sheets',sourceUrl:`https://docs.google.com/spreadsheets/d/${CHEONGGYE_SPREADSHEET_ID}/edit`,checkedAt:new Date().toISOString()},200,auth.response.headers); }
-    catch(error){console.error('Cheonggye member list failed',error);return json({error:'청계면상인회 Google Sheet를 읽을 수 없습니다.',code:'CHEONGGYE_SHEET_READ_FAILED'},502,auth.response.headers);}
+    catch(error){console.error('Cheonggye member list failed',error);return googleReauthResponse(error,'primary',auth.response.headers) || json({error:'청계면상인회 Google Sheet를 읽을 수 없습니다.',code:'CHEONGGYE_SHEET_READ_FAILED'},502,auth.response.headers);}
   }
   if (url.pathname === `${BASE}/cheonggye-members` && request.method === 'POST') {
     const member=normalizeMember(await request.json().catch(()=>({})));
     if(!member.joinedAt||!member.category||!member.store||!member.name)return json({error:'가입일, 업종, 상호, 성명을 확인해 주세요.',code:'CHEONGGYE_MEMBER_INVALID'},400,auth.response.headers);
     try{const no=await cheonggyeAppend(env,member);await cheonggyeAudit(env,auth.session,'create',no,`${member.store}/${member.name}`);return json({ok:true,no},201,auth.response.headers);}
-    catch(error){console.error('Cheonggye member create failed',error);return json({error:'Google Sheet에 회원을 등록하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
+    catch(error){console.error('Cheonggye member create failed',error);return googleReauthResponse(error,'primary',auth.response.headers) || json({error:'Google Sheet에 회원을 등록하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
   }
   const cheonggyeMemberMatch=url.pathname.match(new RegExp(`^${BASE}/cheonggye-members/(\\d+)$`));
   if(cheonggyeMemberMatch&&request.method==='PUT'){
     const no=Number(cheonggyeMemberMatch[1]);const member=normalizeMember(await request.json().catch(()=>({})));
     if(!member.joinedAt||!member.category||!member.store||!member.name)return json({error:'가입일, 업종, 상호, 성명을 확인해 주세요.',code:'CHEONGGYE_MEMBER_INVALID'},400,auth.response.headers);
     try{const found=await cheonggyeUpdate(env,no,member);if(!found)return json({error:'회원 번호를 찾을 수 없습니다.',code:'CHEONGGYE_MEMBER_NOT_FOUND'},404,auth.response.headers);await cheonggyeAudit(env,auth.session,'update',no,`${member.store}/${member.name}`);return json({ok:true,no},200,auth.response.headers);}
-    catch(error){console.error('Cheonggye member update failed',error);return json({error:'Google Sheet의 회원 정보를 수정하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
+    catch(error){console.error('Cheonggye member update failed',error);return googleReauthResponse(error,'primary',auth.response.headers) || json({error:'Google Sheet의 회원 정보를 수정하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
   }
   if(cheonggyeMemberMatch&&request.method==='DELETE'){
     const no=Number(cheonggyeMemberMatch[1]);
     try{const found=await cheonggyeDelete(env,no);if(!found)return json({error:'회원 번호를 찾을 수 없습니다.',code:'CHEONGGYE_MEMBER_NOT_FOUND'},404,auth.response.headers);await cheonggyeAudit(env,auth.session,'delete',no,'member row deleted');return json({ok:true,no},200,auth.response.headers);}
-    catch(error){console.error('Cheonggye member delete failed',error);return json({error:'Google Sheet의 회원 정보를 삭제하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
+    catch(error){console.error('Cheonggye member delete failed',error);return googleReauthResponse(error,'primary',auth.response.headers) || json({error:'Google Sheet의 회원 정보를 삭제하지 못했습니다.',code:'CHEONGGYE_SHEET_WRITE_FAILED'},502,auth.response.headers);}
   }
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
@@ -423,18 +445,22 @@ export async function handleGoogleDriveStorageControl(request, env) {
     await env.DB.prepare('DELETE FROM storage_oauth_states WHERE expires_at<=?').bind(now.toISOString()).run();
     await env.DB.prepare('INSERT INTO storage_oauth_states(nonce_hash,admin_email,connection_role,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(nonce),auth.session.email,role,exp.toISOString(),now.toISOString()).run();
     const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()});
+    const reconnectRow=await env.DB.prepare(`SELECT account_email FROM storage_connections WHERE role=? AND status!='disabled' ORDER BY updated_at DESC LIMIT 1`).bind(role).first();
     const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
+    if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
     return json({authorizeUrl:`${AUTH_URL}?${params}`,role},200,auth.response.headers);
   }
   const driveMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/drives$`));
   if (driveMatch && request.method === 'GET') {
     const row=await rowById(env,decodeURIComponent(driveMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
-    try { return json(await listDrives(env,row),200,auth.response.headers); } catch(error) { console.error('Drive list failed',error); return json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
+    try { return json(await listDrives(env,row),200,auth.response.headers); } catch(error) { console.error('Drive list failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
   }
   const selectMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/select$`));
   if (selectMatch && request.method === 'POST') {
     const row=await rowById(env,decodeURIComponent(selectMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
-    const body=await request.json().catch(() => ({})); const available=await listDrives(env,row); const selected=available.drives.find(d => d.id === String(body.driveId || ''));
+    const body=await request.json().catch(() => ({})); let available;
+    try { available=await listDrives(env,row); } catch(error) { console.error('Drive select list failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
+    const selected=available.drives.find(d => d.id === String(body.driveId || ''));
     if (!selected) return json({error:'이 계정에서 사용할 수 없는 Drive입니다.'},400,auth.response.headers);
     const now=new Date().toISOString();
     const canonicalRoot = row.role === 'primary' && selected.id === primarySharedDriveId(env) ? selected.rootId : '';
@@ -446,7 +472,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
   if (bootstrapMatch && request.method === 'POST') {
     const row=await rowById(env,decodeURIComponent(bootstrapMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
     if (row.role !== 'primary') return json({error:'EKODI 기본 폴더 구조는 primary Drive에만 생성합니다.'},409,auth.response.headers);
-    try { return json({ok:true,...await bootstrap(env,row)},200,auth.response.headers); } catch(error) { console.error('Drive bootstrap failed',error); return json({error:String(error.message || 'Drive 폴더 생성 실패'),code:'DRIVE_BOOTSTRAP_FAILED'},502,auth.response.headers); }
+    try { return json({ok:true,...await bootstrap(env,row)},200,auth.response.headers); } catch(error) { console.error('Drive bootstrap failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:String(error.message || 'Drive 폴더 생성 실패'),code:'DRIVE_BOOTSTRAP_FAILED'},502,auth.response.headers); }
   }
   const disconnectMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)$`));
   if (disconnectMatch && request.method === 'DELETE') {

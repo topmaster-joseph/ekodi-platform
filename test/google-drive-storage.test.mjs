@@ -157,3 +157,18 @@ test('Cheonggye admin polling uses short-lived R2 auth validation cache instead 
   assert.match(control, /isCheonggyeRoute \? await cheonggyeAdminSession/);
   assert.match(control, /using bounded cached validation after D1 exception/);
 });
+
+
+test('Google storage automatically reconnects only when Google credentials require reauthorization', () => {
+  assert.match(control, /GOOGLE_REAUTH_REQUIRED/);
+  assert.match(control, /data\.error === 'invalid_grant'/);
+  assert.match(control, /insufficient\.\*scope/i);
+  assert.match(control, /reconnectRole:role/);
+  assert.match(control, /login_hint/);
+  assert.match(admin, /AUTO_RECONNECT_COOLDOWN_MS=5\*60\*1000/);
+  assert.match(admin, /currentAdminReturnPath/);
+  assert.match(admin, /accountHintedAuthorizeUrl/);
+  assert.match(cheonggyeAdmin, /startAutoReconnect/);
+  assert.match(cheonggyeAdmin, /GOOGLE_REAUTH_REQUIRED/);
+  assert.match(cheonggyeAdmin, /returnTo:currentAdminReturnPath\(\)/);
+});

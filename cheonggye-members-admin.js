@@ -5,6 +5,9 @@
   const EMAIL_KEY = 'ekodi-admin-email';
   const PANEL = 'cheonggye-members';
   const API = '/api/control/storage/google/cheonggye-members';
+  const STORAGE_API = '/api/control/storage/google';
+  const AUTO_RECONNECT_KEY = 'ekodi-storage-auto-reconnect-at';
+  const AUTO_RECONNECT_COOLDOWN_MS = 5 * 60 * 1000;
   const POLL_MS = 15000;
 
   let rows = [];
@@ -13,6 +16,7 @@
   let query = '';
   let pollTimer = null;
   let installed = false;
+  let autoReconnectInFlight = false;
 
   function token() { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
   function email() { try { return sessionStorage.getItem(EMAIL_KEY) || ''; } catch { return ''; } }
@@ -26,18 +30,29 @@
     el.dataset.error = error ? 'true' : 'false';
   }
 
+  function currentAdminReturnPath() { return `${location.pathname}${location.search}${location.hash}`; }
+  function autoReconnectAllowed() { try { const last=Number(sessionStorage.getItem(AUTO_RECONNECT_KEY)||0); return !last || Date.now()-last>AUTO_RECONNECT_COOLDOWN_MS; } catch { return true; } }
+  function markAutoReconnect() { try { sessionStorage.setItem(AUTO_RECONNECT_KEY,String(Date.now())); } catch {} }
+  function clearAutoReconnect() { try { sessionStorage.removeItem(AUTO_RECONNECT_KEY); } catch {} }
+  async function startAutoReconnect(role='primary') {
+    if (autoReconnectInFlight || !autoReconnectAllowed()) return false;
+    markAutoReconnect(); autoReconnectInFlight=true;
+    const headers=new Headers({'content-type':'application/json'}); headers.set('authorization',`Bearer ${token()}`);
+    const response=await fetch(`${STORAGE_API}/oauth/start`,{method:'POST',cache:'no-store',credentials:'same-origin',headers,body:JSON.stringify({role,returnTo:currentAdminReturnPath()})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){autoReconnectInFlight=false;throw new Error(data.error||'Google 연결을 다시 시작하지 못했습니다.');}
+    location.assign(data.authorizeUrl); return true;
+  }
   async function request(path = '', options = {}) {
-    const headers = new Headers(options.headers || {});
-    headers.set('authorization', `Bearer ${token()}`);
+    const headers = new Headers(options.headers || {}); headers.set('authorization', `Bearer ${token()}`);
     if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
     const response = await fetch(`${API}${path}`, { cache:'no-store', credentials:'same-origin', ...options, headers });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = new Error(data.error || `회원명단 API 오류 (${response.status})`);
-      error.code = data.code || '';
-      throw error;
+      if(data.code==='GOOGLE_REAUTH_REQUIRED' && await startAutoReconnect(data.reconnectRole||'primary')) return new Promise(()=>{});
+      const error = new Error(data.error || `회원명단 API 오류 (${response.status})`); error.code = data.code || ''; throw error;
     }
-    return data;
+    clearAutoReconnect(); return data;
   }
 
   function sortedRows() {
