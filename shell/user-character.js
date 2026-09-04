@@ -78,7 +78,7 @@ function mount(){
   window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,service:serviceId(),profile:profile().prop}}));
   return node;
 }
-function refresh(){const existing=document.querySelector(`[${CHARACTER_ATTR}]`);if(!eligible()){existing?.remove();return null;}const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');if(existing&&existing.dataset.ekodiCharacterVariant!==variant){existing.remove();return mount();}return existing||mount();}
+function refresh(){const existing=document.querySelector(`.ekodi-main-ekodian[${CHARACTER_ATTR}]`);if(!eligible()){existing?.remove();return null;}const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');if(existing&&existing.dataset.ekodiCharacterVariant!==variant){existing.remove();return mount();}return existing||mount();}
 window.EKODIUserCharacter=Object.freeze({version:VERSION,refresh,profile:()=>({...profile()})});
 const boot=()=>{setTimeout(refresh,0);setTimeout(refresh,600)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
