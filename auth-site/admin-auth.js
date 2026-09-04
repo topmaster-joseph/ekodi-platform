@@ -1,6 +1,8 @@
 const ADMIN_API='https://api.ekodi.kr';
 const params=new URLSearchParams(location.search);
 const directEntry=params.get('direct')==='1';
+const popupEntry=params.get('popup')==='1';
+const requestedProvider=String(params.get('provider')||'').trim().toLowerCase();
 const rawReturn=params.get('return_to')||'https://admin.ekodi.kr/';
 const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:')return'https://admin.ekodi.kr/';if(u.origin==='https://admin.ekodi.kr')return u.href;if(u.origin==='https://ai.ekodi.kr'&&u.pathname==='/')return u.href;if(u.origin==='https://tax.ekodi.kr'&&(u.pathname==='/'||u.pathname==='/index.html'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/admin'||u.pathname==='/admin/'||u.pathname==='/ekodibiz/mall/admin'||u.pathname==='/ekodibiz/mall/admin/'))return u.href;return'https://admin.ekodi.kr/'}catch{return'https://admin.ekodi.kr/'}})();
 const $=id=>document.getElementById(id);
@@ -62,7 +64,22 @@ function showNavigationFallback(targetHref){
   host.append(link);
   notice('Google 인증은 완료됐지만 자동 화면 이동이 지연되고 있습니다. 아래 버튼을 한 번 누르면 관리자 화면으로 이어집니다.','error');
 }
+function handoffToOpener(result){
+  if(!popupEntry||!window.opener||window.opener.closed)return false;
+  let targetOrigin='';
+  try{targetOrigin=new URL(safeReturn).origin}catch{return false}
+  try{
+    window.opener.postMessage({type:'ekodi-admin-auth-success',token:result.token,email:result.email||'',name:result.name||'',role:result.role||'',provider:result.provider||'google'},targetOrigin);
+    notice('관리자 인증이 완료되었습니다. 원래 관리자 화면으로 돌아갑니다.');
+    window.setTimeout(()=>window.close(),80);
+    return true;
+  }catch(error){
+    console.warn('admin popup handoff',error);
+    return false;
+  }
+}
 function navigateToAdmin(result){
+  if(handoffToOpener(result))return;
   const target=new URL(safeReturn);
   target.hash=new URLSearchParams({ekodi_admin_token:result.token}).toString();
   const targetHref=target.href;
@@ -74,7 +91,7 @@ function navigateToAdmin(result){
     try{location.assign(targetHref)}catch{showNavigationFallback(targetHref)}
   }
 }
-async function prepare(){
+async function prepareGoogle(){
   const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice(directEntry?'Google 관리자 계정 선택창을 준비하고 있습니다.':'관리자 전용 Google 인증을 준비하고 있습니다.');
   if(isEmbeddedWebView){renderExternalBrowserGate();return;}
   try{
@@ -101,7 +118,7 @@ async function prepare(){
           if(expired){
             console.warn('expired_challenge');
             notice('Google 로그인 확인 시간이 지나 새 인증 요청을 준비합니다. 잠시만 기다려 주세요.','error');
-            setTimeout(prepare,350);
+            setTimeout(prepareGoogle,350);
             return;
           }
           notice(loginFailureMessage(e),'error');show('googleRetry',true);
@@ -114,6 +131,30 @@ async function prepare(){
       try{window.google.accounts.id.prompt()}catch(error){console.warn('admin direct Google prompt',error)}
     }else notice('등록된 관리자 Google 계정을 선택해 주세요. 계정 선택 후 EKODI 관리자 허용목록을 다시 확인합니다.');
   }catch(e){console.error('admin central auth',e);notice('관리자 Google 인증 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.','error');show('googleRetry',true)}
+}
+const ADMIN_LOGIN_PROVIDERS=Object.freeze([
+  Object.freeze({id:'google',label:'Google',enabled:true,start:prepareGoogle}),
+]);
+function enabledProviders(){return ADMIN_LOGIN_PROVIDERS.filter(provider=>provider.enabled)}
+function renderProviderChoice(providers){
+  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);
+  for(const provider of providers){
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='google-btn';
+    button.textContent=`${provider.label}로 계속`;
+    button.addEventListener('click',()=>provider.start());
+    host.append(button);
+  }
+  notice('관리자 로그인 방식을 선택해 주세요.');
+}
+async function prepare(){
+  const providers=enabledProviders();
+  if(!providers.length){notice('사용 가능한 관리자 로그인 방식이 없습니다.','error');show('googleRetry',false);return}
+  const selected=requestedProvider?providers.find(provider=>provider.id===requestedProvider):null;
+  if(selected)return selected.start();
+  if(providers.length===1)return providers[0].start();
+  renderProviderChoice(providers);
 }
 $('googleRetry').addEventListener('click',prepare);
 show('signedOut',true);show('signedIn',false);await prepare();
