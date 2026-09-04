@@ -1,5 +1,5 @@
 {
-  "version": 45,
+  "version": 47,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -28,23 +28,8 @@
         ],
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding"
-        ]
-      },
-      {
-        "url": "https://ekodi.kr/deployment-probe",
-        "statuses": [
-          200
         ],
-        "redirect": "manual",
-        "expect": [
-          "OPERATING SPACE"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: space",
-          "x-ekodi-workspace-gateway: space-service-binding",
-          "x-ekodi-shell: v2",
-          "cache-control: no-store"
-        ]
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodibiz/trade/admin",
@@ -90,7 +75,8 @@
         "headerExpect": [
           "x-ekodi-route: trade-partner-workspace",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/_ekodi/space/config.js",

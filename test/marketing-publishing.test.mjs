@@ -30,11 +30,15 @@ test('worker exposes real scheduled publishing lifecycle and never persists prov
   assert.match(worker, /media_type:'CAROUSEL'/);
 });
 
-test('personal brand subject resolves to authenticated person without tenant membership', async () => {
-  const worker = await read('marketing-publishing-worker.js');
-  assert.match(worker, /subjectType === 'person'/);
-  assert.match(worker, /key:identity\.id/);
+test('personal and workspace subjects resolve through the shared immutable authority boundary', async () => {
+  const [worker,subject] = await Promise.all([read('marketing-publishing-worker.js'),read('channel-automation-subject.js')]);
+  assert.match(subject, /requested === 'person'/);
+  assert.match(subject, /key:actor\.id/);
+  assert.match(subject, /workspaceId:context\.workspaceId/);
+  assert.match(subject, /ownerKey:context\.workspaceId/);
+  assert.match(subject, /writable:context\.canManage/);
   assert.match(worker, /personalBrand:true/);
+  assert.match(worker, /workspaceIdentity:true/);
   assert.match(worker, /AI_PUBLISH_REQUIRES_DELEGATION/);
 });
 
@@ -66,11 +70,23 @@ test('staging is read-only while production owns the one-minute scheduler', asyn
     read('wrangler.marketing-publishing.toml'),
   ]);
   assert.match(staging, /ALLOW_MUTATIONS = "false"/);
+  assert.doesNotMatch(staging, /\[\[d1_databases\]\]/, 'development staging must not bind production D1');
   assert.doesNotMatch(staging, /marketing-publish-api\.ekodi\.kr/);
+  assert.match(production, /\[\[d1_databases\]\]/);
   assert.match(production, /marketing-publish-api\.ekodi\.kr/);
   assert.match(production, /crons = \["\* \* \* \* \*"\]/);
 });
 
+
+test('staging health verifier accepts only explicit Cloudflare Access protection', async () => {
+  const workflow = await read('.github/workflows/deploy-marketing-publishing.yml');
+  assert.match(workflow, /-D \/tmp\/publish-stage\.headers/);
+  assert.match(workflow, /\[\[ \"\$code\" == '302' \]\]/);
+  assert.match(workflow, /www-authenticate:\[\[:space:\]\]\*Cloudflare-Access/);
+  assert.match(workflow, /cloudflareaccess\.com\/cdn-cgi\/access\/login/);
+  assert.match(workflow, /\[\[ \"\$code\" == '200' \]\]/);
+  assert.match(workflow, /\"mutations\":false/);
+});
 
 test('central publisher reuses OAuth vault over private service binding and supports YouTube resumable upload', async () => {
   const [publisher,growth,wrangler] = await Promise.all([read('marketing-publishing-worker.js'),read('marketing-growth-worker.js'),read('wrangler.marketing-publishing.toml')]);

@@ -13,8 +13,6 @@ ALLOWED_ORIGINS = "https://ekodi-my-staging.topmaster-joseph.workers.dev,https:/
 enabled = true
 invocation_logs = true
 
-[[d1_databases]]
-binding = "DB"
-database_name = "ekodi-auth"
-database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
-migrations_dir = "migrations"
+# Development-account staging is intentionally data-detached.
+# Production D1 remains bound only in wrangler.marketing-publishing.toml.
+# Read-only staging validates worker boot/health without crossing the dev/prod data boundary.
