@@ -64,6 +64,17 @@ test('successful Google Drive OAuth returns directly to the exact admin route wi
   assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
   assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
 });
+test('Storage exposes a private Google OAuth broker for the Marketing YouTube callback without exposing the client secret', () => {
+  assert.match(control, /MARKETING_YOUTUBE_REDIRECT_URI = 'https:\/\/marketing-connect-api\.ekodi\.kr\/oauth\/youtube\/callback'/);
+  assert.match(control, /GOOGLE_OAUTH_REDIRECT_FORBIDDEN/);
+  assert.match(control, /exchangeGoogleAuthorizationCode/);
+  assert.match(control, /refreshGoogleAccessToken/);
+  assert.match(worker, /export class GoogleOAuthBroker extends WorkerEntrypoint/);
+  assert.match(worker, /exchangeAuthorizationCode/);
+  assert.match(worker, /refreshAccessToken/);
+  assert.doesNotMatch(config, /GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+"/);
+});
+
 test('Admin Worker proxies Storage through a Cloudflare service binding', () => {
   assert.match(siteConfig, /\[\[services\]\]/);
   assert.match(siteConfig, /binding = "STORAGE"/);
