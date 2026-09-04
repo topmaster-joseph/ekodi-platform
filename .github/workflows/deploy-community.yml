@@ -50,6 +50,7 @@ jobs:
           node --check community-worker.js
           node --check ekodi-shell-injector.js
           node --check community/app.js
+          node --check community/community-enhancements.js
           node --check community/social-links.js
           node --check community/connect/app.js
           node --check scripts/guarded-worker-release.mjs
@@ -61,6 +62,7 @@ jobs:
           grep -Fq 'EKODI Connect' community/connect/index.html
           grep -Fq 'connect-api' community/connect/app.js
           grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
+          grep -Fq '<script src="/community-enhancements.js" defer></script>' community/index.html
           grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
           grep -Fq "community:{name:'Community'" auth-site/client-auth.js
           grep -Fq "returnTo:'https://community.ekodi.kr/'" auth-site/client-auth.js
