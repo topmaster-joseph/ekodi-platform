@@ -27,7 +27,6 @@ import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
-import { handleJubileeSharedApi } from './jubilee-shared-api.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -83,11 +82,6 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = incoming.pathname;
-
-    if (path.startsWith('/api/jubilee/v1')) {
-      try { const response = await handleJubileeSharedApi(request, env); if (response) return applyApiSecurityHeaders(response); }
-      catch (error) { console.error('Jubilee shared API error', error); return errorResponse('EKODI Jubilee API 처리 중 오류가 발생했습니다.', 'JUBILEE_API_ERROR'); }
-    }
 
     if (path.startsWith('/api/storage/v1')) {
       try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }

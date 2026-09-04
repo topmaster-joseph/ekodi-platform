@@ -152,3 +152,71 @@ function safeRef(value) {
 function safeCode(error) {
   return String(error?.message || 'jubilee_provider_error').slice(0, 240);
 }
+
+export async function executeAuthorizedJubileeCapabilityRequest(input = {}, authorization = {}) {
+  let envelope;
+  try {
+    envelope = buildJubileeCapabilityRequest(input);
+  } catch (error) {
+    return Object.freeze({
+      response: providerResponse(input.request_id || input.requestId, 'rejected', null, [safeCode(error)]),
+      audit: null,
+    });
+  }
+
+  const authorizationError = validateCoreAuthorization(envelope, authorization);
+  if (authorizationError) {
+    const response = providerResponse(envelope.request_id, 'rejected', null, [authorizationError]);
+    return Object.freeze({
+      response,
+      audit: buildJubileeCapabilityAudit(envelope, response, authorization),
+    });
+  }
+
+  const response = await executeJubileeCapabilityRequest(envelope);
+  return Object.freeze({
+    response,
+    audit: buildJubileeCapabilityAudit(envelope, response, authorization),
+  });
+}
+export function buildJubileeCapabilityAudit(envelope = {}, response = {}, authorization = {}) {
+  return Object.freeze({
+    request_id: safeRef(envelope.request_id),
+    capability_id: JUBILEE_CAPABILITY_PROVIDER.capabilityId,
+    operation: String(envelope.operation || '').trim(),
+    status: String(response.status || 'error').trim(),
+    workspace_id: safeRef(envelope.context_projection?.workspace_id),
+    provider_implementation_id: JUBILEE_CAPABILITY_PROVIDER.implementationId,
+    authorization_scope: 'capability-and-operation-scoped',
+    actor_ref_hash: safeHash(authorization.actor_ref_hash || authorization.actorRefHash),
+  });
+}
+
+function validateCoreAuthorization(envelope, authorization) {
+  if (authorization?.allowed !== true) return 'jubilee_core_authorization_required';
+  const capabilityId = String(
+    authorization.capability_id || authorization.capabilityId || '',
+  ).trim();
+  if (capabilityId !== envelope.capability_id) return 'jubilee_core_capability_mismatch';
+
+  const operations = Array.isArray(authorization.operations)
+    ? authorization.operations.map(value => String(value || '').trim())
+    : [String(authorization.operation || '').trim()].filter(Boolean);
+  if (!operations.includes(envelope.operation)) return 'jubilee_core_operation_not_authorized';
+  const requestedWorkspace = safeRef(envelope.context_projection?.workspace_id);
+  const authorizedWorkspace = safeRef(
+    authorization.workspace_id || authorization.workspaceId,
+  );
+  if (requestedWorkspace && authorizedWorkspace && requestedWorkspace !== authorizedWorkspace) {
+    return 'jubilee_core_workspace_mismatch';
+  }
+  if (requestedWorkspace && !authorizedWorkspace) {
+    return 'jubilee_core_workspace_authorization_required';
+  }
+  return null;
+}
+
+function safeHash(value) {
+  const hash = String(value || '').trim().toLowerCase();
+  return /^[a-f0-9]{64}$/.test(hash) ? hash : null;
+}

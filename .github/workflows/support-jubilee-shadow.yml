@@ -1,0 +1,75 @@
+name: Support Jubilee Shadow
+
+on:
+  pull_request:
+    paths:
+      - 'jubilee-*.js'
+      - 'support-jubilee-boundary.js'
+      - 'support-jubilee-shadow-worker.js'
+      - 'wrangler.support-jubilee-shadow.toml'
+      - '.github/workflows/support-jubilee-shadow.yml'
+
+concurrency:
+  group: support-jubilee-shadow-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  shadow:
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      WORKER_NAME: ekodi-support-jubilee-shadow-${{ github.event.pull_request.number }}
+      DEV_SUBDOMAIN: ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate shadow boundary
+        run: |
+          set -euo pipefail
+          node --check support-jubilee-boundary.js
+          node --check support-jubilee-shadow-worker.js
+          node --check jubilee-capability-provider.js
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import worker from './support-jubilee-shadow-worker.js';
+          const payload={jubileeConsent:true,assessment:{needScore:.99,beneficiaryIdentity:{name:'private'},supportSignals:[{type:'affordability_constraint',source:'consented',reason:'private'}]}};
+          const request=new Request('https://shadow.invalid/preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+          const response=await worker.fetch(request,{ENVIRONMENT:'development',JUBILEE_MODE:'shadow'});
+          assert.equal(response.status,200);
+          const text=await response.text();
+          assert.equal(text.includes('needScore'),false);
+          assert.equal(text.includes('beneficiaryIdentity'),false);
+          assert.equal(text.includes('affordability_constraint'),true);
+          NODE
+      - name: Verify Development credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated shadow worker
+        run: npx --yes wrangler@4.37.1 deploy --config wrangler.support-jubilee-shadow.toml --name "$WORKER_NAME"
+      - name: Verify deployed privacy projection
+        run: |
+          set -euo pipefail
+          url="https://${WORKER_NAME}.${DEV_SUBDOMAIN}"
+          for attempt in $(seq 1 18); do
+            health=$(curl -sS -o /tmp/jubilee-shadow-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/health" || true)
+            preview=$(curl -sS -o /tmp/jubilee-shadow-preview.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST -H 'content-type: application/json' -d '{"jubileeConsent":true,"assessment":{"needScore":0.99,"confidence":0.9,"beneficiaryIdentity":{"name":"private"},"supportSignals":[{"type":"affordability_constraint","source":"consented","reason":"private"}]}}' "$url/preview" || true)
+            if [[ "$health" == '200' && "$preview" == '200' ]] \
+              && grep -Fq '"mode":"shadow"' /tmp/jubilee-shadow-health.json \
+              && grep -Fq '"productionExecution":false' /tmp/jubilee-shadow-health.json \
+              && grep -Fq 'affordability_constraint' /tmp/jubilee-shadow-preview.json \
+              && ! grep -Fq 'needScore' /tmp/jubilee-shadow-preview.json \
+              && ! grep -Fq 'beneficiaryIdentity' /tmp/jubilee-shadow-preview.json; then
+              echo 'Support Jubilee isolated shadow verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          cat /tmp/jubilee-shadow-health.json || true
+          cat /tmp/jubilee-shadow-preview.json || true
+          exit 1
