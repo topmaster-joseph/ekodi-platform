@@ -1,9 +1,12 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
-  "scope": ["public", "workspace"],
+  "scope": [
+    "public",
+    "workspace"
+  ],
   "adminExcluded": true,
   "principles": {
     "singleSource": true,
@@ -15,18 +18,42 @@
     "fallbackHeaderWhenMissing": true,
     "legacyCommonFooterSuppressed": true,
     "rootInternalPathsExcluded": true,
-    "languageChoiceEverywhere": true,
-    "globalUtilitiesInHeader": true
+    "globalUtilitiesInHeader": true,
+    "homepageUtilitiesOnly": true,
+    "workspaceAndPathSelectorsInGlobalChrome": false
   },
   "header": {
     "owner": "shared-shell",
     "strategy": "adopt-existing-first",
     "fallback": "shared-shell-header-when-missing",
-    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path", "language choice"],
+    "requiredMeaning": [
+      "EKODI identity",
+      "current service context",
+      "account or My EKODI path",
+      "language and ambient-audio controls on user homepage only"
+    ],
     "localNavigation": "service-owned",
-    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control"],
-    "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
-    "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"]
+    "behavior": [
+      "single banner",
+      "safe-area aware",
+      "keyboard accessible",
+      "responsive",
+      "content offset when fixed",
+      "compact language control"
+    ],
+    "recognizedExistingHeaders": [
+      "header",
+      ".site-header",
+      ".topbar",
+      ".app-header",
+      ".main-header",
+      "[data-ekodi-fixed-header]"
+    ],
+    "forbidden": [
+      "second global header",
+      "service-specific copy of shared header runtime",
+      "admin navigation mixed into user header"
+    ]
   },
   "footer": {
     "owner": "shared-shell",
@@ -41,25 +68,48 @@
   "language": {
     "owner": "shared-shell",
     "runtime": "shell/user-language.js",
-    "placement": "inside the adopted or fallback user header",
-    "supported": ["ko-KR", "en", "zh-CN", "ja"],
+    "placement": "right side of the adopted or fallback user homepage header",
+    "supported": [
+      "ko-KR",
+      "en",
+      "zh-CN",
+      "ja"
+    ],
     "default": "ko-KR",
     "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
     "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
-    "adminExcluded": true
+    "adminExcluded": true,
+    "homepageOnly": true,
+    "workspaceExcluded": false,
+    "subpagesExcluded": true
   },
   "ambientAudio": {
     "owner": "shared-shell",
     "runtime": "shell/ccm-mr-player.js",
-    "placement": "inside the adopted or fallback user header; floating only when no header exists",
+    "placement": "right side of the adopted or fallback user homepage header",
     "contentOverlapForbidden": true,
-    "adminExcluded": true
+    "adminExcluded": true,
+    "homepageOnly": true,
+    "workspaceExcluded": false,
+    "subpagesExcluded": true,
+    "floatingFallback": false
   },
   "inheritance": {
     "hostRule": "all public/workspace service hosts inherit the manifest service shell",
     "pathRule": "all subordinate paths inherit their parent service shell",
     "rootServiceRule": "ekodi.kr/<service>/... inherits that service when the route is a user surface",
-    "rootPolicyPages": ["/privacy", "/terms"],
-    "excludedRootPrefixes": ["/admin"]
+    "rootPolicyPages": [
+      "/privacy",
+      "/terms"
+    ],
+    "excludedRootPrefixes": [
+      "/admin"
+    ]
+  },
+  "navigationPolicy": {
+    "workspaceChooserVisibleInGlobalChrome": false,
+    "pathChooserVisibleInGlobalChrome": false,
+    "internalWorkspaceContextPreserved": true,
+    "directDeepLinksPreserved": true
   }
 }

@@ -429,3 +429,19 @@ html[data-ekodi-user-ui] {
     animation: none !important;
   }
 }
+
+/* Global navigation policy: workspace/path context remains internal, never a user chooser. */
+html[data-ekodi-user-ui] #workspaceSwitch,
+html[data-ekodi-user-ui] #workspaceSwitcher,
+html[data-ekodi-user-ui] #workspacePicker,
+html[data-ekodi-user-ui] #workspaceSelect,
+html[data-ekodi-user-ui] .workspace-picker,
+html[data-ekodi-user-ui] .workspace-switch,
+html[data-ekodi-user-ui] #pathSelect,
+html[data-ekodi-user-ui] #pathSwitcher,
+html[data-ekodi-user-ui] [data-ekodi-workspace-selector],
+html[data-ekodi-user-ui] [data-ekodi-path-selector],
+html[data-ekodi-user-ui][data-ekodi-service="my"] #workspaces,
+html[data-ekodi-user-ui][data-ekodi-service="my"] a[href="#workspaces"] {
+  display: none !important;
+}

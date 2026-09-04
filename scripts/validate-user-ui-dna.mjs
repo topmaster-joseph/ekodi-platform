@@ -73,7 +73,7 @@ if (!Array.isArray(shell?.scope) || !['public', 'workspace'].every(surface => sh
 if (shell?.principles?.singleSource !== true || shell?.principles?.noDuplicatedHeaderOrFooter !== true) {
   errors.push('User UI Shell must enforce single-source chrome without duplicate headers or footers.');
 }
-for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader']) {
+for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','homepageUtilitiesOnly','globalUtilitiesInHeader']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
 if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
@@ -82,7 +82,7 @@ if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !
 if (shell?.header?.fallback !== 'shared-shell-header-when-missing') {
   errors.push('User header must provide the shared fallback header when a page has no service header.');
 }
-for (const meaning of ['EKODI identity', 'current service context', 'account or My EKODI path', 'language choice']) {
+for (const meaning of ['EKODI identity', 'current service context', 'account or My EKODI path', 'language and ambient-audio controls on user homepage only']) {
   if (!shell?.header?.requiredMeaning?.includes(meaning)) errors.push(`User header is missing required meaning: ${meaning}`);
 }
 for (const selector of ['header','.site-header','.topbar','.app-header','.main-header','[data-ekodi-fixed-header]']) {
@@ -130,7 +130,7 @@ if (!shell?.inheritance?.excludedRootPrefixes?.includes('/admin')) {
 }
 
 const expectedLocales=['ko-KR','en','zh-CN','ja'];
-if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/user-language.js'||shell?.language?.adminExcluded!==true){
+if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/user-language.js'||shell?.language?.adminExcluded!==true||shell?.language?.homepageOnly!==true||shell?.language?.workspaceExcluded!==false||shell?.language?.subpagesExcluded!==true){
   errors.push('Shared user language selector must be owned by the User UI Shell and exclude admin surfaces.');
 }
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
@@ -139,11 +139,19 @@ if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale)))
 for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
 }
-if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
+if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true||shell?.ambientAudio?.homepageOnly!==true||shell?.ambientAudio?.workspaceExcluded!==false||shell?.ambientAudio?.subpagesExcluded!==true||shell?.ambientAudio?.floatingFallback!==false){
   errors.push('Shared ambient audio control must be Shell-owned, avoid content overlap and exclude admin surfaces.');
 }
 for(const marker of ['placeButton','data-ekodi-floating','[data-ekodi-language-control]','ekodi:user-header-ready']){
   if(!ccmMrSource.includes(marker))errors.push(`Shared CCM MR control lost header-placement marker: ${marker}`);
+}
+
+
+if(shell?.principles?.workspaceAndPathSelectorsInGlobalChrome!==false||shell?.navigationPolicy?.workspaceChooserVisibleInGlobalChrome!==false||shell?.navigationPolicy?.pathChooserVisibleInGlobalChrome!==false||shell?.navigationPolicy?.internalWorkspaceContextPreserved!==true||shell?.navigationPolicy?.directDeepLinksPreserved!==true){
+  errors.push('Workspace/path chooser UI must stay out of global chrome while internal context and deep links remain preserved.');
+}
+for(const [source,label] of [[userLanguageSource,'language'],[ccmMrSource,'ambient audio']]){
+  if(!source.includes('userHomepageControlAllowed'))errors.push('Shared '+label+' runtime lost homepage-only marker: userHomepageControlAllowed');
 }
 
 for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallback','renderEkodiUserFooter','manifestServiceForHost','shellServiceForRootPath','data-ekodi-user-ui-style']) {

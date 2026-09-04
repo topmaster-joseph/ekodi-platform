@@ -30,6 +30,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/window\.EKODIUserUIHeader/);
   assert.match(header,/ekodi:shell-theme/);
   assert.match(header,/data-ekodi-header-title/);
+  assert.match(header,/ROUTING_CHOOSER_SELECTORS/);
+  assert.match(header,/suppressRoutingChooserChrome/);
+  assert.match(header,/data-ekodi-routing-chooser/);
+  assert.match(header,/ekodiRoutingChooser='hidden'/);
   assert.doesNotMatch(header,/body\s*\{[^}]*text-align\s*:\s*center/is);
 
   assert.equal(EKODI_USER_FOOTER.version,3);
@@ -85,6 +89,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/text-align:\s*center/);
   assert.match(sharedCss,/justify-content:\s*center/);
   assert.match(sharedCss,/\.ekodi-user-language\s*\{/);
+  assert.match(sharedCss,/#workspaceSwitch/);
+  assert.match(sharedCss,/#workspacePicker/);
+  assert.match(sharedCss,/data-ekodi-path-selector/);
   assert.match(sharedCss,/z-index:\s*2147483400/);
   assert.match(sharedCss,/overflow:\s*visible/);
   assert.match(userLanguage,/z-index:2147483400!important/);
@@ -111,6 +118,21 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(parsedPolicy.language.owner,'shared-shell');
   assert.equal(parsedPolicy.language.adminExcluded,true);
   assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja']);
+  assert.equal(parsedPolicy.principles.homepageUtilitiesOnly,true);
+  assert.equal(parsedPolicy.principles.workspaceAndPathSelectorsInGlobalChrome,false);
+  assert.equal(parsedPolicy.language.homepageOnly,true);
+  assert.equal(parsedPolicy.language.workspaceExcluded,false);
+  assert.equal(parsedPolicy.language.subpagesExcluded,true);
+  assert.equal(parsedPolicy.ambientAudio.homepageOnly,true);
+  assert.equal(parsedPolicy.ambientAudio.workspaceExcluded,false);
+  assert.equal(parsedPolicy.ambientAudio.subpagesExcluded,true);
+  assert.equal(parsedPolicy.ambientAudio.floatingFallback,false);
+  assert.equal(parsedPolicy.navigationPolicy.workspaceChooserVisibleInGlobalChrome,false);
+  assert.equal(parsedPolicy.navigationPolicy.pathChooserVisibleInGlobalChrome,false);
+  assert.match(userLanguage,/userHomepageControlAllowed/);
+  assert.match(userLanguage,/runtimeSurface/);
+  assert.match(ccmPlayer,/userHomepageControlAllowed/);
+  assert.match(ccmPlayer,/currentSurface/);
 
   const strictCsp=shellCsp("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'");
   assert.match(strictCsp,/style-src 'self' https:\/\/shell\.ekodi\.kr/);
