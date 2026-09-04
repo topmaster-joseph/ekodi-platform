@@ -102,6 +102,7 @@ jobs:
               'deploy-work-staging.yml',
               'stage-books-shell.yml',
               'stage-shared-site-shell.yml',
+              'stage-marketing-pages-shell.yml',
               'stage-social-shell.yml',
           }
           for filename in sorted(worker_staging_files):
@@ -200,6 +201,7 @@ jobs:
               ('deploy-work.yml', 'deploy-work-staging.yml'),
               ('deploy-energy.yml', 'deploy-energy-staging.yml'),
               ('deploy-books.yml', 'stage-books-shell.yml'),
+              ('deploy-marketing-pages.yml', 'stage-marketing-pages-shell.yml'),
           )
           for release_name, stage_name in promotion_pairs:
               release_text = (root / release_name).read_text(encoding='utf-8')

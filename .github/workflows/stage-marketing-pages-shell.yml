@@ -1,9 +1,14 @@
 # 2026-09-05 Cloudflare two-account boundary
-# Marketing Pages staging deployment is intentionally quarantined until the Development token has Pages Edit.
-# This workflow validates the preview build only and MUST NOT write to the Production Cloudflare account.
+# Marketing Pages staging uses Workers Static Assets in the Development account.
+# Production remains Cloudflare Pages and is reachable only after this staging gate succeeds.
 name: Stage Marketing AI Pages Shell
 
 on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
   pull_request:
     paths:
       - '.github/workflows/deploy-marketing-pages.yml'
@@ -13,30 +18,44 @@ permissions:
   contents: read
 
 concurrency:
-  group: marketing-pages-shell-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: marketing-pages-shell-${{ github.event_name }}-${{ github.ref_name }}
+  cancel-in-progress: false
 
 env:
   GH_API_TOKEN: ${{ github.token }}
+  WRANGLER_VERSION: '4.119.0'
 
 jobs:
-  validate:
+  staging:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      HUB_STAGING_URL: https://ekodi-marketing-pages-staging.ekodi-development.workers.dev
+      JADAM_STAGING_URL: https://ekodi-marketing-jadam-staging.ekodi-development.workers.dev
+      PIZZAMARU_STAGING_URL: https://ekodi-marketing-pizzamaru-staging.ekodi-development.workers.dev
+      YOGURT_STAGING_URL: https://ekodi-marketing-yogurt-staging.ekodi-development.workers.dev
     steps:
-      - name: Resolve latest Marketing AI source
+      - name: Resolve Marketing AI source
         id: source
         shell: bash
         run: |
           set -euo pipefail
-          sha=$(curl -fsS \
-            -H "Authorization: Bearer $GH_API_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            'https://api.github.com/repos/topmaster-joseph/jadam-maru/commits/main' \
-            | python -c "import sys,json; print(json.load(sys.stdin)['sha'])")
+          if [ "${{ github.event_name }}" = 'workflow_call' ]; then
+            sha='${{ inputs.source_sha }}'
+          else
+            sha=$(curl -fsS \
+              -H "Authorization: Bearer $GH_API_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              'https://api.github.com/repos/topmaster-joseph/jadam-maru/commits/main' \
+              | python -c "import sys,json; print(json.load(sys.stdin)['sha'])")
+          fi
           test ${#sha} -eq 40
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Marketing AI staging source: $sha"
 
       - uses: actions/checkout@v7
         with:
@@ -82,16 +101,90 @@ jobs:
             grep -Fq 'data-ekodi-shell-external-style' "$dir/shell-style.js"
           done
 
-      - name: Enforce staging deployment quarantine
+      - name: Verify Development account boundary
+        if: github.event_name == 'workflow_call'
         shell: bash
         run: |
           set -euo pipefail
-          echo 'Marketing Pages build validation passed.'
-          echo 'Cloudflare Pages staging deployment is quarantined until CLOUDFLARE_DEVELOPMENT_API_TOKEN has Pages Edit.'
-          echo 'No Production Cloudflare credential is available to this workflow.'
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+
+      - name: Deploy isolated Marketing Pages staging Workers
+        if: github.event_name == 'workflow_call'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd marketing-source
+
+          deploy_stage() {
+            name="$1"
+            directory="$2"
+            config="wrangler.${name}.staging.jsonc"
+            cat > "$config" <<JSON
+          {
+            "name": "$name",
+            "compatibility_date": "2026-09-05",
+            "workers_dev": true,
+            "assets": {
+              "directory": "$directory",
+              "html_handling": "auto-trailing-slash"
+            }
+          }
+          JSON
+            npx --yes wrangler@$WRANGLER_VERSION deploy --config "$config"
+          }
+
+          deploy_stage ekodi-marketing-pages-staging ./dist/marketing-ai
+          deploy_stage ekodi-marketing-jadam-staging ./dist/marketing-ai/jadam
+          deploy_stage ekodi-marketing-pizzamaru-staging ./dist/marketing-ai/pizzamaru
+          deploy_stage ekodi-marketing-yogurt-staging ./dist/marketing-ai/yogurtpurple
+
+      - name: Verify isolated Marketing Pages staging
+        if: github.event_name == 'workflow_call'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_stage() {
+            url="$1"
+            needle="$2"
+            asset="$3"
+            slug=$(printf '%s' "$url" | tr -cd 'a-zA-Z0-9')
+            headers="/tmp/${slug}.headers"
+            body="/tmp/${slug}.html"
+            code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/" || true)
+            echo "$url http=$code"
+            if [[ "$code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' "$headers"; then
+              echo "$url is deployed and correctly protected by Cloudflare Access."
+              return 0
+            fi
+            test "$code" = '200'
+            grep -Fq "$needle" "$body"
+            grep -Fq 'data-ekodi-asset-routing="same-origin"' "$body"
+            grep -Fq 'https://shell.ekodi.kr/shell.js' "$body"
+            asset_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/$asset" || true)
+            test "$asset_code" = '200'
+          }
+
+          verify_stage "$HUB_STAGING_URL" '마케팅AI' 'official-ui.css'
+          verify_stage "$JADAM_STAGING_URL" '자담치킨' 'site.css'
+          verify_stage "$PIZZAMARU_STAGING_URL" '피자마루' 'site.css'
+          verify_stage "$YOGURT_STAGING_URL" '요거트퍼플' 'site.css'
+
           {
             echo '## Marketing Pages staging boundary'
             echo '- ✅ Build contract validated.'
-            echo '- 🔒 Production Cloudflare writes are disabled.'
-            echo '- ⏸️ Pages preview deployment remains quarantined until the Development token receives Pages Edit.'
+            echo '- ✅ Four isolated Workers Static Assets staging targets deployed in the Development account.'
+            echo '- ✅ Production Cloudflare credentials were not available to the staging job.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report pull-request contract validation
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          {
+            echo '## Marketing Pages pull-request validation'
+            echo '- ✅ Build and same-origin asset contract validated.'
+            echo '- ℹ️ No Cloudflare mutation is performed from the direct pull-request workflow.'
+            echo '- 🔐 A production release invokes this workflow again as the required Development staging gate.'
           } >> "$GITHUB_STEP_SUMMARY"
