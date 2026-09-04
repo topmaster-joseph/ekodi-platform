@@ -220,12 +220,8 @@ window.EKODIPublicSiteControls = { activate, load };
 window.addEventListener('hashchange', () => { if (location.hash === '#public-site-controls') activate(); });
 window.addEventListener('ekodi-admin-ready', boot);
 if (document.documentElement.dataset.ekodiAdminReady === 'true') boot();
-<<<<<<< HEAD
 })();
-=======
-})();
-<<<<<<< ours
-=======
+
 
 (() => {
 'use strict';
