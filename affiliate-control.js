@@ -141,8 +141,12 @@ async function publicProducts(request, env, url) {
 
   let automation = await getAffiliateAutomationStatus(env);
   if (automation.configured && automation.needsRefresh && !recentFailedRun(automation)) {
-    await runAffiliateAutomation(env, { reason: automation.activeProducts > 0 ? 'public-stale' : 'public-empty' });
-    automation = await getAffiliateAutomationStatus(env);
+    try {
+      await runAffiliateAutomation(env, { reason: automation.activeProducts > 0 ? 'public-stale' : 'public-empty' });
+      automation = await getAffiliateAutomationStatus(env);
+    } catch (error) {
+      automation = { ...automation, status: 'degraded', refreshError: cleanText(error?.message || 'AUTOMATION_REFRESH_FAILED', 160) };
+    }
   }
   const rows = await readPublicRows(env, limit);
   const coupangProducts = rows.map(row => publicProductView(request, row));
