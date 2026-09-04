@@ -85,6 +85,21 @@ AI vendors are replaceable workers behind this development contract. Provider-sp
 
 If a provider-specific instruction conflicts with this file, this policy and `CONSTITUTION.md` take precedence.
 
+## Verified EKODI service truth
+
+Current EKODI service facts are not model knowledge. They are operational evidence.
+
+Before an AI worker or human operator asserts a current EKODI service's existence, canonical URL, admin URL, domain/route, deployment state, operational state, public exposure, authentication route or service boundary, it must follow `config/service-truth-policy.json`.
+
+The minimum rule is `evidence before reasoning`:
+
+1. resolve the authoritative EKODI declaration;
+2. obtain fresh runtime evidence when the claim concerns current operation;
+3. keep implementation, deployment and operation as separate facts;
+4. return `unverified` when fresh evidence is unavailable instead of inferring from memory, naming patterns, repository names, examples or prior conversation.
+
+This requirement is provider-neutral. ChatGPT/GPT, Codex, Claude, Gemini, Copilot and future AI providers consume the same verified EKODI truth context. Installing an AI model, connector or tool does not by itself guarantee truth lookup; the EKODI Orchestrator or integration layer must expose and require the appropriate truth tool/context for truth-required intents.
+
 ## Production authority
 
 AI agents may be allowed to propose, validate, open pull requests, or invoke explicitly guarded release workflows within delegated scope. They must not possess an unrestricted path that edits production source or production infrastructure outside the central gate.
