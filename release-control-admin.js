@@ -4,7 +4,7 @@
   const REPOSITORY = 'topmaster-joseph/ekodi-platform';
   const RUNS_URL = `https://api.github.com/repos/${REPOSITORY}/actions/runs?per_page=80`;
   const CACHE_MS = 60 * 1000;
-  const MALL_FREE_OPS_URL = 'https://mall.ekodi.kr/free-ops?embed=admin';
+  const MALL_FREE_OPS_URL = 'https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin';
   const DEPLOYMENTS_SECTION = 'deployments';
   const RELEASE_UNITS = [
     { id:'shared-site', name:'Shared Site · Admin/Auth', workflow:'deploy-admin-site.yml', model:'Candidate 0% → verify → 100%', risk:'high', domains:['ekodi.kr','admin.ekodi.kr','auth.ekodi.kr'] },
@@ -132,7 +132,7 @@
       refresh.type = 'button';
       refresh.dataset.mallFreeOpsRefresh = 'true';
       const external = el('a', '전체화면 ↗', 'secondary');
-      external.href = 'https://mall.ekodi.kr/free-ops';
+      external.href = 'https://ekodi.kr/ekodibiz/mall/free-ops';
       external.target = '_blank';
       external.rel = 'noopener';
       actions.append(refresh, external);

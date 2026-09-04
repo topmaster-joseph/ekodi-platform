@@ -1,0 +1,35 @@
+name: EKODI Experience Scenario Contracts
+
+on:
+  pull_request:
+    paths: &scenario_paths
+      - 'experience/app.js'
+      - 'experience/scenarios.js'
+      - 'experience/styles.css'
+      - 'test/experience-scenario-engine.test.mjs'
+      - '.github/workflows/experience-scenario-contract.yml'
+  push:
+    branches: [main]
+    paths: *scenario_paths
+
+permissions:
+  contents: read
+
+jobs:
+  scenario-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate guided Experience journeys
+        run: |
+          set -euo pipefail
+          node --check experience/app.js
+          node --check experience/scenarios.js
+          node --test test/experience-platform.test.mjs test/experience-scenario-engine.test.mjs
+          npm run validate:constitution
+          npm run validate:boundaries
+          npm run validate:security

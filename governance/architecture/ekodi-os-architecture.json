@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-09-04",
+  "status": "active",
+  "name": "EKODI OS Architecture and Responsibility Registry",
+  "principle": "Integrated responsibility, distributed execution, standardized connections.",
+  "principleKo": "통합된 책임, 분산된 실행, 표준화된 연결.",
+  "deploymentTopology": "modular-monolith-first",
+  "deploymentRule": "Modular monolith is the default deployment topology. Responsibility and capability boundaries remain explicit and extraction-ready regardless of deployment unit.",
+  "layers": {
+    "governance": {
+      "runtime": false,
+      "purpose": "Constitution, policy, responsibility, approval and change-control authority.",
+      "owns": ["constitution", "policy", "responsibility-model", "approval-gates", "change-control"]
+    },
+    "os": {
+      "runtime": true,
+      "purpose": "Platform-wide execution order, orchestration, routing context, release order and shared operating surfaces.",
+      "owns": ["orchestration", "routing-context", "service-discovery-context", "release-order", "operational-coordination"]
+    },
+    "core": {
+      "runtime": true,
+      "purpose": "Stable shared contracts and controls required for independently executable capabilities to cooperate safely.",
+      "owns": ["identity-and-access-contract", "workspace-authority", "service-contracts", "integration-gateway", "audit", "security-policy", "provider-independence"]
+    },
+    "responsible-independent-service": {
+      "runtime": true,
+      "purpose": "EKODI-offered capabilities with explicit service boundaries and independent lifecycle readiness.",
+      "owns": ["service-domain-logic", "service-data-boundary", "service-health", "service-contract", "service-fallback"]
+    },
+    "external-connected-service": {
+      "runtime": "external",
+      "purpose": "External provider capabilities connected through reviewed adapters or public contracts.",
+      "owns": ["provider-side-service-behavior"]
+    },
+    "workspace": {
+      "runtime": "context",
+      "purpose": "Person, organization, group or project operating context identified by immutable workspace_id; it is not a service implementation.",
+      "owns": ["workspace-context", "membership-context", "workspace-configuration", "workspace-service-selection"]
+    }
+  },
+  "responsibilityClasses": {
+    "ekodi-responsible": {
+      "label": "EKODI Responsible Independent Service",
+      "ekodiOwns": ["service-quality", "security", "privacy-controls", "availability-design", "observability", "fallback-design", "user-protection", "maintenance", "contract-stability"],
+      "rule": "EKODI responsibility does not require shared process, shared database or shared deployment."
+    },
+    "external-provider-responsible": {
+      "label": "External Connected Service",
+      "providerOwns": ["provider-service-availability", "provider-internal-operation", "provider-policy"],
+      "ekodiOwns": ["connector-contract", "authorization-scope", "minimum-data-projection", "error-handling", "retry-policy", "fallback-or-degraded-path", "user-facing-status", "safe-disconnection"]
+    }
+  },
+  "connectionRules": [
+    "Cross-boundary access uses a public or explicitly declared contract.",
+    "Direct private database coupling across responsible independent service boundaries is forbidden.",
+    "External providers connect through reviewed adapters, gateways, APIs, events or webhooks with minimum required scopes.",
+    "A connected service can be disconnected without redefining EKODI canonical person, workspace or authorization identity.",
+    "Raw provider data remains at the owning boundary where practical; downstream services receive the minimum purpose-bound projection.",
+    "Provider-specific credentials never become shared client-side configuration.",
+    "A service failure should degrade its capability without collapsing unrelated capabilities where practical."
+  ],
+  "platformBoundaryClassification": {
+    "ekodi-shell": {"layer":"os","responsibilityClass":"ekodi-responsible","capability":"shared-shell-and-context"},
+    "my": {"layer":"workspace","responsibilityClass":"ekodi-responsible","capability":"personal-control-and-workspace-projection"},
+    "management": {"layer":"os","responsibilityClass":"ekodi-responsible","capability":"management-orchestration"},
+    "mall": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"mall"},
+    "cafe": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"cafe"},
+    "books": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"books"},
+    "publishing": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"publishing"},
+    "journal": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"journal"},
+    "experience": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"experience"},
+    "invest": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"invest"},
+    "community": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"community"},
+    "work": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"work"},
+    "education": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"education"},
+    "bible-conversation": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"bible-conversation"},
+    "life": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"life"},
+    "support": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"support"},
+    "money": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"money"},
+    "social": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"social"},
+    "energy": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"energy"},
+    "delivery": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"delivery"},
+    "business": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"business"},
+    "finance": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"finance"},
+    "control-api": {"layer":"core","responsibilityClass":"ekodi-responsible","capability":"core-control-plane"},
+    "mail-service": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"mail"},
+    "storage-control": {"layer":"core","responsibilityClass":"ekodi-responsible","capability":"storage-gateway"},
+    "marketing-domain-api": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"marketing-domain"},
+    "marketing-publishing-api": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"marketing-publishing"},
+    "admin-auth": {"layer":"core","responsibilityClass":"ekodi-responsible","capability":"admin-and-auth-surfaces"},
+    "site-core": {"layer":"os","responsibilityClass":"ekodi-responsible","capability":"shared-edge-runtime"},
+    "service-proxy": {"layer":"core","responsibilityClass":"ekodi-responsible","capability":"service-routing-gateway"},
+    "marketing-ai": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"marketing-ai"}
+  },
+  "externalConnectedServices": {
+    "google-workspace": {"responsibilityClass":"external-provider-responsible","family":"collaboration-provider","connection":"provider-adapter","dataRule":"human collaboration documents remain provider-owned while EKODI keeps canonical identity and authorization"},
+    "google-drive": {"responsibilityClass":"external-provider-responsible","family":"storage-provider","connection":"storage-control adapter","dataRule":"provider object content remains external; EKODI owns connection metadata and canonical workspace linkage"},
+    "google-mail": {"responsibilityClass":"external-provider-responsible","family":"communications-provider","connection":"mail provider adapter","dataRule":"mailbox content remains at source provider by default"},
+    "youtube": {"responsibilityClass":"external-provider-responsible","family":"publishing-channel-provider","connection":"channel adapter","dataRule":"publishing credentials are explicitly authorized and capability-scoped"},
+    "toss-payments": {"responsibilityClass":"external-provider-responsible","family":"payment-provider","connection":"payment adapter","dataRule":"EKODI stores only required payment contract metadata and never delegates canonical identity"},
+    "accountinfo": {"responsibilityClass":"external-provider-responsible","family":"financial-data-provider","connection":"official handoff","dataRule":"financial execution is not autonomous and high-impact actions require authorized channels and human confirmation"},
+    "ai-provider-family": {"responsibilityClass":"external-provider-responsible","family":"replaceable-compute-provider","connection":"AI gateway/adapter","dataRule":"minimum purpose-bound projection; provider credentials stay server-side"},
+    "official-data-provider-family": {"responsibilityClass":"external-provider-responsible","family":"official-data-provider","connection":"reviewed source adapter","dataRule":"source provenance and allowed use are preserved"}
+  },
+  "capabilityRouting": {
+    "marketing-ai": {
+      "mode": "multi-implementation-selectable",
+      "canonicalCapabilityId": "marketing-ai",
+      "ekodiImplementation": "marketing-ai",
+      "externalImplementationsAllowed": true,
+      "requiredConnection": "standard capability-scoped contract",
+      "selectionAuthorities": ["user", "workspace-admin", "ekodi-orchestrator-policy"],
+      "selectionFactors": ["user-choice", "workspace-policy", "quality", "cost", "latency", "availability", "privacy", "provider-independence"],
+      "parallelUseAllowed": true,
+      "directPrivateDatabaseAccessForExternalImplementations": false,
+      "fallback": "EKODI implementation or safe non-AI/degraded path where the workflow permits"
+    }
+  },
+  "workspaceRules": {
+    "identityKey": "workspace_id",
+    "urlIsIdentity": false,
+    "workspaceKindIsIdentity": false,
+    "workspaceOwnsServiceSelection": true,
+    "workspaceMayChooseAmongCompatibleImplementations": true,
+    "serviceDisconnectMustPreserveWorkspaceIdentity": true
+  }
+}

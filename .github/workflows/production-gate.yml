@@ -60,7 +60,7 @@ jobs:
 
           verify_no_redirect 'https://admin.ekodi.kr/'
           verify_no_redirect 'https://admin.ekodi.kr/control-center.html'
-          verify_html 'https://cgma.ekodi.kr/' '청계면상인회' 'CLIENT cgma'
+          verify_html 'https://ekodi.kr/cgma/' '청계면상인회' 'CLIENT cgma'
           verify_html 'https://jadam.ekodi.kr/' '자담치킨 목포대점' 'CLIENT jadam'
           verify_html 'https://pizzamaru.ekodi.kr/' '피자마루 목포대점' 'CLIENT pizzamaru'
           verify_html 'https://yogurt.ekodi.kr/' '요거트퍼플 목포대점' 'CLIENT yogurt'

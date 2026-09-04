@@ -2,14 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const source = await readFile(new URL('../control-center-features.js', import.meta.url), 'utf8');
+const source = await readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
 
-test('lazy navigation hides its placeholder before the real feature button is installed', () => {
-  const hideIndex = source.indexOf('button.hidden = true');
-  const loadIndex = source.indexOf('await loader()');
-  const removeIndex = source.indexOf('removeResolvedPlaceholders()');
-  assert.ok(hideIndex >= 0, 'lazy placeholder should be hidden during handoff');
-  assert.ok(loadIndex > hideIndex, 'placeholder should be hidden before loading the feature module');
-  assert.ok(removeIndex >= 0, 'resolved placeholders should still be removed after install');
-  assert.match(source, /button\.hidden = false; button\.disabled = false/);
+test('demand navigation marks placeholders busy before loading and removes them only after the real control resolves', () => {
+  const busyIndex = source.indexOf('placeholder.disabled = true');
+  const loadIndex = source.indexOf('for (const src of feature.scripts || []) await loadScript(src)');
+  const realIndex = source.indexOf('const real = await waitFor(feature.real)');
+  const removeIndex = source.indexOf('placeholder !== real && placeholder.isConnected) placeholder.remove()');
+  assert.ok(busyIndex >= 0 && loadIndex > busyIndex, 'placeholder must become busy before primary scripts load');
+  assert.ok(realIndex > loadIndex && removeIndex > realIndex, 'placeholder removal must wait for the real control');
+  assert.ok(source.includes("placeholder.classList.add('is-loading')"));
+  assert.ok(source.includes("placeholder.classList.remove('is-loading')"));
+  assert.ok(source.includes('placeholder.disabled = false'));
 });

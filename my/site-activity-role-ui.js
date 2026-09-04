@@ -2,9 +2,9 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const OWNED_SITE_URLS=Object.freeze({
-  church:'https://church.ekodi.kr/',
-  biz:'https://biz.ekodi.kr/',
-  lab:'https://lab.ekodi.kr/',
+  church:'https://ekodi.kr/ekodichurch',
+  biz:'https://ekodi.kr/ekodibiz',
+  lab:'https://ekodi.kr/ekodilab',
   trade:'https://trade.ekodi.kr/',
 });
 const ROLE_FALLBACK=Object.freeze({

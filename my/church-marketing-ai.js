@@ -1,5 +1,5 @@
 (() => {
-  const MARKETING_URL = 'https://marketing.ekodi.kr/church/';
+  const MARKETING_URL = 'https://ekodi.kr/ekodichurch/marketing/';
   const AUTH_URL = 'https://auth.ekodi.kr/';
   const host = document.querySelector('#platformList');
   const workspaces = document.querySelector('#workspaceList');

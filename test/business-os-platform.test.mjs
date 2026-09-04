@@ -19,8 +19,9 @@ test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
   for(const term of ['BUSINESS OS','에코디비즈','자담치킨 목포대점','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
   assert.match(worker,/ekodibiz/);
   assert.match(worker,/jadam/);
-  assert.match(worker,/https:\/\/biz\.ekodi\.kr/);
-  assert.match(worker,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/ekodibiz/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/jadam\/marketing/);
+  assert.doesNotMatch(worker,/https:\/\/jadam\.ai\.ekodi\.kr/);
   assert.match(worker,/external_client/);
   assert.match(worker,/internal/);
 });
@@ -35,7 +36,8 @@ test('Business OS starts from a customer problem instead of a module catalog',()
   assert.match(customerNext,/requestDoItForMe/);
   assert.match(customerNext,/\/api\/action-check/);
   assert.match(customerNext,/https:\/\/energy\.ekodi\.kr\/jadam/);
-  assert.match(customerNext,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  assert.match(customerNext,/https:\/\/ekodi\.kr\/jadam\/marketing/);
+  assert.doesNotMatch(customerNext,/https:\/\/jadam\.ai\.ekodi\.kr/);
   assert.match(customerNextCss,/\.problem-grid/);
   assert.match(customerNextCss,/\.next-step-panel/);
 });

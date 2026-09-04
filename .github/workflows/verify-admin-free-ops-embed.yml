@@ -42,8 +42,8 @@ jobs:
           }
 
           for attempt in $(seq 1 3); do
-            free_code=$(fetch_final 'https://mall.ekodi.kr/free-ops?embed=admin' /tmp/free-headers /tmp/free-body /tmp/free-url)
-            root_code=$(fetch_final 'https://mall.ekodi.kr/' /tmp/mall-headers /tmp/mall-body /tmp/mall-url)
+            free_code=$(fetch_final 'https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin' /tmp/free-headers /tmp/free-body /tmp/free-url)
+            root_code=$(fetch_final 'https://ekodi.kr/ekodibiz/mall/' /tmp/mall-headers /tmp/mall-body /tmp/mall-url)
             admin_code=$(fetch_final 'https://admin.ekodi.kr/' /tmp/admin-headers /tmp/admin-body /tmp/admin-url)
             asset_code=$(fetch_final 'https://admin.ekodi.kr/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset /tmp/admin-asset-url)
 
@@ -72,7 +72,7 @@ jobs:
             fi
 
             if [ "$asset_code" = '200' ] \
-              && grep -Fq "https://mall.ekodi.kr/free-ops?embed=admin" /tmp/admin-asset \
+              && grep -Fq "https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin" /tmp/admin-asset \
               && grep -Fq "dataset.section = 'mall-free-ops'" /tmp/admin-asset; then
               asset_ok=true
             fi

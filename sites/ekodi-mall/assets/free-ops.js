@@ -5,7 +5,7 @@
   const DRAFT_KEY='ekodiMallFreeOpsDraftV1';
   const RATES=Object.freeze({direct:7,marketplace:8,ai:9});
   const EMBEDDED=new URLSearchParams(location.search).get('embed')==='admin'&&window.self!==window.top;
-  const AUTH_URL=(()=>{const url=new URL('https://auth.ekodi.kr/');url.searchParams.set('site','mall');url.searchParams.set('return_to','https://mall.ekodi.kr/free-ops?embed=admin');return url.toString();})();
+  const AUTH_URL=(()=>{const url=new URL('https://auth.ekodi.kr/');url.searchParams.set('site','mall');url.searchParams.set('return_to','https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin');return url.toString();})();
   if(!window.supabase)return;
   const sb=window.supabase.createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   const $=(s)=>document.querySelector(s);

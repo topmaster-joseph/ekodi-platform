@@ -8,6 +8,7 @@ const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), '
 const shell = await readFile(new URL('../admin-authenticated-shell.js', import.meta.url), 'utf8');
 const demand = await readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8');
+const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
 test('Campus first screen renders the full site catalog with direct operational actions', () => {
   assert.match(js, /사이트 관리 ·/);
@@ -85,19 +86,17 @@ test('public site Open links never inherit monitor-only health endpoints', () =>
   assert.match(js, /serviceControlGrid/);
 });
 
-test('Domains and DNS navigation is removed while Affiliates has a visible icon', () => {
-  assert.match(js, /data-section="domains"/);
-  assert.match(js, /data-lazy-section="domains"/);
-  assert.match(js, /\.forEach\(item => item\.remove\(\)\)/);
-  assert.match(js, /🤝 Affiliates/);
+test('navigation ownership stays in the central registry rather than Campus DOM rewriting', () => {
+  assert.doesNotMatch(registry, /id: 'domains'/);
+  assert.match(registry, /id: 'affiliates'[\s\S]*en: 'Mall AI Sales'/);
+  assert.doesNotMatch(js, /data-section=\"domains\"|data-lazy-section=\"domains\"/);
 });
 
-test('sidebar normalization is idempotent and cannot feed its own MutationObserver forever', () => {
-  assert.match(js, /if \(span\.textContent !== '🤝 Affiliates'\) span\.textContent = '🤝 Affiliates'/);
-  assert.match(js, /first\.nodeType === Node\.TEXT_NODE && first\.textContent/);
-  assert.match(js, /if \(item\.textContent !== '🤝 Affiliates'\) item\.textContent = '🤝 Affiliates'/);
-  assert.match(js, /let sidebarQueued = false/);
-  assert.match(js, /queueMicrotask\(\(\) =>/);
+test('Campus observers are scoped to service-link normalization and one-time panel readiness', () => {
+  assert.match(js, /const serviceGrid = document\.querySelector\('#serviceControlGrid'\)/);
+  assert.match(js, /observer\.observe\(serviceGrid, \{ childList: true, subtree: true \}\)/);
+  assert.match(js, /if \(renderCampus\(\)\) observer\.disconnect\(\)/);
+  assert.doesNotMatch(js, /sidebarQueued|Affiliates.*textContent/);
 });
 
 test('Campus action assets are shipped but fetched only after the administrator opens Campus', () => {

@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_CHARACTER_BOOTED)return;
 window.__EKODI_USER_CHARACTER_BOOTED=true;
 
-const VERSION=1;
+const VERSION=2;
 const STYLE_ID='ekodi-user-character-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','none']);
@@ -39,7 +39,7 @@ function isLanding(){
   return parts.length===0;
 }
 function profile(){return PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}
-function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding()&&!document.querySelector(`[${CHARACTER_ATTR}]`);}
+function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding();}
 function propSvg(prop){
   if(prop==='book')return '<g transform="translate(103 92)"><path d="M-24 0c12-5 20-3 24 2v26c-7-5-15-6-24-3Z"/><path d="M24 0C12-5 3-3 0 2v26c7-5 15-6 24-3Z"/></g>';
   if(prop==='cup')return '<g transform="translate(109 96)"><path d="M-18-7h28v25h-28Z"/><path d="M10-2h7c10 0 10 15 0 15h-7" fill="none"/></g>';
@@ -73,14 +73,15 @@ function mount(){
   if(!eligible()||!document.body)return null;
   const host=heroTarget();if(!host)return null;
   installStyle();host.classList.add('ekodi-main-ekodian-host');
-  const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.setAttribute('aria-label',profile().label);node.innerHTML=svg(profile());host.append(node);
+  const selected=profile();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected);host.append(node);
   document.documentElement.dataset.ekodiUserCharacter=`v${VERSION}`;
   window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,service:serviceId(),profile:profile().prop}}));
   return node;
 }
-function refresh(){const existing=document.querySelector(`[${CHARACTER_ATTR}]`);if(existing&&!eligible()){existing.remove();return null;}return existing||mount();}
+function refresh(){const existing=document.querySelector(`[${CHARACTER_ATTR}]`);if(!eligible()){existing?.remove();return null;}const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');if(existing&&existing.dataset.ekodiCharacterVariant!==variant){existing.remove();return mount();}return existing||mount();}
 window.EKODIUserCharacter=Object.freeze({version:VERSION,refresh,profile:()=>({...profile()})});
 const boot=()=>{setTimeout(refresh,0);setTimeout(refresh,600)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.addEventListener('ekodi:surface-change',refresh);
+window.addEventListener('ekodi:design-profile-ready',refresh);
 })();

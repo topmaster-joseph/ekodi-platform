@@ -16,19 +16,20 @@ test('historical storige entry is normalized and preserved through central auth'
 test('legacy path is compatibility-only and converges to current AI Ops', async () => {
   const handoff = await read('admin-central-handoff.js');
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(handoff, /location\.pathname\.startsWith\('\/legacy'\)\?'ai-ops'/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /'#ai-ops'/);
-  assert.doesNotMatch(shell, /await loadScript\('control-center\.js'\)/);
-  assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
+  const worker = await read('site-worker.js');
+  for (const path of ['/legacy','/legacy/','/legacy.html']) assert.ok(worker.includes(`'${path}'`));
+  assert.match(worker, /function retiredAdminResponse\(\)/);
+  assert.ok(worker.includes("'admin-retired'"));
+  assert.doesNotMatch(shell, /control-center\.js|control-center-ops\.css/);
 });
 
-test('authenticated Admin Tools links cannot reopen legacy UI', async () => {
+test('authenticated Admin routing exposes only current hashes and cannot reopen retired legacy UI', async () => {
+  const handoff = await read('admin-central-handoff.js');
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /function repairLegacyLinks\(\)/);
-  assert.match(shell, /hero\.href='#ai-ops'/);
-  assert.match(shell, /a\[href="\/legacy"\]/);
-  assert.match(shell, /link\.href='#ai-ops'/);
+  assert.doesNotMatch(handoff, /legacy/);
+  assert.match(handoff, /ai-ops/);
+  assert.match(shell, /'ai-ops':'aiops'/);
+  assert.doesNotMatch(shell, /control-center|\/legacy/);
 });
 
 test('Storage remains an explicit demand-loaded admin destination', async () => {

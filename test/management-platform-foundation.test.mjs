@@ -55,7 +55,7 @@ test('tier and module choice remain independent',()=>{
 test('existing Marketing AI is reused and specialist catalog contains requested first wave',()=>{
   const marketing=MANAGEMENT_MODULES.find(module=>module.id==='marketing');
   assert.equal(marketing?.reuseExisting,true);
-  assert.equal(marketing?.url,'https://marketing.ekodi.kr/');
+  assert.equal(marketing?.url,'https://ekodi.kr/ekodibiz/marketing-ai');
   for(const id of ['chief','marketing','menu','order','review','customer','sales']) assert.ok(MANAGEMENT_MODULES.some(module=>module.id===id));
 });
 

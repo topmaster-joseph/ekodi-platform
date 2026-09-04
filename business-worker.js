@@ -8,10 +8,10 @@ const WORKSPACES={
   ekodibiz:{
     id:'ekodibiz',name:'에코디비즈',englishName:'EKODIBIZ',classification:'internal',scope:'organization',accent:'business',
     description:'에코디비즈의 고객, 프로젝트, 마케팅, 업무, 매출과 재무 신호를 한 화면에서 운영하는 내부 Business OS 워크스페이스입니다.',
-    publicUrl:'https://biz.ekodi.kr',marketingUrl:'https://marketing.ekodi.kr',workUrl:'https://work.ekodi.kr',
+    publicUrl:'https://ekodi.kr/ekodibiz',marketingUrl:'https://ekodi.kr/ekodibiz/marketing-ai',workUrl:'https://work.ekodi.kr',
     dataState:'connection_required',dataMessage:'에코디비즈 운영 데이터는 아직 Business OS 읽기 전용 집계 API에 연결되지 않았습니다.',
     modules:[
-      {code:'MKT',name:'Marketing AI',description:'콘텐츠·캠페인·채널 운영',status:'available',statusLabel:'허브 연결',href:'https://marketing.ekodi.kr'},
+      {code:'MKT',name:'Marketing AI',description:'콘텐츠·캠페인·채널 운영',status:'available',statusLabel:'허브 연결',href:'https://ekodi.kr/ekodibiz/marketing-ai'},
       {code:'CRM',name:'Customer AI',description:'고객·문의·관계·재방문 관리',status:'next',statusLabel:'CRM 원장 연결 대기'},
       {code:'SAL',name:'Sales AI',description:'견적·계약 전 단계·매출 파이프라인',status:'next',statusLabel:'매출 원장 연결 대기'},
       {code:'WRK',name:'Work AI',description:'프로젝트·업무·역할·실행 추적',status:'available',statusLabel:'Work 연결',href:'https://work.ekodi.kr'},
@@ -22,10 +22,10 @@ const WORKSPACES={
   jadam:{
     id:'jadam',name:'자담치킨 목포대점',englishName:'JADAM CHICKEN',classification:'external_client',scope:'store',accent:'store',
     description:'자담치킨 목포대점의 Marketing AI, 고객관계, 매출, 매장업무와 비용 신호를 점포 단위로 분리해 운영하는 고객 Business OS 워크스페이스입니다.',
-    publicUrl:'https://jadam.ai.ekodi.kr',marketingUrl:'https://jadam.ai.ekodi.kr',workUrl:'https://work.ekodi.kr',
+    publicUrl:'https://ekodi.kr/jadam/marketing',marketingUrl:'https://ekodi.kr/jadam/marketing',workUrl:'https://work.ekodi.kr',
     dataState:'connection_required',dataMessage:'자담치킨 Marketing AI 워크스페이스는 연결되어 있지만 CRM·POS·재무 지표는 아직 Business OS 읽기 전용 집계 API에 연결되지 않았습니다.',
     modules:[
-      {code:'MKT',name:'Marketing AI',description:'자담치킨 전용 콘텐츠·캠페인·채널 운영',status:'available',statusLabel:'전용 워크스페이스 연결',href:'https://jadam.ai.ekodi.kr'},
+      {code:'MKT',name:'Marketing AI',description:'자담치킨 전용 콘텐츠·캠페인·채널 운영',status:'available',statusLabel:'전용 워크스페이스 연결',href:'https://ekodi.kr/jadam/marketing'},
       {code:'CRM',name:'Customer AI',description:'동의 기반 고객·재방문·휴면고객 관리',status:'next',statusLabel:'고객 원장 연결 대기'},
       {code:'SAL',name:'Sales AI',description:'일매출·주문채널·메뉴 흐름 분석',status:'next',statusLabel:'POS/주문 집계 연결 대기'},
       {code:'WRK',name:'Work AI',description:'매장업무·채용·실행 체크',status:'available',statusLabel:'Work 연결',href:'https://work.ekodi.kr'},
@@ -39,7 +39,7 @@ function workspaceList(){return Object.values(WORKSPACES).map(({id,name,englishN
 function getWorkspace(id){return WORKSPACES[String(id||'').trim().toLowerCase()]||null}
 function noDataBrief(workspace){
   if(workspace?.id==='jadam')return[
-    {code:'connect_marketing',title:'Marketing AI는 자담치킨 전용 워크스페이스를 기준점으로 사용합니다.',body:'jadam.ai.ekodi.kr를 공식 마케팅 운영면으로 유지하고 Business OS는 그 위의 경영 집계층으로 연결합니다.'},
+    {code:'connect_marketing',title:'Marketing AI는 자담치킨 전용 워크스페이스를 기준점으로 사용합니다.',body:'사용자 마케팅 운영면은 ekodi.kr/jadam/marketing으로 유지하고 Business OS는 공통 Marketing Core와 AI Gateway를 내부에서 연결합니다.'},
     {code:'connect_crm',title:'고객 원장은 동의 기반으로 먼저 연결해야 합니다.',body:'전화번호·주문정보를 무조건 수집하지 않고, 고객 동의와 목적 범위를 분리한 CRM 원장을 연결한 뒤 재방문·휴면 지표를 계산합니다.'},
     {code:'connect_sales',title:'POS·배달 주문은 일별 집계부터 읽기 전용으로 연결합니다.',body:'주문 원문을 한곳에 복제하기보다 일매출·주문건수·채널별 매출·메뉴군 같은 최소 집계 데이터부터 연결하는 편이 안전합니다.'},
     {code:'connect_finance',title:'매출보다 이익 신호가 늦게 연결되지 않도록 합니다.',body:'원가·배달수수료·광고비·할인비를 읽기 전용으로 연결한 뒤 매출 상승과 비용 압력을 함께 보도록 구성합니다.'}

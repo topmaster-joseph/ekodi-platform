@@ -7,7 +7,7 @@ const privateClientSites=new Set(['cgma-client','jadam-client','pizzamaru-client
 let changed=false;
 const requestedSite=params.get('site');
 if(requestedSite==='mall-seller'&&!params.get('return_to')&&!params.get('returnTo')){
-  params.set('return_to','https://mall.ekodi.kr/seller/');
+  params.set('return_to','https://ekodi.kr/ekodibiz/mall/seller/');
   changed=true;
 }
 if(legacySiteAliases[requestedSite]){

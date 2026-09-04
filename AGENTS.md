@@ -1,219 +1,178 @@
-# EKODI Platform Engineering Constitution
+# EKODI Platform Engineering Guide
 
-EKODI Platform is not a demo site collection. It is a mission-oriented, sustainable Agentic AI operating ecosystem intended to serve people and recurring services. Every change must protect the mission, human dignity and agency, trust, availability, tenant isolation, data integrity, and sustainable operation.
+EKODI Platform is a mission-oriented, sustainable Agentic AI operating ecosystem. This file guides AI agents and human developers in applying EKODI governance. It is **not** a second constitution and must not restate historical rules as if they were current authority.
 
-## 0. Mission governance is the highest product invariant
+## 0. Authority and precedence
 
-EKODI assumes that human administrators exercise limited, delegated stewardship rather than unlimited authority. AI authority is always narrower still.
+Before making an architectural or cross-cutting change, resolve policy in this order:
 
-The purpose of EKODI AI is to help each person become more independent, responsible, free, holy, connected in truthful community, and able to live a Jubilee-oriented life before God. AI is a bounded professional delegate and tool, never the sovereign purpose of the ecosystem.
+1. Mission, human dignity, safety, privacy and agency governance in `config/ai-mission-governance.json`.
+2. The machine-readable EKODI Platform Constitution in `governance/constitution/constitution.json`.
+3. The operational Constitution Registry index in `governance/registry/constitution-registry.json` for stable IDs, lifecycle state and likely impact paths.
+4. Shared platform policies such as `platform-boundaries.json` and `config/**`.
+5. Service-owned configuration and contracts.
+6. Runtime configuration and implementation details.
 
-The governing principles are:
-- **Stewardship**: use only delegated authority and escalate beyond its limits.
-- **Agency**: preserve informed choice, revocation, portability, exit, and meaningful human review.
-- **Koinonia**: strengthen truthful human relationship and mutual service rather than replacing community for convenience.
-- **Diaspora**: equip people to act faithfully and competently beyond EKODI rather than creating platform captivity.
-- **Jubilee**: reduce exploitative dependency and information asymmetry, restore opportunity, and protect the vulnerable.
-- **Holiness**: reject deceptive, coercive, exploitative, or intentionally degrading means even when they improve a metric.
+If two sources conflict, the higher-precedence active source wins. Secondary prose, old examples, prior conversations and historical implementation notes must never override the currently active canonical source.
 
-Policy priority is mission and human dignity → safety/legal/privacy → consent and user agency → community/Jubilee impact → reliability → efficiency/revenue. Revenue is necessary for sustainability but never overrides mission boundaries, truthful consent, privacy, or human agency.
+The registry index is intentionally non-sovereign. It points to constitutional truth; it does not duplicate or replace it.
 
-Chief AI is an orchestrator, not a sovereign. Unknown agents receive no implicit autonomous authority. High-impact human gates and forbidden boundaries cannot be overridden by Chief AI.
+## 1. Mission governance is the highest product invariant
 
-The machine-readable source of truth is `config/ai-mission-governance.json`. The executable evaluator is `ai-governance.js`. Design and review guidance is in `docs/AI-MISSION-GOVERNANCE.md`. Do not weaken or bypass mission-governance validation to ship a feature.
+EKODI assumes that human administrators exercise limited, delegated stewardship rather than unlimited authority. AI authority is narrower still.
 
-## 1. Product identity
+The purpose of EKODI AI is to help people become more independent, responsible, free, connected in truthful community and able to live a Jubilee-oriented life before God. AI is a bounded professional delegate and tool, never the sovereign purpose of the ecosystem.
 
-- `ekodi.kr`: EKODI front door.
-- `admin.ekodi.kr`: private control plane and operational command center.
-- `api.ekodi.kr`: shared control/data API layer.
-- `marketing.ekodi.kr`: Marketing AI platform hub and Free/Basic tenant entry namespace.
-- `ai.ekodi.kr`: reserved namespace for dedicated Marketing AI customer workspaces.
-- Marketing AI Free/Basic tenant entry uses `marketing.ekodi.kr/<tenant>`.
-- Marketing AI Plus-or-higher dedicated EKODI workspace uses `<tenant>.ai.ekodi.kr`.
-- Marketing AI Pro-or-higher may additionally map a customer-owned hostname without transferring domain ownership to EKODI.
-- Existing first-level customer domains may remain official public-site domains or compatibility aliases. Do not treat them as the canonical Marketing AI naming standard unless explicitly configured for another product.
-- Service-specific details belong in URL paths or product configuration unless a product has an explicit namespace contract such as `ai.ekodi.kr`.
+The governing values remain stewardship, agency, koinonia, diaspora, Jubilee and holiness. Policy priority is mission and human dignity → safety/legal/privacy → consent and user agency → community/Jubilee impact → reliability → efficiency/revenue.
 
-## 2. Customer classification and authority scope are business invariants
+Chief AI / EKODI Orchestrator coordinates work but does not become sovereign authority. High-impact human gates and forbidden boundaries cannot be bypassed by an AI agent.
 
-Ownership by EKODI is not the platform boundary. The boundary is operational responsibility.
+Do not weaken or bypass mission-governance validation to ship a feature.
 
-Platform-internal surfaces are limited to EKODI Core and reusable shared/professional capabilities such as central identity, authorization, billing, AI governance, security, logs, shared APIs, and control-plane infrastructure.
+## 2. Constitutional change handling
 
-An operating organization or business is a customer site/tenant even when EKODI owns it. It must use the same tenant contract, isolation rules, memberships, audit model, and role boundaries as an external customer.
+Ordinary UI, copy, content and local implementation changes should remain lightweight. Do not manufacture constitutional work where none exists.
 
-EKODI-owned customer-site examples include:
-- `church.ekodi.kr` — 에코디교회
-- `biz.ekodi.kr` — 에코디비즈
-- `lab.ekodi.kr` — 에코디연구소
-- `trade.ekodi.kr` — EKODI Global Trading
-- `cafe.ekodi.kr` — 에코디 카페 when operated as an organization/business
+Before changes to domain grammar, workspace identity, authentication/authorization, data sovereignty, provider boundaries, security projection, AI authority, deployment authority or common/core-service boundaries, run or consult the lightweight Constitution Check:
 
-Revenue-critical external clients currently include:
-- `cgma.ekodi.kr` — 청계면상인회 public site; `cgma.ai.ekodi.kr` is its dedicated Marketing AI workspace.
-- `jadam.ai.ekodi.kr` — 자담치킨 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
-- `pizzamaru.ai.ekodi.kr` — 피자마루 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
-- `yogurt.ai.ekodi.kr` — 요거트퍼플 목포대점 Marketing AI workspace; legacy first-level aliases may remain during migration.
+`node scripts/constitution-check.mjs`
 
-One person may hold both platform-global and tenant-local roles. These authorities must never be implicitly combined. A Super Admin acts with platform authority only inside an explicit admin/control-plane context; when entering a customer site, including an EKODI-owned customer site, the person acts only through that site's membership and local activity role. A tenant-local role named `admin` must never inherit platform-admin capabilities merely because the role string matches.
+The check is advisory and non-blocking. It may report `PASS`, `RELATED`, `UPDATE` or `NEW_AREA`. It intentionally does not decide semantic constitutional conflicts.
 
-`My EKODI` should present the person's available sites/workspaces and local roles, while `admin.ekodi.kr` remains the explicit ecosystem-wide administrator context.
+Existing hard safeguards remain hard safeguards. Security validation, tenant isolation, protected-branch rules, guarded deployment, mission governance and C2/C3 approval requirements must not be weakened merely to satisfy the advisory check.
 
-Do not silently reclassify customer tenants or weaken this authority boundary.
+## 3. Domain and workspace identity
 
-## 3. Production invariants
+Do not invent domain or tenant naming rules from memory. Consult `DOMAIN-001`, `WORKSPACE-001` and the corresponding canonical fields in `governance/constitution/constitution.json`.
+
+Current canonical workspace identity is derived from immutable `workspace_id`. Hostnames, slugs and URL paths are routing locators, not authorization truth. Public user-operated spaces follow the canonical workspace routing grammar declared by the constitution. Workspace type remains internal metadata unless a separately approved constitutional rule says otherwise.
+
+Dedicated subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries registered in constitutional governance. Historical customer, feature or AI subdomain examples are legacy or compatibility information unless the current constitution explicitly registers them as active boundaries.
+
+Marketing user surfaces are canonical paths: `ekodi.kr/ekodibiz/marketing-ai` for the EKODIBIZ product and `ekodi.kr/{slug}/marketing` for workspace use, including `ekodi.kr/jadam/marketing`, `ekodi.kr/pizzamaru/marketing`, `ekodi.kr/yogurt/marketing`, and `ekodi.kr/cgma/marketing`. `marketing.ekodi.kr` is an engine boundary and `ai.ekodi.kr` is the AI Gateway/Core; do not expose either as an ordinary customer entry.
+
+Customer-owned domains may map to a workspace public surface but never redefine EKODI internal identity or authorization.
+
+## 4. Customer classification and authority scope
+
+Ownership by EKODI is not the platform boundary. Operational responsibility and tenant scope are.
+
+An operating organization or business is a customer site/tenant even when EKODI owns it. It must use the same tenant contract, isolation rules, memberships, audit model and role boundaries as an external customer.
+
+One person may hold both platform-global and tenant-local roles. These authorities must never be implicitly combined. A Super Administrator acts with platform authority only inside an explicit platform administration context. When entering a customer site, including an EKODI-owned customer site, the person acts through that site's membership and local role.
+
+A tenant-local role named `admin` must never inherit platform-admin capabilities merely because the role string matches.
+
+## 5. Production invariants
 
 A production change is incomplete until all applicable checks pass.
 
 - No redirect loops.
 - No broken canonical domain.
-- No customer domain reassignment without explicit intent.
-- No client-side exposure of provider credentials, API secrets, payment secrets, DNS tokens, or privileged service keys.
-- Admin pages must keep restrictive security headers and `Cache-Control: no-store`.
-- Revenue-critical customer domains must remain monitored.
-- Production endpoint verification must test the real public hostname, not only a build artifact or Pages preview URL.
+- No customer-domain reassignment without explicit intent.
+- No client-side exposure of provider credentials, API secrets, payment secrets, DNS tokens or privileged service keys.
+- Admin pages keep restrictive security headers and `Cache-Control: no-store` where applicable.
+- Production endpoint verification tests the real public hostname, not only a build artifact or preview URL.
 - A successful deploy command alone is not proof of a successful release.
-- Any routing, DNS, auth, payment, customer-domain, or control-plane change requires regression coverage.
-- Any privileged agent action must pass mission governance before execution.
+- Routing, DNS, auth, payment, customer-domain or control-plane changes require regression coverage.
+- Privileged agent actions pass mission governance before execution.
 
-## 3A. Platform isolation is a production invariant
+Shared-edge or topology changes require explicit impact review across every affected route.
+
+## 6. Platform isolation
 
 EKODI sites are independent platforms or specialized services, not cosmetic pages inside one release unit.
 
-- A normal source change must deploy only the platform that owns that source.
-- The coordinated full-ecosystem deployment workflow is manual-only.
-- Every platform-specific deployment workflow must use explicit path filters.
-- Shared edge runtimes must be treated as shared infrastructure and require regression checks across every domain they serve.
-- Do not add a platform-specific source file to a shared runtime when an isolated Worker, Pages project, module, or API contract can solve the problem.
-- Shared database changes are shared-core changes. Name migrations by functional area and preserve table/tenant namespaces.
+- A normal source change deploys only the platform that owns that source.
+- Coordinated full-ecosystem deployment remains verification-oriented and separately guarded.
+- Shared edge runtimes are shared infrastructure and require regression checks across every domain they serve.
+- Shared database changes are shared-core changes and preserve tenant namespaces and migration discipline.
 - Platform-specific code must not directly access another platform or tenant's private data. Use an explicit shared API contract.
-- Changes to `site-worker.js`, `service-proxy.js`, shared auth, shared payment, or shared database infrastructure require an explicit impact review before deployment.
-- Keep `platform-boundaries.json` and `docs/PLATFORM-ISOLATION.md` accurate when a platform's ownership, domain, data store, or deployment unit changes.
+- Keep `platform-boundaries.json` and relevant isolation documentation accurate when ownership, domain, data store or deployment unit changes.
 
-## 4. Definition of done
+## 7. Parallel development
 
-For business-critical changes, “done” means:
+Claude Code, ChatGPT/GPT, Codex, Gemini, Copilot, future AI development agents and human developers follow the same provider-neutral development contract.
+
+Every task uses a unique task ID and an independent branch plus independent worktree or equivalent sandbox. Concurrent tasks do not share one mutable working directory. Agents and ordinary development workers do not write directly to protected production branches and do not deploy production directly from an agent task workspace.
+
+Production-bound changes pass central validation, review, merge and guarded deployment. Production credentials remain outside ordinary agent workspaces.
+
+## 8. Definition of done
+
+For business-critical changes, “done” means all applicable items below are true:
 
 1. Source validation passes.
 2. Automated tests pass.
 3. Mission-governance validation passes for agentic or privileged behavior.
-4. Deployment succeeds.
+4. Guarded deployment succeeds when deployment is part of the task.
 5. Real production hostname returns the expected status and content.
-6. Redirect behavior is explicitly verified when routing changes.
-7. `admin.ekodi.kr` can observe the resulting service state.
-8. Security, human agency, and tenant boundaries remain intact.
+6. Redirect behavior is verified when routing changes.
+7. `admin.ekodi.kr` or the appropriate control plane can observe resulting service state.
+8. Security, human agency and tenant boundaries remain intact.
 9. Failure is visible through monitoring or operational logs.
 
-Never report a feature as complete merely because code was committed.
+Never report a production feature as complete merely because code was committed.
 
-## 5. Agentic AI architecture direction
+## 9. Agentic AI architecture direction
 
-The platform should evolve from a link dashboard into an action-oriented mission control plane:
+The platform evolves toward an action-oriented mission control loop:
 
 `observe → discern → consult specialists → policy check → act or request human decision → verify → restore user agency → audit → report`
 
-Examples:
-- detect a customer-site outage
-- identify DNS/deployment/application cause
-- prepare the safest repair action
-- require a human decision for destructive, spiritually sensitive, legally binding, rights-reducing, or financially sensitive actions
-- execute reversible work through server-side privileged integrations within delegated scope
-- verify the production result
-- restore clear user choices and portability where relevant
-- record an immutable audit event
+Agent actions are scoped by tenant, role, delegated purpose and mission policy. Destructive, spiritually sensitive, legally binding, rights-reducing, financially sensitive or similarly high-impact actions require the appropriate human decision gate.
 
-Agent actions must be scoped by tenant, role, delegated purpose, and mission policy. High-impact actions must never be hidden behind vague automation. A specialist AI may escalate or object when its domain boundary is crossed, and Chief AI must surface rather than suppress that dissent.
+Operational AI receives only the minimum projected context required for the task. Secrets, reusable credentials and unnecessary internal topology remain outside ordinary AI context.
 
-## 5A. AI access, funding, and execution are ecosystem operating invariants
+AI providers are replaceable reasoning or execution resources behind EKODI Core. They do not own EKODI identity, authorization, payment truth or irreversible high-impact decisions.
 
-EKODI must hide unnecessary AI-provider complexity from users and administrators while keeping funding, privacy, execution authority, and provider boundaries explicit inside EKODI Core.
+## 10. AI access, funding and provider independence
 
-The default experience is not “choose OpenAI, Gemini, API, or web.” A person should normally sign in, use EKODI, and receive prepared help without needing to understand the underlying AI route. Provider and billing choices belong behind EKODI Core and the AI Gateway unless the person deliberately opens advanced AI settings.
+Use EKODI Core first for deterministic rules, verified system data and non-AI workflows. Do not call a model merely because one is available.
 
-The governing access principles are:
+Google sign-in establishes EKODI identity. It does not transfer a consumer ChatGPT, Gemini or other AI subscription to EKODI. Consumer AI web sessions are not server APIs and must not be used for unattended execution.
 
-- **Core first**: rules, verified system data, deterministic workflows, and non-AI services must handle a task whenever they can. Do not call a model merely because an AI provider is available.
-- **Provider independence**: OpenAI, Gemini, or any other provider is a replaceable reasoning/execution resource behind EKODI Core, not the identity or source of truth of the ecosystem.
-- **Identity is separate from AI entitlement**: Google sign-in establishes EKODI identity. It does not automatically transfer a user's ChatGPT, Gemini, or other consumer AI subscription, quota, or billing rights to EKODI.
-- **Personal AI access and API execution are different channels**: consumer ChatGPT/Gemini web access may be offered for a person's own interactive use, but it must never be treated as a server API, borrowed session, or unattended automation credential.
-- **Free/Flex cost invariant**: by default, Free and Flex members must not silently consume EKODI-paid model API usage. Their normal order is `Core → connected personal server-callable API → personal AI web handoff → Core-only`.
-- **Paid seamless-use invariant**: when a paid membership includes EKODI AI support, the automatic interactive order is `Core → connected personal API → membership-sponsored EKODI API → personal AI web handoff → Core-only`. This minimizes disruptive page switching while keeping the EKODI-funded allowance bounded by membership policy.
-- **Explicit personal-first preference**: when a person explicitly chooses personal-first mode, EKODI should prefer personal API and personal AI access before consuming a sponsored EKODI allowance, subject to privacy and execution rules.
-- **Proactive/unattended execution invariant**: when EKODI acts before a person asks, prepares background recommendations, or performs scheduled/conditional AI work, it may use only server-callable, auditable API paths. Consumer ChatGPT/Gemini web sessions must never be used for unattended execution.
-- **Admin/system execution invariant**: EKODI Admin AI and system automation must use EKODI Core, governed server integrations, and auditable APIs. They must not borrow an administrator's consumer AI browser session or subscription as an automation engine.
-- **Sensitive-data invariant**: secrets, credentials, tokens, payment data, government identifiers, protected personal data, or equivalent sensitive information must not be automatically sent to personal/free AI routes or consumer web handoffs. Route only through an explicitly permitted protected path, or remain Core-only.
-- **Credential invariant**: user-owned provider credentials must never be stored in browser localStorage, client bundles, analytics, or logs. They require a server-side encrypted credential vault, revocation, masking, tenant/user isolation, and auditability.
-- **Funding traceability**: AI usage must distinguish at least `personal`, `ekodi-sponsored`, and `none/core-only` funding so EKODI never mixes user-owned usage with ecosystem-paid usage.
-- **Membership packaging**: commercial plans should sell an `EKODI AI support allowance` or capability, not a hard dependency on a named provider or fixed provider-specific call count. The Gateway may change models/providers while preserving the member benefit and cost ceiling.
-- **Graceful degradation**: lack of a personal AI connection, sponsored allowance, provider availability, or API credential must never stop EKODI Core. The system must fall back safely to personal handoff or Core-only behavior.
-- **Low-friction UI**: normal UI should show concise states such as “내 AI 연결됨”, “EKODI 지원 AI”, “무료 이용”, or “AI 없이 계속”. API keys, model names, token accounting, and provider routing belong in advanced settings or admin observability, not in the ordinary user path.
-- **Proactive service, not proactive noise**: User AI and Admin AI should observe state, prepare useful outputs, and surface only high-value next actions. Users and administrators should not be forced to ask first, but AI must also avoid unnecessary interruption and preserve final human control for high-impact decisions.
+User-owned provider credentials remain server-side in a protected credential vault with revocation, masking, isolation and auditability. Sensitive data must not be automatically sent to personal/free AI routes.
 
-The shared routing policy should follow the intent-specific pattern:
+Lack of a personal AI connection, sponsored allowance, provider availability or API credential must not collapse EKODI Core. Preserve safe degraded or Core-only behavior.
 
-- Interactive Free/Flex: `Core → personal API → personal AI access → Core-only`
-- Interactive paid automatic mode: `Core → personal API → EKODI-sponsored API → personal AI access → Core-only`
-- Interactive explicit personal-first: `Core → personal API → personal AI access → EKODI-sponsored API when allowed → Core-only`
-- Proactive/unattended: `Core → personal server API when explicitly connected and permitted → EKODI-sponsored API when entitled → Core-only`
-- Admin/system: `Core → governed server API/integration → Core-only`
+## 11. Multi-tenant direction
 
-Any implementation that bypasses these invariants, silently shifts AI cost to EKODI or the user, reuses a consumer browser session for automation, exposes provider credentials, or makes Core availability depend on one AI provider is a governance regression and must not ship.
+The canonical activity model is:
 
-## 6. Multi-tenant direction
+`Person + Site/Tenant + Membership Role + Authority Scope`
 
-All customer sites are independent tenants, not cosmetic page variants. This includes both external customers and EKODI-owned operating organizations.
+Each tenant may independently own branding, domain mapping, enabled products, integrations, content/approval workflow, analytics, billing, users/roles, audit history, delegated AI permissions and appropriate data export/exit controls.
 
-The canonical activity model is `Person + Site/Tenant + Membership Role + Authority Scope`. A person may belong to many tenants and hold different local roles in each. The currently active site context determines the available tenant capabilities; platform-global administrator authority is a separate context and is never inherited by a tenant session.
+Shared infrastructure is encouraged. Shared customer data or implicit cross-tenant authority is not.
 
-Each tenant should be able to own independent configuration for:
-- identity and branding
-- domain
-- enabled products
-- channels and integrations
-- content and approval workflow
-- analytics
-- billing/subscription
-- users and roles
-- local activity-role labels such as pastor, representative, director, manager, or staff
-- audit history
-- delegated AI permissions and revocation state
-- data access/export and exit controls where applicable
+## 12. Sustainable monetization
 
-Shared infrastructure is encouraged, shared customer data or implicit cross-tenant authority is not.
+Design reusable capabilities so they can map cleanly to sustainable commercial packaging. Avoid one-off customer code when a configurable product capability solves the same problem.
 
-## 7. Monetization direction
+Revenue is necessary for sustainability but never overrides mission boundaries, truthful consent, privacy, human agency or tenant isolation. Do not use dark patterns, artificial lock-in, hidden conflicts of interest or deliberate dependency creation.
 
-Design new capabilities so they can map cleanly to commercial packaging, for example:
-- Marketing AI
-- content generation and approval
-- channel publishing
-- analytics/reporting
-- CRM/customer engagement
-- live/media operations
-- managed domain/hosting
-- premium automation/agent actions
-
-Avoid one-off customer code when a configurable product capability can solve the same problem. Do not use dark patterns, artificial lock-in, hidden conflicts of interest, or deliberate dependency creation to improve monetization.
-
-## 8. Release discipline
+## 13. Release discipline
 
 Prefer small reversible releases over large opaque changes.
 
-Before changing production routing, authentication, or privileged AI behavior:
-- inspect the current implementation and live configuration
+Before changing production routing, authentication or privileged AI behavior:
+
+- inspect current implementation and live configuration
 - identify rollback behavior
-- check mission-governance impact and human-gate requirements
+- check mission-governance and constitutional impact
 - add or update regression tests
 - deploy through the guarded path
 - verify the real domain and resulting user impact
 
-When an incident occurs, find and fix the root cause. Do not instruct users to clear cookies or perform local workarounds unless evidence shows the browser is actually the cause.
+When an incident occurs, find and fix the root cause. Do not push browser workarounds onto users unless evidence shows the browser is actually the cause.
 
-## 9. Current automated safeguards
+## 14. Current automated safeguards
 
-The repository contains business contract tests, a Production Revenue Gate, platform-boundary validation, and AI mission-governance validation. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
+The repository contains business contract tests, production/revenue gates, platform-boundary validation, security validation, deployment guardrails and AI mission-governance validation. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
 
-## 10. Quality bar
+The lightweight Constitution Check is different by design: it surfaces likely constitutional relevance without becoming a new deployment bottleneck.
 
-Optimize for an ecosystem people and paying customers can trust. Visual polish matters, but mission fidelity, human dignity and agency, correctness, clarity, speed, security, observability, maintainability, sustainable economics, and measurable beneficiary outcomes come first.
+## 15. Quality bar
+
+Optimize for an ecosystem people and paying customers can trust. Visual polish matters, but mission fidelity, human dignity and agency, correctness, clarity, speed, security, observability, maintainability, sustainable economics and measurable beneficiary outcomes come first.

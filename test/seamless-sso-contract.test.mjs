@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const router=read('auth-site/auth-router.js');
@@ -62,7 +63,7 @@ test('Marketing keeps credential handoff out of the browser URL',()=>{
 
 test('modified auth modules remain syntactically valid',()=>{
   for(const path of ['auth-site/auth-router.js','auth-site/client-auth.js','auth-site/business-auth.js','auth-site/author-auth.js']){
-    const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
+    const result=spawnSync(process.execPath,['--check',fileURLToPath(new URL(`../${path}`,import.meta.url))],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
 });

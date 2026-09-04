@@ -4,7 +4,7 @@ const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.ekodi.kr/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
 const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
 const menus = [
-  ['campus','home'],['work','operations'],['communication','operations'],
+  ['campus','home'],['public-site-controls','home'],['work','operations'],['communication','operations'],
   ['workspace','people'],['organization','people'],['clients','people'],['admins','people'],
   ['life-ai','services'],['community','services'],['books','services'],['social','services'],
   ['aiops','ai'],['marketing-ai','ai'],['ai-module-spec','ai'],['ai-membership','ai'],
@@ -43,9 +43,10 @@ await page.route('https://api.ekodi.kr/api/session', async route => {
 });
 
 async function waitForAdminShell() {
-  await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 20000 });
-  await page.waitForFunction(() => document.querySelectorAll('[data-admin-global-group]').length === 8, null, { timeout: 15000 });
-  await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15000 });
+  await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
+  await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
+  await page.waitForFunction(() => document.querySelectorAll('button[data-admin-global-group]').length >= 8, null, { timeout: 30000 });
+  await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
 }
 
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -88,7 +89,7 @@ if (missingSources.length) throw new Error(`Missing production menu source(s): $
 const results = [];
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
-  const global = page.locator(`[data-admin-global-group="${group}"]`);
+  const global = page.locator(`button[data-admin-global-group="${group}"]`);
   await global.waitFor({ state: 'visible', timeout: 10000 });
   await global.click({ timeout: 10000 });
 

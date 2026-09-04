@@ -1,7 +1,11 @@
 (() => {
   'use strict';
 
-  const VERSION=2;
+  const VERSION=3;
+  const PROFILE_API='https://workspace-api.ekodi.kr/v1/design-profiles/public';
+  const PROFILE_CHOICES={tones:new Set(['inherit','warm','calm','vivid','mono','night']),characters:new Set(['auto','off','welcome','guide','read','idea']),seasons:new Set(['auto','off','spring','summer','autumn','winter']),motions:new Set(['inherit','still','gentle'])};
+  const SEASON_PRESETS={spring:{warm:'#e0b95f',leaf:'#78a982'},summer:{warm:'#e8c75a',leaf:'#5f9b78'},autumn:{warm:'#c88745',leaf:'#8a7b55'},winter:{warm:'#b9c6d5',leaf:'#6e8790'}};
+  const TONE_PRESETS={warm:{accent:'#7f6548',accent2:'#c99b66',warm:'#e2b96f',paper:'#fff9ef',ink:'#332b24'},calm:{accent:'#47685b',accent2:'#8ca9b7',warm:'#c6ae7d',paper:'#f7faf8',ink:'#24322c'},vivid:{accent:'#6953c6',accent2:'#e06d54',warm:'#f0bd55',paper:'#fff8fb',ink:'#30263b'},mono:{accent:'#4b5563',accent2:'#94a3b8',warm:'#9ca3af',paper:'#fafafa',ink:'#242424'},night:{accent:'#78a7d7',accent2:'#a997e8',warm:'#ddb969',paper:'#111827',ink:'#f5f7fb'}};
   const DEFAULT={
     accent:'#315d48',accent2:'#7fa9c8',warm:'#c79a45',leaf:'#6f9e7a',paper:'#fffdf8',ink:'#25332b',
     radius:'18px',softRadius:'12px',shadow:'0 18px 48px rgba(24,38,31,.10)',density:'medium',motion:'gentle'
@@ -45,6 +49,21 @@
     return HOST_ALIAS[sub]||sub||'my';
   }
   function designFor(id=serviceId()){return {...DEFAULT,...(DESIGNS[id]||DESIGNS.my)};}
+  function workspaceKey(){
+    const explicit=String(document.documentElement.dataset.ekodiWorkspaceSlug||document.body?.dataset?.ekodiWorkspaceSlug||'').trim().toLowerCase();if(explicit)return explicit;
+    if(location.hostname==='ekodi.kr'||location.hostname==='www.ekodi.kr'){const first=location.pathname.split('/').filter(Boolean)[0]||'';if(first&&!['privacy','terms','history','mall'].includes(first))return first.toLowerCase();}
+    return '';
+  }
+  function currentSeason(){const m=new Date().getMonth()+1;return m>=3&&m<=5?'spring':m>=6&&m<=8?'summer':m>=9&&m<=11?'autumn':'winter';}
+  function applyDesignTokens(d){const style=document.documentElement.style;for(const [name,value] of Object.entries({accent:d.accent,accent2:d.accent2,warm:d.warm,leaf:d.leaf,paper:d.paper,ink:d.ink})){if(value)style.setProperty('--ekodi-service-'+(name==='accent2'?'accent-2':name),value);}if(d.accent)style.setProperty('--ekodi-ill-accent',d.accent);if(d.accent2)style.setProperty('--ekodi-ill-sky',d.accent2);if(d.warm)style.setProperty('--ekodi-ill-sun',d.warm);}
+  function applyProfile(raw={}){
+    const root=document.documentElement;const tone=PROFILE_CHOICES.tones.has(raw.tone)?raw.tone:'inherit';const character=PROFILE_CHOICES.characters.has(raw.character)?raw.character:'auto';const season=PROFILE_CHOICES.seasons.has(raw.season)?raw.season:'auto';const motion=PROFILE_CHOICES.motions.has(raw.motion)?raw.motion:'inherit';
+    if(tone!=='inherit'&&TONE_PRESETS[tone])applyDesignTokens({...designFor(),...TONE_PRESETS[tone]});
+    const resolvedSeason=season==='auto'?currentSeason():season;root.dataset.ekodiDesignProfile='v1';root.dataset.ekodiDesignTone=tone;root.dataset.ekodiSeason=resolvedSeason;root.dataset.ekodiCharacter=character;root.dataset.ekodiCharacterProfile=character;root.dataset.ekodiFooterProfile=raw.footer==='inherit'?'inherit':'contextual';if(resolvedSeason!=='off'&&SEASON_PRESETS[resolvedSeason])applyDesignTokens({...designFor(),...SEASON_PRESETS[resolvedSeason]});
+    if(motion!=='inherit')root.dataset.ekodiDesignMotion=motion;
+    window.dispatchEvent(new CustomEvent('ekodi:design-profile-ready',{detail:{version:1,service:serviceId(),workspace:workspaceKey(),profile:{...raw,tone,character,season,motion}}}));window.EKODIUserCharacter?.refresh?.();
+  }
+  async function loadProfile(){const workspace=workspaceKey();if(!workspace)return null;try{const fetchOne=async id=>{const url=new URL(PROFILE_API);url.searchParams.set('subject_key',workspace);url.searchParams.set('service_id',id);const r=await fetch(url,{cache:'no-store'});return r.ok?await r.json():null};let data=await fetchOne(serviceId());if((!data?.updatedAt)&&serviceId()!=='space')data=await fetchOne('space')||data;if(!data)return null;applyProfile(data.profile||{});return data.profile||null}catch{return null}}
   function apply(id=serviceId()){
     const d=designFor(id);const root=document.documentElement;const style=root.style;
     root.dataset.ekodiService=id;
@@ -102,8 +121,8 @@
   @media(prefers-reduced-motion:reduce){:root[data-ekodi-design-inheritance]{scroll-behavior:auto!important}}
   `;
   function installStyles(){if(document.getElementById('ekodi-service-design-inheritance-style'))return;const s=document.createElement('style');s.id='ekodi-service-design-inheritance-style';s.textContent=css;document.head.appendChild(s);}
-  function boot(){installStyles();apply();}
+  function boot(){installStyles();apply();void loadProfile();}
 
-  window.EKODIServiceDesign=Object.freeze({version:VERSION,designs:Object.freeze({...DESIGNS}),serviceId,designFor,apply});
+  window.EKODIServiceDesign=Object.freeze({version:VERSION,designs:Object.freeze({...DESIGNS}),serviceId,designFor,apply,applyProfile,loadProfile});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

@@ -45,7 +45,8 @@ test('administrator can inventory non-agent devices without granting remote cont
 });
 
 test('admin UI exposes type filters and management policy editing', () => {
-  assert.match(admin, /통합 기기관리/);
+  assert.match(admin, /REMOTE WORK & DEVICE MANAGEMENT/);
+  assert.match(admin, /원격 작업/);
   assert.match(admin, /deviceTypeFilters/);
   assert.match(admin, /data-save-management/);
   assert.match(admin, /\/management`/);

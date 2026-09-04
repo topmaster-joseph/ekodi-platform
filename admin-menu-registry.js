@@ -11,6 +11,7 @@ export const ADMIN_MENU_GROUPS = Object.freeze([
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'campus', group: 'home', icon: '▦', labels: { ko: '사이트 관리', en: 'Site Management' } },
+  { id: 'public-site-controls', group: 'home', icon: '임', labels: { ko: '임시페이지 설정', en: 'Maintenance Pages' } },
   { id: 'work', group: 'operations', icon: 'W', labels: { ko: '업무', en: 'Work' } },
   { id: 'communication', group: 'operations', icon: '✦', labels: { ko: '메일 · 라이브', en: 'Mail & Live' } },
   { id: 'workspace', group: 'people', icon: '▣', labels: { ko: '공간 · 자료', en: 'Spaces & Files' } },

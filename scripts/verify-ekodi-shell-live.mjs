@@ -57,6 +57,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(health.shellVersion)<2)failures.push(`health:shellVersion:${health.shellVersion||'missing'}`);
     if(Number(health.userUIHeaderVersion)<1)failures.push(`health:userUIHeaderVersion:${health.userUIHeaderVersion||'missing'}`);
     if(Number(health.userUIFooterVersion)<2)failures.push(`health:userUIFooterVersion:${health.userUIFooterVersion||'missing'}`);
+    if(Number(health.userCharacterVersion)<1)failures.push(`health:userCharacterVersion:${health.userCharacterVersion||'missing'}`);
     if(Number(health.adminUIShellVersion)<1)failures.push(`health:adminUIShellVersion:${health.adminUIShellVersion||'missing'}`);
     if(Number(health.messageUIVersion)<1)failures.push(`health:messageUIVersion:${health.messageUIVersion||'missing'}`);
     if(Number(health.illustrationSystemVersion)<1)failures.push(`health:illustrationSystemVersion:${health.illustrationSystemVersion||'missing'}`);
@@ -87,12 +88,13 @@ for(let attempt=1;attempt<=attempts;attempt++){
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
-    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json',
+    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODIUserCharacter',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'"
   ],failures);
+  if(shellResult.headers?.get?.('x-ekodi-user-character')!=='v1')failures.push(`shell:user-character:${shellResult.headers?.get?.('x-ekodi-user-character')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-user-ui-header')!=='v1')failures.push(`shell:user-ui-header:${shellResult.headers?.get?.('x-ekodi-user-ui-header')||'missing'}`);
   const expectedFooterHeader=footerConfig?.version?`v${Number(footerConfig.version)}`:'';
   if(expectedFooterHeader&&shellResult.headers?.get?.('x-ekodi-user-ui-footer')!==expectedFooterHeader)failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
@@ -109,7 +111,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
 
   const statuses=results.map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v1/footer-${expectedFooterHeader||'current'}+centered-v1+csp-safe-css, centralFooter=ok, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v1/footer-${expectedFooterHeader||'current'}+centered-v1+csp-safe-css, centralFooter=ok, userCharacter=v1, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);

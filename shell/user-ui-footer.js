@@ -80,7 +80,7 @@ function applyServiceContext(footer){
   if(!(footer instanceof HTMLElement))return;
   const service=serviceId()||'ekodi';
   footer.dataset.ekodiFooterService=service;
-  const label=serviceLabel();
+  const label=document.documentElement.dataset.ekodiFooterProfile==='inherit'?'':serviceLabel();
   let context=footer.querySelector('.ekodi-user-ui-footer__service');
   if(!label||/^ekodi$/i.test(label)){if(context)context.remove();return;}
   if(!context){
@@ -166,6 +166,7 @@ async function reconcile(){
 window.EKODIUserUIFooter=Object.freeze({version:VERSION,refresh:reconcile});
 window.addEventListener('ekodi:shell-theme',()=>{void reconcile();});
 window.addEventListener('ekodi:surface-change',()=>{void reconcile();});
+window.addEventListener('ekodi:design-profile-ready',()=>{void reconcile();});
 window.addEventListener('resize',()=>{const footer=document.querySelector(`[${FOOTER_ATTR}]`);if(footer)applyReadableFooter(footer);},{passive:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{void reconcile();},{once:true});else void reconcile();
 })();

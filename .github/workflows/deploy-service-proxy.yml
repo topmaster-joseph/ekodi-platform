@@ -55,4 +55,9 @@ jobs:
             echo "$domain edge_http=$code"; case "$code" in 2*|3*) ;; *) failed=1 ;; esac
             if [ "$domain" = "biz.ekodi.kr" ] && ! grep -Fq 'EKODI BIZ' /tmp/site.html; then failed=1; fi
           done
+          for domain in mall.ekodi.kr mall.biz.ekodi.kr; do
+            headers=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 "https://$domain/" || true)
+            echo "$headers" | tr -d '\r' | grep -Fq 'HTTP/2 308' || failed=1
+            echo "$headers" | tr -d '\r' | grep -Fqi 'location: https://ekodi.kr/ekodibiz/mall' || failed=1
+          done
           exit "$failed"

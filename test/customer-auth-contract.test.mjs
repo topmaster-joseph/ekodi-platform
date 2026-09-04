@@ -3,16 +3,17 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { CUSTOMER_TENANTS, normalizeCustomerRole, normalizeTenantSlug } from '../customer-auth.js';
 
-const [source, entry, missionEntry, wrangler, migration] = await Promise.all([
+const [source, entry, missionEntry, wrangler, migration, domainMigration] = await Promise.all([
   readFile(new URL('../customer-auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0005_customer_auth.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../migrations/0055_cgma_public_domain.sql', import.meta.url), 'utf8'),
 ]);
 
 const expected = [
-  ['cgma', 'cgma.ekodi.kr'],
+  ['cgma', 'cgma.or.kr'],
   ['jadam', 'jadam.ekodi.kr'],
   ['pizzamaru', 'pizzamaru.ekodi.kr'],
   ['yogurt', 'yogurt.ekodi.kr'],
@@ -25,7 +26,8 @@ test('revenue clients are seeded as independent customer tenants', () => {
     assert.ok(tenant, `${slug} tenant missing`);
     assert.equal(tenant.domain, domain);
     assert.equal(normalizeTenantSlug(slug), slug);
-    assert.match(migration, new RegExp(`'${slug}',\\s*'[^']+',\\s*'${domain.replaceAll('.', '\\.')}'`));
+    if (slug === 'cgma') assert.match(domainMigration, /SET domain = 'cgma\.or\.kr'/);
+    else assert.match(migration, new RegExp(`'${slug}',\\s*'[^']+',\\s*'${domain.replaceAll('.', '\\.')}'`));
   }
 });
 

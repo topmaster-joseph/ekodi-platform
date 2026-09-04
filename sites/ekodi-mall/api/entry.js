@@ -11,7 +11,7 @@ import { handleStorefrontRequest } from './storefront.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
-const DEFAULT_ALLOWED_ORIGINS = ['https://mall.ekodi.kr','https://mall.biz.ekodi.kr','https://ekodi-mall.pages.dev'];
+const DEFAULT_ALLOWED_ORIGINS = ['https://ekodi.kr','https://ekodi-mall.pages.dev'];
 
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const nowIso = () => new Date().toISOString();

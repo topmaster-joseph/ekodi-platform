@@ -6,16 +6,31 @@ const json = file => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8').r
 const failures = [];
 const fail = message => failures.push(message);
 const constitution = json('governance/constitution/constitution.json');
+const architecture = json('governance/architecture/ekodi-os-architecture.json');
 const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.5.1') fail('constitution version must remain 1.5.1 with approved orgless workspace routing and Invest common-service amendments');
+if (constitution.version !== '1.6.1') fail('constitution version must remain 1.6.1 with approved EKODI OS architecture and Marketing user-surface/engine separation');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
+
+const architectureModel = constitution.architectureModel || {};
+if (architectureModel.registry !== 'governance/architecture/ekodi-os-architecture.json') fail('constitutional architecture registry path mismatch');
+if (architectureModel.platformBoundaryRegistry !== 'platform-boundaries.json') fail('constitutional platform boundary registry path mismatch');
+if (architectureModel.deploymentTopology !== 'modular-monolith-first') fail('constitutional deployment topology must remain modular-monolith-first');
+for (const layer of ['governance','os','core','responsible-independent-service','external-connected-service','workspace']) {
+  if (!architectureModel.layers?.includes(layer)) fail(`constitutional architecture layer missing: ${layer}`);
+  if (!architecture.layers?.[layer]) fail(`architecture registry layer missing: ${layer}`);
+}
+for (const responsibility of ['ekodi-responsible','external-provider-responsible']) {
+  if (!architectureModel.responsibilityClasses?.includes(responsibility)) fail(`constitutional responsibility class missing: ${responsibility}`);
+}
+if (architecture.principle !== 'Integrated responsibility, distributed execution, standardized connections.') fail('architecture registry canonical principle mismatch');
+if (architecture.deploymentTopology !== 'modular-monolith-first') fail('architecture registry must preserve modular-monolith-first deployment topology');
 
 const parallel = constitution.parallelDevelopmentPolicy || {};
 if (parallel.uniqueTaskIdRequired !== true) fail('parallel development requires unique task IDs');
@@ -51,12 +66,25 @@ if (secureProjection.viewExportDownloadApiRawDataSeparated !== true) fail('view/
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
+const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
+const customerOwned = constitution.customerOwnedDomainMappings || {};
 if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
 if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
+if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
+if (!registeredCore.has('ai.ekodi.kr')) fail('registered core-service boundary missing: ai.ekodi.kr');
+const separation=constitution.userSurfaceEngineSeparation||{};
+if (separation.canonicalMarketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('Marketing product canonical drift');
+if (separation.canonicalWorkspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('workspace Marketing canonical pattern drift');
+if (separation.marketingCore !== 'https://marketing.ekodi.kr') fail('Marketing Core boundary drift');
+if (separation.aiGateway !== 'https://ai.ekodi.kr') fail('AI Gateway/Core boundary drift');
+if (separation.customerAiSubdomains !== 'legacy_execution_alias_only') fail('customer AI subdomains must remain legacy execution aliases');
+if (separation.providerTopologyVisibleToOrdinaryUsers !== false) fail('provider topology must stay hidden from ordinary users');
+if (targets['cgma.ekodi.kr'] !== 'https://ekodi.kr/cgma') fail('CGMA legacy domain must target the canonical platform path');
+if (customerOwned['cgma.or.kr'] !== 'https://ekodi.kr/cgma') fail('CGMA customer-owned domain mapping must target the canonical platform path');
 
 const expectedNamespaces = ['workspace-root-slug'];
 if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expectedNamespaces)) {
@@ -112,6 +140,9 @@ if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service 
 if (workspace.subdomainExceptions?.personalHome !== 'my.ekodi.kr') fail('service workspace policy must preserve my.ekodi.kr exception');
 if (workspace.subdomainExceptions?.administration !== 'admin.ekodi.kr') fail('service workspace policy must preserve admin.ekodi.kr exception');
 if (workspace.subdomainExceptions?.authentication !== 'auth.ekodi.kr') fail('service workspace policy must preserve auth.ekodi.kr exception');
+if (workspace.userSurfaceTopologyPolicy?.customerSpecificAiSubdomains !== 'forbidden_as_canonical') fail('service workspace policy must forbid customer AI subdomains as canonical');
+if (workspace.userSurfaceTopologyPolicy?.marketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('service workspace Marketing product canonical drift');
+if (workspace.userSurfaceTopologyPolicy?.workspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('service workspace Marketing path pattern drift');
 
 const alignment = storage.constitutionAlignment || {};
 if (alignment.identityAuthority !== 'ekodi') fail('storage policy must declare EKODI identity authority');
@@ -140,4 +171,5 @@ console.log(`- ${legacy.size} legacy domains registered with canonical migration
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
 console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
+console.log('- Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace architecture registered');
 console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');

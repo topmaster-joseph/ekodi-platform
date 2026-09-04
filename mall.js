@@ -24,6 +24,8 @@
   const dialogTitle = document.querySelector('#productDialogTitle');
   const dialogPrice = document.querySelector('#productDialogPrice');
   const dialogBadges = document.querySelector('#productDialogBadges');
+  const dialogSource = document.querySelector('#productDialogSource');
+  const dialogDisclosure = document.querySelector('#productDialogDisclosure');
   const dialogBuy = document.querySelector('#productDialogBuy');
   const imageCache = new Map();
 
@@ -49,6 +51,10 @@
       category: String(product?.category || '추천').trim().slice(0, 60) || '추천',
       isRocket: Boolean(product?.isRocket),
       isFreeShipping: Boolean(product?.isFreeShipping),
+      providerKey: String(product?.providerKey || 'coupang_partners').trim().slice(0, 120),
+      providerName: String(product?.providerName || '제휴 판매처').trim().slice(0, 120) || '제휴 판매처',
+      buyLabel: String(product?.buyLabel || '판매처에서 구매').trim().slice(0, 120) || '판매처에서 구매',
+      disclosureText: String(product?.disclosureText || DEFAULT_DISCLOSURE).trim().slice(0, 1000) || DEFAULT_DISCLOSURE,
       selectedAt,
       popularityRank: Number.isInteger(popularityRank) ? popularityRank : 0,
     };
@@ -75,6 +81,9 @@
 
   async function resolveImage(url) {
     if (!url) return '';
+    try {
+      if (new URL(url).hostname !== 'api.ekodi.kr') return url;
+    } catch { return ''; }
     if (imageCache.has(url)) return imageCache.get(url);
     const promise = fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit' })
       .then(response => {
@@ -122,7 +131,7 @@
 
   function renderDialogBadges(product) {
     if (!dialogBadges) return;
-    const items = [];
+    const items = [makeBadge(product.providerName || '제휴 판매처', true)];
     if (product.isRocket) items.push(makeBadge('로켓'));
     if (product.isFreeShipping) items.push(makeBadge('무료배송', true));
     dialogBadges.replaceChildren(...items);
@@ -134,7 +143,12 @@
     if (dialogCategory) dialogCategory.textContent = product.category;
     if (dialogTitle) dialogTitle.textContent = product.productName;
     if (dialogPrice) dialogPrice.textContent = formatPrice(product.priceKrw);
-    if (dialogBuy) dialogBuy.href = product.clickUrl;
+    if (dialogSource) dialogSource.textContent = `판매처 · ${product.providerName || '제휴 판매처'}`;
+    if (dialogDisclosure) dialogDisclosure.textContent = product.disclosureText || DEFAULT_DISCLOSURE;
+    if (dialogBuy) {
+      dialogBuy.href = product.clickUrl;
+      dialogBuy.textContent = product.buyLabel || '판매처에서 구매';
+    }
     renderDialogBadges(product);
     if (dialogImage) {
       dialogImage.alt = product.productName;
@@ -172,6 +186,7 @@
     placeholder.textContent = 'EKODI MALL';
     const badges = document.createElement('div');
     badges.className = 'badge-row';
+    badges.append(makeBadge(product.providerName || '제휴 판매처', true));
     if (product.isRocket) badges.append(makeBadge('로켓'));
     if (product.isFreeShipping) badges.append(makeBadge('무료배송', true));
     media.append(image, placeholder, badges);
@@ -341,7 +356,15 @@
   giftResults?.addEventListener('click',event=>{const followup=event.target.closest('[data-gift-followup]');if(followup){askGift(followup.dataset.giftFollowup||followup.textContent);return}const button=event.target.closest('.gift-ai-product');if(!button)return;const product=state.products.find(item=>String(item.id)===String(button.dataset.productId||''));if(product)openProductDialog(product)});
 
   const catalogReady = loadProducts();
-  const initialGift = String(new URLSearchParams(location.search).get('gift') || '').trim().slice(0, 500);
+  const searchParams = new URLSearchParams(location.search);
+  const initialProduct = String(searchParams.get('product') || '').trim().slice(0, 160);
+  if (initialProduct) {
+    catalogReady.then(() => {
+      const product = state.products.find(item => item.productId === initialProduct);
+      if (product) openProductDialog(product);
+    }).catch(() => {});
+  }
+  const initialGift = String(searchParams.get('gift') || '').trim().slice(0, 500);
   if (initialGift) {
     location.hash = 'gift-ai';
     catalogReady.then(() => askGift(initialGift)).catch(() => {});

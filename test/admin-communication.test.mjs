@@ -8,9 +8,8 @@ test('communication registry entry has an operational demand-loaded panel', asyn
     text('admin-menu-registry.js'), text('admin-demand-loader.js'), text('admin-menu-layout.js'), text('communication-admin.js')
   ]);
   assert.match(registry, /id: 'communication'/);
-  assert.match(loader, /communication-admin\.js/);
-  assert.match(loader, /real:'\[data-section=\"communication\"\]'/);
-  assert.match(layout, /\['communication','comm'\]/);
+  assert.doesNotMatch(loader, /comm:\{scripts:\['communication-admin\.js'/);
+  assert.match(layout, /section==='communication'\)return import\('\.\/communication-admin\.js'\)/);
   assert.match(layout, /#communication:communication/);
   assert.match(layout, /communication:#communication/);
   assert.match(module, /communication-admin\.css/);

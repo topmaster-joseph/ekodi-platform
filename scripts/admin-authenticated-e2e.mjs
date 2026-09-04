@@ -35,7 +35,7 @@ const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
 
 const groups = {
-  campus: 'home',
+  campus: 'home', 'public-site-controls': 'home',
   work: 'operations', communication: 'operations',
   workspace: 'people', organization: 'people', 'cheonggye-members': 'people', clients: 'people', admins: 'people',
   'life-ai': 'services', community: 'services', books: 'services', social: 'services',
@@ -261,4 +261,4 @@ clearInterval(heartbeat);
 clearTimeout(hardStop);
 if (fatal) throw fatal;
 stage('complete');
-console.log(`Authenticated admin E2E passed: ${results.length}/24 menus clicked and rendered.`);
+console.log(`Authenticated admin E2E passed: ${results.length}/${expectedMenuCount} menus clicked and rendered.`);

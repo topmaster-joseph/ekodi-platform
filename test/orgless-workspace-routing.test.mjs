@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -13,11 +13,19 @@ test('current public workspace grammar contains no type-prefixed route records',
   const retiredKinds=['personal','o'+'rg','group','project'];
   for(const file of activeFiles){
     const source=await read(file);
+    let activeSource=source;
+    if(file==='site-worker.js') activeSource=activeSource.replace("const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';", '');
+    if(file==='wrangler.site.toml') activeSource=activeSource.replace('"/org/ekodibiz*", ', '');
     for(const kind of retiredKinds){
-      assert.ok(!source.includes('/'+kind+'/'),file+': '+kind);
-      assert.ok(!source.includes('/'+kind+'/{'),file+': '+kind+' template');
+      assert.ok(!activeSource.includes('/'+kind+'/'),file+': '+kind);
+      assert.ok(!activeSource.includes('/'+kind+'/{'),file+': '+kind+' template');
     }
   }
+  const siteWorker=await read('site-worker.js');
+  assert.ok(siteWorker.includes("const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';"));
+  assert.ok(siteWorker.includes('redirectLegacyEkodiBizPath'));
+  const wrangler=await read('wrangler.site.toml');
+  assert.ok(wrangler.includes('"/org/ekodibiz*"'));
 });
 
 test('workspace public routing is slug-rooted while immutable identity remains workspace_id',async()=>{

@@ -19,7 +19,7 @@ export function normalizeStoreSlug(value) {
 }
 
 function publicStoreUrl(env, slug) {
-  const base = clean(env.MALL_BASE_URL || 'https://mall.ekodi.kr', 300).replace(/\/$/, '');
+  const base = clean(env.MALL_BASE_URL || 'https://ekodi.kr/ekodibiz/mall', 300).replace(/\/$/, '');
   return `${base}/store/${encodeURIComponent(slug)}`;
 }
 

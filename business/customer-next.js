@@ -13,14 +13,14 @@ const NEXT_STEP_PROBLEMS={
     title:'기존 고객이 다시 올 이유부터 만듭니다.',
     body:'동의된 고객 행동을 기준으로 재방문 대상과 메시지 초안을 준비하고, 사람의 확인 뒤 캠페인 실행으로 이어갑니다.',
     value:'목표: 재방문 증가 · 고객획득비용 절감',price:'대상 진단 무료 · 발송·운영 실행부터 과금',
-    links:{default:'https://marketing.ekodi.kr',jadam:'https://jadam.ai.ekodi.kr'}
+    links:{default:'https://ekodi.kr/ekodibiz/marketing-ai',jadam:'https://ekodi.kr/jadam/marketing'}
   },
   marketing:{
     label:'홍보를 맡기고 싶어요',icon:'✦',action:'draft_campaign',
     title:'이번 주 홍보를 대신 준비합니다.',
     body:'무엇을 올릴지 고민하는 시간을 줄이고 콘텐츠·캠페인 초안을 만든 뒤 승인 가능한 실행 화면으로 연결합니다.',
     value:'목표: 홍보시간 절감 · 꾸준한 고객 접점',price:'아이디어·초안 무료 · 실행팩 또는 월 관리형 과금',
-    links:{default:'https://marketing.ekodi.kr',jadam:'https://jadam.ai.ekodi.kr'}
+    links:{default:'https://ekodi.kr/ekodibiz/marketing-ai',jadam:'https://ekodi.kr/jadam/marketing'}
   },
   cost:{
     label:'비용을 줄이고 싶어요',icon:'↓',action:'suggest_energy_schedule',

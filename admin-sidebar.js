@@ -378,14 +378,16 @@ export function mountAdminSidebar(root = document, options = {}) {
     schedule();
   }, true);
 
-  const main = root.querySelector?.('#app main') || root.querySelector?.('main');
-  main?.addEventListener('click', event => {
-    const tab = event.target.closest('[data-admin-context-section]');
+  // Post-auth runtime may replace <main>. Delegate contextual-tab clicks from the
+  // stable mount root so newly rendered tab strips never lose navigation handlers.
+  const contextClick = event => {
+    const tab = event.target.closest?.('[data-admin-context-section]');
     if (!tab) return;
     event.preventDefault();
     activateSection(nav, tab.dataset.adminContextSection);
     schedule();
-  }, true);
+  };
+  root.addEventListener?.('click', contextClick, true);
 
   window.addEventListener('ekodi-nav-changed', schedule);
   window.addEventListener('ekodi-feature-installed', schedule);
@@ -397,6 +399,7 @@ export function mountAdminSidebar(root = document, options = {}) {
     order: () => adminMenuOrder(),
     destroy: () => {
       observer.disconnect();
+      root.removeEventListener?.('click', contextClick, true);
       mounted.delete(nav);
     },
   });

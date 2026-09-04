@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const ui = await readFile(new URL('../admin-compact.js', import.meta.url), 'utf8');
+const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
-test('all Control Center navigation labels are English', () => {
-  const labels = [
-    'Campus', 'Operations', 'Services', 'Clients', 'Admin Accounts', 'Finance', 'Mail & Live',
-    'Cloud & Files', 'Organization', 'Domains & DNS', 'Policies', 'Activity Logs', 'Logout',
-  ];
-  for (const label of labels) assert.ok(ui.includes(label), `${label} must be present`);
+test('current Admin navigation exposes the canonical English work-area labels', () => {
+  for (const label of [
+    'Site Management','Work','Mail & Live','Spaces & Files','Organizations','Customer Sites',
+    'Administrators & Access','Life AI','Community','Books & Publishing','Social','AI Operations',
+    'Marketing AI','Finance & Accounting','Storage','API & Cost','System Health','Security','Remote Work',
+  ]) assert.ok(registry.includes(label), `missing current navigation label: ${label}`);
+  assert.doesNotMatch(registry, /Domains & DNS|Activity Logs/);
 });

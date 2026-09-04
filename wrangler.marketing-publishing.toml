@@ -14,7 +14,7 @@ crons = ["* * * * *"]
 [vars]
 ENVIRONMENT = "production"
 ALLOW_MUTATIONS = "true"
-ALLOWED_ORIGINS = "https://marketing.ekodi.kr,https://my.ekodi.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://jadam.ai.ekodi.kr,https://pizzamaru.ai.ekodi.kr,https://yogurt.ai.ekodi.kr,https://cgma.ai.ekodi.kr"
+ALLOWED_ORIGINS = "https://marketing.ekodi.kr,https://my.ekodi.kr,https://cgma.or.kr,https://cgma.ekodi.kr,https://jadam.ekodi.kr,https://pizzamaru.ekodi.kr,https://yogurt.ekodi.kr,https://jadam.ai.ekodi.kr,https://pizzamaru.ai.ekodi.kr,https://yogurt.ai.ekodi.kr,https://cgma.ai.ekodi.kr"
 
 [observability.logs]
 enabled = true
