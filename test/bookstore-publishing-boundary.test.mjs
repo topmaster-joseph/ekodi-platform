@@ -38,3 +38,11 @@ test('cross-service relationship is explicit contract only',()=>{
   assert.match(worker,/privateCrossServiceDataAccess:false/);
   assert.match(contract,/공개 또는 명시적으로 선언된 API·handoff 계약/);
 });
+
+
+test('publishing staging accepts only verified Cloudflare Access protection',()=>{
+  const flow=fs.readFileSync(new URL('../.github/workflows/publishing-boundary-ci.yml',import.meta.url),'utf8');
+  assert.match(flow,/health_contract=0/);
+  assert.match(flow,/www-authenticate: Cloudflare-Access/i);
+  assert.match(flow,/cloudflareaccess\\.com\/cdn-cgi\/access\/login/);
+});

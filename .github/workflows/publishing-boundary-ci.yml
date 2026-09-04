@@ -66,14 +66,22 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/root-h -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             studio=$(curl -L -sS -o /tmp/studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/studio/" || true)
-            health=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            health=$(curl -sS -D /tmp/health-h -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             echo "attempt=$attempt root=$root studio=$studio health=$health"
-            if [[ "$root" == '200' && "$studio" == '200' && "$health" == '200' ]] \
-              && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
-              && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
+            health_contract=0
+            if [[ "$health" == '200' ]] \
               && grep -Fq '"publicName":"출판"' /tmp/health.json \
               && grep -Fq '"independentPlatform":true' /tmp/health.json \
-              && grep -Fq '"privateCrossServiceDataAccess":false' /tmp/health.json \
+              && grep -Fq '"privateCrossServiceDataAccess":false' /tmp/health.json; then
+              health_contract=1
+            elif [[ "$health" == '302' ]] \
+              && grep -Fiq 'www-authenticate: Cloudflare-Access' /tmp/health-h \
+              && grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/cdn-cgi/access/login/' /tmp/health-h; then
+              health_contract=1
+            fi
+            if [[ "$root" == '200' && "$studio" == '200' && "$health_contract" == '1' ]] \
+              && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
+              && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/root-h; then
               echo 'Independent Publishing staging verified.'
               exit 0
