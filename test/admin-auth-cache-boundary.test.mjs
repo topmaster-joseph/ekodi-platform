@@ -41,7 +41,7 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));
   assert.ok(workspaceTarget.expect.includes('serviceOrigins'));
   assert.ok(workspaceTarget.headerExpect.includes('cache-control: no-store'));
-  assert.ok(admin.expect.includes('use_fedcm_for_button:supportsFedCmButton()'));
+  assert.ok(admin.expect.includes('use_fedcm_for_button:false'));
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
   assert.ok(admin.expect.includes('Chrome에서 관리자 로그인 열기'));
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
