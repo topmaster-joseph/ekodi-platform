@@ -195,19 +195,26 @@ jobs:
           if 'max-parallel: 4' not in shell_verify:
               errors.append('verify-shared-shell-production.yml missing bounded production matrix parallelism')
 
-          core_release = (root / 'deploy-site-core.yml').read_text(encoding='utf-8')
-          for marker in (
-              'staging_gate:',
-              'uses: ./.github/workflows/stage-shared-site-shell.yml',
-              'needs: staging_gate',
-              'secrets: inherit',
-          ):
-              if marker not in core_release:
-                  errors.append(f'deploy-site-core.yml missing staging promotion gate marker: {marker}')
-
-          core_stage = (root / 'stage-shared-site-shell.yml').read_text(encoding='utf-8')
-          if 'workflow_call:' not in core_stage:
-              errors.append('stage-shared-site-shell.yml must remain reusable by the production promotion gate')
+          promotion_pairs = (
+              ('deploy-site-core.yml', 'stage-shared-site-shell.yml'),
+              ('deploy-work.yml', 'deploy-work-staging.yml'),
+              ('deploy-energy.yml', 'deploy-energy-staging.yml'),
+              ('deploy-books.yml', 'stage-books-shell.yml'),
+          )
+          for release_name, stage_name in promotion_pairs:
+              release_text = (root / release_name).read_text(encoding='utf-8')
+              for marker in (
+                  'staging_gate:',
+                  f'uses: ./.github/workflows/{stage_name}',
+                  'secrets: inherit',
+              ):
+                  if marker not in release_text:
+                      errors.append(f'{release_name} missing staging promotion gate marker: {marker}')
+              if not re.search(r'needs:\s*(?:staging_gate\b|\[[^\]]*\bstaging_gate\b[^\]]*\])', release_text):
+                  errors.append(f'{release_name} production deployment does not depend on staging_gate')
+              stage_text = (root / stage_name).read_text(encoding='utf-8')
+              if 'workflow_call:' not in stage_text:
+                  errors.append(f'{stage_name} must remain reusable by the production promotion gate')
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)

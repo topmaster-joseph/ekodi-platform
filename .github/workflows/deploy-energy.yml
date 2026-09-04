@@ -22,6 +22,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  staging_gate:
+    uses: ./.github/workflows/deploy-energy-staging.yml
+    secrets: inherit
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 7
@@ -44,7 +48,7 @@ jobs:
           test -f deploy/manifests/energy.worker.json
 
   deploy-production:
-    needs: validate
+    needs: [validate, staging_gate]
     runs-on: ubuntu-latest
     timeout-minutes: 16
     env:

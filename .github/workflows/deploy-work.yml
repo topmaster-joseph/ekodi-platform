@@ -21,7 +21,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  staging_gate:
+    uses: ./.github/workflows/deploy-work-staging.yml
+    secrets: inherit
+
   deploy:
+    needs: staging_gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
