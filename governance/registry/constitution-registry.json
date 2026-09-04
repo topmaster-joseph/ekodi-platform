@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-04",
+  "title": "EKODI Constitution Registry Index",
+  "mode": "index-only",
+  "authority": {
+    "canonicalSource": "governance/constitution/constitution.json",
+    "humanReadableMirror": "CONSTITUTION.md",
+    "rule": "This registry indexes the canonical constitution and never overrides or duplicates constitutional truth."
+  },
+  "precedence": [
+    {
+      "rank": 0,
+      "id": "MISSION",
+      "label": "Mission, human dignity, safety, privacy and agency",
+      "source": "config/ai-mission-governance.json"
+    },
+    {
+      "rank": 1,
+      "id": "CONSTITUTION",
+      "label": "EKODI Platform Constitution",
+      "source": "governance/constitution/constitution.json"
+    },
+    {
+      "rank": 2,
+      "id": "SHARED_POLICY",
+      "label": "Cross-cutting platform and shared-service policy",
+      "source": "config/** and platform-boundaries.json"
+    },
+    {
+      "rank": 3,
+      "id": "SERVICE_POLICY",
+      "label": "Service and workspace policy",
+      "source": "service-owned configuration and contracts"
+    },
+    {
+      "rank": 4,
+      "id": "RUNTIME_CONFIG",
+      "label": "Runtime configuration",
+      "source": "environment and deployment configuration"
+    },
+    {
+      "rank": 5,
+      "id": "IMPLEMENTATION",
+      "label": "Implementation detail",
+      "source": "application code"
+    }
+  ],
+  "states": [
+    "draft",
+    "active",
+    "superseded"
+  ],
+  "checkPolicy": {
+    "mode": "advisory",
+    "blocksMerge": false,
+    "blocksDeployment": false,
+    "triggerOnlyForConstitutionalImpact": true,
+    "semanticConflictDecision": "orchestrator_or_human_review",
+    "finalAuthority": "ekodi_platform_super_administrator",
+    "results": [
+      "PASS",
+      "RELATED",
+      "UPDATE",
+      "NEW_AREA"
+    ]
+  },
+  "rules": [
+    {
+      "id": "DOMAIN-001",
+      "area": "domain",
+      "title": "Canonical workspace URL grammar",
+      "status": "active",
+      "sourcePointer": "/workspaceRoutingPolicy",
+      "impactPaths": [
+        "platform-boundaries.json",
+        "config/service-workspace-policy.json",
+        "site-worker.js",
+        "customer-entry-worker.js",
+        "domains-hub.js",
+        "marketing-domain-control.js",
+        "marketing-domain-worker.js"
+      ]
+    },
+    {
+      "id": "WORKSPACE-001",
+      "area": "workspace",
+      "title": "Immutable workspace identity and tenant authority",
+      "status": "active",
+      "sourcePointer": "/workspaceRoutingPolicy/identityKey",
+      "impactPaths": [
+        "config/service-workspace-policy.json",
+        "customer-auth.js",
+        "customer-member-directory.js",
+        "universal-membership.js",
+        "workspace-admin-page.js"
+      ]
+    },
+    {
+      "id": "AUTH-001",
+      "area": "identity-auth",
+      "title": "Protected request authorization chain",
+      "status": "active",
+      "sourcePointer": "/securityPolicy/protectedApiChain",
+      "impactPaths": [
+        "auth-worker.js",
+        "api-worker.js",
+        "admin-google-auth.js",
+        "google-admin-auth.js",
+        "auth-site/**"
+      ]
+    },
+    {
+      "id": "DATA-001",
+      "area": "data",
+      "title": "EKODI-controlled canonical data sovereignty",
+      "status": "active",
+      "sourcePointer": "/dataSovereignty",
+      "impactPaths": [
+        "config/core-data-boundaries.json",
+        "config/storage-policy.json",
+        "migrations/**",
+        "database/**"
+      ]
+    },
+    {
+      "id": "PROVIDER-001",
+      "area": "provider",
+      "title": "Provider independence and graceful degradation",
+      "status": "active",
+      "sourcePointer": "/providerPolicy",
+      "impactPaths": [
+        "ai-governance-runtime.js",
+        "ai-resilience-runtime.js",
+        "mail-google-adapter.js",
+        "config/storage-policy.json"
+      ]
+    },
+    {
+      "id": "SECURITY-001",
+      "area": "security",
+      "title": "Secure projection and minimum disclosure",
+      "status": "active",
+      "sourcePointer": "/securityPolicy/secureProjection",
+      "impactPaths": [
+        "security-edge.js",
+        "admin-authenticated-shell.js",
+        "api-worker.js",
+        "auth-worker.js",
+        "config/**security**"
+      ]
+    },
+    {
+      "id": "AI-001",
+      "area": "ai",
+      "title": "Bounded AI authority and verification-first evolution",
+      "status": "active",
+      "sourcePointer": "/evolutionPolicy",
+      "impactPaths": [
+        "ai-agent-control.js",
+        "ai-governance.js",
+        "ai-governance-runtime.js",
+        "ai-resilience-runtime.js",
+        "config/ai-mission-governance.json"
+      ]
+    },
+    {
+      "id": "DEPLOY-001",
+      "area": "deployment",
+      "title": "Guarded parallel development and release",
+      "status": "active",
+      "sourcePointer": "/parallelDevelopmentPolicy",
+      "impactPaths": [
+        ".github/workflows/**",
+        "deploy/**",
+        "scripts/guarded-pages-release.mjs",
+        "scripts/guarded-worker-release.mjs",
+        "scripts/validate-deployment-guardrails.mjs"
+      ]
+    },
+    {
+      "id": "COMMON-001",
+      "area": "common-service",
+      "title": "Registered common/core service boundaries",
+      "status": "active",
+      "sourcePointer": "/registeredCommonServiceBoundaries",
+      "impactPaths": [
+        "platform-boundaries.json",
+        "config/service-workspace-policy.json",
+        "domains-hub.js"
+      ]
+    }
+  ]
+}
