@@ -29,13 +29,16 @@ test('Shell Worker bundles global navigation, shared chrome, CCM MR and language
   assert.match(worker,/user-ui-header\.js/);
   assert.match(worker,/user-ui-footer\.js/);
   assert.match(worker,/user-language\.js/);
+  assert.match(worker,/user-character\.js/);
   assert.match(worker,/ccm-mr-player\.js/);
   assert.match(worker,/admin-ui-shell\.js/);
   assert.match(worker,/globalNav/);
   assert.match(worker,/userLanguage/);
+  assert.match(worker,/userCharacter/);
   assert.match(worker,/ccmMrPlayer/);
   assert.match(worker,/x-ekodi-user-language/);
+  assert.match(worker,/x-ekodi-user-character/);
   assert.match(worker,/x-ekodi-ccm-mr/);
   assert.match(worker,/x-ekodi-admin-ui-shell/);
-  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{userHeader\}\\n\$\{userFooter\}\\n\$\{userLanguage\}\\n\$\{ccmMrPlayer\}\\n\$\{adminShell\}\\n\$\{fixedHeader\}/);
+  assert.match(worker,/\$\{shell\}\\n\$\{globalNav\}\\n\$\{userContext\}\\n\$\{userHeader\}\\n\$\{userFooter\}\\n\$\{userLanguage\}\\n\$\{userCharacter\}\\n\$\{ccmMrPlayer\}\\n\$\{adminShell\}\\n\$\{fixedHeader\}/);
 });
