@@ -9,6 +9,7 @@ const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
 const MALL_PREFIX = '/ekodibiz/mall';
 const LEGACY_MALL_PREFIX = '/mall';
+const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
@@ -239,6 +240,20 @@ function isLegacyMallPath(pathname) {
   return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
 }
 
+function isLegacyEkodiBizPath(pathname) {
+  return pathname === LEGACY_EKODIBIZ_PREFIX || pathname.startsWith(`${LEGACY_EKODIBIZ_PREFIX}/`);
+}
+
+function redirectLegacyEkodiBizPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `/ekodibiz${target.pathname.slice(LEGACY_EKODIBIZ_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'ekodibiz-legacy-canonical-redirect');
+  return response;
+}
+
 function redirectLegacyMallPath(request) {
   const target = new URL(request.url);
   target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
@@ -439,6 +454,7 @@ export default {
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
         return injectEkodiShell(secured, 'biz', 'admin');
       }
+      if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
