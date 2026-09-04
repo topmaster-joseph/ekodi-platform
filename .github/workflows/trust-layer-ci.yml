@@ -6,7 +6,7 @@ on:
       - 'supabase/functions/_shared/trust.ts'
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
-      - 'supabase/migrations/*trust_layer*.sql'
+      - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
   push:
@@ -15,7 +15,7 @@ on:
       - 'supabase/functions/_shared/trust.ts'
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
-      - 'supabase/migrations/*trust_layer*.sql'
+      - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
 
@@ -44,3 +44,5 @@ jobs:
           grep -Fq "'cutover_allowed', false" supabase/migrations/20260903010000_trust_layer_foundation.sql
           grep -Fq 'body.mode !== "shadow"' supabase/functions/trust-api/index.ts
           grep -Fq 'trust_cutover_not_allowed' supabase/functions/_shared/trust.ts
+          grep -Fq 'trust_runtime_audit_salt' supabase/functions/trust-api/index.ts
+          grep -Fq 'grant execute on function public.trust_runtime_audit_salt() to service_role' supabase/migrations/20260904001000_trust_audit_vault_secret.sql

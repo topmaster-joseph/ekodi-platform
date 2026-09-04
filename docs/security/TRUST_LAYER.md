@@ -90,7 +90,7 @@ RLS is enabled and direct `anon` / `authenticated` table privileges are revoked 
 
 ## Deployment prerequisite
 
-Before `trust-api` is deployed to any environment, configure a cryptographically random environment-specific `TRUST_AUDIT_SALT` secret through the approved secret-management path. The function fails closed for audit pseudonymization when this secret is absent. Do not put the salt in source control, logs, browser configuration or migration files.
+For audit pseudonymization, `trust-api` first uses an environment-specific `TRUST_AUDIT_SALT` when configured. Otherwise it reads `trust_audit_salt` from Supabase Vault through the service-role-only `trust_runtime_audit_salt()` RPC. The Vault secret is generated inside the database and its plaintext is never committed. If neither source is available, the function fails closed. Never put the salt in source control, logs, browser configuration, or plain migration literals.
 
 ## Non-negotiable invariants
 
