@@ -121,6 +121,7 @@
     button.dataset.campusDomain = site.domain;
     button.dataset.campusTarget = action === 'status' ? 'health' : site.section;
     button.dataset.campusFallback = site.fallback || '';
+    if (action === 'manage' && site.group === 'core') button.dataset.section = 'campus';
     button.textContent = label;
     button.setAttribute('aria-label', `${site.name} ${label}`);
     return button;
