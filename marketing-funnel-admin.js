@@ -145,14 +145,34 @@
           <span class="integration-status connected">공통 커넥터</span>
         </div>
         <div id="affiliateFeedProviders" class="integration-capabilities" aria-live="polite"><span>서버 Feed 연결 상태를 확인하는 중입니다.</span></div>
-        <form id="affiliateExternalProductForm" class="integration-account-form">
-          <div class="integration-form-heading"><div><strong>제휴상품 등록</strong><p>제휴처 API가 없어도 구매 링크만 있으면 에코디몰에 즉시 연결할 수 있습니다.</p></div><span class="integration-mode">MANUAL</span></div>
+        <form id="affiliateMerchantRouteForm" class="integration-account-form">
+          <div class="integration-form-heading"><div><strong>판매처 제휴 경로 설정</strong><p>최저가 판매처를 발견해도 제휴가 active이고 추천 허용된 판매처만 사용자 추천에 올라갑니다.</p></div><span class="integration-mode">ROUTE</span></div>
           <div class="integration-form-grid">
-            <label>제휴처 코드<input name="providerKey" maxlength="80" placeholder="예: linkprice" required></label>
-            <label>제휴처 이름<input name="providerName" maxlength="120" placeholder="예: LinkPrice" required></label>
+            <label>판매처 코드<input name="merchantKey" maxlength="80" placeholder="예: elevenst" required></label>
+            <label>판매처 이름<input name="merchantName" maxlength="120" placeholder="예: 11번가" required></label>
+            <label>국가 코드<input name="marketCountry" maxlength="2" value="KR" placeholder="KR · US · JP"></label>
+            <label>정산 통화<input name="settlementCurrency" maxlength="3" value="KRW" placeholder="KRW · USD · JPY"></label>
+            <label>제휴 방식<select name="affiliateMode"><option value="network">간접 제휴망</option><option value="direct">직접 제휴</option></select></label>
+            <label>제휴 상태<select name="affiliateStatus"><option value="candidate">후보</option><option value="pending">신청/승인 대기</option><option value="approved">승인됨</option><option value="active">활성</option><option value="suspended">중지</option></select></label>
+            <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" placeholder="예: linkprice"></label>
+            <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="예: LinkPrice"></label>
+            <label class="integration-wide">제휴 프로그램/관리 URL<input name="programUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
+            <label class="integration-wide">운영 메모<textarea name="notes" maxlength="500" rows="2" placeholder="승인일, 담당자, 해외 세금/통화 메모 등"></textarea></label>
+            <label class="integration-toggle"><input name="recommendationEnabled" type="checkbox"> 제휴 완료 후 이 판매처의 상품을 추천 후보로 허용</label>
+          </div>
+          <div class="integration-form-actions"><button class="primary" type="submit">제휴 경로 저장</button><span id="affiliateMerchantRouteState"></span></div>
+        </form>
+        <div id="affiliateMerchantRoutes" class="integration-capabilities" aria-live="polite"><span>제휴 경로를 확인하는 중입니다.</span></div>
+        <form id="affiliateExternalProductForm" class="integration-account-form">
+          <div class="integration-form-heading"><div><strong>제휴 완료 상품 등록</strong><p>판매처 코드는 실제 Merchant 기준으로 입력합니다. 간접 제휴망(LinkPrice 등)은 위 제휴 경로 설정에서 관리합니다.</p></div><span class="integration-mode">MANUAL</span></div>
+          <div class="integration-form-grid">
+            <label>판매처 코드<input name="providerKey" maxlength="80" placeholder="예: elevenst" required></label>
+            <label>판매처 이름<input name="providerName" maxlength="120" placeholder="예: 11번가" required></label>
             <label>상품명<input name="productName" maxlength="240" required></label>
             <label>카테고리<input name="category" maxlength="120" placeholder="건강 · 식품 · 생활"></label>
-            <label>가격(원)<input name="priceKrw" type="number" min="0" step="1" placeholder="0"></label>
+            <label>비교가격(원)<input name="priceKrw" type="number" min="0" step="1" placeholder="해외상품은 검증된 원화 환산값만"></label>
+            <label>원 판매가<input name="sourcePriceAmount" type="number" min="0" step="0.01" placeholder="해외 판매가 선택"></label>
+            <label>원 판매가 통화<input name="sourcePriceCurrency" maxlength="3" placeholder="KRW · USD · JPY"></label>
             <label>제휴처 상품 ID<input name="sourceId" maxlength="160" placeholder="선택"></label>
             <label>GTIN/바코드<input name="gtin" inputmode="numeric" maxlength="32" placeholder="8?12?13?14자리"></label>
             <label>브랜드<input name="brand" maxlength="120" placeholder="선택"></label>
@@ -165,7 +185,7 @@
           </div>
           <div class="integration-form-actions"><button class="primary" type="submit">에코디몰에 상품 등록</button><span id="affiliateExternalProductState"></span></div>
         </form>
-        <div class="integration-security-note"><strong>운영 원칙</strong><span>판매처와 제휴 관계를 투명하게 표시하고, 판매 수수료보다 사용자 상황과 적합성을 우선해 추천합니다.</span></div>
+        <div class="integration-security-note"><strong>추천 원칙</strong><span>제휴 완료(active + 추천 허용)는 추천의 입장권입니다. 그 안에서 실제 가격·배송·사용자 적합성으로 순위를 정하며 수수료율은 추천 점수에 넣지 않습니다.</span></div>
       </article>
 
       <div class="integration-summary-grid" aria-label="에코디몰 최근 운영 현황">
@@ -178,6 +198,8 @@
     content.append(panel);
 
     const accountForm = document.querySelector('#affiliateAccountForm');
+    const merchantRouteForm = document.querySelector('#affiliateMerchantRouteForm');
+    const merchantRoutes = document.querySelector('#affiliateMerchantRoutes');
     const externalProductForm = document.querySelector('#affiliateExternalProductForm');
     const feedProviders = document.querySelector('#affiliateFeedProviders');
     const message = document.querySelector('#affiliateMessage');
@@ -256,6 +278,28 @@
       }
     }
 
+    function renderMerchantRoutes(routes = []) {
+      if (!merchantRoutes) return;
+      merchantRoutes.replaceChildren();
+      if (!routes.length) {
+        const empty = document.createElement('span');
+        empty.textContent = '아직 판매처 제휴 경로가 없습니다. 최저가 후보를 발견하면 직접 또는 제휴망 경로를 먼저 등록하세요.';
+        merchantRoutes.append(empty);
+        return;
+      }
+      for (const route of routes) {
+        const row = document.createElement('div');
+        row.className = 'integration-form-actions';
+        const label = document.createElement('span');
+        const via = route.affiliateMode === 'network' ? `간접 · ${route.networkName || route.networkKey}` : '직접 제휴';
+        const market = `${route.marketCountry || 'KR'} · ${route.settlementCurrency || 'KRW'}`;
+        const eligible = route.affiliateStatus === 'active' && route.recommendationEnabled ? '추천 허용' : '추천 대기';
+        label.textContent = `${route.merchantName || route.merchantKey} · ${via} · ${route.affiliateStatus} · ${eligible} · ${market}`;
+        row.append(label);
+        merchantRoutes.append(row);
+      }
+    }
+
     function renderOverview(data) {
       const s = data.summary || {};
       const automation = data.automation || {};
@@ -296,9 +340,10 @@
     }
 
     async function loadOverview() {
-      const [affiliate, providerData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), mallEvents()]);
+      const [affiliate, providerData, routeData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), api('/api/affiliate/routes').catch(() => ({ routes: [] })), mallEvents()]);
       renderOverview(affiliate);
       renderProviderFeeds(providerData.providers || []);
+      renderMerchantRoutes(routeData.routes || []);
       renderMallEvents(events);
       return affiliate;
     }
@@ -359,6 +404,29 @@
         await loadOverview();
       } catch (error) {
         setMessage(error.message, true);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    merchantRouteForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const state = document.querySelector('#affiliateMerchantRouteState');
+      submit.disabled = true;
+      if (state) state.textContent = '저장 중…';
+      try {
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.recommendationEnabled = form.elements.recommendationEnabled.checked;
+        const data = await api('/api/affiliate/routes', { method: 'POST', body: JSON.stringify(payload) });
+        const route = data.route || {};
+        setMessage(`${route.merchantName || route.merchantKey} 제휴 경로를 저장했습니다.${route.recommendationEnabled ? ' 추천 후보로 활성화되었습니다.' : ' 제휴 완료 전에는 추천되지 않습니다.'}`);
+        if (state) state.textContent = route.recommendationEnabled ? '제휴 완료 · 추천 허용' : `${route.affiliateStatus || 'candidate'} · 추천 대기`;
+        await loadOverview();
+      } catch (error) {
+        setMessage(error.message, true);
+        if (state) state.textContent = '저장 실패';
       } finally {
         submit.disabled = false;
       }

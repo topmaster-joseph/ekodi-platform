@@ -40,6 +40,11 @@ test('provider descriptor exposes readiness without endpoint path or secret name
     providerName: 'Partner One',
     connectionMode: 'json_feed_v1',
     endpointHost: 'feed.example.com',
+    marketCountry: 'KR',
+    priceCurrency: 'KRW',
+    affiliateMode: 'direct',
+    networkKey: '',
+    networkName: '',
     enabled: true,
     secretRequired: true,
     secretConfigured: true,
@@ -65,6 +70,18 @@ test('generic feed item normalizes into a provider-neutral product offer input',
   assert.equal(product.gtin, '8801234567893');
   assert.equal(product.providerKey, 'partner-one');
 });
+test('foreign-currency feeds never treat raw foreign price as KRW without an explicit KRW value', () => {
+  const foreignConfig = { providerKey: 'global-shop', providerName: 'Global Shop', marketCountry: 'US', priceCurrency: 'USD', affiliateMode: 'network', networkKey: 'global-network', networkName: 'Global Network' };
+  const rawOnly = normalizeProviderFeedItem({ id: 'USD-1', name: 'Global Product', url: 'https://shop.example.com/usd-1', price: 49.99, currency: 'USD' }, foreignConfig);
+  assert.equal(rawOnly.priceKrw, 0);
+  assert.equal(rawOnly.sourcePriceAmount, 49.99);
+  assert.equal(rawOnly.sourcePriceCurrency, 'USD');
+  assert.equal(rawOnly.marketCountry, 'US');
+  assert.equal(rawOnly.affiliateMode, 'network');
+  const converted = normalizeProviderFeedItem({ id: 'USD-2', name: 'Global Product 2', url: 'https://shop.example.com/usd-2', price: 49.99, currency: 'USD', priceKrw: 69000 }, foreignConfig);
+  assert.equal(converted.priceKrw, 69000);
+});
+
 test('feed fetch keeps credentials server-side and accepts common payload shapes', async () => {
   let seenUrl = '';
   let seenAuth = '';
