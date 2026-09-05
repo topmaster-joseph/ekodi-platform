@@ -7,12 +7,35 @@
     "requests": [
       {
         "url": "https://personal-finance-api.ekodi.kr/health",
-        "statuses": [200],
-        "expect": ["\"ok\":true", "ekodi-personal-finance-api", "\"dataBoundary\":\"dedicated-d1\""]
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"ok\":true",
+          "ekodi-personal-finance-api",
+          "\"dataBoundary\":\"dedicated-d1\"",
+          "\"referenceService\":true",
+          "\"actionCeiling\":\"L2\"",
+          "\"evidenceLinked\":true"
+        ]
       },
       {
         "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/summary",
-        "statuses": [401]
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/controls",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/insights",
+        "statuses": [
+          401
+        ]
       }
     ]
   }

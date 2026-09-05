@@ -16,6 +16,9 @@ on:
         "personal-finance-migrations/**",
         "test/personal-finance-worker.test.mjs",
         "deploy/manifests/personal-finance-api.worker.json",
+        "governance/services/personal-finance-ai.service.json",
+        "governance/architecture/responsible-independent-service-contract.v1.json",
+        "scripts/validate-responsible-independent-services.mjs",
         ".github/workflows/deploy-personal-finance.yml",
       ]
   push:
@@ -27,6 +30,9 @@ on:
         "personal-finance-migrations/**",
         "test/personal-finance-worker.test.mjs",
         "deploy/manifests/personal-finance-api.worker.json",
+        "governance/services/personal-finance-ai.service.json",
+        "governance/architecture/responsible-independent-service-contract.v1.json",
+        "scripts/validate-responsible-independent-services.mjs",
         ".github/workflows/deploy-personal-finance.yml",
       ]
 
@@ -54,6 +60,7 @@ jobs:
           set -euo pipefail
           node --check personal-finance-worker.js
           node --test test/personal-finance-worker.test.mjs
+          node scripts/validate-responsible-independent-services.mjs
           node scripts/validate-additive-migrations.mjs personal-finance-migrations
           test -f deploy/manifests/personal-finance-api.worker.json
           grep -Fq 'binding = "PERSONAL_DB"' wrangler.personal-finance.toml
