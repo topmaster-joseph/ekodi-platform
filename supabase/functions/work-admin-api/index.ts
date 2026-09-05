@@ -1,11 +1,23 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  buildSecurityContext,
+  compareWithLegacy,
+  compatibilityDecision,
+  evaluatePolicy,
+  safeAuditObject,
+  selectCoveredPolicy,
+  type PolicyRule,
+  type RiskLevel,
+  type TrustPolicyVersion,
+} from "../_shared/trust.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_admin_environment_missing");
 const SESSION_URL = "https://api.ekodi.kr/api/session";
 const WORK_HEALTH_URL = "https://work.ekodi.kr/health";
+const WORK_ADMIN_TRUST_POLICY = "trust_policy_v3";
 const ALLOWED_ORIGINS = new Set([
   "https://admin.ekodi.kr",
   "https://admin.biz.ekodi.kr",
@@ -56,7 +68,124 @@ async function verifyEkodiAdmin(req) {
   if (!response.ok) return null;
   const session = await response.json().catch(() => null);
   if (!session?.email) return null;
-  return { email: String(session.email).toLowerCase(), name: String(session.name || session.displayName || "관리자") };
+  const rawAuthority = session?.authority && typeof session.authority === "object" ? session.authority : null;
+  const authority = rawAuthority && Array.isArray(rawAuthority.capabilities)
+    ? {
+      role: String(rawAuthority.role || session.role || "viewer").toLowerCase(),
+      scope: rawAuthority.scope && typeof rawAuthority.scope === "object" ? rawAuthority.scope : null,
+      capabilities: rawAuthority.capabilities.map(value => String(value || "").toLowerCase()).filter(Boolean),
+      deniedCapabilities: Array.isArray(rawAuthority.deniedCapabilities)
+        ? rawAuthority.deniedCapabilities.map(value => String(value || "").toLowerCase()).filter(Boolean)
+        : [],
+      elevated: rawAuthority.elevated === true,
+      elevatedUntil: rawAuthority.elevatedUntil || null,
+    }
+    : null;
+  return {
+    email: String(session.email).toLowerCase(),
+    name: String(session.name || session.displayName || "관리자"),
+    role: String(authority?.role || session.role || "viewer").toLowerCase(),
+    authority,
+  };
+}
+
+async function trustAuditSalt() {
+  const configured = Deno.env.get("TRUST_AUDIT_SALT")?.trim();
+  if (configured) return configured;
+  const { data, error } = await admin.rpc("trust_runtime_audit_salt");
+  if (error || typeof data !== "string" || data.length < 32) throw new Error("trust_audit_salt_missing");
+  return data;
+}
+
+async function trustSubjectHash(subjectId) {
+  const salt = await trustAuditSalt();
+  const bytes = new TextEncoder().encode(`${salt}:${subjectId}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function workAdminCandidatePolicy() {
+  const { data, error } = await admin.from("trust_policy_versions")
+    .select("policy_version,capability_schema_version,projection_version,config,status,created_at")
+    .eq("policy_version", WORK_ADMIN_TRUST_POLICY)
+    .in("status", ["draft", "shadow", "active"])
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as TrustPolicyVersion | null;
+}
+
+async function observeWorkAdminTrustShadow(adminSession, action: "job.moderate" | "organization.verify", risk: RiskLevel = "high") {
+  try {
+    const legacyAllowed = true;
+    const authority = adminSession.authority;
+    const context = buildSecurityContext({
+      subjectId: adminSession.email,
+      roles: [adminSession.role].filter(Boolean),
+      authorityCapabilities: authority?.capabilities ?? [],
+      deniedCapabilities: authority?.deniedCapabilities ?? [],
+      elevated: authority?.elevated === true,
+      service: "work",
+      resource: "work-admin",
+      action,
+      purpose: "authorization-migration",
+      risk,
+      attributes: {
+        migration_surface: "work-admin-api",
+        legacy_predicate: "verified_admin_session",
+        authority_source: authority ? "api-session-authority" : "session-only",
+      },
+    });
+    const policy = await workAdminCandidatePolicy();
+    const selected = authority && policy ? selectCoveredPolicy(context, [policy]) : null;
+    const rules = Array.isArray(selected?.config?.rules) ? selected.config.rules as PolicyRule[] : [];
+    const candidateCovered = Boolean(selected && rules.length > 0);
+    const decision = candidateCovered
+      ? evaluatePolicy(context, rules)
+      : compatibilityDecision(legacyAllowed, {
+        capabilities: [],
+        projectionProfile: "safe-admin",
+        reason: authority
+          ? "Work Admin candidate policy unavailable or outside coverage; mirrored verified admin session."
+          : "Admin session did not expose canonical authority; mirrored verified admin session.",
+      });
+    const comparison = compareWithLegacy(legacyAllowed, decision, "shadow");
+    const { error: auditError } = await admin.from("trust_shadow_decisions").insert({
+      subject_hash: await trustSubjectHash(adminSession.email),
+      workspace_id: null,
+      service: "work",
+      resource: "work-admin",
+      action,
+      purpose: "authorization-migration",
+      risk,
+      legacy_allowed: comparison.legacyAllowed,
+      trust_allowed: comparison.trustAllowed,
+      effective_allowed: comparison.effectiveAllowed,
+      parity: comparison.parity,
+      severity: comparison.severity,
+      policy_version: selected?.policy_version ?? decision.policyVersion,
+      capability_schema_version: selected?.capability_schema_version ?? decision.capabilitySchemaVersion,
+      projection_version: selected?.projection_version ?? decision.projectionVersion,
+      projection_profile: decision.projectionProfile,
+      rule_id: decision.ruleId,
+      context_summary: safeAuditObject({
+        role: adminSession.role,
+        migration_surface: "work-admin-api",
+        legacy_predicate: "verified_admin_session",
+        authority_source: authority ? "api-session-authority" : "session-only",
+        authority_scope_type: authority?.scope?.type ?? null,
+        elevated: authority?.elevated === true,
+        candidate_policy_covered: candidateCovered,
+        required_capability: "service:operate",
+      }),
+    });
+    if (auditError) throw auditError;
+    if (comparison.severity !== "ok") {
+      console.warn("work-admin trust shadow divergence", { action, role: adminSession.role, severity: comparison.severity, parity: comparison.parity });
+    }
+  } catch (error) {
+    // Shadow telemetry is never allowed to alter the existing verified-admin authorization result.
+    console.error("work-admin trust shadow observation failed", error);
+  }
 }
 
 function pathOf(req) {
@@ -343,9 +472,15 @@ Deno.serve(async req => {
     if (req.method === "GET" && path === "/profiles") return await listProfiles(req);
     if (req.method === "GET" && path === "/security") return await security(req);
     const jobMatch = path.match(/^\/jobs\/([0-9a-f-]+)$/i);
-    if (req.method === "PATCH" && jobMatch) return await moderateJob(req, adminSession, jobMatch[1]);
+    if (req.method === "PATCH" && jobMatch) {
+      await observeWorkAdminTrustShadow(adminSession, "job.moderate", "high");
+      return await moderateJob(req, adminSession, jobMatch[1]);
+    }
     const organizationMatch = path.match(/^\/organizations\/([0-9a-f-]+)$/i);
-    if (req.method === "PATCH" && organizationMatch) return await verifyOrganization(req, adminSession, organizationMatch[1]);
+    if (req.method === "PATCH" && organizationMatch) {
+      await observeWorkAdminTrustShadow(adminSession, "organization.verify", "high");
+      return await verifyOrganization(req, adminSession, organizationMatch[1]);
+    }
     return json(req, { error: "not_found" }, 404);
   } catch (error) {
     console.error("work-admin-api", error);
