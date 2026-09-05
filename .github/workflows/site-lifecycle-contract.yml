@@ -1,0 +1,46 @@
+name: EKODI Site Lifecycle Contract
+
+on:
+  pull_request:
+    paths:
+      - 'config/site-lifecycle-registry.json'
+      - 'docs/site-lifecycle.md'
+      - 'scripts/validate-site-lifecycle-registry.mjs'
+      - 'config/service-workspace-policy.json'
+      - 'config/marketing-tenants.json'
+      - 'config/ekodi-service-urls.json'
+      - 'config/ecosystem-services.json'
+      - 'supabase/migrations/20260823001500_owned_customer_sites_and_local_roles.sql'
+      - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
+      - '.github/workflows/site-lifecycle-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/site-lifecycle-registry.json'
+      - 'docs/site-lifecycle.md'
+      - 'scripts/validate-site-lifecycle-registry.mjs'
+      - 'config/service-workspace-policy.json'
+      - 'config/marketing-tenants.json'
+      - 'config/ekodi-service-urls.json'
+      - 'config/ecosystem-services.json'
+      - 'supabase/migrations/20260823001500_owned_customer_sites_and_local_roles.sql'
+      - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
+      - '.github/workflows/site-lifecycle-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate existing and future site lifecycle
+        run: |
+          set -euo pipefail
+          node --check scripts/validate-site-lifecycle-registry.mjs
+          node scripts/validate-site-lifecycle-registry.mjs
