@@ -54,6 +54,13 @@ jobs:
             "$RUNNER_TEMP/cloudflare-usage-root-cause.md"
           cat "$RUNNER_TEMP/cloudflare-usage-root-cause.md" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Livecheck sanitized D1 query insights
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights ekodi-auth --config wrangler.api.toml --time-period=3h --sort-type=sum --sort-by=reads --limit=20 --json > "$RUNNER_TEMP/d1-insights.json"
+          node scripts/livecheck-d1-insights-summary.mjs "$RUNNER_TEMP/d1-insights.json"
+
       - name: Preserve diagnostic report
         uses: actions/upload-artifact@v6
         with:
