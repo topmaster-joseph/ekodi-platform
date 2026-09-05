@@ -94,16 +94,19 @@ async function activeZones(account) {
 async function zoneTraffic(account, zone, window) {
   const result = {
     zone:zone.name, requests:0, botRequests:0, internalRequests:0,
-    healthRequests:0, devToProdSuspectRequests:0, cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
+    healthRequests:0, devToProdSuspectRequests:0, hostRequests:[], cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
   };
-  const uaQuery = `query ZoneUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent } } } } }`;
+  const uaQuery = `query ZoneUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
   try {
     const payload = await gql(account, uaQuery, { zoneTag:zone.id, start:window.start, end:window.end });
     const rows = payload?.data?.viewer?.zones?.[0]?.rows || [];
+    const hostCounts=new Map();
     for (const row of rows) {
       const count = Number(row?.count || 0);
       result.requests += count;
       const rawUserAgent = String(row?.dimensions?.userAgent || '');
+      const host=String(row?.dimensions?.clientRequestHTTPHost || zone.name).trim().toLowerCase();
+      if(host)hostCounts.set(host,(hostCounts.get(host)||0)+count);
       const category = classifyTrafficUserAgent(rawUserAgent).category;
       if (category === 'search_bot' || category === 'other_bot') result.botRequests += count;
       if (category === 'ekodi_internal') {
@@ -111,6 +114,7 @@ async function zoneTraffic(account, zone, window) {
         if (account.label === 'PROD' && /(?:^|[-_/])(dev|development|staging)(?:$|[-_/])/i.test(rawUserAgent)) result.devToProdSuspectRequests += count;
       }
     }
+    result.hostRequests=[...hostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,20);
   } catch (error) { result.warnings.push(`ua:${String(error.message).slice(0,120)}`); }
 
   const healthQuery = `query ZoneHealth($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { clientRequestPath } } } } }`;
@@ -168,9 +172,13 @@ function accountSummary(account, usage, zones, traffic, schedules) {
     return sum;
   }, { availableZones:0, hit:0, miss:0, bypass:0, other:0 });
   const cacheKnown = cache.hit + cache.miss + cache.bypass;
-  const uaUnavailable = traffic.some(row => row.warnings.some(warning => warning.startsWith('ua:')));
-  const healthUnavailable = traffic.some(row => row.warnings.some(warning => warning.startsWith('health:')));
-  const cacheUnavailable = traffic.some(row => row.warnings.some(warning => warning.startsWith('cache:')));
+  const uaAvailableZones=traffic.filter(row=>!row.warnings.some(warning=>warning.startsWith('ua:'))).length;
+  const healthAvailableZones=traffic.filter(row=>!row.warnings.some(warning=>warning.startsWith('health:'))).length;
+  const cacheAvailableZones=traffic.filter(row=>row.cache.available&&!row.warnings.some(warning=>warning.startsWith('cache:'))).length;
+  const zoneCoverageTotal=traffic.length;
+  const hostCounts=new Map();
+  for(const row of traffic)for(const item of row.hostRequests||[])hostCounts.set(item.host,(hostCounts.get(item.host)||0)+Number(item.requests||0));
+  const topHosts=[...hostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,15);
   const worstSubrequest = usage.scripts.reduce((best,item)=>item.subrequestRatio > (best?.subrequestRatio || 0) ? item : best, null);
   const prodResidues = account.label === 'PROD'
     ? usage.scripts.filter(item => /(?:^|[-_])(staging|development|dev)(?:$|[-_])/i.test(item.script) && item.requests > 0)
@@ -178,13 +186,13 @@ function accountSummary(account, usage, zones, traffic, schedules) {
   return {
     label:account.label,
     accountIdMasked:account.accountId ? `${account.accountId.slice(0,4)}...${account.accountId.slice(-4)}` : '',
-    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), traffic,
+    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, traffic,
     signals:{
-      bot:{ available:traffic.length > 0 && !uaUnavailable, requests:botRequests, percent:pct(botRequests,totalZoneRequests), severity:uaUnavailable ? 'unknown' : severity(pct(botRequests,totalZoneRequests),30,60) },
+      bot:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, requests:botRequests, percent:pct(botRequests,totalZoneRequests), severity:uaAvailableZones>0 ? severity(pct(botRequests,totalZoneRequests),30,60) : 'unknown' },
       loopRetry:{ maxSubrequestRatio:worstSubrequest?.subrequestRatio || 0, script:worstSubrequest?.script || '', severity:severity(worstSubrequest?.subrequestRatio || 0,3,8) },
-      cache:{ available:cache.availableZones>0 && !cacheUnavailable, hit:cache.hit, miss:cache.miss, bypass:cache.bypass, hitPercent:pct(cache.hit,cacheKnown), pressurePercent:pct(cache.miss+cache.bypass,cacheKnown), severity:cache.availableZones && !cacheUnavailable ? severity(pct(cache.miss+cache.bypass,cacheKnown),60,85) : 'unknown' },
-      cronHealth:{ healthAvailable:traffic.length > 0 && !healthUnavailable, healthRequests, healthPercent:pct(healthRequests,totalZoneRequests), scheduledScripts:schedules.length, everyMinuteScripts:schedules.filter(row=>row.everyMinute).map(row=>row.script), severity:healthUnavailable ? 'unknown' : (schedules.some(row=>row.everyMinute) || pct(healthRequests,totalZoneRequests)>=10 ? 'warning' : 'ok') },
-      boundary:{ available:traffic.length === 0 || !uaUnavailable, internalRequests, internalPercent:pct(internalRequests,totalZoneRequests), devToProdSuspectRequests, prodStagingResidues:prodResidues.map(item=>item.script), severity:prodResidues.length || devToProdSuspectRequests > 0 ? 'critical' : (uaUnavailable ? 'unknown' : (account.label==='PROD' && pct(internalRequests,totalZoneRequests)>=10 ? 'warning' : 'ok')) },
+      cache:{ available:cacheAvailableZones>0, coverage:`${cacheAvailableZones}/${zoneCoverageTotal}`, partial:cacheAvailableZones>0&&cacheAvailableZones<zoneCoverageTotal, hit:cache.hit, miss:cache.miss, bypass:cache.bypass, hitPercent:pct(cache.hit,cacheKnown), pressurePercent:pct(cache.miss+cache.bypass,cacheKnown), severity:cacheAvailableZones>0 ? severity(pct(cache.miss+cache.bypass,cacheKnown),60,85) : 'unknown' },
+      cronHealth:{ healthAvailable:healthAvailableZones>0, coverage:`${healthAvailableZones}/${zoneCoverageTotal}`, partial:healthAvailableZones>0&&healthAvailableZones<zoneCoverageTotal, healthRequests, healthPercent:pct(healthRequests,totalZoneRequests), scheduledScripts:schedules.length, everyMinuteScripts:schedules.filter(row=>row.everyMinute).map(row=>row.script), severity:healthAvailableZones>0 ? (schedules.some(row=>row.everyMinute) || pct(healthRequests,totalZoneRequests)>=10 ? 'warning' : 'ok') : 'unknown' },
+      boundary:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, internalRequests, internalPercent:pct(internalRequests,totalZoneRequests), devToProdSuspectRequests, prodStagingResidues:prodResidues.map(item=>item.script), severity:prodResidues.length || devToProdSuspectRequests > 0 ? 'critical' : (uaAvailableZones>0 ? (account.label==='PROD' && pct(internalRequests,totalZoneRequests)>=10 ? 'warning' : 'ok') : 'unknown') },
     },
   };
 }
@@ -212,13 +220,15 @@ function markdown(report) {
   for (const row of report.accounts) {
     const s = row.signals;
     lines.push('', `### ${row.label}`,
-      `1. Bot: ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.requests} requests (${s.bot.percent}%)` : 'analytics unavailable'}` ,
+      `1. Bot: ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.requests} requests (${s.bot.percent}%)` : 'analytics unavailable'} | zones ${s.bot.coverage}` ,
       `2. Worker loop/retry: ${icon(s.loopRetry.severity)} max ${s.loopRetry.maxSubrequestRatio} subrequests/request at \`${s.loopRetry.script || 'n/a'}\``,
-      `3. Cache: ${icon(s.cache.severity)} ${s.cache.available ? `hit ${s.cache.hitPercent}%, pressure ${s.cache.pressurePercent}%` : 'analytics field unavailable'}`,
-      `4. Cron/Health: ${icon(s.cronHealth.severity)} health ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthRequests} (${s.cronHealth.healthPercent}%)` : 'analytics unavailable'}, scheduled top scripts ${s.cronHealth.scheduledScripts}, every-minute ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}`,
-      `5. DEV->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
+      `3. Cache: ${icon(s.cache.severity)} ${s.cache.available ? `hit ${s.cache.hitPercent}%, pressure ${s.cache.pressurePercent}%` : 'analytics field unavailable'} | zones ${s.cache.coverage}`,
+      `4. Cron/Health: ${icon(s.cronHealth.severity)} health ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthRequests} (${s.cronHealth.healthPercent}%)` : 'analytics unavailable'} | zones ${s.cronHealth.coverage}, scheduled top scripts ${s.cronHealth.scheduledScripts}, every-minute ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}`,
+      `5. DEV->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'} | zones ${s.boundary.coverage}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
       '', 'Top Workers:',
-      ...row.workers.top.slice(0,10).map(item => `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | cpuP99 raw ${item.cpuP99} | \`${item.script}\``)
+      ...row.workers.top.slice(0,10).map(item => `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | cpuP99 raw ${item.cpuP99} | \`${item.script}\``),
+      '', 'Top Hosts (covered Zone Analytics):',
+      ...(row.topHosts.length ? row.topHosts.slice(0,10).map(item=>'- '+item.requests+' requests | '+item.host+'') : ['- n/a'])
     );
   }
   lines.push('', '> This report is read-only. Warning thresholds are diagnostic signals, not automatic blocking rules.');
