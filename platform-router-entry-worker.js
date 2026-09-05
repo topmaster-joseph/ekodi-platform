@@ -172,7 +172,7 @@ export default {
       if(request.method==='GET'){
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
-        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return storeAdminPage(storeRoute);}
+        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
@@ -181,8 +181,8 @@ export default {
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return tradePartnerPage();
         if(url.pathname==='/mall/admin'||url.pathname.startsWith('/mall/admin/')){const target=new URL(request.url);target.pathname=`/ekodibiz${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
-        if(isChurchPastorAdminPath(url.pathname))return churchPastorAdminPage();
-        if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return workspaceAdminPage();
+        if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
+        if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
