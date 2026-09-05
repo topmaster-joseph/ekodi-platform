@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { shellCsp } from '../ekodi-shell-injector.js';
 import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.js';
+import { EKODI_USER_EXPERIENCE_PROFILES } from '../config/user-ui-experience-profiles.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -132,7 +133,12 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(parsedPolicy.footer.dedupe,'exactly-one-shared-footer');
   assert.equal(parsedPolicy.header.alignment,'centered-canvas');
   assert.equal(parsedPolicy.principles.selectiveRoundedInteraction,true);
-  assert.equal(parsedPolicy.experienceProfiles['consumer-commerce'].appliesTo[0],'mall');
+  assert.equal(parsedPolicy.experienceProfiles.source,'config/user-ui-experience-profiles.js');
+  assert.equal(parsedPolicy.experienceProfiles.strategy,'service-opt-in');
+  assert.equal(EKODI_USER_EXPERIENCE_PROFILES.serviceProfiles.mall,'consumer-commerce');
+  assert.equal(EKODI_USER_EXPERIENCE_PROFILES.profiles['consumer-commerce'].geometry.controlRadius,'999px');
+  assert.match(worker,/USER_EXPERIENCE_PROFILES_BOOTSTRAP/);
+  assert.match(worker,/x-ekodi-user-experience-profiles/);
   assert.match(parsedPolicy.footer.layout,/centered/);
   assert.match(parsedPolicy.footer.themePolicy,/inherit each service/);
   assert.equal(parsedPolicy.language.owner,'shared-shell');
