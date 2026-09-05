@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 import { getAffiliateAutomationStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation } from './coupang-partners-automation.js';
 import { archiveMarketplaceOffer, listMarketplaceProducts, MULTI_AFFILIATE_DISCLOSURE, publicMarketplaceClick, registerMarketplaceProduct } from './affiliate-marketplace.js';
-import { groupProductOffers } from './product-identity.js';
+import { applyProductIdentityAliases, groupProductOffers } from './product-identity.js';
 import { listProviderFeedDescriptors, mixProductsByProvider, syncProviderFeed } from './affiliate-provider-feed.js';
 
 const PREFIX = '/api/affiliate';
@@ -28,6 +28,14 @@ async function readJson(request) {
 }
 
 function cleanText(value, max = 200) { return String(value ?? '').trim().slice(0, max); }
+function safeKey(value, max = 80) { return cleanText(value, max).toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max); }
+const AFFILIATE_ROUTE_MODES = new Set(['direct', 'network']);
+const AFFILIATE_ROUTE_STATUSES = new Set(['candidate', 'pending', 'approved', 'active', 'suspended']);
+const AFFILIATE_TRACKING_STATUSES = new Set(['not_ready', 'pending', 'ready', 'failed']);
+const AFFILIATE_CATALOG_STATUSES = new Set(['not_ready', 'manual_verified', 'feed_ready', 'stale', 'failed']);
+const RECOMMENDABLE_CATALOG_STATUSES = new Set(['manual_verified', 'feed_ready']);
+function marketCountry(value) { const code = cleanText(value || 'KR', 2).toUpperCase(); return /^[A-Z]{2}$/.test(code) ? code : ''; }
+function settlementCurrency(value) { const code = cleanText(value || 'KRW', 3).toUpperCase(); return /^[A-Z]{3}$/.test(code) ? code : ''; }
 function nonNegativeInt(value) {
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0) return null;
@@ -79,12 +87,32 @@ async function ensureSchema(db) {
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_accounts (id TEXT PRIMARY KEY, provider_key TEXT NOT NULL, owner_type TEXT NOT NULL DEFAULT 'internal', owner_key TEXT NOT NULL, display_name TEXT NOT NULL, account_label TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'manual_ready', connection_mode TEXT NOT NULL DEFAULT 'manual', default_channel TEXT NOT NULL DEFAULT '', disclosure_text TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1, last_synced_at TEXT, last_error TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_links (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, tenant_slug TEXT, product_name TEXT NOT NULL, destination_url TEXT NOT NULL DEFAULT '', affiliate_url TEXT NOT NULL, channel TEXT NOT NULL DEFAULT '', campaign_name TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active', created_by INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_daily_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, metric_date TEXT NOT NULL, clicks INTEGER NOT NULL DEFAULT 0, orders INTEGER NOT NULL DEFAULT 0, revenue_krw INTEGER NOT NULL DEFAULT 0, source TEXT NOT NULL DEFAULT 'manual', recorded_by INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(account_id, metric_date, source))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_merchant_routes (route_key TEXT PRIMARY KEY, merchant_key TEXT NOT NULL, merchant_name TEXT NOT NULL, market_country TEXT NOT NULL DEFAULT 'KR', settlement_currency TEXT NOT NULL DEFAULT 'KRW', affiliate_mode TEXT NOT NULL DEFAULT 'direct', network_key TEXT NOT NULL DEFAULT '', network_name TEXT NOT NULL DEFAULT '', affiliate_status TEXT NOT NULL DEFAULT 'candidate', tracking_status TEXT NOT NULL DEFAULT 'not_ready', catalog_status TEXT NOT NULL DEFAULT 'not_ready', recommendation_enabled INTEGER NOT NULL DEFAULT 0, recommendation_verified_at TEXT, program_url TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(merchant_key, affiliate_mode, network_key))`),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_merchant_routes_recommend ON affiliate_merchant_routes(affiliate_status, recommendation_enabled, merchant_key)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_links_account_time ON affiliate_links(account_id, created_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_metrics_account_date ON affiliate_daily_metrics(account_id, metric_date DESC)'),
   ]);
+  for (const statement of [
+    "ALTER TABLE affiliate_merchant_routes ADD COLUMN tracking_status TEXT NOT NULL DEFAULT 'not_ready'",
+    "ALTER TABLE affiliate_merchant_routes ADD COLUMN catalog_status TEXT NOT NULL DEFAULT 'not_ready'",
+    'ALTER TABLE affiliate_merchant_routes ADD COLUMN recommendation_verified_at TEXT',
+  ]) await db.prepare(statement).run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_affiliate_merchant_routes_readiness ON affiliate_merchant_routes(affiliate_status, tracking_status, catalog_status, recommendation_enabled, merchant_key)").run().catch(() => {});
   const now = new Date().toISOString();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_providers (provider_key, display_name, provider_kind, connection_mode, enabled, created_at, updated_at) VALUES ('coupang_partners', 'Coupang Partners', 'affiliate', 'manual', 1, ?, ?)`).bind(now, now).run();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_accounts (id, provider_key, owner_type, owner_key, display_name, account_label, status, connection_mode, default_channel, disclosure_text, enabled, created_at, updated_at) VALUES (?, 'coupang_partners', 'internal', 'ekodibiz', '에코디비즈 쿠팡파트너스', 'EKODIBIZ', 'manual_ready', 'manual', '', '', 1, ?, ?)`).bind(DEFAULT_ACCOUNT_ID, now, now).run();
+  await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, recommendation_verified_at, created_at, updated_at) VALUES ('coupang-partners-direct', 'coupang_partners', '쿠팡', 'KR', 'KRW', 'direct', '', '', 'active', 'ready', 'feed_ready', 1, ?, ?, ?)`).bind(now, now, now).run();
+  await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, recommendation_enabled, notes, created_at, updated_at) VALUES ('elevenst-network-linkprice', 'elevenst', '11번가', 'KR', 'KRW', 'network', 'linkprice', 'LinkPrice', 'pending', 0, 'LinkPrice 회원 계정 보유. 11번가 머천트 승인 및 딥링크/API 활성 확인 후 active 전환.', ?, ?)`).bind(now, now).run();
+  const chinaRouteSeeds = [
+    ['taobao-network-taobao-alliance', 'taobao', '淘宝 타오바오', 'CNY', 'taobao_alliance', '淘宝联盟 / Alimama', 'https://pub.alimama.com/'],
+    ['tmall-network-taobao-alliance', 'tmall', '天猫 티몰', 'CNY', 'taobao_alliance', '淘宝联盟 / Alimama', 'https://pub.alimama.com/'],
+    ['jd-network-jd-union', 'jd', '京东 징둥', 'CNY', 'jd_union', '京东联盟', 'https://jos.jd.com/jdunion'],
+    ['aliexpress-network-affiliate', 'aliexpress', 'AliExpress', 'USD', 'aliexpress_affiliate', 'AliExpress Affiliate', 'https://portals.aliexpress.com/'],
+    ['pinduoduo-network-duoduo-jinbao', 'pinduoduo', '拼多多 핀둬둬', 'CNY', 'duoduo_jinbao', '多多进宝', ''],
+  ];
+  for (const [routeKey, merchantKey, merchantName, currency, networkKey, networkName, programUrl] of chinaRouteSeeds) {
+    await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, program_url, notes, created_at, updated_at) VALUES (?, ?, ?, 'CN', ?, 'network', ?, ?, 'candidate', 'not_ready', 'not_ready', 0, ?, '중국 쇼핑몰 제휴 후보. 공식 승인·추적링크·상품/가격 공급 확인 전 추천 금지. 직접 계약 시 direct 경로를 별도 등록.', ?, ?)`).bind(routeKey, merchantKey, merchantName, currency, networkKey, networkName, programUrl, now, now).run();
+  }
   await db.prepare(`UPDATE affiliate_accounts SET disclosure_text = ?, updated_at = ? WHERE id = ? AND TRIM(disclosure_text) = ''`).bind(DEFAULT_DISCLOSURE, now, DEFAULT_ACCOUNT_ID).run();
 }
 
@@ -93,6 +121,27 @@ function accountView(row) {
 }
 function linkView(row) {
   return { id: row.id, accountId: row.account_id, tenantSlug: row.tenant_slug || '', productName: row.product_name, destinationUrl: row.destination_url || '', affiliateUrl: row.affiliate_url, channel: row.channel || '', campaignName: row.campaign_name || '', status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
+}
+
+function routeRecommendationReady(row = {}) {
+  return row.affiliate_status === 'active'
+    && row.tracking_status === 'ready'
+    && RECOMMENDABLE_CATALOG_STATUSES.has(row.catalog_status)
+    && Boolean(row.recommendation_enabled);
+}
+
+function routeView(row) {
+  return { routeKey: row.route_key, merchantKey: row.merchant_key, merchantName: row.merchant_name, marketCountry: row.market_country, settlementCurrency: row.settlement_currency, affiliateMode: row.affiliate_mode, networkKey: row.network_key || '', networkName: row.network_name || '', affiliateStatus: row.affiliate_status, trackingStatus: row.tracking_status || 'not_ready', catalogStatus: row.catalog_status || 'not_ready', recommendationEnabled: Boolean(row.recommendation_enabled), recommendationReady: routeRecommendationReady(row), recommendationVerifiedAt: row.recommendation_verified_at || null, programUrl: row.program_url || '', notes: row.notes || '', updatedAt: row.updated_at };
+}
+
+async function recommendedMerchantKeys(db) {
+  const rows = await db.prepare(`SELECT merchant_key FROM affiliate_merchant_routes WHERE affiliate_status = 'active' AND tracking_status = 'ready' AND catalog_status IN ('manual_verified','feed_ready') AND recommendation_enabled = 1`).all().catch(() => ({ results: [] }));
+  return new Set((rows.results || []).map(row => row.merchant_key));
+}
+
+async function recommendationRouteForMerchant(db, merchantKey) {
+  const row = await db.prepare(`SELECT * FROM affiliate_merchant_routes WHERE merchant_key = ? AND affiliate_status = 'active' AND tracking_status = 'ready' AND catalog_status IN ('manual_verified','feed_ready') AND recommendation_enabled = 1 ORDER BY updated_at DESC LIMIT 1`).bind(merchantKey).first().catch(() => null);
+  return row && routeRecommendationReady(row) ? row : null;
 }
 
 function recentFailedRun(automation) {
@@ -151,9 +200,10 @@ async function publicProducts(request, env, url) {
     }
   }
   const rows = await readPublicRows(env, limit);
-  const coupangProducts = rows.map(row => publicProductView(request, row));
+  const recommendedMerchants = await recommendedMerchantKeys(env.DB);
+  const coupangProducts = automation.configured && recommendedMerchants.has('coupang_partners') ? rows.map(row => ({ ...publicProductView(request, row), recommendationEligible: true, affiliateMode: 'direct', marketCountry: 'KR', settlementCurrency: 'KRW' })) : [];
   const marketplaceProducts = await listMarketplaceProducts(request, env, limit).catch(() => []);
-  const products = mixProductsByProvider([...coupangProducts, ...marketplaceProducts], limit);
+  const products = applyProductIdentityAliases(mixProductsByProvider([...coupangProducts, ...marketplaceProducts], limit), env);
   const automationStatus = products.length ? 'ready' : (automation.status || 'warming');
   const providers = [...new Map(products.map(item => [item.providerKey || 'unknown', item.providerName || item.providerKey || '제휴 판매처'])).entries()]
     .map(([providerKey, providerName]) => ({ providerKey, providerName }));
@@ -236,8 +286,9 @@ async function overview(env) {
     env.DB.prepare(`SELECT COALESCE(SUM(orders), 0) AS orders, COALESCE(SUM(revenue_krw), 0) AS revenue_krw FROM affiliate_daily_metrics WHERE metric_date >= date('now', '-29 day')`).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_storefront_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
     env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_link_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM ekodi_offers WHERE offer_type = 'product' AND visibility = 'public' AND status = 'active' AND source_provider <> 'coupang_partners'`).first().catch(() => ({ count: 0 })),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM ekodi_offers o WHERE o.offer_type = 'product' AND o.visibility = 'public' AND o.status = 'active' AND o.source_provider <> 'coupang_partners' AND EXISTS (SELECT 1 FROM affiliate_merchant_routes r WHERE r.merchant_key = o.source_provider AND r.affiliate_status = 'active' AND r.recommendation_enabled = 1)`).first().catch(() => ({ count: 0 })),
   ]);
+  const recommendedMerchants = await recommendedMerchantKeys(env.DB);
   return {
     generatedAt: new Date().toISOString(),
     accounts: accounts.results.map(accountView),
@@ -248,7 +299,7 @@ async function overview(env) {
       accounts: accounts.results.length,
       activeLinks: Number(links?.active_links || 0),
       totalLinks: Number(links?.total_links || 0),
-      activeProducts: Number(automation.activeProducts || 0) + Number(marketplaceProducts?.count || 0),
+      activeProducts: (recommendedMerchants.has('coupang_partners') && automation.configured ? Number(automation.activeProducts || 0) : 0) + Number(marketplaceProducts?.count || 0),
       clicks30d: Number(tracked?.clicks || 0) + Number(marketplaceTracked?.clicks || 0),
       orders30d: Number(metrics?.orders || 0),
       revenue30dKrw: Number(metrics?.revenue_krw || 0),
@@ -261,6 +312,14 @@ async function overview(env) {
       offerRegistryAdapter: true,
       multiProviderCatalog: true,
       productIdentityCatalog: true,
+      merchantAffiliateRouting: true,
+      directAndNetworkAffiliate: true,
+      internationalAffiliateMarkets: true,
+      chinaAffiliateMarkets: true,
+      chinaAffiliatePresets: true,
+      recommendationRequiresActiveAffiliate: true,
+      recommendationRequiresVerifiedTrackingAndCatalog: true,
+      freshPriceRequiredForRecommendation: true,
       providerFeedSync: true,
       manualMarketplaceProductRegistration: true,
       automaticDeepLink: true,
@@ -269,6 +328,49 @@ async function overview(env) {
       apiStatus: automation.configured ? 'configured' : 'credentials_required',
     },
   };
+}
+
+async function handleMerchantRoutes(request, env, auth, path) {
+  if (request.method === 'GET' && path === `${PREFIX}/routes`) {
+    const rows = await env.DB.prepare('SELECT * FROM affiliate_merchant_routes ORDER BY recommendation_enabled DESC, affiliate_status, merchant_name').all();
+    return json({ routes: (rows.results || []).map(routeView) }, 200, auth.response.headers);
+  }
+  if (request.method !== 'POST' || path !== `${PREFIX}/routes`) return null;
+  const body = await readJson(request);
+  if (!body) return json({ error: '올바른 JSON 요청이 필요합니다.' }, 400, auth.response.headers);
+  const merchantKey = safeKey(body.merchantKey);
+  const merchantName = cleanText(body.merchantName, 120);
+  const affiliateMode = cleanText(body.affiliateMode || 'direct', 20).toLowerCase();
+  const networkKey = affiliateMode === 'network' ? safeKey(body.networkKey) : '';
+  const networkName = affiliateMode === 'network' ? cleanText(body.networkName, 120) : '';
+  const affiliateStatus = cleanText(body.affiliateStatus || 'candidate', 20).toLowerCase();
+  const trackingStatus = cleanText(body.trackingStatus || 'not_ready', 20).toLowerCase();
+  const catalogStatus = cleanText(body.catalogStatus || 'not_ready', 24).toLowerCase();
+  const country = marketCountry(body.marketCountry);
+  const currency = settlementCurrency(body.settlementCurrency);
+  const programUrl = httpsUrl(body.programUrl, { optional: true });
+  const notes = cleanText(body.notes, 500);
+  const requestedRecommendation = Boolean(body.recommendationEnabled);
+  if (!merchantKey || !merchantName) return json({ error: '판매처 코드와 판매처 이름이 필요합니다.' }, 400, auth.response.headers);
+  if (!AFFILIATE_ROUTE_MODES.has(affiliateMode)) return json({ error: '제휴 방식은 direct 또는 network여야 합니다.' }, 400, auth.response.headers);
+  if (affiliateMode === 'network' && (!networkKey || !networkName)) return json({ error: '간접 제휴에는 제휴망 코드와 이름이 필요합니다.' }, 400, auth.response.headers);
+  if (!AFFILIATE_ROUTE_STATUSES.has(affiliateStatus)) return json({ error: '지원하지 않는 제휴 상태입니다.' }, 400, auth.response.headers);
+  if (!AFFILIATE_TRACKING_STATUSES.has(trackingStatus)) return json({ error: '지원하지 않는 추적링크 상태입니다.' }, 400, auth.response.headers);
+  if (!AFFILIATE_CATALOG_STATUSES.has(catalogStatus)) return json({ error: '지원하지 않는 상품/가격 공급 상태입니다.' }, 400, auth.response.headers);
+  if (!country || !currency) return json({ error: '국가는 ISO 2자리, 통화는 ISO 3자리 코드가 필요합니다.' }, 400, auth.response.headers);
+  if (programUrl === null) return json({ error: '제휴 프로그램 URL은 HTTPS 형식이어야 합니다.' }, 400, auth.response.headers);
+  const recommendationReady = affiliateStatus === 'active' && trackingStatus === 'ready' && RECOMMENDABLE_CATALOG_STATUSES.has(catalogStatus);
+  if (requestedRecommendation && !recommendationReady) return json({ error: '추천 허용은 제휴 active + 추적링크 ready + 상품/가격 공급 ready를 모두 충족해야 합니다.' }, 409, auth.response.headers);
+  const routeKey = `${merchantKey}-${affiliateMode}-${networkKey || 'direct'}`.slice(0, 180);
+  const now = new Date().toISOString();
+  const recommendationVerifiedAt = requestedRecommendation && recommendationReady ? now : null;
+  await env.DB.prepare(`INSERT INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, recommendation_verified_at, program_url, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(merchant_key, affiliate_mode, network_key) DO UPDATE SET merchant_name = excluded.merchant_name, market_country = excluded.market_country, settlement_currency = excluded.settlement_currency, network_name = excluded.network_name, affiliate_status = excluded.affiliate_status, tracking_status = excluded.tracking_status, catalog_status = excluded.catalog_status, recommendation_enabled = excluded.recommendation_enabled, recommendation_verified_at = excluded.recommendation_verified_at, program_url = excluded.program_url, notes = excluded.notes, updated_at = excluded.updated_at`)
+    .bind(routeKey, merchantKey, merchantName, country, currency, affiliateMode, networkKey, networkName, affiliateStatus, trackingStatus, catalogStatus, requestedRecommendation ? 1 : 0, recommendationVerifiedAt, programUrl || '', notes, now, now).run();
+  const row = await env.DB.prepare('SELECT * FROM affiliate_merchant_routes WHERE merchant_key = ? AND affiliate_mode = ? AND network_key = ? LIMIT 1').bind(merchantKey, affiliateMode, networkKey).first();
+  await audit(env, auth.session, 'affiliate.route.upsert', row?.route_key || routeKey, JSON.stringify({ merchantKey, affiliateMode, networkKey, affiliateStatus, recommendationEnabled: requestedRecommendation, country, currency }));
+  return json({ route: routeView(row) }, 200, auth.response.headers);
 }
 
 async function handleAccounts(request, env, auth, path) {
@@ -405,6 +507,9 @@ export async function handleAffiliateRequest(request, env) {
   if (request.method === 'POST' && path === `${PREFIX}/products`) {
     const body = await readJson(request);
     if (!body) return json({ error: '올바른 JSON 요청이 필요합니다.' }, 400, auth.response.headers);
+    const merchantKey = safeKey(body.providerKey);
+    const recommendationRoute = merchantKey ? await recommendationRouteForMerchant(env.DB, merchantKey) : null;
+    if (!recommendationRoute) return json({ error: '제휴·추적링크·상품/가격 공급 검증과 추천 허용을 먼저 완료해 주세요.' }, 409, auth.response.headers);
     const createdBy = await adminId(env, auth.session);
     const result = await registerMarketplaceProduct(env, body, { createdBy });
     if (!result.ok) return json({ error: result.error || '제휴상품을 등록하지 못했습니다.' }, 400, auth.response.headers);
@@ -414,7 +519,10 @@ export async function handleAffiliateRequest(request, env) {
   const providerSync = path.match(/^\/api\/affiliate\/providers\/([a-z0-9_-]+)\/sync$/);
   if (providerSync && request.method === 'POST') {
     const result = await syncProviderFeed(env, providerSync[1]);
-    await audit(env, auth.session, 'affiliate.provider.feed.sync', providerSync[1], JSON.stringify({ status: result.status, received: result.received || 0, valid: result.valid || 0, synced: result.synced || 0 }));
+    const catalogStatus = result.ok && Number(result.synced || 0) > 0 ? 'feed_ready' : (result.ok ? 'not_ready' : 'failed');
+    await env.DB.prepare(`UPDATE affiliate_merchant_routes SET catalog_status = ?, recommendation_verified_at = CASE WHEN ? = 'feed_ready' AND affiliate_status = 'active' AND tracking_status = 'ready' AND recommendation_enabled = 1 THEN ? ELSE recommendation_verified_at END, updated_at = ? WHERE merchant_key = ?`)
+      .bind(catalogStatus, catalogStatus, new Date().toISOString(), new Date().toISOString(), providerSync[1]).run().catch(() => {});
+    await audit(env, auth.session, 'affiliate.provider.feed.sync', providerSync[1], JSON.stringify({ status: result.status, received: result.received || 0, valid: result.valid || 0, synced: result.synced || 0, catalogStatus }));
     return json(result, result.ok ? 200 : 409, auth.response.headers);
   }
   if (request.method === 'GET' && path === `${PREFIX}/providers`) {
@@ -436,6 +544,8 @@ export async function handleAffiliateRequest(request, env) {
       return { ...provider, status: account?.status || (feed ? (feed.secretConfigured ? 'configured' : 'secret_required') : 'registered'), lastSyncedAt: account?.last_synced_at || null, lastError: account?.last_error || '', feedConfigured: Boolean(feed), endpointHost: feed?.endpointHost || '', secretRequired: Boolean(feed?.secretRequired), secretConfigured: feed ? Boolean(feed.secretConfigured) : null };
     }) }, 200, auth.response.headers);
   }
+  const routeResponse = await handleMerchantRoutes(request, env, auth, path);
+  if (routeResponse) return routeResponse;
   const accountResponse = await handleAccounts(request, env, auth, path);
   if (accountResponse) return accountResponse;
   const linkResponse = await handleLinks(request, env, auth, path, url);
