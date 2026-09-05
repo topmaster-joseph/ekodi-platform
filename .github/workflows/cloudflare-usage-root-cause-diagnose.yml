@@ -3,7 +3,7 @@ name: Cloudflare Usage Root Cause Diagnose
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, chatgpt/cloudflare-usage-v2-livecheck-20260905]
     paths:
       - "scripts/diagnose-cloudflare-usage.mjs"
       - "scripts/cloudflare-usage-product-metrics.mjs"
