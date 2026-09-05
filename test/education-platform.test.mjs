@@ -60,6 +60,19 @@ test('Education browser code stores planning metadata only and parses',async()=>
   execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education-worker.js',import.meta.url))],{stdio:'pipe'});
 });
 
+test('Education PR staging accepts only a real Cloudflare Access isolation challenge before content verification',async()=>{
+  const workflow=await read('.github/workflows/deploy-education.yml');
+  assert.ok(workflow.includes('access_code=$(curl -sS -D /tmp/edu-stage-access-headers'));
+  assert.ok(workflow.includes('access_location=$(awk'));
+  assert.ok(workflow.includes('^30[12378]$'));
+  assert.ok(workflow.includes('cloudflareaccess\\.com/cdn-cgi/access/login/'));
+  assert.match(workflow,/Education staging is isolated behind Cloudflare Access/);
+  assert.match(workflow,/for attempt in \$\(seq 1 18\); do[\s\S]*EKODI Education isolated staging verified/);
+  const production=workflow.split('  production:')[1]||'';
+  assert.match(production,/EKODI Education production verified/);
+  assert.match(production,/x-ekodi-shell: v2/);
+});
+
 test('Post-promotion Education code does not retain unused rollout hooks',async()=>{
   const [app,worker,production]=await Promise.all([read('education/app.js'),read('education-worker.js'),read('wrangler.education.toml')]);
   assert.doesNotMatch(app,/data-auth-link|bindJourneyLinks/);
