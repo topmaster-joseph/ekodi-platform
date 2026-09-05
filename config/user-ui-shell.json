@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -87,6 +87,8 @@
     "excludedByDefault": ["tables", "ledgers", "editorial rules", "code/data panels", "broadcast frames", "precision operational panels"]
   },
   "experienceProfiles": {
-    "consumer-commerce": {"appliesTo":["mall"],"purpose":"Friendly shopping and discovery UI for general consumers without changing the shared EKODI shell contract.","rules":["pill-first actions and filters","soft search and form fields","24-30px product and choice cards","rounded promotional sections","mobile-friendly touch targets","shared footer exactly once"]}
+    "source": "config/user-ui-experience-profiles.js",
+    "strategy": "service-opt-in",
+    "fallback": "service-native"
   }
 }
