@@ -10,6 +10,9 @@ on:
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
+      - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
+      - 'supabase/tests/store_operating_spaces.test.sql'
+      - 'test/store-operating-space.test.mjs'
       - '.github/workflows/deploy-space.yml'
   push:
     branches: [main]
@@ -20,6 +23,9 @@ on:
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
+      - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
+      - 'supabase/tests/store_operating_spaces.test.sql'
+      - 'test/store-operating-space.test.mjs'
       - '.github/workflows/deploy-space.yml'
 
 permissions:
@@ -47,12 +53,16 @@ jobs:
           set -euo pipefail
           node --check space-worker.js
           node --check space/app.js
+          node --test test/store-operating-space.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
           grep -Fq 'ekodi_id -> workspace_id -> role -> capability' space-worker.js
           grep -Fq 'workspace_not_found_or_forbidden' supabase/functions/workspace-api/index.ts
           grep -Fq 'tenant_members+RLS' supabase/functions/workspace-api/index.ts
+          grep -Fq 'store_members+RLS' supabase/functions/workspace-api/index.ts
+          grep -Fq 'current_store_operating_spaces' supabase/functions/workspace-api/index.ts
+          grep -Fq '/spaces/store-dashboard' supabase/functions/workspace-api/index.ts
           grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/resolve' space/app.js
           grep -Fq "routeModel:'/{slug}'" space-worker.js
