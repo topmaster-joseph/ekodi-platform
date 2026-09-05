@@ -13,7 +13,7 @@ on:
       - 'test/**'
       - '.github/workflows/production-gate.yml'
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '5 * * * *'
 
 permissions:
   contents: read
