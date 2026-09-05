@@ -265,7 +265,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "label: '원격 작업'",
+          "label: '실행 인프라'",
           "remote-power-admin.js",
           "remote-power-admin.css",
           "device-browser-diagnostics.js",
