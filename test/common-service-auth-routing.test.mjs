@@ -28,8 +28,9 @@ test('My EKODI root keeps its service-owned guest guide while private workspace 
   assert.match(shell, /memberGateMode!=='service-owned'/);
   assert.match(shellInjector, /data-ekodi-member-gate=/);
   assert.match(shellInjector, /options\?\.memberGate==='service-owned'/);
+  assert.match(myWorker, /const shellSurface=route\?'workspace':'public'/);
   assert.match(myWorker, /const memberGate=route\?'shared':'service-owned'/);
-  assert.match(myWorker, /injectEkodiShell\([\s\S]*?'my','',\{memberGate\}\)/);
+  assert.match(myWorker, /injectEkodiShell\([\s\S]*?'my',shellSurface,\{memberGate\}\)/);
 });
 
 test('workspace common services remain member-gated while public services use service-owned guide UI', () => {
