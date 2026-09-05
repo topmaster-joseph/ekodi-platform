@@ -88,6 +88,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/edu-stage-access-headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+          access_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/, ""); print $2; exit}' /tmp/edu-stage-access-headers)
+          if [[ "$access_code" =~ ^30[12378]$ ]] && [[ "$access_location" =~ ^https://([A-Za-z0-9-]+\.)*cloudflareaccess\.com/cdn-cgi/access/login/ ]]; then
+            echo 'EKODI Education staging is isolated behind Cloudflare Access; public content verification is intentionally unavailable without an Access identity.'
+            exit 0
+          fi
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/edu-stage-headers -o /tmp/edu-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             admission=$(curl -L -sS -o /tmp/edu-stage-admission.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/admission" || true)
