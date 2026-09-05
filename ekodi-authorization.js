@@ -1,3 +1,7 @@
+import { capabilityMatches, hasEkodiCapability } from './supabase/functions/_shared/ekodi-capability.js';
+
+export { capabilityMatches, hasEkodiCapability } from './supabase/functions/_shared/ekodi-capability.js';
+
 const ADMIN_ROLE_PRESETS = Object.freeze({
   super_admin: Object.freeze([
     'platform:*', 'workspace:*', 'service:*', 'ai:*', 'automation:*',
@@ -33,22 +37,6 @@ const SENSITIVE = new Set(EKODI_SENSITIVE_CAPABILITIES);
 const SCOPE_TYPES = new Set(['platform', 'workspace', 'service', 'person']);
 
 const clean = (value, max = 160) => String(value ?? '').trim().slice(0, max);
-
-export function capabilityMatches(grant = '', requested = '') {
-  const allowed = clean(grant, 180).toLowerCase();
-  const need = clean(requested, 180).toLowerCase();
-  if (!allowed || !need) return false;
-  if (allowed === '*' || allowed === need) return true;
-  if (allowed.endsWith(':*')) return need.startsWith(allowed.slice(0, -1));
-  return false;
-}
-
-export function hasEkodiCapability(grants = [], requested = '', denied = []) {
-  const need = clean(requested, 180).toLowerCase();
-  if (!need) return false;
-  if (denied.some(grant => capabilityMatches(grant, need))) return false;
-  return grants.some(grant => capabilityMatches(grant, need));
-}
 
 export function normalizeEkodiScope(scope = {}) {
   const raw = typeof scope === 'string' ? { type: scope } : (scope || {});

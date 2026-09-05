@@ -8,6 +8,7 @@ import {
   evaluatePolicy,
   policyCovers,
   secureProjection,
+  selectCoveredPolicy,
 } from "./trust.ts";
 
 Deno.test("security context normalizes duplicate roles", () => {
@@ -45,6 +46,81 @@ Deno.test("candidate policy coverage must be explicit", () => {
   assertEquals(policyCovers(context, []), false);
   assertEquals(policyCovers(context, [{ services: ["*"], resources: ["access-request"], actions: ["review"] }]), true);
   assertEquals(policyCovers(context, [{ services: ["*"], resources: ["access-request"], actions: ["pending.read"] }]), false);
+});
+
+Deno.test("coverage resolver keeps independent migration policies from shadowing each other", () => {
+  const context = buildSecurityContext({
+    subjectId: "user-1",
+    service: "biz",
+    resource: "access-request",
+    action: "review",
+  });
+  const selected = selectCoveredPolicy(context, [
+    {
+      policy_version: "trust_policy_v3",
+      capability_schema_version: "capability_schema_v2",
+      projection_version: "projection_v1",
+      config: { coverage: [{ services: ["work"], resources: ["work-admin"], actions: ["job.moderate"] }] },
+    },
+    {
+      policy_version: "trust_policy_v2",
+      capability_schema_version: "capability_schema_v2",
+      projection_version: "projection_v1",
+      config: { coverage: [{ services: ["*"], resources: ["access-request"], actions: ["review"] }] },
+    },
+  ]);
+  assertEquals(selected?.policy_version, "trust_policy_v2");
+});
+
+Deno.test("generic resolver skips endpoint-specific policies", () => {
+  const context = buildSecurityContext({
+    subjectId: "user-1",
+    service: "work",
+    resource: "work-admin",
+    action: "job.moderate",
+  });
+  const selected = selectCoveredPolicy(context, [{
+    policy_version: "trust_policy_v3",
+    capability_schema_version: "capability_schema_v2",
+    projection_version: "projection_v1",
+    config: {
+      generic_evaluator_compatible: false,
+      coverage: [{ services: ["work"], resources: ["work-admin"], actions: ["job.moderate"] }],
+    },
+  }], { genericEvaluatorOnly: true });
+  assertEquals(selected, null);
+});
+
+Deno.test("policy capability condition uses Admin OS wildcard grammar and explicit deny", () => {
+  const allowedContext = buildSecurityContext({
+    subjectId: "admin-1",
+    roles: ["super_admin"],
+    authorityCapabilities: ["service:*"],
+    service: "work",
+    resource: "work-admin",
+    action: "job.moderate",
+  });
+  const rule = {
+    id: "work-admin-operate",
+    services: ["work"],
+    resources: ["work-admin"],
+    actions: ["job.moderate"],
+    requiredCapabilities: ["service:operate"],
+    allow: true,
+    capabilities: ["service:operate"],
+  };
+  assertEquals(evaluatePolicy(allowedContext, [rule]).allowed, true);
+
+  const deniedContext = buildSecurityContext({
+    subjectId: "admin-1",
+    roles: ["super_admin"],
+    authorityCapabilities: ["service:*"],
+    deniedCapabilities: ["service:operate"],
+    service: "work",
+    resource: "work-admin",
+    action: "job.moderate",
+  });
+  assertEquals(evaluatePolicy(deniedContext, [rule]).allowed, false);
 });
 
 Deno.test("access reviewer candidate policy allows tenant admin with canonical capability", () => {

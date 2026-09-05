@@ -1,3 +1,5 @@
+import { hasEkodiCapability } from "./ekodi-capability.js";
+
 export type TrustMode = "shadow" | "enforce";
 export type ProjectionProfile =
   | "user-self"
@@ -13,6 +15,9 @@ export type SecurityContextInput = {
   subjectId: string;
   workspaceId?: string | null;
   roles?: string[];
+  authorityCapabilities?: string[];
+  deniedCapabilities?: string[];
+  elevated?: boolean;
   service: string;
   resource: string;
   action: string;
@@ -25,6 +30,9 @@ export type SecurityContext = {
   subjectId: string;
   workspaceId: string | null;
   roles: string[];
+  authorityCapabilities: string[];
+  deniedCapabilities: string[];
+  elevated: boolean;
   service: string;
   resource: string;
   action: string;
@@ -42,6 +50,8 @@ export type PolicyRule = {
   rolesAny?: string[];
   purposes?: string[];
   maxRisk?: RiskLevel;
+  requiredCapabilities?: string[];
+  requireElevation?: boolean;
   allow: boolean;
   capabilities?: string[];
   projectionProfile?: ProjectionProfile;
@@ -54,6 +64,22 @@ export type PolicyCoverage = {
   rolesAny?: string[];
   purposes?: string[];
   maxRisk?: RiskLevel;
+};
+
+export type TrustPolicyVersion = {
+  policy_version: string;
+  capability_schema_version: string;
+  projection_version: string;
+  status?: string;
+  created_at?: string;
+  config?: {
+    rules?: PolicyRule[];
+    coverage?: PolicyCoverage[];
+    generic_evaluator_compatible?: boolean;
+    authoritative_source?: string;
+    cutover_allowed?: boolean;
+    [key: string]: unknown;
+  } | null;
 };
 
 export type TrustDecision = {
@@ -91,6 +117,7 @@ const riskRank: Record<RiskLevel, number> = {
 };
 
 const clean = (value: unknown, max = 160) => String(value ?? "").trim().slice(0, max);
+const cleanCapabilities = (values: unknown[] = []) => [...new Set(values.map((value) => clean(value, 180).toLowerCase()).filter(Boolean))].sort();
 
 export function canonicalCapability(namespace: string, resource: string, action: string) {
   const ns = clean(namespace, 80).toLowerCase();
@@ -115,6 +142,9 @@ export function buildSecurityContext(input: SecurityContextInput): SecurityConte
     subjectId,
     workspaceId: input.workspaceId ? clean(input.workspaceId, 128) : null,
     roles: [...new Set((input.roles ?? []).map((role) => clean(role, 80)).filter(Boolean))].sort(),
+    authorityCapabilities: cleanCapabilities(input.authorityCapabilities ?? []),
+    deniedCapabilities: cleanCapabilities(input.deniedCapabilities ?? []),
+    elevated: Boolean(input.elevated),
     service,
     resource,
     action,
@@ -140,11 +170,29 @@ function conditionMatches(ctx: SecurityContext, condition: PolicyCoverage) {
 }
 
 function ruleMatches(ctx: SecurityContext, rule: PolicyRule) {
-  return conditionMatches(ctx, rule);
+  if (!conditionMatches(ctx, rule)) return false;
+  if (rule.requiredCapabilities?.length && !rule.requiredCapabilities.every((capability) =>
+    hasEkodiCapability(ctx.authorityCapabilities, capability, ctx.deniedCapabilities)
+  )) return false;
+  if (rule.requireElevation === true && !ctx.elevated) return false;
+  return true;
 }
 
 export function policyCovers(ctx: SecurityContext, coverage: PolicyCoverage[] = []) {
   return coverage.length > 0 && coverage.some((condition) => conditionMatches(ctx, condition));
+}
+
+export function selectCoveredPolicy(
+  ctx: SecurityContext,
+  policies: TrustPolicyVersion[] = [],
+  options: { genericEvaluatorOnly?: boolean } = {},
+) {
+  for (const policy of policies) {
+    if (options.genericEvaluatorOnly && policy.config?.generic_evaluator_compatible === false) continue;
+    const coverage = Array.isArray(policy.config?.coverage) ? policy.config.coverage : [];
+    if (policyCovers(ctx, coverage)) return policy;
+  }
+  return null;
 }
 
 export function evaluatePolicy(ctx: SecurityContext, rules: PolicyRule[]): TrustDecision {
