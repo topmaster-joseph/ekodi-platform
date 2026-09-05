@@ -80,7 +80,7 @@ async function workerUsage(account, window) {
     ...item,
     subrequestRatio:safeRatio(item.subrequests, item.requests),
     errorPercent:pct(item.errors, item.requests),
-    nonOkStatuses:Object.entries(item.statuses || {}).filter(([status]) => status !== 'ok' && status !== 'unknown').sort((a,b)=>b[1]-a[1]),
+    nonOkStatuses:Object.entries(item.statuses || {}).filter(([status]) => !['ok','success','unknown'].includes(status)).sort((a,b)=>b[1]-a[1]),
   })).sort((a,b) => b.requests - a.requests);
   return {
     requests:list.reduce((sum, item) => sum + item.requests, 0),
@@ -221,11 +221,14 @@ function workerStatusText(item) {
   const values = item?.nonOkStatuses || [];
   return values.length ? values.slice(0,3).map(([status,count])=>`${status}:${fmt(count)}`).join(', ') : 'none';
 }
-function topD1Text(product) {
+function topD1Text(product, databases=product?.databases) {
   if (!product?.available) return `N/A (${product?.warning || 'analytics unavailable'})`;
-  const top = product.databases?.[0];
+  const top = databases?.[0];
   if (!top) return '0 rows read';
   return `${fmt(top.rowsRead)} rows at ${top.database} (${fmt(top.rowsReadPerReadQuery)} rows/read query)`;
+}
+function currentD1Metric(product) {
+  return product?.available ? fmt(product.currentDate?.rowsRead) : 'N/A';
 }
 function topKVText(product) {
   if (!product?.available) return `N/A (${product?.warning || 'analytics unavailable'})`;
@@ -242,19 +245,20 @@ function markdown(report) {
     `Worker/R2 window: ${report.window.start} -> ${report.window.end}`,
     'D1/KV/Durable Objects use Cloudflare calendar-date analytics covering the UTC dates touched by that window.',
     '',
-    '| Account | Worker requests | D1 rows read | KV ops | R2 ops | DO invocations | Bot | Boundary |',
+    '| Account | Worker requests | D1 rows read since 00:00 UTC | KV ops | R2 ops | DO invocations | Bot | Boundary |',
     '|---|---:|---:|---:|---:|---:|---:|---|',
   ];
   for (const row of report.accounts) {
     const s = row.signals;
-    lines.push(`| ${row.label} | ${fmt(row.workers.requests)} | ${productMetric(row.products?.d1,'rowsRead')} | ${productMetric(row.products?.kv,'requests')} | ${productMetric(row.products?.r2,'requests')} | ${productMetric(row.products?.durableObjects,'requests')} | ${s.bot.available ? `${s.bot.percent}%` : 'N/A'} | ${s.boundary.available ? `${s.boundary.devToProdSuspectRequests} suspect` : 'N/A'} |`);
+    lines.push(`| ${row.label} | ${fmt(row.workers.requests)} | ${currentD1Metric(row.products?.d1)} | ${productMetric(row.products?.kv,'requests')} | ${productMetric(row.products?.r2,'requests')} | ${productMetric(row.products?.durableObjects,'requests')} | ${s.bot.available ? `${s.bot.percent}%` : 'N/A'} | ${s.boundary.available ? `${s.boundary.devToProdSuspectRequests} suspect` : 'N/A'} |`);
   }
   const prodRow = report.accounts.find(row=>row.label==='PROD');
   const devRow = report.accounts.find(row=>row.label==='DEV');
   if (prodRow && devRow) {
     lines.push('', '## PROD / DEV ratios', '', '| Metric | Ratio |', '|---|---:|',
       `| Worker requests | ${ratioText(prodRow.workers.requests,devRow.workers.requests)} |`,
-      `| D1 rows read | ${ratioText(prodRow.products?.d1?.rowsRead,devRow.products?.d1?.rowsRead)} |`,
+      `| D1 rows read since 00:00 UTC | ${ratioText(prodRow.products?.d1?.currentDate?.rowsRead,devRow.products?.d1?.currentDate?.rowsRead)} |`,
+      `| D1 rows read across touched UTC dates | ${ratioText(prodRow.products?.d1?.rowsRead,devRow.products?.d1?.rowsRead)} |`,
       `| KV operations | ${ratioText(prodRow.products?.kv?.requests,devRow.products?.kv?.requests)} |`,
       `| R2 operations | ${ratioText(prodRow.products?.r2?.requests,devRow.products?.r2?.requests)} |`,
       `| Durable Object invocations | ${ratioText(prodRow.products?.durableObjects?.requests,devRow.products?.durableObjects?.requests)} |`);
@@ -269,7 +273,7 @@ function markdown(report) {
     const worst = row.workers.scripts.find(item=>item.script===s.loopRetry.script) || row.workers.top?.[0];
     lines.push('', `### ${row.label}`,
       `1. Workers: ${fmt(row.workers.requests)} requests, ${safeRatio(row.workers.subrequests,row.workers.requests)} subrequests/request overall; max ${s.loopRetry.maxSubrequestRatio}x at \`${s.loopRetry.script || 'n/a'}\`; invocation errors ${fmt(row.workers.errors)}. Top non-ok statuses: ${workerStatusText(worst)}.`,
-      `2. D1: ${d1?.available ? `${fmt(d1.rowsRead)} rows read / ${fmt(d1.readQueries)} read queries / ${fmt(d1.rowsWritten)} rows written. Top database: ${topD1Text(d1)}.` : topD1Text(d1)}`,
+      `2. D1: ${d1?.available ? `since 00:00 UTC ${fmt(d1.currentDate?.rowsRead)} rows read / ${fmt(d1.currentDate?.readQueries)} read queries / ${fmt(d1.currentDate?.rowsWritten)} rows written. Top current-day database: ${topD1Text(d1,d1.currentDate?.databases)}. Touched-date total: ${fmt(d1.rowsRead)} rows.` : topD1Text(d1)}`,
       `3. KV/R2/DO: KV ${kv?.available ? `${fmt(kv.requests)} ops (${topKVText(kv)})` : topKVText(kv)}; R2 ${r2?.available ? `${fmt(r2.requests)} ops, ${fmt(r2.errorRequests)} error ops (${topR2Text(r2)})` : topR2Text(r2)}; Durable Objects ${durable?.available ? `${fmt(durable.requests)} invocations` : `N/A (${durable?.warning || 'analytics unavailable'})`}. Edge cache pressure ${s.cache.available ? `${s.cache.pressurePercent}%` : 'N/A'}.`,
       `4. Bots/Cron/Health: bots ${s.bot.available ? `${fmt(s.bot.requests)} (${s.bot.percent}%)` : 'N/A'} across zones ${s.bot.coverage}; health ${s.cronHealth.healthAvailable ? `${fmt(s.cronHealth.healthRequests)} (${s.cronHealth.healthPercent}%)` : 'N/A'}; every-minute schedules ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}.`,
       `5. DEV->PROD boundary: suspect requests ${fmt(s.boundary.devToProdSuspectRequests)}, internal ${s.boundary.available ? `${fmt(s.boundary.internalRequests)} (${s.boundary.internalPercent}%)` : 'N/A'}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}.`,

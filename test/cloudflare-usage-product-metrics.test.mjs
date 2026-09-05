@@ -14,8 +14,9 @@ const window = { start:'2026-09-04T01:00:00.000Z', end:'2026-09-05T01:00:00.000Z
 
 test('D1 usage preserves rows read per database and read-query efficiency signal', async () => {
   const gql = async () => ({ data:{ viewer:{ accounts:[{ d1AnalyticsAdaptiveGroups:[
-    { dimensions:{ databaseId:'db-1' }, sum:{ readQueries:10, writeQueries:2, rowsRead:5000, rowsWritten:7 } },
-    { dimensions:{ databaseId:'db-2' }, sum:{ readQueries:5, writeQueries:0, rowsRead:100, rowsWritten:0 } },
+    { dimensions:{ date:'2026-09-04', databaseId:'db-1' }, sum:{ readQueries:8, writeQueries:1, rowsRead:4000, rowsWritten:5 } },
+    { dimensions:{ date:'2026-09-05', databaseId:'db-1' }, sum:{ readQueries:2, writeQueries:1, rowsRead:1000, rowsWritten:2 } },
+    { dimensions:{ date:'2026-09-05', databaseId:'db-2' }, sum:{ readQueries:5, writeQueries:0, rowsRead:100, rowsWritten:0 } },
   ] }] } } });
   const cf = async () => ({ result:[{ uuid:'db-1', name:'ekodi-auth' },{ uuid:'db-2', name:'other' }] });
   const result = await collectD1Usage(account, window, gql, cf);
@@ -25,6 +26,10 @@ test('D1 usage preserves rows read per database and read-query efficiency signal
   assert.equal(result.databases[0].database, 'ekodi-auth');
   assert.equal(result.databases[0].rowsReadPerReadQuery, 500);
   assert.equal(result.granularity, 'calendar-date');
+  assert.equal(result.currentDate.date, '2026-09-05');
+  assert.equal(result.currentDate.rowsRead, 1100);
+  assert.equal(result.currentDate.readQueries, 7);
+  assert.equal(result.currentDate.databases[0].database, 'ekodi-auth');
 });
 test('KV, R2 and Durable Objects aggregate their official analytics datasets', async () => {
   const gql = async (_account, query) => {
@@ -77,6 +82,8 @@ test('diagnostic v2 keeps the five-check order and worker status visibility', ()
   assert.match(source, /5\. DEV->PROD boundary:/);
   assert.match(source, /dimensions \{ scriptName status \}/);
   assert.match(source, /nonOkStatuses/);
+  assert.match(source, /'ok','success','unknown'/);
+  assert.match(source, /since 00:00 UTC/);
 });
 
 test('diagnostic workflow validates and watches the product metrics module', () => {

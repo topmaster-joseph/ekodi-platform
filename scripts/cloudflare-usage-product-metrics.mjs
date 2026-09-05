@@ -27,6 +27,39 @@ async function d1Names(account, cf) {
     return new Map();
   }
 }
+function aggregateD1Rows(rows, names) {
+  const databases = new Map();
+  for (const row of rows) {
+    const databaseId = String(row.databaseId || 'unknown');
+    if (!databases.has(databaseId)) databases.set(databaseId, {
+      databaseId,
+      database:names.get(databaseId) || databaseId,
+      readQueries:0,
+      writeQueries:0,
+      rowsRead:0,
+      rowsWritten:0,
+    });
+    const item = databases.get(databaseId);
+    item.readQueries += row.readQueries;
+    item.writeQueries += row.writeQueries;
+    item.rowsRead += row.rowsRead;
+    item.rowsWritten += row.rowsWritten;
+  }
+  return [...databases.values()].map(item => ({
+    ...item,
+    rowsReadPerReadQuery:item.readQueries > 0 ? Math.round((item.rowsRead / item.readQueries) * 100) / 100 : 0,
+  })).sort((a,b)=>b.rowsRead-a.rowsRead);
+}
+
+function d1Totals(databases) {
+  return {
+    rowsRead:databases.reduce((sum,row)=>sum+row.rowsRead,0),
+    rowsWritten:databases.reduce((sum,row)=>sum+row.rowsWritten,0),
+    readQueries:databases.reduce((sum,row)=>sum+row.readQueries,0),
+    writeQueries:databases.reduce((sum,row)=>sum+row.writeQueries,0),
+  };
+}
+
 export async function collectD1Usage(account, window, gql, cf) {
   return optionalProduct('d1', async () => {
     const start = dateOnly(window.start);
@@ -34,7 +67,7 @@ export async function collectD1Usage(account, window, gql, cf) {
     const query = `query D1Usage($accountTag:string!,$start:Date,$end:Date) {
       viewer { accounts(filter:{accountTag:$accountTag}) {
         d1AnalyticsAdaptiveGroups(limit:10000,filter:{date_geq:$start,date_leq:$end}) {
-          dimensions { databaseId }
+          dimensions { date databaseId }
           sum { readQueries writeQueries rowsRead rowsWritten }
         }
       } }
@@ -43,29 +76,37 @@ export async function collectD1Usage(account, window, gql, cf) {
       gql(account, query, { accountTag:account.accountId, start, end }),
       d1Names(account, cf),
     ]);
-    const rows = payload?.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups || [];
-    const databases = rows.map(row => {
-      const databaseId = String(row?.dimensions?.databaseId || 'unknown');
-      const readQueries = asNumber(row?.sum?.readQueries);
-      const rowsRead = asNumber(row?.sum?.rowsRead);
-      return {
-        databaseId,
-        database:names.get(databaseId) || databaseId,
-        readQueries,
-        writeQueries:asNumber(row?.sum?.writeQueries),
-        rowsRead,
-        rowsWritten:asNumber(row?.sum?.rowsWritten),
-        rowsReadPerReadQuery:readQueries > 0 ? Math.round((rowsRead / readQueries) * 100) / 100 : 0,
-      };
-    }).sort((a,b) => b.rowsRead - a.rowsRead);
+    const sourceRows = payload?.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups || [];
+    const rows = sourceRows.map(row => ({
+      date:String(row?.dimensions?.date || ''),
+      databaseId:String(row?.dimensions?.databaseId || 'unknown'),
+      readQueries:asNumber(row?.sum?.readQueries),
+      writeQueries:asNumber(row?.sum?.writeQueries),
+      rowsRead:asNumber(row?.sum?.rowsRead),
+      rowsWritten:asNumber(row?.sum?.rowsWritten),
+    }));
+    const databases = aggregateD1Rows(rows, names);
+    const dates = [...new Set(rows.map(row=>row.date).filter(Boolean))]
+      .map(date => {
+        const dateDatabases = aggregateD1Rows(rows.filter(row=>row.date===date), names);
+        return { date, ...d1Totals(dateDatabases), databases:dateDatabases };
+      })
+      .sort((a,b)=>b.date.localeCompare(a.date));
+    const currentDate = dates.find(row=>row.date===end) || {
+      date:end,
+      rowsRead:0,
+      rowsWritten:0,
+      readQueries:0,
+      writeQueries:0,
+      databases:[],
+    };
     return {
       granularity:'calendar-date',
       window:{ start, end },
-      rowsRead:databases.reduce((sum,row)=>sum+row.rowsRead,0),
-      rowsWritten:databases.reduce((sum,row)=>sum+row.rowsWritten,0),
-      readQueries:databases.reduce((sum,row)=>sum+row.readQueries,0),
-      writeQueries:databases.reduce((sum,row)=>sum+row.writeQueries,0),
+      ...d1Totals(databases),
       databases,
+      dates,
+      currentDate,
     };
   });
 }
