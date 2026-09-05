@@ -77,3 +77,15 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.doesNotMatch(ui,/api\/finance\/personal\/(?:accounts|transactions|summary|goals|budgets|recurring)/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-api\.ekodi\.kr/);assert.match(workerSource,/personal-finance-admin\.js/);
 });
+
+
+test('Personal Finance admin assets are asset-first and candidate-only in the guarded release contract',()=>{
+  const manifest=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  for(const suffix of ['personal-finance-admin.js?pf=v1','personal-finance-admin.css?pf=v1']){
+    const probe=manifest.worker.requests.find(item=>item.url.endsWith(suffix));
+    assert.ok(probe,suffix);
+    assert.equal(probe.rollbackVerify,false,suffix);
+    assert.deepEqual(probe.headerExpect,['x-content-type-options: nosniff'],suffix);
+    assert.equal(probe.headerExpect.some(value=>value.startsWith('x-ekodi-route:')),false,suffix);
+  }
+});
