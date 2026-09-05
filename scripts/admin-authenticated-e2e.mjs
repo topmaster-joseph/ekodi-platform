@@ -141,21 +141,35 @@ async function menuDiagnostics(id) {
   }, id), 5_000, `${id} diagnostics`);
 }
 
+let selectedWorkArea = null;
+
+async function dispatchClick(locator, timeout = 5_000) {
+  await locator.waitFor({ state: 'visible', timeout });
+  await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
+}
+
+async function selectWorkArea(group) {
+  if (selectedWorkArea === group) return;
+  const global = globalButton(group);
+  await global.waitFor({ state: 'visible', timeout: 5_000 });
+  const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+  if (!active) await dispatchClick(global);
+  await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5_000 });
+  selectedWorkArea = group;
+}
+
 async function clickMenu(id) {
   const started = Date.now();
   const group = groups[id];
   stage(`menu-${id}-global`);
   console.log(`[E2E] ${id}: begin`);
   try {
-    const global = globalButton(group);
-    await global.waitFor({ state: 'visible', timeout: 5_000 });
-    const globalActive = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
-    if (!globalActive) await global.evaluate(node => node.click());
+    await selectWorkArea(group);
 
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
     await tab.waitFor({ state: 'visible', timeout: 5_000 });
-    await tab.evaluate(node => node.click());
+    await dispatchClick(tab);
     stage(`menu-${id}-panel`);
     await waitForVisiblePanel(id);
 
@@ -184,9 +198,7 @@ async function clickTaxHandoff() {
   const started = Date.now();
   stage('menu-tax-global');
   console.log('[E2E] tax: begin');
-  const global = globalButton('business');
-  await global.waitFor({ state: 'visible', timeout: 5_000 });
-  await global.evaluate(node => node.click());
+  await selectWorkArea('business');
   stage('menu-tax-tab');
   const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
   await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
@@ -194,7 +206,7 @@ async function clickTaxHandoff() {
   const [response] = await Promise.all([
     page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 10_000 }).catch(() => null),
     page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 }),
-    taxTab.evaluate(node => node.click()),
+    dispatchClick(taxTab),
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
