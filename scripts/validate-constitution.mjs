@@ -13,9 +13,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.7.0') fail('constitution version must remain 1.7.0 with approved sustainable 8-generation evolution policy');
+if (constitution.version !== '1.8.0') fail('constitution version must remain 1.8.0 with approved Sovereign Autonomous Operations policy');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -23,6 +23,8 @@ const architectureModel = constitution.architectureModel || {};
 if (architectureModel.registry !== 'governance/architecture/ekodi-os-architecture.json') fail('constitutional architecture registry path mismatch');
 if (architectureModel.platformBoundaryRegistry !== 'platform-boundaries.json') fail('constitutional platform boundary registry path mismatch');
 if (architectureModel.evolutionRegistry !== 'governance/architecture/ekodi-evolution-model.json') fail('constitutional evolution registry path mismatch');
+if (architectureModel.operatingArchitectureVersion !== '1.8.0') fail('constitutional operating architecture version must be 1.8.0');
+if (architectureModel.sovereignOperationsRegistry !== 'governance/architecture/sovereign-autonomous-operations.v1.json') fail('constitutional sovereign operations registry path mismatch');
 if (architectureModel.deploymentTopology !== 'modular-monolith-first') fail('constitutional deployment topology must remain modular-monolith-first');
 for (const layer of ['governance','os','core','responsible-independent-service','external-connected-service','workspace']) {
   if (!architectureModel.layers?.includes(layer)) fail(`constitutional architecture layer missing: ${layer}`);
@@ -79,6 +81,14 @@ if (evolutionModel.sustainability?.reuseCapabilityBeforeNewService !== true) fai
 if (evolutionModel.boundaryCreationGate?.grandfatherExistingBoundaries !== true) fail('evolution model must grandfather existing boundaries');
 if (evolutionModel.workspaceConvergence?.canonicalIdentity !== 'workspace_id') fail('evolution model must preserve workspace_id authority');
 if (evolutionModel.workspaceConvergence?.canonicalTerm !== 'Workspace') fail('evolution model must make Workspace canonical');
+
+const sovereign = constitution.sovereignAutonomousOperations || {};
+if (JSON.stringify(sovereign.hierarchy || []) !== JSON.stringify(['sovereign','autonomous','agentic','services'])) fail('sovereign hierarchy mismatch');
+if (sovereign.authorityContext !== 'Person + Workspace + Role + Capability') fail('sovereign authority context mismatch');
+if (sovereign.autonomousAuthorityExpansionForbidden !== true) fail('autonomous authority expansion must be forbidden');
+if (sovereign.productionDirectAgentMutationForbidden !== true) fail('direct production mutation by agents must be forbidden');
+if (sovereign.verificationAfterExecutionRequired !== true) fail('autonomous execution verification must be required');
+if (sovereign.currentGenerationUnchanged !== true || sovereign.currentScaleTierUnchanged !== true) fail('v1.8 must not silently promote generation or scale tier');
 
 const secureProjection = constitution.securityPolicy?.secureProjection || {};
 if (secureProjection.enabledByDefault !== true) fail('Secure Projection must be enabled by default');
@@ -203,5 +213,5 @@ console.log(`- sustainable evolution: generation ${sustainable.currentGeneration
 console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
 console.log('- Workspace is canonical; Space remains compatibility-only during migration');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
-console.log('- Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace architecture registered');
+console.log('- Sovereign -> Autonomous -> Agentic -> Services operating hierarchy registered over Governance/OS/Core service boundaries');
 console.log('- data sovereignty, tenant authority, provider, storage and sustainable scaling rules checked');

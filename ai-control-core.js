@@ -1,8 +1,9 @@
 import { getControlPlaneSummary } from './cognitive-control-plane.js';
+import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
-  version: '0.4.0',
+  version: '0.5.0',
   defaultMode: 'primary-review',
   modes: Object.freeze(['single', 'primary-review', 'parallel']),
   providerOrder: Object.freeze([
@@ -22,6 +23,7 @@ export const AI_CONTROL_POLICY = Object.freeze({
   maxParallelProviders: 3,
   executionEnvironment: 'development',
   controlPlane: getControlPlaneSummary(),
+  sovereignAutonomy: getSovereignAutonomySummary(),
   missionPolicyVersion: AI_MISSION_RUNTIME.version,
 });
 
