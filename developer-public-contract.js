@@ -1,0 +1,35 @@
+export const DEVELOPER_PORTAL_META=Object.freeze({
+  serviceId:'developer-portal',
+  publicName:'EKODI Developer',
+  canonicalOrigin:'https://dev.ekodi.kr',
+  standardName:'EKODI Integration Standard',
+  standardVersion:'0.1-foundation',
+  conformanceLevel:'public-preflight',
+  sideEffects:'none',
+  dataPolicy:'public-contract-only',
+});
+
+export const PUBLIC_CONFORMANCE_CONTRACT=Object.freeze({
+  id:'ekodi.responsible-service.v1',
+  standard:'EKODI Integration Standard v0.1',
+  status:'enforced-foundation',
+  required:['serviceId','responsibilityClass','serviceBoundary','identity','dataBoundary','capabilities','connections','actionPolicy','projectionPolicy','lifecycle','providerStrategy','evidencePolicy'],
+  invariants:{
+    responsibilityClass:'ekodi-responsible',
+    'serviceBoundary.failureIsolation':true,
+    'serviceBoundary.extractable':true,
+    'identity.serviceDoesNotOwnCanonicalIdentity':true,
+    'identity.workspaceIdNeverDerivedFromUrl':true,
+    'dataBoundary.crossServicePrivateDatabaseAccess':false,
+    'lifecycle.disconnectSafe':true,
+    'lifecycle.exportSupported':true,
+    'lifecycle.providerReplacementSupported':true,
+    'actionPolicy.defaultMaximum':'L2',
+    'actionPolicy.financialExecutionEnabled':false,
+    'actionPolicy.irreversibleAutonomousExecution':false,
+    'projectionPolicy.userMayRevoke':true,
+    'providerStrategy.externalProviderPrivateDbAccess':false,
+    'evidencePolicy.insightRequiresEvidence':true,
+  },
+  finalCertification:'EKODI CI contract, security, tenant/data-boundary and staging checks remain authoritative.',
+});
