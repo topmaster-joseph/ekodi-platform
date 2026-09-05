@@ -2,6 +2,31 @@ function cleanText(value, max = 500) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
 }
 
+const MAX_PRODUCT_IDENTITY_ALIASES = 512;
+
+function safeProviderKey(value) {
+  const key = cleanText(value, 80).toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]{0,79}$/.test(key) ? key : '';
+}
+
+function safeAliasIdentity(value) {
+  const key = cleanText(value, 160).toLowerCase();
+  return /^[a-z0-9][a-z0-9._:-]{0,159}$/.test(key) ? key : '';
+}
+
+function safeSourceId(value) {
+  const source = cleanText(value, 160);
+  return /^[A-Za-z0-9._:-]+$/.test(source) ? source : '';
+}
+
+function parseAliasConfig(raw) {
+  if (!raw) return [];
+  try {
+    const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(value) ? value : [];
+  } catch { return []; }
+}
+
 function canonical(value) {
   return cleanText(value, 500).toLocaleLowerCase('ko-KR').replace(/[^0-9a-z가-힣]+/gi, '');
 }
@@ -19,6 +44,39 @@ export function normalizeGtin(value) {
 
 function explicitIdentity(value) {
   return cleanText(value, 160).toLocaleLowerCase('en-US').replace(/[^a-z0-9._:-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+export function getProductIdentityAliases(env = {}) {
+  const rows = parseAliasConfig(env.AFFILIATE_PRODUCT_IDENTITY_ALIASES_JSON).slice(0, MAX_PRODUCT_IDENTITY_ALIASES);
+  const aliases = new Map();
+  const conflicts = new Set();
+  for (const row of rows) {
+    const providerKey = safeProviderKey(row?.providerKey);
+    const sourceId = safeSourceId(row?.sourceId ?? row?.productId ?? row?.merchantSourceId);
+    const productIdentityKey = safeAliasIdentity(row?.productIdentityKey ?? row?.identityKey);
+    if (!providerKey || !sourceId || !productIdentityKey) continue;
+    const lookupKey = `${providerKey}:${sourceId}`;
+    if (conflicts.has(lookupKey)) continue;
+    const existing = aliases.get(lookupKey);
+    if (existing && existing.productIdentityKey !== productIdentityKey) {
+      aliases.delete(lookupKey);
+      conflicts.add(lookupKey);
+      continue;
+    }
+    aliases.set(lookupKey, { providerKey, sourceId, productIdentityKey });
+  }
+  return [...aliases.values()];
+}
+
+export function applyProductIdentityAliases(offers = [], env = {}) {
+  const aliasMap = new Map(getProductIdentityAliases(env).map(alias => [`${alias.providerKey}:${alias.sourceId}`, alias.productIdentityKey]));
+  return (Array.isArray(offers) ? offers : []).map(offer => {
+    if (!offer || typeof offer !== 'object' || offer.productIdentityKey || offer.identityKey) return offer;
+    const providerKey = safeProviderKey(offer.providerKey);
+    const sourceIds = [offer.merchantSourceId, offer.productId, offer.sourceId, offer.id].map(safeSourceId).filter(Boolean);
+    const productIdentityKey = sourceIds.map(sourceId => aliasMap.get(`${providerKey}:${sourceId}`)).find(Boolean);
+    return productIdentityKey ? { ...offer, productIdentityKey } : offer;
+  });
 }
 
 function exactTitleKey(offer) {

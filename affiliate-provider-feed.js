@@ -65,6 +65,11 @@ export function getProviderFeedConfigs(env = {}) {
       headerName: safeHeaderName(entry?.headerName),
       tokenPrefix: entry?.tokenPrefix !== undefined ? tokenPrefixRaw.slice(0, 40) : (entry?.headerName ? '' : 'Bearer '),
       disclosureText: cleanText(entry?.disclosureText, 1000),
+      marketCountry: /^[A-Z]{2}$/.test(cleanText(entry?.marketCountry || 'KR', 2).toUpperCase()) ? cleanText(entry?.marketCountry || 'KR', 2).toUpperCase() : 'KR',
+      priceCurrency: /^[A-Z]{3}$/.test(cleanText(entry?.priceCurrency || 'KRW', 3).toUpperCase()) ? cleanText(entry?.priceCurrency || 'KRW', 3).toUpperCase() : 'KRW',
+      affiliateMode: cleanText(entry?.affiliateMode || 'direct', 20) === 'network' ? 'network' : 'direct',
+      networkKey: safeKey(entry?.networkKey),
+      networkName: cleanText(entry?.networkName, 120),
       enabled: entry?.enabled !== false,
     };
   }).filter(Boolean);
@@ -77,6 +82,11 @@ export function listProviderFeedDescriptors(env = {}) {
     providerName: config.providerName,
     connectionMode: 'json_feed_v1',
     endpointHost: new URL(config.url).hostname,
+    marketCountry: config.marketCountry,
+    priceCurrency: config.priceCurrency,
+    affiliateMode: config.affiliateMode,
+    networkKey: config.networkKey,
+    networkName: config.networkName,
     enabled: config.enabled,
     secretRequired: Boolean(config.tokenEnv),
     secretConfigured: Boolean(config.tokenEnv ? env[config.tokenEnv] : true),
@@ -97,7 +107,10 @@ export function normalizeProviderFeedItem(item = {}, config = {}) {
   const productName = cleanText(item.productName ?? item.title ?? item.name, 240);
   const affiliateUrl = httpsUrl(item.affiliateUrl ?? item.clickUrl ?? item.url ?? item.productUrl);
   if (!sourceId || !productName || !affiliateUrl) return null;
-  const price = Number(item.priceKrw ?? item.priceAmount ?? item.price ?? 0);
+  const sourcePrice = Number(item.priceAmount ?? item.price ?? item.priceKrw ?? 0);
+  const sourcePriceCurrency = cleanText(item.priceCurrency ?? item.currency ?? config.priceCurrency ?? 'KRW', 3).toUpperCase();
+  const explicitKrw = Number(item.priceKrw);
+  const priceKrw = Number.isFinite(explicitKrw) && explicitKrw >= 0 ? Math.trunc(explicitKrw) : (sourcePriceCurrency === 'KRW' && Number.isFinite(sourcePrice) && sourcePrice >= 0 ? Math.trunc(sourcePrice) : 0);
   const rawGtin = cleanText(item.gtin ?? item.barcode, 32);
   const gtin = rawGtin ? normalizeGtin(rawGtin) : '';
   return {
@@ -108,7 +121,13 @@ export function normalizeProviderFeedItem(item = {}, config = {}) {
     affiliateUrl,
     destinationUrl: httpsUrl(item.destinationUrl ?? item.originalUrl ?? item.productUrl),
     imageUrl: httpsUrl(item.imageUrl ?? item.image ?? item.thumbnailUrl),
-    priceKrw: Number.isFinite(price) && price >= 0 ? Math.trunc(price) : 0,
+    priceKrw,
+    sourcePriceAmount: Number.isFinite(sourcePrice) && sourcePrice >= 0 ? sourcePrice : 0,
+    sourcePriceCurrency: /^[A-Z]{3}$/.test(sourcePriceCurrency) ? sourcePriceCurrency : config.priceCurrency || 'KRW',
+    marketCountry: config.marketCountry || 'KR',
+    affiliateMode: config.affiliateMode || 'direct',
+    affiliateNetworkKey: config.networkKey || '',
+    affiliateNetworkName: config.networkName || '',
     category: cleanText(item.category, 120) || '추천',
     disclosureText: cleanText(item.disclosureText, 1000) || cleanText(config.disclosureText, 1000),
     productIdentityKey: cleanText(item.productIdentityKey, 160),

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { groupProductOffers, productIdentityKey } from '../product-identity.js';
+import { applyProductIdentityAliases, getProductIdentityAliases, groupProductOffers, productIdentityKey } from '../product-identity.js';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
@@ -30,6 +30,40 @@ test('explicit seller-neutral identity groups provider offers without using comm
   assert.equal(groups[0].providerCount, 2);
   assert.equal(groups[0].bestPriceKrw, 19000);
   assert.deepEqual(groups[0].offers.map(item => item.providerKey), ['provider-b', 'provider-a']);
+});
+
+test('verified source aliases join real provider offers without title guessing', () => {
+  const env = { AFFILIATE_PRODUCT_IDENTITY_ALIASES_JSON: JSON.stringify([
+    { providerKey: 'coupang_partners', sourceId: '2213165937', productIdentityKey: 'dazzlshop:ilpum:10x20' },
+    { providerKey: 'linkprice_11st', sourceId: '3099849458', productIdentityKey: 'dazzlshop:ilpum:10x20' },
+  ]) };
+  const enriched = applyProductIdentityAliases([
+    offer({ id: 'c', productId: '2213165937', providerKey: 'coupang_partners', productName: '다즐샵 일품도시락 10종 20팩', priceKrw: 81000 }),
+    offer({ id: 'l', productId: '3099849458', providerKey: 'linkprice_11st', productName: '다즐샵 일품도시락 10종 20팩 냉동도시락', priceKrw: 69900 }),
+  ], env);
+  const groups = groupProductOffers(enriched);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].identityBasis, 'explicit');
+  assert.equal(groups[0].identityConfidence, 'verified');
+  assert.equal(groups[0].providerCount, 2);
+  assert.equal(groups[0].bestPriceKrw, 69900);
+});
+
+test('identity alias config fails closed and never overwrites an existing explicit identity', () => {
+  const env = { AFFILIATE_PRODUCT_IDENTITY_ALIASES_JSON: JSON.stringify([
+    { providerKey: 'provider-a', sourceId: 'SKU-1', productIdentityKey: 'verified:sku:1' },
+    { providerKey: 'provider bad', sourceId: 'SKU/2', productIdentityKey: '' },
+    { providerKey: 'provider-c', sourceId: 'SKU-3', productIdentityKey: 'verified:sku:3a' },
+    { providerKey: 'provider-c', sourceId: 'SKU-3', productIdentityKey: 'verified:sku:3b' },
+  ]) };
+  assert.deepEqual(getProductIdentityAliases(env), [
+    { providerKey: 'provider-a', sourceId: 'SKU-1', productIdentityKey: 'verified:sku:1' },
+  ]);
+  const [preserved] = applyProductIdentityAliases([
+    offer({ providerKey: 'provider-a', productId: 'SKU-1', productIdentityKey: 'existing:identity' }),
+  ], env);
+  assert.equal(preserved.productIdentityKey, 'existing:identity');
+  assert.deepEqual(getProductIdentityAliases({ AFFILIATE_PRODUCT_IDENTITY_ALIASES_JSON: '{bad-json' }), []);
 });
 
 test('GTIN and brand plus model create provider-neutral identities', () => {
@@ -66,11 +100,12 @@ test('exact sufficiently specific titles remain a conservative compatibility fal
 });
 
 test('public Mall contract exposes server identities while keeping flat products for compatibility', async () => {
-  const [api, marketplace, curator, admin] = await Promise.all([
+  const [api, marketplace, curator, admin, routeMigration] = await Promise.all([
     read('affiliate-control.js'),
     read('affiliate-marketplace.js'),
     read('sites/ekodi-mall/assets/context-curator.js'),
     read('marketing-funnel-admin.js'),
+    read('migrations/0063_affiliate_merchant_routes.sql'),
   ]);
   assert.match(api, /groupProductOffers/);
   assert.match(api, /catalogMode: 'product_identity_v1'/);
@@ -83,4 +118,13 @@ test('public Mall contract exposes server identities while keeping flat products
   assert.match(admin, /name="brand"/);
   assert.match(admin, /name="model"/);
   assert.match(admin, /name="productIdentityKey"/);
+  for (const field of ['merchantKey', 'marketCountry', 'settlementCurrency', 'affiliateMode', 'affiliateStatus', 'networkKey', 'recommendationEnabled']) assert.match(admin, new RegExp(`name="${field}"`));
+  assert.match(admin, /LinkPrice/);
+  assert.match(api, /recommendationRequiresActiveAffiliate: true/);
+  assert.match(api, /affiliateStatus !== 'active'/);
+  assert.match(api, /recommendedMerchants\.has\('coupang_partners'\)/);
+  assert.match(marketplace, /affiliate_status = 'active' AND recommendation_enabled = 1/);
+  assert.match(curator, /제휴가 완료된 판매처 안에서/);
+  assert.match(routeMigration, /'elevenst', '11번가'.*'network'/s);
+  assert.match(routeMigration, /'linkprice', 'LinkPrice', 'pending', 0/);
 });
