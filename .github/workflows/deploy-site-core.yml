@@ -50,6 +50,8 @@ on:
       - 'admin-public-site-controls.js'
       - 'client-access.js'
       - 'client-access.css'
+      - 'marketing-funnel-admin.js'
+      - 'marketing-funnel-admin.css'
       - 'books-admin.js'
       - 'books-admin.css'
       - 'books-finance-admin.js'
