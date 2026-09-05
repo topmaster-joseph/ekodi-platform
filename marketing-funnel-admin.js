@@ -153,6 +153,10 @@
             <label>카테고리<input name="category" maxlength="120" placeholder="건강 · 식품 · 생활"></label>
             <label>가격(원)<input name="priceKrw" type="number" min="0" step="1" placeholder="0"></label>
             <label>제휴처 상품 ID<input name="sourceId" maxlength="160" placeholder="선택"></label>
+            <label>GTIN/바코드<input name="gtin" inputmode="numeric" maxlength="32" placeholder="8?12?13?14자리"></label>
+            <label>브랜드<input name="brand" maxlength="120" placeholder="선택"></label>
+            <label>모델명<input name="model" maxlength="160" placeholder="선택"></label>
+            <label>동일상품 묶음키<input name="productIdentityKey" maxlength="160" placeholder="검증된 동일 상품일 때만"></label>
             <label class="integration-wide">제휴 구매 링크<input name="affiliateUrl" type="url" inputmode="url" placeholder="https://..." required></label>
             <label class="integration-wide">원본 상품 링크<input name="destinationUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
             <label class="integration-wide">상품 이미지 링크<input name="imageUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
