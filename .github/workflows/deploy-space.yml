@@ -11,8 +11,11 @@ on:
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
       - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
+      - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
+      - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
+      - 'test/store-user-site-admin.test.mjs'
       - '.github/workflows/deploy-space.yml'
   push:
     branches: [main]
@@ -24,8 +27,11 @@ on:
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
       - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
+      - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
+      - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
+      - 'test/store-user-site-admin.test.mjs'
       - '.github/workflows/deploy-space.yml'
 
 permissions:
@@ -53,7 +59,7 @@ jobs:
           set -euo pipefail
           node --check space-worker.js
           node --check space/app.js
-          node --test test/store-operating-space.test.mjs
+          node --test test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
