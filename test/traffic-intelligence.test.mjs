@@ -57,3 +57,13 @@ test('browser beacon respects privacy signals and classifier collector is daily 
   assert.match(collector, /httpRequestsAdaptiveGroups/);
   assert.doesNotMatch(collector, /client_ip|request_path|raw_log/i);
 });
+
+test('collector isolates unavailable zones and preserves partial analytics', async () => {
+  const collector = await readFile('scripts/collect-traffic-intelligence.mjs', 'utf8');
+  assert.match(collector, /let collectedZoneCount = 0/);
+  assert.match(collector, /const skippedZones = \[\]/);
+  assert.match(collector, /try \{[\s\S]*collectZone\(zone, window\)[\s\S]*catch \(error\)/);
+  assert.match(collector, /const stateStatus = skippedZones\.length \? 'partial' : 'ok'/);
+  assert.match(collector, /if \(collectedZoneCount === 0\)/);
+  assert.match(collector, /last_success_at=excluded\.last_success_at/);
+});
