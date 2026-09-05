@@ -5,6 +5,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'admin-*.js'
+      - 'marketing-funnel-admin.js'
       - 'scripts/admin-authenticated-e2e.mjs'
       - '.github/workflows/admin-authenticated-e2e.yml'
 

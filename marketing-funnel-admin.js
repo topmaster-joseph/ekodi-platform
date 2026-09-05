@@ -296,7 +296,7 @@
     }
 
     async function loadOverview() {
-      const [affiliate, providerData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), mallEvents()]);
+      const [affiliate, providerData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), mallEvents().catch(() => [])]);
       renderOverview(affiliate);
       renderProviderFeeds(providerData.providers || []);
       renderMallEvents(events);

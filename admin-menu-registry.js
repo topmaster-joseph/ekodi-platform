@@ -31,7 +31,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
   { id: 'finance', group: 'business', icon: '₩', labels: { ko: '결제 · 회계', en: 'Finance & Accounting' } },
   { id: 'tax', group: 'business', icon: 'T', labels: { ko: '세금 · 증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/', adminHandoff: true },
-  { id: 'affiliates', group: 'business', icon: '🛒', labels: { ko: '에코디몰 AI 영업', en: 'Mall AI Sales' }, href: 'https://ekodi.kr/ekodibiz/mall/admin/', adminHandoff: true },
+  { id: 'affiliates', group: 'business', icon: '🛒', labels: { ko: '에코디몰 AI 영업', en: 'Mall AI Sales' } },
   { id: 'storage', group: 'data', icon: '▣', labels: { ko: '저장소', en: 'Storage' } },
   { id: 'api-cost', group: 'data', icon: '₩', labels: { ko: 'API · 비용', en: 'API & Cost' } },
   { id: 'health', group: 'system', icon: '♥', labels: { ko: '시스템 건강', en: 'System Health' } },
