@@ -13,8 +13,8 @@ test('Community keeps public discovery, locale selection and action auth gating 
   for (const marker of ['id="languageMenu"','data-locale="ko-KR"','data-locale="en"','data-locale="zh-CN"','data-locale="ja"']) assert.ok(html.includes(marker));
   assert.ok(html.includes('data-auth-href="/connect/"'));
   assert.ok(css.includes('word-break:keep-all'));
-  assert.match(runtime, /\$\$\('\[data-auth-href\]'\)\.forEach/);
-  assert.doesNotMatch(runtime, /(?:^|\n)\s{4}\$\('\[data-auth-href\]'\)\.forEach/);
+  assert.ok(runtime.includes("closest?.('[data-auth-href]')"));
+  assert.ok(!runtime.includes("$$('[data-auth-href]').forEach"));
   assert.ok(runtime.includes("localStorage.setItem('ekodi.locale'"));
   assert.ok(workflow.includes('node --check community/community-enhancements.js'));
 });

@@ -32,6 +32,8 @@
     a.href = channel.url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
+    a.dataset.authHref = channel.url;
+    a.dataset.authTarget = '_blank';
     a.dataset.provider = channel.provider || 'other';
     if (variant === 'cards') {
       a.className = 'channel-card';
@@ -51,6 +53,8 @@
     a.href = `${HUB}/?org=${encodeURIComponent(orgId)}`;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
+    a.dataset.authHref = a.href;
+    a.dataset.authTarget = '_blank';
     if (variant === 'cards') {
       a.className = 'channel-card';
       const icon = document.createElement('span'); icon.textContent = 'E';
