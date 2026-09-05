@@ -821,6 +821,54 @@
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jadam/admin/site",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "사용자 사이트",
+          "store-site-admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: jadam-store-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru/admin/site",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "사용자 사이트",
+          "store-site-admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: pizzamaru-store-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/yogurt/admin/site",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "사용자 사이트",
+          "store-site-admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: yogurt-store-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
       }
     ]
   }

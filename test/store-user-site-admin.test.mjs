@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { jadamAdminPage, jadamAdminScript, isJadamAdminPath } from '../jadam-admin-page.js';
+import { pizzamaruAdminPage, pizzamaruAdminScript, isPizzamaruAdminPath } from '../pizzamaru-admin-page.js';
+import { yogurtAdminPage, yogurtAdminScript, isYogurtAdminPath } from '../yogurt-admin-page.js';
+
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+const [migration,worker]=await Promise.all([
+  read('supabase/migrations/20260906005000_store_user_site_provisioning.sql'),
+  read('space-worker.js'),
+]);
+const admins=[
+  ['jadam',jadamAdminPage,jadamAdminScript,isJadamAdminPath],
+  ['pizzamaru',pizzamaruAdminPage,pizzamaruAdminScript,isPizzamaruAdminPath],
+  ['yogurt',yogurtAdminPage,yogurtAdminScript,isYogurtAdminPath],
+];
+
+test('store user site is automatically provisioned from the canonical workspace slug',()=>{
+  assert.match(migration,/create table if not exists public\.store_user_sites/);
+  assert.match(migration,/after insert or update of operating_space_slug/);
+  assert.match(migration,/workspace_automatic/);
+  assert.match(migration,/shared_shell_workspace_automatic/);
+  assert.match(migration,/store_user_site_public_profile/);
+});
+
+test('all three independent store admins expose user-site settings',async()=>{
+  for(const [slug,page,script,isPath] of admins){
+    assert.equal(isPath(`/${slug}/admin/site`),true);
+    const [html,js]=await Promise.all([page().text(),script().text()]);
+    assert.match(html,/store-site-admin/);
+    assert.match(js,/사용자 사이트/);
+    assert.match(js,/store_user_site_admin_snapshot/);
+    assert.match(js,/update_store_user_site_settings/);
+    assert.match(js,/Workspace 자동/);
+    assert.match(js,/가입만으로/);
+  }
+});
+test('space worker reads public-safe site profile and honors pause and alias state',()=>{
+  assert.match(worker,/store_user_site_public_profile/);
+  assert.match(worker,/resolved\.canonicalSlug/);
+  assert.match(worker,/resolved\.status==='paused'/);
+  assert.match(worker,/x-ekodi-workspace-alias/);
+});
+
+test('site settings keep authorization bound to immutable store identity',()=>{
+  assert.match(migration,/can_manage_store_user_site/);
+  assert.match(migration,/store_members/);
+  assert.match(migration,/store_owner/);
+  assert.match(migration,/tenant_admin/);
+  assert.match(migration,/platform_admin/);
+  assert.match(migration,/Canonical identity remains stores\.id/);
+});
+
+test('signup is identity-only and site materialization waits for store slug',async()=>{
+  const scripts=await Promise.all(admins.map(([, ,script])=>script().text()));
+  for(const js of scripts){
+    assert.match(js,/Person \/ EKODI ID/);
+    assert.match(js,/operating_space_slug/);
+    assert.match(js,/JIT/);
+  }
+});

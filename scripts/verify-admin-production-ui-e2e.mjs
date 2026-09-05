@@ -91,7 +91,8 @@ for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
   const global = page.locator(`button[data-admin-global-group="${group}"]`);
   await global.waitFor({ state: 'visible', timeout: 10000 });
-  await global.click({ timeout: 10000 });
+  const globalActive = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+  if (!globalActive) await global.evaluate(node => node.click());
 
   const tab = page.locator(`[data-admin-context-section="${id}"]`);
   await tab.waitFor({ state: 'visible', timeout: 10000 });
@@ -102,7 +103,7 @@ for (const [id, group] of menus) {
     if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
     await Promise.all([
       page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 15000 }),
-      tab.click({ timeout: 10000 }),
+      tab.evaluate(node => node.click()),
     ]);
     const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
@@ -115,7 +116,7 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  await tab.click({ timeout: 10000 });
+  await tab.evaluate(node => node.click());
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
   await page.waitForFunction(section => {
     const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));

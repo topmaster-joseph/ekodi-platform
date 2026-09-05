@@ -10,7 +10,21 @@ const STORE_PAGE_PROFILES=Object.freeze({
   pizzamaru:{documentTitle:'피자마루 목포대점 · EKODI',name:'피자마루 목포대점',kicker:'PIZZA STORE USER PAGE',lead:'피자 메뉴·옵션·판매가·배달채널을 피자마루 데이터로만 분리해 운영합니다.',theme:'pizzamaru',description:'피자마루 목포대점 사용자 운영페이지'},
   yogurt:{documentTitle:'요거트퍼플 목포대점 · EKODI',name:'요거트퍼플 목포대점',kicker:'YOGURT DESSERT USER PAGE',lead:'요거트·디저트 메뉴·옵션·판매가·배달채널을 요거트퍼플 데이터로만 분리해 운영합니다.',theme:'yogurt',description:'요거트퍼플 목포대점 사용자 운영페이지'},
 });
-function pageProfile(pathname){const slug=workspaceSlugFromPublicPath(pathname);return STORE_PAGE_PROFILES[slug]||DEFAULT_PAGE_PROFILE}
+function staticPageProfile(pathname){const slug=workspaceSlugFromPublicPath(pathname);return STORE_PAGE_PROFILES[slug]||DEFAULT_PAGE_PROFILE}
+async function pageProfile(pathname,env){
+  const slug=workspaceSlugFromPublicPath(pathname);
+  const fallback=staticPageProfile(pathname);
+  if(!slug||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return {profile:fallback,canonicalSlug:slug,status:'active',source:'static'};
+  try{
+    const response=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/store_user_site_public_profile`,{
+      method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json'},body:JSON.stringify({p_slug:slug})
+    });
+    if(!response.ok)return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback'};
+    const data=await response.json().catch(()=>null);
+    if(!data||typeof data!=='object')return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback'};
+    return {profile:{documentTitle:data.document_title||`${data.name||fallback.name} · EKODI`,name:data.name||fallback.name,kicker:data.kicker||fallback.kicker,lead:data.lead||fallback.lead,theme:data.theme||fallback.theme,description:data.description||fallback.description},canonicalSlug:data.canonical_slug||slug,status:data.status||'active',source:'store-user-sites'};
+  }catch{return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback'}}
+}
 function htmlText(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 
 function securityHeaders(env={}){
@@ -90,7 +104,14 @@ export default{
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
     if(isPublicWorkspacePath(url.pathname)){
       if(legacyAlias&&url.pathname!=='/deployment-probe')return canonicalRedirect();
-      return appShell(request,env,'space-workspace',pageProfile(url.pathname));
+      const resolved=await pageProfile(url.pathname,env);
+      const requested=workspaceSlugFromPublicPath(url.pathname);
+      if(resolved.canonicalSlug&&requested&&resolved.canonicalSlug!==requested){
+        const target=new URL(`/${resolved.canonicalSlug}${url.search}`,'https://ekodi.kr');
+        return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
+      }
+      if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      return appShell(request,env,'space-workspace',resolved.profile);
     }
     return withHeaders(env,await env.ASSETS.fetch(request),'space-asset');
   }
