@@ -13,7 +13,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.8.1') fail('constitution version must remain 1.8.1 with approved Sovereign Autonomous Operations policy');
+if (constitution.version !== '1.8.2') fail('constitution version must remain 1.8.2 with the approved Developer/Experience portal amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -111,9 +111,18 @@ if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
+if (!registeredCommon.has('dev.ekodi.kr')) fail('registered public developer boundary missing: dev.ekodi.kr');
+if (!registeredCommon.has('exp.ekodi.kr')) fail('registered experience boundary missing: exp.ekodi.kr');
+if (!registeredCommon.has('try.ekodi.kr')) fail('registered Experience compatibility boundary missing: try.ekodi.kr');
 if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
 if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
 if (!registeredCore.has('ai.ekodi.kr')) fail('registered core-service boundary missing: ai.ekodi.kr');
+if (!systemDomains.has('dev.ekodi.kr') || !systemDomains.has('exp.ekodi.kr')) fail('public Developer/Experience production boundaries are incomplete');
+if ((constitution.systemBoundaries?.development || []).includes('dev.ekodi.kr')) fail('root dev.ekodi.kr must not remain a Development environment host');
+const portals=constitution.publicPortalPolicy||{};
+if (portals.developerPortal!=='https://dev.ekodi.kr' || portals.experiencePortal!=='https://exp.ekodi.kr') fail('public portal canonical domain policy mismatch');
+if (portals.sharedRuntimeAllowedAtS0!==true) fail('public portal S0 shared-runtime policy missing');
+if (portals.experienceDataPolicy!=='synthetic-only' || portals.developerDataPolicy!=='public-contract-only') fail('public portal data projection policy mismatch');
 const separation=constitution.userSurfaceEngineSeparation||{};
 if (separation.canonicalMarketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('Marketing product canonical drift');
 if (separation.canonicalWorkspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('workspace Marketing canonical pattern drift');

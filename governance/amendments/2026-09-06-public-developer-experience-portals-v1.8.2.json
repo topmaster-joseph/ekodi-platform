@@ -1,0 +1,20 @@
+{
+  "id": "2026-09-06-public-developer-experience-portals-v1.8.2",
+  "constitutionVersion": "1.8.2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-06",
+  "changeClass": "C2",
+  "taskId": "ekodi-public-dev-exp-portals-20260906",
+  "summary": "Establish dev.ekodi.kr as the public EKODI Developer and Conformance portal and exp.ekodi.kr as the canonical EKODI Experience portal, while retaining try.ekodi.kr as a permanent compatibility redirect.",
+  "approvalBasis": "The platform owner explicitly instructed that the developer public site be built around dev.ekodi.kr under the EKODI Constitution and proposed exp.ekodi.kr for the experience surface, then instructed the build to proceed.",
+  "registeredBoundaries": ["dev.ekodi.kr", "exp.ekodi.kr"],
+  "legacyAlias": {"from": "try.ekodi.kr", "to": "https://exp.ekodi.kr", "status": 308},
+  "developmentBoundaryAdjustment": "The root dev.ekodi.kr becomes the public Developer portal. Development mirrors remain on nested hosts such as my.dev.ekodi.kr, admin.dev.ekodi.kr, auth.dev.ekodi.kr and api.dev.ekodi.kr.",
+  "runtimePolicy": "At S0, Developer and Experience may share the existing ekodi-experience runtime while retaining separate public contracts and routes. A new independent deployment requires measured evidence.",
+  "developerDataRule": "Public contracts, examples and browser-local preflight only. No production customer data, reusable secrets, private repository structure or internal provider topology.",
+  "experienceDataRule": "Synthetic-only by default with Secure Projection and no production writes.",
+  "authorityRule": "Public preflight never grants production authority. Existing EKODI CI contract, security, tenant/data-boundary, staging, certification and guarded promotion gates remain authoritative.",
+  "verificationPolicy": "Constitution, platform boundary, public contract drift, Secure Projection, staging host simulation, guarded production release, dev/exp real-host verification and try redirect verification must pass.",
+  "rollback": "Remove dev.ekodi.kr from the shared public runtime, restore try.ekodi.kr as the Experience canonical host and reverse the domain registrations through the guarded pipeline. No production customer data migration or rollback is required."
+}

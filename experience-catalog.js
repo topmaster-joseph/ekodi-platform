@@ -2,7 +2,7 @@
   serviceId: 'experience',
   publicName: '에코디 체험',
   publicNameEn: 'EKODI Experience',
-  canonicalOrigin: 'https://try.ekodi.kr',
+  canonicalOrigin: 'https://exp.ekodi.kr',
   tagline: '에코디를 직접 경험해 보세요.',
   statusSource: 'curated-public-projection',
   dataPolicy: 'synthetic-only',
