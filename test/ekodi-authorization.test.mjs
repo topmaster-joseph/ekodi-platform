@@ -5,6 +5,7 @@ import {
   authorizeEkodiAction,
   capabilityMatches,
   hasEkodiCapability,
+  hasActiveEkodiElevation,
   scopeAllows,
 } from '../ekodi-authorization.js';
 
@@ -35,6 +36,15 @@ test('sensitive account mutation requires temporary elevation', () => {
   const elevated = adminAuthorityForRole('super_admin', { elevated:true, elevatedUntil:'2099-01-01T00:00:00.000Z' });
   const allowed = authorizeEkodiAction({ authority:elevated, requiredCapabilities:['admin:accounts.write'] });
   assert.equal(allowed.allowed, true);
+});
+
+test('expired or timestamp-less elevation cannot authorize sensitive actions', () => {
+  const expired = adminAuthorityForRole('super_admin', { elevated:true, elevatedUntil:'2000-01-01T00:00:00.000Z' });
+  const missingExpiry = adminAuthorityForRole('super_admin', { elevated:true });
+  assert.equal(hasActiveEkodiElevation(expired), false);
+  assert.equal(hasActiveEkodiElevation(missingExpiry), false);
+  assert.equal(authorizeEkodiAction({ authority:expired, requiredCapabilities:['admin:accounts.write'] }).code, 'ELEVATION_REQUIRED');
+  assert.equal(authorizeEkodiAction({ authority:missingExpiry, requiredCapabilities:['admin:accounts.write'] }).code, 'ELEVATION_REQUIRED');
 });
 
 test('operator cannot inherit platform administrator account capability', () => {
