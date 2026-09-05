@@ -3,21 +3,30 @@
 if(window.__EKODI_USER_CHARACTER_BOOTED)return;
 window.__EKODI_USER_CHARACTER_BOOTED=true;
 
-const VERSION=2;
+const VERSION=3;
 const STYLE_ID='ekodi-user-character-style';
+const REGISTRY_ATTR='data-ekodi-character-registry';
+const REGISTRY_ASSET='character-registry.js';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','none']);
 const CHARACTER_ATTR='data-ekodi-user-character';
-const PROFILES=Object.freeze({
+const FALLBACK_RESTRAINT=new Set(['payment','personal_data','security','complex_admin','focus_heavy']);
+const FALLBACK_PROFILES=Object.freeze({
   church:{pose:'welcome',prop:'book',label:'함께 말씀을 나누는 에코디언'},
   community:{pose:'welcome',prop:'heart',label:'이웃을 잇는 에코디언'},
+  cgma:{pose:'welcome',prop:'heart',label:'상인과 이웃을 잇는 에코디언'},
   cafe:{pose:'welcome',prop:'cup',label:'반갑게 맞이하는 에코디언'},
   mall:{pose:'guide',prop:'bag',label:'필요를 함께 찾는 에코디언'},
+  shop:{pose:'guide',prop:'bag',label:'좋은 선택을 돕는 에코디언'},
+  jadam:{pose:'guide',prop:'bag',label:'메뉴 선택을 돕는 에코디언'},
+  pizzamaru:{pose:'guide',prop:'bag',label:'메뉴 선택을 돕는 에코디언'},
+  delivery:{pose:'guide',prop:'route',label:'주문과 배달의 길을 잇는 에코디언'},
   business:{pose:'guide',prop:'chart',label:'일을 돕는 에코디언'},
-  biz:{pose:'guide',prop:'chart',label:'일을 돕는 에코디언'},
+  biz:{pose:'guide',prop:'chart',label:'사업의 다음 선택을 돕는 에코디언'},
   marketing:{pose:'idea',prop:'spark',label:'아이디어를 건네는 에코디언'},
   trade:{pose:'guide',prop:'route',label:'길을 잇는 에코디언'},
   invest:{pose:'guide',prop:'chart',label:'기회를 살피는 에코디언'},
+  money:{pose:'guide',prop:'chart',label:'재정 흐름을 살피는 에코디언'},
   books:{pose:'read',prop:'book',label:'책을 권하는 에코디언'},
   publishing:{pose:'read',prop:'book',label:'이야기를 만드는 에코디언'},
   author:{pose:'idea',prop:'spark',label:'창작을 돕는 에코디언'},
@@ -28,20 +37,46 @@ const PROFILES=Object.freeze({
   pay:{pose:'guide',prop:'shield',label:'안전한 결제를 돕는 에코디언'},
   insurance:{pose:'guide',prop:'shield',label:'안심을 돕는 에코디언'},
   live:{pose:'welcome',prop:'spark',label:'오늘의 이야기를 여는 에코디언'},
+  media:{pose:'welcome',prop:'spark',label:'이야기의 장면을 여는 에코디언'},
+  social:{pose:'welcome',prop:'heart',label:'사람과 소식을 잇는 에코디언'},
+  messenger:{pose:'welcome',prop:'heart',label:'대화를 이어 주는 에코디언'},
   developer:{pose:'guide',prop:'route',label:'연결 규격을 안내하는 에코디언'},
-  experience:{pose:'welcome',prop:'spark',label:'체험의 길을 여는 에코디언'}
+  experience:{pose:'welcome',prop:'spark',label:'체험의 길을 여는 에코디언'},
+  work:{pose:'guide',prop:'route',label:'집중할 일을 안내하는 에코디언'},
+  energy:{pose:'guide',prop:'chart',label:'에너지 흐름을 살피는 에코디언'},
+  mail:{pose:'guide',prop:'route',label:'소식을 정확히 이어 주는 에코디언'},
+  cloud:{pose:'guide',prop:'route',label:'자료와 작업을 이어 주는 에코디언'},
+  life:{pose:'welcome',prop:'heart',label:'삶의 질문 곁에 있는 에코디언'},
+  journal:{pose:'read',prop:'book',label:'기록과 성찰을 돕는 에코디언'},
+  space:{pose:'guide',prop:'route',label:'운영공간을 안내하는 에코디언'},
+  management:{pose:'guide',prop:'chart',label:'운영을 정리하는 에코디언'}
 });
 
 function serviceId(){return String(document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||location.hostname.split('.')[0]||'my').trim().toLowerCase();}
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||document.documentElement.dataset.ekodiUserSurface||'').trim().toLowerCase();}
 function mode(){return String(document.documentElement.dataset.ekodiCharacter||document.body?.dataset?.ekodiCharacter||'auto').trim().toLowerCase();}
+function context(){return String(document.documentElement.dataset.ekodiCharacterContext||document.body?.dataset?.ekodiCharacterContext||'').trim().toLowerCase();}
+function registry(){return window.EKODICharacterRegistry||null;}
+function profiles(){return registry()?.services||FALLBACK_PROFILES;}
 function isLanding(){
   const parts=location.pathname.split('/').filter(Boolean);
   if(location.hostname==='ekodi.kr'||location.hostname==='www.ekodi.kr')return parts.length<=1;
   return parts.length===0;
 }
-function profile(){return PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}
-function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding();}
+function profile(){return profiles()[serviceId()]||FALLBACK_PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}
+function experienceState(){
+  const requested=String(document.documentElement.dataset.ekodiCharacterState||document.body?.dataset?.ekodiCharacterState||'welcome').trim().toLowerCase();
+  const active=registry();
+  if(active?.experienceStates?.[requested])return requested;
+  if(active?.placements?.[requested])return active.placements[requested];
+  return 'calm';
+}
+function isRestrainedContext(){
+  const value=context();if(!value)return false;
+  const configured=registry()?.restraint?.minimize;
+  return Array.isArray(configured)?configured.includes(value):FALLBACK_RESTRAINT.has(value);
+}
+function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding()&&!isRestrainedContext();}
 function propSvg(prop){
   if(prop==='book')return '<g transform="translate(103 92)"><path d="M-24 0c12-5 20-3 24 2v26c-7-5-15-6-24-3Z"/><path d="M24 0C12-5 3-3 0 2v26c7-5 15-6 24-3Z"/></g>';
   if(prop==='cup')return '<g transform="translate(109 96)"><path d="M-18-7h28v25h-28Z"/><path d="M10-2h7c10 0 10 15 0 15h-7" fill="none"/></g>';
@@ -75,15 +110,40 @@ function mount(){
   if(!eligible()||!document.body)return null;
   const host=heroTarget();if(!host)return null;
   installStyle();host.classList.add('ekodi-main-ekodian-host');
-  const selected=profile();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected);host.append(node);
+  const selected=profile();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.dataset.ekodiCharacterState=experienceState();node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected);host.append(node);
   document.documentElement.dataset.ekodiUserCharacter=`v${VERSION}`;
-  window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,service:serviceId(),profile:profile().prop}}));
+  window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,registryVersion:registry()?.schemaVersion||0,service:serviceId(),profile:selected.prop,state:experienceState()}}));
   return node;
 }
-function refresh(){const existing=document.querySelector(`.ekodi-main-ekodian[${CHARACTER_ATTR}]`);if(!eligible()){existing?.remove();return null;}const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');if(existing&&existing.dataset.ekodiCharacterVariant!==variant){existing.remove();return mount();}return existing||mount();}
-window.EKODIUserCharacter=Object.freeze({version:VERSION,refresh,profile:()=>({...profile()})});
-const boot=()=>{setTimeout(refresh,0);setTimeout(refresh,600)};
+function refresh(force=false){
+  const existing=document.querySelector(`.ekodi-main-ekodian[${CHARACTER_ATTR}]`);
+  if(force)existing?.remove();
+  const current=force?null:existing;
+  if(!eligible()){current?.remove();return null;}
+  const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');
+  const state=experienceState();
+  if(current&&(current.dataset.ekodiCharacterVariant!==variant||current.dataset.ekodiCharacterState!==state)){current.remove();return mount();}
+  return current||mount();
+}
+function registryUrl(){
+  try{const src=document.currentScript?.src;if(src)return new URL(REGISTRY_ASSET,src).href;}catch{}
+  return `https://shell.ekodi.kr/${REGISTRY_ASSET}`;
+}
+function ensureRegistry(){
+  if(registry()||document.querySelector(`script[${REGISTRY_ATTR}]`))return;
+  const script=document.createElement('script');script.src=registryUrl();script.async=true;script.setAttribute(REGISTRY_ATTR,'');script.addEventListener('error',()=>{document.documentElement.dataset.ekodiCharacterRegistry='fallback';},{once:true});(document.head||document.documentElement).append(script);
+}
+
+window.EKODIUserCharacter=Object.freeze({
+  version:VERSION,
+  refresh,
+  profile:()=>({...profile()}),
+  state:()=>experienceState(),
+  registry:()=>registry()
+});
+const boot=()=>{ensureRegistry();setTimeout(refresh,0);setTimeout(refresh,600)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.addEventListener('ekodi:surface-change',refresh);
 window.addEventListener('ekodi:design-profile-ready',refresh);
+window.addEventListener('ekodi:character-registry-ready',()=>{document.documentElement.dataset.ekodiCharacterRegistry=`v${registry()?.schemaVersion||1}`;refresh(true);});
 })();
