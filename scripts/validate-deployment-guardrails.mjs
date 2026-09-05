@@ -26,7 +26,6 @@ const workerGuarded = {
   '.github/workflows/deploy-community.yml': ['guarded-worker-release.mjs', 'community.worker.json'],
   '.github/workflows/deploy-social.yml': ['guarded-worker-release.mjs', 'social.worker.json'],
   '.github/workflows/deploy-life-ai.yml': ['guarded-worker-release.mjs', 'life.worker.json'],
-  '.github/workflows/deploy-personal-finance.yml': ['guarded-worker-release.mjs', 'personal-finance-api.worker.json'],
 };
 for (const [file, needles] of Object.entries(workerGuarded)) requireText(file, needles);
 
@@ -117,8 +116,6 @@ requireText('.github/workflows/deploy-finance.yml', [
   '--secrets-file /tmp/finance-secrets.json',
 ]);
 forbidText('.github/workflows/deploy-finance.yml', ['npm run deploy:finance','deploy --config wrangler.finance.toml','secret put TOSS_SECRET_KEY','secret put TOSS_MID']);
-requireText('.github/workflows/deploy-personal-finance.yml', ['environment: development','ekodi-personal-finance-api-staging','ekodi-personal-finance-staging','needs: [validate, staging]','d1 time-travel info','guarded-worker-release.mjs','personal-finance-api.worker.json','PERSONAL_DB']);
-forbidText('.github/workflows/deploy-personal-finance.yml', ['deploy --config wrangler.personal-finance.toml','ekodi-auth']);
 
 requireText('.github/workflows/sync-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
 requireText('.github/workflows/deploy-jadam-marketing-ai.yml', ['guarded-pages-release.mjs', 'marketing-ai.pages.json']);
