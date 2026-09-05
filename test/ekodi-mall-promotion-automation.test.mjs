@@ -62,6 +62,8 @@ test('growth entry preserves recovery logic while publishing scheduler owns the 
   assert.match(entry,/mallSalesIntelligence/);
   assert.match(entry,/mallPromotionAutomation/);
   assert.match(entry,/scheduled\(_event, env, ctx\)/);
+  assert.match(entry,/new Headers\(sourceHeaders \|\| \{\}\)/);
+  assert.match(entry,/baseResponse\.status, baseResponse\.headers/);
   assert.match(wrangler,/main = "marketing-growth-entry.js"/);
   assert.doesNotMatch(wrangler,/crons\s*=/);
   assert.match(publishConfig,/crons = \["\* \* \* \* \*"\]/);

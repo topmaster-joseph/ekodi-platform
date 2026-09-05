@@ -2,8 +2,12 @@ import growthWorker from './marketing-growth-worker.js';
 import { getMallPromotionStatus, handleMallPromotionRequest, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {status, headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+function json(data, status = 200, sourceHeaders = undefined) {
+  const headers = new Headers(sourceHeaders || {});
+  headers.set('content-type','application/json; charset=utf-8');
+  headers.set('cache-control','no-store');
+  headers.set('x-content-type-options','nosniff');
+  return new Response(JSON.stringify(data), {status, headers});
 }
 
 export default {
@@ -19,7 +23,7 @@ export default {
         getMallPromotionStatus(env),
         getMallSalesIntelligenceStatus(env),
       ]);
-      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status);
+      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status, baseResponse.headers);
     }
     return growthWorker.fetch(request, env, ctx);
   },
