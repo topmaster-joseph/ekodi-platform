@@ -2,6 +2,7 @@ import { listPublicOffers, upsertOffer } from './offer-registry.js';
 import { normalizeGtin } from './product-identity.js';
 
 export const MULTI_AFFILIATE_DISCLOSURE = '에코디몰에는 에코디 및 제휴 판매처의 상품이 함께 표시됩니다. 제휴 링크를 통한 구매 시 에코디가 수수료를 받을 수 있으며, 상품별 판매처는 구매 전에 표시됩니다.';
+const FEED_PRICE_FRESH_MS = 24 * 60 * 60 * 1000;
 
 function cleanText(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
@@ -31,6 +32,15 @@ function metadataOf(offer) {
   return metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : {};
 }
 
+function offerFreshness(metadata, updatedAt) {
+  const sourceType = cleanText(metadata?.sourceType, 40);
+  const verifiedAt = cleanText(metadata?.syncedAt || updatedAt, 80);
+  if (sourceType !== 'json_feed_v1') return { status: 'current', verifiedAt };
+  const timestamp = Date.parse(verifiedAt);
+  const fresh = Number.isFinite(timestamp) && Date.now() - timestamp <= FEED_PRICE_FRESH_MS;
+  return { status: fresh ? 'fresh' : 'stale', verifiedAt };
+}
+
 export async function ensureAffiliateMarketplaceSchema(db) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_link_clicks (
@@ -44,26 +54,29 @@ export async function ensureAffiliateMarketplaceSchema(db) {
 export async function listMarketplaceProducts(request, env, limit = 100) {
   if (!env.DB?.prepare) return [];
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(Number(limit) || 100)));
-  const offers = await listPublicOffers(env.DB, { offerType: 'product', limit: safeLimit });
+  const offers = await listPublicOffers(env.DB, { offerType: 'product', excludeSourceProvider: 'coupang_partners', limit: safeLimit });
   const baseUrl = new URL(request.url);
-  return offers.filter(offer => offer.sourceProvider !== 'coupang_partners').map((offer, index) => {
+  return offers.map((offer, index) => {
     const metadata = metadataOf(offer);
     const linkId = Number(metadata.linkId || 0);
     if (!linkId) return null;
     const providerName = cleanText(metadata.providerName, 120) || cleanText(offer.sourceProvider, 120) || '제휴 판매처';
     const clickUrl = new URL(`/api/affiliate/public/link/${linkId}`, baseUrl).toString();
+    const freshness = offerFreshness(metadata, offer.updatedAt);
     return {
       id: `affiliate-${linkId}`,
       productId: cleanText(metadata.merchantSourceId, 160) || offer.sourceId,
       merchantSourceId: cleanText(metadata.merchantSourceId, 160),
       productName: offer.title,
-      priceKrw: Number(offer.priceAmount || 0),
+      priceKrw: freshness.status === 'stale' ? 0 : Number(offer.priceAmount || 0),
+      priceFreshness: freshness.status,
+      priceVerifiedAt: freshness.verifiedAt || null,
       imageUrl: httpsUrl(offer.imageUrl, { optional: true }) || '',
       clickUrl,
       category: offer.category || '추천',
       isRocket: false,
       isFreeShipping: Boolean(metadata.isFreeShipping),
-      selectedAt: offer.updatedAt || null,
+      selectedAt: freshness.verifiedAt || offer.updatedAt || null,
       providerKey: offer.sourceProvider,
       providerName,
       buyLabel: `${providerName}에서 구매`,
@@ -100,7 +113,7 @@ export async function publicMarketplaceClick(request, env, url) {
   return new Response(null, { status: 302, headers });
 }
 
-export async function registerMarketplaceProduct(env, input = {}, { createdBy = null } = {}) {
+export async function registerMarketplaceProduct(env, input = {}, { createdBy = null, connectionMode = 'manual', stableSourceId = '' } = {}) {
   if (!env.DB?.prepare) return { ok: false, error: '제휴상품 데이터베이스 연결이 필요합니다.' };
   const providerKey = safeKey(input.providerKey);
   const providerName = cleanText(input.providerName, 120);
@@ -124,6 +137,9 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
   const channel = cleanText(input.channel, 120) || 'EKODI Mall';
   const campaignName = cleanText(input.campaignName, 160);
   const merchantSourceId = cleanText(input.sourceId, 160);
+  const normalizedConnectionMode = connectionMode === 'json_feed_v1' ? 'json_feed_v1' : 'manual';
+  const stableOfferSourceId = cleanText(stableSourceId, 160);
+  if (normalizedConnectionMode === 'json_feed_v1' && !stableOfferSourceId) return { ok: false, error: 'Feed products require a stable source id.' };
   const productIdentityKey = cleanText(input.productIdentityKey, 160);
   const rawGtin = cleanText(input.gtin || input.barcode, 32);
   const gtin = normalizeGtin(rawGtin);
@@ -133,36 +149,55 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
   const summary = cleanText(input.summary, 500) || `${providerName} · 에코디몰 제휴상품`;
 
   await env.DB.prepare(`INSERT INTO affiliate_providers (provider_key, display_name, provider_kind, connection_mode, enabled, created_at, updated_at)
-    VALUES (?, ?, 'affiliate', 'manual', 1, ?, ?)
-    ON CONFLICT(provider_key) DO UPDATE SET display_name = excluded.display_name, enabled = 1, updated_at = excluded.updated_at`)
-    .bind(providerKey, providerName, now, now).run();
+    VALUES (?, ?, 'affiliate', ?, 1, ?, ?)
+    ON CONFLICT(provider_key) DO UPDATE SET display_name = excluded.display_name, connection_mode = excluded.connection_mode, enabled = 1, updated_at = excluded.updated_at`)
+    .bind(providerKey, providerName, normalizedConnectionMode, now, now).run();
+  const accountStatus = normalizedConnectionMode === 'json_feed_v1' ? 'feed_ready' : 'manual_ready';
   await env.DB.prepare(`INSERT INTO affiliate_accounts (id, provider_key, owner_type, owner_key, display_name, account_label, status, connection_mode, default_channel, disclosure_text, enabled, created_at, updated_at)
-    VALUES (?, ?, 'internal', 'ekodibiz', ?, 'EKODIBIZ', 'manual_ready', 'manual', ?, ?, 1, ?, ?)
+    VALUES (?, ?, 'internal', 'ekodibiz', ?, 'EKODIBIZ', ?, ?, ?, ?, 1, ?, ?)
     ON CONFLICT(id) DO UPDATE SET provider_key = excluded.provider_key, display_name = excluded.display_name,
-      default_channel = excluded.default_channel, disclosure_text = excluded.disclosure_text, enabled = 1, updated_at = excluded.updated_at`)
-    .bind(accountId, providerKey, `에코디비즈 ${providerName}`, channel, disclosureText, now, now).run();
+      connection_mode = excluded.connection_mode, default_channel = excluded.default_channel, disclosure_text = excluded.disclosure_text, enabled = 1, updated_at = excluded.updated_at`)
+    .bind(accountId, providerKey, `에코디비즈 ${providerName}`, accountStatus, normalizedConnectionMode, channel, disclosureText, now, now).run();
 
-  const inserted = await env.DB.prepare(`INSERT INTO affiliate_links (account_id, tenant_slug, product_name, destination_url, affiliate_url, channel, campaign_name, status, created_by, created_at, updated_at)
-    VALUES (?, NULL, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`)
-    .bind(accountId, productName, destinationUrl || '', affiliateUrl, channel, campaignName, createdBy, now, now).run();
-  const linkId = Number(inserted.meta?.last_row_id || 0);
-  if (!linkId) return { ok: false, error: '제휴상품 링크를 등록하지 못했습니다.' };
+  const offerSourceId = stableOfferSourceId ? `feed:${stableOfferSourceId}` : '';
+  let linkId = 0;
+  let created = true;
+  if (offerSourceId) {
+    const existingOffer = await env.DB.prepare(`SELECT metadata_json FROM ekodi_offers WHERE offer_type = 'product' AND source_provider = ? AND source_id = ? LIMIT 1`)
+      .bind(providerKey, offerSourceId).first().catch(() => null);
+    try { linkId = Number(JSON.parse(existingOffer?.metadata_json || '{}').linkId || 0); } catch { linkId = 0; }
+    if (linkId) {
+      const existingLink = await env.DB.prepare('SELECT id FROM affiliate_links WHERE id = ? LIMIT 1').bind(linkId).first().catch(() => null);
+      if (!existingLink) linkId = 0;
+    }
+  }
+  if (linkId) {
+    created = false;
+    await env.DB.prepare(`UPDATE affiliate_links SET product_name = ?, destination_url = ?, affiliate_url = ?, channel = ?, campaign_name = ?, status = 'active', updated_at = ? WHERE id = ?`)
+      .bind(productName, destinationUrl || '', affiliateUrl, channel, campaignName, now, linkId).run();
+  } else {
+    const inserted = await env.DB.prepare(`INSERT INTO affiliate_links (account_id, tenant_slug, product_name, destination_url, affiliate_url, channel, campaign_name, status, created_by, created_at, updated_at)
+      VALUES (?, NULL, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`)
+      .bind(accountId, productName, destinationUrl || '', affiliateUrl, channel, campaignName, createdBy, now, now).run();
+    linkId = Number(inserted.meta?.last_row_id || 0);
+  }
+  if (!linkId) return { ok: false, error: 'Unable to persist affiliate product link.' };
 
   const offer = await upsertOffer(env.DB, {
     offerType: 'product', ownerType: 'business', ownerKey: 'ekodibiz', sourceProvider: providerKey,
-    sourceId: `link:${linkId}`, title: productName, summary, category, priceAmount: priceKrw,
+    sourceId: offerSourceId || `link:${linkId}`, title: productName, summary, category, priceAmount: priceKrw,
     canonicalUrl: `https://api.ekodi.kr/api/affiliate/public/link/${linkId}`, imageUrl: imageUrl || '',
     actionKind: 'external_purchase', visibility: 'public', status: 'active',
     discoveryKeywords: [providerName, category, productName, '에코디몰'],
-    metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, productIdentityKey, gtin, brand, model, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName },
+    metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, productIdentityKey, gtin, brand, model, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName, sourceType: normalizedConnectionMode, syncedAt: normalizedConnectionMode === 'json_feed_v1' ? now : '' },
   });
-  return { ok: true, linkId, accountId, providerKey, providerName, productIdentityKey, gtin, brand, model, offer };
+  return { ok: true, linkId, accountId, providerKey, providerName, productIdentityKey, gtin, brand, model, connectionMode: normalizedConnectionMode, stableSourceId: stableOfferSourceId, created, offer };
 }
 
 export async function archiveMarketplaceOffer(db, linkId) {
   const row = await db.prepare(`SELECT l.id, a.provider_key FROM affiliate_links l JOIN affiliate_accounts a ON a.id = l.account_id WHERE l.id = ? LIMIT 1`).bind(Number(linkId)).first();
   if (!row) return false;
-  await db.prepare(`UPDATE ekodi_offers SET status = 'inactive', updated_at = ? WHERE offer_type = 'product' AND source_provider = ? AND source_id = ?`)
-    .bind(new Date().toISOString(), row.provider_key, `link:${row.id}`).run().catch(() => {});
+  await db.prepare(`UPDATE ekodi_offers SET status = 'inactive', updated_at = ? WHERE offer_type = 'product' AND source_provider = ? AND (source_id = ? OR metadata_json LIKE ?)`)
+    .bind(new Date().toISOString(), row.provider_key, `link:${row.id}`, `%"linkId":${row.id},%`).run().catch(() => {});
   return true;
 }

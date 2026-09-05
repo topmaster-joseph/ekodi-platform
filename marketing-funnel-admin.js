@@ -144,6 +144,7 @@
           <div class="integration-provider-brand"><span class="integration-provider-logo">＋</span><div><small>MULTI AFFILIATE MARKETPLACE</small><strong id="multiAffiliateTitle">다른 제휴 판매처 상품 연결</strong><p id="affiliateProviderSummary">등록된 제휴처를 확인하는 중입니다.</p></div></div>
           <span class="integration-status connected">공통 커넥터</span>
         </div>
+        <div id="affiliateFeedProviders" class="integration-capabilities" aria-live="polite"><span>서버 Feed 연결 상태를 확인하는 중입니다.</span></div>
         <form id="affiliateExternalProductForm" class="integration-account-form">
           <div class="integration-form-heading"><div><strong>제휴상품 등록</strong><p>제휴처 API가 없어도 구매 링크만 있으면 에코디몰에 즉시 연결할 수 있습니다.</p></div><span class="integration-mode">MANUAL</span></div>
           <div class="integration-form-grid">
@@ -178,6 +179,7 @@
 
     const accountForm = document.querySelector('#affiliateAccountForm');
     const externalProductForm = document.querySelector('#affiliateExternalProductForm');
+    const feedProviders = document.querySelector('#affiliateFeedProviders');
     const message = document.querySelector('#affiliateMessage');
     const trackingMessage = document.querySelector('#mallTrackingMessage');
     const runButton = document.querySelector('#affiliateAutomationRun');
@@ -226,6 +228,34 @@
       if (trackingMessage) trackingMessage.textContent = `최근 30일 실제 원장 ${rows.length.toLocaleString('ko-KR')}건 · 테스트 제외 · 마지막 확인 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
     }
 
+    function renderProviderFeeds(providers = []) {
+      if (!feedProviders) return;
+      feedProviders.replaceChildren();
+      const feeds = providers.filter(item => item.feedConfigured);
+      if (!feeds.length) {
+        const empty = document.createElement('span');
+        empty.textContent = '자동 Feed 커넥터는 준비되어 있습니다. 서버에 제휴처 Feed 설정이 추가되면 여기에 연결 상태가 표시됩니다.';
+        feedProviders.append(empty);
+        return;
+      }
+      for (const provider of feeds) {
+        const row = document.createElement('div');
+        row.className = 'integration-form-actions';
+        const label = document.createElement('span');
+        const syncState = provider.lastSyncedAt ? formatRunTime(provider.lastSyncedAt) : '아직 동기화 없음';
+        const readiness = provider.secretRequired && !provider.secretConfigured ? '비밀키 필요' : provider.status;
+        label.textContent = `${provider.displayName || provider.providerKey} · ${readiness} · ${provider.endpointHost || 'Feed'} · ${syncState}`;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'secondary compact';
+        button.dataset.providerSync = provider.providerKey;
+        button.textContent = 'Feed 동기화';
+        button.disabled = !provider.enabled || (provider.secretRequired && !provider.secretConfigured);
+        row.append(label, button);
+        feedProviders.append(row);
+      }
+    }
+
     function renderOverview(data) {
       const s = data.summary || {};
       const automation = data.automation || {};
@@ -266,8 +296,9 @@
     }
 
     async function loadOverview() {
-      const [affiliate, events] = await Promise.all([api('/api/affiliate/overview'), mallEvents()]);
+      const [affiliate, providerData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), mallEvents()]);
       renderOverview(affiliate);
+      renderProviderFeeds(providerData.providers || []);
       renderMallEvents(events);
       return affiliate;
     }
@@ -330,6 +361,27 @@
         setMessage(error.message, true);
       } finally {
         submit.disabled = false;
+      }
+    });
+
+    feedProviders?.addEventListener('click', async event => {
+      const button = event.target.closest('[data-provider-sync]');
+      if (!button || button.disabled) return;
+      const providerKey = String(button.dataset.providerSync || '');
+      if (!/^[a-z0-9_-]+$/.test(providerKey)) return;
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = '동기화 중…';
+      setMessage('');
+      try {
+        const result = await api(`/api/affiliate/providers/${encodeURIComponent(providerKey)}/sync`, { method: 'POST', body: '{}' });
+        setMessage(`${result.providerName || providerKey} Feed 동기화 완료 · ${Number(result.synced || 0).toLocaleString('ko-KR')}개 반영`);
+        await loadOverview();
+      } catch (error) {
+        setMessage(error.message, true);
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
       }
     });
 

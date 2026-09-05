@@ -2,6 +2,7 @@ import authWorker from './auth-worker.js';
 import { getAffiliateAutomationStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation } from './coupang-partners-automation.js';
 import { archiveMarketplaceOffer, listMarketplaceProducts, MULTI_AFFILIATE_DISCLOSURE, publicMarketplaceClick, registerMarketplaceProduct } from './affiliate-marketplace.js';
 import { groupProductOffers } from './product-identity.js';
+import { listProviderFeedDescriptors, mixProductsByProvider, syncProviderFeed } from './affiliate-provider-feed.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
@@ -152,7 +153,7 @@ async function publicProducts(request, env, url) {
   const rows = await readPublicRows(env, limit);
   const coupangProducts = rows.map(row => publicProductView(request, row));
   const marketplaceProducts = await listMarketplaceProducts(request, env, limit).catch(() => []);
-  const products = [...coupangProducts, ...marketplaceProducts].slice(0, limit);
+  const products = mixProductsByProvider([...coupangProducts, ...marketplaceProducts], limit);
   const automationStatus = products.length ? 'ready' : (automation.status || 'warming');
   const providers = [...new Map(products.map(item => [item.providerKey || 'unknown', item.providerName || item.providerKey || '제휴 판매처'])).entries()]
     .map(([providerKey, providerName]) => ({ providerKey, providerName }));
@@ -240,6 +241,7 @@ async function overview(env) {
   return {
     generatedAt: new Date().toISOString(),
     accounts: accounts.results.map(accountView),
+    providerFeeds: listProviderFeedDescriptors(env),
     automation,
     summary: {
       providers: new Set(accounts.results.map(row => row.provider_key)).size,
@@ -259,6 +261,7 @@ async function overview(env) {
       offerRegistryAdapter: true,
       multiProviderCatalog: true,
       productIdentityCatalog: true,
+      providerFeedSync: true,
       manualMarketplaceProductRegistration: true,
       automaticDeepLink: true,
       automaticClickTracking: true,
@@ -408,9 +411,30 @@ export async function handleAffiliateRequest(request, env) {
     await audit(env, auth.session, 'affiliate.marketplace.product.create', `${result.providerKey}:${result.linkId}`, body.productName || '');
     return json(result, 201, auth.response.headers);
   }
+  const providerSync = path.match(/^\/api\/affiliate\/providers\/([a-z0-9_-]+)\/sync$/);
+  if (providerSync && request.method === 'POST') {
+    const result = await syncProviderFeed(env, providerSync[1]);
+    await audit(env, auth.session, 'affiliate.provider.feed.sync', providerSync[1], JSON.stringify({ status: result.status, received: result.received || 0, valid: result.valid || 0, synced: result.synced || 0 }));
+    return json(result, result.ok ? 200 : 409, auth.response.headers);
+  }
   if (request.method === 'GET' && path === `${PREFIX}/providers`) {
-    const rows = await env.DB.prepare('SELECT * FROM affiliate_providers ORDER BY provider_key').all();
-    return json({ providers: rows.results.map(row => ({ providerKey: row.provider_key, displayName: row.display_name, providerKind: row.provider_kind, connectionMode: row.connection_mode, enabled: Boolean(row.enabled) })) }, 200, auth.response.headers);
+    const [providerRows, accountRows] = await Promise.all([
+      env.DB.prepare('SELECT * FROM affiliate_providers ORDER BY provider_key').all(),
+      env.DB.prepare('SELECT * FROM affiliate_accounts ORDER BY provider_key, id').all(),
+    ]);
+    const feeds = listProviderFeedDescriptors(env);
+    const providers = new Map();
+    for (const row of providerRows.results || []) providers.set(row.provider_key, { providerKey: row.provider_key, displayName: row.display_name, providerKind: row.provider_kind, connectionMode: row.connection_mode, enabled: Boolean(row.enabled) });
+    const accountByProvider = new Map((accountRows.results || []).map(row => [row.provider_key, row]));
+    for (const feed of feeds) {
+      const current = providers.get(feed.providerKey) || { providerKey: feed.providerKey, displayName: feed.providerName, providerKind: 'affiliate', enabled: feed.enabled };
+      providers.set(feed.providerKey, { ...current, displayName: feed.providerName, connectionMode: feed.connectionMode, enabled: feed.enabled });
+    }
+    return json({ providers: [...providers.values()].map(provider => {
+      const account = accountByProvider.get(provider.providerKey);
+      const feed = feeds.find(item => item.providerKey === provider.providerKey);
+      return { ...provider, status: account?.status || (feed ? (feed.secretConfigured ? 'configured' : 'secret_required') : 'registered'), lastSyncedAt: account?.last_synced_at || null, lastError: account?.last_error || '', feedConfigured: Boolean(feed), endpointHost: feed?.endpointHost || '', secretRequired: Boolean(feed?.secretRequired), secretConfigured: feed ? Boolean(feed.secretConfigured) : null };
+    }) }, 200, auth.response.headers);
   }
   const accountResponse = await handleAccounts(request, env, auth, path);
   if (accountResponse) return accountResponse;
