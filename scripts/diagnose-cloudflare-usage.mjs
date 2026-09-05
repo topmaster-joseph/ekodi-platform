@@ -20,6 +20,7 @@ function windowUtc() {
   const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
   return { start:start.toISOString(), end:end.toISOString() };
 }
+function recentWindowUtc(minutes=20){const end=new Date();const start=new Date(end.getTime()-minutes*60*1000);return {start:start.toISOString(),end:end.toISOString(),minutes};}
 function pct(n, d) { return d > 0 ? Math.round((n / d) * 1000) / 10 : 0; }
 function safeRatio(n, d) { return d > 0 ? Math.round((n / d) * 100) / 100 : 0; }
 function severity(value, warn, critical) {
@@ -260,6 +261,14 @@ function markdown(report) {
   for (const row of report.accounts) {
     const s = row.signals;
     lines.push(`| ${row.label} | ${row.workers.requests} | ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.percent}%` : 'N/A'} | ${icon(s.loopRetry.severity)} ${s.loopRetry.maxSubrequestRatio}x | ${icon(s.cache.severity)} ${s.cache.available ? `${s.cache.pressurePercent}%` : 'N/A'} | ${icon(s.cronHealth.severity)} ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthPercent}%` : 'N/A'} | ${icon(s.boundary.severity)} internal ${s.boundary.available ? `${s.boundary.internalPercent}%` : 'N/A'} |`);
+  }
+  lines.push('', '## Recent worker window', `Window: ${report.recentWindow.start} -> ${report.recentWindow.end}`);
+  for(const row of report.recentWorkers){
+    lines.push('', `### ${row.label}`);
+    for(const name of ['ekodi-shell','shy-thunder-39a4','ekodi-marketing-publishing-api','ekodi-auth-api']){
+      const item=row.scripts.find(entry=>entry.script===name);
+      if(item)lines.push(`- ${item.script}: ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors`);
+    }
   }
   lines.push('', '## Five checks');
   for (const row of report.accounts) {
