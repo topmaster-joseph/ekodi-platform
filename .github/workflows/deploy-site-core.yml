@@ -71,6 +71,7 @@ on:
       - 'author-billing-admin.js'
       - 'author-billing-admin.css'
       - 'ai-ops-admin.js'
+      - 'user-ai-tier-panel.js'
       - 'ai-ops-admin.css'
       - 'devotional-admin.js'
       - 'devotional-admin.css'
