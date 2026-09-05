@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(12);
 
 insert into auth.users(id,email) values
   ('11111111-1111-4111-8111-111111111111','owner@invalid.test'),
@@ -40,6 +40,8 @@ select is((public.store_operating_space_snapshot('jadam')#>>'{summary,connected_
 select is((public.store_operating_space_snapshot('jadam')#>>'{menu,0,base_price}')::integer,19000,'canonical menu keeps the verified EKODI base price');
 select is((public.store_operating_space_snapshot('jadam')#>>'{menu,0,listings,0,price}')::integer,20000,'channel listing preserves the platform price separately');
 select is(public.business_os_snapshot('pizzamaru')#>>'{workspace,storeSlug}','pizzamaru-mokpo-univ','Business OS resolves PizzaMaru through the canonical store route');
+select is(public.store_admin_route_profile('jadam')->>'name','자담치킨 목포대점','public-safe route profile exposes only the store display identity');
+select is(public.store_admin_route_profile('not-a-store'),null::jsonb,'unregistered slug does not become a store admin route');
 
 reset role;
 select set_config('request.jwt.claim.sub','99999999-9999-4999-8999-999999999999',true);

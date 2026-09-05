@@ -12,6 +12,7 @@ on:
       - 'supabase/functions/workspace-api/**'
       - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
       - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
+      - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
       - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
@@ -28,6 +29,7 @@ on:
       - 'supabase/functions/workspace-api/**'
       - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
       - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
+      - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
       - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
@@ -73,6 +75,8 @@ jobs:
           grep -Fq '/spaces/resolve' space/app.js
           grep -Fq "routeModel:'/{slug}'" space-worker.js
           test -f deploy/manifests/space.worker.json
+          test -f supabase/migrations/20260906006000_store_admin_routing.sql
+          grep -Fq 'store_admin_route_profile' supabase/migrations/20260906006000_store_admin_routing.sql
 
   staging:
     if: github.event_name == 'pull_request'
