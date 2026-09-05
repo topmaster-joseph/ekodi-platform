@@ -15,6 +15,7 @@ if (!mapJs.includes('EKODISystemMap')) throw new Error('System Map runtime marke
 if (!mapJs.includes("fetch('/platform-boundaries.json'")) throw new Error('System Map must read platform-boundaries.json');
 if (!mapJs.includes("fetch('/monitor-status.json'")) throw new Error('System Map must read monitor-status.json');
 if (!mapJs.includes("fetch('/ecosystem-services.json'")) throw new Error('System Map must read ecosystem-services.json');
+if (!mapJs.includes("fetch('/constitution-policy.json'")) throw new Error('System Map must read constitution-policy.json');
 if (mapJs.includes('setInterval(')) throw new Error('System Map must stay event-driven');
 
 const storageAwareMapJs = mapJs.replace(
@@ -28,6 +29,7 @@ await Promise.all([
   writeFile(`${output}system-health-admin.css`, `${healthCss}\n${mapCss}\n`),
   cp(`${root}platform-boundaries.json`, `${output}platform-boundaries.json`),
   cp(`${root}config/ecosystem-services.json`, `${output}ecosystem-services.json`),
+  cp(`${root}governance/constitution/constitution.json`, `${output}constitution-policy.json`),
   cp(`${root}storage-admin.js`, `${output}storage-admin.js`),
   cp(`${root}storage-admin.css`, `${output}storage-admin.css`),
 ]);
