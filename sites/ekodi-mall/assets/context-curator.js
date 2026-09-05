@@ -111,7 +111,8 @@
     if (offer.marketCountry && offer.marketCountry !== 'KR') badges.push(offer.marketCountry);
     if (offer.isRocket) badges.push('빠른배송');
     if (offer.isFreeShipping) badges.push('무료배송');
-    if (offer.priceFreshness === 'stale' || (!offer.priceKrw && offer.sourcePriceCurrency && offer.sourcePriceCurrency !== 'KRW')) badges.push('환율·최신가 확인');
+    if (offer.priceFreshness === 'stale') badges.push('판매처 최신가 확인');
+    if (!offer.priceKrw && offer.sourcePriceCurrency && offer.sourcePriceCurrency !== 'KRW') badges.push('환율·최신가 확인');
     return badges;
   }
   let offerDialog = null;
@@ -135,7 +136,7 @@
     const whySection = text('section', 'context-detail-why', ''); whySection.append(text('h3', '', '왜 이 상품인가'));
     const why = text('ul', 'context-card-reasons', ''); reasons(product, context).forEach((reason) => why.append(text('li', '', reason))); whySection.append(why);
     const offerSection = text('section', 'context-detail-offers', '');
-    offerSection.append(text('h3', '', '어디서 살까요?'), text('p', 'context-detail-note', product.offers.length > 1 ? '제휴가 완료된 판매처 안에서 가격·배송·사용자 적합성을 비교합니다. 제휴 수수료율은 추천순위에 반영하지 않습니다.' : '현재 제휴 완료 및 추천 허용된 판매처는 1곳입니다. 다른 판매처도 제휴가 완료되면 함께 비교됩니다.'));
+    offerSection.append(text('h3', '', '어디서 살까요?'), text('p', 'context-detail-note', product.offers.length > 1 ? '제휴가 완료된 판매처 안에서 가격·배송·사용자 적합성을 비교합니다. 추천순위와 제휴수수료는 분리합니다.' : '현재 제휴 완료 및 추천 허용된 판매처는 1곳입니다. 다른 판매처도 제휴가 완료되면 함께 비교됩니다.'));
     const list = text('div', 'context-detail-offer-list', '');
     product.offers.forEach((offer) => {
       const row = text('article', 'context-detail-offer', ''); const copy = text('div', 'context-detail-offer-copy', '');
