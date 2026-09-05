@@ -7,8 +7,15 @@
   "changeClass": "C2",
   "taskId": "ekodi-8gen-sustainable-20260905",
   "issue": 1002,
+  "pullRequest": 1004,
   "summary": "Adopt Generation 8 Living Digital Commons as the EKODI north star while freezing the current deployment footprint as a sustainable convergence baseline and introducing evidence- and economics-based scale gates.",
   "approvalBasis": "The platform owner explicitly requested that EKODI set the final target to Generation 8 and reform the current state for sustainability, with capacity and performance expansion deferred until revenue or other justified operational requirements support it.",
+  "integrationOrder": {
+    "approvedWinner": 1004,
+    "overlappingPullRequest": 893,
+    "reason": "PR 1004 is based on the current main architecture and advances the active constitution to v1.7.0. PR 893 was authored against an earlier v1.6.0 constitution baseline and must refresh after PR 1004 so Portable Cloud First can be preserved under the sustainable evolution constitution without regressing newer governance.",
+    "followUp": "Refresh or rebase PR 893 after PR 1004 is centrally merged, then revalidate cloud portability against Constitution v1.7.0 and the sustainable boundary/cost gates."
+  },
   "currentState": {
     "generation": 2,
     "name": "Integrated Platform",
