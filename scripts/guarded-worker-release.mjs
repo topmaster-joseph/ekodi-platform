@@ -187,6 +187,10 @@ function responseDiagnostic(response, body) {
   return `route=${route} mitigated=${mitigated} content-type=${contentType} body=${JSON.stringify(preview)}`;
 }
 
+const STANDARD_VERIFY_ATTEMPTS = 18;
+const PROMOTION_VERIFY_ATTEMPTS = 36;
+const VERIFY_RETRY_DELAY_MS = 3500;
+
 async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
   if (phase === 'rollback' && request.rollbackVerify === false) {
     console.log(`↩️ rollback verification skipped for candidate-only request: ${request.url}`);
@@ -204,7 +208,8 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
     headers['Cloudflare-Workers-Version-Overrides'] = `${worker.name}="${overrideVersion}"`;
   }
   let last = '';
-  for (let attemptIndex = 1; attemptIndex <= 18; attemptIndex += 1) {
+  const attemptLimit = phase === 'production' && !overrideVersion ? PROMOTION_VERIFY_ATTEMPTS : STANDARD_VERIFY_ATTEMPTS;
+  for (let attemptIndex = 1; attemptIndex <= attemptLimit; attemptIndex += 1) {
     try {
       const response = await fetch(request.url, {
         redirect: request.redirect || 'manual',
@@ -229,7 +234,10 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
       return;
     } catch (error) {
       last = error?.message || String(error);
-      if (attemptIndex < 18) await new Promise(resolve => setTimeout(resolve, 3500));
+      if (attemptIndex === STANDARD_VERIFY_ATTEMPTS && attemptLimit > STANDARD_VERIFY_ATTEMPTS) {
+        console.log(`⏳ Production route has not stabilized yet; extending verification before rollback: ${request.url}`);
+      }
+      if (attemptIndex < attemptLimit) await new Promise(resolve => setTimeout(resolve, VERIFY_RETRY_DELAY_MS));
     }
   }
   throw new Error(`${request.url} verification failed: ${last}`);
@@ -295,7 +303,7 @@ try {
 
   console.log('Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.');
   deployVersions([`${candidateVersion}@100%`], `EKODI guarded promote ${tag}`);
-  await verifyAll('');
+  await verifyAll('', 'production');
 
   appendSummary([
     `## EKODI guarded Worker release: ${worker.name}`,
