@@ -103,7 +103,7 @@ jobs:
           if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/management-access.headers; then
             remote_protected=1
             echo 'Management staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
-            npx --yes wrangler@4.119.0 dev --config wrangler.management.staging.toml --local --port 8794 >/tmp/management-local.log 2>&1 &
+            npx --yes wrangler@4.129.0 dev --config wrangler.management.staging.toml --local --port 8794 >/tmp/management-local.log 2>&1 &
             runtime_pid=$!
             verify_base='http://127.0.0.1:8794'
             ready=0
