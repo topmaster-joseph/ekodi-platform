@@ -27,7 +27,9 @@ const PROFILES=Object.freeze({
   support:{pose:'welcome',prop:'heart',label:'기회를 연결하는 에코디언'},
   pay:{pose:'guide',prop:'shield',label:'안전한 결제를 돕는 에코디언'},
   insurance:{pose:'guide',prop:'shield',label:'안심을 돕는 에코디언'},
-  live:{pose:'welcome',prop:'spark',label:'오늘의 이야기를 여는 에코디언'}
+  live:{pose:'welcome',prop:'spark',label:'오늘의 이야기를 여는 에코디언'},
+  developer:{pose:'guide',prop:'route',label:'연결 규격을 안내하는 에코디언'},
+  experience:{pose:'welcome',prop:'spark',label:'체험의 길을 여는 에코디언'}
 });
 
 function serviceId(){return String(document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||location.hostname.split('.')[0]||'my').trim().toLowerCase();}

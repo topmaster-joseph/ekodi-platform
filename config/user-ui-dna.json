@@ -33,7 +33,9 @@
     "my": {"family":"personal-constellation","mood":"personal, calm, choice-led","palette":"night blue / soft cyan / warm white","type":"spacious modern sans","geometry":"personal activity lanes and modular home cards","density":"medium"},
     "mail": {"family":"correspondence-desk","mood":"quiet, focused, dependable","palette":"ink / parchment / clear blue","type":"neutral reading sans","geometry":"message rows, clean dividers, restrained panels","density":"high"},
     "live": {"family":"live-stage","mood":"immediate, human, broadcast-ready","palette":"charcoal / luminous white / signal coral","type":"bold display sans + compact metadata","geometry":"stage frames, live rails, audience strips","density":"medium"},
-    "cloud": {"family":"cloud-library","mood":"ordered, durable, collaborative","palette":"cloud white / steel blue / deep ink","type":"utility sans","geometry":"file shelves, workspace tiles, breadcrumb rails","density":"medium-high"}
+    "cloud": {"family":"cloud-library","mood":"ordered, durable, collaborative","palette":"cloud white / steel blue / deep ink","type":"utility sans","geometry":"file shelves, workspace tiles, breadcrumb rails","density":"medium-high"},
+    "developer": {"family":"connection-workbench","mood":"precise, open, standards-led","palette":"night ink / mint signal / clear blue","type":"technical sans + mono accents","geometry":"contract rails, code/data panels, restrained guide character","density":"medium-high","rule":"character guides orientation only; code, schema and validation remain visually primary"},
+    "experience": {"family":"guided-portal","mood":"immersive, welcoming, exploratory","palette":"deep night / cyan glow / violet portal / warm signal","type":"spacious display sans","geometry":"portal frames, journey rails, immersive rooms, welcoming guide character","density":"medium","rule":"synthetic experience first; character welcomes and guides without implying production data or autonomous authority"}
   },
   "aliases": {
     "mission": {"target":"community","rule":"legacy naming/route only; do not create a second visual family"}

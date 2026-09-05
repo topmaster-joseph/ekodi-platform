@@ -65,3 +65,21 @@ test('legacy try.ekodi.kr permanently redirects to canonical exp.ekodi.kr',async
   assert.equal(response.status,308);
   assert.equal(response.headers.get('location'),'https://exp.ekodi.kr/developer?mode=user');
 });
+
+test('developer and experience use service-specific EKODI user characters',()=>{
+  const character=read('shell/user-character.js');
+  const design=read('shell/service-design-inheritance.js');
+  const recommendations=read('design-profile-runtime.js');
+  const illustration=JSON.parse(read('config/illustration-system.json'));
+  const dna=JSON.parse(read('config/user-ui-dna.json'));
+  assert.match(character,/developer:\{pose:'guide',prop:'route'/);
+  assert.match(character,/experience:\{pose:'welcome',prop:'spark'/);
+  assert.match(design,/developer:\{accent:'.+mood:'connection-workbench'/);
+  assert.match(design,/experience:\{accent:'.+mood:'guided-portal'/);
+  assert.match(recommendations,/developer:\{tone:'calm',character:'guide'/);
+  assert.match(recommendations,/experience:\{tone:'night',character:'welcome'/);
+  assert.equal(illustration.services.developer.scene,'field-research');
+  assert.equal(illustration.services.experience.scene,'personal-journey');
+  assert.equal(dna.services.developer.family,'connection-workbench');
+  assert.equal(dna.services.experience.family,'guided-portal');
+});
