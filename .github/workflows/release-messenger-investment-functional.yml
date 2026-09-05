@@ -8,6 +8,8 @@ on:
       - 'migrations/*design*.sql'
       - 'design-profile-runtime.js'
       - 'profile-evidence-runtime.js'
+      - 'profile-official-data-adapter.js'
+      - 'invest-personalization-runtime.js'
       - 'ekodi-principal.js'
       - 'messenger-triage.js'
       - 'messenger-outbox.js'
@@ -26,6 +28,7 @@ on:
       - 'test/conversation-foundation-release.test.mjs'
       - 'test/profile-evidence-contract.test.mjs'
       - 'test/design-profile-contract.test.mjs'
+      - 'test/invest-personalization-contract.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
     branches: [main]
@@ -56,8 +59,8 @@ jobs:
       - name: Validate Conversation, Operator, Investment and Profile boundaries
         run: |
           set -euo pipefail
-          for file in ekodi-principal.js profile-evidence-runtime.js design-profile-runtime.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs
+          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js design-profile-runtime.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
+          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/invest-personalization-contract.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
@@ -65,6 +68,7 @@ jobs:
           grep -Fq 'site_design_profiles' migrations/0055_adaptive_design_profiles.sql
           grep -Fq 'conversationFoundation' workspace-platform-entry-worker.js
           grep -Fq 'profileEvidenceFoundation' workspace-platform-entry-worker.js
+          grep -Fq "investPersonalization:'v1'" workspace-platform-entry-worker.js
           grep -Fq '/api/control/messenger' mission-control-entry-worker.js
           grep -Fq 'analysis-and-connection-only' workspace-platform-api-worker.js
           ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
@@ -117,8 +121,18 @@ jobs:
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config .workspace-staging.toml
       - name: Verify isolated Workspace staging
         run: |
+          set -euo pipefail
           for attempt in $(seq 1 18); do
-            if curl -fsS "$WORKSPACE_STAGING_URL/health" -o /tmp/health && grep -Fq '"mutations":false' /tmp/health && grep -Fq '"conversationSchemaReady":true' /tmp/health && grep -Fq '"designProfileSchemaReady":true' /tmp/health; then exit 0; fi
+            code=$(curl -sS -o /tmp/health -w '%{http_code}' --connect-timeout 5 --max-time 15 "$WORKSPACE_STAGING_URL/health" || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq '"mutations":false' /tmp/health \
+              && grep -Fq '"conversationSchemaReady":true' /tmp/health \
+              && grep -Fq '"designProfileSchemaReady":true' /tmp/health \
+              && grep -Fq '"investPersonalization":"v1"' /tmp/health \
+              && grep -Fq '"transactionExecution":false' /tmp/health; then
+              exit 0
+            fi
+            echo "workspace staging health attempt=$attempt/18 http=$code body=$(cat /tmp/health 2>/dev/null || true)"
             sleep 4
           done
           exit 1
@@ -194,7 +208,7 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml "$WRANGLER_VERSION"
       - name: Guarded Workspace API release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
-      - name: Verify production Conversation foundation
+      - name: Verify production Workspace foundation
         run: |
           curl -fsS 'https://workspace-api.ekodi.kr/health' > /tmp/live-health.json
           grep -Fq '"schemaReady":true' /tmp/live-health.json
@@ -202,6 +216,8 @@ jobs:
           grep -Fq '"profileEvidenceFoundation":"v1"' /tmp/live-health.json
           grep -Fq '"adaptiveDesign":"v1"' /tmp/live-health.json
           grep -Fq '"designProfileSchemaReady":true' /tmp/live-health.json
+          grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/live-health.json
+          grep -Fq '"investPersonalization":"v1"' /tmp/live-health.json
 
   production-control:
     needs: production-workspace
