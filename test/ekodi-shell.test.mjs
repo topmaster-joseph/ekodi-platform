@@ -77,7 +77,7 @@ test('Shell-enabled asset Workers keep dynamic roots and APIs behind their wrapp
   }
 });
 
-test('bundled shell uses edge cache before rebuilding fourteen static asset fragments',async()=>{
+test('bundled shell uses edge cache before rebuilding fifteen static asset fragments',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/caches\.default/);
   assert.match(worker,/bundleCache\.match\(bundleCacheKey\)/);

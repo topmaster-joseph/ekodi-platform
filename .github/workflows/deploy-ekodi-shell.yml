@@ -69,6 +69,7 @@ jobs:
           node --check shell/user-ui-header.js
           node --check shell/user-ui-footer.js
           node --check shell/user-language.js
+          node --check shell/media-meeting-adapter.js
           node --check shell/user-character.js
           node --check shell/admin-ui-shell.js
           node --check shell/mobile-fixed-header.js
@@ -87,11 +88,13 @@ jobs:
           grep -Fq "userHeaderUrl.pathname='/user-ui-header.js'" ekodi-shell-worker.js
           grep -Fq "userFooterUrl.pathname='/user-ui-footer.js'" ekodi-shell-worker.js
           grep -Fq "userLanguageUrl.pathname='/user-language.js'" ekodi-shell-worker.js
+          grep -Fq "mediaMeetingUrl.pathname='/media-meeting-adapter.js'" ekodi-shell-worker.js
           grep -Fq "userCharacterUrl.pathname='/user-character.js'" ekodi-shell-worker.js
           grep -Fq "url.pathname==='/user-footer.json'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-footer" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-language" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-media-meeting" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-character" ekodi-shell-worker.js
           grep -Fq "adminShellUrl.pathname='/admin-ui-shell.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-admin-ui-shell" ekodi-shell-worker.js
@@ -106,6 +109,7 @@ jobs:
           grep -Fq 'window.EKODIUserUIHeader' shell/user-ui-header.js
           grep -Fq 'window.EKODIUserUIFooter' shell/user-ui-footer.js
           grep -Fq 'window.EKODIUserLanguage' shell/user-language.js
+          grep -Fq 'window.EKODIMediaMeetingAdapter' shell/media-meeting-adapter.js
           grep -Fq 'window.EKODIUserCharacter' shell/user-character.js
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js

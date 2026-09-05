@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -24,7 +24,7 @@
     "fallback": "shared-shell-header-when-missing",
     "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path", "language choice"],
     "localNavigation": "service-owned",
-    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control"],
+    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control", "brand returns to current service home top"],
     "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
     "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"]
   },
@@ -42,11 +42,20 @@
     "owner": "shared-shell",
     "runtime": "shell/user-language.js",
     "placement": "inside the adopted or fallback user header",
-    "supported": ["ko-KR", "en", "zh-CN", "ja"],
+    "supported": ["ko-KR", "en", "zh-CN", "ja", "ne", "vi"],
     "default": "ko-KR",
     "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
     "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
-    "adminExcluded": true
+    "adminExcluded": true,
+    "browserTranslation": "managed native i18n surfaces opt out of Google automatic translation UI"
+  },
+  "mediaMeetingAdapter": {
+    "owner": "shared-shell",
+    "runtime": "shell/media-meeting-adapter.js",
+    "meetingProviders": ["jitsi"],
+    "mediaProviders": ["youtube"],
+    "stateOrder": ["language", "authentication", "provider state", "fallback"],
+    "fallbackRequired": true
   },
   "ambientAudio": {
     "owner": "shared-shell",

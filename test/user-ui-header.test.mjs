@@ -7,10 +7,11 @@ import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('user UI header/footer/language are shared user-surface-only modules',async()=>{
-  const [header,footerClient,userLanguage,ccmPlayer,legacyMobileHeader,worker,principles,sharedCss,injector,shellPolicy]=await Promise.all([
+  const [header,footerClient,userLanguage,mediaMeeting,ccmPlayer,legacyMobileHeader,worker,principles,sharedCss,injector,shellPolicy]=await Promise.all([
     read('shell/user-ui-header.js'),
     read('shell/user-ui-footer.js'),
     read('shell/user-language.js'),
+    read('shell/media-meeting-adapter.js'),
     read('shell/ccm-mr-player.js'),
     read('shell/mobile-fixed-header.js'),
     read('ekodi-shell-worker.js'),
@@ -47,6 +48,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(worker,/userHeaderUrl\.pathname='\/user-ui-header\.js'/);
   assert.match(worker,/userFooterUrl\.pathname='\/user-ui-footer\.js'/);
   assert.match(worker,/userLanguageUrl\.pathname='\/user-language\.js'/);
+  assert.match(worker,/mediaMeetingUrl\.pathname='\/media-meeting-adapter\.js'/);
   assert.match(worker,/USER_FOOTER_BOOTSTRAP/);
   assert.match(worker,/\/user-footer\.json/);
   assert.match(worker,/x-ekodi-user-ui-footer/);
@@ -65,7 +67,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(footerClient,/백련동1길 17-4/);
   assert.doesNotMatch(footerClient,/© 2026 EKODI · EKODIBIZ/);
 
-  assert.match(userLanguage,/const VERSION=4/);
+  assert.match(userLanguage,/const VERSION=5/);
   assert.match(userLanguage,/const COOKIE_KEY='ekodi_locale'/);
   assert.match(userLanguage,/data-ekodi-language-control/);
   assert.match(userLanguage,/document\.documentElement\.lang=next/);
@@ -74,6 +76,18 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(userLanguage,/zh-CN/);
   assert.match(userLanguage,/window\.EKODIUserLanguage/);
   assert.match(userLanguage,/-webkit-text-fill-color:#20362b!important/);
+  assert.match(header,/data-ekodi-header-home/);
+  assert.match(header,/serviceHomeUrl/);
+  assert.match(header,/bindHomeAnchor\(header\)/);
+  assert.match(userLanguage,/notranslate/);
+  assert.match(injector,/name=\"google\" content=\"notranslate\"/);
+  assert.match(userLanguage,/locale:'ne'/);
+
+  assert.match(mediaMeeting,/window\.EKODIMediaMeetingAdapter/);
+  assert.match(mediaMeeting,/data-ekodi-meeting-provider=\"jitsi\"/);
+  assert.match(mediaMeeting,/data-ekodi-media-provider=\"youtube\"/);
+  assert.match(mediaMeeting,/config\.defaultLanguage/);
+  assert.match(mediaMeeting,/Preparing the next broadcast/);
 
   assert.match(ccmPlayer,/dataset\.ekodiCcmMr='v2'/);
   assert.match(ccmPlayer,/background:#fbfcfa!important/);
@@ -110,7 +124,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(parsedPolicy.footer.themePolicy,/inherit each service/);
   assert.equal(parsedPolicy.language.owner,'shared-shell');
   assert.equal(parsedPolicy.language.adminExcluded,true);
-  assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja']);
+  assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja','ne','vi']);
 
   const strictCsp=shellCsp("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'");
   assert.match(strictCsp,/style-src 'self' https:\/\/shell\.ekodi\.kr/);
