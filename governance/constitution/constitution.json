@@ -1,6 +1,6 @@
 {
-  "version": "1.8.1",
-  "effectiveDate": "2026-09-05",
+  "version": "1.8.2",
+  "effectiveDate": "2026-09-06",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -58,10 +58,11 @@
       "auth.ekodi.kr",
       "api.ekodi.kr",
       "status.ekodi.kr",
-      "ai.ekodi.kr"
+      "ai.ekodi.kr",
+      "dev.ekodi.kr",
+      "exp.ekodi.kr"
     ],
     "development": [
-      "dev.ekodi.kr",
       "my.dev.ekodi.kr",
       "admin.dev.ekodi.kr",
       "auth.dev.ekodi.kr",
@@ -315,9 +316,11 @@
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
-    "try.ekodi.kr",
     "invest.ekodi.kr",
-    "marketing.ekodi.kr"
+    "marketing.ekodi.kr",
+    "dev.ekodi.kr",
+    "exp.ekodi.kr",
+    "try.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
@@ -461,5 +464,14 @@
     "standingDelegationScope": "existing_registered_boundary_only",
     "automaticSafeRecoveryForFailedBoundedPromotion": true,
     "unbudgetedPaidCommitmentForbidden": true
+  },
+  "publicPortalPolicy": {
+    "developerPortal": "https://dev.ekodi.kr",
+    "experiencePortal": "https://exp.ekodi.kr",
+    "legacyExperienceAlias": "https://try.ekodi.kr",
+    "developmentMirrorRule": "nested *.dev.ekodi.kr system hosts only; dev.ekodi.kr root is reserved for the public developer portal",
+    "sharedRuntimeAllowedAtS0": true,
+    "experienceDataPolicy": "synthetic-only",
+    "developerDataPolicy": "public-contract-only"
   }
 }

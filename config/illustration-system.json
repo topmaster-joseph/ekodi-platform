@@ -53,7 +53,9 @@
     "mail":{"scene":"correspondence-desk","objects":["letter","desk","people","plant"]},
     "live":{"scene":"small-stage","objects":["people","camera","stage","signal"]},
     "cloud":{"scene":"shared-library","objects":["folders","people","shelf","cloud"]},
-    "media":{"scene":"story-studio","objects":["camera","people","frame","light"]}
+    "media":{"scene":"story-studio","objects":["camera","people","frame","light"]},
+    "developer":{"scene":"field-research","objects":["person","contract","route","light"]},
+    "experience":{"scene":"personal-journey","objects":["person","path","portal","spark"]}
   },
   "automaticUse": {
     "selectors": ["[data-ekodi-illustration]", "[data-ekodi-empty-state]", "[data-ekodi-welcome]"],

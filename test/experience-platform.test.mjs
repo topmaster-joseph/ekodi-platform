@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import worker from '../experience-worker.js';
@@ -7,10 +7,10 @@ import { projectValue } from '../secure-projection.js';
 
 const read=file=>fs.readFileSync(new URL(`../${file}`,import.meta.url),'utf8').replace(/^\uFEFF/,'');
 
-test('experience is a registered common-service boundary at try.ekodi.kr',()=>{
+test('experience is a registered common-service boundary at exp.ekodi.kr',()=>{
   const boundary=JSON.parse(read('platform-boundaries.json')).platforms.experience;
   assert.equal(boundary.kind,'common-service-platform');
-  assert.ok(boundary.domains.includes('try.ekodi.kr'));
+  assert.ok(boundary.domains.includes('exp.ekodi.kr'));
   assert.equal(boundary.deployWorkflow,'.github/workflows/deploy-experience.yml');
   assert.match(boundary.database,/none/i);
 });
@@ -42,17 +42,17 @@ test('experience exposes user and developer modes from the same safe catalog',()
 
 test('experience worker health and catalog are public GET-only contracts',async()=>{
   const env={};
-  const health=await worker.fetch(new Request('https://try.ekodi.kr/health'),env);
+  const health=await worker.fetch(new Request('https://exp.ekodi.kr/health'),env);
   assert.equal(health.status,200);
   const healthJson=await health.json();
   assert.equal(healthJson.service,'ekodi-experience');
   assert.equal(healthJson.dataPolicy,'synthetic-only');
   assert.equal(healthJson.projection,'experience_public');
-  const catalogResponse=await worker.fetch(new Request('https://try.ekodi.kr/api/catalog'),env);
+  const catalogResponse=await worker.fetch(new Request('https://exp.ekodi.kr/api/catalog'),env);
   assert.equal(catalogResponse.status,200);
   const catalog=await catalogResponse.json();
   assert.equal(catalog.safety.productionWrites,false);
-  const post=await worker.fetch(new Request('https://try.ekodi.kr/api/catalog',{method:'POST'}),env);
+  const post=await worker.fetch(new Request('https://exp.ekodi.kr/api/catalog',{method:'POST'}),env);
   assert.equal(post.status,405);
 });
 

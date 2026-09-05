@@ -38,7 +38,9 @@
     live:{accent:'#ff665d',accent2:'#b2a7df',warm:'#e8ac54',leaf:'#718b78',paper:'#17191c',ink:'#ffffff',radius:'12px',softRadius:'8px',density:'medium',motion:'live',mood:'live-stage'},
     cloud:{accent:'#4f7fa8',accent2:'#a7d5e6',warm:'#c8aa6c',leaf:'#6f9383',paper:'#f7fbfd',ink:'#1d2c3b',radius:'14px',softRadius:'10px',density:'medium-high',motion:'ordered',mood:'cloud-library'},
     money:{accent:'#2f7e5c',accent2:'#7da8c7',warm:'#d5ad57',leaf:'#6c9274',paper:'#fafdf9',ink:'#1f3329',radius:'8px',softRadius:'6px',density:'high',motion:'quiet',mood:'money-ledger'},
-    support:{accent:'#5f8d76',accent2:'#7899bd',warm:'#d7ad5b',leaf:'#709778',paper:'#fbfaf5',ink:'#27352d',radius:'16px',softRadius:'10px',density:'medium',motion:'gentle',mood:'opportunity-desk'}
+    support:{accent:'#5f8d76',accent2:'#7899bd',warm:'#d7ad5b',leaf:'#709778',paper:'#fbfaf5',ink:'#27352d',radius:'16px',softRadius:'10px',density:'medium',motion:'gentle',mood:'opportunity-desk'},
+    developer:{accent:'#86e0c3',accent2:'#74bfff',warm:'#d7b86f',leaf:'#6e9c8f',paper:'#071126',ink:'#eff8ff',radius:'16px',softRadius:'12px',density:'medium-high',motion:'measured',mood:'connection-workbench'},
+    experience:{accent:'#78d7ff',accent2:'#7567ff',warm:'#f2ce7d',leaf:'#78a991',paper:'#071126',ink:'#f4f8ff',radius:'24px',softRadius:'16px',density:'medium',motion:'immersive',mood:'guided-portal'}
   };
   const HOST_ALIAS={'ins':'insurance'};
 
