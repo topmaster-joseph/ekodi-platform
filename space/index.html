@@ -4,40 +4,97 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <meta name="description" content="개인·기관·단체·프로젝트의 EKODI 운영공간">
+  <meta name="description" content="EKODI 점포 운영공간">
   <title>운영공간 · EKODI</title>
-  <link rel="stylesheet" href="/style.css?v=20260829-space-1">
+  <link rel="stylesheet" href="/style.css?v=20260906-store-ops-1">
 </head>
 <body>
   <main class="shell">
-    <header class="top"><a class="brand" href="https://ekodi.kr">EKODI</a><a class="my" href="https://my.ekodi.kr">내 홈</a></header>
-    <section class="hero">
-      <span class="eyebrow">OPERATING SPACE</span>
-      <h1>내가 운영하고 참여하는<br>공간으로 바로 들어갑니다.</h1>
-      <p>개인·기관·단체·프로젝트는 주소가 바뀌어도 내부의 고유 공간 ID와 권한을 그대로 유지합니다.</p>
-    </section>
+    <header class="top">
+      <a class="brand" href="https://ekodi.kr">EKODI</a>
+      <div class="top-actions">
+        <label id="spaceSwitcherWrap" class="space-switcher hidden">
+          <span>운영공간</span>
+          <select id="spaceSwitcher" aria-label="운영공간 전환"></select>
+        </label>
+        <a class="my" href="https://my.ekodi.kr">내 홈</a>
+      </div>
+    </header>
     <div id="status" class="status">연결 상태를 확인하고 있습니다.</div>
-    <section id="signedOut" class="panel hidden">
-      <h2>공간은 로그인 후 연결됩니다.</h2>
-      <p>로그인 전에는 안내만 보여주고, 실제 운영정보와 권한은 고유 EKODI ID로 확인합니다.</p>
-      <button id="login" type="button">로그인하고 내 공간 보기</button>
+    <section id="signedOut" class="panel auth-panel hidden">
+      <span class="eyebrow">PRIVATE OPERATING SPACE</span>
+      <h1>내 운영공간에 연결합니다.</h1>
+      <p>로그인 후 내가 운영하거나 참여하는 점포와 조직만 표시합니다.</p>
+      <button id="login" type="button">로그인</button>
     </section>
+
     <section id="signedIn" class="hidden">
-      <div class="account-row"><span id="account">EKODI 사용자</span><button id="logout" class="quiet" type="button">로그아웃</button></div>
-      <section id="spaceIndex" class="panel">
-        <div class="panel-head"><div><span class="eyebrow">MY SPACES</span><h2>운영공간</h2></div></div>
+      <div class="account-row">
+        <span id="account">EKODI 사용자</span>
+        <button id="logout" class="quiet" type="button">로그아웃</button>
+      </div>
+      <section id="spaceIndex" class="space-index">
+        <div class="index-copy">
+          <span class="eyebrow">MY OPERATING SPACES</span>
+          <h1>내 운영공간</h1>
+          <p>같은 계정으로 들어오더라도 각 점포의 데이터와 운영 맥락은 서로 섞이지 않습니다.</p>
+        </div>
         <div id="spaceList" class="space-list"></div>
       </section>
-      <section id="workspaceView" class="panel hidden">
-        <span id="workspaceType" class="eyebrow">SPACE</span>
-        <h2 id="workspaceName">공간 확인 중</h2>
-        <p id="workspaceMeta"></p>
-        <div class="actions"><a id="workspaceHome" href="/">다른 공간 보기</a><a id="workspaceMy" href="https://my.ekodi.kr/">내 홈</a></div>
-        <div class="workspace-note">이 URL은 사람이 읽는 경로입니다. 실제 데이터·권한 연결은 URL이나 slug가 아니라 내부의 불변 workspace ID를 기준으로 처리합니다.</div>
+      <section id="workspaceView" class="workspace hidden">
+        <section class="workspace-head">
+          <div>
+            <span id="workspaceType" class="eyebrow">STORE OPERATING SPACE</span>
+            <h1 id="workspaceName">공간 확인 중</h1>
+            <p id="workspaceMeta"></p>
+          </div>
+          <span id="workspaceRole" class="role-badge"></span>
+        </section>
+
+        <section class="panel store-profile-panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">STORE MASTER</span><h2>매장 기준정보</h2></div>
+            <span class="source-chip">EKODI 기준정보</span>
+          </div>
+          <div id="storeBasics" class="store-basics"></div>
+        </section>
+
+        <section class="panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">SALES CHANNELS</span><h2>배달플랫폼 연결</h2></div>
+            <span id="channelCount" class="count-chip">0 / 0 연결</span>
+          </div>
+          <div id="channelList" class="channel-list"></div>
+        </section>
+        <section class="panel menu-panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">MENU MASTER</span><h2>메뉴 · 가격 기준정보</h2></div>
+            <div id="menuSummary" class="menu-summary"></div>
+          </div>
+          <div id="menuList" class="menu-list"></div>
+          <div id="unmappedList" class="unmapped-list"></div>
+          <div class="data-boundary">
+            배달앱의 메뉴·가격·옵션은 공식 API, 파트너 제공자료 또는 검증된 파일에서 가져온 값만 표시합니다.
+            연결 전에는 임의의 메뉴나 가격을 만들지 않습니다.
+          </div>
+        </section>
+
+        <section class="ops-grid store-data">
+          <article class="panel compact-panel">
+            <span class="eyebrow">AI OPERATIONS</span>
+            <h2>운영 신호</h2>
+            <div id="agentHints" class="agent-hints"></div>
+          </article>
+          <article class="panel compact-panel">
+            <span class="eyebrow">SERVICES</span>
+            <h2>이 점포의 서비스</h2>
+            <div id="serviceActions" class="service-actions"></div>
+          </article>
+        </section>
       </section>
     </section>
   </main>
   <script src="/config.js"></script>
-  <script type="module" src="/app.js?v=20260829-space-1"></script>
+  <script type="module" src="/app.js?v=20260906-store-ops-1"></script>
 </body>
 </html>

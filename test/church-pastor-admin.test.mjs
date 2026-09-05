@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from '../church-pastor-admin-page.js';
 
 test('pastor admin route is scoped to ekodi-church', () => {
@@ -29,4 +30,13 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /권한이 없습니다/);
   assert.match(source, /church_care_tasks/);
   assert.match(source, /senior_pastor/);
+});
+
+test('production entry routes church admin before generic workspace admin', async () => {
+  const source = await fs.promises.readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8');
+  assert.match(source, /churchPastorAdminPage/);
+  assert.match(source, /church-pastor-admin\.js/);
+  const church = source.indexOf('isChurchPastorAdminPath(url.pathname)');
+  const generic = source.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath');
+  assert.ok(church >= 0 && generic > church);
 });
