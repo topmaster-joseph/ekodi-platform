@@ -7,6 +7,8 @@ import {
   storeAdminPage,
   storeAdminCss,
   storeAdminScript,
+  storeAdminCanAccess,
+  storeAdminSectionsForRole,
 } from '../store-admin-engine.js';
 
 const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
@@ -33,14 +35,26 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
     assert.equal(response.headers.get('x-ekodi-route'),`${store.slug}-store-admin`);
     assert.equal(response.headers.get('x-ekodi-store-scope'),store.id);
     assert.equal(response.headers.get('cache-control'),'no-store');
-    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260906-provisioning/);
+    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260906-tenant-capability-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);
   }
+  assert.match(router,/injectEkodiShell\(storeAdminPage\(storeRoute\),'business','admin'\)/);
   assert.match(await storeAdminCss().text(),/word-break:keep-all/);
   const script=await storeAdminScript().text();
   assert.match(script,/business_os_store_admin_snapshot/);assert.match(script,/store_operating_space_snapshot/);
-  assert.match(script,/\['store_owner','tenant_admin','platform_admin'\]/);
+  assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
+  assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
   assert.match(script,/state\.menu\?\.menu/);assert.doesNotMatch(script,/state\.menu\?\.items/);
   assert.doesNotMatch(script,/\/api\/store\/menu/);
+});
+
+test('one Store Admin page projects sections from tenant role capabilities',()=>{
+  const all=storeAdminSectionsForRole('store_owner');
+  assert.equal(all.length,12);assert.ok(all.includes('site'));assert.ok(all.includes('finance'));
+  assert.deepEqual(storeAdminSectionsForRole('marketing_manager'),['overview','customers','reviews','sales','marketing']);
+  assert.deepEqual(storeAdminSectionsForRole('accounting_manager'),['overview','sales','finance']);
+  assert.equal(storeAdminCanAccess('hq_manager','connections'),true);assert.equal(storeAdminCanAccess('hq_manager','site'),false);
+  assert.equal(storeAdminCanAccess('client_viewer','sales'),true);assert.equal(storeAdminCanAccess('client_viewer','customers'),false);
+  assert.equal(storeAdminCanAccess('member','overview'),false);
 });
 
 test('a future registered store is resolved from the canonical database route profile',async()=>{
@@ -55,7 +69,7 @@ test('a future registered store is resolved from the canonical database route pr
 });
 test('router classifies store admin before generic workspace admin and keeps legacy asset aliases',()=>{
   const dynamic=router.indexOf('if(isStoreAdminPathShape(url.pathname))');
-  const generic=router.indexOf('if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return workspaceAdminPage()');
+  const generic=router.indexOf('if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))');
   assert.ok(dynamic>=0);assert.ok(generic>dynamic);
   assert.match(router,/resolveStoreAdminRoute\(url\.pathname\)/);
   assert.match(router,/\/store-admin\.js/);assert.match(router,/\/jadam-admin\.js/);
