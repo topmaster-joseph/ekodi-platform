@@ -129,12 +129,12 @@ if (!shell?.inheritance?.excludedRootPrefixes?.includes('/admin')) {
   errors.push('Admin root paths must stay outside the User UI Shell.');
 }
 
-const expectedLocales=['ko-KR','en','zh-CN','ja'];
+const expectedLocales=['ko-KR','en','zh-CN','ja','ne','vi'];
 if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/user-language.js'||shell?.language?.adminExcluded!==true){
   errors.push('Shared user language selector must be owned by the User UI Shell and exclude admin surfaces.');
 }
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
-  errors.push('Shared user language selector must support Korean, English, Simplified Chinese and Japanese.');
+  errors.push('Shared user language selector must support Korean, English, Simplified Chinese, Japanese, Nepali and Vietnamese.');
 }
 for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
