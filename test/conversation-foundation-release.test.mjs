@@ -117,3 +117,16 @@ test('Conversation staging writes temporary Wrangler configs inside the checked-
   assert.doesNotMatch(workflow,/\/tmp\/(?:workspace|control)-staging\.toml/);
   assert.match(workflow,/main = "workspace-platform-entry-worker\.js"[\s\S]*migrations_dir = "migrations"/);
 });
+
+
+test('Access-protected Conversation staging keeps runtime verification fail-closed',async()=>{
+  const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
+  assert.match(workflow,/Cloudflare Access\|Log in to All Workers/);
+  assert.match(workflow,/deployments status --config \.workspace-staging\.toml/);
+  assert.match(workflow,/d1 execute DB --remote --config \.workspace-staging\.toml --file \/tmp\/workspace-schema-probe\.sql/);
+  for(const table of ['messenger_outbox','messenger_identity_audit','ekodi_profiles','ekodi_profile_evidence','ekodi_profile_confirmations','ekodi_profile_discovery_runs','site_design_profiles']) assert.match(workflow,new RegExp(`SELECT 1 FROM ${table} LIMIT 0`));
+  assert.match(workflow,/deployments status --config \.control-staging\.toml/);
+  assert.match(workflow,/d1 execute DB --remote --config \.control-staging\.toml --file \/tmp\/control-schema-probe\.sql/);
+  for(const table of ['messenger_threads','messenger_messages','messenger_handoffs','messenger_outbox']) assert.match(workflow,new RegExp(`SELECT 1 FROM ${table} LIMIT 0`));
+  assert.match(workflow,/Production still enforces the live 401 boundary/);
+});
