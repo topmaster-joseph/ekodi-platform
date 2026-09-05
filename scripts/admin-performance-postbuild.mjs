@@ -46,7 +46,7 @@ for (const [from,to] of [
   ['hashes','h'],
   ['paths','p'],
 ]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
-for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph']]) {
+for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph'],['requestedKey','rk'],['selector','sl'],['settled','st'],['deadline','dl'],['index','ix'],['changed','ch']]) {
   demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
 }
 const selfInitializingIdentifier = demandLoaderSource.match(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*\(/);
