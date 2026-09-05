@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
-const [migration,api,app,html,css]=await Promise.all([
+const [migration,api,app,html,css,manifest]=await Promise.all([
   read('supabase/migrations/20260906001000_store_operating_spaces.sql'),
   read('supabase/functions/workspace-api/index.ts'),
-  read('space/app.js'),read('space/index.html'),read('space/style.css')
+  read('space/app.js'),read('space/index.html'),read('space/style.css'),
+  read('deploy/manifests/space.worker.json')
 ]);
 
 test('Mokpo University stores have three independent root operating-space routes',()=>{
@@ -46,4 +47,10 @@ test('store route UI is an operating dashboard rather than a generic landing her
   assert.match(app,/플랫폼별 가격 차이/);
   assert.match(css,/\.workspace-head/);
   assert.doesNotMatch(css,/position:fixed[^}]*black/i);
+});
+
+test('production smoke manifest follows the current store dashboard shell',()=>{
+  assert.match(manifest,/STORE MASTER/);
+  assert.match(manifest,/MENU MASTER/);
+  assert.doesNotMatch(manifest,/실제 데이터·권한 연결/);
 });
