@@ -34,6 +34,20 @@ test('public conformance rules stay aligned with the machine validator',()=>{
     assert.ok(validator.includes(message),`validator rule drifted: ${path}`);
   }
 });
+
+test('public preflight provides actionable remediation without changing authority',()=>{
+  const guidance=PUBLIC_CONFORMANCE_CONTRACT.remediation.guidance;
+  assert.equal(guidance['dataBoundary.crossServicePrivateDatabaseAccess'].code,'DATA-004');
+  assert.match(guidance['dataBoundary.crossServicePrivateDatabaseAccess'].fix,/API, Event/);
+  assert.equal(guidance['identity.workspaceIdNeverDerivedFromUrl'].code,'TENANT-001');
+  assert.equal(PUBLIC_CONFORMANCE_CONTRACT.sampleManifest.actionPolicy.defaultMaximum,'L2');
+  assert.match(PUBLIC_CONFORMANCE_CONTRACT.finalCertification,/CI contract/);
+  const js=read('experience/developer.js');
+  assert.match(js,/수정 방법/);
+  assert.match(js,/왜 필요한가/);
+  assert.match(js,/suggested/);
+});
+
 test('developer portal is public, read-only and canonical at dev.ekodi.kr',async()=>{
   assert.equal(DEVELOPER_PORTAL_META.canonicalOrigin,'https://dev.ekodi.kr');
   const health=await worker.fetch(new Request('https://dev.ekodi.kr/health'),{});
@@ -61,6 +75,13 @@ test('developer browser preflight never submits manifest data',()=>{
   const workerSource=read('experience-worker.js');
   assert.match(workerSource,/htmlAsset\(env,request,'\/developer','developer'\)/);
   assert.doesNotMatch(workerSource,/htmlAsset\(env,request,'\/developer\.html','developer'\)/);
+});
+
+test('Experience links directly to the canonical Developer portal',()=>{
+  const html=read('experience/index.html');
+  assert.match(html,/href="https:\/\/dev\.ekodi\.kr\/"/);
+  assert.match(html,/개발자 포털 ↗/);
+  assert.match(html,/실제 규격 검사는 dev\.ekodi\.kr에서 이어집니다/);
 });
 
 test('legacy try.ekodi.kr permanently redirects to canonical exp.ekodi.kr',async()=>{
