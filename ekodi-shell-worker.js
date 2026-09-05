@@ -7,7 +7,21 @@ const USER_FOOTER_BOOTSTRAP=`window.__EKODI_USER_FOOTER_CONFIG__=${JSON.stringif
 function corsHeaders(){return {'access-control-allow-origin':'*','access-control-allow-methods':'GET,HEAD,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','x-content-type-options':'nosniff'};}
 function json(data,status=200,cache='public, max-age=60, stale-while-revalidate=300'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,...corsHeaders()}});}
 function withHeaders(response){const headers=new Headers(response.headers);headers.set('access-control-allow-origin','*');headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','no-referrer');headers.set('cross-origin-resource-policy','cross-origin');if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
-async function bundledShell(request,env){
+async function bundledShell(request,env,ctx){
+  let bundleCache=null,bundleCacheKey=null;
+  if(request.method==='GET'&&typeof caches!=='undefined'){
+    try{
+      bundleCache=caches.default;
+      bundleCacheKey=new Request(request.url,{method:'GET'});
+      const cached=await bundleCache.match(bundleCacheKey);
+      if(cached){
+        const headers=new Headers(cached.headers);
+        headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
+        headers.set('x-ekodi-shell-bundle-cache','hit');
+        return withHeaders(new Response(cached.body,{status:cached.status,statusText:cached.statusText,headers}));
+      }
+    }catch{}
+  }
   const shellUrl=new URL(request.url);shellUrl.pathname='/shell.js';
   const navUrl=new URL(request.url);navUrl.pathname='/user-global-nav.js';
   const contextUrl=new URL(request.url);contextUrl.pathname='/user-context.js';
@@ -67,11 +81,19 @@ async function bundledShell(request,env){
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
-  return withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  headers.set('x-ekodi-shell-bundle-cache','miss');
+  const response=withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
+    const stored=response.clone();
+    stored.headers.set('cache-control','public, max-age=300');
+    stored.headers.set('x-ekodi-shell-bundle-cache','stored');
+    ctx.waitUntil(bundleCache.put(bundleCacheKey,stored).catch(()=>{}));
+  }
+  return response;
 }
 
 export default {
-  async fetch(request,env){
+  async fetch(request,env,ctx){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:1,userCharacterVersion:2,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:3,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
@@ -84,7 +106,7 @@ export default {
       const service=id?serviceForId(id):canonicalUrl?serviceForUrl(canonicalUrl):host?serviceForHost(host):null;
       return service?json(service):json({error:'service_not_found'},404,'no-store');
     }
-    if(url.pathname==='/shell.js')return bundledShell(request,env);
+    if(url.pathname==='/shell.js')return bundledShell(request,env,ctx);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?source=shell.ekodi.kr',307);
     if(url.pathname==='/')return Response.redirect('https://my.ekodi.kr/',302);
     return withHeaders(await env.ASSETS.fetch(request));
