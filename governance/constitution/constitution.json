@@ -1,6 +1,6 @@
 {
-  "version": "1.6.1",
-  "effectiveDate": "2026-09-04",
+  "version": "1.7.0",
+  "effectiveDate": "2026-09-05",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -20,11 +20,16 @@
     "secure-projection-minimum-disclosure",
     "integrated-responsibility-distributed-execution-standardized-connections",
     "layered-governance-os-core-services-connections-workspaces",
-    "user-surface-engine-separation"
+    "user-surface-engine-separation",
+    "capability-first-reuse",
+    "sustainable-scale-by-evidence",
+    "workspace-over-space",
+    "living-digital-commons-north-star"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
     "platformBoundaryRegistry": "platform-boundaries.json",
+    "evolutionRegistry": "governance/architecture/ekodi-evolution-model.json",
     "deploymentTopology": "modular-monolith-first",
     "layers": [
       "governance",
@@ -38,7 +43,7 @@
       "ekodi-responsible",
       "external-provider-responsible"
     ],
-    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries."
+    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate."
   },
   "systemBoundaries": {
     "production": [
@@ -86,12 +91,15 @@
     "workspaceSubdomainsForbidden": true,
     "personalHomeSubdomainException": "my.ekodi.kr",
     "kindEncodedInUrl": false,
-    "reservedRootSlugsManagedBy": "platform_route_registry"
+    "reservedRootSlugsManagedBy": "platform_route_registry",
+    "canonicalOperatingTerm": "Workspace",
+    "legacySpaceIsCompatibilityOnly": true
   },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
     "newTenantSubdomainsForbidden": true,
     "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": true,
+    "sustainableBoundaryGateRequired": true,
     "customDomainsMapToTenantPublicSpace": true,
     "legacyAliasesMayRedirect": true,
     "legacyAliasesMustBeRegistered": true,
@@ -167,7 +175,9 @@
     "cloudflareRole": "edge_and_system_object_provider",
     "aiProvidersRole": "replaceable_compute_provider",
     "directExternalProviderCallsFromFeatureModulesForbiddenWhenGatewayExists": true,
-    "degradedProviderMustNotCollapseUnrelatedCoreServices": true
+    "degradedProviderMustNotCollapseUnrelatedCoreServices": true,
+    "paidCapacityRequiresMeasuredValueOrRequiredRiskControl": true,
+    "speculativeScaleForbidden": true
   },
   "securityPolicy": {
     "edgeBeforeOrigin": true,
@@ -234,11 +244,13 @@
       "CONSTITUTION.md",
       "governance/constitution/**",
       "governance/amendments/**",
+      "governance/architecture/ekodi-evolution-model.json",
       "platform-boundaries.json",
       "config/core-data-boundaries.json",
       "config/storage-policy.json",
       "config/service-workspace-policy.json",
       "scripts/validate-constitution.mjs",
+      "scripts/validate-ekodi-os-architecture.mjs",
       ".github/workflows/constitution-check.yml"
     ],
     "owner": "topmaster-joseph",
@@ -296,6 +308,7 @@
     "evidenceLinksRequiredForPublishedRecommendations": true,
     "unsupportedRecommendationsRemainInternal": true,
     "externalAndInternalEvidenceCombined": true,
+    "noSpeculativeScale": true,
     "observedSignals": [
       "traffic",
       "latency",
@@ -308,7 +321,10 @@
       "network",
       "ai_cost",
       "security_events",
-      "operational_load"
+      "operational_load",
+      "revenue",
+      "funding",
+      "unit_economics"
     ],
     "approvalRequired": [
       "production_change",
@@ -319,7 +335,8 @@
       "destructive_change",
       "security_boundary_change",
       "production_dns_change",
-      "provider_lock_in"
+      "provider_lock_in",
+      "new_independent_deployment"
     ],
     "securityCore": [
       "least_privilege",
@@ -341,6 +358,23 @@
       "disaster_recovery",
       "secure_projection"
     ]
+  },
+  "sustainableEvolutionModel": {
+    "registry": "governance/architecture/ekodi-evolution-model.json",
+    "currentGeneration": 2,
+    "currentGenerationName": "Integrated Platform",
+    "nextGeneration": 3,
+    "nextGenerationName": "Capability Platform",
+    "northStarGeneration": 8,
+    "northStarName": "Living Digital Commons",
+    "generationAdvancement": "evidence_driven_not_date_driven",
+    "currentScaleTier": "S0",
+    "defaultEconomics": "minimum-viable-shared-infrastructure",
+    "reuseCapabilityBeforeNewService": true,
+    "sharedBeforeDedicated": true,
+    "existingDeploymentBoundariesGrandfathered": true,
+    "newIndependentDeploymentRequiresEvidence": true,
+    "workspaceConvergenceTarget": "Person + Workspace + Membership + Capability"
   },
   "canonicalWorkspaceServicePatterns": [
     "https://ekodi.kr/{slug}/{service}",
