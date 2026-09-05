@@ -55,6 +55,11 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "Latest jadam-maru/main: $sha"
 
+      - name: Identify EKODI release traffic
+        shell: bash
+        run: |
+          printf '%s\n' 'user-agent = "EKODI-github-release/1.0"' > "$HOME/.curlrc"
+
       - name: Verify Cloudflare credentials
         if: github.event_name != 'pull_request'
         run: |
@@ -131,6 +136,11 @@ jobs:
           test ${#sha} -eq 40
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "Using Marketing AI source proven by staging: $sha"
+
+      - name: Identify EKODI release traffic
+        shell: bash
+        run: |
+          printf '%s\n' 'user-agent = "EKODI-github-release/1.0"' > "$HOME/.curlrc"
 
       - name: Verify Cloudflare credentials
         if: github.event_name != 'pull_request'

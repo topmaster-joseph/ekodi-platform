@@ -17,3 +17,8 @@ test('guarded fallback sync remains available without hourly polling',()=>{
   assert.match(sync,/guarded-pages-release\.mjs/);
   assert.match(sync,/marketing-ai\.pages\.json/);
 });
+
+test('scheduled Marketing AI release probes identify as EKODI internal traffic',()=>{
+  const markers=deploy.match(/EKODI-github-release\/1\.0/g)||[];
+  assert.equal(markers.length,2);
+});
