@@ -1,11 +1,14 @@
 (() => {
   'use strict';
 
-  const VERSION=3;
+  const VERSION=4;
   const PROFILE_API='https://workspace-api.ekodi.kr/v1/design-profiles/public';
   const PROFILE_CHOICES={tones:new Set(['inherit','warm','calm','vivid','mono','night']),characters:new Set(['auto','off','welcome','guide','read','idea']),seasons:new Set(['auto','off','spring','summer','autumn','winter']),motions:new Set(['inherit','still','gentle'])};
   const SEASON_PRESETS={spring:{warm:'#e0b95f',leaf:'#78a982'},summer:{warm:'#e8c75a',leaf:'#5f9b78'},autumn:{warm:'#c88745',leaf:'#8a7b55'},winter:{warm:'#b9c6d5',leaf:'#6e8790'}};
   const TONE_PRESETS={warm:{accent:'#7f6548',accent2:'#c99b66',warm:'#e2b96f',paper:'#fff9ef',ink:'#332b24'},calm:{accent:'#47685b',accent2:'#8ca9b7',warm:'#c6ae7d',paper:'#f7faf8',ink:'#24322c'},vivid:{accent:'#6953c6',accent2:'#e06d54',warm:'#f0bd55',paper:'#fff8fb',ink:'#30263b'},mono:{accent:'#4b5563',accent2:'#94a3b8',warm:'#9ca3af',paper:'#fafafa',ink:'#242424'},night:{accent:'#78a7d7',accent2:'#a997e8',warm:'#ddb969',paper:'#111827',ink:'#f5f7fb'}};
+  const EXPERIENCE_PROFILES={
+    'consumer-commerce':{controlRadius:'999px',fieldRadius:'999px',chipRadius:'999px',panelRadius:'28px',imageRadius:'24px',sectionRadius:'30px'}
+  };
   const DEFAULT={
     accent:'#315d48',accent2:'#7fa9c8',warm:'#c79a45',leaf:'#6f9e7a',paper:'#fffdf8',ink:'#25332b',
     radius:'18px',softRadius:'12px',shadow:'0 18px 48px rgba(24,38,31,.10)',density:'medium',motion:'gentle'
@@ -24,7 +27,7 @@
     messenger:{accent:'#0e8e91',accent2:'#c9f4f5',warm:'#e0b867',leaf:'#6b9c8f',paper:'#071b28',ink:'#effcfc',radius:'16px',softRadius:'999px',density:'medium-high',motion:'immediate',mood:'conversation-switchboard'},
     energy:{accent:'#e5a414',accent2:'#3e91bd',warm:'#ffd35b',leaf:'#3f8b55',paper:'#0d1a24',ink:'#f3f8f2',radius:'20px',softRadius:'999px',density:'medium-high',motion:'flow',mood:'solar-grid'},
     business:{accent:'#3aae91',accent2:'#dda74d',warm:'#dda74d',leaf:'#678b78',paper:'#f7f5ee',ink:'#252a29',radius:'6px',softRadius:'4px',density:'high',motion:'gated',mood:'operator-cockpit'},
-    mall:{accent:'#ee725b',accent2:'#245dcc',warm:'#f1c54a',leaf:'#70a16f',paper:'#fff7e9',ink:'#273149',radius:'26px',softRadius:'999px',density:'medium',motion:'bouncy',mood:'curated-market'},
+    mall:{accent:'#ee725b',accent2:'#245dcc',warm:'#f1c54a',leaf:'#70a16f',paper:'#fff7e9',ink:'#273149',radius:'26px',softRadius:'999px',density:'medium',motion:'bouncy',mood:'curated-market',experience:'consumer-commerce'},
     marketing:{accent:'#7428b8',accent2:'#ff7b42',warm:'#ffab48',leaf:'#6f9976',paper:'#fbf5ff',ink:'#311c3c',radius:'22px',softRadius:'16px',density:'medium-high',motion:'kinetic',mood:'campaign-studio'},
     biz:{accent:'#3f3b36',accent2:'#b18a49',warm:'#c9a35d',leaf:'#77806e',paper:'#f3efe7',ink:'#242321',radius:'4px',softRadius:'2px',density:'high',motion:'restrained',mood:'business-briefing'},
     trade:{accent:'#00b9df',accent2:'#79e5ff',warm:'#c9a652',leaf:'#628f86',paper:'#07131e',ink:'#eefcff',radius:'5px',softRadius:'3px',density:'high',motion:'terminal',mood:'global-terminal'},
@@ -48,7 +51,11 @@
     const sub=String(location.hostname||'').split('.')[0].toLowerCase();
     return HOST_ALIAS[sub]||sub||'my';
   }
-  function designFor(id=serviceId()){return {...DEFAULT,...(DESIGNS[id]||DESIGNS.my)};}
+  function designFor(id=serviceId()){
+    const base={...DEFAULT,...(DESIGNS[id]||DESIGNS.my)};
+    const profile=EXPERIENCE_PROFILES[base.experience]||{};
+    return {...base,experienceProfile:base.experience||'service-native',controlRadius:profile.controlRadius||base.softRadius,fieldRadius:profile.fieldRadius||base.softRadius,chipRadius:profile.chipRadius||base.softRadius,panelRadius:profile.panelRadius||base.radius,imageRadius:profile.imageRadius||base.radius,sectionRadius:profile.sectionRadius||base.radius};
+  }
   function workspaceKey(){
     const explicit=String(document.documentElement.dataset.ekodiWorkspaceSlug||document.body?.dataset?.ekodiWorkspaceSlug||'').trim().toLowerCase();if(explicit)return explicit;
     if(location.hostname==='ekodi.kr'||location.hostname==='www.ekodi.kr'){const first=location.pathname.split('/').filter(Boolean)[0]||'';if(first&&!['privacy','terms','history','mall'].includes(first))return first.toLowerCase();}
@@ -71,6 +78,8 @@
     root.dataset.ekodiDesignMood=d.mood;
     root.dataset.ekodiDesignDensity=d.density;
     root.dataset.ekodiDesignMotion=d.motion;
+    root.dataset.ekodiExperienceProfile=d.experienceProfile;
+    root.dataset.ekodiShapeProfile=d.experienceProfile==='consumer-commerce'?'soft-commerce':'service-native';
     style.setProperty('--ekodi-service-accent',d.accent);
     style.setProperty('--ekodi-service-accent-2',d.accent2);
     style.setProperty('--ekodi-service-warm',d.warm);
@@ -79,6 +88,12 @@
     style.setProperty('--ekodi-service-ink',d.ink);
     style.setProperty('--ekodi-service-radius',d.radius);
     style.setProperty('--ekodi-service-radius-soft',d.softRadius);
+    style.setProperty('--ekodi-control-radius',d.controlRadius);
+    style.setProperty('--ekodi-field-radius',d.fieldRadius);
+    style.setProperty('--ekodi-chip-radius',d.chipRadius);
+    style.setProperty('--ekodi-panel-radius',d.panelRadius);
+    style.setProperty('--ekodi-image-radius',d.imageRadius);
+    style.setProperty('--ekodi-section-radius',d.sectionRadius);
     style.setProperty('--ekodi-service-shadow',d.shadow);
     style.setProperty('--ekodi-service-density',d.density);
     style.setProperty('--ekodi-service-motion',d.motion);
@@ -93,29 +108,18 @@
 
   const css=`
   :root[data-ekodi-design-inheritance]{
-    --ekodi-card-radius:var(--ekodi-service-radius);
-    --ekodi-button-radius:var(--ekodi-service-radius-soft);
+    --ekodi-card-radius:var(--ekodi-panel-radius,var(--ekodi-service-radius));
+    --ekodi-button-radius:var(--ekodi-control-radius,var(--ekodi-service-radius-soft));
     --ekodi-panel-shadow:var(--ekodi-service-shadow);
   }
-  :root[data-ekodi-design-inheritance] .ekodi-card,
-  :root[data-ekodi-design-inheritance] [data-ekodi-card],
-  :root[data-ekodi-design-inheritance] .ekodi-panel{
-    border-radius:var(--ekodi-service-radius)!important;
-  }
-  :root[data-ekodi-design-inheritance] .ekodi-primary,
-  :root[data-ekodi-design-inheritance] [data-ekodi-primary],
-  :root[data-ekodi-design-inheritance] .ekodi-cta{
-    background:var(--ekodi-service-accent)!important;
-  }
-  :root[data-ekodi-design-inheritance] .ekodi-soft-surface,
-  :root[data-ekodi-design-inheritance] [data-ekodi-soft-surface]{
-    background:color-mix(in srgb,var(--ekodi-service-accent) 8%,var(--ekodi-service-paper))!important;
-  }
-  :root[data-ekodi-design-inheritance] .ekodi-friendly-empty,
-  :root[data-ekodi-design-inheritance] .ekodi-friendly-welcome,
-  :root[data-ekodi-design-inheritance] .ekodi-message-ui{
-    --accent:var(--ekodi-service-accent);
-  }
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.ekodi-card,[data-ekodi-card],.ekodi-panel){border-radius:var(--ekodi-panel-radius,var(--ekodi-service-radius))!important}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.btn,.button,.smallbtn,.ekodi-button,.ekodi-cta,[data-ekodi-control],[role="tab"]){border-radius:var(--ekodi-control-radius,var(--ekodi-service-radius-soft))}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.search,.ekodi-field,[data-ekodi-field]){border-radius:var(--ekodi-field-radius,var(--ekodi-service-radius-soft))}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.chip,.tag,.ekodi-chip,[data-ekodi-chip]){border-radius:var(--ekodi-chip-radius,var(--ekodi-service-radius-soft))}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(dialog,.modal,.ekodi-dialog,[data-ekodi-dialog]){border-radius:var(--ekodi-panel-radius,var(--ekodi-service-radius))}
+  :root[data-ekodi-design-inheritance] :where(.ekodi-primary,[data-ekodi-primary],.ekodi-cta){background:var(--ekodi-service-accent)!important}
+  :root[data-ekodi-design-inheritance] :where(.ekodi-soft-surface,[data-ekodi-soft-surface]){background:color-mix(in srgb,var(--ekodi-service-accent) 8%,var(--ekodi-service-paper))!important}
+  :root[data-ekodi-design-inheritance] :where(.ekodi-friendly-empty,.ekodi-friendly-welcome,.ekodi-message-ui){--accent:var(--ekodi-service-accent)}
   [data-ekodi-shell-surface="admin"]{--ekodi-service-shadow:0 10px 30px rgba(0,0,0,.16)}
   [data-ekodi-shell-surface="admin"] .ekodi-illustration{filter:saturate(.72);opacity:.9}
   @media(prefers-reduced-motion:reduce){:root[data-ekodi-design-inheritance]{scroll-behavior:auto!important}}

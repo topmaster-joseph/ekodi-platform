@@ -1,9 +1,11 @@
 {
-  "version": 2,
+  "version": 3,
   "policy": "Each public EKODI service must have a distinct visual family. Share accessibility, responsive behavior, EKODI identity and navigation conventions, but do not clone palette, card geometry, typography hierarchy or information rhythm across services.",
   "shared": {
-    "mustKeep": ["EKODI brand relationship", "WCAG-conscious contrast", "keyboard focus", "responsive layout", "clear return path to ekodi.kr", "natural-language word integrity (no arbitrary word splitting)"],
-    "mustVary": ["dominant palette", "headline typography", "corner geometry", "information density", "hero composition", "motion character", "card language"]
+    "mustKeep": ["EKODI brand relationship", "WCAG-conscious contrast", "keyboard focus", "responsive layout", "clear return path to ekodi.kr", "natural-language word integrity (no arbitrary word splitting)", "centered shared chrome and canvas", "selective rounded interaction language"],
+    "mustVary": ["dominant palette", "headline typography", "corner geometry", "information density", "hero composition", "motion character", "card language"],
+    "geometryPolicy": {"strategy":"selective-by-role-and-service-profile","rule":"Use soft or pill geometry for user actions and comfort surfaces where it improves approachability. Preserve angular geometry for editorial, data, media and precision structures when the service visual family requires it.","softTargets":["buttons and calls-to-action","filters and chips","search and form controls","dialogs","choice cards"],"preserveAngularFor":["tables and ledgers","documents and editorial rules","code and data panels","broadcast frames","precision operational panels"]},
+    "chromePolicy": {"alignment":"centered-canvas","footerCardinality":"exactly-one","bodyTextAlignment":"service-owned"}
   },
   "services": {
     "church": {"family":"sanctuary","mood":"contemplative, spacious, sacred","palette":"deep forest / cream / muted gold","type":"serif-led","geometry":"open sections, restrained circles","density":"low"},
@@ -19,7 +21,7 @@
     "messenger": {"family":"conversation-switchboard","mood":"immediate, relational, context-aware","palette":"deep navy / luminous teal / soft ice","type":"compact conversational sans","geometry":"thread lanes, presence dots, handoff rails","density":"medium-high","rule":"conversation first; actions deep-link to the owning EKODI service"},
     "energy": {"family":"solar-grid","mood":"luminous, calm, operational, stewardship-led","palette":"deep ink / sunlight amber / leaf green / cool current blue","type":"wide modern sans + numeric telemetry accents","geometry":"energy-flow nodes, arcs, instrument panels","density":"medium-high","status":"staging MVP on feature/ekodi-energy-ai"},
     "business": {"family":"operator-cockpit","mood":"decisive, calm, orchestration-led","palette":"paper / graphite / mint / restrained amber","type":"compact operational sans + mono labels","geometry":"briefing bands, action gates, rectangular operator panels","density":"high","status":"staging MVP on feature/business-os-mvp"},
-    "mall": {"family":"curated-market","mood":"lively, tactile, discovery-led","palette":"apricot / coral / cobalt / market yellow","type":"editorial commerce sans","geometry":"product tiles, sticker badges, rounded image frames","density":"medium","status":"implemented in canonical sites/ekodi-mall on design/distinct-user-ui-20260816"},
+    "mall": {"family":"curated-market","mood":"lively, tactile, discovery-led","palette":"apricot / coral / cobalt / market yellow","type":"editorial commerce sans","geometry":"product tiles, sticker badges, rounded image frames","density":"medium","status":"implemented in canonical sites/ekodi-mall on design/distinct-user-ui-20260816","experienceProfile":"consumer-commerce","uiExtension":{"controls":"pill-first","fields":"pill-or-soft","cards":"soft 24-30px","promotionalSections":"rounded containers","images":"rounded product frames","touchTargets":"mobile-friendly","footer":"shared-only exactly once"}},
     "marketing": {"family":"campaign-studio","mood":"creative, energetic, outcome-led","palette":"aubergine / electric violet / warm orange","type":"bold grotesk sans","geometry":"campaign canvases, split previews, kinetic cards","density":"medium-high"},
     "biz": {"family":"business-briefing","mood":"credible, strategic, executive","palette":"stone / charcoal / brass","type":"clean sans + numeric accents","geometry":"briefing sheets and metric bands","density":"high"},
     "trade": {"family":"global-terminal","mood":"international, fast, exact","palette":"midnight / cyan / ice","type":"condensed sans + mono","geometry":"route lines, quote tables, terminal panels","density":"high"},

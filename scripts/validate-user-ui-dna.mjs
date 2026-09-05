@@ -77,6 +77,18 @@ if (!Array.isArray(shell?.scope) || !['public', 'workspace'].every(surface => sh
 if (shell?.principles?.singleSource !== true || shell?.principles?.noDuplicatedHeaderOrFooter !== true) {
   errors.push('User UI Shell must enforce single-source chrome without duplicate headers or footers.');
 }
+if (shell?.principles?.centeredChrome !== true || shell?.principles?.selectiveRoundedInteraction !== true || shell?.principles?.serviceGeometryPreserved !== true) {
+  errors.push('User UI Shell must center shared chrome and use selective service-aware geometry.');
+}
+if (shell?.header?.alignment !== 'centered-canvas' || shell?.footer?.dedupe !== 'exactly-one-shared-footer') {
+  errors.push('Shared header/footer alignment and footer cardinality contract is incomplete.');
+}
+if (shell?.geometry?.strategy !== 'selective-by-semantic-role-and-service-profile' || !shell?.geometry?.tokens?.includes('--ekodi-control-radius')) {
+  errors.push('Shared geometry policy must expose semantic, service-aware radius tokens.');
+}
+if (shell?.experienceProfiles?.['consumer-commerce']?.appliesTo?.includes('mall') !== true || services.mall?.experienceProfile !== 'consumer-commerce') {
+  errors.push('Mall must inherit the reusable consumer-commerce experience profile.');
+}
 for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
@@ -153,7 +165,7 @@ for(const marker of ['placeButton','data-ekodi-floating','[data-ekodi-language-c
 for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallback','renderEkodiUserFooter','manifestServiceForHost','shellServiceForRootPath','data-ekodi-user-ui-style']) {
   if (!injectorSource.includes(marker)) errors.push(`Shared user UI injector lost required marker: ${marker}`);
 }
-for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.ekodi-user-ui-footer','.ekodi-user-ui-header','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','text-align: center','.ekodi-user-language','justify-content: center']) {
+for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.ekodi-user-ui-footer','.ekodi-user-ui-header','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','text-align: center','.ekodi-user-language','justify-content: center','--ekodi-user-header-inline-gutter','Selective geometry principle','consumer-commerce','body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer]']) {
   if (!userUiStyle.includes(marker)) errors.push(`Shared CSP-safe user UI stylesheet lost required marker: ${marker}`);
 }
 for (const marker of ['Natural-language word integrity','word-break: keep-all','overflow-wrap: break-word','hyphens: none','[data-ekodi-break-anywhere]']) {
@@ -165,7 +177,7 @@ for (const marker of ['Responsive Typography Standard v2','word-break:keep-all',
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
-for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=4','ekodi-user-ui-footer__copy','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters']) {
+for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=5','ekodi-user-ui-footer__copy','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {
   if (!clientFooterSource.includes(marker)) errors.push(`Shared client footer lost central-config marker: ${marker}`);
 }
 for (const duplicatedText of ['213-13-01959','백련동1길 17-4','© 2026 EKODI · EKODIBIZ']) {
@@ -178,6 +190,9 @@ for (const marker of ['rootUserService','rootInternalPath','shellServiceForRootP
 for(const id of Object.keys(services)){
   if(id==='mission')continue;
   if(!designInheritanceSource.includes(`${id}:`))errors.push(`Runtime design inheritance is missing UI DNA service "${id}".`);
+}
+for(const marker of ['EXPERIENCE_PROFILES','consumer-commerce','--ekodi-control-radius','--ekodi-field-radius','--ekodi-chip-radius','--ekodi-panel-radius','ekodiExperienceProfile']){
+  if(!designInheritanceSource.includes(marker))errors.push(`Runtime design inheritance lost semantic geometry marker: ${marker}`);
 }
 
 for (const service of EKODI_SERVICE_MANIFEST.services ?? []) {
