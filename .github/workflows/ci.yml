@@ -34,7 +34,8 @@ jobs:
             .github/workflows/verify-ekodi-core-completion.yml \
             .github/workflows/release-messenger-investment-functional.yml \
             .github/workflows/release-invest-personalization.yml \
-            .github/workflows/cloud-control-workers-builds.yml
+            .github/workflows/cloud-control-workers-builds.yml \
+            .github/workflows/redeploy-control-on-central-core.yml
       - name: Enforce traffic-ready data plane
         run: |
           node --check data-plane.js
