@@ -1,7 +1,7 @@
 ﻿const freezeList = values => Object.freeze([...values]);
 
 export const SOVEREIGN_AUTONOMY_POLICY = Object.freeze({
-  version: '1.8.0',
+  version: '1.8.1',
   hierarchy: freezeList(['sovereign', 'autonomous', 'agentic', 'services']),
   authorityContext: 'Person + Workspace + Role + Capability',
   finalHumanAuthority: 'ekodi_platform_super_administrator',
@@ -19,7 +19,7 @@ export const SOVEREIGN_AUTONOMY_POLICY = Object.freeze({
       description: 'Contract-sensitive work that may proceed only inside an explicit bounded interface.',
       areas: freezeList([
         'service_contract', 'api_contract', 'agent_tool', 'worker', 'queue', 'cache',
-        'tenant_configuration', 'knowledge_index', 'content_pipeline', 'data_projection',
+        'tenant_configuration', 'knowledge_index', 'content_pipeline', 'data_projection', 'bounded_production_promotion',
       ]),
       requirement: 'explicit contract + bounded capability + rollback + verification',
     }),
@@ -76,6 +76,24 @@ export function normalizeSovereignContext(input = {}) {
     verificationDefined: source.verificationDefined === true,
     production: source.production === true,
     highImpact: source.highImpact === true,
+    standingDelegation: source.standingDelegation === true,
+    existingBoundary: source.existingBoundary === true,
+    postVerificationRequired: source.postVerificationRequired === true,
+    automaticRollback: source.automaticRollback === true,
+    knownStableTarget: source.knownStableTarget === true,
+    paidCommitment: source.paidCommitment === true,
+    explicitDelegatedBudget: source.explicitDelegatedBudget === true,
+    permissionExpansion: source.permissionExpansion === true,
+    canonicalIdentityChange: source.canonicalIdentityChange === true,
+    workspaceAuthorityChange: source.workspaceAuthorityChange === true,
+    destructiveDataChange: source.destructiveDataChange === true,
+    massDataChange: source.massDataChange === true,
+    newDomainOwnership: source.newDomainOwnership === true,
+    securityBoundaryChange: source.securityBoundaryChange === true,
+    newIndependentDeployment: source.newIndependentDeployment === true,
+    providerLockIn: source.providerLockIn === true,
+    productionSecretChange: source.productionSecretChange === true,
+    productionDnsChange: source.productionDnsChange === true,
   });
 }
 
@@ -105,13 +123,26 @@ function authorityMissing(context) {
   return '';
 }
 
+
+function sovereignEscalation(context) {
+  if (context.paidCommitment && !context.explicitDelegatedBudget) return 'unbudgeted_paid_commitment';
+  for (const [key, reason] of [['permissionExpansion','permission_expansion'],['canonicalIdentityChange','canonical_identity_change'],['workspaceAuthorityChange','workspace_authority_change'],['destructiveDataChange','destructive_data_change'],['massDataChange','mass_data_change'],['newDomainOwnership','new_domain_ownership'],['securityBoundaryChange','security_boundary_change'],['newIndependentDeployment','new_independent_deployment'],['providerLockIn','provider_lock_in'],['productionSecretChange','production_secret_change'],['productionDnsChange','production_dns_or_topology_change']]) if (context[key]) return reason;
+  return '';
+}
+function standingDelegationEvidence(context) {
+  const missing=[];
+  for (const [key,label] of [['standingDelegation','standing_delegation'],['existingBoundary','existing_registered_boundary'],['delegated','delegated'],['reversible','reversible'],['audited','audited'],['preflightVerified','preflight_verified'],['rollbackDefined','rollback_defined'],['knownStableTarget','known_stable_rollback_target'],['verificationDefined','verification_defined'],['postVerificationRequired','post_promotion_verification'],['automaticRollback','automatic_safe_recovery']]) if (!context[key]) missing.push(label);
+  return Object.freeze({eligible:missing.length===0,missing:Object.freeze(missing)});
+}
+
 export function evaluateAutonomousOperation(input = {}) {
   const area = clean(input.area).toLowerCase();
   const context = normalizeSovereignContext(input.context || input);
   const executionClass = classifyAutonomousArea(area);
 
-  if (context.highImpact || executionClass === 'red') {
-    return decision('human_gate', context.highImpact ? 'high_impact' : `red_area:${area || 'unknown'}`, 'Sovereign-core and high-impact changes require independent human authority and the governed promotion path.', { executionClass, context });
+  const sovereignReason = sovereignEscalation(context);
+  if (context.highImpact || sovereignReason || executionClass === 'red') {
+    return decision('human_gate', context.highImpact ? 'high_impact' : (sovereignReason || `red_area:${area || 'unknown'}`), 'Sovereign-core and high-impact changes require independent human authority and the governed promotion path.', { executionClass, context });
   }
 
   const missing = authorityMissing(context);
@@ -120,7 +151,8 @@ export function evaluateAutonomousOperation(input = {}) {
   }
 
   if (context.production) {
-    return decision('control_plane_required', 'production_promotion_only', 'Autonomous agents may prepare and verify a production candidate, but production mutation must pass the independent control/release plane.', { executionClass, context });
+    const standing = standingDelegationEvidence(context);
+    return decision('control_plane_required', 'production_promotion_only', 'Autonomous agents may prepare and verify a production candidate, but production mutation must pass the independent control/release plane.', { executionClass, context, standingDelegationEligible: standing.eligible, standingDelegationMissing: standing.missing });
   }
 
   if (executionClass === 'green') {

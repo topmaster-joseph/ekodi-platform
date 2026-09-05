@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.8.0
+# EKODI Platform Constitution v1.8.1
 
-Effective: 2026-09-05
+Effective: 2026-09-06
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 

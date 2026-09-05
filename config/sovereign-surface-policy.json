@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "1.8.0",
+  "policyVersion": "1.8.1",
   "status": "active",
   "sourceOfTruth": "governance/architecture/sovereign-autonomous-operations.v1.json",
   "authorityContext": "Person + Workspace + Role + Capability",
@@ -53,6 +53,7 @@
     "sovereign_control_plane",
     "constitutional_change"
   ],
+  "boundedProductionPromotion": {"changeClass":"yellow","directAgentMutation":false,"standingDelegation":true,"scope":"existing_registered_boundary_only","controlPlaneRequired":true},
   "completionDefinition": [
     "contract_declared",
     "authority_bounded",
