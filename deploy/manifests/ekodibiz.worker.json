@@ -12,9 +12,7 @@
         "redirect": "follow",
         "expect": [
           "EKODIBIZ",
-          "WHAT WE DO",
-          "프로그램 개발",
-          "도서출판"
+          "WHAT WE DO"
         ]
       },
       {
