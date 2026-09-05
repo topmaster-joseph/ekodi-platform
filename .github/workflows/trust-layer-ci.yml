@@ -6,6 +6,7 @@ on:
       - 'supabase/functions/_shared/trust.ts'
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
+      - 'supabase/functions/access-api/**'
       - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
@@ -15,6 +16,7 @@ on:
       - 'supabase/functions/_shared/trust.ts'
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
+      - 'supabase/functions/access-api/**'
       - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
@@ -35,6 +37,8 @@ jobs:
         run: deno check supabase/functions/_shared/trust.ts
       - name: Type-check Trust shadow API
         run: deno check --node-modules-dir=auto supabase/functions/trust-api/index.ts
+      - name: Type-check access API Trust adapter
+        run: deno check --node-modules-dir=auto supabase/functions/access-api/index.ts
       - name: Run Trust invariants
         run: deno test supabase/functions/_shared/trust.test.ts
       - name: Verify shadow-only cutover guard
@@ -46,3 +50,14 @@ jobs:
           grep -Fq 'trust_cutover_not_allowed' supabase/functions/_shared/trust.ts
           grep -Fq 'trust_runtime_audit_salt' supabase/functions/trust-api/index.ts
           grep -Fq 'grant execute on function public.trust_runtime_audit_salt() to service_role' supabase/migrations/20260904001000_trust_audit_vault_secret.sql
+      - name: Verify access migration stays shadow-only
+        shell: bash
+        run: |
+          grep -Fq "'authoritative_source', 'legacy'" supabase/migrations/20260905020000_access_api_trust_shadow.sql
+          grep -Fq "'cutover_allowed', false" supabase/migrations/20260905020000_access_api_trust_shadow.sql
+          grep -Fq "'generic_evaluator_compatible', false" supabase/migrations/20260905020000_access_api_trust_shadow.sql
+          grep -Fq "'workspace:access.read'" supabase/migrations/20260905020000_access_api_trust_shadow.sql
+          grep -Fq "'workspace:access.review'" supabase/migrations/20260905020000_access_api_trust_shadow.sql
+          grep -Fq 'genericEvaluatorCompatible = policy?.config?.generic_evaluator_compatible !== false' supabase/functions/trust-api/index.ts
+          grep -Fq 'legacy_predicate:"tenantReviewer"' supabase/functions/access-api/index.ts
+          grep -Fq 'Shadow telemetry must never change the live legacy authorization result.' supabase/functions/access-api/index.ts
