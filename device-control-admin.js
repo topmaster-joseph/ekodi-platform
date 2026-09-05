@@ -5,6 +5,7 @@
   const TOKEN_KEY = 'ekodi-auth-token';
   const WINDOWS_AGENT_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1';
   const BOOTSTRAP_URL = '/ekodi-device-bootstrap.cmd';
+  const DEVICE_REFRESH_MS = 30 * 1000;
   const POWER_COMMANDS = [
     ['power.always_on', '항상 켜짐', '절전 없음 · 화면 AC 30분 / 배터리 15분'],
     ['power.presentation', '프레젠테이션', '화면과 절전을 모두 끄지 않음'],
@@ -37,6 +38,7 @@
     'startup.restore': '이 시작 프로그램을 다시 활성화할까요?',
   };
   let timer = null;
+  let loadPromise = null;
   let currentEnrollmentUrl = '';
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
@@ -391,7 +393,9 @@
     visible.forEach(device => list.append(deviceCard(device)));
   }
 
-  async function loadDevices() {
+  function loadDevices() {
+    if (loadPromise) return loadPromise;
+    loadPromise = (async () => {
     const list = document.querySelector('#ekodiDeviceList');
     if (!list || !sessionStorage.getItem(TOKEN_KEY)) return;
     try {
@@ -400,6 +404,8 @@
       renderDevices(data.devices || []); renderJobs(data.jobs || []);
       const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
     } catch (error) { list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>'; list.querySelector('p').textContent = error.message; }
+    })().finally(() => { loadPromise = null; });
+    return loadPromise;
   }
 
   async function createEnrollment() {
@@ -480,7 +486,8 @@
 
     if (location.hash === '#devices') showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
-    timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
+    timer = window.setInterval(() => { if (document.visibilityState === 'visible' && !panel.classList.contains('hidden-panel')) loadDevices(); }, DEVICE_REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !panel.classList.contains('hidden-panel')) loadDevices(); });
   }
 
   installPanel();
