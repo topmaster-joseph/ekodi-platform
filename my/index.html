@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="ekodi-ui-type" content="USER">
   <title>My EKODI | 나의 에코디</title>
-  <link rel="stylesheet" href="/styles.css?v=20260904-progressive-personalization-1">
+  <link rel="stylesheet" href="/styles.css?v=20260906-intent-os-1">
   <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
   <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
@@ -45,11 +45,17 @@
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
     </section>
 
-    <section class="intent-shelf" aria-label="관심 시작점">
-      <div><p class="eyebrow">START FROM NEED</p><h2>지금 무엇이 필요하세요?</h2><p>기능 이름을 먼저 알 필요는 없습니다. 관심을 보인 영역만 My EKODI가 다음 단계로 꺼내 보여줍니다.</p></div>
-      <div class="intent-actions">
-        <button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
-      </div>
+
+    <section class="intent-shelf intent-os" aria-label="하고 싶은 일로 시작">
+      <div class="intent-copy"><p class="eyebrow">INTENT OS · CAPABILITY FIRST</p><h2>무엇을 하고 싶으세요?</h2><p>서비스 이름을 찾지 않아도 됩니다. My EKODI가 의도를 먼저 읽고 등록된 Capability만 조합해 실행 계획을 만듭니다.</p></div>
+      <form id="intentPlanForm" class="intent-plan-form">
+        <label class="intent-field"><span>하고 싶은 일</span><textarea id="intentPlanText" maxlength="1200" placeholder="예: 다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘" required></textarea></label>
+        <label class="intent-field intent-audience"><span>현재 맥락</span><select id="intentPlanAudience"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select></label>
+        <button id="intentPlanSubmit" class="primary" type="submit">계획 만들기</button>
+      </form>
+      <div class="intent-examples" aria-label="빠른 예시"><button type="button" data-intent-example="다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘">행사 준비</button><button type="button" data-intent-example="우리 매장의 고객 홍보와 매출 관리를 정리해줘">사업 운영</button><button type="button" data-intent-example="토요모임 말씀과 안내 콘텐츠를 준비해줘">교회·콘텐츠</button><button type="button" data-intent-example="책 원고를 정리하고 출판 준비까지 해줘">창작·출판</button></div>
+      <div class="intent-actions intent-legacy-signals" aria-label="빠른 관심 영역"><button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
+      <div id="intentPlanResult" class="intent-plan-result" aria-live="polite"><div class="intent-empty"><strong>원하는 결과부터 말해 주세요.</strong><p>EKODI는 Capability를 먼저 고르고 서비스와 AI는 그 다음에 선택합니다.</p></div></div>
     </section>
 
     <section id="money" class="section finance-section">
@@ -123,6 +129,7 @@
   <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="/journey/">My Journey ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js?v=20260904-progressive-personalization-1"></script>
+  <script type="module" src="/intent-navigator.js?v=20260906-intent-os-1"></script>
   <script type="module" src="/workspace-selector-sync.js?v=20260822-shell-sync-1"></script>
   <script type="module" src="/user-ai-ui.js?v=20260904-progressive-personalization-1"></script>
   <script type="module" src="/membership-summary.js?v=20260822-universal-membership-1"></script>

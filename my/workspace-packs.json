@@ -1,0 +1,294 @@
+{
+  "version": "1.1.0",
+  "name": "EKODI Workspace Packs",
+  "defaultPack": "personal-starter",
+  "packs": [
+    {
+      "id": "personal-starter",
+      "name": "My EKODI 기본",
+      "audiences": [
+        "person"
+      ],
+      "description": "누구나 시작하는 개인 활동 기본 환경.",
+      "capabilities": [
+        "core.navigator",
+        "core.project",
+        "core.documents",
+        "core.communication",
+        "core.analytics"
+      ],
+      "signals": [
+        "시작",
+        "도움",
+        "정리",
+        "계획",
+        "무엇을",
+        "모르겠",
+        "하고 싶"
+      ]
+    },
+    {
+      "id": "creator",
+      "name": "Creator Workspace",
+      "audiences": [
+        "person",
+        "team"
+      ],
+      "description": "글·미술·영상·음악·애니메이션 등 창작 활동을 프로젝트에서 공개까지 연결.",
+      "capabilities": [
+        "core.navigator",
+        "core.project",
+        "knowledge.research",
+        "creator.writing",
+        "creator.visual",
+        "creator.media",
+        "creator.publish",
+        "creator.rights",
+        "business.marketing",
+        "core.public-site"
+      ],
+      "signals": [
+        "글",
+        "책",
+        "작가",
+        "그림",
+        "미술",
+        "일러스트",
+        "디자인",
+        "영상",
+        "애니메이션",
+        "음악",
+        "창작",
+        "출판",
+        "포트폴리오"
+      ]
+    },
+    {
+      "id": "small-business",
+      "name": "Small Business Workspace",
+      "audiences": [
+        "person",
+        "business"
+      ],
+      "description": "소상공인과 작은 사업체의 고객·마케팅·영업·운영·재정을 연결.",
+      "capabilities": [
+        "core.project",
+        "core.automation",
+        "core.analytics",
+        "business.marketing",
+        "business.crm",
+        "business.sales",
+        "business.operations",
+        "commerce.market",
+        "finance.stewardship",
+        "core.public-site"
+      ],
+      "signals": [
+        "가게",
+        "매장",
+        "소상공인",
+        "사업",
+        "고객",
+        "홍보",
+        "마케팅",
+        "매출",
+        "판매",
+        "창업"
+      ]
+    },
+    {
+      "id": "organization",
+      "name": "Organization Workspace",
+      "audiences": [
+        "organization",
+        "community",
+        "team"
+      ],
+      "description": "기관·단체·협회·프로젝트 조직의 회원·문서·행사·재정·소통을 연결.",
+      "capabilities": [
+        "core.project",
+        "core.documents",
+        "core.automation",
+        "core.communication",
+        "core.analytics",
+        "community.membership",
+        "community.events",
+        "finance.stewardship",
+        "core.public-site"
+      ],
+      "signals": [
+        "기관",
+        "단체",
+        "협회",
+        "상인회",
+        "회원",
+        "조직",
+        "행사",
+        "위원회",
+        "공동체"
+      ]
+    },
+    {
+      "id": "learning-research",
+      "name": "Learning & Research Workspace",
+      "audiences": [
+        "person",
+        "team",
+        "organization"
+      ],
+      "description": "배움과 연구를 자료 탐색부터 산출물까지 연결.",
+      "capabilities": [
+        "core.navigator",
+        "core.project",
+        "core.documents",
+        "knowledge.research",
+        "learning.coach",
+        "creator.writing",
+        "core.analytics"
+      ],
+      "signals": [
+        "공부",
+        "배우",
+        "학습",
+        "연구",
+        "논문",
+        "자료",
+        "강의",
+        "교육",
+        "리서치"
+      ]
+    },
+    {
+      "id": "work-career",
+      "name": "Work & Career Workspace",
+      "audiences": [
+        "person"
+      ],
+      "description": "진로 탐색, 취업 준비, 역량 성장과 실제 일 관리를 연결.",
+      "capabilities": [
+        "core.navigator",
+        "core.project",
+        "core.documents",
+        "knowledge.research",
+        "learning.coach",
+        "work.career"
+      ],
+      "signals": [
+        "취업",
+        "구직",
+        "이직",
+        "직업",
+        "진로",
+        "이력서",
+        "면접",
+        "일자리"
+      ]
+    },
+    {
+      "id": "ministry-community",
+      "name": "Ministry & Community Workspace",
+      "audiences": [
+        "person",
+        "church",
+        "community",
+        "organization"
+      ],
+      "description": "사역·공동체·콘텐츠·행사를 사람 중심으로 연결.",
+      "capabilities": [
+        "core.project",
+        "core.documents",
+        "core.communication",
+        "community.membership",
+        "community.events",
+        "ministry.service",
+        "creator.writing",
+        "creator.media"
+      ],
+      "signals": [
+        "교회",
+        "목회",
+        "사역",
+        "예배",
+        "선교",
+        "말씀",
+        "기도",
+        "공동체"
+      ]
+    },
+    {
+      "id": "trade-commerce",
+      "name": "Trade & Commerce Workspace",
+      "audiences": [
+        "business",
+        "organization"
+      ],
+      "description": "공급자·바이어·판매·재정·문서 흐름을 거래 단위로 연결.",
+      "capabilities": [
+        "core.project",
+        "core.documents",
+        "core.analytics",
+        "business.sales",
+        "business.operations",
+        "commerce.market",
+        "trade.operations",
+        "finance.stewardship"
+      ],
+      "signals": [
+        "무역",
+        "수출",
+        "수입",
+        "바이어",
+        "공급자",
+        "견적",
+        "물류",
+        "거래"
+      ]
+    },
+    {
+      "id": "insurance-care",
+      "name": "Insurance Care Workspace",
+      "audiences": [
+        "person",
+        "business"
+      ],
+      "description": "보험 가입내역과 보장·청구 준비를 이해하기 쉽게 관리.",
+      "capabilities": [
+        "core.documents",
+        "core.analytics",
+        "finance.stewardship",
+        "insurance.guide"
+      ],
+      "signals": [
+        "보험",
+        "보장",
+        "실손",
+        "청구",
+        "보험료"
+      ]
+    },
+    {
+      "id": "energy-care",
+      "name": "Energy Care Workspace",
+      "audiences": [
+        "person",
+        "business",
+        "organization"
+      ],
+      "description": "전기·태양광·시설 데이터를 관찰하고 개선 과제를 관리.",
+      "capabilities": [
+        "core.project",
+        "core.analytics",
+        "energy.manage"
+      ],
+      "signals": [
+        "전기",
+        "태양광",
+        "전력",
+        "에너지",
+        "발전량",
+        "시설"
+      ]
+    }
+  ],
+  "principle": "Packs are starting compositions, never identity or authorization boundaries."
+}
