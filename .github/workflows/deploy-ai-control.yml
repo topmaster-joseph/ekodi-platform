@@ -91,7 +91,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/cognitive-control-plane.test.mjs
+          node --test test/ai-control-platform.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
@@ -103,6 +103,9 @@ jobs:
           grep -Fq 'missionPolicyVersion' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
+          grep -Fq "route=common-services&service=ai" ai-control-worker.js
+          grep -Fq "surface:'runtime-only'" ai-control-worker.js
+          grep -Fq "centralAdminSession" ai-control-worker.js
           grep -Fq "['login','status']" scripts/ai-account-node.mjs
           test -f migrations/0050_ai_control_plane.sql
           test -f migrations/0051_ai_account_nodes.sql
@@ -157,11 +160,19 @@ jobs:
           worker_pid=$!
           trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 24); do
-            root_code=$(curl -sS -o /tmp/ai-local.html -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/ || true)
-            config_code=$(curl -sS -o /tmp/ai-local-config.js -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/config.js || true)
+            root_code=$(curl -sS -D /tmp/ai-local-root-headers.txt -o /tmp/ai-local-root-body.txt -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/ || true)
+            config_code=$(curl -sS -o /tmp/ai-local-config.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/config.js || true)
+            exchange_code=$(curl -sS -o /tmp/ai-local-exchange.json -w '%{http_code}' --connect-timeout 2 --max-time 5 -X POST http://127.0.0.1:8787/api/auth/exchange || true)
+            health_code=$(curl -sS -o /tmp/ai-local-health.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/__health || true)
             status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
-            if [[ "$root_code" == "200" && "$config_code" == "200" && "$status_code" == "200" ]]               && grep -Fq 'AI Control Plane' /tmp/ai-local.html               && grep -Fq '"taskExecutionEnabled":false' /tmp/ai-local-config.js               && grep -Fq '"platform":"ai-control"' /tmp/ai-local-status.json               && grep -Fq '"stateStore":"unavailable"' /tmp/ai-local-status.json; then
-              echo 'Immutable AI Control staging artifact verified locally with execution disabled.'
+            if [[ "$root_code" == "307" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" ]] \
+              && grep -Fqi 'location: https://admin.ekodi.kr/?route=common-services&service=ai' /tmp/ai-local-root-headers.txt \
+              && grep -Fq 'operator_surface_moved' /tmp/ai-local-config.json \
+              && grep -Fq 'service_local_auth_retired' /tmp/ai-local-exchange.json \
+              && grep -Fq '"platform":"ai-control"' /tmp/ai-local-health.json \
+              && grep -Fq '"surface":"runtime-only"' /tmp/ai-local-health.json \
+              && grep -Fq 'authentication_required' /tmp/ai-local-status.json; then
+              echo 'Immutable AI Runtime staging artifact verified: operator root redirects to Admin, health is minimal, detailed status is protected.'
               exit 0
             fi
             sleep 1
@@ -193,15 +204,15 @@ jobs:
           headers=/tmp/ai-edge-headers.txt
           body=/tmp/ai-edge-body.txt
           code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/" || true)
-          if [[ "$code" == "200" ]] && grep -Fq 'AI Control Plane' "$body"; then
-            echo "AI Control Plane staging is directly reachable at $STAGING_URL."
+          if [[ "$code" == "307" ]] && grep -Fqi 'location: https://admin.ekodi.kr/?route=common-services&service=ai' "$headers"; then
+            echo "AI Runtime staging redirects operator entry to the central Admin Control Plane."
             exit 0
           fi
           if [[ "$code" == "302" ]] && grep -Eqi '^www-authenticate:[[:space:]]*Cloudflare-Access' "$headers"; then
-            echo "AI Control Plane staging deployed at $STAGING_URL and remains protected by Cloudflare Access."
+            echo "AI Runtime staging deployed at $STAGING_URL and remains protected by Cloudflare Access."
             exit 0
           fi
-          printf 'Unexpected staging edge response: HTTP %s\n' "$code" >&2
+          printf 'Unexpected AI Runtime staging edge response: HTTP %s\n' "$code" >&2
           cat "$headers" >&2 || true
           cat "$body" >&2 || true
           exit 1

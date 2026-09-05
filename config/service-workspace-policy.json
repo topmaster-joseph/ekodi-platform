@@ -124,5 +124,22 @@
       "yogurtMarketing": "https://ekodi.kr/yogurt/marketing",
       "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
     }
+  },
+  "commonServiceOperatorAccessRule": {
+    "surface": "admin.ekodi.kr",
+    "canonicalPath": "admin-menu/common-services",
+    "runtimeHostsAreOperatorPages": false,
+    "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
+    "sessionAuthority": "central_admin_session",
+    "authorityContext": "Person + Workspace + Role + Capability",
+    "internalOperationalInfoBeforeAuthentication": false,
+    "perServiceLoginUi": false,
+    "runtimeApiMayRemainOnDedicatedHost": true,
+    "capabilityExamples": [
+      "service:read",
+      "service:operate",
+      "ai:read",
+      "ai:operate"
+    ]
   }
 }
