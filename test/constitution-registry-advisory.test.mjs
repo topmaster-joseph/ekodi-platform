@@ -74,3 +74,19 @@ test('advisory check recognizes data-sovereignty validators without over-indexin
   assert.match(billing,/Result:\*\* PASS/);
   assert.doesNotMatch(billing,/DATA-001/);
 });
+
+
+test('advisory check cross-maps Cognitive and Data Plane contracts without over-indexing runtime',()=>{
+  const data=run('config/data-plane-contract.json');
+  for(const id of ['ARCH-001','DATA-001','PROVIDER-001','DEPLOY-001','WORKSPACE-001']) assert.match(data,new RegExp(id));
+
+  const cognitive=run('config/cognitive-control-plane.json');
+  for(const id of ['ARCH-001','DATA-001','PROVIDER-001','DEPLOY-001','AI-001']) assert.match(cognitive,new RegExp(id));
+
+  const validator=run('scripts/validate-cognitive-control-plane.mjs');
+  for(const id of ['ARCH-001','DATA-001','PROVIDER-001','DEPLOY-001','WORKSPACE-001','AI-001']) assert.match(validator,new RegExp(id));
+
+  const runtime=run('cognitive-control-plane.js');
+  assert.match(runtime,/Result:\*\* PASS/);
+  for(const id of ['ARCH-001','DATA-001','PROVIDER-001','DEPLOY-001','WORKSPACE-001','AI-001']) assert.doesNotMatch(runtime,new RegExp(id));
+});
