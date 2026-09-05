@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "name": "EKODI Responsible Independent Service Contract",
+  "status": "enforced-foundation",
+  "principle": "Integrated responsibility, distributed execution, standardized connections.",
+  "required": [
+    "serviceId",
+    "responsibilityClass",
+    "serviceBoundary",
+    "identity",
+    "dataBoundary",
+    "capabilities",
+    "connections",
+    "actionPolicy",
+    "projectionPolicy",
+    "lifecycle"
+  ],
+  "invariants": {
+    "responsibilityClass": "ekodi-responsible",
+    "workspaceIdentityIsExternalToService": true,
+    "canonicalPersonIdentityComesFromCore": true,
+    "privateDatabaseCrossServiceAccessForbidden": true,
+    "externalProviderCredentialsClientSideForbidden": true,
+    "disconnectMustPreservePersonAndWorkspaceIdentity": true,
+    "exportOrExitPathRequired": true,
+    "auditTrailRequired": true,
+    "providerReplacementPathRequired": true
+  },  "actionLevels": {
+    "L0": "observe",
+    "L1": "analyze",
+    "L2": "recommend",
+    "L3": "execute-after-explicit-approval",
+    "L4": "bounded-preauthorized-execution"
+  },
+  "defaultActionPolicy": {
+    "maximumWithoutFreshApproval": "L2",
+    "financialExecutionDefault": "disabled",
+    "highImpactActionRequiresFreshApproval": true,
+    "autonomousIrreversibleActionForbidden": true
+  },
+  "connectionContract": {
+    "allowedMechanisms": ["api", "event", "webhook", "adapter", "gateway"],
+    "minimumScope": true,
+    "revocable": true,
+    "providerStatusVisible": true,
+    "rawDataSharingDefault": "remain-at-owning-boundary",
+    "downstreamDefault": "purpose-bound-projection"
+  },
+  "evidenceContract": {
+    "insightRequiresEvidence": true,
+    "evidenceRequiresSourceProvenance": true,
+    "userCanInspectBasis": true,
+    "userCorrectionSupported": true
+  }
+}
