@@ -117,6 +117,7 @@ export function evaluateMissionAction(action = {}) {
 
   if (
     HUMAN_GATE.has(area)
+    || Boolean(action.highImpact)
     || Boolean(action.reducesUserRights)
     || Boolean(action.crossTenantPrivateData)
     || agent.mustEscalate?.includes(area)

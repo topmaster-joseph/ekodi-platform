@@ -1,3 +1,4 @@
+import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
 export const COGNITIVE_CONTROL_POLICY = Object.freeze({
   version: '1.1.0',
   planes: Object.freeze(['control', 'governance', 'execution', 'data']),
@@ -88,6 +89,10 @@ export function normalizeControlIntent(input = {}) {
     governanceAuthorized: source.governanceAuthorized === true,
     rebuildOnPromotion: source.rebuildOnPromotion === true,
     highImpact: source.highImpact === true,
+    standingDelegation: source.standingDelegation === true,
+    personId: clean(source.personId || source.person_id), workspaceId: clean(source.workspaceId || source.workspace_id), role: clean(source.role), capability: clean(source.capability),
+    existingBoundary: source.existingBoundary === true, preflightVerified: source.preflightVerified === true, reversible: source.reversible === true, rollbackDefined: source.rollbackDefined === true, verificationDefined: source.verificationDefined === true, postVerificationRequired: source.postVerificationRequired === true, automaticRollback: source.automaticRollback === true, knownStableTarget: source.knownStableTarget === true, failedVerification: source.failedVerification === true,
+    paidCommitment: source.paidCommitment === true, explicitDelegatedBudget: source.explicitDelegatedBudget === true, permissionExpansion: source.permissionExpansion === true, canonicalIdentityChange: source.canonicalIdentityChange === true, workspaceAuthorityChange: source.workspaceAuthorityChange === true, destructiveDataChange: source.destructiveDataChange === true, massDataChange: source.massDataChange === true, newDomainOwnership: source.newDomainOwnership === true, securityBoundaryChange: source.securityBoundaryChange === true, newIndependentDeployment: source.newIndependentDeployment === true, providerLockIn: source.providerLockIn === true, productionSecretChange: source.productionSecretChange === true, productionDnsChange: source.productionDnsChange === true,
     gates: Object.freeze(unique(source.gates)),
     artifact: normalizeArtifact(source.artifact),
   });
@@ -135,11 +140,13 @@ export function evaluateControlIntent(input = {}) {
   }
 
   const mutating = MUTATING_OPERATIONS.has(intent.operation);
-  const highImpact = intent.highImpact || HIGH_IMPACT.has(intent.operation);
-
-  if (highImpact) {
-    return result('human_gate', 'high_impact_change', 'High-impact changes require an explicit human stewardship decision regardless of the requesting agent or environment.', { intent });
+  if (intent.operation === 'rollback') {
+    const safeRecovery = intent.standingDelegation && intent.failedVerification && intent.automaticRollback && intent.knownStableTarget && intent.existingBoundary && intent.reversible && intent.audited && intent.verificationDefined && intent.postVerificationRequired;
+    if (safeRecovery) return result('allow', 'automatic_safe_rollback', 'Failed bounded production may recover automatically to a known stable target and must verify the recovery.', { intent, authorizationMode: 'standing_delegation' });
+    return result('human_gate', 'high_impact_change', 'Rollback outside the verified safe-recovery envelope remains a sovereign human decision.', { intent });
   }
+  const highImpact = intent.highImpact || HIGH_IMPACT.has(intent.operation);
+  if (highImpact) return result('human_gate', 'high_impact_change', 'High-impact changes require an explicit human stewardship decision regardless of the requesting agent or environment.', { intent });
 
   if (intent.targetEnvironment === 'production' && intent.operation === 'observe') {
     if (!intent.readOnly || !intent.audited) {
@@ -152,9 +159,10 @@ export function evaluateControlIntent(input = {}) {
     if (intent.sourceEnvironment !== 'verification') {
       return result('deny', 'verification_required', 'Production schema migration must originate from the verification environment.', { intent });
     }
-    if (!intent.governanceAuthorized) {
-      return result('deny', 'governance_authorization_required', 'Production schema migration requires independent Governance Plane authorization.', { intent });
-    }
+    const sovereign = evaluateAutonomousOperation({ area:'bounded_production_promotion', personId:intent.personId, workspaceId:intent.workspaceId, role:intent.role, capability:intent.capability, production:true, standingDelegation:intent.standingDelegation, existingBoundary:intent.existingBoundary, delegated:intent.standingDelegation, reversible:intent.reversible, audited:intent.audited, preflightVerified:intent.preflightVerified, rollbackDefined:intent.rollbackDefined, verificationDefined:intent.verificationDefined, postVerificationRequired:intent.postVerificationRequired, automaticRollback:intent.automaticRollback, knownStableTarget:intent.knownStableTarget, paidCommitment:intent.paidCommitment, explicitDelegatedBudget:intent.explicitDelegatedBudget, permissionExpansion:intent.permissionExpansion, canonicalIdentityChange:intent.canonicalIdentityChange, workspaceAuthorityChange:intent.workspaceAuthorityChange, destructiveDataChange:intent.destructiveDataChange, massDataChange:intent.massDataChange, newDomainOwnership:intent.newDomainOwnership, securityBoundaryChange:intent.securityBoundaryChange, newIndependentDeployment:intent.newIndependentDeployment, providerLockIn:intent.providerLockIn, productionSecretChange:intent.productionSecretChange, productionDnsChange:intent.productionDnsChange });
+    const standingAuthorized = sovereign.standingDelegationEligible === true;
+    if (sovereign.tier === 'human_gate' && !intent.governanceAuthorized) return result('human_gate', sovereign.reason, sovereign.explanation, { intent, sovereign });
+    if (!intent.governanceAuthorized && !standingAuthorized) return result('deny', 'governance_authorization_required', 'Production promotion needs explicit Governance authorization or a complete pre-approved bounded standing delegation.', { intent, sovereign });
     if (!intent.audited) {
       return result('deny', 'audit_required', 'Production schema migration must create durable audit evidence.', { intent });
     }
@@ -193,7 +201,7 @@ export function evaluateControlIntent(input = {}) {
     if (missing.length) {
       return result('deny', 'promotion_gates_incomplete', 'Every production promotion gate must be satisfied before release.', { intent, missingGates: missing });
     }
-    return result('allow', 'verified_artifact_promotion', 'The same verified immutable artifact may be promoted through the guarded production controller.', { intent });
+    return result('allow', 'verified_artifact_promotion', 'The same verified immutable artifact may be promoted through the guarded production controller.', { intent, authorizationMode: intent.governanceAuthorized ? 'explicit_governance' : 'standing_delegation' });
   }
 
   if (intent.targetEnvironment === 'verification' && mutating) {
