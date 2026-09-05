@@ -7,6 +7,7 @@ const USER_FOOTER_BOOTSTRAP=`window.__EKODI_USER_FOOTER_CONFIG__=${JSON.stringif
 function corsHeaders(){return {'access-control-allow-origin':'*','access-control-allow-methods':'GET,HEAD,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','x-content-type-options':'nosniff'};}
 function json(data,status=200,cache='public, max-age=60, stale-while-revalidate=300'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,...corsHeaders()}});}
 function withHeaders(response){const headers=new Headers(response.headers);headers.set('access-control-allow-origin','*');headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','no-referrer');headers.set('cross-origin-resource-policy','cross-origin');if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
+async function safeAssetFetch(env,url,request){try{return await env.ASSETS.fetch(new Request(url,request));}catch{return new Response('',{status:503,headers:{'cache-control':'no-store','x-ekodi-shell-asset-error':'fetch_failed'}});}}
 async function bundledShell(request,env,ctx){
   let bundleCache=null,bundleCacheKey=null;
   if(request.method==='GET'&&typeof caches!=='undefined'){
@@ -38,21 +39,21 @@ async function bundledShell(request,env,ctx){
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
   const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,mediaMeetingResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
-    env.ASSETS.fetch(new Request(shellUrl,request)),
-    env.ASSETS.fetch(new Request(navUrl,request)),
-    env.ASSETS.fetch(new Request(contextUrl,request)),
-    env.ASSETS.fetch(new Request(userHeaderUrl,request)),
-    env.ASSETS.fetch(new Request(userFooterUrl,request)),
-    env.ASSETS.fetch(new Request(userLanguageUrl,request)),
-    env.ASSETS.fetch(new Request(mediaMeetingUrl,request)),
-    env.ASSETS.fetch(new Request(userCharacterUrl,request)),
-    env.ASSETS.fetch(new Request(ccmMrUrl,request)),
-    env.ASSETS.fetch(new Request(adminShellUrl,request)),
-    env.ASSETS.fetch(new Request(headerUrl,request)),
-    env.ASSETS.fetch(new Request(messageUrl,request)),
-    env.ASSETS.fetch(new Request(illustrationUrl,request)),
-    env.ASSETS.fetch(new Request(designInheritanceUrl,request)),
-    env.ASSETS.fetch(new Request(linkCompatUrl,request)),
+    safeAssetFetch(env,shellUrl,request),
+    safeAssetFetch(env,navUrl,request),
+    safeAssetFetch(env,contextUrl,request),
+    safeAssetFetch(env,userHeaderUrl,request),
+    safeAssetFetch(env,userFooterUrl,request),
+    safeAssetFetch(env,userLanguageUrl,request),
+    safeAssetFetch(env,mediaMeetingUrl,request),
+    safeAssetFetch(env,userCharacterUrl,request),
+    safeAssetFetch(env,ccmMrUrl,request),
+    safeAssetFetch(env,adminShellUrl,request),
+    safeAssetFetch(env,headerUrl,request),
+    safeAssetFetch(env,messageUrl,request),
+    safeAssetFetch(env,illustrationUrl,request),
+    safeAssetFetch(env,designInheritanceUrl,request),
+    safeAssetFetch(env,linkCompatUrl,request),
   ]);
   if(!shellResponse.ok)return withHeaders(shellResponse);
   const shell=await shellResponse.text();

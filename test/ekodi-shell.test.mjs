@@ -85,3 +85,27 @@ test('bundled shell uses edge cache before rebuilding fifteen static asset fragm
   assert.match(worker,/x-ekodi-shell-bundle-cache','hit/);
   assert.match(worker,/bundledShell\(request,env,ctx\)/);
 });
+
+test('bundled shell isolates an optional asset fetch rejection',async()=>{
+  const {default:worker}=await import('../ekodi-shell-worker.js');
+  const env={ENVIRONMENT:'test',ASSETS:{fetch:async request=>{
+    const path=new URL(request.url).pathname;
+    if(path==='/user-character.js')throw new Error('transient asset failure');
+    return new Response(path==='/shell.js'?'window.shellCore=true;':`// ${path}`,{status:200});
+  }}};
+  const response=await worker.fetch(new Request('https://shell.ekodi.kr/shell.js'),env,{waitUntil(){}});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-user-character'),'missing');
+  assert.match(await response.text(),/window\.shellCore=true/);
+});
+
+test('bundled shell converts core asset rejection into controlled 503',async()=>{
+  const {default:worker}=await import('../ekodi-shell-worker.js');
+  const env={ENVIRONMENT:'test',ASSETS:{fetch:async request=>{
+    if(new URL(request.url).pathname==='/shell.js')throw new Error('core asset failure');
+    return new Response('// optional',{status:200});
+  }}};
+  const response=await worker.fetch(new Request('https://shell.ekodi.kr/shell.js'),env,{waitUntil(){}});
+  assert.equal(response.status,503);
+  assert.equal(response.headers.get('x-ekodi-shell-asset-error'),'fetch_failed');
+});
