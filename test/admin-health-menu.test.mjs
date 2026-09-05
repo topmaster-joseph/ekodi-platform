@@ -6,13 +6,16 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
 const canonicalPair = (source, section, hash) => source.includes(`['${section}', '${hash}']`) || source.includes(`${section}:${hash}`);
 
-test('Health remains a visible standalone route before Security and later operational features', async () => {
+test('Health remains a visible Operations Center route after AI and node controls', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   const loader = await read('admin-demand-loader.js');
-  assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
-  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
-  assert.ok(registry.indexOf("id: 'health'") < registry.indexOf("id: 'security'"));
+  assert.match(registry, /id: 'security', group: 'core'/);
+  assert.match(registry, /id: 'capabilities', group: 'operations-center'/);
+  assert.match(registry, /id: 'health', group: 'operations-center'/);
+  assert.ok(registry.indexOf("id: 'capabilities'") < registry.indexOf("id: 'aiops'"));
+  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'devices'"));
+  assert.ok(registry.indexOf("id: 'devices'") < registry.indexOf("id: 'health'"));
   assert.ok(routePair(menu, '#health', 'health'));
   assert.ok(canonicalPair(menu, 'health', '#health'));
   assert.match(loader, /health:\s*\{/);

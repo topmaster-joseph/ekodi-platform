@@ -9,8 +9,8 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('eight stable work areas replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
+test('five domains plus Operations Center replace the former many-group admin taxonomy', () => {
+  for (const id of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'space']) {
@@ -22,14 +22,14 @@ test('eight stable work areas replace the former many-group admin taxonomy', () 
   assert.match(sidebar, /getAdminMenuGroupForSection/);
 });
 
-test('every global work area opens its first visible contextual submenu', () => {
+test('every global work area opens its configured visible default submenu', () => {
   const { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY, getAdminMenuGroupDefault } = registryModule;
   for (const group of ADMIN_MENU_GROUPS) {
-    const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal);
-    assert.ok(firstVisibleChild, `${group.id} should have a visible child`);
-    assert.equal(getAdminMenuGroupDefault(group.id), firstVisibleChild.id);
+    const configured = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly);
+    assert.ok(configured, `${group.id} should have a visible configured default`);
+    assert.equal(getAdminMenuGroupDefault(group.id), group.defaultSection);
   }
-  assert.match(registry, /firstVisibleChild/);
+  assert.match(registry, /const explicit = ADMIN_MENU_REGISTRY\.find/);
 });
 
 test('left navigation is a reusable shared module backed only by the registry', () => {

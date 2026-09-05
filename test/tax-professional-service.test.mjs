@@ -83,7 +83,9 @@ test('Admin registry exposes Tax as an external professional service', async () 
   const runtime = await read('admin-menu-runtime.js');
   assert.match(registry, /id: 'tax'/);
   assert.match(registry, /https:\/\/tax\.ekodi\.kr\//);
-  assert.match(registry, /세금 · 증빙/);
+  assert.match(registry, /세금·증빙/);
+  assert.match(registry, /id: 'tax'[^\n]*group: 'vertical'/);
+  assert.match(registry, /id: 'tax'[^\n]*adminHandoff: true/);
   assert.match(runtime, /ensureExternalMenuItems/);
 });
 

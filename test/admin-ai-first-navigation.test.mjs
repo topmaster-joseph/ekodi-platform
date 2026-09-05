@@ -36,12 +36,12 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
   assert.ok(layout.includes('routeInternal()'));
 });
 
-test('human-facing Admin menu has one canonical order inside eight work areas', () => {
-  assert.deepEqual(adminMenuGroups(), ['home','operations','people','services','ai','business','data','system']);
+test('human-facing Admin menu has one canonical order inside five domains plus Operations Center', () => {
+  assert.deepEqual(adminMenuGroups(), ['structure','core','common','vertical','tenants','operations-center']);
   assert.deepEqual(adminMenuOrder(), [
-    'campus','public-site-controls','work','communication','workspace','organization','cheonggye-members','clients','admins',
-    'life-ai','personal-finance','common-services','community','books','social','aiops','devotional','marketing-ai','ai-module-spec','ai-membership',
-    'finance','tax','affiliates','storage','api-cost','health','security','devices','architecture',
+    'campus','public-site-controls','architecture','security','admins','ai-module-spec','storage',
+    'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','affiliates',
+    'work','organization','clients','cheonggye-members','capabilities','aiops','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
   assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));
