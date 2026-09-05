@@ -40,6 +40,9 @@ test('every public admin subservice belongs to one work area', () => {
   assert.equal(getAdminMenuGroupForSection('finance'), 'business');
   assert.equal(getAdminMenuGroupForSection('workspace'), 'people');
   assert.equal(getAdminMenuGroupForSection('storage'), 'data');
+  assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
+  assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
+  assert.equal(getAdminMenuGroupForSection('devices'), 'system');
 });
 
 test('admin locale is deliberately limited to Korean and English', () => {
