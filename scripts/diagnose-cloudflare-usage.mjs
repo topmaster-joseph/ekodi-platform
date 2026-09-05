@@ -150,6 +150,32 @@ function automationKind(value){
   return 'other-automation';
 }
 
+async function recentTrafficClassification(account, window) {
+  let zones=[];
+  try{zones=await activeZones(account);}catch{return {label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:0,internalHosts:[]};}
+  const totals={label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:zones.length,internalHosts:[]};
+  const internalHosts=new Map();
+  const query=`query RecentUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
+  for(const zone of zones){
+    try{
+      const payload=await gql(account,query,{zoneTag:zone.id,start:window.start,end:window.end});
+      const rows=payload?.data?.viewer?.zones?.[0]?.rows||[];
+      totals.coverage+=1;
+      for(const row of rows){
+        const count=Number(row?.count||0),ua=String(row?.dimensions?.userAgent||''),host=String(row?.dimensions?.clientRequestHTTPHost||zone.name).trim().toLowerCase();
+        totals.requests+=count;
+        const category=classifyTrafficUserAgent(ua).category;
+        if(category==='ekodi_internal'){totals.internal+=count;if(/^EKODI-github-monitor\//i.test(ua))totals.monitor+=count;if(host)internalHosts.set(host,(internalHosts.get(host)||0)+count);}
+        else if(category==='search_bot')totals.searchBot+=count;
+        else if(category==='other_bot')totals.automation+=count;
+        else totals.unclassified+=count;
+      }
+    }catch{}
+  }
+  totals.internalHosts=[...internalHosts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,10);
+  return totals;
+}
+
 async function activeZones(account) {
   const payload = await cf(account, `/zones?per_page=50&status=active&account.id=${encodeURIComponent(account.accountId)}`);
   return (payload?.result || []).filter(zone => zone?.id && zone?.name).map(zone => ({ id:String(zone.id), name:String(zone.name) }));
@@ -340,6 +366,13 @@ function markdown(report) {
       if(item)lines.push(`- ${item.script}: ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors`);
     }
   }
+  lines.push('', '## Recent traffic classification');
+  for(const row of report.recentTraffic||[]){
+    lines.push('', `### ${row.label}`);
+    lines.push(`- requests ${row.requests} | internal ${row.internal} (GitHub monitor ${row.monitor}) | search bot ${row.searchBot} | automation ${row.automation} | unclassified ${row.unclassified} | zones ${row.coverage}/${row.zones}`);
+    if(row.internalHosts?.length)lines.push(...row.internalHosts.slice(0,5).map(item=>`- internal ${item.requests} | ${item.host}`));
+  }
+
   lines.push('', '## Five checks');
   for (const row of report.accounts) {
     const s = row.signals;
@@ -384,12 +417,13 @@ async function main() {
   const window = windowUtc();
   const accounts = [];
   for (const account of [prod, dev]) accounts.push(await inspect(account, window));
-  const recentWindow=recentWindowUtc(20),recentWorkers=[];
+  const recentWindow=recentWindowUtc(20),recentWorkers=[],recentTraffic=[];
   for(const account of [prod,dev]){
     const usage=await workerUsage(account,recentWindow);
     recentWorkers.push({label:account.label,requests:usage.requests,scripts:usage.scripts});
+    recentTraffic.push(await recentTrafficClassification(account,recentWindow));
   }
-  const report = { schemaVersion:2, generatedAt:new Date().toISOString(), window, recentWindow, recentWorkers, accounts };
+  const report = { schemaVersion:3, generatedAt:new Date().toISOString(), window, recentWindow, recentWorkers, recentTraffic, accounts };
   await fs.writeFile(outputJson, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   await fs.writeFile(outputMd, markdown(report), 'utf8');
   console.log(markdown(report));
