@@ -64,3 +64,13 @@ test('advisory check recognizes provider-independence boundary without over-inde
   assert.match(adapter,/Result:\*\* PASS/);
   assert.doesNotMatch(adapter,/PROVIDER-001/);
 });
+
+
+test('advisory check recognizes data-sovereignty validators without over-indexing billing implementation',()=>{
+  const boundary=run('scripts/validate-core-data-boundaries.mjs,scripts/validate-storage-ai-contracts.mjs');
+  assert.match(boundary,/Result:\*\* RELATED/);
+  assert.match(boundary,/DATA-001/);
+  const billing=run('membership-billing.js');
+  assert.match(billing,/Result:\*\* PASS/);
+  assert.doesNotMatch(billing,/DATA-001/);
+});
