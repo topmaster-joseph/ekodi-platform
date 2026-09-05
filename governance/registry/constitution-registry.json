@@ -145,6 +145,8 @@
       "impactPaths": [
         "config/core-data-boundaries.json",
         "config/storage-policy.json",
+        "scripts/validate-core-data-boundaries.mjs",
+        "scripts/validate-storage-ai-contracts.mjs",
         "migrations/**",
         "database/**"
       ]
