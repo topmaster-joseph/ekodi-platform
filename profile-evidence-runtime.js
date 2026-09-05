@@ -1,5 +1,6 @@
 import { runAiEnhancedTask } from './ai-resilience-runtime.js';
 import { auditPrincipal, resolveWorkspacePrincipal } from './ekodi-principal.js';
+import { d1SchemaReady } from './d1-schema-readiness.js';
 
 export const PROFILE_ENTITY_TYPES=Object.freeze(['person','organization','business','project']);
 export const PROFILE_SOURCE_CLASSES=Object.freeze(['official','verified','public','user','ai_inference','needs_check']);
@@ -136,15 +137,7 @@ function responseJson(request,env,data,status=200){
 }
 async function requestBody(request){try{return await request.json()}catch{return null}}
 
-export async function profileSchemaReady(env){
-  if(!env?.DB)return false;
-  try{
-    const names=['ekodi_profiles','ekodi_profile_evidence','ekodi_profile_confirmations','ekodi_profile_discovery_runs'];
-    const placeholders=names.map(()=>'?').join(',');
-    const rows=await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN (${placeholders})`).bind(...names).all();
-    return new Set((rows.results||[]).map(row=>row.name)).size===names.length;
-  }catch{return false}
-}
+export async function profileSchemaReady(env){ return d1SchemaReady(env?.DB,['ekodi_profiles','ekodi_profile_evidence','ekodi_profile_confirmations','ekodi_profile_discovery_runs']); }
 
 async function profileForSubject(env,profileKey,subject){
   return env.DB.prepare(`SELECT profile_key,subject_type,subject_key,entity_type,display_name,public_identifier,status,review_state,created_at,updated_at,confirmed_at FROM ekodi_profiles WHERE profile_key=? AND subject_type=? AND subject_key=? AND status='active'`)
