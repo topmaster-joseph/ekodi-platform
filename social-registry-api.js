@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { handleKakaoPersonalControl } from './kakao-personal-control.js';
 
 const PROVIDERS = new Set(['youtube','instagram','facebook','kakao','blog','threads','live','tiktok','linkedin','other']);
 const POLICIES = new Set(['inherit_org','custom','none']);
@@ -161,6 +162,7 @@ async function audit(env, session, action, detail) {
 export async function handleSocialRegistry(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
+  if (path.startsWith('/api/control/social/kakao/')) return handleKakaoPersonalControl(request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status:204, headers:corsHeaders(request, env, path.startsWith('/api/social/')) });
   if (path === '/api/social/registry' && request.method === 'GET') {
     try {
