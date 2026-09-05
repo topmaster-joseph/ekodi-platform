@@ -71,7 +71,7 @@
         "redirect": "manual",
         "expect": [
           "자담치킨 목포대점",
-          "JADAM STORE ADMIN"
+          "store-admin.js?v=20260906-provisioning"
         ],
         "headerExpect": [
           "x-ekodi-route: jadam-store-admin",
@@ -103,7 +103,7 @@
         "redirect": "manual",
         "expect": [
           "피자마루 목포대점",
-          "PIZZAMARU STORE ADMIN"
+          "store-admin.js?v=20260906-provisioning"
         ],
         "headerExpect": [
           "x-ekodi-route: pizzamaru-store-admin",
@@ -135,7 +135,7 @@
         "redirect": "manual",
         "expect": [
           "요거트퍼플 목포대점",
-          "YOGURT PURPLE STORE ADMIN"
+          "store-admin.js?v=20260906-provisioning"
         ],
         "headerExpect": [
           "x-ekodi-route: yogurt-store-admin",
