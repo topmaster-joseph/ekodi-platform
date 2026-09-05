@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import { classifyTrafficUserAgent } from '../traffic-intelligence.js';
+import { serviceForId } from '../ekodi-service-manifest.js';
 
 const cfApi = 'https://api.cloudflare.com/client/v4';
 const prod = {
@@ -133,6 +134,8 @@ function routeFamily(hostValue,pathValue){
   if(path.includes('/marketing'))return 'marketing';
   if(path.startsWith('/mall')||path.startsWith('/ekodibiz/mall'))return 'mall';
   if(path==='/'||path==='/privacy'||path==='/terms'||path.startsWith('/history'))return 'public-root';
+  const first=path.split('/').filter(Boolean)[0]||'';
+  if(host==='ekodi.kr'&&first&&serviceForId(first))return 'service-root';
   return 'other';
 }
 
