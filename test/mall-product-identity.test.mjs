@@ -100,13 +100,14 @@ test('exact sufficiently specific titles remain a conservative compatibility fal
 });
 
 test('public Mall contract exposes server identities while keeping flat products for compatibility', async () => {
-  const [api, marketplace, curator, admin, routeMigration, gateMigration] = await Promise.all([
+  const [api, marketplace, curator, admin, routeMigration, gateMigration, chinaMigration] = await Promise.all([
     read('affiliate-control.js'),
     read('affiliate-marketplace.js'),
     read('sites/ekodi-mall/assets/context-curator.js'),
     read('marketing-funnel-admin.js'),
     read('migrations/0063_affiliate_merchant_routes.sql'),
     read('migrations/0064_affiliate_recommendation_gate.sql'),
+    read('migrations/0065_china_affiliate_market_presets.sql'),
   ]);
   assert.match(api, /groupProductOffers/);
   assert.match(api, /catalogMode: 'product_identity_v1'/);
@@ -120,7 +121,13 @@ test('public Mall contract exposes server identities while keeping flat products
   assert.match(admin, /name="model"/);
   assert.match(admin, /name="productIdentityKey"/);
   for (const field of ['merchantKey', 'marketCountry', 'settlementCurrency', 'affiliateMode', 'affiliateStatus', 'trackingStatus', 'catalogStatus', 'networkKey', 'recommendationEnabled']) assert.match(admin, new RegExp(`name="${field}"`));
-  for (const network of ['LinkPrice', 'awin', 'impact', 'cj', 'rakuten']) assert.match(admin, new RegExp(network, 'i'));
+  for (const network of ['LinkPrice', 'awin', 'impact', 'cj', 'rakuten', 'taobao_alliance', 'jd_union', 'aliexpress_affiliate', 'duoduo_jinbao']) assert.match(admin, new RegExp(network, 'i'));
+  for (const merchant of ['淘宝 타오바오', '天猫 티몰', '京东 징둥', 'AliExpress', '拼多多 핀둬둬']) assert.match(admin, new RegExp(merchant));
+  assert.match(admin, /data-cn-affiliate-preset="taobao"/);
+  assert.match(admin, /marketCountry: 'CN'/);
+  assert.match(admin, /settlementCurrency: 'CNY'/);
+  assert.match(api, /chinaAffiliateMarkets: true/);
+  assert.match(api, /chinaAffiliatePresets: true/);
   assert.match(api, /recommendationRequiresActiveAffiliate: true/);
   assert.match(api, /recommendationRequiresVerifiedTrackingAndCatalog: true/);
   assert.match(api, /freshPriceRequiredForRecommendation: true/);
@@ -136,4 +143,8 @@ test('public Mall contract exposes server identities while keeping flat products
   assert.match(gateMigration, /ADD COLUMN tracking_status/);
   assert.match(gateMigration, /ADD COLUMN catalog_status/);
   assert.match(gateMigration, /merchant_key = 'coupang_partners'/);
+  for (const merchantKey of ['taobao', 'tmall', 'jd', 'aliexpress', 'pinduoduo']) assert.match(chinaMigration, new RegExp(`'${merchantKey}'`));
+  for (const networkKey of ['taobao_alliance', 'jd_union', 'aliexpress_affiliate', 'duoduo_jinbao']) assert.match(chinaMigration, new RegExp(`'${networkKey}'`));
+  assert.match(chinaMigration, /'CN','CNY'/);
+  assert.match(chinaMigration, /'candidate','not_ready','not_ready',0/);
 });
