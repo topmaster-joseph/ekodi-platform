@@ -103,6 +103,16 @@ async function ensureSchema(db) {
   await db.prepare(`INSERT OR IGNORE INTO affiliate_accounts (id, provider_key, owner_type, owner_key, display_name, account_label, status, connection_mode, default_channel, disclosure_text, enabled, created_at, updated_at) VALUES (?, 'coupang_partners', 'internal', 'ekodibiz', '에코디비즈 쿠팡파트너스', 'EKODIBIZ', 'manual_ready', 'manual', '', '', 1, ?, ?)`).bind(DEFAULT_ACCOUNT_ID, now, now).run();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, recommendation_verified_at, created_at, updated_at) VALUES ('coupang-partners-direct', 'coupang_partners', '쿠팡', 'KR', 'KRW', 'direct', '', '', 'active', 'ready', 'feed_ready', 1, ?, ?, ?)`).bind(now, now, now).run();
   await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, recommendation_enabled, notes, created_at, updated_at) VALUES ('elevenst-network-linkprice', 'elevenst', '11번가', 'KR', 'KRW', 'network', 'linkprice', 'LinkPrice', 'pending', 0, 'LinkPrice 회원 계정 보유. 11번가 머천트 승인 및 딥링크/API 활성 확인 후 active 전환.', ?, ?)`).bind(now, now).run();
+  const chinaRouteSeeds = [
+    ['taobao-network-taobao-alliance', 'taobao', '淘宝 타오바오', 'CNY', 'taobao_alliance', '淘宝联盟 / Alimama', 'https://pub.alimama.com/'],
+    ['tmall-network-taobao-alliance', 'tmall', '天猫 티몰', 'CNY', 'taobao_alliance', '淘宝联盟 / Alimama', 'https://pub.alimama.com/'],
+    ['jd-network-jd-union', 'jd', '京东 징둥', 'CNY', 'jd_union', '京东联盟', 'https://jos.jd.com/jdunion'],
+    ['aliexpress-network-affiliate', 'aliexpress', 'AliExpress', 'USD', 'aliexpress_affiliate', 'AliExpress Affiliate', 'https://portals.aliexpress.com/'],
+    ['pinduoduo-network-duoduo-jinbao', 'pinduoduo', '拼多多 핀둬둬', 'CNY', 'duoduo_jinbao', '多多进宝', ''],
+  ];
+  for (const [routeKey, merchantKey, merchantName, currency, networkKey, networkName, programUrl] of chinaRouteSeeds) {
+    await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, program_url, notes, created_at, updated_at) VALUES (?, ?, ?, 'CN', ?, 'network', ?, ?, 'candidate', 'not_ready', 'not_ready', 0, ?, '중국 쇼핑몰 제휴 후보. 공식 승인·추적링크·상품/가격 공급 확인 전 추천 금지. 직접 계약 시 direct 경로를 별도 등록.', ?, ?)`).bind(routeKey, merchantKey, merchantName, currency, networkKey, networkName, programUrl, now, now).run();
+  }
   await db.prepare(`UPDATE affiliate_accounts SET disclosure_text = ?, updated_at = ? WHERE id = ? AND TRIM(disclosure_text) = ''`).bind(DEFAULT_DISCLOSURE, now, DEFAULT_ACCOUNT_ID).run();
 }
 
@@ -305,6 +315,8 @@ async function overview(env) {
       merchantAffiliateRouting: true,
       directAndNetworkAffiliate: true,
       internationalAffiliateMarkets: true,
+      chinaAffiliateMarkets: true,
+      chinaAffiliatePresets: true,
       recommendationRequiresActiveAffiliate: true,
       recommendationRequiresVerifiedTrackingAndCatalog: true,
       freshPriceRequiredForRecommendation: true,
