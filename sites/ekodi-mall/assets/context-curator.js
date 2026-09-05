@@ -34,6 +34,19 @@
     return [...groups.values()].map((product) => ({ ...product, offers: product.offers.sort((a, b) => (a.priceKrw || Infinity) - (b.priceKrw || Infinity)) }));
   }
 
+  function normalizeProductIdentity(raw, index) {
+    const offers = Array.isArray(raw?.offers) ? raw.offers.map((offer, offerIndex) => normalizeOffer(offer, offerIndex)).filter(Boolean) : [];
+    if (!offers.length) return null;
+    offers.sort((a, b) => (a.priceKrw || Infinity) - (b.priceKrw || Infinity));
+    return {
+      id: clean(raw?.productIdentityId || raw?.id || String(index)),
+      name: clean(raw?.name || offers[0].name),
+      category: clean(raw?.category || offers[0].category || '??'),
+      identityConfidence: clean(raw?.identityConfidence || ''),
+      offers,
+    };
+  }
+
   const RECIPIENTS = [['은사·선생님',['교수님','교수','선생님','스승','은사']],['부모님',['부모님','어머니','아버지','엄마','아빠']],['어르신',['어르신','장로님','권사님']],['거래처',['거래처','협력사','대표님']],['친구',['친구','지인']],['가족',['가족','형제','자매']]];
   const OCCASIONS = [['감사',['감사','답례']],['집들이',['집들이','이사']],['명절',['추석','설날','명절']],['생일',['생일']],['개업',['개업','오픈']],['졸업·입학',['졸업','입학']],['방문',['방문','인사']]];
   const EXPAND = { 건강:['홍삼','건강','차','꿀','견과','영양'], 지역:['전남','지역','로컬','특산','산지'], 지역성:['전남','지역','로컬','특산'], 실용:['생활','주방','리빙','세트'], 친환경:['친환경','재사용','오가닉','유기농'], 고급:['프리미엄','고급','선물세트'], 감사:['선물','세트','프리미엄'], 집들이:['생활','주방','리빙'] };
@@ -106,7 +119,7 @@
   }
   async function load() {
     if (loading) return loading;
-    loading = fetch(API, { method: 'GET', mode: 'cors', credentials: 'omit', headers: { accept: 'application/json' } }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); const body = await response.json(); const offers = Array.isArray(body.products) ? body.products.map(normalizeOffer).filter(Boolean) : []; affiliateProducts = groupOffers(offers); if (body.disclosureText && disclosure) disclosure.textContent = `${clean(body.disclosureText)} 추천순위는 제휴수수료와 분리합니다.`; return affiliateProducts; }).catch(() => { affiliateProducts = []; return []; });
+    loading = fetch(API, { method: 'GET', mode: 'cors', credentials: 'omit', headers: { accept: 'application/json' } }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); const body = await response.json(); const offers = Array.isArray(body.products) ? body.products.map(normalizeOffer).filter(Boolean) : []; const identities = Array.isArray(body.productIdentities) ? body.productIdentities.map(normalizeProductIdentity).filter(Boolean) : []; affiliateProducts = identities.length ? identities : groupOffers(offers); if (body.disclosureText && disclosure) disclosure.textContent = `${clean(body.disclosureText)} 추천순위는 제휴수수료와 분리합니다.`; return affiliateProducts; }).catch(() => { affiliateProducts = []; return []; });
     return loading;
   }
   async function recommend(message, focus = true) {

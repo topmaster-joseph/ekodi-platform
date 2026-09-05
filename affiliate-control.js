@@ -1,6 +1,7 @@
 import authWorker from './auth-worker.js';
 import { getAffiliateAutomationStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation } from './coupang-partners-automation.js';
 import { archiveMarketplaceOffer, listMarketplaceProducts, MULTI_AFFILIATE_DISCLOSURE, publicMarketplaceClick, registerMarketplaceProduct } from './affiliate-marketplace.js';
+import { groupProductOffers } from './product-identity.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
@@ -156,7 +157,8 @@ async function publicProducts(request, env, url) {
   const providers = [...new Map(products.map(item => [item.providerKey || 'unknown', item.providerName || item.providerKey || '제휴 판매처'])).entries()]
     .map(([providerKey, providerName]) => ({ providerKey, providerName }));
   const combinedDisclosure = marketplaceProducts.length ? `${disclosureText} ${MULTI_AFFILIATE_DISCLOSURE}` : disclosureText;
-  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: marketplaceProducts.length ? 'multi_affiliate' : 'coupang_partners', providers, automationStatus, disclosureText: combinedDisclosure, products }, 200, publicHeaders(request));
+  const productIdentities = groupProductOffers(products);
+  return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: marketplaceProducts.length ? 'multi_affiliate' : 'coupang_partners', providers, automationStatus, disclosureText: combinedDisclosure, catalogMode: 'product_identity_v1', productIdentities, products }, 200, publicHeaders(request));
 }
 
 function coupangImageUrl(value) {
@@ -256,6 +258,7 @@ async function overview(env) {
       onDemandProductIngest: true,
       offerRegistryAdapter: true,
       multiProviderCatalog: true,
+      productIdentityCatalog: true,
       manualMarketplaceProductRegistration: true,
       automaticDeepLink: true,
       automaticClickTracking: true,

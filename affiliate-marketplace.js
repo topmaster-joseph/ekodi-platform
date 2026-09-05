@@ -1,4 +1,5 @@
 import { listPublicOffers, upsertOffer } from './offer-registry.js';
+import { normalizeGtin } from './product-identity.js';
 
 export const MULTI_AFFILIATE_DISCLOSURE = '에코디몰에는 에코디 및 제휴 판매처의 상품이 함께 표시됩니다. 제휴 링크를 통한 구매 시 에코디가 수수료를 받을 수 있으며, 상품별 판매처는 구매 전에 표시됩니다.';
 
@@ -53,7 +54,8 @@ export async function listMarketplaceProducts(request, env, limit = 100) {
     const clickUrl = new URL(`/api/affiliate/public/link/${linkId}`, baseUrl).toString();
     return {
       id: `affiliate-${linkId}`,
-      productId: offer.sourceId,
+      productId: cleanText(metadata.merchantSourceId, 160) || offer.sourceId,
+      merchantSourceId: cleanText(metadata.merchantSourceId, 160),
       productName: offer.title,
       priceKrw: Number(offer.priceAmount || 0),
       imageUrl: httpsUrl(offer.imageUrl, { optional: true }) || '',
@@ -66,6 +68,10 @@ export async function listMarketplaceProducts(request, env, limit = 100) {
       providerName,
       buyLabel: `${providerName}에서 구매`,
       disclosureText: cleanText(metadata.disclosureText, 1000) || MULTI_AFFILIATE_DISCLOSURE,
+      productIdentityKey: cleanText(metadata.productIdentityKey, 160),
+      gtin: cleanText(metadata.gtin, 32),
+      brand: cleanText(metadata.brand, 120),
+      model: cleanText(metadata.model, 160),
       popularityRank: 1000 + index,
     };
   }).filter(Boolean);
@@ -118,6 +124,12 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
   const channel = cleanText(input.channel, 120) || 'EKODI Mall';
   const campaignName = cleanText(input.campaignName, 160);
   const merchantSourceId = cleanText(input.sourceId, 160);
+  const productIdentityKey = cleanText(input.productIdentityKey, 160);
+  const rawGtin = cleanText(input.gtin || input.barcode, 32);
+  const gtin = normalizeGtin(rawGtin);
+  if (rawGtin && !gtin) return { ok: false, error: 'GTIN/???? ?????? ??? 8, 12, 13, 14?? ???? ???.' };
+  const brand = cleanText(input.brand, 120);
+  const model = cleanText(input.model, 160);
   const summary = cleanText(input.summary, 500) || `${providerName} · 에코디몰 제휴상품`;
 
   await env.DB.prepare(`INSERT INTO affiliate_providers (provider_key, display_name, provider_kind, connection_mode, enabled, created_at, updated_at)
@@ -142,9 +154,9 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
     canonicalUrl: `https://api.ekodi.kr/api/affiliate/public/link/${linkId}`, imageUrl: imageUrl || '',
     actionKind: 'external_purchase', visibility: 'public', status: 'active',
     discoveryKeywords: [providerName, category, productName, '에코디몰'],
-    metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName },
+    metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, productIdentityKey, gtin, brand, model, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName },
   });
-  return { ok: true, linkId, accountId, providerKey, providerName, offer };
+  return { ok: true, linkId, accountId, providerKey, providerName, productIdentityKey, gtin, brand, model, offer };
 }
 
 export async function archiveMarketplaceOffer(db, linkId) {
