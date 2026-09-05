@@ -59,6 +59,12 @@ test('Admin live surfaces avoid hidden-tab polling and coalesce slow refreshes',
   for (const asset of ['device-control-admin.js','hybrid-execution-admin.js','mission-control-admin.js','cheonggye-members-admin.js']) assert.ok(sharedDeploy.includes(`- '${asset}'`));
 });
 
+test('Shared Site release is triggered and syntax-checks Clients assets', () => {
+  assert.ok(sharedDeploy.includes("- 'client-access.js'"));
+  assert.ok(sharedDeploy.includes("- 'client-access.css'"));
+  assert.match(sharedDeploy, /admin-public-site-controls\.js client-access\.js ai-ops-admin\.js/);
+});
+
 test('production build ships optional modules as standalone assets and retired loaders stay removed', () => {
   for (const asset of ['admin-demand-loader.js','author-billing-admin.js','client-access.js','books-admin.js','finance-monitor.js']) assert.ok(build.includes(`'${asset}'`));
   assert.doesNotMatch(build, /'control-center-features\.js'/);
