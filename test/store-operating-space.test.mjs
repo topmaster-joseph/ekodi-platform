@@ -62,7 +62,7 @@ test('PizzaMaru and YogurtPurple get dedicated user-page profiles',()=>{
   assert.match(worker,/PIZZA STORE USER PAGE/);
   assert.match(worker,/YOGURT DESSERT USER PAGE/);
   assert.match(worker,/yogurtpurple->yogurt/);
-  assert.match(worker,/pageProfile\(url\.pathname\)/);
+  assert.match(worker,/pageProfile\(url\.pathname,env\)/);
   assert.match(html,/__SPACE_PAGE_NAME__/);
   assert.match(html,/storePageStats/);
   assert.match(app,/renderStorePageOverview/);
