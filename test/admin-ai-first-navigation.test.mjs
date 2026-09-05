@@ -40,7 +40,7 @@ test('human-facing Admin menu has one canonical order inside eight work areas', 
   assert.deepEqual(adminMenuGroups(), ['home','operations','people','services','ai','business','data','system']);
   assert.deepEqual(adminMenuOrder(), [
     'campus','public-site-controls','work','communication','workspace','organization','cheonggye-members','clients','admins',
-    'life-ai','community','books','social','aiops','devotional','marketing-ai','ai-module-spec','ai-membership',
+    'life-ai','common-services','community','books','social','aiops','devotional','marketing-ai','ai-module-spec','ai-membership',
     'finance','tax','affiliates','storage','api-cost','health','security','devices','architecture',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));

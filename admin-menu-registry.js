@@ -20,6 +20,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'clients', group: 'people', icon: 'C', labels: { ko: '고객 사이트', en: 'Customer Sites' } },
   { id: 'admins', group: 'people', icon: '♜', labels: { ko: '관리자 · 권한', en: 'Administrators & Access' }, superAdminOnly: true },
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
+  { id: 'common-services', group: 'services', icon: '◉', labels: { ko: '공통서비스', en: 'Common Services' } },
   { id: 'community', group: 'services', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
   { id: 'books', group: 'services', icon: 'B', labels: { ko: '출판 · 도서', en: 'Books & Publishing' } },
   { id: 'social', group: 'services', icon: 'S', labels: { ko: '소셜', en: 'Social' } },

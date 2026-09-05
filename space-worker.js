@@ -1,4 +1,17 @@
-import { isPublicWorkspacePath } from './workspace-route-policy.js';
+import { isPublicWorkspacePath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
+
+const DEFAULT_PAGE_PROFILE=Object.freeze({
+  documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
+  lead:'로그인 후 내가 운영하거나 참여하는 점포와 조직만 표시합니다.',theme:'default',
+  description:'EKODI 점포 운영공간'
+});
+const STORE_PAGE_PROFILES=Object.freeze({
+  jadam:{documentTitle:'자담치킨 목포대점 · EKODI',name:'자담치킨 목포대점',kicker:'CHICKEN STORE USER PAGE',lead:'치킨 메뉴·가격·배달채널을 자담치킨 데이터로만 분리해 운영합니다.',theme:'jadam',description:'자담치킨 목포대점 사용자 운영페이지'},
+  pizzamaru:{documentTitle:'피자마루 목포대점 · EKODI',name:'피자마루 목포대점',kicker:'PIZZA STORE USER PAGE',lead:'피자 메뉴·옵션·판매가·배달채널을 피자마루 데이터로만 분리해 운영합니다.',theme:'pizzamaru',description:'피자마루 목포대점 사용자 운영페이지'},
+  yogurt:{documentTitle:'요거트퍼플 목포대점 · EKODI',name:'요거트퍼플 목포대점',kicker:'YOGURT DESSERT USER PAGE',lead:'요거트·디저트 메뉴·옵션·판매가·배달채널을 요거트퍼플 데이터로만 분리해 운영합니다.',theme:'yogurt',description:'요거트퍼플 목포대점 사용자 운영페이지'},
+});
+function pageProfile(pathname){const slug=workspaceSlugFromPublicPath(pathname);return STORE_PAGE_PROFILES[slug]||DEFAULT_PAGE_PROFILE}
+function htmlText(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 
 function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net'];
@@ -35,9 +48,23 @@ function authRedirect(request,env){
   target.searchParams.set('site','space');target.searchParams.set('return_to',canonical.href);
   return withHeaders(env,Response.redirect(target.href,302),'auth-start');
 }
-async function appShell(request,env,route='space-home'){
+async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROFILE){
   const target=new URL(request.url);target.pathname='/';target.search='';target.hash='';
-  return withHeaders(env,await env.ASSETS.fetch(new Request(target.toString(),request)),route);
+  const asset=await env.ASSETS.fetch(new Request(target.toString(),request));
+  const contentType=asset.headers.get('content-type')||'';
+  if(!contentType.includes('text/html'))return withHeaders(env,asset,route);
+  let html=await asset.text();
+  const tokens={
+    '__SPACE_PAGE_DOCUMENT_TITLE__':profile.documentTitle,
+    '__SPACE_PAGE_NAME__':profile.name,
+    '__SPACE_PAGE_KICKER__':profile.kicker,
+    '__SPACE_PAGE_LEAD__':profile.lead,
+    '__SPACE_PAGE_THEME__':profile.theme,
+    '__SPACE_PAGE_DESCRIPTION__':profile.description,
+  };
+  for(const [token,value] of Object.entries(tokens))html=html.replaceAll(token,htmlText(value));
+  const headers=new Headers(asset.headers);headers.delete('content-length');headers.delete('content-encoding');headers.delete('etag');
+  return withHeaders(env,new Response(html,{status:asset.status,statusText:asset.statusText,headers}),route);
 }
 
 export default{
@@ -55,11 +82,15 @@ export default{
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
       return authRedirect(request,env);
     }
+    if(url.pathname==='/yogurtpurple'||url.pathname==='/yogurtpurple/'){
+      const target=new URL('/yogurt'+url.search,'https://ekodi.kr');
+      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'yogurtpurple->yogurt'}});
+    }
     if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://my.ekodi.kr/','cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
     if(isPublicWorkspacePath(url.pathname)){
       if(legacyAlias&&url.pathname!=='/deployment-probe')return canonicalRedirect();
-      return appShell(request,env,'space-workspace');
+      return appShell(request,env,'space-workspace',pageProfile(url.pathname));
     }
     return withHeaders(env,await env.ASSETS.fetch(request),'space-asset');
   }
