@@ -29,3 +29,11 @@ test('public Money does not present demo balances as operational data',async()=>
   assert.match(app,/공개 Money 화면에는 개인 잔액이나 예시 숫자를 표시하지 않습니다/);
   assert.doesNotMatch(app,/1324000|67300|120120|국민은행|예전 급여계좌/);
 });
+
+test('Money staging keeps Cloudflare Access and verifies deployment existence',async()=>{
+  const workflow=await read('.github/workflows/deploy-money.yml');
+  assert.match(workflow,/EKODI Money staging is deployed and correctly protected by Cloudflare Access/);
+  assert.match(workflow,/wrangler@\$\{WRANGLER_VERSION\} deployments status --config wrangler\.money\.staging\.toml --json/);
+  assert.match(workflow,/Cloudflare-Access\|cloudflareaccess\\\.com/);
+  assert.doesNotMatch(workflow,/disable.*Cloudflare Access|bypass.*Cloudflare Access/i);
+});
