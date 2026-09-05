@@ -49,7 +49,7 @@ if (surface.tracks?.service?.directCrossServicePrivateDb !== false) fail('servic
 if (surface.tracks?.tenant?.urlIsIdentity !== false) fail('tenant track must keep URL separate from identity authority');
 if (surface.tracks?.agent?.rootCredentialAccess !== false) fail('agent track must forbid root credential access');
 
-if (constitution.version !== '1.8.1') fail('constitution must be v1.8.1');
+if (constitution.version !== '1.8.2') fail('constitution must be v1.8.2 while Sovereign Autonomous Operations remains v1.8.1');
 if (constitution.architectureModel?.operatingArchitectureVersion !== '1.8.1') fail('constitution operating architecture version mismatch');
 if (constitution.architectureModel?.sovereignOperationsRegistry !== 'governance/architecture/sovereign-autonomous-operations.v1.json') fail('constitution sovereign registry path mismatch');
 if (JSON.stringify(constitution.sovereignAutonomousOperations?.hierarchy) !== JSON.stringify(hierarchy)) fail('constitution sovereign hierarchy mismatch');

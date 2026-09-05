@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.8.1
+# EKODI Platform Constitution v1.8.2
 
 Effective: 2026-09-06
 
@@ -40,7 +40,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
 - Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
-- Development mirrors those boundaries under `*.dev.ekodi.kr`.
+- Development mirrors production system boundaries on nested `*.dev.ekodi.kr` hosts such as `my.dev.ekodi.kr`, `admin.dev.ekodi.kr`, `auth.dev.ekodi.kr` and `api.dev.ekodi.kr`; the root `dev.ekodi.kr` is reserved for the public EKODI Developer portal.
 - Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
 - Canonical public user-space addresses use the universal root pattern `ekodi.kr/{slug}`. Workspace kind is internal metadata and is never encoded into the public URL.
 - Workspace child services use `ekodi.kr/{slug}/{service}`; workspace administration uses `ekodi.kr/{slug}/admin` or `ekodi.kr/{slug}/{service}/admin`. Root slugs reserved for platform, common-service or core-service routes cannot be claimed by a workspace.
@@ -49,7 +49,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
 - Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
-- `try.ekodi.kr` is a registered common-service boundary for the EKODI Experience service. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface.
+- `exp.ekodi.kr` is the canonical registered common-service boundary for EKODI Experience. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface. Legacy `try.ekodi.kr` permanently redirects to `exp.ekodi.kr`.
+- `dev.ekodi.kr` is the registered public EKODI Developer and Conformance portal. It exposes public integration contracts, examples and browser-local preflight validation only; private repository structure, secrets, production customer data and internal provider topology remain excluded.
 - `invest.ekodi.kr` is the registered common Invest Core for Evidence-First research, diligence, IR and connection support; workspace-specific investment businesses remain under `ekodi.kr/{slug}/invest`.
 - `marketing.ekodi.kr` is the registered EKODI Marketing Core engine boundary. It is not the ordinary product or customer entry; the product entry is `ekodi.kr/ekodibiz/marketing-ai`, and workspace marketing uses `ekodi.kr/{slug}/marketing`.
 - `ai.ekodi.kr` is the registered provider-independent AI Gateway/Core boundary. Customer-specific `*.ai.ekodi.kr` addresses are compatibility execution aliases only and must not be presented as canonical user URLs.
