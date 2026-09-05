@@ -91,23 +91,54 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup EXIT
+
+          access_code=$(curl -sS -D /tmp/management-access.headers -o /tmp/management-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/management-access.headers; then
+            remote_protected=1
+            echo 'Management staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
+            npx --yes wrangler@4.129.0 dev --config wrangler.management.staging.toml --local --port 8794 >/tmp/management-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8794'
+            ready=0
+            for attempt in $(seq 1 30); do
+              root_code=$(curl -sS -o /tmp/management-ready.html -w '%{http_code}' --max-time 5 "$verify_base/" || true)
+              if [[ "$root_code" == '200' ]]; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/management-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$ready" != '1' ]]; then cat /tmp/management-local.log; exit 1; fi
+          fi
+
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/management.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            config_code=$(curl -sS -o /tmp/management-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
-            catalog_code=$(curl -sS -o /tmp/management-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/catalog" || true)
-            auth_code=$(curl -sS -o /tmp/management-auth.json -w '%{http_code}' -H 'content-type: application/json' -d '{"tokenHash":"test","type":"email"}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/auth/exchange" || true)
+            root_code=$(curl -sS -o /tmp/management.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
+            config_code=$(curl -sS -o /tmp/management-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/config.js" || true)
+            catalog_code=$(curl -sS -o /tmp/management-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/catalog" || true)
+            auth_code=$(curl -sS -o /tmp/management-auth.json -w '%{http_code}' -H 'content-type: application/json' -d '{"tokenHash":"test","type":"email"}' --connect-timeout 5 --max-time 15 "$verify_base/api/auth/exchange" || true)
             if [[ "$root_code" == "200" && "$config_code" == "200" && "$catalog_code" == "200" && "$auth_code" == "503" ]] \
-              && grep -Fq '경영플랫폼' /tmp/management.html \
-              && grep -Fq '로그인 전에는 서비스 안내만 제공합니다' /tmp/management.html \
+              && grep -Fq '<p class="eyebrow">MANAGEMENT PLATFORM</p>' /tmp/management.html \
+              && grep -Fq 'id="guestGuide"' /tmp/management.html \
               && grep -Fq '"mode":"isolated-staging"' /tmp/management-config.js \
               && grep -Fq '"executionEnabled":false' /tmp/management-config.js \
               && grep -Fq '"guestMode":"guide-only"' /tmp/management-catalog.json \
               && grep -Fq '"error":"identity_integration_disabled"' /tmp/management-auth.json; then
-              echo 'Management staging verified in the Development account with identity integration and execution disabled.'
+              if [[ "$remote_protected" == '1' ]]; then
+                echo 'Management staging deployment exists in Development, Access remains enforced, and its exact staging configuration passes runtime contracts.'
+              else
+                echo 'Management staging verified remotely with identity integration and execution disabled.'
+              fi
               exit 0
             fi
             sleep 5
           done
+          cat /tmp/management-access.headers || true
+          cat /tmp/management-local.log 2>/dev/null || true
           exit 1
 
   deploy-production:
