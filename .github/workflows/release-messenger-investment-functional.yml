@@ -98,7 +98,7 @@ jobs:
         env:
           DB_ID: ${{ steps.db.outputs.id }}
         run: |
-          cat > /tmp/workspace-staging.toml <<EOF
+          cat > .workspace-staging.toml <<EOF
           name = "ekodi-workspace-platform-api-staging"
           main = "workspace-platform-entry-worker.js"
           compatibility_date = "2026-08-18"
@@ -113,8 +113,8 @@ jobs:
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config /tmp/workspace-staging.toml
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/workspace-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config .workspace-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config .workspace-staging.toml
       - name: Verify isolated Workspace staging
         run: |
           for attempt in $(seq 1 18); do
@@ -149,7 +149,7 @@ jobs:
         env:
           DB_ID: ${{ steps.db.outputs.id }}
         run: |
-          cat > /tmp/control-staging.toml <<EOF
+          cat > .control-staging.toml <<EOF
           name = "ekodi-conversation-control-staging"
           main = "mission-control-entry-worker.js"
           compatibility_date = "2026-08-12"
@@ -163,8 +163,8 @@ jobs:
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config /tmp/control-staging.toml
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/control-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config .control-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config .control-staging.toml
       - name: Verify Operator authentication boundary
         run: |
           for attempt in $(seq 1 18); do
