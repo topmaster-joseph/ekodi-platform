@@ -31,6 +31,7 @@ const ADMIN_HOSTS = new Set([
 ]);
 const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
 const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
+const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
 const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
@@ -107,6 +108,8 @@ const ADMIN_ASSETS = new Set([
   '/device-browser-diagnostics.js',
   '/ai-ops-admin.css',
   '/ai-ops-admin.js',
+  '/common-services-admin.css',
+  '/common-services-admin.js',
   '/life-ai-admin.css',
   '/life-ai-admin.js',
   '/mission-control-admin.css',
@@ -405,6 +408,26 @@ async function proxyAdminStorage(request, env) {
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-storage-proxy');
 }
 
+async function proxyAdminCommonServiceAi(request) {
+  const url = new URL(request.url);
+  const suffix = url.pathname.slice(ADMIN_COMMON_SERVICE_AI_PREFIX.length);
+  if (!/^(?:status|session|tasks(?:\/[a-z0-9._~-]+(?:\/(?:run|approve))?)?|nodes(?:\/pair)?)$/i.test(suffix)) {
+    return withHostSecurity(new Response(JSON.stringify({error:'NOT_FOUND'}), {status:404,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}), ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
+  }
+  const target = new URL('https://ai.ekodi.kr');
+  target.pathname = '/api/' + suffix;
+  target.search = url.search;
+  const headers = new Headers(request.headers);
+  headers.delete('host');
+  headers.delete('origin');
+  headers.delete('referer');
+  headers.set('x-ekodi-admin-proxy', 'common-service-v1');
+  const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
+  const upstream = await fetch(target.toString(), {method:request.method,headers,body,redirect:'manual'});
+  const response = new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Common-Service-Proxy', 'ai-runtime-v1');
+  return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
+}
 async function proxyAdminMarketingPublishing(request) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_MARKETING_PUBLISHING_PREFIX.length) || '/health';
@@ -501,6 +524,7 @@ export default {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
+      if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request);
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
           const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
