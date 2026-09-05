@@ -46,6 +46,7 @@ test('admin asset preserves maintenance controls and adds login provider setting
   assert.match(demand, /'public-site-controls':\s*\{/);
   assert.match(demand, /scripts:\s*\['admin-public-site-controls\.js'\]/);
   assert.match(demand, /__EKODIAdminScriptLoads/);
+  assert.doesNotMatch(demand, /loadedScripts\.has\(feature\.scripts\?\.\[0\]\)/);
   assert.match(menu, /\['public-site-controls','public-site-controls'\]/);
   assert.match(build, /admin-public-site-controls\.js/);
 });
