@@ -8,12 +8,13 @@ function corsHeaders(){return {'access-control-allow-origin':'*','access-control
 function json(data,status=200,cache='public, max-age=60, stale-while-revalidate=300'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,...corsHeaders()}});}
 function withHeaders(response){const headers=new Headers(response.headers);headers.set('access-control-allow-origin','*');headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','no-referrer');headers.set('cross-origin-resource-policy','cross-origin');if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
 async function safeAssetFetch(env,url,request){try{return await env.ASSETS.fetch(new Request(url,request));}catch{return new Response('',{status:503,headers:{'cache-control':'no-store','x-ekodi-shell-asset-error':'fetch_failed'}});}}
+function bundleCacheRequest(request){const url=new URL(request.url);url.pathname='/shell.js';url.search='';url.searchParams.set('bundle',String(EKODI_SERVICE_MANIFEST.shellVersion||'1'));return new Request(url,{method:'GET'});}
 async function bundledShell(request,env,ctx){
   let bundleCache=null,bundleCacheKey=null;
   if(request.method==='GET'&&typeof caches!=='undefined'){
     try{
       bundleCache=caches.default;
-      bundleCacheKey=new Request(request.url,{method:'GET'});
+      bundleCacheKey=bundleCacheRequest(request);
       const cached=await bundleCache.match(bundleCacheKey);
       if(cached){
         const headers=new Headers(cached.headers);
@@ -114,6 +115,6 @@ export default {
     if(url.pathname==='/shell.js')return bundledShell(request,env,ctx);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?source=shell.ekodi.kr',307);
     if(url.pathname==='/')return Response.redirect('https://my.ekodi.kr/',302);
-    return withHeaders(await env.ASSETS.fetch(request));
+    return withHeaders(await safeAssetFetch(env,url,request));
   }
 };
