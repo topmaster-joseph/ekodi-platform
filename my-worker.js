@@ -1,6 +1,8 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { routeIntent } from './capability-intent-runtime.js';
+import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
+import workspacePacks from './config/workspace-packs.json' with { type: 'json' };
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
@@ -56,21 +58,60 @@ function parsePrivateWorkspacePath(pathname){
   if(serviceId&&(!SERVICE_ID_RE.test(serviceId)||!visibleServices().some(service=>service.id===serviceId)))return false;
   return {workspaceKey,serviceId};
 }
-async function loadIntentCatalog(request,env){
-  const base=new URL(request.url);
-  const read=async pathname=>{
-    const target=new URL(pathname,base);
-    const response=await env.ASSETS.fetch(new Request(target.toString(),{method:'GET'}));
-    if(!response.ok)throw new Error(`intent_asset_${response.status}`);
-    return response.json();
-  };
-  const [registry,packs]=await Promise.all([read('/capability-registry.json'),read('/workspace-packs.json')]);
-  return {registry,packs};
-}
+function loadIntentCatalog(){return {registry:capabilityRegistry,packs:workspacePacks};}
 function intentShowrooms(plan){
   const ids=new Set(plan.showroomEntries||[]);
   return visibleServices().filter(service=>ids.has(service.id)).map(service=>({id:service.id,name:service.name,url:service.url}));
 }
+function bearer(request){const value=String(request.headers.get('authorization')||'');return value.startsWith('Bearer ')?value:''}
+async function verifiedWorkspaceAuthority(request,env,workspaceKey){
+  const authorization=bearer(request);
+  if(!authorization)return {ok:false,status:401,error:'authentication_required'};
+  const supabase=String(env.SUPABASE_URL||'').replace(/\/$/,'');
+  const key=String(env.SUPABASE_PUBLISHABLE_KEY||'');
+  if(!supabase||!key)return {ok:false,status:503,error:'authority_provider_unavailable'};
+  const response=await fetch(`${supabase}/functions/v1/workspace-api/workspaces?site=social`,{headers:{authorization,apikey:key,'cache-control':'no-store'}});
+  const body=await response.json().catch(()=>({}));
+  if(response.status===401)return {ok:false,status:401,error:'authentication_required'};
+  if(!response.ok)return {ok:false,status:503,error:'workspace_authority_unavailable'};
+  const rows=Array.isArray(body?.workspaces)?body.workspaces:[];
+  const selected=rows.find(item=>String(item?.workspace_key||'')===workspaceKey&&['active','pre_registered'].includes(String(item?.status||'')));
+  if(!selected)return {ok:false,status:403,error:'workspace_access_required'};
+  return {ok:true,workspace:selected};
+}
+function intentExecutionDecision(capability){
+  const tier=String(capability?.actionTier||'human_gate');
+  if(tier==='observe')return {state:'execute_now',mode:'observe'};
+  if(tier==='assist')return {state:'execute_now',mode:'prepare'};
+  if(tier==='execute_reversible')return {state:'adapter_required',mode:'bounded_mutation'};
+  if(tier==='human_gate')return {state:'human_gate',mode:'sovereign'};
+  return {state:'forbidden',mode:'none'};
+}
+function executeSafeCapability(capability,plan){
+  const decision=intentExecutionDecision(capability);
+  if(decision.state!=='execute_now')return {...decision,capabilityId:capability.id};
+  if(decision.mode==='observe')return {...decision,capabilityId:capability.id,result:{status:'observed',source:'registered_context',showrooms:plan.showroomEntries||[]}};
+  return {...decision,capabilityId:capability.id,result:{status:'prepared',ownerAgent:capability.ownerAgent,domain:capability.domain,next:'service_adapter_or_user_surface'}};
+}
+async function intentRequestBody(request){
+  const length=Number(request.headers.get('content-length')||0);if(length>8192)return {error:'intent_too_large',status:413};
+  let body={};try{body=await request.json()}catch{return {error:'invalid_json',status:400}}
+  const text=String(body?.text||'').trim(),audience=String(body?.audience||'person').trim().toLowerCase(),workspaceKey=String(body?.workspace_key||'').trim();
+  if(!text)return {error:'intent_required',status:400};if(text.length>1200)return {error:'intent_too_long',status:400};if(workspaceKey.length>180||!WORKSPACE_KEY_RE.test(workspaceKey))return {error:'valid_workspace_required',status:400};
+  return {text,audience,workspaceKey};
+}
+async function handleIntentPreflight(request,env,{execute=false}={}){
+  if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
+  const parsed=await intentRequestBody(request);if(parsed.error)return json(env,{ok:false,error:parsed.error},parsed.status);
+  const authority=await verifiedWorkspaceAuthority(request,env,parsed.workspaceKey);if(!authority.ok)return json(env,{ok:false,error:authority.error},authority.status);
+  const catalog=loadIntentCatalog();
+  const plan=routeIntent({text:parsed.text,audience:parsed.audience},catalog,{limit:3});
+  const byId=new Map(catalog.registry.capabilities.map(item=>[item.id,item]));
+  const capabilities=plan.capabilityIds.map(id=>byId.get(id)).filter(Boolean);
+  const decisions=capabilities.map(item=>execute?executeSafeCapability(item,plan):{capabilityId:item.id,...intentExecutionDecision(item)});
+  return json(env,{ok:true,contract:execute?'ekodi.intent-execution.v1':'ekodi.intent-preflight.v1',authority:{verified:true,workspace_key:authority.workspace.workspace_key,workspace_kind:authority.workspace.workspace_kind||'',role:authority.workspace.role||'member',status:authority.workspace.status||''},plan:{contract:plan.contract,recommendations:plan.recommendations,capabilityIds:plan.capabilityIds,showroomEntries:plan.showroomEntries},decisions,summary:{executed:execute?decisions.filter(item=>item.state==='execute_now').length:0,requiresAdapter:decisions.filter(item=>item.state==='adapter_required').length,humanGate:decisions.filter(item=>item.state==='human_gate').length,forbidden:decisions.filter(item=>item.state==='forbidden').length},executionPolicy:execute?'safe_observe_and_prepare_only':'server_authority_verified'});
+}
+
 async function handleIntentPlan(request,env){
   if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
   const length=Number(request.headers.get('content-length')||0);
@@ -81,7 +122,7 @@ async function handleIntentPlan(request,env){
   if(!text)return json(env,{ok:false,error:'intent_required'},400);
   if(text.length>1200)return json(env,{ok:false,error:'intent_too_long'},400);
   const audience=String(body?.audience||'person').trim().toLowerCase();
-  const catalog=await loadIntentCatalog(request,env);
+  const catalog=loadIntentCatalog();
   const plan=routeIntent({text,audience},catalog,{limit:3});
   const byId=new Map(catalog.registry.capabilities.map(item=>[item.id,item]));
   const packsById=new Map(catalog.packs.packs.map(item=>[item.id,item]));
@@ -150,11 +191,15 @@ export default{
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
     }
     if(url.pathname==='/service-manifest.json')return json(env,{version:EKODI_SERVICE_MANIFEST.version,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:visibleServices()});
+    if(url.pathname==='/capability-registry.json')return json(env,capabilityRegistry);
+    if(url.pathname==='/workspace-packs.json')return json(env,workspacePacks);
     if(url.pathname==='/api/intent/plan')return handleIntentPlan(request,env);
+    if(url.pathname==='/api/intent/preflight')return handleIntentPreflight(request,env);
+    if(url.pathname==='/api/intent/execute')return handleIntentPreflight(request,env,{execute:true});
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',capabilityRegistry:'universal-v2',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v2',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=my.ekodi.kr',307);
