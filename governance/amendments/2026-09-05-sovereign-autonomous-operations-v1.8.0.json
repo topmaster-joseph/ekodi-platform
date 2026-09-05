@@ -28,5 +28,13 @@
     "secure projection and least privilege",
     "Generation 2 and S0 until evidence-driven promotion"
   ],
-  "rollback": "Revert the v1.8.0 constitution, sovereign operations registry, surface policy, runtime integration and validators to v1.7.0. Do not remove existing services, workspaces, data, provider integrations or production routes. No destructive data or DNS change is authorized by this amendment."
+  "rollback": "Revert the v1.8.0 constitution, sovereign operations registry, surface policy, runtime integration and validators to v1.7.0. Do not remove existing services, workspaces, data, provider integrations or production routes. No destructive data or DNS change is authorized by this amendment.",
+  "approvalEvidence": {
+    "pullRequest": 1007,
+    "labels": [
+      "constitution-approved",
+      "integration-order-approved"
+    ],
+    "ownerInstructionRecorded": true
+  }
 }
