@@ -110,6 +110,8 @@ jobs:
           grep -Fq 'window.EKODIUserUIFooter' shell/user-ui-footer.js
           grep -Fq 'window.EKODIUserLanguage' shell/user-language.js
           grep -Fq 'window.EKODIMediaMeetingAdapter' shell/media-meeting-adapter.js
+          grep -Fq 'const VERSION=2' shell/media-meeting-adapter.js
+          grep -Fq 'social.ekodi.kr/api/media/youtube/status' shell/media-meeting-adapter.js
           grep -Fq 'window.EKODIUserCharacter' shell/user-character.js
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js

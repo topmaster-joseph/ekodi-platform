@@ -83,7 +83,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(injector,/name=\"google\" content=\"notranslate\"/);
   assert.match(userLanguage,/locale:'ne'/);
 
+  assert.match(mediaMeeting,/const VERSION=2/);
   assert.match(mediaMeeting,/window\.EKODIMediaMeetingAdapter/);
+  assert.match(mediaMeeting,/social\.ekodi\.kr\/api\/media\/youtube\/status/);
+  assert.match(mediaMeeting,/POLL_MS=60_000/);
   assert.match(mediaMeeting,/data-ekodi-meeting-provider=\"jitsi\"/);
   assert.match(mediaMeeting,/data-ekodi-media-provider=\"youtube\"/);
   assert.match(mediaMeeting,/config\.defaultLanguage/);
