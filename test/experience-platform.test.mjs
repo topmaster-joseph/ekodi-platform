@@ -72,5 +72,8 @@ test('experience deploy files use isolated staging and guarded production releas
   assert.match(prod,/custom_domain = true/);
   assert.match(staging,/ekodi-experience-staging/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/experience\.worker\.json/);
+  assert.match(workflow,/wrangler@\$\{WRANGLER_VERSION\} triggers deploy --config wrangler\.experience\.toml/);
+  assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/experience\.worker\.json --wrangler-version \$\{WRANGLER_VERSION\}/);
+  assert.ok(workflow.indexOf('Synchronize Experience production routes') < workflow.indexOf('Guarded Experience production release'));
   assert.match(workflow,/ekodi-experience-staging\.ekodi-development\.workers\.dev/);
 });

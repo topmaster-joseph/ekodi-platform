@@ -143,8 +143,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Synchronize Experience production routes
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.experience.toml
       - name: Guarded Experience production release
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/experience.worker.json
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/experience.worker.json --wrangler-version ${WRANGLER_VERSION}
       - name: Deep verify public Developer and Experience production
         shell: bash
         run: |
