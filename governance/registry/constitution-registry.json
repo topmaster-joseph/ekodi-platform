@@ -242,6 +242,20 @@
         "evolution-intelligence-store.js",
         "system-health-admin.js"
       ]
+    },
+    {
+      "id": "TRUST-001",
+      "area": "trust-authorization",
+      "title": "Trust policy, capability, secure projection and audit boundary",
+      "status": "active",
+      "sourcePointer": "/securityPolicy",
+      "impactPaths": [
+        "supabase/functions/_shared/trust.ts",
+        "supabase/functions/access-api",
+        "supabase/functions/trust-api",
+        "supabase/migrations/*trust*",
+        "docs/security/TRUST_LAYER.md"
+      ]
     }
   ]
 }

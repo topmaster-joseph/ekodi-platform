@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
@@ -27,4 +27,10 @@ test('advisory check recognizes surface-engine and evolution intelligence change
   assert.match(surface,/SURFACE-001/);
   const evolution=run('traffic-intelligence.js,scripts\/collect-traffic-intelligence.mjs');
   assert.match(evolution,/EVOLVE-001/);
+});
+
+test('advisory check recognizes Trust Layer security boundary',()=>{
+  const trust=run('supabase/functions/_shared/trust.ts,supabase/functions/access-api/index.ts,supabase/functions/trust-api/index.ts,supabase/migrations/20260905020000_access_api_trust_shadow.sql,docs/security/TRUST_LAYER.md');
+  assert.match(trust,/Result:\*\* RELATED/);
+  assert.match(trust,/TRUST-001/);
 });
