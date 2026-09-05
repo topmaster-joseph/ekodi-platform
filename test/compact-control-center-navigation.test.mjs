@@ -8,7 +8,7 @@ test('current Admin navigation exposes the canonical English work-area labels', 
   for (const label of [
     'Site Management','Work','Mail & Live','Spaces & Files','Organizations','Customer Sites',
     'Administrators & Access','Life AI','Community','Books & Publishing','Social','AI Operations',
-    'Marketing AI','Finance & Accounting','Storage','API & Cost','System Health','Security','Remote Work',
+    'Marketing AI','Finance & Accounting','Storage','API & Cost','System Health','Security','Execution Infrastructure',
   ]) assert.ok(registry.includes(label), `missing current navigation label: ${label}`);
   assert.doesNotMatch(registry, /Domains & DNS|Activity Logs/);
 });
