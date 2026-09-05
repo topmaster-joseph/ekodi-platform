@@ -150,12 +150,12 @@ async function clickMenu(id) {
     const global = globalButton(group);
     await global.waitFor({ state: 'visible', timeout: 5_000 });
     const globalActive = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
-    if (!globalActive) await global.click({ timeout: 5_000, force: true });
+    if (!globalActive) await global.evaluate(node => node.click());
 
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
     await tab.waitFor({ state: 'visible', timeout: 5_000 });
-    await tab.click({ timeout: 5_000, force: true });
+    await tab.evaluate(node => node.click());
     stage(`menu-${id}-panel`);
     await waitForVisiblePanel(id);
 
@@ -186,7 +186,7 @@ async function clickTaxHandoff() {
   console.log('[E2E] tax: begin');
   const global = globalButton('business');
   await global.waitFor({ state: 'visible', timeout: 5_000 });
-  await global.click({ timeout: 5_000, force: true });
+  await global.evaluate(node => node.click());
   stage('menu-tax-tab');
   const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
   await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
@@ -194,7 +194,7 @@ async function clickTaxHandoff() {
   const [response] = await Promise.all([
     page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 10_000 }).catch(() => null),
     page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 }),
-    taxTab.click({ timeout: 5_000, force: true }),
+    taxTab.evaluate(node => node.click()),
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
