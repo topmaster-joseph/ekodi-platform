@@ -303,7 +303,7 @@ jobs:
             local url="$1"
             : > /tmp/link-body
             local meta status final title
-            meta=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/link-body -w '%{http_code}|%{url_effective}' "$url" || true)
+            meta=$(curl -L -sS --retry 3 --retry-delay 1 --retry-all-errors --connect-timeout 5 --max-time 20 -o /tmp/link-body -w '%{http_code}|%{url_effective}' "$url" || true)
             status=${meta%%|*}
             final=${meta#*|}
             title=$(grep -io '<title>[^<]*</title>' /tmp/link-body | head -1 | sed -E 's#</?title>##Ig' | tr '|' '/' || true)
