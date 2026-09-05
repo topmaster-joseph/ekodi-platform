@@ -121,16 +121,18 @@ export function affiliateProductOffer(product = {}) {
   });
 }
 
-export async function listPublicOffers(db, { query = '', offerType = '', sourceProvider = '', limit = 20 } = {}) {
+export async function listPublicOffers(db, { query = '', offerType = '', sourceProvider = '', excludeSourceProvider = '', limit = 20 } = {}) {
   await ensureOfferRegistrySchema(db);
   const safeLimit = Math.max(1, Math.min(50, Math.trunc(Number(limit) || 20)));
   const type = OFFER_TYPES.has(offerType) ? offerType : '';
   const needle = cleanText(query, 120);
   const provider = cleanText(sourceProvider, 120);
+  const excludedProvider = cleanText(excludeSourceProvider, 120);
   const clauses = ["visibility = 'public'", "status = 'active'"];
   const binds = [];
   if (type) { clauses.push('offer_type = ?'); binds.push(type); }
   if (provider) { clauses.push('source_provider = ?'); binds.push(provider); }
+  if (excludedProvider) { clauses.push('source_provider <> ?'); binds.push(excludedProvider); }
   if (needle) {
     clauses.push('(title LIKE ? OR summary LIKE ? OR category LIKE ? OR discovery_keywords_json LIKE ?)');
     const like = `%${needle.replace(/[%_]/g, '')}%`;
