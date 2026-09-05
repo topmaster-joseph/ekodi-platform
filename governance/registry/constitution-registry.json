@@ -156,8 +156,12 @@
       "status": "active",
       "sourcePointer": "/providerPolicy",
       "impactPaths": [
+        "config/ai-provider-independence.json",
         "ai-governance-runtime.js",
         "ai-resilience-runtime.js",
+        "core-ai-gateway.js",
+        "ai-control-provider-router.js",
+        "scripts/validate-ai-provider-independence.mjs",
         "mail-google-adapter.js",
         "config/storage-policy.json"
       ]
