@@ -307,7 +307,12 @@ async function main() {
   const window = windowUtc();
   const accounts = [];
   for (const account of [prod, dev]) accounts.push(await inspect(account, window));
-  const report = { schemaVersion:1, generatedAt:new Date().toISOString(), window, accounts };
+  const recentWindow=recentWindowUtc(20),recentWorkers=[];
+  for(const account of [prod,dev]){
+    const usage=await workerUsage(account,recentWindow);
+    recentWorkers.push({label:account.label,requests:usage.requests,scripts:usage.scripts});
+  }
+  const report = { schemaVersion:2, generatedAt:new Date().toISOString(), window, recentWindow, recentWorkers, accounts };
   await fs.writeFile(outputJson, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   await fs.writeFile(outputMd, markdown(report), 'utf8');
   console.log(markdown(report));
