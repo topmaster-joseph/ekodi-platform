@@ -147,6 +147,26 @@
     </section>
   </div>
 
+  <div class="modal" id="circleJoinModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="circleJoinTitle">
+      <button class="modal-close" data-close-modal aria-label="닫기">×</button>
+      <p class="eyebrow">PARTICIPATION REVIEW</p>
+      <h2 id="circleJoinTitle">Circle 참여 확인</h2>
+      <p class="muted" id="circleJoinSummary">참여 전에 공개 범위와 운영 방식을 확인합니다.</p>
+      <div class="join-review-grid">
+        <div><small>추천 맥락</small><strong id="circleJoinReason">직접 선택</strong></div>
+        <div><small>방식 · 일정</small><strong id="circleJoinMode">확인 중</strong></div>
+        <div><small>참여 정책</small><strong id="circleJoinPolicy">확인 중</strong></div>
+        <div><small>Circle 공개</small><strong id="circleJoinVisibility">확인 중</strong></div>
+        <div><small>참여 인원</small><strong id="circleJoinCapacity">확인 중</strong></div>
+        <div><small>참여 후 상태</small><strong id="circleJoinStatus">확인 중</strong></div>
+      </div>
+      <p class="join-review-note">이 확인 단계에서는 연락처나 추가 개인정보를 보내지 않습니다. 참여 결과는 바로 참여 또는 승인 대기로 명확하게 표시됩니다.</p>
+      <div class="form-actions"><button type="button" class="ghost" data-close-modal>취소</button><button type="button" class="primary" id="circleJoinConfirm">참여 확인</button></div>
+    </section>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script type="module" src="/app.js"></script>

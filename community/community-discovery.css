@@ -27,3 +27,12 @@ body,button,a,p,h1,h2,h3,small,span,label{word-break:keep-all;overflow-wrap:brea
 .circle-card .recommendation-why{margin:0 0 12px;padding-top:10px;border-top:1px solid var(--line);font-size:10.5px;line-height:1.6;color:var(--green);font-weight:750}
 
 .channel-social-slot{display:contents}
+
+.circle-card.circle-focus{border-color:#6f9788;box-shadow:0 0 0 2px rgba(50,95,80,.10),0 16px 40px rgba(36,47,42,.08)}
+.circle-focus-note{margin:0 0 12px;padding:9px 10px;border-radius:11px;background:#edf4ef;color:#355448;font-size:10.5px;font-weight:800;line-height:1.55}
+.join-review-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0 12px}
+.join-review-grid>div{display:grid;gap:4px;padding:13px 14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.join-review-grid small{font-size:10px;color:var(--muted);font-weight:700}
+.join-review-grid strong{font-size:13px;color:var(--ink)}
+.join-review-note{margin:14px 0 4px;padding:13px 14px;border-radius:14px;background:var(--green2);color:#3f5f53;font-size:11px;line-height:1.65}
+@media(max-width:620px){.join-review-grid{grid-template-columns:1fr}}
