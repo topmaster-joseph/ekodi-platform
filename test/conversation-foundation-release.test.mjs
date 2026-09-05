@@ -106,3 +106,14 @@ test('central Core redispatch suppresses a duplicate native Control push run for
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
 });
+
+
+test('Conversation staging writes temporary Wrangler configs inside the checked-out repository',async()=>{
+  const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
+  assert.match(workflow,/cat > \.workspace-staging\.toml/);
+  assert.match(workflow,/--config \.workspace-staging\.toml/);
+  assert.match(workflow,/cat > \.control-staging\.toml/);
+  assert.match(workflow,/--config \.control-staging\.toml/);
+  assert.doesNotMatch(workflow,/\/tmp\/(?:workspace|control)-staging\.toml/);
+  assert.match(workflow,/main = "workspace-platform-entry-worker\.js"[\s\S]*migrations_dir = "migrations"/);
+});

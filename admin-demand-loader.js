@@ -5,7 +5,7 @@
   const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
   const app=document.querySelector('#app');
   const nav=document.querySelector('.sidebar nav');
-  const loadedScripts=new Map();
+  const loadedScripts=globalThis.__EKODIAdminScriptLoads||(globalThis.__EKODIAdminScriptLoads=new Map());
   const loadedStyles=new Map();
   const pending=new Map();
   const secondaryScheduled=new Set();
@@ -19,6 +19,7 @@
       hashes: ['#campus'],
       insert: 'first',
     },
+    'public-site-controls':{scripts:['admin-public-site-controls.js'],real:'[data-section="public-site-controls"]'},
     aiops: {
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
@@ -120,19 +121,14 @@
 
   function loadScript(src) {
     if (loadedScripts.has(src)) return loadedScripts.get(src);
-    const existing = document.querySelector(`script[data-ekodi-demand-script="${src}"]`);
-    if (existing) return Promise.resolve(existing);
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = assetUrl(src);
       script.dataset.ekodiDemandScript = src;
       script.addEventListener('load', () => resolve(script), { once:true });
-      script.addEventListener('error', () => reject(new Error(`${src} 로딩 실패`)), { once:true });
+      script.addEventListener('error', () => reject(new Error(`${src} load failed`)), { once:true });
       document.body.appendChild(script);
-    }).catch(error => {
-      loadedScripts.delete(src);
-      throw error;
-    });
+    }).catch(error => { loadedScripts.delete(src); throw error; });
     loadedScripts.set(src, promise);
     return promise;
   }
