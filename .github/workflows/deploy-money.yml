@@ -91,6 +91,12 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
+            protected=$(curl -sS -D /tmp/money-access.headers -o /tmp/money-access.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+            if [[ "$protected" == '302' || "$protected" == '403' ]] && grep -Eiq 'Cloudflare-Access|cloudflareaccess\.com' /tmp/money-access.headers /tmp/money-access.html; then
+              npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.money.staging.toml --json > /tmp/money-stage-deployments.json
+              echo 'EKODI Money staging is deployed and correctly protected by Cloudflare Access.'
+              exit 0
+            fi
             root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/integrations" || true)

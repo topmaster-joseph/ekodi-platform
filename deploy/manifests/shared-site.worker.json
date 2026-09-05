@@ -821,6 +821,54 @@
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jadam/admin/site",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "자담치킨 목포대점",
+          "store-site-admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: jadam-store-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru/admin/site",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "피자마루 목포대점",
+          "store-site-admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: pizzamaru-store-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/yogurt/admin/site",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "요거트퍼플 목포대점",
+          "store-site-admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: yogurt-store-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
       }
     ]
   }

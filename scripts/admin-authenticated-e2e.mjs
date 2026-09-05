@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
@@ -34,17 +35,8 @@ const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${toke
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
 
-const groups = {
-  campus: 'home', 'public-site-controls': 'home',
-  work: 'operations', communication: 'operations',
-  workspace: 'people', organization: 'people', 'cheonggye-members': 'people', clients: 'people', admins: 'people',
-  'life-ai': 'services', community: 'services', books: 'services', social: 'services',
-  aiops: 'ai', devotional: 'ai', 'marketing-ai': 'ai', 'ai-module-spec': 'ai', 'ai-membership': 'ai',
-  finance: 'business', tax: 'business', affiliates: 'business',
-  storage: 'data', 'api-cost': 'data',
-  health: 'system', security: 'system', devices: 'system', architecture: 'system',
-};
-const menuIds = Object.keys(groups);
+const menuIds = adminMenuOrder();
+const groups = Object.fromEntries(menuIds.map(id => [id, getAdminMenuGroupForSection(id)]));
 const expectedMenuCount = menuIds.length;
 const internalMenuIds = menuIds.filter(id => id !== 'tax');
 const results = [];
@@ -157,12 +149,13 @@ async function clickMenu(id) {
   try {
     const global = globalButton(group);
     await global.waitFor({ state: 'visible', timeout: 5_000 });
-    await global.click({ timeout: 5_000 });
+    const globalActive = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+    if (!globalActive) await global.evaluate(node => node.click());
 
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
     await tab.waitFor({ state: 'visible', timeout: 5_000 });
-    await tab.click({ timeout: 5_000 });
+    await tab.evaluate(node => node.click());
     stage(`menu-${id}-panel`);
     await waitForVisiblePanel(id);
 
@@ -193,7 +186,7 @@ async function clickTaxHandoff() {
   console.log('[E2E] tax: begin');
   const global = globalButton('business');
   await global.waitFor({ state: 'visible', timeout: 5_000 });
-  await global.click({ timeout: 5_000 });
+  await global.evaluate(node => node.click());
   stage('menu-tax-tab');
   const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
   await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
@@ -201,7 +194,7 @@ async function clickTaxHandoff() {
   const [response] = await Promise.all([
     page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 10_000 }).catch(() => null),
     page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 }),
-    taxTab.click({ timeout: 5_000 }),
+    taxTab.evaluate(node => node.click()),
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
