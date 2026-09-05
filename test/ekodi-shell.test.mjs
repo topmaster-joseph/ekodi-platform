@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -19,12 +19,12 @@ test('browser shell preserves workspace context, bounded surfaces and intent-fir
   assert.match(shell,/document/);
   assert.match(shell,/form/);
   assert.match(shell,/data/);
-  assert.match(shell,/EKODI 다음 행동/);
-  assert.match(shell,/원하는 일을 고르거나 적어보세요/);
+  assert.match(shell,/EKODI ?ㅼ쓬 ?됰룞/);
+  assert.match(shell,/?먰븯???쇱쓣 怨좊Ⅴ嫄곕굹 ?곸뼱蹂댁꽭??);
   assert.match(shell,/suggestedServices/);
   assert.match(shell,/slice\(0,3\)/);
-  assert.match(shell,/모든 서비스 보기/);
-  assert.match(shell,/내 공간 · My EKODI/);
+  assert.match(shell,/紐⑤뱺 ?쒕퉬??蹂닿린/);
+  assert.match(shell,/??怨듦컙 쨌 My EKODI/);
 });
 
 test('shell injector is isolated in Shadow DOM and applies shared style only to internal surfaces',async()=>{
@@ -77,7 +77,7 @@ test('Shell-enabled asset Workers keep dynamic roots and APIs behind their wrapp
   }
 });
 
-test('bundled shell uses edge cache before rebuilding fourteen static asset fragments',async()=>{
+test('bundled shell uses edge cache before rebuilding fifteen static asset fragments',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/caches\.default/);
   assert.match(worker,/bundleCache\.match\(bundleCacheKey\)/);
@@ -85,3 +85,4 @@ test('bundled shell uses edge cache before rebuilding fourteen static asset frag
   assert.match(worker,/x-ekodi-shell-bundle-cache','hit/);
   assert.match(worker,/bundledShell\(request,env,ctx\)/);
 });
+

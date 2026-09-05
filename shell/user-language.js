@@ -3,23 +3,27 @@
 if(window.__EKODI_USER_LANGUAGE_BOOTED)return;
 window.__EKODI_USER_LANGUAGE_BOOTED=true;
 
-const VERSION=4;
+const VERSION=5;
 const STYLE_ID='ekodi-user-language-style';
 const STORAGE_KEY='ekodi_user_locale';
 const COOKIE_KEY='ekodi_locale';
 const PARAM_KEY='lang';
 const SUPPORTED=Object.freeze([
-  {locale:'ko-KR',short:'한국어',label:'한국어'},
+  {locale:'ko-KR',short:'\uD55C\uAD6D\uC5B4',label:'\uD55C\uAD6D\uC5B4'},
   {locale:'en',short:'English',label:'English'},
-  {locale:'zh-CN',short:'中文',label:'中文'},
-  {locale:'ja',short:'日本語',label:'日本語'}
+  {locale:'zh-CN',short:'\u4E2D\u6587',label:'\u4E2D\u6587'},
+  {locale:'ja',short:'\u65E5\u672C\u8A9E',label:'\u65E5\u672C\u8A9E'},
+  {locale:'ne',short:'\u0928\u0947\u092A\u093E\u0932\u0940',label:'\u0928\u0947\u092A\u093E\u0932\u0940'},
+  {locale:'vi',short:'Ti\u1EBFng Vi\u1EC7t',label:'Ti\u1EBFng Vi\u1EC7t'}
 ]);
+
 const LOCALES=new Set(SUPPORTED.map(item=>item.locale));
 const COPY=Object.freeze({
   'ko-KR':{language:'언어',home:'EKODI 홈',account:'사용자 계정',privacy:'개인정보처리방침',terms:'이용약관',contact:'문의',legal:'법적 고지'},
   en:{language:'Language',home:'EKODI Home',account:'User account',privacy:'Privacy Policy',terms:'Terms of Use',contact:'Contact',legal:'Legal information'},
   'zh-CN':{language:'语言',home:'EKODI 首页',account:'用户账户',privacy:'隐私政策',terms:'使用条款',contact:'联系',legal:'法律信息'},
   ja:{language:'言語',home:'EKODI ホーム',account:'ユーザーアカウント',privacy:'プライバシーポリシー',terms:'利用規約',contact:'お問い合わせ',legal:'法的情報'},
+  ne:{language:'\u092D\u093E\u0937\u093E',home:'EKODI \u0917\u0943\u0939',account:'\u092A\u094D\u0930\u092F\u094B\u0917\u0915\u0930\u094D\u0924\u093E \u0916\u093E\u0924\u093E',privacy:'\u0917\u094B\u092A\u0928\u0940\u092F\u0924\u093E \u0928\u0940\u0924\u093F',terms:'\u092A\u094D\u0930\u092F\u094B\u0917\u0915\u093E \u0938\u0930\u094D\u0924\u0939\u0930\u0942',contact:'\u0938\u092E\u094D\u092A\u0930\u094D\u0915',legal:'\u0915\u093E\u0928\u0941\u0928\u0940 \u091C\u093E\u0928\u0915\u093E\u0930\u0940'},
   my:{language:'ဘာသာစကား',home:'EKODI ပင်မ',account:'အသုံးပြုသူ အကောင့်',privacy:'ကိုယ်ရေးအချက်အလက် မူဝါဒ',terms:'အသုံးပြုမှု စည်းကမ်းများ',contact:'ဆက်သွယ်ရန်',legal:'ဥပဒေဆိုင်ရာ အချက်အလက်'},
   kac:{language:'Ga',home:'EKODI Home',account:'User account',privacy:'Privacy Policy',terms:'Terms of Use',contact:'Contact',legal:'Legal information'},
   vi:{language:'Ngôn ngữ',home:'Trang chủ EKODI',account:'Tài khoản người dùng',privacy:'Chính sách quyền riêng tư',terms:'Điều khoản sử dụng',contact:'Liên hệ',legal:'Thông tin pháp lý'},
@@ -38,6 +42,7 @@ function normalize(value){
   if(lower==='en'||lower.startsWith('en-'))return'en';
   if(lower==='zh'||lower.startsWith('zh-'))return'zh-CN';
   if(lower==='ja'||lower.startsWith('ja-'))return'ja';
+  if(lower==='ne'||lower.startsWith('ne-')||lower==='nep')return'ne';
   if(lower==='my'||lower.startsWith('my-')||lower==='bur'||lower==='mya')return'my';
   if(lower==='kac'||lower.startsWith('kac-')||lower==='jinghpaw'||lower==='kachin')return'kac';
   if(lower==='vi'||lower.startsWith('vi-'))return'vi';
@@ -77,6 +82,11 @@ function updateSharedCopy(){
   for(const [key,value] of Object.entries(labels)){
     for(const node of document.querySelectorAll(`[data-ekodi-i18n="${key}"]`))setText(node,value);
   }
+}
+function ensureBrowserTranslationBoundary(){
+  let meta=document.head?.querySelector('meta[name=\"google\"][content=\"notranslate\"]');
+  if(!meta&&document.head){meta=document.createElement('meta');meta.name='google';meta.content='notranslate';meta.dataset.ekodiBrowserTranslation='managed';document.head.append(meta);}
+  document.documentElement.dataset.ekodiBrowserTranslation='native-i18n';
 }
 function apply(locale,{save=true,emit=true}={}){
   const next=normalize(locale)||'ko-KR';
@@ -180,7 +190,7 @@ function syncControls(){
 }
 function reconcile(){scheduled=false;placeControl();updateSharedCopy();}
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(reconcile);}
-function boot(){apply(initialLocale(),{save:true,emit:false});schedule();}
+function boot(){ensureBrowserTranslationBoundary();apply(initialLocale(),{save:true,emit:false});schedule();}
 
 window.EKODIUserLanguage=Object.freeze({
   version:VERSION,

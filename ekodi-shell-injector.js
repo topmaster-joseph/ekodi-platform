@@ -59,7 +59,7 @@ function surfaceBootStyle(surface){
 function fallbackHeader(serviceId){
   const label=escapeHtml(serviceLabel(cleanServiceId(serviceId)));
   const context=label&&label!=='EKODI'?`<span class="ekodi-user-ui-fallback-header__context">${label}</span>`:'<span class="ekodi-user-ui-fallback-header__context" aria-hidden="true"></span>';
-  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://my.ekodi.kr/">My EKODI</a></nav></div></header>`;
+  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://my.ekodi.kr/">My EKODI</a></nav></div></header>`;
 }
 
 class ShellHtmlInjector{
@@ -90,7 +90,7 @@ class UserUiHtmlInjector{
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
-class UserUiHeadInjector{element(element){element.append(`<link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
+class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
 class UserHeaderAdopter{
   constructor(){this.seen=false;}
   element(element){

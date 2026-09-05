@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=1;
+const VERSION=2;
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
@@ -12,6 +12,7 @@ const CENTER_CLASS='ekodi-user-ui-header-center';
 const FALLBACK_CLASS='ekodi-user-ui-header-fallback';
 const SPACER_ATTR='data-ekodi-user-header-spacer';
 const FALLBACK_ATTR='data-ekodi-user-header-fallback';
+const HOME_ATTR='data-ekodi-header-home';
 const HEADER_SELECTORS=[
   'header[data-ekodi-user-header-root]',
   'header[data-ekodi-fixed-header]',
@@ -154,7 +155,7 @@ function ensureFallback(){
   header.setAttribute(FALLBACK_ATTR,`v${VERSION}`);
   header.setAttribute('data-ekodi-user-header-root',`v${VERSION}`);
   header.setAttribute('role','banner');
-  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://my.ekodi.kr/">My EKODI</a></div>`;
+  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://my.ekodi.kr/">My EKODI</a></div>`;
   document.body.prepend(header);
   fallbackHeader=header;
   return header;
@@ -162,6 +163,39 @@ function ensureFallback(){
 function removeFallback(){
   if(fallbackHeader?.isConnected)fallbackHeader.remove();
   fallbackHeader=null;
+}
+function serviceHomeUrl(){
+  const explicit=String(document.documentElement.dataset.ekodiHome||document.body?.dataset?.ekodiHome||'').trim();
+  if(explicit){try{return new URL(explicit,location.href)}catch{}}
+  const url=new URL(location.href);
+  url.search='';url.hash='';
+  if(url.hostname==='ekodi.kr'||url.hostname==='www.ekodi.kr'){
+    const segment=url.pathname.split('/').filter(Boolean)[0]||'';
+    const globalRoots=new Set(['privacy','terms','admin']);
+    url.pathname=segment&&!globalRoots.has(segment)?`/${segment}/`:'/';
+  }else url.pathname='/';
+  return url;
+}
+function findHomeAnchor(header){
+  const selectors=[`[${HOME_ATTR}]`,'.brand[href]','a.brand[href]','.site-brand a[href]','.logo a[href]','a.logo[href]','.site-logo a[href]'];
+  for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
+  return null;
+}
+function bindHomeAnchor(header){
+  const anchor=findHomeAnchor(header);if(!anchor)return;
+  const home=serviceHomeUrl();anchor.setAttribute(HOME_ATTR,`v${VERSION}`);anchor.href=home.toString();
+  if(anchor.dataset.ekodiHeaderHomeBound==='true')return;
+  anchor.dataset.ekodiHeaderHomeBound='true';
+  anchor.addEventListener('click',event=>{
+    const target=serviceHomeUrl();
+    const here=new URL(location.href);here.search='';here.hash='';
+    if(here.origin===target.origin&&here.pathname.replace(/\/+$/,'/')===target.pathname.replace(/\/+$/,'/')){
+      event.preventDefault();
+      const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({top:0,left:0,behavior:reduced?'auto':'smooth'});
+      try{history.replaceState(history.state,'',target.pathname+location.search);}catch{}
+    }
+  });
 }
 function safeCenterCandidate(node){
   if(!node||!visible(node))return false;
@@ -197,6 +231,7 @@ function detach(){
 }
 function attach(header){
   if(!header||!shouldEnable())return;
+  bindHomeAnchor(header);
   if(activeHeader===header&&spacer?.isConnected){
     const nextCenter=findCenter(header);
     if(nextCenter!==activeCenter){
