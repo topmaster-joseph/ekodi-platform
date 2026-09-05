@@ -182,9 +182,19 @@ async function main() {
     const collectedAt = now.toISOString();
     const statements = [supportSchemaSql()];
     let hostCount = 0;
+    let collectedZoneCount = 0;
+    const skippedZones = [];
 
     for (const zone of zones) {
-      const buckets = await collectZone(zone, window);
+      let buckets;
+      try {
+        buckets = await collectZone(zone, window);
+        collectedZoneCount += 1;
+      } catch (error) {
+        skippedZones.push({ zone:zone.name, message:String(error?.message || error).slice(0, 200) });
+        console.warn(`Skipping Traffic Intelligence zone ${zone.name}: analytics unavailable`);
+        continue;
+      }
       hostCount += buckets.size;
       for (const [host, bucket] of buckets) {
         const siteId = trafficSiteIdForHost(host);
@@ -207,10 +217,18 @@ ON CONFLICT(day, zone_name, host) DO UPDATE SET
   classifier_version=excluded.classifier_version, collected_at=excluded.collected_at;`);
       }
     }
+    if (collectedZoneCount === 0) {
+      const denied = skippedZones.some(item => item.message.includes('zone.analytics.read'));
+      throw new Error(denied
+        ? 'Cloudflare Analytics Read 권한이 있는 Zone이 없어 Traffic Intelligence를 수집하지 못했습니다.'
+        : '수집 가능한 Cloudflare Zone Analytics가 없습니다.');
+    }
+    const stateStatus = skippedZones.length ? 'partial' : 'ok';
+    const stateMessage = `${window.day} · ${collectedZoneCount}/${zones.length}개 Zone · ${hostCount}개 Host 분류 완료${skippedZones.length ? ` · ${skippedZones.length}개 Zone 권한/분석 제외` : ''}`;
     statements.push(`INSERT INTO traffic_intelligence_state
   (source, status, last_attempt_at, last_success_at, zone_count, host_count, message, classifier_version)
-VALUES ('cloudflare', 'ok', ${sqlText(collectedAt)}, ${sqlText(collectedAt)}, ${zones.length}, ${hostCount},
-  ${sqlText(`${window.day} · ${zones.length}개 Zone · ${hostCount}개 Host 분류 완료`)}, ${sqlText(TRAFFIC_CLASSIFIER_VERSION)})
+VALUES ('cloudflare', ${sqlText(stateStatus)}, ${sqlText(collectedAt)}, ${sqlText(collectedAt)}, ${collectedZoneCount}, ${hostCount},
+  ${sqlText(stateMessage)}, ${sqlText(TRAFFIC_CLASSIFIER_VERSION)})
 ON CONFLICT(source) DO UPDATE SET
   status=excluded.status, last_attempt_at=excluded.last_attempt_at,
   last_success_at=excluded.last_success_at, zone_count=excluded.zone_count,
@@ -219,7 +237,7 @@ ON CONFLICT(source) DO UPDATE SET
     statements.push("DELETE FROM traffic_intelligence_daily WHERE day < date('now', '-90 day');");
     statements.push("DELETE FROM traffic_human_sessions WHERE day < date('now', '-35 day');");
     await writeFile(outputPath, `${statements.join('\n')}\n`, 'utf8');
-    console.log(`Prepared Traffic Intelligence for ${zones.length} zones / ${hostCount} hosts (${window.day}).`);
+    console.log(`Prepared Traffic Intelligence for ${collectedZoneCount}/${zones.length} zones / ${hostCount} hosts (${window.day}, ${stateStatus}).`);
   } catch (error) {
     const rawMessage = String(error?.message || error).slice(0, 400);
     const message = rawMessage.includes('zone.analytics.read')
