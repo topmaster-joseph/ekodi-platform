@@ -1,5 +1,5 @@
 export const COGNITIVE_CONTROL_POLICY = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   planes: Object.freeze(['control', 'governance', 'execution', 'data']),
   environments: Object.freeze(['development', 'verification', 'production']),
   promotionPath: Object.freeze(['development', 'verification', 'production']),
@@ -31,7 +31,6 @@ export const COGNITIVE_CONTROL_POLICY = Object.freeze({
     'audit',
   ]),
   highImpactOperations: Object.freeze([
-    'rollback',
     'production-secret-change',
     'production-dns-change',
     'destructive-production-data-change',
@@ -88,6 +87,11 @@ export function normalizeControlIntent(input = {}) {
     governanceAuthorized: source.governanceAuthorized === true,
     rebuildOnPromotion: source.rebuildOnPromotion === true,
     highImpact: source.highImpact === true,
+    existingBoundary: source.existingBoundary === true,
+    reversible: source.reversible === true,
+    automaticRollback: source.automaticRollback === true,
+    stableRollbackTarget: source.stableRollbackTarget === true,
+    postRollbackVerification: source.postRollbackVerification === true,
     gates: Object.freeze(unique(source.gates)),
     artifact: normalizeArtifact(source.artifact),
   });
@@ -139,6 +143,13 @@ export function evaluateControlIntent(input = {}) {
 
   if (highImpact) {
     return result('human_gate', 'high_impact_change', 'High-impact changes require an explicit human stewardship decision regardless of the requesting agent or environment.', { intent });
+  }
+
+
+  if (intent.targetEnvironment === 'production' && intent.operation === 'rollback') {
+    const safe = intent.governanceAuthorized && intent.audited && intent.existingBoundary && intent.reversible && intent.automaticRollback && intent.stableRollbackTarget && intent.postRollbackVerification;
+    if (!safe) return result('human_gate', 'sovereign_rollback_boundary', 'Only a verified safe rollback to a known stable target may execute autonomously. Other production rollback remains a sovereign decision.', { intent });
+    return result('allow', 'automatic_safe_rollback', 'A failed bounded production release may automatically return to its known stable version and must verify recovery.', { intent });
   }
 
   if (intent.targetEnvironment === 'production' && intent.operation === 'observe') {

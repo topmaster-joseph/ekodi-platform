@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { evaluateAutonomyEnvelope } from '../sovereign-autonomy-policy.js';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -259,6 +260,8 @@ function isMissingWorker(error) {
 
 async function bootstrapFirstDeploy() {
   if (!allowFirstDeploy) throw new Error(`First deployment is not allowed by manifest for ${worker.name}.`);
+  const firstDeployDecision = evaluateAutonomyEnvelope({ production: true, delegated: true, existingBoundary: false, reversible: true, preflightVerified: true, postVerificationRequired: true, automaticRollback: false, logged: true, newIndependentDeployment: true });
+  if (firstDeployDecision.level === 'A4') throw new Error(`First deployment requires sovereign A4 approval; autonomous bootstrap denied for ${worker.name}.`);
   console.log(`No existing ${worker.name} deployment found. Manifest explicitly allows one first deployment bootstrap.`);
   const deployArgs = ['deploy', '--config', worker.config];
   if (secretsFilePath) deployArgs.push('--secrets-file', secretsFilePath);
@@ -287,6 +290,19 @@ try {
     process.exit(0);
   }
   console.log(`Stable production version: ${previousVersion}`);
+
+  const autonomyDecision = evaluateAutonomyEnvelope({
+    area: 'guarded_worker_release', production: true, delegated: true, existingBoundary: true,
+    reversible: true, preflightVerified: true, postVerificationRequired: true,
+    automaticRollback: true, logged: true, paidCommitment: false, permissionExpansion: false,
+    canonicalIdentityChange: false, workspaceAuthorityChange: false, destructiveDataChange: false,
+    newDomainOwnership: false, securityBoundaryChange: false, newIndependentDeployment: false,
+  });
+  if (autonomyDecision.level !== 'A3' || autonomyDecision.automaticAllowed !== true) {
+    throw new Error(`Sovereign autonomy gate denied production promotion: ${autonomyDecision.level}`);
+  }
+  console.log('✅ Sovereign autonomy A3 gate passed for existing guarded Worker boundary.');
+
 
   candidateVersion = uploadCandidate();
   console.log(`Candidate version: ${candidateVersion}`);

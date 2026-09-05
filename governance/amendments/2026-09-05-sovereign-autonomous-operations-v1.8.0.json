@@ -1,0 +1,29 @@
+{
+  "id": "2026-09-05-sovereign-autonomous-operations-v1.8.0",
+  "constitutionVersion": "1.8.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-05",
+  "changeClass": "C2",
+  "taskId": "ekodi-sovereign-autonomy-20260905",
+  "issue": 1006,
+  "summary": "Delegate A0-A3 operational execution to EKODI while preserving user sovereignty for A4 decisions and prohibiting A5 actions.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to rapidly complete autonomous change, build, deployment and operation without interruption, while retaining final user decision authority for important decisions.",
+  "scope": {
+    "automatic": [
+      "A0",
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "humanDecision": [
+      "A4"
+    ],
+    "never": [
+      "A5"
+    ]
+  },
+  "costPolicy": "No numeric budget is inferred. New paid commitments without an explicit delegated budget remain A4.",
+  "safety": "Existing guarded release, validation, staging/candidate verification, audit and automatic safe rollback remain mandatory. Tests and guardrails may not be bypassed.",
+  "rollback": "Revert v1.8 constitutional and autonomy-policy changes. Existing production services, data, DNS and workspaces are not destructively migrated by this amendment."
+}

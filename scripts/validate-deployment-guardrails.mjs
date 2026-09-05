@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const autonomyPolicyFile = 'sovereign-autonomy-policy.js';
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 let failed = false;
 
@@ -19,6 +20,9 @@ function forbidText(file, needles) {
   for (const needle of needles) if (text.includes(needle)) fail(file, `unsafe production bypass detected: ${needle}`);
   return text;
 }
+
+requireText('scripts/guarded-worker-release.mjs', ['sovereign-autonomy-policy.js','Sovereign autonomy A3 gate passed','automatic rollback after failed gate','autonomous bootstrap denied']);
+requireText(autonomyPolicyFile, ['classifyAutonomyLevel','evaluateAutonomyEnvelope','paidCommitment','guardrailBypass']);
 
 const workerGuarded = {
   '.github/workflows/deploy-site-core.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json'],

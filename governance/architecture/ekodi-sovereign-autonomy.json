@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-09-05",
+  "status": "active",
+  "name": "EKODI Sovereign Autonomous Operations",
+  "sovereignAuthority": "ekodi_platform_super_administrator",
+  "delegatedExecutionAuthority": "ekodi_autonomous_control_plane",
+  "providerAgentsAreWorkersNotAuthority": true,
+  "unknownActionDefault": "A4",
+  "implicitBudgetForbidden": true,
+  "levels": {
+    "A0": {
+      "name": "observe",
+      "automatic": true
+    },
+    "A1": {
+      "name": "analyze_assist",
+      "automatic": true
+    },
+    "A2": {
+      "name": "reversible_non_production",
+      "automatic": true
+    },
+    "A3": {
+      "name": "bounded_production",
+      "automatic": true
+    },
+    "A4": {
+      "name": "sovereign_high_impact",
+      "automatic": false
+    },
+    "A5": {
+      "name": "forbidden",
+      "automatic": false
+    }
+  },
+  "a3Requirements": [
+    "explicit_delegated_scope",
+    "existing_registered_boundary",
+    "reversible_or_safe_degraded_path",
+    "preflight_verified",
+    "guarded_candidate_or_equivalent",
+    "post_execution_verification",
+    "automatic_safe_rollback",
+    "auditable",
+    "no_permission_expansion",
+    "no_canonical_identity_or_workspace_authority_change",
+    "no_irreversible_or_mass_data_change",
+    "no_new_domain_ownership_or_security_boundary",
+    "no_unbudgeted_paid_commitment"
+  ],
+  "sovereignClasses": [
+    "constitution_change",
+    "material_user_rights_reduction",
+    "canonical_identity_or_workspace_authority_change",
+    "permission_or_authority_expansion",
+    "irreversible_or_mass_data_change",
+    "new_domain_ownership_or_security_boundary",
+    "service_or_domain_ownership_transfer",
+    "legal_commitment",
+    "new_paid_commitment_without_explicit_delegated_budget",
+    "provider_lock_in",
+    "new_independent_deployment",
+    "regulated_financial_or_insurance_product_commitment",
+    "production_secret_change"
+  ],
+  "forbiddenClasses": [
+    "guardrail_bypass",
+    "test_bypass",
+    "secret_exfiltration",
+    "cross_tenant_private_data_without_authority",
+    "coercive_manipulation",
+    "unlogged_hidden_high_impact_automation"
+  ],
+  "costPolicy": {
+    "currentScaleTier": "S0",
+    "explicitBudgetRequiredForNewPaidCommitment": true,
+    "noNumericBudgetInferred": true,
+    "optimizationBeforeCapacity": true
+  },
+  "productionLoop": [
+    "observe",
+    "diagnose",
+    "plan",
+    "policy_check",
+    "preflight",
+    "candidate_or_canary",
+    "execute",
+    "verify",
+    "audit",
+    "report"
+  ],
+  "failureLoop": [
+    "automatic_safe_rollback",
+    "verify_rollback",
+    "isolate",
+    "audit",
+    "report"
+  ],
+  "safeRollback": {
+    "automaticForFailedA3": true,
+    "requiresKnownStableTarget": true,
+    "requiresVerification": true,
+    "authorityExpandingOrDestructiveRollbackIsA4": true
+  },
+  "generationAcceleration": {
+    "formalGenerationRemains": 2,
+    "allowEarlyPatterns": [
+      "G3_capability_contracts",
+      "G4_intent_routing",
+      "G5_bounded_agentic_operations",
+      "G6_federation_ready_connectors",
+      "G7_observation_recommendation_and_low_risk_optimization"
+    ],
+    "formalPromotionRequiresSovereignDecision": true
+  }
+}

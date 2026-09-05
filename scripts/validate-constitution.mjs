@@ -8,14 +8,15 @@ const fail = message => failures.push(message);
 const constitution = json('governance/constitution/constitution.json');
 const architecture = json('governance/architecture/ekodi-os-architecture.json');
 const evolutionModel = json('governance/architecture/ekodi-evolution-model.json');
+const autonomy = json('governance/architecture/ekodi-sovereign-autonomy.json');
 const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.7.0') fail('constitution version must remain 1.7.0 with approved sustainable 8-generation evolution policy');
+if (constitution.version !== '1.8.0') fail('constitution version must remain 1.8.0 with approved sovereign autonomous operations policy');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','user-sovereign-bounded-autonomy']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -23,6 +24,7 @@ const architectureModel = constitution.architectureModel || {};
 if (architectureModel.registry !== 'governance/architecture/ekodi-os-architecture.json') fail('constitutional architecture registry path mismatch');
 if (architectureModel.platformBoundaryRegistry !== 'platform-boundaries.json') fail('constitutional platform boundary registry path mismatch');
 if (architectureModel.evolutionRegistry !== 'governance/architecture/ekodi-evolution-model.json') fail('constitutional evolution registry path mismatch');
+if (architectureModel.autonomyRegistry !== 'governance/architecture/ekodi-sovereign-autonomy.json') fail('constitutional autonomy registry path mismatch');
 if (architectureModel.deploymentTopology !== 'modular-monolith-first') fail('constitutional deployment topology must remain modular-monolith-first');
 for (const layer of ['governance','os','core','responsible-independent-service','external-connected-service','workspace']) {
   if (!architectureModel.layers?.includes(layer)) fail(`constitutional architecture layer missing: ${layer}`);
@@ -52,12 +54,22 @@ if (evolution.noSpeculativeScale !== true) fail('speculative scaling must be con
 for (const signal of ['traffic','latency','error_rate','capacity','ai_cost','security_events','revenue','funding','unit_economics']) {
   if (!evolution.observedSignals?.includes(signal)) fail(`Evolution observed signal missing: ${signal}`);
 }
-for (const gate of ['production_change','shared_core_creation','permission_expansion','paid_cost_commitment','data_migration','destructive_change','security_boundary_change','production_dns_change','new_independent_deployment']) {
+for (const gate of ['constitution_change','shared_core_creation','permission_expansion','new_paid_commitment_without_explicit_delegated_budget','irreversible_or_mass_data_change','security_boundary_change','new_domain_or_ownership_boundary','provider_lock_in','new_independent_deployment','canonical_identity_or_workspace_authority_change']) {
   if (!evolution.approvalRequired?.includes(gate)) fail(`Evolution approval gate missing: ${gate}`);
 }
 for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','secure_projection','rollback','backup','disaster_recovery']) {
   if (!evolution.securityCore?.includes(control)) fail(`Evolution security core control missing: ${control}`);
 }
+
+
+if (autonomy.status !== 'active') fail('sovereign autonomy registry must be active');
+if (autonomy.sovereignAuthority !== 'ekodi_platform_super_administrator') fail('sovereign autonomy human authority mismatch');
+if (autonomy.delegatedExecutionAuthority !== 'ekodi_autonomous_control_plane') fail('delegated execution authority mismatch');
+if (autonomy.providerAgentsAreWorkersNotAuthority !== true) fail('AI/provider agents must remain workers, not authority');
+if (autonomy.implicitBudgetForbidden !== true || autonomy.costPolicy?.noNumericBudgetInferred !== true) fail('autonomy must forbid implicit numeric budgets');
+if (autonomy.safeRollback?.automaticForFailedA3 !== true || autonomy.safeRollback?.requiresVerification !== true) fail('failed A3 must automatically roll back and verify');
+if (constitution.sovereignAutonomy?.registry !== 'governance/architecture/ekodi-sovereign-autonomy.json') fail('constitution sovereign autonomy registry mismatch');
+if (constitution.sovereignAutonomy?.newPaidCommitmentRequiresExplicitDelegatedBudget !== true) fail('new paid commitment must require explicit budget delegation');
 
 const sustainable = constitution.sustainableEvolutionModel || {};
 if (sustainable.registry !== 'governance/architecture/ekodi-evolution-model.json') fail('sustainable evolution registry mismatch');

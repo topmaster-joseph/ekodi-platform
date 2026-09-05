@@ -17,10 +17,11 @@ test('Chief AI remains primary while specialist AI access is direct and bounded'
   }
 });
 
-test('high-impact provider mutations require the human gate', () => {
-  for (const area of ['production_secret_change','production_dns_change','repository_force_push','repository_delete','production_rollback']) {
-    assert.match(runtime, new RegExp(`'${area}'`));
+test('sovereign provider mutations remain human-gated while safe bounded production is delegated', () => {
+  for (const area of ['permission_expanding_or_root_secret_change','new_domain_ownership_or_security_boundary','repository_force_push','repository_delete','irreversible_or_authority_expanding_production_rollback']) {
+    assert.match(runtime, new RegExp(`['"]${area}['"]`));
   }
+  assert.match(runtime, /bounded_production/);
 });
 
 test('Cloudflare inventory exposes account, zones and workers without exposing controller credentials', () => {

@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.7.0
+# EKODI Platform Constitution v1.8.0
 
 Effective: 2026-09-05
 
@@ -129,7 +129,7 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - Security is a core platform capability: least privilege, Zero Trust boundaries, strong authentication and authorization, secrets protection, encryption, auditability, tenant isolation, sandboxing, supply-chain checks, AI/agent identity, tool and data boundary protection, anomaly detection, isolation, rollback, backup and recovery are designed into shared control layers.
 - Technology selection prioritizes verified maturity, security, interoperability, operational reliability, provider independence, replaceability, cost efficiency and measured EKODI fit over vendor claims or fashion.
 - Capacity and traffic recommendations prefer root-cause and structural improvement before raw resource expansion: cache, query optimization, asynchronous queues, fault isolation, routing, autoscaling and data architecture are compared with cost and rollback evidence.
-- Low-risk observation, analysis, forecasting, scoring and sandbox experiments may run automatically within delegated limits. Production changes, shared-core creation, permission expansion, paid commitments, data migration, destructive changes, security-boundary changes and production DNS changes require EKODI Platform Super Administrator approval and the guarded release pipeline.
+- Low-risk observation, analysis, forecasting and sandbox work may run automatically. Bounded production changes classified A3 may also run automatically only inside the Sovereign Autonomy Envelope and guarded release pipeline. A4 sovereign changes such as constitution, rights, authority expansion, unbudgeted paid commitments, irreversible or mass data changes, new domain ownership/security boundaries, provider lock-in and new independent deployment require EKODI Platform Super Administrator approval.
 - `EKODI Evolution Intelligence` recommends; it never becomes sovereign authority. Final platform authority remains the EKODI Platform Super Administrator.
 
 ## 13. Sustainable 8-Generation Evolution Constitution
@@ -146,3 +146,15 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - Existing independent deployment boundaries are grandfathered as a migration baseline and are reviewed for convergence before expansion. Their existence is not precedent for creating additional boundaries.
 - The canonical operating-context target is **Person + Workspace + Membership + Capability**. Legacy `Space` names may remain only as migration aliases and must converge without breaking `workspace_id`.
 - Machine-readable rules, scale tiers, boundary gates and generation definitions are maintained in `governance/architecture/ekodi-evolution-model.json` and are enforced by repository validators.
+
+
+## 14. Sovereign Autonomous Operations Constitution
+- The EKODI Platform Super Administrator remains the sovereign human authority. EKODI Autonomous Control Plane receives delegated execution authority but never sovereign authority.
+- AI providers, agents and development workers are replaceable executors. Provider or model identity never grants authority.
+- Autonomy levels are **A0 Observe**, **A1 Analyze/Assist**, **A2 Reversible Non-Production**, **A3 Bounded Production**, **A4 Sovereign/High-Impact**, and **A5 Forbidden**. A0-A3 may execute automatically when their policy requirements pass; A4 requires the sovereign user's decision; A5 never executes.
+- A3 requires explicit delegated scope, an existing registered boundary, preflight verification, reversible or safe degraded operation, a guarded candidate/canary path, post-execution verification, auditability, and a known safe rollback target. Failed A3 releases roll back automatically and verify the rollback.
+- A3 never expands permissions, changes canonical identity/workspace authority, performs irreversible or mass destructive data changes, creates a new domain ownership/security boundary, creates a new independent deployment, or enters a new paid commitment without an explicit delegated budget.
+- No numeric budget is inferred from silence. Until a budget envelope is explicitly delegated, a new paid commitment remains A4. Security, legal and reliability work may still be proposed urgently, but the commitment boundary remains sovereign.
+- Reversible configuration of an existing registered route, safe same-scope operations, capacity tuning within an explicit budget, verified guarded deployment, provider failover, health recovery and safe rollback may be A3.
+- Generation 3-7 operating patterns may be adopted early on shared S0 infrastructure when they preserve prior-generation foundations. Formal generation promotion remains evidence-driven and an A4 constitutional decision.
+- Machine-readable authority: `governance/architecture/ekodi-sovereign-autonomy.json`. Runtime classification: `sovereign-autonomy-policy.js`.

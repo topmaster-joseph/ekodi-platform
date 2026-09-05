@@ -1,5 +1,5 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "effectiveDate": "2026-09-05",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -24,7 +24,8 @@
     "capability-first-reuse",
     "sustainable-scale-by-evidence",
     "workspace-over-space",
-    "living-digital-commons-north-star"
+    "living-digital-commons-north-star",
+    "user-sovereign-bounded-autonomy"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -43,7 +44,8 @@
       "ekodi-responsible",
       "external-provider-responsible"
     ],
-    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate."
+    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate.",
+    "autonomyRegistry": "governance/architecture/ekodi-sovereign-autonomy.json"
   },
   "systemBoundaries": {
     "production": [
@@ -251,7 +253,10 @@
       "config/service-workspace-policy.json",
       "scripts/validate-constitution.mjs",
       "scripts/validate-ekodi-os-architecture.mjs",
-      ".github/workflows/constitution-check.yml"
+      ".github/workflows/constitution-check.yml",
+      "governance/architecture/ekodi-sovereign-autonomy.json",
+      "sovereign-autonomy-policy.js",
+      "scripts/validate-sovereign-autonomy.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -327,16 +332,16 @@
       "unit_economics"
     ],
     "approvalRequired": [
-      "production_change",
+      "constitution_change",
       "shared_core_creation",
       "permission_expansion",
-      "paid_cost_commitment",
-      "data_migration",
-      "destructive_change",
+      "new_paid_commitment_without_explicit_delegated_budget",
+      "irreversible_or_mass_data_change",
       "security_boundary_change",
-      "production_dns_change",
+      "new_domain_or_ownership_boundary",
       "provider_lock_in",
-      "new_independent_deployment"
+      "new_independent_deployment",
+      "canonical_identity_or_workspace_authority_change"
     ],
     "securityCore": [
       "least_privilege",
@@ -357,6 +362,14 @@
       "backup",
       "disaster_recovery",
       "secure_projection"
+    ],
+    "autonomousAllowed": [
+      "observation",
+      "analysis",
+      "recommendation",
+      "reversible_non_production_change",
+      "bounded_production_change_inside_autonomy_envelope",
+      "safe_automatic_rollback"
     ]
   },
   "sustainableEvolutionModel": {
@@ -394,5 +407,22 @@
     "aiGateway": "https://ai.ekodi.kr",
     "customerAiSubdomains": "legacy_execution_alias_only",
     "providerTopologyVisibleToOrdinaryUsers": false
+  },
+  "sovereignAutonomy": {
+    "registry": "governance/architecture/ekodi-sovereign-autonomy.json",
+    "sovereignAuthority": "ekodi_platform_super_administrator",
+    "delegatedExecutionAuthority": "ekodi_autonomous_control_plane",
+    "automaticLevels": [
+      "A0",
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "sovereignLevel": "A4",
+    "forbiddenLevel": "A5",
+    "unknownActionDefault": "A4",
+    "newPaidCommitmentRequiresExplicitDelegatedBudget": true,
+    "safeFailedA3RollbackAutomatic": true,
+    "providerAgentsAreWorkersNotAuthority": true
   }
 }

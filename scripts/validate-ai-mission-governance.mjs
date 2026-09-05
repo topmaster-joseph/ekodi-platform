@@ -15,6 +15,7 @@ const requiredHumanGates = [
   'destructive_or_mass_data_change',
   'material_insurance_or_financial_product_commitment',
   'policy_change_that_materially_reduces_user_rights',
+  'production_secret_change',
 ];
 const requiredForbidden = [
   'deceptive_impersonation_of_human_or_divine_authority',
@@ -27,6 +28,9 @@ const requiredForbidden = [
 assert(policy.authorityModel?.humanRole === 'steward_delegate', 'humanRole must remain steward_delegate');
 assert(policy.authorityModel?.chiefAiRole === 'orchestrator_not_sovereign', 'Chief AI must remain an orchestrator, not a sovereign');
 assert(policy.authorityModel?.defaultAuthority === 'least_privilege', 'default AI authority must be least_privilege');
+assert(policy.authorityModel?.finalSovereignAuthority === 'ekodi_platform_super_administrator', 'final sovereign authority must remain human');
+assert(policy.authorityModel?.delegatedExecutionAuthority === 'ekodi_autonomous_control_plane', 'delegated execution authority mismatch');
+assert(policy.actionTiers?.bounded_production?.autonomy === 'guarded_auto', 'bounded production must be guarded_auto');
 
 for (const principle of requiredPrinciples) {
   assert(policy.principles?.[principle], `missing mission principle: ${principle}`);

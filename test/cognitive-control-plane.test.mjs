@@ -144,17 +144,13 @@ test('additive migration fails closed without a recovery point', () => {
   assert.deepEqual(result.missingGates, ['recovery-point']);
 });
 
-test('production rollback is a human gate', () => {
-  const result = evaluateControlIntent({
-    actor: 'DevOps AI',
-    actorPlane: 'governance',
-    operation: 'rollback',
-    sourceEnvironment: 'production',
-    targetEnvironment: 'production',
-    audited: true,
-  });
-  assert.equal(result.decision, 'human_gate');
-  assert.equal(result.reason, 'high_impact_change');
+test('verified safe production rollback is delegated but unsafe rollback stays sovereign', () => {
+  const safe = evaluateControlIntent({ actor:'DevOps AI', actorPlane:'governance', operation:'rollback', sourceEnvironment:'production', targetEnvironment:'production', audited:true, governanceAuthorized:true, existingBoundary:true, reversible:true, automaticRollback:true, stableRollbackTarget:true, postRollbackVerification:true });
+  assert.equal(safe.decision, 'allow');
+  assert.equal(safe.reason, 'automatic_safe_rollback');
+  const unsafe = evaluateControlIntent({ actor:'DevOps AI', actorPlane:'governance', operation:'rollback', sourceEnvironment:'production', targetEnvironment:'production', audited:true });
+  assert.equal(unsafe.decision, 'human_gate');
+  assert.equal(unsafe.reason, 'sovereign_rollback_boundary');
 });
 
 test('repository force push stays human-gated even outside production', () => {

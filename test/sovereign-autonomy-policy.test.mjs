@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { classifyAutonomyLevel,evaluateAutonomyEnvelope } from '../sovereign-autonomy-policy.js';
+const bounded={production:true,delegated:true,existingBoundary:true,reversible:true,preflightVerified:true,postVerificationRequired:true,automaticRollback:true,logged:true};
+test('A0 read-only and A1 analysis are automatic',()=>{assert.equal(classifyAutonomyLevel({readOnly:true}),'A0');assert.equal(classifyAutonomyLevel({analysisOnly:true}),'A1')});
+test('A2 reversible delegated non-production is automatic',()=>assert.equal(classifyAutonomyLevel({reversible:true,delegated:true}),'A2'));
+test('A3 bounded production requires every safety gate',()=>{assert.equal(classifyAutonomyLevel(bounded),'A3');assert.equal(classifyAutonomyLevel({...bounded,automaticRollback:false}),'A4')});
+test('new paid commitment without explicit budget is A4',()=>{assert.equal(classifyAutonomyLevel({paidCommitment:true}),'A4');assert.equal(classifyAutonomyLevel({...bounded,paidCommitment:true,explicitDelegatedBudget:true}),'A3')});
+test('identity authority, new domain/security boundary and permission expansion remain A4',()=>{for(const k of ['canonicalIdentityChange','workspaceAuthorityChange','newDomainOwnership','securityBoundaryChange','permissionExpansion'])assert.equal(classifyAutonomyLevel({[k]:true}),'A4')});
+test('forbidden bypass is A5 and unknown action is A4',()=>{assert.equal(classifyAutonomyLevel({guardrailBypass:true}),'A5');assert.equal(classifyAutonomyLevel({}),'A4')});
+test('safe failed A3 remains automatically recoverable',()=>{const d=evaluateAutonomyEnvelope(bounded);assert.equal(d.automaticAllowed,true);assert.equal(d.level,'A3')});

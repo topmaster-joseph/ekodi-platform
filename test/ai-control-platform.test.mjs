@@ -75,3 +75,10 @@ test('delegated reversible preflighted actions may pass the autonomous gate',()=
   const task=normalizeTaskInput({prompt:'update isolated preview',governance:{agentId:'platform',area:'bounded_preview_update',delegated:true,reversible:true,logged:true,preflightVerified:true}}); const d=evaluateTaskMissionPolicy(task);
   assert.equal(d.tier,'execute_reversible'); assert.equal(d.autonomousActionAllowed,true); assert.equal(d.analysisOnly,false);
 });
+
+test('bounded production fields survive normalization and execute autonomously only inside A3',()=>{
+  const task=normalizeTaskInput({prompt:'promote verified bounded production candidate',governance:{agentId:'release',area:'bounded_release',production:true,delegated:true,existingBoundary:true,reversible:true,logged:true,preflightVerified:true,postVerificationRequired:true,automaticRollback:true}});
+  const d=evaluateTaskMissionPolicy(task);
+  assert.equal(task.governance.production,true); assert.equal(task.governance.existingBoundary,true);
+  assert.equal(d.tier,'bounded_production'); assert.equal(d.autonomousActionAllowed,true); assert.equal(d.analysisOnly,false); assert.equal(d.humanApprovalRequired,false);
+});
