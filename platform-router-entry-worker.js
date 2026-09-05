@@ -12,6 +12,7 @@ import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } fr
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { isJadamAdminPath, jadamAdminPage, jadamAdminCss, jadamAdminScript } from './jadam-admin-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -168,6 +169,9 @@ export default {
 
     if(host===PUBLIC_HOST){
       if(request.method==='GET'){
+        if(url.pathname==='/jadam-admin.css')return jadamAdminCss();
+        if(url.pathname==='/jadam-admin.js')return jadamAdminScript();
+        if(isJadamAdminPath(url.pathname))return jadamAdminPage();
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();

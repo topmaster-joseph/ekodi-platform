@@ -16,6 +16,7 @@ import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybri
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
+import { handleStoreMenuControl } from './store-menu-control.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
@@ -149,6 +150,11 @@ export default {
     if (path.startsWith('/api/marketing/connectors/')) {
       try { const response = await handleMarketingOrderConnectors(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Marketing order connector error', error); return errorResponse('Marketing 주문·POS 연결 처리 중 오류가 발생했습니다.', 'MARKETING_ORDER_CONNECTOR_ERROR'); }
+    }
+
+    if (path.startsWith('/api/store/menu')) {
+      try { const response = await handleStoreMenuControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Store menu control error', error); return errorResponse('점포 메뉴 원장 처리 중 오류가 발생했습니다.', 'STORE_MENU_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/marketing/ledger/')) {
