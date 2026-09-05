@@ -71,6 +71,33 @@ function stableRank(items,scorer,profile,context){
 export const rankCircles=(items,profile,context={})=>stableRank(items,scoreCircle,profile,context);
 export const rankPeople=(items,profile,context={})=>stableRank(items,scorePerson,profile,context);
 
+export function rankPeopleForCircle(items,circle={}){
+  const tags=circle?.tags||[];
+  return (items||[]).map((person,index)=>{
+    const shared=overlap(person?.shared_interests||person?.interests,tags);
+    const canHelp=overlap(person?.can_help_me_with,tags);
+    const canReceive=overlap(person?.i_can_help_with,tags);
+    const score=shared.length*12+canHelp.length*6+canReceive.length*4;
+    const reasons=[];
+    if(shared.length)reasons.push(`Circle 공통 관심 ${shared.slice(0,2).join(' · ')}`);
+    if(canHelp.length)reasons.push(`함께 배울 수 있음 ${canHelp.slice(0,2).join(' · ')}`);
+    if(canReceive.length)reasons.push(`함께 나눌 수 있음 ${canReceive.slice(0,2).join(' · ')}`);
+    return {...person,circle_bridge_score:score,circle_bridge_reasons:reasons,circle_bridge_source_index:index};
+  }).sort((a,b)=>b.circle_bridge_score-a.circle_bridge_score||a.circle_bridge_source_index-b.circle_bridge_source_index)
+    .map(({circle_bridge_source_index,...person})=>person);
+}
+
+
+export function bestCircleForPerson(circles,person={}){
+  const signals=uniq([...(person?.shared_interests||[]),...(person?.can_help_me_with||[]),...(person?.i_can_help_with||[])]);
+  const ranked=(circles||[]).map((circle,index)=>{
+    const matches=overlap(signals,circle?.tags||[]);
+    return {circle,matches,index,score:matches.length*10+Math.max(0,Number(circle?.recommendation_score)||0)*0.01};
+  }).filter(item=>item.matches.length).sort((a,b)=>b.score-a.score||a.index-b.index);
+  if(!ranked.length)return null;
+  return {...ranked[0].circle,cross_recommendation_reasons:ranked[0].matches.slice(0,3)};
+}
+
 export function recommendationBasis(profile={},context={}){
   const basis=[];
   if(list(profile.interests).length)basis.push('관심사');
