@@ -6,10 +6,12 @@ import { pizzamaruAdminPage, pizzamaruAdminScript, isPizzamaruAdminPath } from '
 import { yogurtAdminPage, yogurtAdminScript, isYogurtAdminPath } from '../yogurt-admin-page.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
-const [migration,worker]=await Promise.all([
+const [migration,worker,manifestText]=await Promise.all([
   read('supabase/migrations/20260906005000_store_user_site_provisioning.sql'),
   read('space-worker.js'),
+  read('deploy/manifests/shared-site.worker.json'),
 ]);
+const manifest=JSON.parse(manifestText);
 const admins=[
   ['jadam',jadamAdminPage,jadamAdminScript,isJadamAdminPath],
   ['pizzamaru',pizzamaruAdminPage,pizzamaruAdminScript,isPizzamaruAdminPath],
@@ -58,5 +60,15 @@ test('signup is identity-only and site materialization waits for store slug',asy
     assert.match(js,/Person \/ EKODI ID/);
     assert.match(js,/operating_space_slug/);
     assert.match(js,/JIT/);
+  }
+});
+
+test('production smoke uses markers present in static store-admin HTML',()=>{
+  const names={jadam:'자담치킨 목포대점',pizzamaru:'피자마루 목포대점',yogurt:'요거트퍼플 목포대점'};
+  for(const [slug,name] of Object.entries(names)){
+    const request=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr/${slug}/admin/site`);
+    assert.ok(request,`missing production smoke for ${slug}/admin/site`);
+    assert.deepEqual(request.expect,[name,'store-site-admin']);
+    assert.ok(!request.expect.includes('사용자 사이트'),'client-rendered text must not be used as a pre-JS smoke marker');
   }
 });

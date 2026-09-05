@@ -829,7 +829,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "사용자 사이트",
+          "자담치킨 목포대점",
           "store-site-admin"
         ],
         "headerExpect": [
@@ -845,7 +845,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "사용자 사이트",
+          "피자마루 목포대점",
           "store-site-admin"
         ],
         "headerExpect": [
@@ -861,7 +861,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "사용자 사이트",
+          "요거트퍼플 목포대점",
           "store-site-admin"
         ],
         "headerExpect": [
