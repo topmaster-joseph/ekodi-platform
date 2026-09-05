@@ -63,6 +63,18 @@
       <div class="interest-cloud" id="myInterestCloud"></div>
     </section>
 
+    <section class="daily-flow signed-in-only" id="dailyFlow" data-defer-signed-in hidden>
+      <div class="daily-flow-head">
+        <div><p class="eyebrow">TODAY FOR YOU</p><h2 data-i18n="today.title">오늘의 연결 흐름</h2><p data-i18n="today.intro">Circle 2개, 함께할 사람 3명, 관련 Channel 1개를 한 흐름으로 묶었습니다.</p></div>
+        <span class="daily-flow-privacy" data-i18n="today.privacy">공개된 추천 신호만 사용합니다</span>
+      </div>
+      <div class="daily-flow-grid">
+        <article><header><span>01</span><div><small>CIRCLES</small><strong data-i18n="today.circles">오늘 볼 Circle</strong></div></header><div class="daily-flow-list" id="dailyCircleList"></div><a href="#circles" data-i18n="today.allCircles">전체 Circle 보기 →</a></article>
+        <article><header><span>02</span><div><small>PEOPLE</small><strong data-i18n="today.people">함께할 사람</strong></div></header><div class="daily-flow-list" id="dailyPeopleList"></div><a href="#people" data-i18n="today.allPeople">전체 People 보기 →</a></article>
+        <article><header><span>03</span><div><small>CHANNEL</small><strong data-i18n="today.channel">이어볼 Channel</strong></div></header><div class="daily-flow-list" id="dailyChannelList"></div><a href="#channels" data-i18n="today.allChannels">전체 Channel 보기 →</a></article>
+      </div>
+    </section>
+
     <section class="section" id="circles">
       <div class="section-head">
         <div><p class="eyebrow">CIRCLES FOR YOU</p><h2 data-i18n="circles.title">관심에서 시작되는 작은 공동체</h2></div>
@@ -89,15 +101,15 @@
       <p class="section-intro" data-i18n="channels.intro">다양한 채널을 먼저 살펴보고, 선택하는 순간 로그인 여부를 확인해 자연스럽게 이어집니다.</p>
       <div class="channel-grid">
         <div class="channel-social-slot" data-ekodi-social-links data-org="community" data-variant="cards">
-          <a class="channel-card" href="https://www.youtube.com/@ekodichurch" target="_blank" rel="noopener" data-auth-href="https://www.youtube.com/@ekodichurch" data-auth-target="_blank"><span>▶</span><b>YouTube</b><small>예배 · 말씀 · Shorts</small></a>
-          <a class="channel-card" href="https://www.instagram.com/ekodicommunity" target="_blank" rel="noopener" data-auth-href="https://www.instagram.com/ekodicommunity" data-auth-target="_blank"><span>◎</span><b>Instagram</b><small>현장 · 사진 · 짧은 이야기</small></a>
-          <a class="channel-card" href="https://live.ekodi.kr" target="_blank" rel="noopener" data-auth-href="https://live.ekodi.kr" data-auth-target="_blank"><span>●</span><b>LIVE</b><small>지금 이어지는 방송</small></a>
+          <a class="channel-card" href="https://www.youtube.com/@ekodichurch" data-recommend-tags="영상,찬양,성경공부,음악" target="_blank" rel="noopener" data-auth-href="https://www.youtube.com/@ekodichurch" data-auth-target="_blank"><span>▶</span><b>YouTube</b><small>예배 · 말씀 · Shorts</small></a>
+          <a class="channel-card" href="https://www.instagram.com/ekodicommunity" data-recommend-tags="영상,지역활동,여행,디자인" target="_blank" rel="noopener" data-auth-href="https://www.instagram.com/ekodicommunity" data-auth-target="_blank"><span>◎</span><b>Instagram</b><small>현장 · 사진 · 짧은 이야기</small></a>
+          <a class="channel-card" href="https://live.ekodi.kr" data-recommend-tags="찬양,성경공부,기도,선교" target="_blank" rel="noopener" data-auth-href="https://live.ekodi.kr" data-auth-target="_blank"><span>●</span><b>LIVE</b><small>지금 이어지는 방송</small></a>
         </div>
-        <a class="channel-card" href="https://ekodi.kr/ekodichurch" target="_blank" rel="noopener" data-auth-href="https://ekodi.kr/ekodichurch" data-auth-target="_blank"><span>⌂</span><b>EKODI Church</b><small>예배 · 말씀 · 공동체</small></a>
-        <a class="channel-card" href="/connect/" data-auth-href="/connect/" data-auth-target="_self"><span>↔</span><b>Connect</b><small>사람 · 관심사 · 새로운 연결</small></a>
-        <a class="channel-card" href="https://biz.ekodi.kr" target="_blank" rel="noopener" data-auth-href="https://biz.ekodi.kr" data-auth-target="_blank"><span>▦</span><b>EKODI Biz</b><small>소상공인 · 경영 · 마케팅</small></a>
-        <a class="channel-card" href="https://lab.ekodi.kr" target="_blank" rel="noopener" data-auth-href="https://lab.ekodi.kr" data-auth-target="_blank"><span>◇</span><b>EKODI Lab</b><small>연구 · 실험 · 배움</small></a>
-        <a class="channel-card" href="https://trade.biz.ekodi.kr" target="_blank" rel="noopener" data-auth-href="https://trade.biz.ekodi.kr" data-auth-target="_blank"><span>⇄</span><b>EKODI Trade</b><small>지역 · 연결 · 교류</small></a>
+        <a class="channel-card" href="https://ekodi.kr/ekodichurch" data-recommend-tags="성경공부,기도,찬양,선교,봉사" target="_blank" rel="noopener" data-auth-href="https://ekodi.kr/ekodichurch" data-auth-target="_blank"><span>⌂</span><b>EKODI Church</b><small>예배 · 말씀 · 공동체</small></a>
+        <a class="channel-card" href="/connect/" data-recommend-tags="지역활동,외국인교류,청년,한국어,영어" data-auth-href="/connect/" data-auth-target="_self"><span>↔</span><b>Connect</b><small>사람 · 관심사 · 새로운 연결</small></a>
+        <a class="channel-card" href="https://biz.ekodi.kr" data-recommend-tags="소상공인,경영,마케팅,창업,AI" target="_blank" rel="noopener" data-auth-href="https://biz.ekodi.kr" data-auth-target="_blank"><span>▦</span><b>EKODI Biz</b><small>소상공인 · 경영 · 마케팅</small></a>
+        <a class="channel-card" href="https://lab.ekodi.kr" data-recommend-tags="AI,연구,배움,영상편집,디자인" target="_blank" rel="noopener" data-auth-href="https://lab.ekodi.kr" data-auth-target="_blank"><span>◇</span><b>EKODI Lab</b><small>연구 · 실험 · 배움</small></a>
+        <a class="channel-card" href="https://trade.biz.ekodi.kr" data-recommend-tags="지역활동,소상공인,외국인교류,마케팅" target="_blank" rel="noopener" data-auth-href="https://trade.biz.ekodi.kr" data-auth-target="_blank"><span>⇄</span><b>EKODI Trade</b><small>지역 · 연결 · 교류</small></a>
       </div>
     </section>
   </main>

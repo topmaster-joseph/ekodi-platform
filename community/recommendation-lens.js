@@ -71,6 +71,27 @@ function stableRank(items,scorer,profile,context){
 export const rankCircles=(items,profile,context={})=>stableRank(items,scoreCircle,profile,context);
 export const rankPeople=(items,profile,context={})=>stableRank(items,scorePerson,profile,context);
 
+function scoreChannel(channel,profile={},context={}){
+  const tags=channel?.tags||[];
+  const sharedInterests=overlap(profile.interests,tags);
+  const learning=overlap(profile.wants_to_learn,tags);
+  const offering=overlap(profile.skills_offered,tags);
+  const languages=overlap(profile.languages,tags);
+  const role=overlap(roleTags(context.role),tags);
+  const score=sharedInterests.length*10+learning.length*6+offering.length*4+languages.length*2+role.length*2+Math.max(0,Number(channel?.base_score)||0);
+  const reasons=[];
+  if(sharedInterests.length)reasons.push(`관심 ${sharedInterests.slice(0,2).join(' · ')}`);
+  if(learning.length)reasons.push(`배움 ${learning.slice(0,2).join(' · ')}`);
+  if(offering.length)reasons.push(`나눔 ${offering.slice(0,2).join(' · ')}`);
+  if(languages.length)reasons.push(`언어 ${languages.slice(0,2).join(' · ')}`);
+  if(role.length)reasons.push('현재 역할과 연관');
+  return {...channel,recommendation_score:score,recommendation_reasons:uniq(reasons).slice(0,3)};
+}
+export const rankChannels=(items,profile,context={})=>stableRank(items,scoreChannel,profile,context);
+export function dailyRecommendationFlow(circles,people,channels,profile={},context={}){
+  return {circles:rankCircles(circles,profile,context).slice(0,2),people:rankPeople(people,profile,context).slice(0,3),channels:rankChannels(channels,profile,context).slice(0,1)};
+}
+
 export function rankPeopleForCircle(items,circle={}){
   const tags=circle?.tags||[];
   return (items||[]).map((person,index)=>{
