@@ -43,3 +43,14 @@ test('advisory check recognizes reserved system-domain ownership',()=>{
   assert.match(sharedSiteDomain,/Result:\*\* RELATED/);
   assert.match(sharedSiteDomain,/DOMAIN-002/);
 });
+
+test('advisory check recognizes shared Shell architecture without over-indexing service internals',()=>{
+  for(const file of ['config/user-ui-shell.json','shell/media-meeting-adapter.js']){
+    const output=run(file);
+    assert.match(output,/Result:\*\* RELATED/);
+    assert.match(output,/ARCH-001/);
+  }
+  const serviceInternal=run('social-youtube-status.js');
+  assert.match(serviceInternal,/Result:\*\* PASS/);
+  assert.doesNotMatch(serviceInternal,/ARCH-001/);
+});
