@@ -16,6 +16,13 @@ test('My EKODI exposes a private personal finance control surface',async()=>{
   assert.match(app,/EKODI_MY_AUTH\?\.getAccessToken/);
   assert.match(app,/\/import\/preview/);
   assert.match(app,/\/import\/commit/);
+  assert.match(app,/\/planning/);
+  assert.match(app,/안전사용가능액/);
+  assert.match(app,/예상수입 미포함/);
+  assert.match(app,/financeSettingsForm/);
+  assert.match(app,/financeRecurringForm/);
+  assert.match(app,/financeBudgetForm/);
+  assert.match(app,/financeGoalForm/);
   assert.match(app,/xlsx@0\.18\.5/);
   assert.doesNotMatch(app,/service_role|SUPABASE_SERVICE/i);
   const syntax=spawnSync(process.execPath,['--check',fileURLToPath(new URL('../my/personal-finance.js',import.meta.url))],{encoding:'utf8'});

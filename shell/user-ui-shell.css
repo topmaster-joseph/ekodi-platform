@@ -32,6 +32,15 @@ html[data-ekodi-user-ui] .ekodi-break-anywhere {
   hyphens: none !important;
 }
 
+/* Selective geometry principle: soften interactive comfort surfaces without flattening service identity. */
+html[data-ekodi-user-ui] :where(.btn,.button,.smallbtn,.ekodi-button,.ekodi-cta,[data-ekodi-control],[role="tab"]){border-radius:var(--ekodi-user-control-radius)}
+html[data-ekodi-user-ui] :where(.search,.ekodi-field,[data-ekodi-field]){border-radius:var(--ekodi-user-field-radius)}
+html[data-ekodi-user-ui] :where(.chip,.tag,.ekodi-chip,[data-ekodi-chip]){border-radius:var(--ekodi-user-chip-radius)}
+html[data-ekodi-user-ui] :where(dialog,.modal,.ekodi-dialog,[data-ekodi-dialog]){border-radius:var(--ekodi-user-panel-radius)}
+html[data-ekodi-user-ui][data-ekodi-experience-profile="consumer-commerce"] :where(.card,.context-card,.store-card,.policy,.guide article,.discover-grid button,[data-ekodi-commerce-card]){border-radius:var(--ekodi-user-panel-radius)!important}
+html[data-ekodi-user-ui][data-ekodi-experience-profile="consumer-commerce"] :where(.partner,.local,[data-ekodi-commerce-section]){border-radius:var(--ekodi-user-section-radius);overflow:hidden}
+html[data-ekodi-user-ui][data-ekodi-experience-profile="consumer-commerce"] :where(.thumb,.detail-art,.context-detail-visual,[data-ekodi-commerce-image]){border-radius:var(--ekodi-user-image-radius)}
+
 html[data-ekodi-user-ui] {
   --ekodi-user-chrome-bg: color-mix(in srgb, var(--ekodi-service-paper, #fafaf7) 94%, var(--ekodi-service-accent, #315d48) 6%);
   --ekodi-user-chrome-text: var(--ekodi-service-ink, #18251d);
@@ -41,6 +50,12 @@ html[data-ekodi-user-ui] {
   --ekodi-user-header-fallback-height: 64px;
   --ekodi-user-canvas-max: 1240px;
   --ekodi-user-reading-max: 760px;
+  --ekodi-user-control-radius: var(--ekodi-control-radius, var(--ekodi-service-radius-soft, 12px));
+  --ekodi-user-field-radius: var(--ekodi-field-radius, var(--ekodi-service-radius-soft, 12px));
+  --ekodi-user-chip-radius: var(--ekodi-chip-radius, var(--ekodi-service-radius-soft, 999px));
+  --ekodi-user-panel-radius: var(--ekodi-panel-radius, var(--ekodi-service-radius, 18px));
+  --ekodi-user-image-radius: var(--ekodi-image-radius, var(--ekodi-service-radius, 18px));
+  --ekodi-user-section-radius: var(--ekodi-section-radius, var(--ekodi-service-radius, 18px));
 }
 
 /* Centered Canvas Principle
@@ -127,7 +142,7 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
 .ekodi-user-ui-header-fallback a:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 4px;
-  border-radius: 4px;
+  border-radius: var(--ekodi-user-control-radius);
 }
 
 /* If a service already owns a valid header, adopt it and suppress the fallback. */
@@ -148,6 +163,9 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
   z-index: 2147483000 !important;
   overflow: visible !important;
   box-sizing: border-box !important;
+  --ekodi-user-header-inline-gutter: max(16px, calc((100vw - var(--ekodi-user-canvas-max)) / 2));
+  padding-left: var(--ekodi-user-header-inline-gutter) !important;
+  padding-right: var(--ekodi-user-header-inline-gutter) !important;
   min-height: var(--ekodi-user-header-min-height, var(--ekodi-user-header-fallback-height)) !important;
   padding-top: calc(var(--ekodi-user-header-base-padding-top, 0px) + env(safe-area-inset-top, 0px)) !important;
   transform: none !important;
@@ -175,6 +193,8 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
 }
 
 .ekodi-user-ui-header-fallback {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   min-height: var(--ekodi-user-header-fallback-height) !important;
   border-bottom: 1px solid var(--ekodi-user-chrome-line) !important;
   background: var(--ekodi-user-chrome-bg) !important;
@@ -251,7 +271,7 @@ html[data-ekodi-user-ui] {
   max-width: 96px;
   box-sizing: border-box;
   border: 1px solid var(--ekodi-user-chrome-line);
-  border-radius: max(8px, calc(var(--ekodi-service-radius-soft, 16px) * .6));
+  border-radius: var(--ekodi-user-control-radius);
   padding: 0 26px 0 9px;
   background: color-mix(in srgb, var(--ekodi-user-chrome-bg) 92%, transparent);
   color: var(--ekodi-user-chrome-text);
@@ -361,6 +381,9 @@ html[data-ekodi-user-ui] {
 }
 
 [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer) {
+  display: none !important;
+}
+body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
   display: none !important;
 }
 

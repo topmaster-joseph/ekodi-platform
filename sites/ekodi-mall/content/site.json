@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "brand": {
     "name": "EKODI MALL",
     "shortName": "EKODI",
@@ -182,12 +182,12 @@
       "label": "전체"
     },
     {
-      "id": "living",
-      "label": "생활"
+      "id": "general",
+      "label": "일반"
     },
     {
-      "id": "local",
-      "label": "로컬"
+      "id": "living",
+      "label": "생활"
     },
     {
       "id": "book",
@@ -223,7 +223,11 @@
   "local": {
     "eyebrow": "LOCAL COMMONS",
     "title": "지역의 가게가|하나의 시장이 되도록",
-    "description": "지역 상권의 각 가게가 독립된 스토어를 갖고, 지역관 안에서 함께 발견되는 구조를 운영합니다. 온라인 콘텐츠와 실제 방문, 상담과 주문 준비를 연결하는 지역 커머스 플랫폼을 지향합니다."
+    "description": "지역 상권의 각 가게가 독립된 스토어를 갖고, 지역관 안에서 함께 발견되는 구조를 운영합니다. 온라인 콘텐츠와 실제 방문, 상담과 주문 준비를 연결하는 지역 커머스 플랫폼을 지향합니다.",
+    "filterLabel": "내 로컬",
+    "selectionTitle": "내 로컬을 직접 선택하세요",
+    "selectionDescription": "내 로컬은 방문 위치가 아니라 사용자가 선택한 생활권입니다. 선택하지 않으면 전국의 지역 연결 상품을 함께 보여줍니다.",
+    "privacyNote": "현재 위치는 버튼을 눌러 동의한 경우에만 확인하며, 좌표를 저장하거나 IP만으로 청계면·무안 같은 지역을 확정하지 않습니다."
   },
   "business": {
     "name": "에코디비즈",

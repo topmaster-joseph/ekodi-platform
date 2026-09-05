@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 const readJson = async path => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 
 export async function readCapabilityRegistrySources() {
-  const [registry, packs, governance, ecosystem, providerContract] = await Promise.all([
+  const [registry, packs, governance, ecosystem, providerContract, myRegistry, myPacks] = await Promise.all([
     readJson('config/capability-registry.json'),
     readJson('config/workspace-packs.json'),
     readJson('config/ai-mission-governance.json'),
@@ -14,7 +14,7 @@ export async function readCapabilityRegistrySources() {
   return { registry, packs, governance, ecosystem, providerContract };
 }
 
-export function validateCapabilityRegistry({ registry = {}, packs = {}, governance = {}, ecosystem = {}, providerContract = {} } = {}) {
+export function validateCapabilityRegistry({ registry = {}, packs = {}, governance = {}, ecosystem = {}, providerContract = {}, myRegistry = null, myPacks = null } = {}) {
   const errors = [];
   const idPattern = /^[a-z][a-z0-9.-]*$/;
   const allowedSurfaces = new Set(['my', 'workspace', 'showroom', 'dedicated']);
@@ -36,6 +36,8 @@ export function validateCapabilityRegistry({ registry = {}, packs = {}, governan
   if (registry.intentPolicy?.unknownCapabilityBehavior !== 'unresolved_not_guessed') errors.push('Unknown capabilities must remain unresolved rather than guessed.');
   if (registry.surfacePolicy?.defaultHome !== 'https://my.ekodi.kr') errors.push('Default private home must remain My EKODI.');
   if (registry.surfacePolicy?.specialistSites !== 'showroom_and_entry') errors.push('Specialist sites must remain showroom_and_entry surfaces.');
+  if (myRegistry && JSON.stringify(myRegistry) !== JSON.stringify(registry)) errors.push('My EKODI capability registry projection must match the canonical registry.');
+  if (myPacks && JSON.stringify(myPacks) !== JSON.stringify(packs)) errors.push('My EKODI workspace pack projection must match the canonical packs.');
 
   for (const capability of registry.capabilities ?? []) {
     const id = String(capability?.id ?? '');

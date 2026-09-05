@@ -1,5 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
+import { routeIntent } from './capability-intent-runtime.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
@@ -55,6 +56,53 @@ function parsePrivateWorkspacePath(pathname){
   if(serviceId&&(!SERVICE_ID_RE.test(serviceId)||!visibleServices().some(service=>service.id===serviceId)))return false;
   return {workspaceKey,serviceId};
 }
+async function loadIntentCatalog(request,env){
+  const base=new URL(request.url);
+  const read=async pathname=>{
+    const target=new URL(pathname,base);
+    const response=await env.ASSETS.fetch(new Request(target.toString(),{method:'GET'}));
+    if(!response.ok)throw new Error(`intent_asset_${response.status}`);
+    return response.json();
+  };
+  const [registry,packs]=await Promise.all([read('/capability-registry.json'),read('/workspace-packs.json')]);
+  return {registry,packs};
+}
+function intentShowrooms(plan){
+  const ids=new Set(plan.showroomEntries||[]);
+  return visibleServices().filter(service=>ids.has(service.id)).map(service=>({id:service.id,name:service.name,url:service.url}));
+}
+async function handleIntentPlan(request,env){
+  if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
+  const length=Number(request.headers.get('content-length')||0);
+  if(length>8192)return json(env,{ok:false,error:'intent_too_large'},413);
+  let body={};
+  try{body=await request.json()}catch{return json(env,{ok:false,error:'invalid_json'},400)}
+  const text=String(body?.text||'').trim();
+  if(!text)return json(env,{ok:false,error:'intent_required'},400);
+  if(text.length>1200)return json(env,{ok:false,error:'intent_too_long'},400);
+  const audience=String(body?.audience||'person').trim().toLowerCase();
+  const catalog=await loadIntentCatalog(request,env);
+  const plan=routeIntent({text,audience},catalog,{limit:3});
+  const byId=new Map(catalog.registry.capabilities.map(item=>[item.id,item]));
+  const packsById=new Map(catalog.packs.packs.map(item=>[item.id,item]));
+  return json(env,{
+    ok:true,
+    contract:plan.contract,
+    schemaVersion:plan.schemaVersion,
+    autonomyPolicyVersion:plan.autonomyPolicyVersion,
+    authorityContext:plan.authorityContext,
+    principle:plan.principle,
+    recommendations:plan.recommendations.map(item=>({...item,description:packsById.get(item.id)?.description||''})),
+    capabilities:plan.capabilityIds.map(id=>{const item=byId.get(id);return item?{id:item.id,name:item.name,description:item.description,domain:item.domain,ownerAgent:item.ownerAgent,actionTier:item.actionTier,maturity:item.maturity}:null}).filter(Boolean),
+    steps:plan.steps,
+    unresolvedCapabilityIds:plan.unresolvedCapabilityIds,
+    reversibleCapabilities:plan.reversibleCapabilities,
+    humanGateCapabilities:plan.humanGateCapabilities,
+    forbiddenCapabilities:plan.forbiddenCapabilities,
+    showrooms:intentShowrooms(plan),
+    execution:'plan_only_until_server_authority_revalidation',
+  });
+}
 async function manifestDrivenApp(request,env){
   const asset=await env.ASSETS.fetch(request);
   if(!asset.ok)return withHeaders(env,asset);
@@ -102,10 +150,11 @@ export default{
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
     }
     if(url.pathname==='/service-manifest.json')return json(env,{version:EKODI_SERVICE_MANIFEST.version,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:visibleServices()});
+    if(url.pathname==='/api/intent/plan')return handleIntentPlan(request,env);
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',capabilityRegistry:'universal-v2',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=my.ekodi.kr',307);
