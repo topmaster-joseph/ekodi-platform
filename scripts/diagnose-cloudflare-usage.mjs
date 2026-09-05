@@ -152,9 +152,9 @@ function automationKind(value){
 
 async function recentTrafficClassification(account, window) {
   let zones=[];
-  try{zones=await activeZones(account);}catch{return {label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:0,internalHosts:[]};}
+  try{zones=await activeZones(account);}catch{return {label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:0,internalHosts:[],automationHosts:[]};}
   const totals={label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:zones.length,internalHosts:[]};
-  const internalHosts=new Map();
+  const internalHosts=new Map(),automationHosts=new Map();
   const query=`query RecentUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
   for(const zone of zones){
     try{
@@ -167,12 +167,13 @@ async function recentTrafficClassification(account, window) {
         const category=classifyTrafficUserAgent(ua).category;
         if(category==='ekodi_internal'){totals.internal+=count;if(/^EKODI-github-monitor\//i.test(ua))totals.monitor+=count;if(host)internalHosts.set(host,(internalHosts.get(host)||0)+count);}
         else if(category==='search_bot')totals.searchBot+=count;
-        else if(category==='other_bot')totals.automation+=count;
+        else if(category==='other_bot'){totals.automation+=count;const key=host+'|'+automationKind(ua);automationHosts.set(key,(automationHosts.get(key)||0)+count);}
         else totals.unclassified+=count;
       }
     }catch{}
   }
   totals.internalHosts=[...internalHosts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,10);
+  totals.automationHosts=[...automationHosts].map(([key,requests])=>{const cut=key.indexOf('|');return {host:key.slice(0,cut),kind:key.slice(cut+1),requests};}).sort((a,b)=>b.requests-a.requests).slice(0,10);
   return totals;
 }
 
@@ -371,6 +372,7 @@ function markdown(report) {
     lines.push('', `### ${row.label}`);
     lines.push(`- requests ${row.requests} | internal ${row.internal} (GitHub monitor ${row.monitor}) | search bot ${row.searchBot} | automation ${row.automation} | unclassified ${row.unclassified} | zones ${row.coverage}/${row.zones}`);
     if(row.internalHosts?.length)lines.push(...row.internalHosts.slice(0,5).map(item=>`- internal ${item.requests} | ${item.host}`));
+    if(row.automationHosts?.length)lines.push(...row.automationHosts.slice(0,8).map(item=>`- automation ${item.requests} | ${item.kind} | ${item.host}`));
   }
 
   lines.push('', '## Five checks');
