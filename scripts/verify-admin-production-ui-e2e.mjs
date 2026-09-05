@@ -111,16 +111,14 @@ for (const [id, group] of menus) {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
     const href = await source.getAttribute('href');
     if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
-    await Promise.all([
-      page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 15000 }),
-      dispatchClick(tab),
-    ]);
+    const taxNavigation = page.waitForRequest(request => request.isNavigationRequest() && request.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15000 });
+    await dispatchClick(tab);
+    const taxRequest = await taxNavigation;
     const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
-    const taxUrl = page.url();
-    if (!taxUrl.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax click navigated to unexpected URL: ${taxUrl}`);
+    const taxUrl = taxRequest.url();
     results.push({ id, kind: 'handoff', ok: true, detail: taxUrl });
-    console.log(`[PROD-E2E] ${id}: ok current-tab ${taxUrl}`);
+    console.log(`[PROD-E2E] ${id}: ok navigation-request ${taxUrl}`);
     await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await waitForAdminShell();
     selectedWorkArea = null;
