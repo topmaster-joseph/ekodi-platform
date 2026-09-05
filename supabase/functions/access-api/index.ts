@@ -34,6 +34,7 @@ const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin=createClient(url,service,{auth:{persistSession:false}});
 const clip=(v:unknown,n:number)=>String(v??"").trim().slice(0,n);
 const plans=new Set(["standard","basic","pro","enterprise"]);
+const tenantAdminSite=new Map<string,string>([["cgma","cheonggye"]]);
 
 async function authClient(req:Request){
   const authorization=req.headers.get("Authorization");
@@ -48,11 +49,12 @@ async function platformAdmin(userId:string){
   return data?.platform_admin===true;
 }
 async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
-  if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"]};
-  if(!tenantId)return {allowed:false,roles:[] as string[]};
+  if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"],authority:"platform",role:"platform_admin"};
+  if(!tenantId)return {allowed:false,roles:[] as string[],authority:"none",role:null};
   const {data}=await admin.from("tenant_members").select("role,status").eq("tenant_id",tenantId).eq("user_id",userId).eq("status","active");
   const roles=[...new Set((data??[]).map((row:any)=>clip(row?.role,80)).filter(Boolean))];
-  return {allowed:roles.some((role)=>role==="tenant_admin"||role==="platform_admin"),roles};
+  const role=roles.includes("platform_admin")?"platform_admin":roles.includes("tenant_admin")?"tenant_admin":null;
+  return {allowed:Boolean(role),roles,authority:role==="platform_admin"?"platform":role==="tenant_admin"?"tenant":"none",role};
 }
 async function tenantBySlug(slug:string){
   if(!slug)return null;
@@ -258,6 +260,16 @@ Deno.serve(async(req)=>{
       return json(req,{workspaces:Array.isArray(data)?data:[],user:{id:auth.user.id,email:auth.user.email??null,name:auth.user.user_metadata?.full_name??auth.user.user_metadata?.name??null}});
     }
 
+    if(req.method==="GET"&&path==="/reviewer"){
+      const site=clip(requestUrl.searchParams.get("site"),60),tenantSlug=clip(requestUrl.searchParams.get("tenant"),80);
+      if(!site||!tenantSlug)return json(req,{error:"site_and_tenant_required"},400);
+      const tenant=await tenantBySlug(tenantSlug);
+      if(!tenant)return json(req,{error:"tenant_not_found"},404);
+      const reviewer=await tenantReviewerAuthorization(auth.user.id,tenant.id);
+      if(!reviewer.allowed)return json(req,{allowed:false,error:"reviewer_required"},403);
+      return json(req,{allowed:true,authority:reviewer.authority,role:reviewer.role,mode:"edit",scope:"tenant:"+tenant.slug,tenant:{id:tenant.id,slug:tenant.slug,name:tenant.name}});
+    }
+
     if(req.method==="POST"&&path==="/request"){
       const body=await req.json();
       const site=clip(body?.site,60),tenantSlug=clip(body?.tenant,80),note=clip(body?.note,1000)||null;
@@ -297,9 +309,17 @@ Deno.serve(async(req)=>{
       const {data:workspaceData,error:workspaceError}=await auth.db.rpc("current_site_workspaces",{p_site_key:site});
       if(workspaceError)throw workspaceError;
       const workspaces=Array.isArray(workspaceData)?workspaceData:[];
-      const selected=workspaceKey
+      let selected=workspaceKey
         ?workspaces.find((item:any)=>item?.workspace_key===workspaceKey)
         :workspaces.find((item:any)=>item?.source==="registry"&&item?.requires_handoff===true);
+      if(!selected){
+        const tenantSlug=tenantAdminSite.get(site)||null;
+        const tenant=tenantSlug?await tenantBySlug(tenantSlug):null;
+        const reviewer=tenant?await tenantReviewerAuthorization(auth.user.id,tenant.id):{allowed:false,authority:"none",role:null,roles:[] as string[]};
+        if(reviewer.allowed&&tenant){
+          selected={workspace_key:`reviewer:${tenant.slug}`,workspace_name:tenant.name,workspace_kind:"organization",tenant_id:tenant.id,tenant:tenant.slug,store_id:null,store_name:null,role:reviewer.role,status:"active",source:"reviewer",plan:"admin",requires_handoff:true,authority:reviewer.authority};
+        }
+      }
       if(!selected||selected.requires_handoff!==true||!["active","pre_registered"].includes(String(selected.status||""))){
         return json(req,{error:"site_access_required"},403);
       }
