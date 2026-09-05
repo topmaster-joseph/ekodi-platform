@@ -283,6 +283,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Detect production Mall components
+        id: production_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "api_changed=true" >> "$GITHUB_OUTPUT"
+            echo "site_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Manual release remains fail-closed and validates both API/D1 and Pages."
+            exit 0
+          fi
+          before="${{ github.event.before }}"
+          if [ -z "$before" ] || [[ "$before" =~ ^0+$ ]]; then
+            echo "api_changed=true" >> "$GITHUB_OUTPUT"
+            echo "site_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Unknown push baseline; releasing both components fail-closed."
+            exit 0
+          fi
+          if ! git -C "$GITHUB_WORKSPACE" cat-file -e "${before}^{commit}" 2>/dev/null; then
+            git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "$before"
+          fi
+          changed=$(git -C "$GITHUB_WORKSPACE" diff --name-only "$before" "$GITHUB_SHA")
+          api_changed=false
+          site_changed=false
+          if printf '%s\n' "$changed" | grep -Eq '^sites/ekodi-mall/api/'; then api_changed=true; fi
+          if printf '%s\n' "$changed" | grep -E '^sites/ekodi-mall/' | grep -Ev '^sites/ekodi-mall/api/' | grep -q .; then site_changed=true; fi
+          if printf '%s\n' "$changed" | grep -Fxq '.github/workflows/deploy-ekodi-mall.yml'; then site_changed=true; fi
+          echo "api_changed=$api_changed" >> "$GITHUB_OUTPUT"
+          echo "site_changed=$site_changed" >> "$GITHUB_OUTPUT"
+          printf 'Mall production scope: api=%s site=%s\n' "$api_changed" "$site_changed"
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -290,9 +323,11 @@ jobs:
           node-version: "24"
 
       - name: Rebuild exact production artifact
+        if: steps.production_scope.outputs.site_changed == 'true'
         run: npm run build
 
       - name: Resolve or create production D1
+        if: steps.production_scope.outputs.api_changed == 'true'
         id: mall_d1
         shell: bash
         run: |
@@ -312,12 +347,15 @@ jobs:
           echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
 
       - name: Apply production migrations after staging success
+        if: steps.production_scope.outputs.api_changed == 'true'
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.runtime.toml
 
       - name: Deploy production Mall API after staging success
+        if: steps.production_scope.outputs.api_changed == 'true'
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.runtime.toml
 
       - name: Verify production API before Pages promotion
+        if: steps.production_scope.outputs.api_changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -345,12 +383,18 @@ jobs:
           cat /tmp/mall-fees.json || true
           exit 1
 
+      - name: Record API release scope
+        if: steps.production_scope.outputs.api_changed != 'true'
+        run: echo "Mall API/D1 unchanged; preserving the verified production API and releasing Pages independently." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Deploy production to Cloudflare Pages
+        if: steps.production_scope.outputs.site_changed == 'true'
         env:
           CF_PROJECT: ${{ needs.validate.outputs.project }}
         run: npx --yes wrangler@${WRANGLER_VERSION} pages deploy dist --project-name="$CF_PROJECT" --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
 
       - name: Smoke test production UI
+        if: steps.production_scope.outputs.site_changed == 'true'
         env:
           PUBLIC_URL: ${{ needs.validate.outputs.public_url }}
         shell: bash
