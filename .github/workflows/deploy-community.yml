@@ -50,6 +50,7 @@ jobs:
           node --check community-worker.js
           node --check ekodi-shell-injector.js
           node --check community/app.js
+          node --check community/recommendation-lens.js
           node --check community/community-enhancements.js
           node --check community/social-links.js
           node --check community/connect/app.js

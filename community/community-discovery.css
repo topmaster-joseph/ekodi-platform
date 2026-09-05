@@ -23,3 +23,5 @@ body,button,a,p,h1,h2,h3,small,span,label{word-break:keep-all;overflow-wrap:brea
   .language-options{right:-42px}
   .section-intro{margin-top:-8px}
 }
+
+.circle-card .recommendation-why{margin:0 0 12px;padding-top:10px;border-top:1px solid var(--line);font-size:10.5px;line-height:1.6;color:var(--green);font-weight:750}
