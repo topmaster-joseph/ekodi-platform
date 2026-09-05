@@ -36,3 +36,10 @@ body,button,a,p,h1,h2,h3,small,span,label{word-break:keep-all;overflow-wrap:brea
 .join-review-grid strong{font-size:13px;color:var(--ink)}
 .join-review-note{margin:14px 0 4px;padding:13px 14px;border-radius:14px;background:var(--green2);color:#3f5f53;font-size:11px;line-height:1.65}
 @media(max-width:620px){.join-review-grid{grid-template-columns:1fr}}
+
+.cross-recommendation-notice{max-width:760px;margin:-8px 0 18px;padding:12px 14px;border:1px solid #cddfd4;border-radius:14px;background:#f1f7f3;color:#3b5c4e;font-size:11px;font-weight:750;line-height:1.65;display:flex;align-items:center;justify-content:space-between;gap:12px}.cross-recommendation-notice button{flex:0 0 auto;border:1px solid #bfd3c7;border-radius:999px;padding:6px 9px;background:#fff;color:#365649;font-size:10px;font-weight:800;cursor:pointer}
+.circle-card .circle-people{background:#f3f5f1;color:#3d594d}
+.person-circle-link{width:100%;margin:2px 0 8px;border:1px solid #cfdcd4;border-radius:11px;padding:8px 10px;background:#f6faf7;color:#365649;font-size:10.5px;font-weight:800;text-align:left;cursor:pointer}
+.person-circle-link:hover,.circle-card .circle-people:hover{background:#e8f1eb}
+.circle-card[data-circle-id].circle-bridge{border-color:#8ca99e}
+@media(max-width:620px){.cross-recommendation-notice{margin-top:-4px}.card-actions{flex-wrap:wrap}.card-actions .join{min-width:46%}}
