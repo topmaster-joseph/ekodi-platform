@@ -142,31 +142,38 @@ function installStyle() {
 `;
   document.head.append(style);
 }
+function bindAdminHandoff(link, definition) {
+  if (!link || definition?.adminHandoff !== true || link.dataset.adminHandoffBound === 'true') return link;
+  link.dataset.adminHandoff = 'true';
+  link.dataset.adminHandoffBound = 'true';
+  link.removeAttribute('target');
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    const destination = adminSubserviceDestination(definition);
+    if (!destination) {
+      console.error(`Blocked untrusted admin handoff target: ${definition.href}`);
+      return;
+    }
+    window.location.assign(destination);
+  });
+  return link;
+}
 function ensureExternalMenuItems() {
   const nav = document.querySelector('.sidebar nav');
   if (!nav) return;
   for (const id of adminMenuOrder()) {
     const definition = getAdminMenuItem(id);
-    if (!definition?.href || nav.querySelector('.nav[data-section="'+id+'"]')) continue;
-    const link = document.createElement('a');
-    link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.rel = 'noopener';
-    if (definition.adminHandoff === true) {
-      link.dataset.adminHandoff = 'true';
-      link.addEventListener('click', event => {
-        event.preventDefault();
-        const destination = adminSubserviceDestination(definition);
-        if (!destination) {
-          console.error(`Blocked untrusted admin handoff target: ${definition.href}`);
-          return;
-        }
-        window.location.assign(destination);
-      });
-    } else {
-      link.target = '_blank';
+    if (!definition?.href) continue;
+    let link = nav.querySelector('.nav[data-section="'+id+'"]');
+    if (!link) {
+      link = document.createElement('a');
+      link.className = 'nav'; link.dataset.section = id; link.href = definition.href; link.rel = 'noopener';
+      link.append(document.createTextNode((definition.icon || '·')+' '));
+      const label = document.createElement('span'); label.textContent = getAdminMenuLabel(id, locale); link.append(label);
+      nav.append(link);
     }
-    link.append(document.createTextNode((definition.icon || '·')+' '));
-    const label = document.createElement('span'); label.textContent = getAdminMenuLabel(id, locale); link.append(label);
-    nav.append(link);
+    if (definition.adminHandoff === true) bindAdminHandoff(link, definition);
+    else link.target = '_blank';
   }
   window.dispatchEvent(new Event('ekodi-nav-changed'));
 }
