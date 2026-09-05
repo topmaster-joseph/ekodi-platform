@@ -269,7 +269,7 @@
   }
 
   function placeholder(key, feature) {
-    if (!nav || loadedScripts.has(feature.scripts?.[0]) || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
+    if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
     let button = nav.querySelector(feature.real);
     let changed = false;
     if (!button) {
