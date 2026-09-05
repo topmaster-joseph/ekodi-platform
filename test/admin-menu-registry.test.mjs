@@ -34,6 +34,8 @@ test('every public admin subservice belongs to one work area', () => {
   }
   assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자 · 권한');
   assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrators & Access');
+  assert.equal(getAdminMenuLabel('common-services', 'ko'), '공통서비스');
+  assert.equal(getAdminMenuGroupForSection('common-services'), 'services');
   assert.ok(adminMenuOrder().includes('security'));
   assert.ok(adminMenuOrder().includes('admins'));
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'ai');

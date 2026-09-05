@@ -35,19 +35,37 @@
       },
       {
         "url": "https://space.ekodi.kr/deployment-probe",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "OPERATING SPACE",
-          "실제 데이터·권한 연결"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: space",
-          "x-ekodi-route: space-workspace",
-          "cache-control: no-store"
-        ]
+        "expect": ["OPERATING SPACE", "STORE MASTER", "MENU MASTER"],
+        "headerExpect": ["x-ekodi-service: space", "x-ekodi-route: space-workspace", "cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/jadam",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["자담치킨 목포대점", "CHICKEN STORE USER PAGE", "USER OPERATIONS"],
+        "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["피자마루 목포대점", "PIZZA STORE USER PAGE", "USER OPERATIONS"],
+        "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/yogurt",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["요거트퍼플 목포대점", "YOGURT DESSERT USER PAGE", "USER OPERATIONS"],
+        "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/yogurtpurple",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://ekodi.kr/yogurt", "x-ekodi-workspace-alias: yogurtpurple->yogurt"]
       }
     ]
   }
