@@ -90,3 +90,19 @@ test('advisory check cross-maps Cognitive and Data Plane contracts without over-
   assert.match(runtime,/Result:\*\* PASS/);
   for(const id of ['ARCH-001','DATA-001','PROVIDER-001','DEPLOY-001','WORKSPACE-001','AI-001']) assert.doesNotMatch(runtime,new RegExp(id));
 });
+
+
+test('advisory check recognizes C2/C3 change-control boundary without over-indexing runtime',()=>{
+  for(const file of [
+    'governance/amendments/2026-09-03-orgless-workspace-routing-v1.5.json',
+    'scripts/validate-constitution-change.mjs',
+    '.github/workflows/constitution-check.yml',
+    'config/storage-policy.json',
+  ]){
+    const output=run(file);
+    assert.match(output,/CHANGE-001/);
+  }
+  const runtime=run('life-worker.js');
+  assert.match(runtime,/Result:\*\* PASS/);
+  assert.doesNotMatch(runtime,/CHANGE-001/);
+});

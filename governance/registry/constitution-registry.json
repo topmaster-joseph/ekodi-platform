@@ -224,6 +224,25 @@
       ]
     },
     {
+      "id": "CHANGE-001",
+      "area": "change-control",
+      "title": "C2/C3 constitutional change control and protected paths",
+      "status": "active",
+      "sourcePointer": "/changeControl",
+      "impactPaths": [
+        "CONSTITUTION.md",
+        "governance/constitution/**",
+        "governance/amendments/**",
+        "platform-boundaries.json",
+        "config/core-data-boundaries.json",
+        "config/storage-policy.json",
+        "config/service-workspace-policy.json",
+        "scripts/validate-constitution.mjs",
+        "scripts/validate-constitution-change.mjs",
+        ".github/workflows/constitution-check.yml"
+      ]
+    },
+    {
       "id": "COMMON-001",
       "area": "common-service",
       "title": "Registered common/core service boundaries",
