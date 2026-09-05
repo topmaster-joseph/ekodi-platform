@@ -39,4 +39,7 @@ test('advisory check recognizes reserved system-domain ownership',()=>{
   const systemDomain=run('wrangler.ai.toml,wrangler.site.toml,.github/workflows/deploy-ai-gateway.yml,deploy/manifests/shared-site.worker.json,test/ai-gateway-domain.test.mjs');
   assert.match(systemDomain,/Result:\*\* RELATED/);
   assert.match(systemDomain,/DOMAIN-002/);
+  const sharedSiteDomain=run('wrangler.site.toml');
+  assert.match(sharedSiteDomain,/Result:\*\* RELATED/);
+  assert.match(sharedSiteDomain,/DOMAIN-002/);
 });
