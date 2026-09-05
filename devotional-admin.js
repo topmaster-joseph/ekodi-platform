@@ -10,6 +10,7 @@ let panel=document.querySelector('[data-panel~="devotional"]');
 if(!panel){panel=document.createElement('section');panel.className='section devotional-panel hidden-panel';panel.hidden=true;panel.dataset.panel='devotional';content.append(panel);}
 let button=nav.querySelector('[data-section="devotional"],[data-lazy-section="devotional"]');
 if(!button){button=document.createElement('button');button.type='button';button.className='nav';button.dataset.section='devotional';button.innerHTML='<span>매일묵상</span>';nav.append(button);}
+if(!button.dataset.section)button.dataset.section='devotional';
 const auth=()=>{try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}};
 async function request(path='',options={}){const headers=new Headers(options.headers||{});headers.set('authorization',`Bearer ${auth()}`);if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');const res=await fetch(`${API}${path}`,{...options,headers});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||`HTTP ${res.status}`);return body;}
 function fallback(){return{month:'2026-09',connected:false,renderReady:false,channels:[{id:'church',name:'에코디교회',time:'06:00',connected:false},{id:'mission',name:'에코디선교회',time:'07:00',connected:false}],items:passages.map((passage,i)=>({day:i+1,passage,status:'draft',church:'not_connected',mission:'not_connected'}))};}
