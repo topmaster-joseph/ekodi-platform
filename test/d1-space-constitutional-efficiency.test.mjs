@@ -60,3 +60,16 @@ test('workspace kinds remain metadata, not public path prefixes',async()=>{
     assert.doesNotMatch(constitution,new RegExp(`canonical.*\\/${kind}\\/\\{slug\\}`,'i'));
   }
 });
+
+test('Marketing Publishing migration gate uses zero-row probes for the full channel schema',async()=>{
+  const workflow=await read('.github/workflows/deploy-marketing-publishing.yml');
+  const start=workflow.indexOf('Wait for shared D1 migration gate on normal production push');
+  const end=workflow.indexOf('Verify production D1 publication tables and entitlement triggers',start);
+  assert.ok(start>=0&&end>start);
+  const gate=workflow.slice(start,end);
+  assert.doesNotMatch(gate,/sqlite_master/);
+  assert.match(gate,/SELECT 1 FROM marketing_publication_jobs LIMIT 0/);
+  assert.match(gate,/SELECT 1 FROM channel_automation_profiles LIMIT 0/);
+  assert.match(gate,/SELECT 1 FROM channel_oauth_connections LIMIT 0/);
+  assert.match(gate,/SELECT 1 FROM channel_provider_schedules LIMIT 0/);
+});
