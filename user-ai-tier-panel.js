@@ -199,8 +199,6 @@
       button.dataset.userAiMembershipBound = 'true';
       button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); showSection(); });
     }
-    root.querySelector('[data-demand-feature="aimembers"]')?.remove();
-    if (root.querySelector('[data-section="aiops"]')) root.querySelector('[data-demand-feature="aiops"]')?.remove();
     return true;
   }
 
