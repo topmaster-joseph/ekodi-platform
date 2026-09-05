@@ -29,6 +29,23 @@ test('Conversation release owns only Conversation APIs, never the shared-site Wo
   assert.doesNotMatch(workflow,/gh workflow run deploy-site-core\.yml/);
 });
 
+test('Workspace API has one deployment owner while Invest keeps an independent validation gate',async()=>{
+  const canonical=await read('.github/workflows/release-messenger-investment-functional.yml');
+  const invest=await read('.github/workflows/release-invest-personalization.yml');
+  const triggers=triggerBlock(canonical);
+  assert.match(triggers,/profile-official-data-adapter\.js/);
+  assert.match(triggers,/invest-personalization-runtime\.js/);
+  assert.match(triggers,/test\/invest-personalization-contract\.test\.mjs/);
+  assert.match(canonical,/node --test[^\n]*invest-personalization-contract\.test\.mjs/);
+  assert.match(canonical,/"investPersonalization":"v1"/);
+  assert.match(canonical,/"transactionExecution":false/);
+  assert.match(invest,/name: Validate EKODI Invest Personalization/);
+  assert.doesNotMatch(invest,/\n\s*workspace-staging:/);
+  assert.doesNotMatch(invest,/\n\s*production-workspace:/);
+  assert.doesNotMatch(invest,/wrangler@\$\{WRANGLER_VERSION\} deploy/);
+  assert.doesNotMatch(invest,/guarded-worker-release\.mjs/);
+});
+
 test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
   const workflow=await read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow,/name: Deploy EKODI Shared Site Core/);
@@ -106,7 +123,6 @@ test('central Core redispatch suppresses a duplicate native Control push run for
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
 });
-
 
 test('Conversation staging writes temporary Wrangler configs inside the checked-out repository',async()=>{
   const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
