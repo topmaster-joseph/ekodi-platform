@@ -144,13 +144,13 @@ async function activeZones(account) {
 async function zoneTraffic(account, zone, window) {
   const result = {
     zone:zone.name, requests:0, botRequests:0, internalRequests:0,
-    healthRequests:0, devToProdSuspectRequests:0, hostRequests:[], routeFamilies:[], sharedSiteFamilies:[], sharedOtherHosts:[], sharedWorkerFirstRequests:0, sharedWorkerFirstFamilies:[], cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
+    healthRequests:0, devToProdSuspectRequests:0, hostRequests:[], botHostRequests:[], routeFamilies:[], sharedSiteFamilies:[], sharedOtherHosts:[], sharedWorkerFirstRequests:0, sharedWorkerFirstFamilies:[], cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
   };
   const uaQuery = `query ZoneUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
   try {
     const payload = await gql(account, uaQuery, { zoneTag:zone.id, start:window.start, end:window.end });
     const rows = payload?.data?.viewer?.zones?.[0]?.rows || [];
-    const hostCounts=new Map();
+    const hostCounts=new Map(),botHostCounts=new Map();
     for (const row of rows) {
       const count = Number(row?.count || 0);
       result.requests += count;
@@ -158,13 +158,14 @@ async function zoneTraffic(account, zone, window) {
       const host=String(row?.dimensions?.clientRequestHTTPHost || zone.name).trim().toLowerCase();
       if(host)hostCounts.set(host,(hostCounts.get(host)||0)+count);
       const category = classifyTrafficUserAgent(rawUserAgent).category;
-      if (category === 'search_bot' || category === 'other_bot') result.botRequests += count;
+      if (category === 'search_bot' || category === 'other_bot'){result.botRequests += count;if(host)botHostCounts.set(host,(botHostCounts.get(host)||0)+count);}
       if (category === 'ekodi_internal') {
         result.internalRequests += count;
         if (account.label === 'PROD' && /(?:^|[-_/])(dev|development|staging)(?:$|[-_/])/i.test(rawUserAgent)) result.devToProdSuspectRequests += count;
       }
     }
     result.hostRequests=[...hostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,20);
+    result.botHostRequests=[...botHostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,20);
   } catch (error) { result.warnings.push(`ua:${String(error.message).slice(0,120)}`); }
 
   const routeQuery = `query ZoneRoutes($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { clientRequestHTTPHost clientRequestPath } } } } }`;
@@ -253,6 +254,9 @@ function accountSummary(account, usage, zones, traffic, schedules) {
   const hostCounts=new Map();
   for(const row of traffic)for(const item of row.hostRequests||[])hostCounts.set(item.host,(hostCounts.get(item.host)||0)+Number(item.requests||0));
   const topHosts=[...hostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,15);
+  const botHostCounts=new Map();
+  for(const row of traffic)for(const item of row.botHostRequests||[])botHostCounts.set(item.host,(botHostCounts.get(item.host)||0)+Number(item.requests||0));
+  const topBotHosts=[...botHostCounts].map(([host,requests])=>({host,requests,total:hostCounts.get(host)||0,percent:pct(requests,hostCounts.get(host)||0)})).sort((a,b)=>b.requests-a.requests).slice(0,15);
   const routeAvailableZones=traffic.filter(row=>!row.warnings.some(warning=>warning.startsWith('route:'))).length;
   const sharedFamilyCounts=new Map();
   for(const row of traffic)for(const item of row.sharedSiteFamilies||[])sharedFamilyCounts.set(item.family,(sharedFamilyCounts.get(item.family)||0)+Number(item.requests||0));
@@ -271,7 +275,7 @@ function accountSummary(account, usage, zones, traffic, schedules) {
   return {
     label:account.label,
     accountIdMasked:account.accountId ? `${account.accountId.slice(0,4)}...${account.accountId.slice(-4)}` : '',
-    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, sharedSiteFamilies, sharedOtherHosts, sharedWorkerFirstRequests, sharedWorkerFirstFamilies, routeCoverage:`${routeAvailableZones}/${zoneCoverageTotal}`, traffic,
+    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, topBotHosts, sharedSiteFamilies, sharedOtherHosts, sharedWorkerFirstRequests, sharedWorkerFirstFamilies, routeCoverage:`${routeAvailableZones}/${zoneCoverageTotal}`, traffic,
     signals:{
       bot:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, requests:botRequests, percent:pct(botRequests,totalZoneRequests), severity:uaAvailableZones>0 ? severity(pct(botRequests,totalZoneRequests),30,60) : 'unknown' },
       loopRetry:{ maxSubrequestRatio:worstSubrequest?.subrequestRatio || 0, script:worstSubrequest?.script || '', severity:severity(worstSubrequest?.subrequestRatio || 0,3,8) },
@@ -322,6 +326,8 @@ function markdown(report) {
       ...row.workers.top.slice(0,10).map(item => `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | cpuP99 raw ${item.cpuP99} | \`${item.script}\``),
       '', 'Top Hosts (covered Zone Analytics):',
       ...(row.topHosts.length ? row.topHosts.slice(0,10).map(item=>'- '+item.requests+' requests | '+item.host+'') : ['- n/a']),
+      '', 'Top Bot Hosts (covered Zone Analytics):',
+      ...(row.topBotHosts.length ? row.topBotHosts.slice(0,10).map(item=>'- '+item.requests+' bot requests / '+item.total+' total ('+item.percent+'%) | '+item.host) : ['- n/a']),
       '', 'Shared Site route families (covered Zone Analytics):',
       '- coverage '+row.routeCoverage,
       ...(row.sharedSiteFamilies.length ? row.sharedSiteFamilies.map(item=>'- '+item.requests+' requests | '+item.family) : ['- n/a']),
