@@ -62,7 +62,7 @@ test('AI runtime service-local login and public config are retired', async () =>
 test('AI runtime exposes only minimal unauthenticated health and protects detailed status', async () => {
   const health = await aiWorker.fetch(new Request('https://ai.ekodi.kr/__health'), {}, { waitUntil() {} });
   assert.equal(health.status, 200);
-  assert.deepEqual(await health.json(), { ok:true, platform:'ai-control', architectureVersion:'1.8.0', surface:'runtime-only' });
+  assert.deepEqual(await health.json(), { ok:true, platform:'ai-control', architectureVersion:'1.8.1', surface:'runtime-only' });
   const status = await aiWorker.fetch(new Request('https://ai.ekodi.kr/api/status'), {}, { waitUntil() {} });
   assert.equal(status.status, 401);
   assert.equal((await status.json()).error, 'authentication_required');

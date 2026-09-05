@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
@@ -34,17 +35,8 @@ const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${toke
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
 
-const groups = {
-  campus: 'home', 'public-site-controls': 'home',
-  work: 'operations', communication: 'operations',
-  workspace: 'people', organization: 'people', 'cheonggye-members': 'people', clients: 'people', admins: 'people',
-  'life-ai': 'services', community: 'services', books: 'services', social: 'services',
-  aiops: 'ai', devotional: 'ai', 'marketing-ai': 'ai', 'ai-module-spec': 'ai', 'ai-membership': 'ai',
-  finance: 'business', tax: 'business', affiliates: 'business',
-  storage: 'data', 'api-cost': 'data',
-  health: 'system', security: 'system', devices: 'system', architecture: 'system',
-};
-const menuIds = Object.keys(groups);
+const menuIds = adminMenuOrder();
+const groups = Object.fromEntries(menuIds.map(id => [id, getAdminMenuGroupForSection(id)]));
 const expectedMenuCount = menuIds.length;
 const internalMenuIds = menuIds.filter(id => id !== 'tax');
 const results = [];

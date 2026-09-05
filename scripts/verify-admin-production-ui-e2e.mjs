@@ -6,7 +6,7 @@ const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
 const menus = [
   ['campus','home'],['public-site-controls','home'],['work','operations'],['communication','operations'],
   ['workspace','people'],['organization','people'],['clients','people'],['admins','people'],
-  ['life-ai','services'],['community','services'],['books','services'],['social','services'],
+  ['life-ai','services'],['common-services','services'],['community','services'],['books','services'],['social','services'],
   ['aiops','ai'],['marketing-ai','ai'],['ai-module-spec','ai'],['ai-membership','ai'],
   ['finance','business'],['tax','business'],['affiliates','business'],
   ['storage','data'],['api-cost','data'],
