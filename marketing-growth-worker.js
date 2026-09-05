@@ -1,6 +1,7 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
+import { d1SchemaReady } from './d1-schema-readiness.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
@@ -147,13 +148,7 @@ function redirectResult(returnUrl, params) {
   Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,String(value)));
   return Response.redirect(url.href,302);
 }
-async function schemaReady(env) {
-  if (!env.DB) return false;
-  try {
-    const result = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns')").all();
-    return (result.results || []).length === 3;
-  } catch { return false; }
-}
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }

@@ -1,4 +1,5 @@
 import { runAiEnhancedTask } from './ai-resilience-runtime.js';
+import { d1SchemaReady } from './d1-schema-readiness.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -77,12 +78,7 @@ async function authContext(request,env,{write=false}={}){
   return {identity,subject};
 }
 async function schemaReady(env){
-  try{
-    const names=['messenger_threads','messenger_messages','messenger_handoffs','messenger_events','messenger_channel_links','investment_opportunities','investment_diligence_items'];
-    const placeholders=names.map(()=>'?').join(',');
-    const rows=await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN (${placeholders})`).bind(...names).all();
-    return new Set((rows.results||[]).map(row=>row.name)).size===names.length;
-  }catch{return false}
+  return d1SchemaReady(env?.DB,['messenger_threads','messenger_messages','messenger_handoffs','messenger_events','messenger_channel_links','investment_opportunities','investment_diligence_items']);
 }
 
 async function recordMessengerEvent(env,threadId,eventType,actorKind='system',actorId='',detail={}){
