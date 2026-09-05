@@ -229,7 +229,9 @@
         "hybrid-execution.js",
         "hybrid-execution-admin.js",
         "hybrid-execution-monitor.js",
-        "docs/ARCHITECTURE.md"
+        "docs/ARCHITECTURE.md",
+        "config/user-ui-shell.json",
+        "shell/media-meeting-adapter.js"
       ]
     },
     {
