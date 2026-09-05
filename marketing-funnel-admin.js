@@ -145,20 +145,30 @@
           <span class="integration-status connected">공통 커넥터</span>
         </div>
         <div id="affiliateFeedProviders" class="integration-capabilities" aria-live="polite"><span>서버 Feed 연결 상태를 확인하는 중입니다.</span></div>
+        <div class="integration-account-form" aria-labelledby="chinaAffiliateTitle">
+          <div class="integration-form-heading"><div><strong id="chinaAffiliateTitle">중국 쇼핑몰 제휴 빠른 설정</strong><p>중국 판매처는 공식 제휴망 경로를 불러온 뒤 직접 제휴 계약이 있으면 제휴 방식을 직접 제휴로 바꿔 저장할 수 있습니다. 모든 경로는 검증 전 추천 차단 상태로 시작합니다.</p></div><span class="integration-mode">CN</span></div>
+          <div id="chinaAffiliatePresets" class="integration-form-actions">
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="taobao">淘宝 타오바오</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="tmall">天猫 티몰</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="jd">京东 징둥</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="aliexpress">AliExpress</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="pinduoduo">拼多多 핀둬둬</button>
+          </div>
+        </div>
         <form id="affiliateMerchantRouteForm" class="integration-account-form">
           <div class="integration-form-heading"><div><strong>판매처 제휴 경로 설정</strong><p>최저가여도 제휴 active, 추적링크 ready, 상품·가격 공급 ready, 추천 허용까지 모두 완료된 판매처만 사용자 추천에 올라갑니다.</p></div><span class="integration-mode">ROUTE</span></div>
           <div class="integration-form-grid">
             <label>판매처 코드<input name="merchantKey" maxlength="80" placeholder="예: elevenst" required></label>
             <label>판매처 이름<input name="merchantName" maxlength="120" placeholder="예: 11번가" required></label>
-            <label>국가 코드<input name="marketCountry" maxlength="2" value="KR" placeholder="KR · US · JP"></label>
-            <label>정산 통화<input name="settlementCurrency" maxlength="3" value="KRW" placeholder="KRW · USD · JPY"></label>
+            <label>국가 코드<input name="marketCountry" maxlength="2" value="KR" placeholder="KR · CN · US · JP"></label>
+            <label>정산 통화<input name="settlementCurrency" maxlength="3" value="KRW" placeholder="KRW · CNY · USD · JPY"></label>
             <label>제휴 방식<select name="affiliateMode"><option value="network">간접 제휴망</option><option value="direct">직접 제휴</option></select></label>
             <label>제휴 상태<select name="affiliateStatus"><option value="candidate">후보</option><option value="pending">신청/승인 대기</option><option value="approved">승인됨</option><option value="active">활성</option><option value="suspended">중지</option></select></label>
             <label>추적링크 상태<select name="trackingStatus"><option value="not_ready">미준비</option><option value="pending">확인 중</option><option value="ready">추적 확인 완료</option><option value="failed">오류</option></select></label>
             <label>상품·가격 공급<select name="catalogStatus"><option value="not_ready">미준비</option><option value="manual_verified">수동 가격 검증</option><option value="feed_ready">Feed/API 정상</option><option value="stale">가격 만료</option><option value="failed">오류</option></select></label>
-            <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" list="affiliateNetworkKeys" placeholder="linkprice · awin · impact"></label>
-            <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="LinkPrice · Awin · impact.com"></label>
-            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="awin"><option value="impact"><option value="cj"><option value="rakuten"></datalist>
+            <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" list="affiliateNetworkKeys" placeholder="linkprice · taobao_alliance · jd_union"></label>
+            <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="LinkPrice · 淘宝联盟 · 京东联盟"></label>
+            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="awin"><option value="impact"><option value="cj"><option value="rakuten"><option value="taobao_alliance"><option value="jd_union"><option value="aliexpress_affiliate"><option value="duoduo_jinbao"></datalist>
             <label class="integration-wide">제휴 프로그램/관리 URL<input name="programUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
             <label class="integration-wide">운영 메모<textarea name="notes" maxlength="500" rows="2" placeholder="승인일, 담당자, 해외 세금/통화 메모 등"></textarea></label>
             <label class="integration-toggle"><input name="recommendationEnabled" type="checkbox"> 제휴 완료 후 이 판매처의 상품을 추천 후보로 허용</label>
@@ -175,7 +185,7 @@
             <label>카테고리<input name="category" maxlength="120" placeholder="건강 · 식품 · 생활"></label>
             <label>검증 비교가격(원)<input name="priceKrw" type="number" min="1" step="1" required placeholder="해외상품도 현재 검증된 원화 환산값"></label>
             <label>원 판매가<input name="sourcePriceAmount" type="number" min="0" step="0.01" placeholder="해외 판매가 선택"></label>
-            <label>원 판매가 통화<input name="sourcePriceCurrency" maxlength="3" placeholder="KRW · USD · JPY"></label>
+            <label>원 판매가 통화<input name="sourcePriceCurrency" maxlength="3" placeholder="KRW · CNY · USD · JPY"></label>
             <label>제휴처 상품 ID<input name="sourceId" maxlength="160" placeholder="선택"></label>
             <label>GTIN/바코드<input name="gtin" inputmode="numeric" maxlength="32" placeholder="8?12?13?14자리"></label>
             <label>브랜드<input name="brand" maxlength="120" placeholder="선택"></label>
@@ -203,6 +213,7 @@
     const accountForm = document.querySelector('#affiliateAccountForm');
     const merchantRouteForm = document.querySelector('#affiliateMerchantRouteForm');
     const merchantRoutes = document.querySelector('#affiliateMerchantRoutes');
+    const chinaAffiliatePresets = document.querySelector('#chinaAffiliatePresets');
     const externalProductForm = document.querySelector('#affiliateExternalProductForm');
     const feedProviders = document.querySelector('#affiliateFeedProviders');
     const message = document.querySelector('#affiliateMessage');
@@ -279,6 +290,28 @@
         row.append(label, button);
         feedProviders.append(row);
       }
+    }
+
+    const CHINA_AFFILIATE_PRESETS = {
+      taobao: { merchantKey: 'taobao', merchantName: '淘宝 타오바오', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'taobao_alliance', networkName: '淘宝联盟 / Alimama', programUrl: 'https://pub.alimama.com/' },
+      tmall: { merchantKey: 'tmall', merchantName: '天猫 티몰', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'taobao_alliance', networkName: '淘宝联盟 / Alimama', programUrl: 'https://pub.alimama.com/' },
+      jd: { merchantKey: 'jd', merchantName: '京东 징둥', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'jd_union', networkName: '京东联盟', programUrl: 'https://jos.jd.com/jdunion' },
+      aliexpress: { merchantKey: 'aliexpress', merchantName: 'AliExpress', marketCountry: 'CN', settlementCurrency: 'USD', networkKey: 'aliexpress_affiliate', networkName: 'AliExpress Affiliate', programUrl: 'https://portals.aliexpress.com/' },
+      pinduoduo: { merchantKey: 'pinduoduo', merchantName: '拼多多 핀둬둬', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'duoduo_jinbao', networkName: '多多进宝', programUrl: '' },
+    };
+
+    function applyChinaAffiliatePreset(key) {
+      const preset = CHINA_AFFILIATE_PRESETS[key];
+      if (!preset || !merchantRouteForm) return;
+      for (const [name, value] of Object.entries(preset)) if (merchantRouteForm.elements[name]) merchantRouteForm.elements[name].value = value;
+      merchantRouteForm.elements.affiliateMode.value = 'network';
+      merchantRouteForm.elements.affiliateStatus.value = 'candidate';
+      merchantRouteForm.elements.trackingStatus.value = 'not_ready';
+      merchantRouteForm.elements.catalogStatus.value = 'not_ready';
+      merchantRouteForm.elements.recommendationEnabled.checked = false;
+      merchantRouteForm.elements.notes.value = `${preset.merchantName} 중국 제휴 후보. 공식 승인·추적링크·상품/가격 공급 확인 전 추천 금지. 직접 계약이 있으면 제휴 방식을 직접 제휴로 변경.`;
+      merchantRouteForm.elements.merchantKey.focus();
+      setMessage(`${preset.merchantName} 중국 제휴 기본값을 불러왔습니다. 직접 계약이면 제휴 방식을 '직접 제휴'로 바꿔 저장할 수 있습니다.`);
     }
 
     function renderMerchantRoutes(routes = []) {
@@ -410,6 +443,12 @@
       } finally {
         submit.disabled = false;
       }
+    });
+
+    chinaAffiliatePresets?.addEventListener('click', event => {
+      const presetButton = event.target.closest('[data-cn-affiliate-preset]');
+      if (!presetButton) return;
+      applyChinaAffiliatePreset(String(presetButton.dataset.cnAffiliatePreset || ''));
     });
 
     merchantRouteForm?.addEventListener('submit', async event => {
