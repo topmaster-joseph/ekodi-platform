@@ -32,11 +32,12 @@ const saleTypeLabels = {
   curation: '큐레이션 준비'
 };
 
-const [site, productsRaw, pages, storesRaw, indexTemplate, productTemplate, pageTemplate, storeTemplate, sellerTemplate, checkoutTemplate] = await Promise.all([
+const [site, productsRaw, pages, storesRaw, regionsConfig, indexTemplate, productTemplate, pageTemplate, storeTemplate, sellerTemplate, checkoutTemplate] = await Promise.all([
   readJson('content/site.json'),
   readJson('content/products.json'),
   readJson('content/pages.json'),
   readJson('content/stores.json'),
+  readJson('content/regions.json'),
   read('src/index.template.html'),
   read('src/product.template.html'),
   read('src/page.template.html'),
@@ -51,6 +52,9 @@ const publishedStoreIds = new Set(stores.map((store) => store.id));
 const products = productsRaw.filter((product) => product.published && publishedStoreIds.has(product.storeId));
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
 const basketHref = site.platform?.basketHref || '/checkout/';
+const regions = Array.isArray(regionsConfig?.regions) ? regionsConfig.regions : [];
+const regionMap = new Map(regions.map((region) => [region.id, region]));
+const regionOptions = regions.filter((region) => region.selectable).map((region) => `<option value="${esc(region.id)}" data-path="${esc((region.path || []).join(','))}" data-full-name="${esc(region.fullName || region.label)}">${esc(region.fullName || region.label)}</option>`).join('');
 const heroParts = site.hero.title.split('|');
 const heroTitle = heroParts.length >= 3
   ? `${esc(heroParts[0])}<br><em>${esc(heroParts[1])}</em><br>${esc(heroParts.slice(2).join(''))}`
@@ -59,11 +63,14 @@ const heroTitle = heroParts.length >= 3
 function productCard(product, options = {}) {
   const href = `/products/${product.slug}/`;
   const store = storeMap.get(product.storeId);
-  const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''}`.toLowerCase();
-  const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"`;
+  const region = product.region || {};
+  const regionIds = Array.isArray(region.regionIds) ? region.regionIds.filter((id) => regionMap.has(id)) : [];
+  const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
+  const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"`;
+  const regionChip = region.label ? `<p class="region-chip">지역 · ${esc(region.label)}${region.verified ? ' · 확인됨' : ''}</p>` : '';
   const heart = options.withHeart === false ? '' : `<button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button>`;
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
-  return `<article class="card"${data}><div class="thumb ${esc(product.category)}"><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p>${esc(product.description)}</p><div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  return `<article class="card"${data}><div class="thumb ${esc(product.category)}"><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p>${esc(product.description)}</p>${regionChip}<div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
 }
 
 function productDetailSections(product, store) {
@@ -75,6 +82,7 @@ function productDetailSections(product, store) {
       : '현재는 상품 문의와 상담을 중심으로 거래를 준비합니다.';
   const sections = [
     { label: 'PURPOSE', title: '무엇을 제안하나요', body: product.description },
+    ...(product.region?.label ? [{ label: 'LOCAL', title: '어느 지역과 연결되나요', body: `${product.region.label}${product.region.verified ? ' · 지역 연결 확인됨' : ' · 지역 연결 확인 필요'}` }] : []),
     { label: 'STATUS', title: '지금 어디까지 준비됐나요', body: `${product.status}. ${store.name}에서 운영·검토하는 상품입니다.` },
     { label: 'COMMERCE', title: '어떻게 거래되나요', body: `${saleLabel}. ${transactionText} ${Number.isFinite(product.price) ? `현재 표시 가격은 ${formatPrice(product.price)}입니다.` : '가격과 최종 판매 조건은 아직 확정되지 않았습니다.'}` }
   ];
@@ -93,9 +101,10 @@ function productDetailSections(product, store) {
     .join('');
 }
 
-const filters = site.categories.map((category, index) =>
+const categoryFilters = site.categories.map((category, index) =>
   `<button class="${index === 0 ? 'active' : ''}" data-filter="${esc(category.id)}">${esc(category.label)}</button>`
 ).join('');
+const filters = `${categoryFilters}<button data-filter="local" data-filter-kind="region">${esc(site.local?.filterLabel || '내 로컬')}</button>`;
 
 const productCards = products.map((product) => productCard(product)).join('');
 
@@ -151,6 +160,10 @@ const indexHtml = fill(indexTemplate, {
   LOCAL_EYEBROW: esc(site.local.eyebrow),
   LOCAL_TITLE: localTitle,
   LOCAL_DESCRIPTION: esc(site.local.description),
+  LOCAL_SELECTION_TITLE: esc(site.local.selectionTitle || '내 로컬을 직접 선택하세요'),
+  LOCAL_SELECTION_DESCRIPTION: esc(site.local.selectionDescription || ''),
+  LOCAL_PRIVACY_NOTE: esc(site.local.privacyNote || ''),
+  REGION_OPTIONS: regionOptions,
   STANDARDS: standards,
   JOURNAL: journal,
   POLICIES: policies,
@@ -245,6 +258,7 @@ const platformModules = (site.platform?.modules || []).map((module, index) =>
 ).join('');
 const sellerHtml = fill(sellerTemplate, {
   PLATFORM_NAME: esc(site.platform?.name || 'EKODI Commerce Platform'),
+  REGION_OPTIONS: regionOptions,
   PLATFORM_MODULES: platformModules,
   INQUIRY_URL: esc(site.links.inquiry),
   NOTICE: esc(site.notice)

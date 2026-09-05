@@ -12,14 +12,18 @@
     "published": true,
     "featured": true,
     "price": null,
-    "action": {"type": "inquiry", "label": "입점·문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "입점·문의",
+      "url": "https://ekodibiz.kr"
+    }
   },
   {
     "id": "p2",
     "slug": "cheonggye-local-box",
     "storeId": "store-ekodi-select",
     "name": "청계 로컬 한상 꾸러미",
-    "category": "local",
+    "category": "general",
     "badge": "지역상생",
     "description": "지역 가게의 먹거리와 이야기를 한 상자에 잇는 기획",
     "status": "파트너 모집",
@@ -27,7 +31,22 @@
     "published": true,
     "featured": true,
     "price": null,
-    "action": {"type": "inquiry", "label": "파트너 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "파트너 문의",
+      "url": "https://ekodibiz.kr"
+    },
+    "region": {
+      "primaryRegionId": "kr-46-muan-cheonggye",
+      "regionIds": [
+        "kr-46",
+        "kr-46-muan",
+        "kr-46-muan-cheonggye"
+      ],
+      "label": "전라남도 무안군 청계면",
+      "relationship": "community",
+      "verified": true
+    }
   },
   {
     "id": "p3",
@@ -42,7 +61,11 @@
     "published": true,
     "featured": false,
     "price": null,
-    "action": {"type": "inquiry", "label": "출간 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "출간 문의",
+      "url": "https://ekodibiz.kr"
+    }
   },
   {
     "id": "p4",
@@ -57,7 +80,11 @@
     "published": true,
     "featured": false,
     "price": null,
-    "action": {"type": "inquiry", "label": "구성 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "구성 문의",
+      "url": "https://ekodibiz.kr"
+    }
   },
   {
     "id": "p5",
@@ -72,14 +99,18 @@
     "published": true,
     "featured": false,
     "price": null,
-    "action": {"type": "inquiry", "label": "제휴 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "제휴 문의",
+      "url": "https://ekodibiz.kr"
+    }
   },
   {
     "id": "p6",
     "slug": "mokpo-campus-local-pass",
     "storeId": "store-ekodi-select",
     "name": "목대 후문 맛지도 패스",
-    "category": "local",
+    "category": "general",
     "badge": "지역상생",
     "description": "상점가 발견과 방문을 연결하는 지역 체험형 상품",
     "status": "기획 준비",
@@ -87,7 +118,22 @@
     "published": true,
     "featured": false,
     "price": null,
-    "action": {"type": "inquiry", "label": "참여 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "참여 문의",
+      "url": "https://ekodibiz.kr"
+    },
+    "region": {
+      "primaryRegionId": "kr-46-muan-cheonggye",
+      "regionIds": [
+        "kr-46",
+        "kr-46-muan",
+        "kr-46-muan-cheonggye"
+      ],
+      "label": "전라남도 무안군 청계면",
+      "relationship": "experience",
+      "verified": true
+    }
   },
   {
     "id": "p7",
@@ -102,7 +148,11 @@
     "published": true,
     "featured": false,
     "price": null,
-    "action": {"type": "inquiry", "label": "콘텐츠 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "콘텐츠 문의",
+      "url": "https://ekodibiz.kr"
+    }
   },
   {
     "id": "p8",
@@ -117,6 +167,10 @@
     "published": true,
     "featured": false,
     "price": null,
-    "action": {"type": "inquiry", "label": "파트너 문의", "url": "https://ekodibiz.kr"}
+    "action": {
+      "type": "inquiry",
+      "label": "파트너 문의",
+      "url": "https://ekodibiz.kr"
+    }
   }
 ]

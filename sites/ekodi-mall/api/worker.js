@@ -5,7 +5,8 @@ const DEFAULT_ALLOWED_ORIGINS = [
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const VALID_SELLER_TYPES = new Set(['individual', 'business']);
 const VALID_SALE_TYPES = new Set(['direct', 'affiliate', 'inquiry']);
-const VALID_CATEGORIES = new Set(['local', 'living', 'book', 'gift']);
+const VALID_CATEGORIES = new Set(['general', 'living', 'book', 'gift']);
+const VALID_LOCAL_RELATIONSHIPS = new Set(['seller-declared', 'community', 'producer', 'store', 'experience', 'service', 'origin']);
 const VALID_CHANNELS = new Set(['copy', 'share', 'sms', 'kakao', 'qr', 'social', 'mall', 'unknown']);
 const VALID_ATTRIBUTION_TYPES = new Set(['direct', 'marketplace', 'ai']);
 
@@ -43,6 +44,28 @@ function cleanHttpsUrl(value) {
 function slugOrBlank(value) {
   const slug = cleanText(value, 80).toLowerCase();
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : '';
+}
+
+function normalizeCategory(value) {
+  const category = cleanText(value, 40).toLowerCase();
+  return VALID_CATEGORIES.has(category) ? category : 'general';
+}
+
+function cleanRegionId(value) {
+  const id = cleanText(value, 100).toLowerCase();
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) ? id : '';
+}
+
+function normalizeRegion(value) {
+  if (!value || typeof value !== 'object') return null;
+  const primaryRegionId = cleanRegionId(value.primaryRegionId);
+  if (!primaryRegionId) return null;
+  const ids = Array.isArray(value.regionIds) ? value.regionIds : [];
+  const regionIds = [...new Set(ids.map(cleanRegionId).filter(Boolean).concat(primaryRegionId))].slice(0, 8);
+  const label = cleanText(value.label, 160);
+  const requestedRelationship = cleanText(value.relationship, 40).toLowerCase();
+  const relationship = VALID_LOCAL_RELATIONSHIPS.has(requestedRelationship) ? requestedRelationship : 'seller-declared';
+  return { primaryRegionId, regionIds, label, relationship, verified: false };
 }
 
 function flag(value) {
@@ -129,7 +152,8 @@ export function normalizeProductInput(body = {}) {
   const content = body.content || {};
   const sellerType = VALID_SELLER_TYPES.has(seller.type) ? seller.type : 'individual';
   const saleType = VALID_SALE_TYPES.has(product.saleType) ? product.saleType : 'direct';
-  const category = VALID_CATEGORIES.has(product.category) ? product.category : 'local';
+  const category = normalizeCategory(product.category);
+  const region = normalizeRegion(product.region);
   const affiliateUrl = cleanHttpsUrl(product.action?.url || product.affiliateUrl || '');
   const normalized = {
     sellerType,
@@ -144,6 +168,7 @@ export function normalizeProductInput(body = {}) {
     product: {
       saleType,
       category,
+      region,
       name: cleanText(product.name, 160),
       audience: cleanText(product.audience, 500),
       oneLine: cleanText(product.oneLine, 300),
@@ -165,6 +190,7 @@ export function normalizeProductInput(body = {}) {
   if (!normalized.sellerDisplayName) errors.push('판매자 표시명을 입력해 주세요.');
   if (!normalized.product.name) errors.push('상품명을 입력해 주세요.');
   if (!normalized.contact) errors.push('연락·문의 채널을 입력해 주세요.');
+  if (normalized.product.region && !normalized.product.region.label) errors.push('지역 연결에는 표시할 행정지역명이 필요합니다.');
   if (saleType === 'affiliate' && !affiliateUrl) errors.push('제휴판매는 유효한 HTTPS 제휴링크가 필요합니다.');
   if (normalized.store?.name && !normalized.store.slug) errors.push('스토어를 연결하려면 영문 소문자·숫자·하이픈 slug가 필요합니다.');
   return { value: normalized, errors };
@@ -249,7 +275,14 @@ function rowToOwnerProduct(row) {
     store: row.store_id ? { id: row.store_id, name: row.store_name || '', slug: row.store_slug || '', contact: row.store_contact || '' } : null,
     product: {
       saleType: row.sale_type,
-      category: row.category,
+      category: normalizeCategory(row.category),
+      region: row.primary_region_id ? {
+        primaryRegionId: row.primary_region_id,
+        regionIds: JSON.parse(row.region_ids_json || '[]'),
+        label: row.region_label || '',
+        relationship: row.local_relationship || 'seller-declared',
+        verified: Boolean(row.region_verified)
+      } : null,
       name: row.name,
       audience: row.audience || '',
       oneLine: row.one_line || '',
@@ -284,9 +317,10 @@ async function saveProduct(env, user, body, existingId = '') {
     const current = await getOwnerProduct(env, user.id, existingId);
     if (!current) return { notFound: true };
     await env.DB.prepare(`UPDATE products SET
-      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,name=?,audience=?,one_line=?,price=?,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
+      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,primary_region_id=?,region_ids_json=?,region_label=?,local_relationship=?,region_verified=0,name=?,audience=?,one_line=?,price=?,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
       WHERE id=? AND seller_id=?`)
-      .bind(linkedStoreId, seller.displayName, value.sellerType, value.product.saleType, value.product.category, value.product.name,
+      .bind(linkedStoreId, seller.displayName, value.sellerType, value.product.saleType, value.product.category, value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []),
+        value.product.region?.label || '', value.product.region?.relationship || '', value.product.name,
         value.product.audience, value.product.oneLine, value.product.price, JSON.stringify(value.product.benefits), JSON.stringify(value.product.specs),
         value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl, JSON.stringify(value.content), now, existingId, user.id).run();
     return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, existingId)) };
@@ -295,9 +329,10 @@ async function saveProduct(env, user, body, existingId = '') {
   const shareCode = randomCode(12);
   const publicUrl = makePublicUrl(env.MALL_BASE_URL, shareCode);
   await env.DB.prepare(`INSERT INTO products
-    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,audience,one_line,price,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
+    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,primary_region_id,region_ids_json,region_label,local_relationship,region_verified,name,audience,one_line,price,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
     .bind(id, user.id, linkedStoreId, shareCode, publicUrl, seller.displayName, value.sellerType, value.product.saleType, value.product.category,
+      value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []), value.product.region?.label || '', value.product.region?.relationship || '',
       value.product.name, value.product.audience, value.product.oneLine, value.product.price, JSON.stringify(value.product.benefits),
       JSON.stringify(value.product.specs), value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl,
       JSON.stringify(value.content), now, now).run();
@@ -345,7 +380,7 @@ async function getPublicProduct(env, shareCode) {
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '' } : null,
     product: {
-      saleType: row.sale_type, category: row.category, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
+      saleType: row.sale_type, category: normalizeCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: JSON.parse(row.region_ids_json || '[]'), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: JSON.parse(row.benefits_json || '[]'), specs: JSON.parse(row.specs_json || '[]'), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
     },

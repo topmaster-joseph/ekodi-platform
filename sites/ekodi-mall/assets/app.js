@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   const grid = document.querySelector('#grid');
   if (!grid) return;
   const cards = () => [...grid.querySelectorAll('[data-product]')];
@@ -22,12 +22,24 @@
       const active = wishes.includes(button.dataset.wish); button.classList.toggle('on', active); button.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
   }
+  function regionIds(card) { return String(card.dataset.regionIds || '').split(',').map((item) => item.trim()).filter(Boolean); }
+  function localMatch(card) {
+    const ids = regionIds(card);
+    if (!ids.length) return false;
+    const selected = window.EkodiLocal?.getSelectedRegionId?.() || '';
+    return !selected || ids.includes(selected);
+  }
+  function categoryMatch(card) {
+    if (filter === 'all') return true;
+    if (filter === 'local') return localMatch(card);
+    return card.dataset.category === filter;
+  }
   function render() {
     const query = (search?.value || '').trim().toLowerCase(); let visible = 0;
     cards().forEach((card) => {
-      const categoryMatch = filter === 'all' || card.dataset.category === filter;
+      const filterMatch = categoryMatch(card);
       const searchMatch = !query || (card.dataset.search || '').includes(query);
-      card.hidden = !(categoryMatch && searchMatch); if (!card.hidden) visible += 1;
+      card.hidden = !(filterMatch && searchMatch); if (!card.hidden) visible += 1;
     });
     if (empty) empty.hidden = visible > 0; syncHearts(); updateCount();
   }
@@ -65,5 +77,6 @@
     wishes = wishes.filter((item) => item !== button.dataset.remove); saveWishes(); render(); openWishlist();
   });
   window.addEventListener('ekodi:marketplace-products-loaded', render);
+  document.addEventListener('ekodi:local-region-change', render);
   render();
 })();

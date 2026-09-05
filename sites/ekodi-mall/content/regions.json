@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "country": "KR",
+  "policy": {
+    "confirmation": "explicit-user-choice",
+    "geolocation": "consent-only-no-coordinate-storage",
+    "ipInference": "suggestion-only-never-confirm"
+  },
+  "regions": [
+    {
+      "id": "kr",
+      "label": "대한민국",
+      "fullName": "대한민국",
+      "type": "country",
+      "parentId": null,
+      "path": [
+        "kr"
+      ],
+      "selectable": false
+    },
+    {
+      "id": "kr-46",
+      "label": "전라남도",
+      "fullName": "전라남도",
+      "type": "province",
+      "parentId": "kr",
+      "path": [
+        "kr",
+        "kr-46"
+      ],
+      "selectable": true
+    },
+    {
+      "id": "kr-46-muan",
+      "label": "무안군",
+      "fullName": "전라남도 무안군",
+      "type": "county",
+      "parentId": "kr-46",
+      "path": [
+        "kr",
+        "kr-46",
+        "kr-46-muan"
+      ],
+      "selectable": true
+    },
+    {
+      "id": "kr-46-muan-cheonggye",
+      "label": "청계면",
+      "fullName": "전라남도 무안군 청계면",
+      "type": "township",
+      "parentId": "kr-46-muan",
+      "path": [
+        "kr",
+        "kr-46",
+        "kr-46-muan",
+        "kr-46-muan-cheonggye"
+      ],
+      "selectable": true
+    }
+  ]
+}
