@@ -1,5 +1,5 @@
 {
-  "version": 51,
+  "version": 52,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -124,7 +124,8 @@
           "x-ekodi-route: church-pastor-admin",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/workspace-trade-portal.js",

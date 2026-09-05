@@ -40,3 +40,13 @@ test('production entry routes church admin before generic workspace admin', asyn
   const generic = source.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath');
   assert.ok(church >= 0 && generic > church);
 });
+
+test('pastor admin release contract requires nosniff and candidate-only rollback semantics', async () => {
+  const page = await fs.promises.readFile(new URL('../church-pastor-admin-page.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(page, /x-content-type-options':'nosn'/);
+  assert.match(page, /x-content-type-options':'nosniff'/);
+  const manifest = JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const probe = manifest.worker.requests.find((item) => item.url === 'https://ekodi.kr/ekodi-church/admin');
+  assert.equal(probe?.rollbackVerify, false);
+  assert.ok(probe?.headerExpect?.includes('x-content-type-options: nosniff'));
+});
