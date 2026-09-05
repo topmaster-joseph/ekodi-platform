@@ -20,7 +20,7 @@ EKODI uses one ecosystem account and many independently operated services.
 
 `config/ecosystem-services.json` is the canonical registry for EKODI user-facing services.
 
-`npm run generate:user-services` creates:
+`npm run generate:user-services` creates ephemeral build/deploy artifacts (not committed):
 
 - `generated/user-services.js` for the server membership runtime
 - `my/user-services.js` for My EKODI

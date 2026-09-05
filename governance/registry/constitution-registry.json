@@ -285,9 +285,7 @@
         "marketing-canonical-projection.js",
         "marketing-growth-worker.js",
         "marketing-publishing-worker.js",
-        "my/progressive-personalization.js",
-        "my/user-services.js",
-        "generated/user-services.js",
+        "my/progressive-personalization.js",        "config/ecosystem-services.json",
         "scripts/generate-user-service-registry.mjs"
       ]
     },
