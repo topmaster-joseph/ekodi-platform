@@ -16,6 +16,7 @@ const CORS_ORIGINS=new Set(['https://life.ekodi.kr','https://admin.ekodi.kr','ht
 function corsHeaders(request){const origin=request?.headers?.get?.('origin')||'';return origin&&CORS_ORIGINS.has(origin)?{'access-control-allow-origin':origin,'access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,OPTIONS',vary:'Origin'}:{}}
 function json(data,status=200,request=null){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...corsHeaders(request),...SECURITY_HEADERS}})}
 function withHeaders(response){const headers=new Headers(response.headers);for(const [k,v] of Object.entries(SECURITY_HEADERS))headers.set(k,v);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
+async function safeAssetFetch(env,request){try{return await env.ASSETS.fetch(request)}catch{return new Response('인생AI를 잠시 불러오지 못했습니다.',{status:503,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-ekodi-life-asset-error':'fetch_failed',...SECURITY_HEADERS}})}}
 async function readBody(request){try{return await request.json()}catch{return null}}
 function bearer(request){return String(request.headers.get('authorization')||'').trim()}
 async function memberAuthorized(request,env){
@@ -45,7 +46,9 @@ async function aiReply(request,env){
   const reflection=buildLifeReflection({message,topic:String(body.topic||'')});
   if(reflection.urgent)return json({ok:true,mode:'safety-first',reflection,reply:reflection.notice});
   const token=bearer(request);if(!token)return json({error:'Google 로그인한 무료회원부터 이용할 수 있습니다.',code:'LIFE_AUTH_REQUIRED'},401,request);
-  const cfg=config(env);const upstream=await fetch(`${cfg.coreApiUrl}/api/user-ai/assist`,{method:'POST',headers:{authorization:token,'content-type':'application/json'},body:JSON.stringify({site:'life',intent:'interactive',aiRequired:true,dataClass:'general',message:buildLifeAiPrompt({message,topic:reflection.topic.id,reflection})})});
+  const cfg=config(env);let upstream;
+  try{upstream=await fetch(`${cfg.coreApiUrl}/api/user-ai/assist`,{method:'POST',headers:{authorization:token,'content-type':'application/json'},body:JSON.stringify({site:'life',intent:'interactive',aiRequired:true,dataClass:'general',message:buildLifeAiPrompt({message,topic:reflection.topic.id,reflection})})})}
+  catch{return json({ok:false,mode:'core-only',reflection,reply:reflection.nextQuestion,notice:'AI 연결이 어려워 기본 질문으로 계속합니다.'},200,request)}
   const data=await upstream.json().catch(()=>({}));
   if(!upstream.ok)return json({ok:false,mode:'core-only',reflection,reply:reflection.nextQuestion,notice:data.error||'AI 연결이 어려워 기본 질문으로 계속합니다.'},200);
   return json({ok:true,reflection,...data});
@@ -62,7 +65,7 @@ export default{
     if(request.method==='GET'&&url.pathname==='/api/journey'){
       const auth=bearer(request);if(!auth.toLowerCase().startsWith('bearer '))return json({error:'Google 로그인이 필요합니다.',code:'LIFE_AUTH_REQUIRED'},401,request);
       const cfg=config(env);if(!cfg.dataEnabled)return json({reflections:[]},200,request);
-      const response=await fetch(`${cfg.supabaseUrl}/rest/v1/life_reflections?select=id,topic,question_text,root_question,scriptures,next_question,action_text,created_at&order=created_at.desc&limit=20`,{headers:{apikey:cfg.supabasePublishableKey,authorization:auth}});
+      let response;try{response=await fetch(`${cfg.supabaseUrl}/rest/v1/life_reflections?select=id,topic,question_text,root_question,scriptures,next_question,action_text,created_at&order=created_at.desc&limit=20`,{headers:{apikey:cfg.supabasePublishableKey,authorization:auth}})}catch{return json({error:'나의 질문을 불러오지 못했습니다.',code:'LIFE_JOURNEY_UNAVAILABLE'},503,request)}
       const data=await response.json().catch(()=>[]);if(!response.ok)return json({error:'나의 질문을 불러오지 못했습니다.',code:'LIFE_JOURNEY_READ_FAILED'},response.status,request);
       return json({reflections:Array.isArray(data)?data:[]},200,request);
     }
@@ -74,8 +77,8 @@ export default{
     if(request.method==='POST'&&url.pathname==='/api/ai')return aiReply(request,env);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/#life-ai',307);
     if(url.pathname==='/my'||url.pathname==='/my/')return Response.redirect('https://my.ekodi.kr/journey/?source=life',307);
-    let response=await env.ASSETS.fetch(request);
-    if(response.status===404&&!url.pathname.includes('.')){const root=new URL(request.url);root.pathname='/';response=await env.ASSETS.fetch(new Request(root,request))}
+    let response=await safeAssetFetch(env,request);
+    if(response.status===404&&!url.pathname.includes('.')){const root=new URL(request.url);root.pathname='/';response=await safeAssetFetch(env,new Request(root,request))}
     return injectEkodiShell(withHeaders(response),'life');
   }
 };
