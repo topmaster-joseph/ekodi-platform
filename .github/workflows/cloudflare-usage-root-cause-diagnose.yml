@@ -58,7 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 d1 insights ekodi-auth --config wrangler.api.toml --time-period=3h --sort-type=sum --sort-by=reads --limit=20 --json > "$RUNNER_TEMP/d1-insights.json"
+          npx --yes wrangler@4 d1 insights ekodi-auth --config wrangler.api.toml --time-period=3h --sort-type=sum --sort-by=reads --limit=100 --json > "$RUNNER_TEMP/d1-insights.json"
           node scripts/livecheck-d1-insights-summary.mjs "$RUNNER_TEMP/d1-insights.json"
 
       - name: Preserve diagnostic report

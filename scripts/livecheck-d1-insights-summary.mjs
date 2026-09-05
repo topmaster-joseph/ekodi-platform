@@ -13,7 +13,7 @@ function sanitizeSql(value) {
     .slice(0, 360);
 }
 
-const summary = rows.slice(0, 20).map((row, index) => ({
+const summary = rows.map((row, index) => ({
   rank:index + 1,
   query:sanitizeSql(row?.query),
   totalRowsRead:Number(row?.totalRowsRead || 0),
@@ -23,4 +23,4 @@ const summary = rows.slice(0, 20).map((row, index) => ({
   totalDurationMs:Number(row?.totalDurationMs || 0),
 }));
 
-console.log(JSON.stringify(summary, null, 2));
+console.log(JSON.stringify({ queryGroups:summary.length, capturedRowsRead:summary.reduce((sum,row)=>sum+row.totalRowsRead,0), top:summary.slice(0,40) }, null, 2));
