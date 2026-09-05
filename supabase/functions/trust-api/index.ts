@@ -6,14 +6,14 @@ import {
   compareWithLegacy,
   compatibilityDecision,
   evaluatePolicy,
-  policyCovers,
   safeAuditObject,
   secureProjection,
+  selectCoveredPolicy,
   TRUST_VERSIONS,
-  type PolicyCoverage,
   type PolicyRule,
   type ProjectionProfile,
   type RiskLevel,
+  type TrustPolicyVersion,
 } from "../_shared/trust.ts";
 
 const url = Deno.env.get("SUPABASE_URL")!;
@@ -121,16 +121,15 @@ function profileFor(roles: string[], purpose: string | null): ProjectionProfile 
   return "workspace-member";
 }
 
-async function shadowPolicy() {
+async function shadowPolicies() {
   const { data, error } = await admin
     .from("trust_policy_versions")
-    .select("policy_version,capability_schema_version,projection_version,config,status")
+    .select("policy_version,capability_schema_version,projection_version,config,status,created_at")
     .in("status", ["shadow", "active"])
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
   if (error) throw error;
-  return data ?? null;
+  return (data ?? []) as TrustPolicyVersion[];
 }
 
 Deno.serve(async (req) => {
@@ -156,10 +155,10 @@ Deno.serve(async (req) => {
       return json(req, { error: "site_resource_action_required" }, 400);
     }
 
-    const [{ data: access, error: accessError }, { data: workspaces, error: workspacesError }, policy] = await Promise.all([
+    const [{ data: access, error: accessError }, { data: workspaces, error: workspacesError }, policies] = await Promise.all([
       auth.db.rpc("current_site_access", { p_site_key: site }),
       auth.db.rpc("current_site_workspaces", { p_site_key: site }),
-      shadowPolicy(),
+      shadowPolicies(),
     ]);
     if (accessError) throw accessError;
     if (workspacesError) throw workspacesError;
@@ -186,20 +185,17 @@ Deno.serve(async (req) => {
       },
     });
 
+    const policy = selectCoveredPolicy(context, policies, { genericEvaluatorOnly: true });
     const capabilities = capabilitySet({ roles, service: site, resource, action, legacyAllowed });
     const projectionProfile = profileFor(roles, purpose);
     const rules = Array.isArray(policy?.config?.rules) ? policy.config.rules as PolicyRule[] : [];
-    const coverage = Array.isArray(policy?.config?.coverage) ? policy.config.coverage as PolicyCoverage[] : [];
-    const genericEvaluatorCompatible = policy?.config?.generic_evaluator_compatible !== false;
-    const candidateCovered = genericEvaluatorCompatible && rules.length > 0 && policyCovers(context, coverage);
+    const candidateCovered = Boolean(policy && rules.length > 0);
     const decision = candidateCovered
       ? evaluatePolicy(context, rules)
       : compatibilityDecision(legacyAllowed, {
         capabilities,
         projectionProfile,
-        reason: genericEvaluatorCompatible
-          ? "Outside explicit Trust migration coverage; mirrored current EKODI authorization."
-          : "Candidate policy requires an endpoint-specific legacy observer; generic Trust evaluator stayed in compatibility mode.",
+        reason: "No generic Trust candidate covers this request; mirrored current EKODI authorization.",
       });
     const comparison = compareWithLegacy(legacyAllowed, decision, "shadow");
 
@@ -209,7 +205,8 @@ Deno.serve(async (req) => {
       workspace_selected: Boolean(workspaceId),
       risk,
       candidate_policy_covered: candidateCovered,
-      generic_evaluator_compatible: genericEvaluatorCompatible,
+      policy_selection: "coverage",
+      generic_evaluator_compatible: policy?.config?.generic_evaluator_compatible !== false,
     });
 
     const { error: auditError } = await admin.from("trust_shadow_decisions").insert({
@@ -245,7 +242,7 @@ Deno.serve(async (req) => {
         capabilities: decision.capabilities,
         projection_profile: decision.projectionProfile,
         candidate_policy_covered: candidateCovered,
-        generic_evaluator_compatible: genericEvaluatorCompatible,
+        generic_evaluator_compatible: policy?.config?.generic_evaluator_compatible !== false,
         versions: {
           policy: policy?.policy_version ?? TRUST_VERSIONS.policy,
           capability_schema: policy?.capability_schema_version ?? TRUST_VERSIONS.capabilitySchema,
