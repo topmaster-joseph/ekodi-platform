@@ -1,4 +1,5 @@
 import { createOpenAiProvider } from './openai-provider-adapter.js';
+import { d1SchemaReady } from './d1-schema-readiness.js';
 
 const SUBJECT_TYPE = 'tenant';
 const SUBJECT_KEY = 'ekodibiz';
@@ -19,16 +20,7 @@ export function kstParts(date=new Date()) { const shifted=new Date(date.getTime(
 export function campaignKey(runDate,provider,productRowId) { return `mall-${String(runDate).replaceAll('-','')}-${slug(provider)}-${Number(productRowId)}`; }
 function parseJsonObject(text) { const source=clean(text,12000); const start=source.indexOf('{'); const end=source.lastIndexOf('}'); if(start<0||end<=start) return null; try { return JSON.parse(source.slice(start,end+1)); } catch { return null; } }
 
-async function schemaReady(env) {
-  if (!env.DB?.prepare) return false;
-  try {
-    const result = await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN (
-      'affiliate_storefront_products','affiliate_storefront_clicks','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_growth_opportunities',
-      'marketing_oauth_connections','marketing_publish_channels','marketing_content_items','marketing_publication_jobs','marketing_publish_policies','service_subscriptions'
-    )`).all();
-    return (result.results || []).length === 11;
-  } catch { return false; }
-}
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_growth_opportunities','marketing_oauth_connections','marketing_publish_channels','marketing_content_items','marketing_publication_jobs','marketing_publish_policies','service_subscriptions']); }
 
 async function autonomyGate(env) {
   const [policy,subscription] = await Promise.all([

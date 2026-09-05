@@ -1,3 +1,4 @@
+import { d1SchemaReady } from './d1-schema-readiness.js';
 const ACCOUNT_ID = 'coupang-ekodibiz';
 const STOREFRONT = 'ekodi-mall';
 const NAVER_TREND_URL = 'https://naverapihub.apigw.ntruss.com/search-trend/v1/search';
@@ -132,16 +133,7 @@ async function fetchNaverCategoryTrends(env, categories, runDate) {
   return {status:'ok',signals};
 }
 
-async function schemaReady(env) {
-  if (!env.DB?.prepare) return false;
-  try {
-    const result = await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN (
-      'affiliate_storefront_products','affiliate_storefront_clicks','affiliate_demand_signals',
-      'affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs'
-    )`).all();
-    return (result.results || []).length === 6;
-  } catch { return false; }
-}
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs']); }
 
 async function loadProducts(env) {
   const result = await env.DB.prepare(`SELECT p.id,p.product_id,p.product_name,p.price_krw,p.category,p.selection_score,p.is_rocket,p.is_free_shipping,
