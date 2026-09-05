@@ -90,3 +90,19 @@ test('CI actionlint checks release workflows without legacy shellcheck noise',as
   assert.match(workflow,/\.github\/workflows\/deploy-control-api\.yml/);
   assert.match(workflow,/\.github\/workflows\/release-messenger-investment-functional\.yml/);
 });
+
+test('CI actionlint covers the central Core Control redispatch workflow',async()=>{
+  const workflow=await read('.github/workflows/ci.yml');
+  assert.match(workflow,/\.github\/workflows\/redeploy-control-on-central-core\.yml/);
+});
+
+test('central Core redispatch suppresses a duplicate native Control push run for the same SHA',async()=>{
+  const workflow=await read('.github/workflows/redeploy-control-on-central-core.yml');
+  assert.match(workflow,/event=push/);
+  assert.match(workflow,/--arg sha "\$GITHUB_SHA"/);
+  assert.match(workflow,/\.head_sha == \$sha/);
+  assert.match(workflow,/native_control_run=true/);
+  assert.match(workflow,/steps\.dedupe\.outputs\.native_control_run != 'true'/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
+});
