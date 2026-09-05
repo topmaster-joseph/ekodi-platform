@@ -7,6 +7,8 @@ on:
       - 'marketing-publishing-worker.js'
       - 'channel-*.js'
       - 'migrations/0055_channel_automation_core.sql'
+      - 'migrations/0062_channel_service_bridge.sql'
+      - 'test/channel-service-bridge.test.mjs'
       - 'test/channel-automation-core.test.mjs'
       - 'wrangler.marketing-publishing.toml'
       - 'wrangler.marketing-publishing.staging.toml'
@@ -22,6 +24,8 @@ on:
       - 'marketing-publishing-worker.js'
       - 'channel-*.js'
       - 'migrations/0055_channel_automation_core.sql'
+      - 'migrations/0062_channel_service_bridge.sql'
+      - 'test/channel-service-bridge.test.mjs'
       - 'test/channel-automation-core.test.mjs'
       - 'wrangler.marketing-publishing.toml'
       - 'wrangler.marketing-publishing.staging.toml'
@@ -56,13 +60,14 @@ jobs:
           set -euo pipefail
           node --check marketing-publishing-worker.js
           for f in channel-*.js; do node --check "$f"; done
-          node --test test/marketing-publishing.test.mjs test/channel-automation-core.test.mjs
+          node --test test/marketing-publishing.test.mjs test/channel-automation-core.test.mjs test/channel-service-bridge.test.mjs
           grep -Fq "subject_type IN ('person','tenant','store')" migrations/0026_marketing_publication_queue.sql
           grep -Fq 'credential_ref' migrations/0026_marketing_publication_queue.sql
           grep -Fq 'MARKETING_PLAN_SCHEDULE_REQUIRED' migrations/0027_marketing_publication_entitlements.sql
           grep -Fq 'BEFORE UPDATE OF status ON marketing_publication_jobs' migrations/0027_marketing_publication_entitlements.sql
           grep -Fq 'channel_oauth_connections' migrations/0055_channel_automation_core.sql
           grep -Fq 'credential_ciphertext' migrations/0055_channel_automation_core.sql
+          grep -Fq 'channel_provider_schedules' migrations/0062_channel_service_bridge.sql
           if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0055_channel_automation_core.sql; then
             echo 'Plaintext provider tokens must not be persisted in Channel Automation D1.'
             exit 1
@@ -145,12 +150,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          probe_sql='SELECT 1 FROM marketing_publication_jobs LIMIT 0; SELECT 1 FROM channel_automation_profiles LIMIT 0; SELECT 1 FROM channel_oauth_connections LIMIT 0; SELECT 1 FROM channel_provider_schedules LIMIT 0;'
           for attempt in $(seq 1 30); do
-            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_publication_jobs','channel_automation_profiles','channel_oauth_connections');" --json > /tmp/schema.json 2>/tmp/schema.err; then
-              if grep -Fq 'marketing_publication_jobs' /tmp/schema.json && grep -Fq 'channel_automation_profiles' /tmp/schema.json && grep -Fq 'channel_oauth_connections' /tmp/schema.json; then
-                echo 'Shared Marketing publication schema is ready.'
-                exit 0
-              fi
+            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "$probe_sql" --json > /tmp/schema.json 2>/tmp/schema.err; then
+              echo 'Shared Marketing publication schema is ready.'
+              exit 0
             fi
             sleep 5
           done
@@ -162,11 +166,12 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml \
-            --command "SELECT name,type FROM sqlite_master WHERE name IN ('marketing_publication_jobs','channel_automation_profiles','channel_oauth_connections','trg_marketing_publication_plan_insert_scheduled','trg_marketing_publication_plan_execute') ORDER BY name;" \
+            --command "SELECT name,type FROM sqlite_master WHERE name IN ('marketing_publication_jobs','channel_automation_profiles','channel_oauth_connections','channel_provider_schedules','trg_marketing_publication_plan_insert_scheduled','trg_marketing_publication_plan_execute') ORDER BY name;" \
             --json > /tmp/publishing-schema.json
           grep -Fq 'marketing_publication_jobs' /tmp/publishing-schema.json
           grep -Fq 'channel_automation_profiles' /tmp/publishing-schema.json
           grep -Fq 'channel_oauth_connections' /tmp/publishing-schema.json
+          grep -Fq 'channel_provider_schedules' /tmp/publishing-schema.json
           grep -Fq 'trg_marketing_publication_plan_insert_scheduled' /tmp/publishing-schema.json
           grep -Fq 'trg_marketing_publication_plan_execute' /tmp/publishing-schema.json
       - name: Bootstrap or guarded production release

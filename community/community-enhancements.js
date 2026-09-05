@@ -16,6 +16,7 @@
       'circles.title':'관심에서 시작되는 작은 공동체','circles.intro':'로그인 전에도 다양한 Circle을 먼저 둘러볼 수 있습니다. 참여하는 순간 로그인 여부를 확인합니다.',
       'people.title':'비슷해서, 또 서로 달라서 연결되는 사람들','people.intro':'로그인 전에는 관심사 기반 예시를 먼저 둘러볼 수 있습니다. 실제 회원 연결은 로그인 후 공개 범위와 상호 조건을 확인해 진행합니다.','people.empty':'아직 추천할 연결이 없습니다.',
       'channels.title':'흩어진 채널은 열어 두고, 관계는 한곳에 모읍니다','channels.intro':'다양한 채널을 먼저 살펴보고, 선택하는 순간 로그인 여부를 확인해 자연스럽게 이어집니다.',
+      'today.title':'오늘의 연결 흐름','today.intro':'Circle 2개, 함께할 사람 3명, 관련 Channel 1개를 한 흐름으로 묶었습니다.','today.privacy':'공개된 추천 신호만 사용합니다','today.circles':'오늘 볼 Circle','today.people':'함께할 사람','today.channel':'이어볼 Channel','today.allCircles':'전체 Circle 보기 →','today.allPeople':'전체 People 보기 →','today.allChannels':'전체 Channel 보기 →',
       login:'Google로 시작', logout:'로그아웃', connect:'연결 보기'
     },
     en: {
@@ -26,6 +27,7 @@
       'circles.title':'Small communities that start with interests','circles.intro':'Browse a wide range of Circles before signing in. We check your login only when you choose to participate.',
       'people.title':'People connected by what they share and how they differ','people.intro':'Before signing in, browse interest-based examples. Real member connections proceed only after login, with visibility and mutual conditions checked.','people.empty':'No connection recommendations yet.',
       'channels.title':'Keep channels open, gather relationships in one place','channels.intro':'Explore different channels first. When you choose one, we check login and continue from there.',
+      'today.title':"Today's connection flow",'today.intro':'Two Circles, three people, and one relevant Channel in one short path.','today.privacy':'Uses only disclosed recommendation signals','today.circles':'Circles for today','today.people':'People to connect with','today.channel':'Channel to continue with','today.allCircles':'View all Circles →','today.allPeople':'View all People →','today.allChannels':'View all Channels →',
       login:'Start with Google', logout:'Sign out', connect:'View connection'
     },
     'zh-CN': {
@@ -36,6 +38,7 @@
       'circles.title':'从兴趣开始的小共同体','circles.intro':'登录前也可以先浏览多样的小组。只有在参与时才确认登录状态。',
       'people.title':'因相似，也因不同而连接的人','people.intro':'登录前可先查看基于兴趣的示例。真实会员连接会在登录后确认公开范围和双方条件再进行。','people.empty':'暂时没有推荐的连接。',
       'channels.title':'频道保持开放，关系汇聚一处','channels.intro':'先浏览不同频道，选择时再确认登录并自然继续。',
+      'today.title':'今日连接路径','today.intro':'把 2 个小组、3 位伙伴和 1 个相关频道放在一条简短路径里。','today.privacy':'仅使用已公开的推荐信号','today.circles':'今天可看的小组','today.people':'可以连接的人','today.channel':'继续浏览的频道','today.allCircles':'查看全部小组 →','today.allPeople':'查看全部伙伴 →','today.allChannels':'查看全部频道 →',
       login:'使用 Google 开始', logout:'退出登录', connect:'查看连接'
     },
     ja: {
@@ -46,6 +49,7 @@
       'circles.title':'関心から始まる小さなコミュニティ','circles.intro':'ログイン前でも多様なサークルを先に見られます。参加するときにログイン状態を確認します。',
       'people.title':'似ているから、違うから、つながる人たち','people.intro':'ログイン前は関心ベースの例を閲覧できます。実際の会員同士の接続はログイン後、公開範囲と相互条件を確認して進めます。','people.empty':'まだおすすめのつながりはありません。',
       'channels.title':'チャンネルは開いたまま、関係は一か所へ','channels.intro':'さまざまなチャンネルを先に見て、選んだときにログインを確認して続けます。',
+      'today.title':'今日のつながりフロー','today.intro':'Circle 2件、人 3人、関連Channel 1件をひとつの短い流れにまとめました。','today.privacy':'公開済みの推薦シグナルだけを使います','today.circles':'今日見るCircle','today.people':'つながる人','today.channel':'続けて見るChannel','today.allCircles':'すべてのCircleを見る →','today.allPeople':'すべてのPeopleを見る →','today.allChannels':'すべてのChannelを見る →',
       login:'Googleで始める', logout:'ログアウト', connect:'つながりを見る'
     },
   };
