@@ -29,9 +29,11 @@ test('provider policy exposes public routing state and super-admin management on
 });
 
 test('admin asset preserves maintenance controls and adds login provider settings', async () => {
-  const [ui, shell, build] = await Promise.all([
+  const [ui, shell, demand, menu, build] = await Promise.all([
     read('admin-public-site-controls.js'),
     read('admin-authenticated-shell.js'),
+    read('admin-demand-loader.js'),
+    read('admin-menu-layout.js'),
     read('scripts/build.mjs')
   ]);
   assert.match(ui, /임시페이지 설정/);
@@ -40,5 +42,10 @@ test('admin asset preserves maintenance controls and adds login provider setting
   assert.match(ui, /현재 기본값은 Google 단일 로그인/);
   assert.match(ui, /\/api\/admin\/auth\/providers/);
   assert.match(shell, /admin-public-site-controls\.js/);
+  assert.match(shell, /__EKODIAdminScriptLoads/);
+  assert.match(demand, /'public-site-controls':\s*\{/);
+  assert.match(demand, /scripts:\s*\['admin-public-site-controls\.js'\]/);
+  assert.match(demand, /__EKODIAdminScriptLoads/);
+  assert.match(menu, /\['public-site-controls','public-site-controls'\]/);
   assert.match(build, /admin-public-site-controls\.js/);
 });
