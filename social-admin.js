@@ -45,16 +45,17 @@
     if (!token()) return;
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
-    if (!nav || !content || document.querySelector('[data-section="social"]')) return;
+    if (!nav || !content || content.querySelector('[data-panel~="social"]')) return;
 
-    const navButton = el('button', '', 'nav');
-    navButton.type = 'button'; navButton.dataset.section = 'social';
-    navButton.append(document.createTextNode('◉ '), el('span', 'Social'));
-    const placeholder = nav.querySelector('[data-lazy-section="social"]');
-    const communication = nav.querySelector('[data-section="communication"]');
-    if (placeholder) placeholder.insertAdjacentElement('beforebegin', navButton);
-    else if (communication) communication.insertAdjacentElement('afterend', navButton);
-    else nav.append(navButton);
+    let navButton = nav.querySelector('[data-section="social"], [data-lazy-section="social"]');
+    if (!navButton) {
+      navButton = el('button', '', 'nav');
+      navButton.type = 'button'; navButton.dataset.section = 'social';
+      navButton.append(document.createTextNode('◉ '), el('span', 'Social'));
+      const communication = nav.querySelector('[data-section="communication"]');
+      if (communication?.parentElement) communication.insertAdjacentElement('afterend', navButton);
+      else nav.append(navButton);
+    }
 
     const section = el('section', '', 'section social-admin hidden-panel');
     section.dataset.panel = 'social'; section.id = 'socialAdmin';

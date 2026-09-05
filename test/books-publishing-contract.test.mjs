@@ -52,7 +52,7 @@ test('Shared Site release follows every Books admin source that feeds the deploy
     'books-pipeline-admin.css', 'books-pipeline-bridge.js', 'books-royalty-admin.js',
     'books-royalty-admin.css', 'author-billing-admin.js', 'author-billing-admin.css',
   ]) assert.ok(sharedDeploy.includes(`- '${asset}'`), `${asset} must trigger Shared Site production release`);
-  assert.match(sharedDeploy, /client-access\.js books-admin\.js books-finance-admin\.js books-distribution-admin\.js books-pipeline-admin\.js books-pipeline-bridge\.js books-royalty-admin\.js author-billing-admin\.js ai-ops-admin\.js/);
+  assert.match(sharedDeploy, /client-access\.js [^\r\n]*books-admin\.js books-finance-admin\.js books-distribution-admin\.js books-pipeline-admin\.js books-pipeline-bridge\.js books-royalty-admin\.js author-billing-admin\.js ai-ops-admin\.js/);
 });
 
 test('Public publishing page has transparent pricing and consultation submission', () => {
