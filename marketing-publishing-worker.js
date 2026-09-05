@@ -5,6 +5,7 @@ import { exchangeYoutubeCode, listYoutubeChannels, uploadYoutubeVideo, youtubeAu
 import { channelAutomationActor, resolveChannelAutomationSubject } from './channel-automation-subject.js';
 import { automationEntitlement, listAutomationProfiles, upsertAutomationProfile } from './channel-automation-runtime.js';
 import { disconnectManagedConnection, handleYoutubeCallback, listManagedConnections, managedCredential, selectYoutubeConnection, startYoutubeConnection, youtubeConnectionReady } from './channel-oauth-control.js';
+import { channelServiceBridgeReady, channelServiceBridgeSchemaReady, listServiceChannels, scheduleServiceYoutube } from './channel-service-bridge.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -487,9 +488,22 @@ export default {
     const corsInfo = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
     if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-publish-api.ekodi.kr',307);
-    const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env);
-    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
+    const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env), serviceBridgeSchema=await channelServiceBridgeSchemaReady(env);
+    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,channelServiceBridgeSchema:serviceBridgeSchema,channelServiceBridgeConfigured:channelServiceBridgeReady(env),scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
     if (!baseReady) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
+    if (url.pathname.startsWith('/v1/internal/')) {
+      if (!automationReady || !serviceBridgeSchema) return json(request,env,{error:'CHANNEL_SERVICE_BRIDGE_NOT_READY'},503);
+      if (url.pathname === '/v1/internal/channels' && request.method === 'GET') {
+        const result = await listServiceChannels(request,env);
+        return json(request,env,result.body,result.status);
+      }
+      if (url.pathname === '/v1/internal/youtube/schedule' && request.method === 'POST') {
+        if (String(env.ALLOW_MUTATIONS || 'true') === 'false') return json(request,env,{error:'STAGING_READ_ONLY'},403);
+        try { const result = await scheduleServiceYoutube(request,env); return json(request,env,result.body,result.status); }
+        catch(error){ console.error('Channel service schedule',error); return json(request,env,{error:error?.code||'CHANNEL_SERVICE_SCHEDULE_FAILED'},error?.status||500); }
+      }
+      return json(request,env,{error:'NOT_FOUND'},404);
+    }
     if (url.pathname === '/oauth/youtube/callback' && request.method === 'GET') {
       if (String(env.ALLOW_MUTATIONS || 'true') === 'false') return json(request,env,{error:'STAGING_READ_ONLY'},403);
       if (!automationReady) return json(request,env,{error:'CHANNEL_SCHEMA_NOT_READY'},503);
