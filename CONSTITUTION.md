@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.7.0
+# EKODI Platform Constitution v1.8.0
 
 Effective: 2026-09-05
 
@@ -24,6 +24,18 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - The same capability may have more than one compatible implementation, including an EKODI implementation and one or more external implementations. User choice, workspace policy or EKODI Orchestrator policy may select or combine compatible implementations within authorization, privacy, quality, cost, availability and safety constraints.
 - External implementations never gain direct private database access merely by implementing a capability contract. They receive the minimum purpose-bound projection and capability-scoped authorization required for the task.
 - Machine-readable architecture authority is `governance/architecture/ekodi-os-architecture.json`; `platform-boundaries.json` remains the deployment-boundary registry and does not by itself define responsibility ownership.
+
+## 1B. Sovereign Autonomous Operations Constitution
+- EKODI v1.8 uses the operating hierarchy **Sovereign → Autonomous → Agentic → Services**. This is an operating-architecture upgrade, not a constitutional promotion beyond Generation 2 or S0.
+- Sovereign authority owns constitution, identity, policy, authorization, audit and final control authority. AI, providers and services never become sovereign actors.
+- Every autonomous execution resolves the canonical authority context **Person + Workspace + Role + Capability**. Missing context permits analysis but not implicit execution authority.
+- Autonomous Operations follow **Observe → Detect → Reason → Plan → Execute → Verify → Recover → Learn**. Execution is never complete until verification succeeds; failed verification enters recovery or a safe degraded state.
+- Learning may propose better policy, routing, capacity or automation, but it may not expand its own authority, bypass a human gate or silently change constitutional policy.
+- UI, Service, Tenant, Knowledge, Content and Agent are the six parallel surface tracks. Green work is parallel-safe when delegated, reversible, audited and preflight-verified. Yellow work additionally requires an explicit contract, rollback and verification definition. Red Sovereign/Core work requires independent human authority and governed promotion.
+- Auth, identity authority, core schema, gateway, policy, secrets, production deployment, production DNS, destructive data operations, permission expansion and constitutional changes are Red areas by default.
+- Production application mutation remains verified immutable promotion only. Agent task workspaces may prepare and verify candidates but may not directly mutate production.
+- Shared-before-dedicated, capability-first reuse and no-speculative-scale remain binding. v1.8 does not justify infrastructure expansion without measured demand, sustainable funding or a documented security/legal/reliability requirement.
+- Machine-readable authority is `governance/architecture/sovereign-autonomous-operations.v1.json`; cross-cutting surface policy is `config/sovereign-surface-policy.json`.
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
