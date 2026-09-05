@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "scripts/diagnose-cloudflare-usage.mjs"
+      - "scripts/cloudflare-usage-product-metrics.mjs"
       - "traffic-intelligence.js"
       - ".github/workflows/cloudflare-usage-root-cause-diagnose.yml"
 
@@ -37,11 +38,12 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/diagnose-cloudflare-usage.mjs
+          node --check scripts/cloudflare-usage-product-metrics.mjs
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$CLOUDFLARE_DEVELOPMENT_API_TOKEN"
           test "$CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
-          ! grep -Eq '(wrangler[[:space:]].*(deploy|delete)|curl[^\n]*-X[[:space:]]*(PUT|POST|PATCH|DELETE)[^\n]*/workers/scripts)' scripts/diagnose-cloudflare-usage.mjs
+          ! grep -Eq '(wrangler[[:space:]].*(deploy|delete)|curl[^\n]*-X[[:space:]]*(PUT|POST|PATCH|DELETE)[^\n]*/workers/scripts)' scripts/diagnose-cloudflare-usage.mjs scripts/cloudflare-usage-product-metrics.mjs
 
       - name: Diagnose five Cloudflare usage root causes
         shell: bash

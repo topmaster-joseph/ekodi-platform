@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import { classifyTrafficUserAgent } from '../traffic-intelligence.js';
+import { collectProductUsage } from './cloudflare-usage-product-metrics.mjs';
 
 const cfApi = 'https://api.cloudflare.com/client/v4';
 const prod = {
@@ -66,17 +67,20 @@ async function workerUsage(account, window) {
   const scripts = new Map();
   for (const row of rows) {
     const name = String(row?.dimensions?.scriptName || 'unknown');
-    if (!scripts.has(name)) scripts.set(name, { script:name, requests:0, subrequests:0, errors:0, cpuP99:0 });
+    if (!scripts.has(name)) scripts.set(name, { script:name, requests:0, subrequests:0, errors:0, cpuP99:0, statuses:{} });
     const item = scripts.get(name);
     item.requests += Number(row?.sum?.requests || 0);
     item.subrequests += Number(row?.sum?.subrequests || 0);
     item.errors += Number(row?.sum?.errors || 0);
     item.cpuP99 = Math.max(item.cpuP99, Number(row?.quantiles?.cpuTimeP99 || 0));
+    const status = String(row?.dimensions?.status || 'unknown');
+    item.statuses[status] = (item.statuses[status] || 0) + Number(row?.sum?.requests || 0);
   }
   const list = [...scripts.values()].map(item => ({
     ...item,
     subrequestRatio:safeRatio(item.subrequests, item.requests),
     errorPercent:pct(item.errors, item.requests),
+    nonOkStatuses:Object.entries(item.statuses || {}).filter(([status]) => status !== 'ok' && status !== 'unknown').sort((a,b)=>b[1]-a[1]),
   })).sort((a,b) => b.requests - a.requests);
   return {
     requests:list.reduce((sum, item) => sum + item.requests, 0),
@@ -159,7 +163,7 @@ async function schedulePressure(account, scripts) {
   return rows;
 }
 
-function accountSummary(account, usage, zones, traffic, schedules) {
+function accountSummary(account, usage, zones, traffic, schedules, products) {
   const totalZoneRequests = traffic.reduce((sum,row)=>sum+row.requests,0);
   const botRequests = traffic.reduce((sum,row)=>sum+row.botRequests,0);
   const internalRequests = traffic.reduce((sum,row)=>sum+row.internalRequests,0);
@@ -186,7 +190,7 @@ function accountSummary(account, usage, zones, traffic, schedules) {
   return {
     label:account.label,
     accountIdMasked:account.accountId ? `${account.accountId.slice(0,4)}...${account.accountId.slice(-4)}` : '',
-    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, traffic,
+    workers:{ ...usage, top:usage.scripts.slice(0,15) }, products, zones:zones.map(zone=>zone.name), topHosts, traffic,
     signals:{
       bot:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, requests:botRequests, percent:pct(botRequests,totalZoneRequests), severity:uaAvailableZones>0 ? severity(pct(botRequests,totalZoneRequests),30,60) : 'unknown' },
       loopRetry:{ maxSubrequestRatio:worstSubrequest?.subrequestRatio || 0, script:worstSubrequest?.script || '', severity:severity(worstSubrequest?.subrequestRatio || 0,3,8) },
@@ -203,35 +207,79 @@ function icon(level) {
   if (level === 'unknown') return '[N/A]';
   return '[OK]';
 }
+function fmt(value) {
+  return Number(value || 0).toLocaleString('en-US');
+}
+function ratioText(numerator, denominator) {
+  if (!denominator) return numerator ? 'n/a (DEV=0)' : '0x';
+  return `${safeRatio(numerator, denominator)}x`;
+}
+function productMetric(product, key) {
+  return product?.available ? fmt(product[key]) : 'N/A';
+}
+function workerStatusText(item) {
+  const values = item?.nonOkStatuses || [];
+  return values.length ? values.slice(0,3).map(([status,count])=>`${status}:${fmt(count)}`).join(', ') : 'none';
+}
+function topD1Text(product) {
+  if (!product?.available) return `N/A (${product?.warning || 'analytics unavailable'})`;
+  const top = product.databases?.[0];
+  if (!top) return '0 rows read';
+  return `${fmt(top.rowsRead)} rows at ${top.database} (${fmt(top.rowsReadPerReadQuery)} rows/read query)`;
+}
+function topKVText(product) {
+  if (!product?.available) return `N/A (${product?.warning || 'analytics unavailable'})`;
+  return (product.actions || []).slice(0,4).map(row=>`${row.action}:${fmt(row.requests)}`).join(', ') || 'none';
+}
+function topR2Text(product) {
+  if (!product?.available) return `N/A (${product?.warning || 'analytics unavailable'})`;
+  return (product.operations || []).slice(0,4).map(row=>`${row.bucket}/${row.action}/${row.status}:${fmt(row.requests)}`).join(', ') || 'none';
+}
 function markdown(report) {
   const lines = [
-    '# EKODI Cloudflare Usage Root Cause Diagnose',
+    '# EKODI Cloudflare Usage Root Cause Diagnose v2',
     '',
-    `Window: ${report.window.start} -> ${report.window.end}`,
+    `Worker/R2 window: ${report.window.start} -> ${report.window.end}`,
+    'D1/KV/Durable Objects use Cloudflare calendar-date analytics covering the UTC dates touched by that window.',
     '',
-    '| Account | Worker requests | Bot | Max subrequest/request | Cache pressure | Health | Boundary |',
-    '|---|---:|---:|---:|---:|---:|---|',
+    '| Account | Worker requests | D1 rows read | KV ops | R2 ops | DO invocations | Bot | Boundary |',
+    '|---|---:|---:|---:|---:|---:|---:|---|',
   ];
   for (const row of report.accounts) {
     const s = row.signals;
-    lines.push(`| ${row.label} | ${row.workers.requests} | ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.percent}%` : 'N/A'} | ${icon(s.loopRetry.severity)} ${s.loopRetry.maxSubrequestRatio}x | ${icon(s.cache.severity)} ${s.cache.available ? `${s.cache.pressurePercent}%` : 'N/A'} | ${icon(s.cronHealth.severity)} ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthPercent}%` : 'N/A'} | ${icon(s.boundary.severity)} internal ${s.boundary.available ? `${s.boundary.internalPercent}%` : 'N/A'} |`);
+    lines.push(`| ${row.label} | ${fmt(row.workers.requests)} | ${productMetric(row.products?.d1,'rowsRead')} | ${productMetric(row.products?.kv,'requests')} | ${productMetric(row.products?.r2,'requests')} | ${productMetric(row.products?.durableObjects,'requests')} | ${s.bot.available ? `${s.bot.percent}%` : 'N/A'} | ${s.boundary.available ? `${s.boundary.devToProdSuspectRequests} suspect` : 'N/A'} |`);
+  }
+  const prodRow = report.accounts.find(row=>row.label==='PROD');
+  const devRow = report.accounts.find(row=>row.label==='DEV');
+  if (prodRow && devRow) {
+    lines.push('', '## PROD / DEV ratios', '', '| Metric | Ratio |', '|---|---:|',
+      `| Worker requests | ${ratioText(prodRow.workers.requests,devRow.workers.requests)} |`,
+      `| D1 rows read | ${ratioText(prodRow.products?.d1?.rowsRead,devRow.products?.d1?.rowsRead)} |`,
+      `| KV operations | ${ratioText(prodRow.products?.kv?.requests,devRow.products?.kv?.requests)} |`,
+      `| R2 operations | ${ratioText(prodRow.products?.r2?.requests,devRow.products?.r2?.requests)} |`,
+      `| Durable Object invocations | ${ratioText(prodRow.products?.durableObjects?.requests,devRow.products?.durableObjects?.requests)} |`);
   }
   lines.push('', '## Five checks');
   for (const row of report.accounts) {
     const s = row.signals;
+    const d1 = row.products?.d1;
+    const kv = row.products?.kv;
+    const r2 = row.products?.r2;
+    const durable = row.products?.durableObjects;
+    const worst = row.workers.scripts.find(item=>item.script===s.loopRetry.script) || row.workers.top?.[0];
     lines.push('', `### ${row.label}`,
-      `1. Bot: ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.requests} requests (${s.bot.percent}%)` : 'analytics unavailable'} | zones ${s.bot.coverage}` ,
-      `2. Worker loop/retry: ${icon(s.loopRetry.severity)} max ${s.loopRetry.maxSubrequestRatio} subrequests/request at \`${s.loopRetry.script || 'n/a'}\``,
-      `3. Cache: ${icon(s.cache.severity)} ${s.cache.available ? `hit ${s.cache.hitPercent}%, pressure ${s.cache.pressurePercent}%` : 'analytics field unavailable'} | zones ${s.cache.coverage}`,
-      `4. Cron/Health: ${icon(s.cronHealth.severity)} health ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthRequests} (${s.cronHealth.healthPercent}%)` : 'analytics unavailable'} | zones ${s.cronHealth.coverage}, scheduled top scripts ${s.cronHealth.scheduledScripts}, every-minute ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}`,
-      `5. DEV->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'} | zones ${s.boundary.coverage}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
+      `1. Workers: ${fmt(row.workers.requests)} requests, ${safeRatio(row.workers.subrequests,row.workers.requests)} subrequests/request overall; max ${s.loopRetry.maxSubrequestRatio}x at \`${s.loopRetry.script || 'n/a'}\`; invocation errors ${fmt(row.workers.errors)}. Top non-ok statuses: ${workerStatusText(worst)}.`,
+      `2. D1: ${d1?.available ? `${fmt(d1.rowsRead)} rows read / ${fmt(d1.readQueries)} read queries / ${fmt(d1.rowsWritten)} rows written. Top database: ${topD1Text(d1)}.` : topD1Text(d1)}`,
+      `3. KV/R2/DO: KV ${kv?.available ? `${fmt(kv.requests)} ops (${topKVText(kv)})` : topKVText(kv)}; R2 ${r2?.available ? `${fmt(r2.requests)} ops, ${fmt(r2.errorRequests)} error ops (${topR2Text(r2)})` : topR2Text(r2)}; Durable Objects ${durable?.available ? `${fmt(durable.requests)} invocations` : `N/A (${durable?.warning || 'analytics unavailable'})`}. Edge cache pressure ${s.cache.available ? `${s.cache.pressurePercent}%` : 'N/A'}.`,
+      `4. Bots/Cron/Health: bots ${s.bot.available ? `${fmt(s.bot.requests)} (${s.bot.percent}%)` : 'N/A'} across zones ${s.bot.coverage}; health ${s.cronHealth.healthAvailable ? `${fmt(s.cronHealth.healthRequests)} (${s.cronHealth.healthPercent}%)` : 'N/A'}; every-minute schedules ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}.`,
+      `5. DEV->PROD boundary: suspect requests ${fmt(s.boundary.devToProdSuspectRequests)}, internal ${s.boundary.available ? `${fmt(s.boundary.internalRequests)} (${s.boundary.internalPercent}%)` : 'N/A'}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}.`,
       '', 'Top Workers:',
-      ...row.workers.top.slice(0,10).map(item => `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | cpuP99 raw ${item.cpuP99} | \`${item.script}\``),
+      ...row.workers.top.slice(0,10).map(item => `- ${fmt(item.requests)} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | status ${workerStatusText(item)} | cpuP99 raw ${item.cpuP99} | \`${item.script}\``),
       '', 'Top Hosts (covered Zone Analytics):',
-      ...(row.topHosts.length ? row.topHosts.slice(0,10).map(item=>'- '+item.requests+' requests | '+item.host+'') : ['- n/a'])
+      ...(row.topHosts.length ? row.topHosts.slice(0,10).map(item=>`- ${fmt(item.requests)} requests | ${item.host}`) : ['- n/a'])
     );
   }
-  lines.push('', '> This report is read-only. Warning thresholds are diagnostic signals, not automatic blocking rules.');
+  lines.push('', '> This report is read-only. Product analytics availability depends on token permissions and dataset availability. Calendar-date datasets are not treated as exact 24-hour counters.');
   return `${lines.join('\n')}\n`;
 }
 
@@ -242,15 +290,18 @@ async function inspect(account, window) {
   try { zones = await activeZones(account); } catch {}
   const traffic = [];
   for (const zone of zones) traffic.push(await zoneTraffic(account, zone, window));
-  const schedules = await schedulePressure(account, usage.scripts);
-  return accountSummary(account, usage, zones, traffic, schedules);
+  const [schedules, products] = await Promise.all([
+    schedulePressure(account, usage.scripts),
+    collectProductUsage(account, window, gql, cf),
+  ]);
+  return accountSummary(account, usage, zones, traffic, schedules, products);
 }
 
 async function main() {
   const window = windowUtc();
   const accounts = [];
   for (const account of [prod, dev]) accounts.push(await inspect(account, window));
-  const report = { schemaVersion:1, generatedAt:new Date().toISOString(), window, accounts };
+  const report = { schemaVersion:2, generatedAt:new Date().toISOString(), window, accounts };
   await fs.writeFile(outputJson, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   await fs.writeFile(outputMd, markdown(report), 'utf8');
   console.log(markdown(report));
