@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
   <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
+  <link rel="stylesheet" href="/personal-finance.css?v=20260905-personal-finance-1">
 </head>
 <body data-ekodi-ui="USER">
   <header class="topbar">
     <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">내 에코디</a><a href="/journey/">나의 여정</a><a href="#account">내 정보</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">내 에코디</a><a href="#money">나의 재무</a><a href="/journey/">나의 여정</a><a href="#account">내 정보</a></nav>
     <button id="authButton" class="ghost" type="button">Google로 시작</button>
   </header>
 
@@ -47,8 +48,13 @@
     <section class="intent-shelf" aria-label="관심 시작점">
       <div><p class="eyebrow">START FROM NEED</p><h2>지금 무엇이 필요하세요?</h2><p>기능 이름을 먼저 알 필요는 없습니다. 관심을 보인 영역만 My EKODI가 다음 단계로 꺼내 보여줍니다.</p></div>
       <div class="intent-actions">
-        <button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-intent-service="marketing">알리기</button>
+        <button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
       </div>
+    </section>
+
+    <section id="money" class="section finance-section">
+      <div class="section-head finance-heading"><div><p class="eyebrow">PERSONAL FINANCE · PRIVATE LEDGER</p><h2>나의 재무</h2><p>자산·부채·거래를 실제 데이터로 정리하고, 근거가 연결된 제안만 받습니다. 개인재무 원장은 다른 Workspace와 분리되며 금융 실행은 자동으로 이루어지지 않습니다.</p></div><span id="financeStatus" class="finance-status">로그인 확인 중</span></div>
+      <div id="personalFinanceApp" aria-live="polite"><div class="finance-empty"><strong>개인재무를 준비하고 있습니다.</strong></div></div>
     </section>
 
     <section id="journey-preview" class="section soft-section" data-progressive-services="work,edu" hidden>
@@ -121,6 +127,7 @@
   <script type="module" src="/user-ai-ui.js?v=20260904-progressive-personalization-1"></script>
   <script type="module" src="/membership-summary.js?v=20260822-universal-membership-1"></script>
   <script type="module" src="/approval-brief.js?v=20260904-approval-hub-1"></script>
+  <script type="module" src="/personal-finance.js?v=20260905-personal-finance-1"></script>
   <script type="module" src="/life-communication.js?v=20260824-life-ai-1"></script>
   <script src="/church-marketing-ai.js?v=20260827-church-marketing-1"></script>
   <script src="/channel-automation.js?v=20260903-channel-automation-1"></script>
