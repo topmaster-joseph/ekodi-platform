@@ -97,8 +97,8 @@ jobs:
             catalog_code=$(curl -sS -o /tmp/management-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/catalog" || true)
             auth_code=$(curl -sS -o /tmp/management-auth.json -w '%{http_code}' -H 'content-type: application/json' -d '{"tokenHash":"test","type":"email"}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/auth/exchange" || true)
             if [[ "$root_code" == "200" && "$config_code" == "200" && "$catalog_code" == "200" && "$auth_code" == "503" ]] \
-              && grep -Fq '경영플랫폼' /tmp/management.html \
-              && grep -Fq '로그인 전에는 서비스 안내만 제공합니다' /tmp/management.html \
+              && grep -Fq '<p class="eyebrow">MANAGEMENT PLATFORM</p>' /tmp/management.html \
+              && grep -Fq 'id="guestGuide"' /tmp/management.html \
               && grep -Fq '"mode":"isolated-staging"' /tmp/management-config.js \
               && grep -Fq '"executionEnabled":false' /tmp/management-config.js \
               && grep -Fq '"guestMode":"guide-only"' /tmp/management-catalog.json \
