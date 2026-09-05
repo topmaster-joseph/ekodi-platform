@@ -1,0 +1,133 @@
+name: Deploy CGMA Apex Edge
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-cgma-apex-edge.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-cgma-apex-edge.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ekodi-cgma-apex-edge-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
+  CGMA_SOURCE_REF: '609aac9863aee2fd85103b0774dc11061e576f1c'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate EKODI constitution and deployment ownership
+        run: |
+          set -euo pipefail
+          node scripts/validate-constitution.mjs
+          node scripts/validate-deployment-guardrails.mjs
+      - name: Checkout pinned CGMA edge source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/cheonggye-market
+          ref: ${{ env.CGMA_SOURCE_REF }}
+          path: cgma-source
+          persist-credentials: false
+      - name: Validate CGMA edge contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C cgma-source rev-parse HEAD)" = "$CGMA_SOURCE_REF"
+          cd cgma-source
+          node --check cgma-root-gateway.js
+          node verify-root-gateway.mjs
+          node verify-canonical.mjs
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.cgma-root-gateway.toml
+          grep -Fq 'binding = "EKODI_SHARED"' wrangler.cgma-root-gateway.toml
+          grep -Fq 'service = "shy-thunder-39a4"' wrangler.cgma-root-gateway.toml
+
+  production:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/cheonggye-market
+          ref: ${{ env.CGMA_SOURCE_REF }}
+          path: cgma-source
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify EKODI Production account boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test "$CLOUDFLARE_ACCOUNT_ID" = '6986fd633f4e33bf804c921697b2d797'
+          test "$(git -C cgma-source rev-parse HEAD)" = "$CGMA_SOURCE_REF"
+      - name: Verify CGMA Pages upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_upstream() {
+            local url="$1" needle="$2" body
+            body=$(mktemp)
+            curl -fsSL --max-redirs 6 --max-time 20 -o "$body" "$url"
+            grep -Fq "$needle" "$body"
+            rm -f "$body"
+          }
+          check_upstream 'https://cheonggye-market.pages.dev/' 'OFFICIAL ARCHIVE'
+          check_upstream 'https://cheonggye-market.pages.dev/admin' 'ADMIN CONSOLE'
+          check_upstream 'https://cheonggye-market.pages.dev/member-admin' 'MEMBERSHIP REVIEW'
+          check_upstream 'https://cheonggye-market.pages.dev/api/resources' '"items"'
+      - name: Deploy CGMA apex edge with central Production authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd cgma-source
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.cgma-root-gateway.toml
+      - name: Verify CGMA edge production
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_cgma() {
+            local path="$1" needle="$2" code
+            for attempt in $(seq 1 18); do
+              code=$(curl -sS -L --max-redirs 6 -D /tmp/cgma.headers -o /tmp/cgma.body -w '%{http_code}' --max-time 20 "https://ekodi.kr${path}?edge_release=${GITHUB_SHA}" || true)
+              if [[ "$code" == '200' ]] && grep -Fq "$needle" /tmp/cgma.body && grep -Fiq 'x-ekodi-route: cgma-root-gateway' /tmp/cgma.headers; then
+                echo "CGMA edge verified: ${path}"
+                return 0
+              fi
+              sleep 4
+            done
+            echo "CGMA edge verification failed: ${path} code=${code}"
+            return 1
+          }
+          check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요'
+          check_cgma '/cgma/admin' 'ADMIN CONSOLE'
+          check_cgma '/cgma/member-admin' 'MEMBERSHIP REVIEW'
+          check_cgma '/cgma/api/resources' '"items"'
+      - name: Dispatch current EKODI Shared Site guarded release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-site-core.yml/dispatches" -f ref=main
+          echo 'CGMA apex edge is live. Dispatched current-main Shared Site guarded release.'
