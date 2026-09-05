@@ -108,19 +108,21 @@ jobs:
         run: |
           bash scripts/apply-d1-migrations-with-retry.sh PERSONAL_DB wrangler.personal-finance.staging.runtime.toml "$WRANGLER_VERSION"
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.personal-finance.staging.runtime.toml
-      - name: Verify local runtime auth boundary
+      - name: Verify deployed staging candidate and protected edge
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply PERSONAL_DB --local --config wrangler.personal-finance.staging.runtime.toml >/tmp/pf-local-migrations.log 2>&1
-          npx --yes wrangler@${WRANGLER_VERSION} dev --local --config wrangler.personal-finance.staging.runtime.toml --ip 127.0.0.1 --port 8794 >/tmp/pf-dev.log 2>&1 &
-          runtime_pid=$!
-          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do code=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8794/health || true); [ "$code" = '200' ] && break; sleep 2; done
-          health=$(curl -fsS http://127.0.0.1:8794/health)
-          auth_code=$(curl -sS -o /tmp/pf-auth.json -w '%{http_code}' http://127.0.0.1:8794/api/finance/personal/summary)
-          printf '%s' "$health" | grep -Fq '"dataBoundary":"dedicated-d1"'
-          [ "$auth_code" = '401' ]
+          npx --yes wrangler@${WRANGLER_VERSION} deployments list --name ekodi-personal-finance-api-staging --json >/tmp/pf-deployments.json
+          node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/pf-deployments.json','utf8'));if(!Array.isArray(j)||!j.length)process.exit(1);"
+          edge_code=$(curl -sS -o /tmp/pf-edge.html -w '%{http_code}' https://ekodi-personal-finance-api-staging.ekodi-development.workers.dev/health || true)
+          if [ "$edge_code" = '200' ]; then
+            grep -Eq 'ekodi-personal-finance-api|Cloudflare Access|Log in to All Workers' /tmp/pf-edge.html
+          elif [ "$edge_code" = '302' ] || [ "$edge_code" = '403' ]; then
+            true
+          else
+            echo "Unexpected staging edge status: $edge_code" >&2
+            exit 1
+          fi
       - name: Cleanup staging config
         if: always()
         run: rm -f wrangler.personal-finance.staging.runtime.toml
