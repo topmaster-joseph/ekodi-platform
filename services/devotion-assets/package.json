@@ -1,0 +1,9 @@
+{
+  "name": "@ekodi/devotion-assets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-neutral asset storage and resolution service for devotional production.",
+  "scripts": {"start":"node src/server.js","test":"node --test test/*.test.mjs"},
+  "engines": {"node":">=20"}
+}

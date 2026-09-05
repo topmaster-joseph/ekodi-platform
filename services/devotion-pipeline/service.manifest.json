@@ -1,0 +1,39 @@
+{
+  "service_id": "ekodi.devotion-pipeline",
+  "display_name": "EKODI Devotion Pipeline",
+  "version": "0.1.0",
+  "scope": "shared-independent-service",
+  "tenant_neutral": true,
+  "role": "orchestrator",
+  "identity_key": ["workspace_id", "batch_key", "item_id", "render_version"],
+  "flow": [
+    "script -> Devotion Voice synthesis (WAV bytes)",
+    "voice WAV bytes -> Devotion Assets store (voice asset)",
+    "render request -> Devotion Renderer",
+    "render result metadata -> Devotion Assets store (result record)"
+  ],
+  "adapters": {
+    "voice": "replaceable (default: HTTP adapter to ekodi.devotion-voice)",
+    "assets": "replaceable (default: HTTP adapter to ekodi.devotion-assets)",
+    "renderer": "replaceable (default: HTTP adapter to ekodi.devotion-renderer.ffmpeg)"
+  },
+  "guarantees": [
+    "replays are logically idempotent per (workspace_id, batch_key, item_id, render_version)",
+    "two workspace_ids never collide because every downstream call is namespaced by workspace_id",
+    "fails closed with an explicit error code when any composed service is disconnected"
+  ],
+  "error_codes": [
+    "PIPELINE_VOICE_DISCONNECTED",
+    "PIPELINE_ASSET_STORE_DISCONNECTED",
+    "PIPELINE_RENDERER_DISCONNECTED"
+  ],
+  "forbidden_core_dependencies": [
+    "specific workspace names",
+    "specific church or mission names",
+    "YouTube publishing",
+    "Google Drive folder IDs",
+    "EKODI admin authentication",
+    "Gemini SDK",
+    "FFmpeg binary"
+  ]
+}

@@ -1,38 +1,50 @@
 # EKODI Daily Devotional Automation
 
 ## Goal
-Turn a monthly Bible-reading plan into independently written 30-second devotional videos, package each master for EKODI Church and EKODI Mission, retain durable artifacts in Shared Drive EKODI, and schedule each variant on its assigned YouTube channel.
+Turn a monthly Bible-reading plan into independently written 30-second devotional videos, package each master for one or more publication targets, retain durable artifacts, and schedule publication without making the engine belong to a particular church, mission organization, workspace, or admin page.
 
-## Control plane
-`admin.ekodi.kr` exposes **AI·자동화 → 매일묵상**. The panel shows source passages, render state, channel connection state, scheduled/published state, and failures. A disconnected provider must be shown as disconnected rather than simulated as complete.
+## Independent service
+The production engine is `ekodi.devotion-studio`, developed under `services/devotion-studio/` with its own manifest, tests, HTTP interface, and replaceable adapters.
+
+EKODI Church and EKODI Mission are **integration targets**, not owners of the service. Their current September connection package lives under `integrations/devotion-studio/`, outside the service core.
+
+## Platform control plane
+`admin.ekodi.kr` exposes **AI·자동화 → 매일묵상**, but the panel is only a management client. The platform endpoint `/api/control/devotional` authenticates the EKODI administrator and proxies commands to Devotion Studio.
+
+The platform adapter must not own devotional database tables, FFmpeg execution, YouTube channel credentials, or provider-specific persistence.
 
 ## Runtime flow
-1. Seed monthly passages into D1 operational state.
-2. Produce an original devotional script from the Bible passage. QTIN commentary is not copied.
-3. Dispatch a render job to the external FFmpeg render node.
-4. Render a 1080x1920, 30fps, H.264/AAC master and channel end cards.
-5. Persist retained scripts, metadata, and final video artifacts through the EKODI Storage Gateway into Shared Drive EKODI.
-6. Upload channel variants as private YouTube videos and set `publishAt` for scheduled publication.
-7. Record YouTube video IDs, URLs, publication state, and retry state in the operational database.
+1. Admin submits or selects a monthly passage batch.
+2. The platform adapter sends the generic batch to Devotion Studio with an immutable `workspace_id`.
+3. Devotion Studio produces/coordinates original scripts and render jobs through replaceable adapters.
+4. A renderer adapter dispatches FFmpeg work. Default target remains 1080x1920, 30fps, H.264/AAC.
+5. An asset-store adapter persists retained scripts, metadata, and final media. Shared Drive EKODI can be one adapter target, not a core dependency.
+6. Publication targets are resolved through publication adapters. YouTube is the current adapter, not a mandatory core provider.
+7. Publication IDs, URLs, retry state, and failures are returned through the service contract and surfaced in admin.
 
-## Channel defaults
-- `church`: 에코디교회, 06:00 Asia/Seoul
-- `mission`: 에코디선교회, 07:00 Asia/Seoul
+## Current EKODI integration defaults
+- target `church`: 에코디교회, 06:00 Asia/Seoul
+- target `mission`: 에코디선교회, 07:00 Asia/Seoul
 
-## Server-only configuration
-- `DEVOTIONAL_RENDER_ENDPOINT`
-- `DEVOTIONAL_RENDER_KEY`
-- YouTube OAuth client credentials and refresh tokens for each channel
-- Storage Gateway credentials/bindings already governed by the EKODI storage layer
+These labels and defaults live in the EKODI integration package, not in the Devotion Studio core.
 
-Provider and OAuth secrets must never be committed or exposed to the browser.
+## Server-side platform adapter configuration
+- `DEVOTION_STUDIO_ENDPOINT`
+- `DEVOTION_STUDIO_KEY`
+- `DEVOTION_STUDIO_WORKSPACE_ID`
+- `DEVOTION_STUDIO_CHURCH_TARGET_REF`
+- `DEVOTION_STUDIO_MISSION_TARGET_REF`
+
+Provider credentials and OAuth refresh tokens must never be committed or exposed to the browser.
 
 ## Safety / reliability
-- Control endpoints require the existing EKODI administrator session.
-- Generation is disabled until a render endpoint and key are configured.
-- Channel status remains `not_connected` until OAuth is actually completed.
-- Content IDs must be idempotent per month/day/channel to prevent duplicate uploads.
-- YouTube should receive videos ahead of time with scheduled publication, so a later EKODI outage does not cancel already-scheduled releases.
+- EKODI admin control endpoints still require the existing administrator session.
+- Platform GET requests may show a disconnected management state when Devotion Studio is not connected.
+- Mutating actions fail closed until the independent service is connected.
+- Render actions fail closed until a renderer adapter reports ready.
+- Publication actions fail closed until the selected publication adapter reports ready.
+- Core records are isolated by immutable `workspace_id` and `batch_key`.
+- Idempotency must be enforced per workspace/content/publication target before production YouTube upload is enabled.
 
 ## Deployment boundary
-Cloudflare handles control/state/orchestration. FFmpeg rendering and large media upload run on a separate authorized render node or container service. This avoids pretending Cloudflare Worker runtime is a general video workstation.
+Devotion Studio must have an independent deployment lifecycle. Church, Mission, Admin, renderer, storage and YouTube adapters may all be replaced or redeployed independently. A failure or disconnect in one workspace or publication target must not stop other workspaces or the service itself.

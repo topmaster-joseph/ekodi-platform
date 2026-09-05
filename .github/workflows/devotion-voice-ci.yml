@@ -1,0 +1,33 @@
+name: Devotion Voice CI
+
+on:
+  pull_request:
+    paths:
+      - 'services/devotion-voice/**'
+      - '.github/workflows/devotion-voice-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/devotion-voice/**'
+      - '.github/workflows/devotion-voice-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate independent voice module
+        run: |
+          set -euo pipefail
+          node --check services/devotion-voice/src/wav.js
+          node --check services/devotion-voice/src/providers/gemini.js
+          node --check services/devotion-voice/src/service.js
+          node --check services/devotion-voice/src/server.js
+          node --test services/devotion-voice/test/*.test.mjs

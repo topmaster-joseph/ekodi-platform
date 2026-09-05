@@ -1,0 +1,137 @@
+name: Devotion Studio Staging
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'services/devotion-studio/**'
+      - '.github/workflows/devotion-studio-staging.yml'
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  staging:
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate independent service
+        run: |
+          set -euo pipefail
+          node --check services/devotion-studio/src/worker.js
+          node --check services/devotion-studio/src/service.js
+          node --check services/devotion-studio/src/http-handler.js
+          node --check services/devotion-studio/src/adapters/d1-repository.js
+          node --test services/devotion-studio/test/*.test.mjs
+
+      - name: Verify Cloudflare development credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Resolve isolated Devotion Studio staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-devotion-studio-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-devotion-studio-staging --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build independent staging config
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > services/devotion-studio/wrangler.staging.runtime.toml <<EOF
+          name = "ekodi-devotion-studio-staging"
+          main = "src/worker.js"
+          compatibility_date = "2026-09-01"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          SERVICE_KEY = "staging-ci-key"
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-devotion-studio-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+
+      - name: Apply independent staging migration
+        working-directory: services/devotion-studio
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.staging.runtime.toml
+
+      - name: Deploy independent Devotion Studio staging
+        working-directory: services/devotion-studio
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.staging.runtime.toml
+
+      - name: Verify deployed revision and local service contract
+        working-directory: services/devotion-studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.staging.runtime.toml --json > /tmp/devotion-studio-deployments.json
+          test -s /tmp/devotion-studio-deployments.json
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --local --config wrangler.staging.runtime.toml >/tmp/devotion-studio-local-migrations.log 2>&1
+          npx --yes wrangler@${WRANGLER_VERSION} dev --local --config wrangler.staging.runtime.toml --ip 127.0.0.1 --port 8792 > /tmp/devotion-studio-dev.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8792/v1/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/devotion-studio-dev.log; exit 1; fi
+            sleep 2
+          done
+          [ "$ready" = '1' ] || { cat /tmp/devotion-studio-dev.log; exit 1; }
+          grep -Fq '"service":"ekodi.devotion-studio"' /tmp/health.json
+
+          unauthorized=$(curl -sS -o /tmp/unauthorized.json -w '%{http_code}' -X PUT \
+            -H 'content-type: application/json' \
+            --data '{"workspace_id":"workspace-test","items":[{"id":"01","passage":"Test passage"}]}' \
+            'http://127.0.0.1:8792/v1/batches/ci-batch' || true)
+          [ "$unauthorized" = '401' ]
+
+          created=$(curl -sS -o /tmp/created.json -w '%{http_code}' -X PUT \
+            -H 'authorization: Bearer staging-ci-key' -H 'content-type: application/json' \
+            --data '{"workspace_id":"workspace-test","title":"CI batch","items":[{"id":"01","passage":"Test passage"}],"publication_targets":[{"id":"target-a","kind":"youtube","config_ref":""}]}' \
+            'http://127.0.0.1:8792/v1/batches/ci-batch' || true)
+          [ "$created" = '200' ]
+          grep -Fq '"workspace_id":"workspace-test"' /tmp/created.json
+          grep -Fq '"renderer":false' /tmp/created.json
+
+          fetched=$(curl -sS -o /tmp/fetched.json -w '%{http_code}' \
+            -H 'authorization: Bearer staging-ci-key' \
+            'http://127.0.0.1:8792/v1/batches/ci-batch?workspace_id=workspace-test' || true)
+          [ "$fetched" = '200' ]
+          grep -Fq '"batch_key":"ci-batch"' /tmp/fetched.json
+
+          render=$(curl -sS -o /tmp/render.json -w '%{http_code}' -X POST \
+            -H 'authorization: Bearer staging-ci-key' -H 'content-type: application/json' \
+            --data '{"workspace_id":"workspace-test"}' \
+            'http://127.0.0.1:8792/v1/batches/ci-batch/render' || true)
+          [ "$render" = '409' ]
+          grep -Fq '"code":"RENDERER_NOT_CONNECTED"' /tmp/render.json
+
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f services/devotion-studio/wrangler.staging.runtime.toml
