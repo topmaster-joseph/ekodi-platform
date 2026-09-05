@@ -168,10 +168,7 @@ function walk(directory) {
       for (const [from, to] of adminReplacements) source = source.split(from).join(to);
       if (relative === 'admin-lazy-features.js') source = ensureAdminScopeServices(source);
     }
-    if (source !== original) {
-      fs.writeFileSync(absolute, source);
-      changed.push(relative);
-    }
+    if (source !== original) changed.push(relative);
   }
 }
 
@@ -224,12 +221,10 @@ for (const [relative, required] of Object.entries(adminChecks)) {
   }
 }
 
+for (const relative of changed) remaining.push(`${relative}: source requires canonical display-name normalization`);
 if (remaining.length) {
-  console.error('Prefix-free display-name enforcement failed:');
+  console.error('Prefix-free display-name validation failed:');
   for (const item of [...new Set(remaining)]) console.error(`- ${item}`);
   process.exit(1);
 }
-
-console.log(changed.length
-  ? `Normalized platform/AI/admin display names in ${changed.length} source file(s): ${changed.join(', ')}`
-  : 'Platform, specialist AI and admin display names already follow the canonical prefix-free policy.');
+console.log('Platform, specialist AI and admin display names follow the canonical prefix-free policy.');

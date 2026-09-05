@@ -12,7 +12,6 @@ on:
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/community.worker.json'
       - '.github/workflows/deploy-community.yml'
-      - 'release/community-shell-20260819.marker'
   push:
     branches: [main]
     paths:
@@ -148,8 +147,7 @@ jobs:
   production:
     if: >-
       always() && needs.validate.result == 'success' &&
-      (github.event_name != 'pull_request' ||
-       (github.event.pull_request.head.ref == 'release/community-shell-20260819' && needs.staging.result == 'success'))
+      github.event_name != 'pull_request'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 20

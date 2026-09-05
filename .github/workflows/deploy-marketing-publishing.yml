@@ -125,8 +125,7 @@ jobs:
   production:
     if: >-
       always() && needs.validate.result == 'success' &&
-      (github.event_name != 'pull_request' ||
-       (github.event.pull_request.head.ref == 'release/marketing-personal-brand-20260818' && needs.staging.result == 'success'))
+      github.event_name != 'pull_request'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -142,11 +141,7 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-      - name: Apply shared D1 migrations for release-PR promotion
-        if: github.event_name == 'pull_request'
-        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-publishing.toml
       - name: Wait for shared D1 migration gate on normal production push
-        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -181,7 +176,7 @@ jobs:
           if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.marketing-publishing.toml --json > /tmp/publishing-deployments.log 2>&1; then
             node scripts/guarded-worker-release.mjs --manifest deploy/manifests/marketing-publishing.worker.json
           elif grep -Eq 'has no deployments|This Worker does not exist|does not exist on your account|code: 10007' /tmp/publishing-deployments.log; then
-            echo 'No production deployment exists; bootstrapping from PR-staging-validated source.'
+            echo 'No production deployment exists; bootstrapping from validated source.'
             npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-publishing.toml
           else
             cat /tmp/publishing-deployments.log

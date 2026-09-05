@@ -154,7 +154,8 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.marketing-domains.staging.toml --json > /tmp/staging-deployments.json
-          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.marketing-domains.staging.toml >/tmp/local-migrations.log 2>&1\n          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.marketing-domains.staging.toml --ip 127.0.0.1 --port 8793 > /tmp/marketing-domain-remote-dev.log 2>&1 &
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.marketing-domains.staging.toml >/tmp/local-migrations.log 2>&1
+          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.marketing-domains.staging.toml --ip 127.0.0.1 --port 8793 > /tmp/marketing-domain-remote-dev.log 2>&1 &
           runtime_pid=$!
           trap 'kill $runtime_pid 2>/dev/null || true' EXIT
           ready=0
