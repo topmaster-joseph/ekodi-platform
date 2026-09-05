@@ -132,7 +132,10 @@ async function menuDiagnostics(id) {
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const busy = panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
       const style = getComputedStyle(node);
-      return !node.hidden && style.display !== 'none' && style.visibility !== 'hidden';
+      return node.getAttribute('aria-hidden') !== 'true'
+        && !node.hidden
+        && style.display !== 'none'
+        && style.visibility !== 'hidden';
     }).length : 0;
     return {
       panelFound: Boolean(panel),
