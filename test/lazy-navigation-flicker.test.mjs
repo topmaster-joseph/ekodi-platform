@@ -14,4 +14,5 @@ test('demand navigation marks placeholders busy before loading and removes them 
   assert.ok(source.includes("placeholder.classList.add('is-loading')"));
   assert.ok(source.includes("placeholder.classList.remove('is-loading')"));
   assert.ok(source.includes('placeholder.disabled = false'));
+  assert.ok(source.includes("window.EKODIAdminPanels?.activate(real.dataset.section||key)"));
 });

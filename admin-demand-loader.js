@@ -247,7 +247,7 @@
         }
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
-          queueMicrotask(() => real.click());
+          queueMicrotask(()=>window.EKODIAdminPanels?.activate(real.dataset.section||key)||real.click());
         }
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
@@ -257,7 +257,7 @@
           placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
           placeholder.classList.remove('is-loading');
-          placeholder.title = '다시 눌러 로드';
+          placeholder.title = '다시 시도';
         }
       } finally {
         pending.delete(key);
