@@ -7,20 +7,22 @@ const failures = [];
 const fail = message => failures.push(message);
 const constitution = json('governance/constitution/constitution.json');
 const architecture = json('governance/architecture/ekodi-os-architecture.json');
+const evolutionModel = json('governance/architecture/ekodi-evolution-model.json');
 const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.6.1') fail('constitution version must remain 1.6.1 with approved EKODI OS architecture and Marketing user-surface/engine separation');
+if (constitution.version !== '1.7.0') fail('constitution version must remain 1.7.0 with approved sustainable 8-generation evolution policy');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
 const architectureModel = constitution.architectureModel || {};
 if (architectureModel.registry !== 'governance/architecture/ekodi-os-architecture.json') fail('constitutional architecture registry path mismatch');
 if (architectureModel.platformBoundaryRegistry !== 'platform-boundaries.json') fail('constitutional platform boundary registry path mismatch');
+if (architectureModel.evolutionRegistry !== 'governance/architecture/ekodi-evolution-model.json') fail('constitutional evolution registry path mismatch');
 if (architectureModel.deploymentTopology !== 'modular-monolith-first') fail('constitutional deployment topology must remain modular-monolith-first');
 for (const layer of ['governance','os','core','responsible-independent-service','external-connected-service','workspace']) {
   if (!architectureModel.layers?.includes(layer)) fail(`constitutional architecture layer missing: ${layer}`);
@@ -39,21 +41,45 @@ if (parallel.independentWorktreeOrSandboxPerTask !== true) fail('parallel develo
 if (parallel.sharedMutableWorkingDirectoryForbidden !== true) fail('concurrent tasks must not share a mutable working directory');
 if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protected-branch writes must be forbidden');
 if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
+
 const evolution = constitution.evolutionPolicy || {};
 if (evolution.mode !== 'verification_first_security_native_self_evolving') fail('evolution policy must remain verification-first and security-native');
 if (evolution.finalAuthority !== 'ekodi_platform_super_administrator') fail('Evolution Intelligence final authority must remain the EKODI Platform Super Administrator');
 if (evolution.providerIndependent !== true) fail('Evolution Intelligence must remain provider-independent');
 if (evolution.evidenceLinksRequiredForPublishedRecommendations !== true) fail('published Evolution recommendations must require evidence links');
 if (evolution.unsupportedRecommendationsRemainInternal !== true) fail('unsupported Evolution recommendations must remain internal');
-for (const signal of ['traffic','latency','error_rate','capacity','ai_cost','security_events']) {
+if (evolution.noSpeculativeScale !== true) fail('speculative scaling must be constitutionally forbidden');
+for (const signal of ['traffic','latency','error_rate','capacity','ai_cost','security_events','revenue','funding','unit_economics']) {
   if (!evolution.observedSignals?.includes(signal)) fail(`Evolution observed signal missing: ${signal}`);
 }
-for (const gate of ['production_change','shared_core_creation','permission_expansion','paid_cost_commitment','data_migration','destructive_change','security_boundary_change','production_dns_change']) {
+for (const gate of ['production_change','shared_core_creation','permission_expansion','paid_cost_commitment','data_migration','destructive_change','security_boundary_change','production_dns_change','new_independent_deployment']) {
   if (!evolution.approvalRequired?.includes(gate)) fail(`Evolution approval gate missing: ${gate}`);
 }
 for (const control of ['least_privilege','zero_trust','audit','tenant_isolation','sandbox','agent_identity','secure_projection','rollback','backup','disaster_recovery']) {
   if (!evolution.securityCore?.includes(control)) fail(`Evolution security core control missing: ${control}`);
 }
+
+const sustainable = constitution.sustainableEvolutionModel || {};
+if (sustainable.registry !== 'governance/architecture/ekodi-evolution-model.json') fail('sustainable evolution registry mismatch');
+if (sustainable.currentGeneration !== 2 || sustainable.currentGenerationName !== 'Integrated Platform') fail('constitutional current generation must be 2 Integrated Platform');
+if (sustainable.nextGeneration !== 3 || sustainable.nextGenerationName !== 'Capability Platform') fail('constitutional next generation must be 3 Capability Platform');
+if (sustainable.northStarGeneration !== 8 || sustainable.northStarName !== 'Living Digital Commons') fail('constitutional north star must be Generation 8 Living Digital Commons');
+if (sustainable.currentScaleTier !== 'S0') fail('constitutional current scale tier must be S0');
+if (sustainable.reuseCapabilityBeforeNewService !== true) fail('capability reuse must precede new service creation');
+if (sustainable.sharedBeforeDedicated !== true) fail('shared infrastructure must precede dedicated infrastructure');
+if (sustainable.existingDeploymentBoundariesGrandfathered !== true) fail('existing deployment boundaries must be grandfathered as migration baseline');
+if (sustainable.newIndependentDeploymentRequiresEvidence !== true) fail('new independent deployment must require evidence');
+if (sustainable.workspaceConvergenceTarget !== 'Person + Workspace + Membership + Capability') fail('workspace convergence target mismatch');
+if (evolutionModel.currentGeneration !== sustainable.currentGeneration) fail('constitution/evolution current generation mismatch');
+if (evolutionModel.northStarGeneration !== sustainable.northStarGeneration) fail('constitution/evolution north star mismatch');
+if (evolutionModel.currentScaleTier !== sustainable.currentScaleTier) fail('constitution/evolution scale tier mismatch');
+if (evolutionModel.sustainability?.noSpeculativeScale !== true) fail('evolution model must forbid speculative scale');
+if (evolutionModel.sustainability?.sharedBeforeDedicated !== true) fail('evolution model must preserve shared-before-dedicated');
+if (evolutionModel.sustainability?.reuseCapabilityBeforeNewService !== true) fail('evolution model must preserve capability-first reuse');
+if (evolutionModel.boundaryCreationGate?.grandfatherExistingBoundaries !== true) fail('evolution model must grandfather existing boundaries');
+if (evolutionModel.workspaceConvergence?.canonicalIdentity !== 'workspace_id') fail('evolution model must preserve workspace_id authority');
+if (evolutionModel.workspaceConvergence?.canonicalTerm !== 'Workspace') fail('evolution model must make Workspace canonical');
+
 const secureProjection = constitution.securityPolicy?.secureProjection || {};
 if (secureProjection.enabledByDefault !== true) fail('Secure Projection must be enabled by default');
 if (secureProjection.model !== 'purpose-bound-minimum-disclosure') fail('Secure Projection model mismatch');
@@ -63,6 +89,7 @@ if (secureProjection.sourceTopologyNotProjectedToBrowserOrExternalOperationalAi 
 if (secureProjection.adminDefaultProfile !== 'admin_safe') fail('administrator default projection must be admin_safe');
 if (secureProjection.externalAiDefaultProfile !== 'ai_minimum') fail('external operational AI projection must default to ai_minimum');
 if (secureProjection.viewExportDownloadApiRawDataSeparated !== true) fail('view/export/download/API/raw-data capabilities must remain distinct');
+
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
@@ -72,6 +99,7 @@ const customerOwned = constitution.customerOwnedDomainMappings || {};
 if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
+if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
 if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
 if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
@@ -94,6 +122,8 @@ if (constitution.workspaceRoutingPolicy?.canonicalHost !== 'ekodi.kr') fail('wor
 if (constitution.workspaceRoutingPolicy?.identityKey !== 'workspace_id') fail('workspace routing identity key must be workspace_id');
 if (constitution.workspaceRoutingPolicy?.workspaceSubdomainsForbidden !== true) fail('workspace subdomains must be forbidden');
 if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainException !== 'my.ekodi.kr') fail('My EKODI must remain the personal-home subdomain exception');
+if (constitution.workspaceRoutingPolicy?.canonicalOperatingTerm !== 'Workspace') fail('Workspace must be the canonical operating-context term');
+if (constitution.workspaceRoutingPolicy?.legacySpaceIsCompatibilityOnly !== true) fail('Space must remain compatibility-only during migration');
 
 const canonicalPatterns = constitution.canonicalWorkspacePatterns || [];
 if (JSON.stringify(canonicalPatterns) !== JSON.stringify(['https://ekodi.kr/{slug}'])) fail('canonical workspace pattern must be https://ekodi.kr/{slug}');
@@ -169,7 +199,9 @@ console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
+console.log(`- sustainable evolution: generation ${sustainable.currentGeneration} -> ${sustainable.northStarGeneration}, scale ${sustainable.currentScaleTier}`);
 console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
+console.log('- Workspace is canonical; Space remains compatibility-only during migration');
 console.log('- service workspace routing policy aligned to immutable workspace_id');
 console.log('- Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace architecture registered');
-console.log('- data sovereignty, tenant authority, provider and storage transition rules checked');
+console.log('- data sovereignty, tenant authority, provider, storage and sustainable scaling rules checked');
