@@ -11,6 +11,16 @@ EKODI는 기존 사이트를 다시 만드는 방식으로 전환하지 않는�
 5. Legacy 정리: 새 canonical surface 검증 뒤에만 redirect/compatibility alias로 전환한다.
 
 URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `workspace_id` 또는 그 하위 `store_id`다.
+## 사용자·관리자 Surface 쌍
+
+Store Workspace의 사용자 화면과 관리자 화면은 서로 다른 사이트가 아니다. 하나의 Workspace에 역할이 다른 두 Surface를 제공한다.
+
+- 사용자/운영 Surface: `https://ekodi.kr/{slug}`
+- 관리자 Surface: `https://ekodi.kr/{slug}/admin`
+- 공통 관리자 엔진: `store-admin`
+- 실제 데이터·권한 경계: immutable `workspace_id` / `store_id`
+
+따라서 `jadam-store-admin`, `pizzamaru-store-admin` 같은 점포별 관리자 엔진을 늘리지 않는다. `store-admin + workspace context` 하나를 사용하며, 새 Store Workspace의 canonical slug가 프로비저닝되면 사용자 Surface와 관리자 Surface가 한 쌍으로 제공된다. URL 별칭은 canonical 주소로 정규화하되 권한 기준으로 사용하지 않는다.
 
 ## 기존 사이트 처리 원칙
 

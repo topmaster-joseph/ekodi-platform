@@ -15,6 +15,8 @@ const serviceUrls=readJson('config/ekodi-service-urls.json');
 const ecosystem=readJson('config/ecosystem-services.json');
 const ownedMigration=readText('supabase/migrations/20260823001500_owned_customer_sites_and_local_roles.sql');
 const storeSiteMigration=readText('supabase/migrations/20260906005000_store_user_site_provisioning.sql');
+const storeAdmin=readText('store-admin-page.js');
+const platformRouter=readText('platform-router-entry-worker.js');
 
 assert(registry.generation.signup==='identity_only','signup must create identity only');
 assert(registry.generation.canonicalSlugAssigned==='auto_provision_user_site','canonical slug must provision the user site');
@@ -22,6 +24,10 @@ assert(registry.generation.optionalServiceActivated==='jit_service_profile','opt
 assert(registry.identity.authorizationKey==='workspace_id','workspace_id must remain authorization truth');
 assert(registry.identity.urlRole==='routing_locator_only','URL must remain a routing locator');
 assert(registry.identity.siteCodeCopying===false,'per-site application copying is forbidden');
+assert(registry.surfacePairing?.userPattern==='https://ekodi.kr/{slug}','user surface pattern drifted');
+assert(registry.surfacePairing?.storeAdminPattern==='https://ekodi.kr/{slug}/admin','store admin surface pattern drifted');
+assert(registry.surfacePairing?.storeAdminEngine==='store-admin','store admin must use one shared engine');
+assert(registry.surfacePairing?.sameWorkspaceIdentity===true&&registry.surfacePairing?.separateSite===false,'user/admin surfaces must be one workspace, not two sites');
 const sites=registry.existingWorkspaceSites||[];
 const ids=new Set();
 const canonicalUrls=new Set();
@@ -59,6 +65,10 @@ assert(ownedMigration.includes("'operating_model','customer-site'"),'owned sites
 assert(storeSiteMigration.includes('after insert or update of operating_space_slug'),'store user-site automatic provisioning trigger is missing');
 assert(storeSiteMigration.includes("'workspace_automatic'"),'store user-site provisioning mode must remain automatic');
 assert(storeSiteMigration.includes('Canonical identity remains stores.id'),'store site identity must remain immutable store id');
+assert(storeAdmin.includes("'x-ekodi-route':'store-admin'"),'shared Store Admin route marker is missing');
+assert(storeAdmin.includes("'x-ekodi-workspace':slug"),'Store Admin must expose workspace routing context separately');
+assert(platformRouter.includes('resolveStoreAdminProfile'),'platform router must resolve store admin from provisioned user-site profile');
+assert(platformRouter.includes('storeAdminSlugFromPath'),'platform router must pair /{slug}/admin structurally');
 
 assert(workspacePolicy.publicWorkspaceRouting.workspaceIdentityKey==='workspace_id','service/workspace policy must use workspace_id');
 assert(workspacePolicy.publicWorkspaceRouting.slugRole==='routing_locator_only','service/workspace policy must keep slug non-authoritative');

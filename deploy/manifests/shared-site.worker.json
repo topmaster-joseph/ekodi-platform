@@ -71,10 +71,12 @@
         "redirect": "manual",
         "expect": [
           "자담치킨 목포대점",
-          "JADAM STORE ADMIN"
+          "STORE ADMIN · jadam"
         ],
         "headerExpect": [
-          "x-ekodi-route: jadam-store-admin",
+          "x-ekodi-route: store-admin",
+          "x-ekodi-admin-surface: store",
+          "x-ekodi-workspace: jadam",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
@@ -103,10 +105,12 @@
         "redirect": "manual",
         "expect": [
           "피자마루 목포대점",
-          "PIZZAMARU STORE ADMIN"
+          "STORE ADMIN · pizzamaru"
         ],
         "headerExpect": [
-          "x-ekodi-route: pizzamaru-store-admin",
+          "x-ekodi-route: store-admin",
+          "x-ekodi-admin-surface: store",
+          "x-ekodi-workspace: pizzamaru",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
@@ -135,10 +139,12 @@
         "redirect": "manual",
         "expect": [
           "요거트퍼플 목포대점",
-          "YOGURT PURPLE STORE ADMIN"
+          "STORE ADMIN · yogurt"
         ],
         "headerExpect": [
-          "x-ekodi-route: yogurt-store-admin",
+          "x-ekodi-route: store-admin",
+          "x-ekodi-admin-surface: store",
+          "x-ekodi-workspace: yogurt",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
@@ -833,7 +839,9 @@
           "store-site-admin"
         ],
         "headerExpect": [
-          "x-ekodi-route: jadam-store-admin",
+          "x-ekodi-route: store-admin",
+          "x-ekodi-admin-surface: store",
+          "x-ekodi-workspace: jadam",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
@@ -849,7 +857,9 @@
           "store-site-admin"
         ],
         "headerExpect": [
-          "x-ekodi-route: pizzamaru-store-admin",
+          "x-ekodi-route: store-admin",
+          "x-ekodi-admin-surface: store",
+          "x-ekodi-workspace: pizzamaru",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
@@ -865,7 +875,9 @@
           "store-site-admin"
         ],
         "headerExpect": [
-          "x-ekodi-route: yogurt-store-admin",
+          "x-ekodi-route: store-admin",
+          "x-ekodi-admin-surface: store",
+          "x-ekodi-workspace: yogurt",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]

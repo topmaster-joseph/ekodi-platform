@@ -149,5 +149,13 @@
     "verify_canonical_surface",
     "redirect_only_verified_legacy_aliases",
     "retire_duplicate_runtime_after_observation_window"
-  ]
+  ],
+  "surfacePairing": {
+    "userPattern": "https://ekodi.kr/{slug}",
+    "storeAdminPattern": "https://ekodi.kr/{slug}/admin",
+    "storeAdminEngine": "store-admin",
+    "sameWorkspaceIdentity": true,
+    "separateSite": false,
+    "autoPairOnCanonicalSlug": true
+  }
 }

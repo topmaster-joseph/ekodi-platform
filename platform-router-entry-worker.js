@@ -12,6 +12,7 @@ import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } fr
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { storeAdminSlugFromPath, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-page.js';
 import { isJadamAdminPath, jadamAdminPage, jadamAdminCss, jadamAdminScript } from './jadam-admin-page.js';
 import { isPizzamaruAdminPath, pizzamaruAdminPage, pizzamaruAdminCss, pizzamaruAdminScript } from './pizzamaru-admin-page.js';
 import { isYogurtAdminPath, yogurtAdminPage, yogurtAdminCss, yogurtAdminScript } from './yogurt-admin-page.js';
@@ -23,6 +24,13 @@ import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 
 const PUBLIC_HOST='ekodi.kr';
+const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const STORE_ADMIN_FALLBACKS=Object.freeze({
+  jadam:{canonical_slug:'jadam',name:'자담치킨 목포대점'},
+  pizzamaru:{canonical_slug:'pizzamaru',name:'피자마루 목포대점'},
+  yogurt:{canonical_slug:'yogurt',name:'요거트퍼플 목포대점'},
+});
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
 const CGMA_SITE=Object.freeze({
   id:'cgma',
@@ -48,6 +56,24 @@ function resolvedHost(request,env){
   return simulated||url.hostname.toLowerCase();
 }
 
+async function resolveStoreAdminProfile(slug){
+  const normalized=String(slug||'').trim().toLowerCase();
+  if(!normalized)return null;
+  try{
+    const response=await fetch(`${SUPABASE_URL}/rest/v1/rpc/store_user_site_public_profile`,{
+      method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json'},
+      body:JSON.stringify({p_slug:normalized}),signal:AbortSignal.timeout(1800)
+    });
+    if(response.ok){const data=await response.json().catch(()=>null);if(data?.canonical_slug)return data;}
+  }catch{}
+  return STORE_ADMIN_FALLBACKS[normalized]||null;
+}
+function storeAdminCanonicalRedirect(request,profile){
+  const source=new URL(request.url);const requested=storeAdminSlugFromPath(source.pathname);const canonical=String(profile?.canonical_slug||requested||'').trim().toLowerCase();
+  if(!requested||!canonical||requested===canonical)return null;
+  const suffix=source.pathname.slice((`/${requested}/admin`).length);const target=new URL(request.url);target.pathname=`/${canonical}/admin${suffix}`;
+  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-alias':`${requested}->${canonical}`}});
+}
 function workspaceServiceUnavailable(){
   return new Response('Workspace service unavailable',{status:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'space-binding-unavailable'}});
 }
@@ -172,6 +198,8 @@ export default {
 
     if(host===PUBLIC_HOST){
       if(request.method==='GET'){
+        if(url.pathname==='/store-admin.css')return storeAdminCss();
+        if(url.pathname==='/store-admin.js')return storeAdminScript();
         if(url.pathname==='/jadam-admin.css')return jadamAdminCss();
         if(url.pathname==='/jadam-admin.js')return jadamAdminScript();
         if(isJadamAdminPath(url.pathname))return jadamAdminPage();
@@ -190,6 +218,8 @@ export default {
         if(isTradePartnerPath(url.pathname))return tradePartnerPage();
         if(url.pathname==='/mall/admin'||url.pathname.startsWith('/mall/admin/')){const target=new URL(request.url);target.pathname=`/ekodibiz${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return churchPastorAdminPage();
+        const storeAdminSlug=storeAdminSlugFromPath(url.pathname);
+        if(storeAdminSlug){const profile=await resolveStoreAdminProfile(storeAdminSlug);if(profile){const redirect=storeAdminCanonicalRedirect(request,profile);if(redirect)return redirect;return storeAdminPage(profile)}}
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return workspaceAdminPage();
       }
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
