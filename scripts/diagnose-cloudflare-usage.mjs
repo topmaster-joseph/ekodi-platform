@@ -94,6 +94,21 @@ const SHARED_SITE_HOSTS=new Set([
   'mail.church.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
   'cloud.ekodi.kr','auth.ekodi.kr'
 ]);
+const SHARED_SITE_WORKER_FIRST_EXACT=new Set([
+  '/','/deployment-probe','/auth/start','/admin','/control-center','/control-center/','/control-center.html',
+  '/workspace-admin.css','/workspace-admin.js','/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js',
+  '/auth.js','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js',
+  '/marketing-onboarding.js','/membership-ui.js','/control-center.css','/admin-shell.css','/admin-central-handoff.js','/admin-authenticated-shell.js',
+  '/compact-control-center.js','/compact-control-center.css','/admin-compact.js','/admin-compact.css','/admin-menu-layout.js','/admin-menu-registry.js',
+  '/admin-sidebar.js','/admin-menu-runtime.js','/admin-demand-loader.js','/admin-public-site-controls.js','/admin-perf-diagnostics.js',
+  '/device-browser-diagnostics.js','/device-browser-diagnostics.css','/admin-lazy-features.js','/ai-ops-admin.css','/system-health-admin.js','/system-health-admin.css'
+]);
+const SHARED_SITE_WORKER_FIRST_PREFIXES=['/privacy','/terms','/history','/mall','/org/ekodibiz','/ekodibiz','/jadam/marketing','/pizzamaru/marketing','/yogurt/marketing','/cgma/marketing','/_ekodi/space/','/_ekodi/ekodibiz/','/api/'];
+function sharedSiteWorkerFirstPath(value){
+  const path=String(value||'/').toLowerCase();
+  return SHARED_SITE_WORKER_FIRST_EXACT.has(path)||SHARED_SITE_WORKER_FIRST_PREFIXES.some(prefix=>path.startsWith(prefix));
+}
+
 function routeFamily(hostValue,pathValue){
   const host=String(hostValue||'').toLowerCase();
   const path=String(pathValue||'/').toLowerCase();
@@ -129,7 +144,7 @@ async function activeZones(account) {
 async function zoneTraffic(account, zone, window) {
   const result = {
     zone:zone.name, requests:0, botRequests:0, internalRequests:0,
-    healthRequests:0, devToProdSuspectRequests:0, hostRequests:[], routeFamilies:[], sharedSiteFamilies:[], sharedOtherHosts:[], cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
+    healthRequests:0, devToProdSuspectRequests:0, hostRequests:[], routeFamilies:[], sharedSiteFamilies:[], sharedOtherHosts:[], sharedWorkerFirstRequests:0, sharedWorkerFirstFamilies:[], cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
   };
   const uaQuery = `query ZoneUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
   try {
@@ -155,17 +170,25 @@ async function zoneTraffic(account, zone, window) {
   const routeQuery = `query ZoneRoutes($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { clientRequestHTTPHost clientRequestPath } } } } }`;
   try {
     const payload=await gql(account,routeQuery,{zoneTag:zone.id,start:window.start,end:window.end});
-    const families=new Map(), sharedFamilies=new Map(), sharedOtherHosts=new Map();
+    const families=new Map(), sharedFamilies=new Map(), sharedOtherHosts=new Map(), sharedWorkerFirstFamilies=new Map();
     for(const row of payload?.data?.viewer?.zones?.[0]?.rows||[]){
       const count=Number(row?.count||0);
       const host=String(row?.dimensions?.clientRequestHTTPHost||zone.name).trim().toLowerCase();
       const family=routeFamily(host,row?.dimensions?.clientRequestPath);
       families.set(family,(families.get(family)||0)+count);
-      if(SHARED_SITE_HOSTS.has(host)){sharedFamilies.set(family,(sharedFamilies.get(family)||0)+count);if(family==='other')sharedOtherHosts.set(host,(sharedOtherHosts.get(host)||0)+count);}
+      if(SHARED_SITE_HOSTS.has(host)){
+        sharedFamilies.set(family,(sharedFamilies.get(family)||0)+count);
+        if(family==='other')sharedOtherHosts.set(host,(sharedOtherHosts.get(host)||0)+count);
+        if(sharedSiteWorkerFirstPath(row?.dimensions?.clientRequestPath)){
+          result.sharedWorkerFirstRequests+=count;
+          sharedWorkerFirstFamilies.set(family,(sharedWorkerFirstFamilies.get(family)||0)+count);
+        }
+      }
     }
     result.routeFamilies=[...families].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
     result.sharedSiteFamilies=[...sharedFamilies].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
     result.sharedOtherHosts=[...sharedOtherHosts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests);
+    result.sharedWorkerFirstFamilies=[...sharedWorkerFirstFamilies].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
   }catch(error){result.warnings.push(`route:${String(error.message).slice(0,120)}`);}
 
   const healthQuery = `query ZoneHealth($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { clientRequestPath } } } } }`;
@@ -237,6 +260,10 @@ function accountSummary(account, usage, zones, traffic, schedules) {
   const otherHostCounts=new Map();
   for(const row of traffic)for(const item of row.sharedOtherHosts||[])otherHostCounts.set(item.host,(otherHostCounts.get(item.host)||0)+Number(item.requests||0));
   const sharedOtherHosts=[...otherHostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,15);
+  const sharedWorkerFirstRequests=traffic.reduce((sum,row)=>sum+Number(row.sharedWorkerFirstRequests||0),0);
+  const workerFirstFamilyCounts=new Map();
+  for(const row of traffic)for(const item of row.sharedWorkerFirstFamilies||[])workerFirstFamilyCounts.set(item.family,(workerFirstFamilyCounts.get(item.family)||0)+Number(item.requests||0));
+  const sharedWorkerFirstFamilies=[...workerFirstFamilyCounts].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
   const worstSubrequest = usage.scripts.reduce((best,item)=>item.subrequestRatio > (best?.subrequestRatio || 0) ? item : best, null);
   const prodResidues = account.label === 'PROD'
     ? usage.scripts.filter(item => /(?:^|[-_])(staging|development|dev)(?:$|[-_])/i.test(item.script) && item.requests > 0)
@@ -244,7 +271,7 @@ function accountSummary(account, usage, zones, traffic, schedules) {
   return {
     label:account.label,
     accountIdMasked:account.accountId ? `${account.accountId.slice(0,4)}...${account.accountId.slice(-4)}` : '',
-    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, sharedSiteFamilies, sharedOtherHosts, routeCoverage:`${routeAvailableZones}/${zoneCoverageTotal}`, traffic,
+    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, sharedSiteFamilies, sharedOtherHosts, sharedWorkerFirstRequests, sharedWorkerFirstFamilies, routeCoverage:`${routeAvailableZones}/${zoneCoverageTotal}`, traffic,
     signals:{
       bot:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, requests:botRequests, percent:pct(botRequests,totalZoneRequests), severity:uaAvailableZones>0 ? severity(pct(botRequests,totalZoneRequests),30,60) : 'unknown' },
       loopRetry:{ maxSubrequestRatio:worstSubrequest?.subrequestRatio || 0, script:worstSubrequest?.script || '', severity:severity(worstSubrequest?.subrequestRatio || 0,3,8) },
@@ -299,7 +326,10 @@ function markdown(report) {
       '- coverage '+row.routeCoverage,
       ...(row.sharedSiteFamilies.length ? row.sharedSiteFamilies.map(item=>'- '+item.requests+' requests | '+item.family) : ['- n/a']),
       '', 'Shared Site OTHER by host:',
-      ...(row.sharedOtherHosts.length ? row.sharedOtherHosts.map(item=>'- '+item.requests+' requests | '+item.host) : ['- n/a'])
+      ...(row.sharedOtherHosts.length ? row.sharedOtherHosts.map(item=>'- '+item.requests+' requests | '+item.host) : ['- n/a']),
+      '', 'Shared Site Worker-first candidates:',
+      '- candidate requests '+row.sharedWorkerFirstRequests,
+      ...(row.sharedWorkerFirstFamilies.length ? row.sharedWorkerFirstFamilies.map(item=>'- '+item.requests+' requests | '+item.family) : ['- n/a'])
     );
   }
   lines.push('', '> This report is read-only. Warning thresholds are diagnostic signals, not automatic blocking rules.');
