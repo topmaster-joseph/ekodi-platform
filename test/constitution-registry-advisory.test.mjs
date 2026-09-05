@@ -34,3 +34,9 @@ test('advisory check recognizes Trust Layer security boundary',()=>{
   assert.match(trust,/Result:\*\* RELATED/);
   assert.match(trust,/TRUST-001/);
 });
+
+test('advisory check recognizes reserved system-domain ownership',()=>{
+  const systemDomain=run('wrangler.ai.toml,wrangler.site.toml,.github/workflows/deploy-ai-gateway.yml,deploy/manifests/shared-site.worker.json,test/ai-gateway-domain.test.mjs');
+  assert.match(systemDomain,/Result:\*\* RELATED/);
+  assert.match(systemDomain,/DOMAIN-002/);
+});

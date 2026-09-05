@@ -83,6 +83,24 @@
       ]
     },
     {
+      "id": "DOMAIN-002",
+      "area": "system-domain",
+      "title": "Reserved system subdomain ownership",
+      "status": "active",
+      "sourcePointer": "/systemBoundaries",
+      "impactPaths": [
+        "wrangler.ai*.toml",
+        ".github/workflows/deploy-ai-control.yml",
+        ".github/workflows/deploy-ai-gateway.yml",
+        ".github/workflows/verify-ai-gateway-production.yml",
+        "deploy/manifests/ai-control.worker.json",
+        "deploy/manifests/shared-site.worker.json",
+        "platform-router-entry-worker.js",
+        "auth-site/admin-auth.js",
+        "test/ai-gateway-domain.test.mjs"
+      ]
+    },
+    {
       "id": "WORKSPACE-001",
       "area": "workspace",
       "title": "Immutable workspace identity and tenant authority",
