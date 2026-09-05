@@ -5,6 +5,11 @@ const providerLabels={baemin:'배달의민족',coupang_eats:'쿠팡이츠',yogiy
 const statusLabels={active:'연결됨',ready:'준비됨',setup_required:'설정 필요',partner_required:'공식 연결 필요',credentials_required:'인증 필요',paused:'일시중지',error:'오류'};
 const sourceLabels={not_connected:'미연결',official_api:'공식 API',partner_import:'파트너 자료',verified_file:'검증 파일',manual_verified:'운영자 확인'};
 const roleLabels={store_owner:'점포 운영자',store_staff:'점포 담당자',tenant_admin:'조직 관리자',platform_admin:'플랫폼 관리자',member:'구성원'};
+const storePageProfiles=Object.freeze({
+  jadam:{kicker:'CHICKEN STORE USER PAGE',lead:'치킨 메뉴·가격·배달채널을 자담치킨 데이터로만 분리해 운영합니다.'},
+  pizzamaru:{kicker:'PIZZA STORE USER PAGE',lead:'피자 메뉴·옵션·판매가·배달채널을 피자마루 데이터로만 분리해 운영합니다.'},
+  yogurt:{kicker:'YOGURT DESSERT USER PAGE',lead:'요거트·디저트 메뉴·옵션·판매가·배달채널을 요거트퍼플 데이터로만 분리해 운영합니다.'},
+});
 let sb=null;
 let currentSpaces=[];
 
@@ -109,6 +114,25 @@ function detectPriceDifferences(menu=[]){
   }
   return count;
 }
+function renderStorePageOverview(workspace){
+  const profile=storePageProfiles[workspace.slug]||{};
+  const summary=workspace.summary||{};
+  const menu=Array.isArray(workspace.menu)?workspace.menu:[];
+  const channels=Array.isArray(workspace.channels)?workspace.channels:[];
+  const connected=channels.filter(item=>['active','ready'].includes(item.connection_status)).length;
+  const differences=detectPriceDifferences(menu);
+  document.documentElement.dataset.storePage=workspace.slug||'default';
+  $('workspaceType').textContent=profile.kicker||'STORE OPERATING SPACE';
+  $('workspaceMeta').textContent=profile.lead||'이 점포의 매장·메뉴·가격·판매채널 데이터를 다른 점포와 분리해 운영합니다.';
+  $('storePageTitle').textContent=`${workspace.name} 사용자 운영페이지`;
+  $('storePageLead').textContent=profile.lead||'이 점포의 운영정보를 독립된 사용자페이지에서 확인합니다.';
+  $('storePageStats').innerHTML=[
+    ['연결 채널',`${connected} / ${channels.length}`],
+    ['기준 메뉴',Number(summary.canonical_menu_count||0).toLocaleString('ko-KR')],
+    ['플랫폼 등록',Number(summary.platform_listing_count||0).toLocaleString('ko-KR')],
+    ['가격 차이',differences.toLocaleString('ko-KR')],
+  ].map(([label,value])=>`<article class="store-page-stat"><small>${esc(label)}</small><strong>${esc(value)}</strong></article>`).join('');
+}
 function renderAgentHints(workspace){
   const summary=workspace.summary||{};const menu=Array.isArray(workspace.menu)?workspace.menu:[];
   const hints=[];const connected=Number(summary.connected_channel_count||0);
@@ -128,10 +152,9 @@ function renderStoreDashboard(workspace){
   renderStoreBasics(workspace.store||{});
   renderChannels(Array.isArray(workspace.channels)?workspace.channels:[]);
   renderMenu(Array.isArray(workspace.menu)?workspace.menu:[],Array.isArray(workspace.unmapped_channel_listings)?workspace.unmapped_channel_listings:[],workspace.summary||{});
-  renderAgentHints(workspace);renderServiceActions(workspace.slug);
+  renderStorePageOverview(workspace);renderAgentHints(workspace);renderServiceActions(workspace.slug);
   $('workspaceName').textContent=workspace.name;
   $('workspaceRole').textContent=roleLabels[workspace.role]||workspace.role||'점포 구성원';
-  $('workspaceMeta').textContent='이 점포의 매장·메뉴·가격·판매채널 데이터를 다른 점포와 분리해 운영합니다.';
   document.title=`${workspace.name} · EKODI`;
   document.documentElement.dataset.workspaceId=workspace.workspace_id;
 }
@@ -143,7 +166,8 @@ async function renderWorkspace(){
     $('workspaceName').textContent=space.name;$('workspaceRole').textContent=roleLabels[space.role]||space.role||'구성원';
     document.documentElement.dataset.workspaceId=space.workspace_id;
     if(space.kind==='store'){
-      showStoreSections(true);$('workspaceType').textContent='STORE OPERATING SPACE';
+      showStoreSections(true);document.documentElement.dataset.storePage=slug;
+      $('workspaceType').textContent=storePageProfiles[slug]?.kicker||'STORE OPERATING SPACE';
       const {workspace}=await api(`/spaces/store-dashboard?slug=${encodeURIComponent(slug)}`);
       renderStoreDashboard(workspace);status(`${workspace.name} 운영공간에 연결되었습니다.`,'ok');return;
     }
