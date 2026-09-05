@@ -3,20 +3,28 @@ name: Trust Layer CI
 on:
   pull_request:
     paths:
+      - 'ekodi-authorization.js'
+      - 'test/ekodi-authorization.test.mjs'
+      - 'supabase/functions/_shared/ekodi-capability.js'
       - 'supabase/functions/_shared/trust.ts'
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
       - 'supabase/functions/access-api/**'
+      - 'supabase/functions/work-admin-api/**'
       - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
   push:
     branches: [main]
     paths:
+      - 'ekodi-authorization.js'
+      - 'test/ekodi-authorization.test.mjs'
+      - 'supabase/functions/_shared/ekodi-capability.js'
       - 'supabase/functions/_shared/trust.ts'
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
       - 'supabase/functions/access-api/**'
+      - 'supabase/functions/work-admin-api/**'
       - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
@@ -30,15 +38,22 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Validate canonical capability matcher in Admin OS
+        run: node --test test/ekodi-authorization.test.mjs
       - name: Type-check Trust Layer core
         run: deno check supabase/functions/_shared/trust.ts
       - name: Type-check Trust shadow API
         run: deno check --node-modules-dir=auto supabase/functions/trust-api/index.ts
       - name: Type-check access API Trust adapter
         run: deno check --node-modules-dir=auto supabase/functions/access-api/index.ts
+      - name: Type-check work admin Trust observer
+        run: deno check --node-modules-dir=auto supabase/functions/work-admin-api/index.ts
       - name: Run Trust invariants
         run: deno test supabase/functions/_shared/trust.test.ts
       - name: Verify shadow-only cutover guard
@@ -58,6 +73,17 @@ jobs:
           grep -Fq "'generic_evaluator_compatible', false" supabase/migrations/20260905020000_access_api_trust_shadow.sql
           grep -Fq "'workspace:access.read'" supabase/migrations/20260905020000_access_api_trust_shadow.sql
           grep -Fq "'workspace:access.review'" supabase/migrations/20260905020000_access_api_trust_shadow.sql
-          grep -Fq 'genericEvaluatorCompatible = policy?.config?.generic_evaluator_compatible !== false' supabase/functions/trust-api/index.ts
+          grep -Fq 'selectCoveredPolicy(context, policies, { genericEvaluatorOnly: true })' supabase/functions/trust-api/index.ts
           grep -Fq 'legacy_predicate:"tenantReviewer"' supabase/functions/access-api/index.ts
           grep -Fq 'Shadow telemetry must never change the live legacy authorization result.' supabase/functions/access-api/index.ts
+      - name: Verify work admin migration stays candidate-only
+        shell: bash
+        run: |
+          grep -Fq "'trust_policy_v3'" supabase/migrations/20260905074500_work_admin_trust_shadow_candidate.sql
+          grep -Fq "'draft'" supabase/migrations/20260905074500_work_admin_trust_shadow_candidate.sql
+          grep -Fq "'authoritative_source', 'legacy'" supabase/migrations/20260905074500_work_admin_trust_shadow_candidate.sql
+          grep -Fq "'cutover_allowed', false" supabase/migrations/20260905074500_work_admin_trust_shadow_candidate.sql
+          grep -Fq "'service:operate'" supabase/migrations/20260905074500_work_admin_trust_shadow_candidate.sql
+          grep -Fq 'WORK_ADMIN_TRUST_POLICY = "trust_policy_v3"' supabase/functions/work-admin-api/index.ts
+          grep -Fq 'legacyAllowed = true' supabase/functions/work-admin-api/index.ts
+          grep -Fq 'Shadow telemetry is never allowed to alter the existing verified-admin authorization result.' supabase/functions/work-admin-api/index.ts
