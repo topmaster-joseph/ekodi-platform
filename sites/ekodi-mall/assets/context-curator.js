@@ -21,7 +21,7 @@
     const clickUrl = safeUrl(raw?.clickUrl);
     if (!clickUrl) return null;
     const price = Number(raw?.priceKrw || 0);
-    return { id: String(raw?.id || index), name: clean(raw?.productName || '상품'), category: clean(raw?.category || '추천'), providerKey: clean(raw?.providerKey || 'affiliate'), providerName: clean(raw?.providerName || '제휴 판매처'), priceKrw: Number.isFinite(price) && price > 0 ? price : 0, clickUrl, isRocket: Boolean(raw?.isRocket), isFreeShipping: Boolean(raw?.isFreeShipping) };
+    return { id: String(raw?.id || index), name: clean(raw?.productName || '상품'), category: clean(raw?.category || '추천'), providerKey: clean(raw?.providerKey || 'affiliate'), providerName: clean(raw?.providerName || '제휴 판매처'), priceKrw: Number.isFinite(price) && price > 0 ? price : 0, clickUrl, imageUrl: safeUrl(raw?.imageUrl), priceFreshness: clean(raw?.priceFreshness || ''), priceVerifiedAt: clean(raw?.priceVerifiedAt || raw?.selectedAt || ''), isRocket: Boolean(raw?.isRocket), isFreeShipping: Boolean(raw?.isFreeShipping) };
   }
 
   function groupOffers(offers) {
@@ -96,14 +96,60 @@
     link.addEventListener('click', () => document.dispatchEvent(new CustomEvent('ekodi:context-offer-click', { detail: { providerKey: offer.providerKey, productName: offer.name } })));
     return link;
   }
+  function detailButton(product, context) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'context-detail-button'; button.textContent = '상품·판매처 보기';
+    button.addEventListener('click', () => openProductDetail(product, context));
+    return button;
+  }
+  function offerBadges(offer, product) {
+    const badges = []; const lowest = bestPrice(product);
+    if (product.offers.length > 1 && lowest && offer.priceKrw === lowest) badges.push('현재 표시가 최저');
+    if (offer.isRocket) badges.push('빠른배송');
+    if (offer.isFreeShipping) badges.push('무료배송');
+    if (offer.priceFreshness === 'stale') badges.push('판매처 최신가 확인');
+    return badges;
+  }
+  let offerDialog = null;
+  function ensureOfferDialog() {
+    if (offerDialog) return offerDialog;
+    offerDialog = document.createElement('dialog'); offerDialog.className = 'context-offer-dialog';
+    offerDialog.innerHTML = '<div class="context-offer-shell"><button type="button" class="context-dialog-close" aria-label="닫기">×</button><div data-detail-body></div></div>';
+    offerDialog.querySelector('.context-dialog-close')?.addEventListener('click', () => offerDialog.close());
+    offerDialog.addEventListener('click', (event) => { if (event.target === offerDialog) offerDialog.close(); });
+    document.body.append(offerDialog); return offerDialog;
+  }
+  function openProductDetail(product, context) {
+    const dialog = ensureOfferDialog(); const body = dialog.querySelector('[data-detail-body]');
+    if (!body) return; body.replaceChildren();
+    const header = text('header', 'context-detail-head', '');
+    const meta = text('div', 'context-detail-meta', '');
+    meta.append(text('span', 'context-fit', contextLabel(context)), text('span', 'context-provider', product.offers.length > 1 ? `판매처 ${product.offers.length}곳` : '현재 연결 판매처 1곳'));
+    header.append(meta, text('h2', '', product.name), text('p', 'context-detail-price', bestPrice(product) ? `${money(bestPrice(product))}부터` : '판매처에서 최신 가격 확인'));
+    const visual = text('div', 'context-detail-visual', ''); const image = product.offers.find((offer) => offer.imageUrl)?.imageUrl;
+    if (image) { const img = document.createElement('img'); img.src = image; img.alt = product.name; img.loading = 'lazy'; visual.append(img); } else visual.append(text('span', '', 'EKODI CURATED'));
+    const whySection = text('section', 'context-detail-why', ''); whySection.append(text('h3', '', '왜 이 상품인가'));
+    const why = text('ul', 'context-card-reasons', ''); reasons(product, context).forEach((reason) => why.append(text('li', '', reason))); whySection.append(why);
+    const offerSection = text('section', 'context-detail-offers', '');
+    offerSection.append(text('h3', '', '어디서 살까요?'), text('p', 'context-detail-note', product.offers.length > 1 ? '가격·배송·판매처 조건을 보고 선택하세요. 추천순위와 제휴수수료는 분리합니다.' : '현재 확인된 판매처는 1곳입니다. 다른 검증 판매처가 연결되면 이곳에서 함께 비교됩니다.'));
+    const list = text('div', 'context-detail-offer-list', '');
+    product.offers.forEach((offer) => {
+      const row = text('article', 'context-detail-offer', ''); const copy = text('div', 'context-detail-offer-copy', '');
+      copy.append(text('strong', '', offer.providerName), text('span', 'context-detail-offer-price', money(offer.priceKrw)));
+      const badges = text('div', 'context-detail-badges', ''); offerBadges(offer, product).forEach((badge) => badges.append(text('span', '', badge))); copy.append(badges);
+      const link = offerLink(offer); link.className = 'context-offer-buy'; link.textContent = '판매처에서 구매'; row.append(copy, link); list.append(row);
+    });
+    offerSection.append(list); body.append(header, visual, whySection, offerSection);
+    document.dispatchEvent(new CustomEvent('ekodi:context-product-open', { detail: { productId: product.id, offerCount: product.offers.length } }));
+    if (typeof dialog.showModal === 'function') { if (!dialog.open) dialog.showModal(); } else dialog.setAttribute('open', '');
+  }
   function card(product, context, index) {
     const article = text('article', 'context-card', ''); const top = text('div', 'context-card-top', '');
     top.append(text('span', 'context-fit', index === 0 ? '가장 적합' : index === 1 ? '대안' : '함께 비교'), text('span', 'context-provider', product.offers.length > 1 ? `판매처 ${product.offers.length}곳` : product.offers[0]?.providerName || '판매처'));
     article.append(top, text('h3', '', product.name), text('p', 'context-card-price', bestPrice(product) ? `${money(bestPrice(product))}부터` : '판매처에서 가격 확인'));
     const why = text('ul', 'context-card-reasons', ''); reasons(product, context).forEach((reason) => why.append(text('li', '', reason))); article.append(why);
     const action = text('div', 'context-card-action', '');
-    if (product.offers.length > 1) { const offers = text('div', 'context-offer-list', ''); product.offers.slice(0, 3).forEach((offer) => offers.append(offerLink(offer, true))); article.append(offers); action.append(text('small', '', '판매처별 조건을 확인하세요.')); }
-    else { action.append(text('small', '', `판매처 · ${product.offers[0]?.providerName || '외부 판매처'}`), offerLink(product.offers[0])); }
+    action.append(text('small', '', product.offers.length > 1 ? `판매처 ${product.offers.length}곳 비교 가능` : `현재 판매처 · ${product.offers[0]?.providerName || '외부 판매처'}`), detailButton(product, context));
     article.append(action); return article;
   }
 
