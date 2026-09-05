@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-04",
+  "updatedAt": "2026-09-05",
   "title": "EKODI Constitution Registry Index",
   "mode": "index-only",
   "authority": {
@@ -93,7 +93,10 @@
         "customer-auth.js",
         "customer-member-directory.js",
         "universal-membership.js",
-        "workspace-admin-page.js"
+        "workspace-admin-page.js",
+        "workspace-route-policy.js",
+        "space-worker.js",
+        "platform-router-entry-worker.js"
       ]
     },
     {
@@ -107,7 +110,11 @@
         "api-worker.js",
         "admin-google-auth.js",
         "google-admin-auth.js",
-        "auth-site/**"
+        "auth-site/**",
+        "auth-worker-core.js",
+        "ekodi-authorization.js",
+        "admin-session-fastpath.js",
+        "admin-authenticated-shell.js"
       ]
     },
     {
@@ -188,6 +195,52 @@
         "platform-boundaries.json",
         "config/service-workspace-policy.json",
         "domains-hub.js"
+      ]
+    },
+    {
+      "id": "ARCH-001",
+      "area": "architecture",
+      "title": "Layered EKODI OS architecture and responsibility boundaries",
+      "status": "active",
+      "sourcePointer": "/architectureModel",
+      "impactPaths": [
+        "governance/architecture/**",
+        "ekodi-service-manifest.js",
+        "platform-router-entry-worker.js",
+        "hybrid-execution.js",
+        "hybrid-execution-admin.js",
+        "hybrid-execution-monitor.js",
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "SURFACE-001",
+      "area": "user-surface",
+      "title": "User surface and engine separation",
+      "status": "active",
+      "sourcePointer": "/userSurfaceEngineSeparation",
+      "impactPaths": [
+        "marketing-canonical-projection.js",
+        "marketing-growth-worker.js",
+        "marketing-publishing-worker.js",
+        "my/progressive-personalization.js",
+        "my/user-services.js",
+        "generated/user-services.js",
+        "scripts/generate-user-service-registry.mjs"
+      ]
+    },
+    {
+      "id": "EVOLVE-001",
+      "area": "evolution-observability",
+      "title": "Evidence-driven evolution signals",
+      "status": "active",
+      "sourcePointer": "/evolutionPolicy/observedSignals",
+      "impactPaths": [
+        "traffic-intelligence.js",
+        "traffic-intelligence-control.js",
+        "scripts/collect-traffic-intelligence.mjs",
+        "evolution-intelligence-store.js",
+        "system-health-admin.js"
       ]
     }
   ]
