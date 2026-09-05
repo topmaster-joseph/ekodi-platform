@@ -149,7 +149,8 @@ async function clickMenu(id) {
   try {
     const global = globalButton(group);
     await global.waitFor({ state: 'visible', timeout: 5_000 });
-    await global.click({ timeout: 5_000 });
+    const globalActive = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+    if (!globalActive) await global.click({ timeout: 5_000 });
 
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);

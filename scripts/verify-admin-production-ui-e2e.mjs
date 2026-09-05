@@ -91,7 +91,8 @@ for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
   const global = page.locator(`button[data-admin-global-group="${group}"]`);
   await global.waitFor({ state: 'visible', timeout: 10000 });
-  await global.click({ timeout: 10000 });
+  const globalActive = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+  if (!globalActive) await global.click({ timeout: 10000 });
 
   const tab = page.locator(`[data-admin-context-section="${id}"]`);
   await tab.waitFor({ state: 'visible', timeout: 10000 });
