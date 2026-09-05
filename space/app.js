@@ -120,15 +120,17 @@ function renderAgentHints(workspace){
   hints.push(['외부 변경은 자동 확정하지 않습니다.','가격 변경·게시·주문 변경은 승인 게이트를 거친 뒤 공식 어댑터가 실행합니다.']);
   $('agentHints').innerHTML=hints.map(([title,body])=>`<div class="hint"><b>${esc(title)}</b>${esc(body)}</div>`).join('');
 }
-function renderServiceActions(slug){
-  $('serviceActions').innerHTML=`<a href="/${encodeURIComponent(slug)}/marketing">Marketing AI <span>콘텐츠 · 캠페인 · 채널 →</span></a><a href="/">운영공간 목록 <span>다른 점포로 전환 →</span></a><a href="https://my.ekodi.kr/">내 홈 <span>개인 허브 →</span></a>`;
+function renderServiceActions(slug,role){
+  const manager=['store_owner','tenant_admin','platform_admin'].includes(String(role||''));
+  const admin=manager?`<a href="/${encodeURIComponent(slug)}/admin">점포 관리자 <span>매출 · 주문 · 메뉴 · 운영 →</span></a>`:'';
+  $('serviceActions').innerHTML=admin+`<a href="/${encodeURIComponent(slug)}/marketing">Marketing AI <span>콘텐츠 · 캠페인 · 채널 →</span></a><a href="/">운영공간 목록 <span>다른 점포로 전환 →</span></a><a href="https://my.ekodi.kr/">내 홈 <span>개인 허브 →</span></a>`;
 }
 function showStoreSections(on){document.querySelectorAll('.store-data').forEach(el=>el.classList.toggle('hidden',!on))}
 function renderStoreDashboard(workspace){
   renderStoreBasics(workspace.store||{});
   renderChannels(Array.isArray(workspace.channels)?workspace.channels:[]);
   renderMenu(Array.isArray(workspace.menu)?workspace.menu:[],Array.isArray(workspace.unmapped_channel_listings)?workspace.unmapped_channel_listings:[],workspace.summary||{});
-  renderAgentHints(workspace);renderServiceActions(workspace.slug);
+  renderAgentHints(workspace);renderServiceActions(workspace.slug,workspace.role);
   $('workspaceName').textContent=workspace.name;
   $('workspaceRole').textContent=roleLabels[workspace.role]||workspace.role||'점포 구성원';
   $('workspaceMeta').textContent='이 점포의 매장·메뉴·가격·판매채널 데이터를 다른 점포와 분리해 운영합니다.';
