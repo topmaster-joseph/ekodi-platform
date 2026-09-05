@@ -7,6 +7,18 @@
   "principleKo": "통합된 책임, 분산된 실행, 표준화된 연결.",
   "deploymentTopology": "modular-monolith-first",
   "deploymentRule": "Modular monolith is the default deployment topology. Responsibility and capability boundaries remain explicit and extraction-ready regardless of deployment unit.",
+  "operatingArchitectureVersion": "1.8.0",
+  "sovereignOperationsRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json",
+  "sovereignHierarchy": {
+    "order": ["sovereign", "autonomous", "agentic", "services"],
+    "rule": "Sovereign authority bounds autonomy; autonomy coordinates agents; agents operate capabilities and services without acquiring sovereign authority."
+  },
+  "authorityContext": {
+    "canonical": "Person + Workspace + Role + Capability",
+    "workspaceIdentityKey": "workspace_id",
+    "aiMayExpandOwnAuthority": false,
+    "providerMayOwnCanonicalAuthority": false
+  },
   "layers": {
     "governance": {
       "runtime": false,

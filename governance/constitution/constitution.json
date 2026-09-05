@@ -1,5 +1,5 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "effectiveDate": "2026-09-05",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -24,7 +24,10 @@
     "capability-first-reuse",
     "sustainable-scale-by-evidence",
     "workspace-over-space",
-    "living-digital-commons-north-star"
+    "living-digital-commons-north-star",
+    "sovereign-autonomy-with-human-authority",
+    "person-workspace-role-capability-authority",
+    "observe-detect-reason-plan-execute-verify-recover-learn"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -43,7 +46,9 @@
       "ekodi-responsible",
       "external-provider-responsible"
     ],
-    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate."
+    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate.",
+    "operatingArchitectureVersion": "1.8.0",
+    "sovereignOperationsRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json"
   },
   "systemBoundaries": {
     "production": [
@@ -233,7 +238,16 @@
       "guarded-deployment",
       "production-verification"
     ],
-    "productionCredentialsOutsideAgentWorktrees": true
+    "productionCredentialsOutsideAgentWorktrees": true,
+    "parallelSurfaceTracks": [
+      "ui",
+      "service",
+      "tenant",
+      "knowledge",
+      "content",
+      "agent"
+    ],
+    "sovereignRedAreasRequireCentralGate": true
   },
   "changeControl": {
     "C0": "operational parameter change; no constitutional impact; automated validation allowed",
@@ -251,7 +265,11 @@
       "config/service-workspace-policy.json",
       "scripts/validate-constitution.mjs",
       "scripts/validate-ekodi-os-architecture.mjs",
-      ".github/workflows/constitution-check.yml"
+      ".github/workflows/constitution-check.yml",
+      "governance/architecture/sovereign-autonomous-operations.v1.json",
+      "config/sovereign-surface-policy.json",
+      "sovereign-autonomy-runtime.js",
+      "scripts/validate-sovereign-autonomous-operations.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -357,7 +375,9 @@
       "backup",
       "disaster_recovery",
       "secure_projection"
-    ]
+    ],
+    "autonomousAuthorityExpansionForbidden": true,
+    "verificationAfterAutonomousExecutionRequired": true
   },
   "sustainableEvolutionModel": {
     "registry": "governance/architecture/ekodi-evolution-model.json",
@@ -394,5 +414,46 @@
     "aiGateway": "https://ai.ekodi.kr",
     "customerAiSubdomains": "legacy_execution_alias_only",
     "providerTopologyVisibleToOrdinaryUsers": false
+  },
+  "sovereignAutonomousOperations": {
+    "version": "1.8.0",
+    "hierarchy": [
+      "sovereign",
+      "autonomous",
+      "agentic",
+      "services"
+    ],
+    "authorityContext": "Person + Workspace + Role + Capability",
+    "finalHumanAuthority": "ekodi_platform_super_administrator",
+    "autonomyLoop": [
+      "observe",
+      "detect",
+      "reason",
+      "plan",
+      "execute",
+      "verify",
+      "recover",
+      "learn"
+    ],
+    "surfaceTracks": [
+      "ui",
+      "service",
+      "tenant",
+      "knowledge",
+      "content",
+      "agent"
+    ],
+    "executionClasses": [
+      "green",
+      "yellow",
+      "red"
+    ],
+    "autonomousAuthorityExpansionForbidden": true,
+    "productionDirectAgentMutationForbidden": true,
+    "verificationAfterExecutionRequired": true,
+    "failedVerificationRequiresRecoveryOrSafeDegradedState": true,
+    "providerIndependenceRequired": true,
+    "currentGenerationUnchanged": true,
+    "currentScaleTierUnchanged": true
   }
 }

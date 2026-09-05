@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "architectureVersion": "1.8.0",
+  "effectiveDate": "2026-09-05",
+  "status": "active",
+  "name": "EKODI Sovereign Autonomous Operations",
+  "purpose": "Preserve human and workspace sovereignty while allowing bounded AI and service operations to observe, reason, execute, verify, recover and learn inside explicit authority.",
+  "hierarchy": [
+    {
+      "level": 1,
+      "id": "sovereign",
+      "owns": [
+        "constitution",
+        "identity",
+        "policy",
+        "authorization",
+        "audit",
+        "control-authority"
+      ]
+    },
+    {
+      "level": 2,
+      "id": "autonomous",
+      "owns": [
+        "observe",
+        "detect",
+        "reason",
+        "plan",
+        "execute",
+        "verify",
+        "recover",
+        "learn"
+      ]
+    },
+    {
+      "level": 3,
+      "id": "agentic",
+      "owns": [
+        "chief-orchestration",
+        "specialist-agents",
+        "capability-tools",
+        "provider-routing"
+      ]
+    },
+    {
+      "level": 4,
+      "id": "services",
+      "owns": [
+        "ui",
+        "service",
+        "tenant",
+        "knowledge",
+        "content",
+        "agent-features"
+      ]
+    }
+  ],
+  "authorityContext": {
+    "canonical": "Person + Workspace + Role + Capability",
+    "personRequiredForExecution": true,
+    "workspaceIdentityKey": "workspace_id",
+    "roleRequiredForExecution": true,
+    "capabilityRequiredForExecution": true,
+    "aiMayExpandOwnAuthority": false,
+    "providerMayOwnCanonicalAuthority": false
+  },
+  "planes": {
+    "sovereignCore": [
+      "identity",
+      "policy",
+      "authorization",
+      "audit",
+      "constitution",
+      "service-contract-authority"
+    ],
+    "controlPlane": [
+      "intent",
+      "classification",
+      "delegation",
+      "routing",
+      "approval",
+      "release-order",
+      "evidence"
+    ],
+    "autonomousOperations": [
+      "observe",
+      "detect",
+      "reason",
+      "plan",
+      "execute",
+      "verify",
+      "recover",
+      "learn"
+    ],
+    "agenticPlane": [
+      "chief-orchestrator",
+      "specialist-agents",
+      "capability-tools",
+      "provider-adapters"
+    ],
+    "servicePlane": [
+      "ui",
+      "services",
+      "tenant",
+      "knowledge",
+      "content",
+      "agent-features"
+    ]
+  },
+  "autonomousLoop": {
+    "stages": [
+      "observe",
+      "detect",
+      "reason",
+      "plan",
+      "execute",
+      "verify",
+      "recover",
+      "learn"
+    ],
+    "executionRequiresDelegation": true,
+    "executionRequiresAudit": true,
+    "verificationRequiredAfterExecution": true,
+    "failedVerificationRoutesTo": "recover",
+    "recoveryFailureRoutesTo": "safe-degraded-observe",
+    "learningMayRecommendPolicyChange": true,
+    "learningMayApplyAuthorityExpansion": false
+  },
+  "parallelChangeClasses": {
+    "green": {
+      "mode": "parallel-safe",
+      "examples": [
+        "ui",
+        "content",
+        "documentation",
+        "knowledge",
+        "agent_prompt",
+        "tenant_presentation",
+        "health_checks",
+        "analytics",
+        "read_only_audits",
+        "observability",
+        "service_catalog"
+      ],
+      "autonomousRequirement": [
+        "delegated",
+        "reversible",
+        "audited",
+        "preflight_verified"
+      ]
+    },
+    "yellow": {
+      "mode": "contract-sensitive",
+      "examples": [
+        "service_contract",
+        "api_contract",
+        "agent_tool",
+        "worker",
+        "queue",
+        "cache",
+        "tenant_configuration",
+        "knowledge_index",
+        "content_pipeline",
+        "data_projection"
+      ],
+      "autonomousRequirement": [
+        "delegated",
+        "reversible",
+        "audited",
+        "preflight_verified",
+        "contract_declared",
+        "rollback_defined",
+        "verification_defined"
+      ]
+    },
+    "red": {
+      "mode": "sovereign-human-gate",
+      "examples": [
+        "auth",
+        "identity_authority",
+        "core_schema",
+        "gateway",
+        "policy",
+        "secrets",
+        "production_deployment",
+        "production_dns",
+        "destructive_data",
+        "permission_expansion",
+        "sovereign_control_plane",
+        "constitutional_change"
+      ],
+      "autonomousRequirement": [
+        "human_gate",
+        "governed_promotion"
+      ]
+    }
+  },
+  "costAndScale": {
+    "currentScaleTier": "S0",
+    "sharedBeforeDedicated": true,
+    "noSpeculativeScale": true,
+    "noSpeculativeServiceSplit": true,
+    "paidCapacityRequires": [
+      "recurring_revenue",
+      "committed_funding",
+      "demonstrated_operational_value",
+      "security_legal_privacy_or_reliability_requirement"
+    ]
+  },
+  "productionRule": {
+    "directAgentMutationForbidden": true,
+    "verifiedImmutablePromotionOnly": true,
+    "independentGovernanceAuthorizationRequired": true,
+    "rollbackOrRecoveryPathRequired": true
+  }
+}

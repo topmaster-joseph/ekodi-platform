@@ -3,6 +3,7 @@ import apiWorker from './api-worker.js';
 import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
+import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
@@ -356,7 +357,18 @@ export async function handleAgentMissionControl(request, env) {
       actionTiers: ['observe', 'assist', 'execute_reversible', 'human_gate', 'forbidden'],
       humanGateAreas: AI_MISSION_RUNTIME.humanGateAreas,
       forbiddenAreas: AI_MISSION_RUNTIME.forbiddenAreas,
+      sovereignAutonomy: getSovereignAutonomySummary(),
     }, 200, request, env);
+  }
+
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/sovereign`) {
+    return json({ ok: true, ...getSovereignAutonomySummary() }, 200, request, env);
+  }
+
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/sovereign/evaluate`) {
+    const body = await readJson(request);
+    if (!body) return json({ error: '유효한 JSON 요청이 필요합니다.', code: 'INVALID_JSON' }, 400, request, env);
+    return json({ ok: true, decision: evaluateAutonomousOperation(body) }, 200, request, env);
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/provider-status`) {

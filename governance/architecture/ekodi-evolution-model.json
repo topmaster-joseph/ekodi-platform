@@ -8,6 +8,13 @@
   "currentGeneration": 2,
   "currentGenerationLabel": "Integrated Platform moving toward Capability Platform",
   "currentScaleTier": "S0",
+  "operatingArchitectureVersion": "1.8.0",
+  "operatingArchitectureName": "Sovereign Autonomous Operations",
+  "operatingArchitectureRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json",
+  "generationPromotion": {
+    "changedByV18": false,
+    "note": "v1.8 reorganizes the operating architecture and autonomous control contract without promoting the constitutional generation or scale tier."
+  },
   "principle": "Grow by verified need, preserve user and workspace sovereignty, and expand cost only after value is proven.",
   "generations": [
     {"generation":1,"name":"Service Collection","goal":"Independent services exist and deliver value."},
