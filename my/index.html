@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-ekodi-global-nav="off">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -12,34 +12,45 @@
   <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
   <link rel="stylesheet" href="/personal-finance.css?v=20260905-personal-finance-1">
+  <link rel="stylesheet" href="/comfort-ui.css?v=20260906-comfort-v2">
 </head>
 <body data-ekodi-ui="USER">
-  <header class="topbar">
-    <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="#workspaces">내 공간</a><a href="#platforms">내 에코디</a><a href="#money">나의 재무</a><a href="/journey/">나의 여정</a><a href="#account">내 정보</a></nav>
-    <button id="authButton" class="ghost" type="button">Google로 시작</button>
+  <header class="topbar my-comfort-header">
+    <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="brand-leaf" aria-hidden="true"></span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
+    <nav aria-label="주요 메뉴"><a href="#home">홈</a><a href="#workspaces">공간</a><a href="#recommendations">AI 비서</a><a href="#money">재무</a><a href="/journey/">여정</a><a href="#account">정보</a></nav>
+    <div class="top-actions"><a class="header-search" href="#intentPlanText" aria-label="하고 싶은 일 입력으로 이동">&#54616;&#44256; &#49910;&#51008; &#51068;&#51012; &#47568;&#54644;&#48372;&#49464;&#50836;</a><button id="authButton" class="ghost" type="button">Google로 시작</button></div>
   </header>
 
   <main id="home">
-    <section class="welcome-shell">
+    <section class="welcome-shell comfort-hero">
       <div class="welcome-copy">
-        <p class="eyebrow">MY EKODI · USER UI</p>
+        <p class="eyebrow">MY EKODI · PERSONAL AI HOME</p>
         <h1><span id="welcomeLead">오늘도 편안하게,<br>필요한 것부터.</span></h1>
-        <p class="lead">My EKODI는 내 정보와 공간을 보여주는 곳을 넘어, 지금 필요한 일을 먼저 살피고 다음 행동을 제안하는 개인 AI 비서입니다.</p>
+        <p class="lead">My EKODI는 내 정보와 공간을 보여주는 곳을 넘어, 지금 필요한 일을 먼저 살피고 다음 한 걸음을 조용히 제안하는 개인 AI 비서입니다.</p>
+        <p class="hero-whisper">당신의 하루가, 조금 더 여유로워지도록.</p>
+        <div class="hero-promises" aria-label="My EKODI 사용 원칙"><span>내 선택이 먼저</span><span>필요한 것만</span><span>공간별로 안전하게</span></div>
       </div>
-      <aside class="identity-card" aria-label="나의 EKODI 상태">
+      <aside class="identity-card comfort-identity" aria-label="나의 EKODI 상태">
+        <div class="sprout-orb" aria-hidden="true"><i></i><b></b><span>•ᴗ•</span></div>
         <div class="identity-top"><small>EKODI USER AI</small><span id="accountPlan" class="status-pill">Guest</span></div>
         <strong id="identityName">로그인 전</strong>
         <span id="identityEmail">Google 인증 후 연결됩니다.</span>
         <code id="workspaceKey">workspace:…</code>
         <p id="workspaceSummary">로그인하면 마지막으로 사용한 공간과 연결 상태를 기억합니다.</p>
+        <a class="hero-auth-link" href="https://auth.ekodi.kr/?site=my&amp;return_to=https%3A%2F%2Fmy.ekodi.kr%2F">Google로 시작하기 <span aria-hidden="true">→</span></a>
       </aside>
     </section>
 
     <section id="recommendations" class="section assistant-section">
       <div class="assistant-heading">
         <div class="assistant-orb" aria-hidden="true">✦</div>
-        <div><p class="eyebrow">EKODI USER AI · 개인 AI 비서</p><h2>오늘의 제안</h2><p>현재 연결 상태와 이용 범위를 바탕으로 지금 하면 좋은 일만 골라 제안합니다. 전문 AI를 직접 지휘하지 않으며, 필요한 서비스로 안전하게 이어줍니다.</p></div>
+        <div><p class="eyebrow">EKODI USER AI · 개인 AI 비서</p><h2>시작 제안</h2><p>복잡한 메뉴보다 지금 필요한 것부터 보여드립니다. 선택하면 해당 공간이나 기능으로 자연스럽게 이어집니다.</p></div>
+      </div>
+      <div class="comfort-quick-grid" aria-label="빠른 시작">
+        <a href="#workspaces"><span class="quick-icon">⌂</span><strong>내 공간 열기</strong><small>저장한 작업과 맥락을 이어갑니다.</small></a>
+        <a href="#intentPlanText"><span class="quick-icon">✦</span><strong>AI와 시작하기</strong><small>하고 싶은 일을 자연어로 말해 보세요.</small></a>
+        <a href="#money"><span class="quick-icon">₩</span><strong>재무 살피기</strong><small>내 원장을 차분하게 정리합니다.</small></a>
+        <a href="/journey/"><span class="quick-icon">↗</span><strong>여정 이어가기</strong><small>다음 단계만 가볍게 확인합니다.</small></a>
       </div>
       <div id="recommendationList" class="recommendation-grid" aria-live="polite"><div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong><p>내 공간과 연결된 서비스를 살펴보고 필요한 다음 행동을 준비합니다.</p></div></div>
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
@@ -126,7 +137,14 @@
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="/journey/">My Journey ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer class="my-custom-footer" aria-label="My EKODI 안내">
+    <div class="my-footer-inner">
+      <div class="my-footer-brand"><span class="brand-leaf" aria-hidden="true"></span><div><strong>My EKODI</strong><p>당신의 일상에 가까이, 필요한 순간에만 조용히 돕는 개인 AI 공간입니다.</p></div></div>
+      <nav aria-label="My EKODI 바로가기"><a href="#workspaces">공간</a><a href="#recommendations">AI 비서</a><a href="#money">재무</a><a href="/journey/">여정</a><a href="#account">정보</a></nav>
+      <p class="my-footer-note">좋은 생각이 모여, 더 좋은 하루가 됩니다.</p>
+    </div>
+    <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span></div>
+  </footer>
   <script src="/config.js"></script>
   <script type="module" src="/app.js?v=20260904-progressive-personalization-1"></script>
   <script type="module" src="/intent-navigator.js?v=20260906-intent-os-1"></script>

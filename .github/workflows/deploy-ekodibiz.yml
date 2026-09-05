@@ -119,7 +119,7 @@ jobs:
 
           printf 'HEALTH=%s\nCONSULT=%s\nOFFER=%s\nOPS=%s\nCHECKOUT=%s\n' "${health:0:700}" "${consult:0:700}" "${offer:0:700}" "${ops:0:700}" "${checkout:0:700}"
           grep -Fq 'WHAT WE DO' <<<"$root"
-          grep -Fq '관계자 로그인' <<<"$root"
+          grep -Fq '프로그램 개발' <<<"$root"
           grep -Fq 'operational-mvp' <<<"$health"
           grep -Fq 'durable-object-sqlite' <<<"$health"
           grep -Fq '30일 자동홍보팩' <<<"$catalog"
@@ -173,7 +173,7 @@ jobs:
             catalog=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/catalog' || true)
             ops=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/ops/status' || true)
             if grep -Fq 'WHAT WE DO' <<<"$root" \
-              && grep -Fq '관계자 로그인' <<<"$root" \
+              && grep -Fq '프로그램 개발' <<<"$root" \
               && grep -Fq 'operational-mvp' <<<"$health" \
               && grep -Fq 'approval-gated' <<<"$health" \
               && grep -Fq 'durable-object-sqlite' <<<"$health" \
