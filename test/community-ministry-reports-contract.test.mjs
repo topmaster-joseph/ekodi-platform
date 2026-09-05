@@ -99,3 +99,8 @@ test('community admin UI is lazy-loaded, source-aware and secured as an admin as
   assert.ok(entry.includes('handleCommunityReportsRequest'));
   assert.ok(entry.includes('runCommunityReportSchedule'));
 });
+
+test('Community report source asks central Admin OS for read capability', async () => {
+  const source = await read('supabase/functions/community-report-source/index.ts');
+  assert.match(source, /"x-ekodi-required-capability": "service:read"/);
+});

@@ -1,5 +1,6 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
+import { withAdminRouteCapability } from './admin-route-authorization.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
@@ -83,6 +84,7 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = incoming.pathname;
+    request = withAdminRouteCapability(request);
 
     if (path === '/api/telemetry/visit') {
       try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
