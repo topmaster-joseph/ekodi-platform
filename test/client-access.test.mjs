@@ -73,3 +73,10 @@ test('Clients navigation and responsive layout are part of the module', () => {
   assert.match(css, /\.client-access-layout/);
   assert.match(css, /@media\(max-width:900px\)/);
 });
+
+test('Clients reuses the shared sidebar button and mounts based on panel readiness', () => {
+  assert.match(source, /content\.querySelector\('\[data-panel~="clients"\]'\)/);
+  assert.match(source, /let navButton = nav\.querySelector\('\[data-section="clients"\]'\)/);
+  assert.match(source, /if \(!navButton\) \{/);
+  assert.doesNotMatch(source, /document\.querySelector\('\[data-section="clients"\]'\)\) return null/);
+});
