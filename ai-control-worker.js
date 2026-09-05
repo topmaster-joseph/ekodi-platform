@@ -7,7 +7,7 @@ const ONLINE_WINDOW_MS=10*60*1000;
 function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
-function config(env={}){return{platform:'ai-control',architectureVersion:'1.8.1',hierarchy:['sovereign','autonomous','agentic','services'],mode:env.AI_CONTROL_MODE||'free-first',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=ai&return_to=https%3A%2F%2Fai.ekodi.kr%2F',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true}}
+function config(env={}){return{platform:'ai-control',architectureVersion:'1.8.1',hierarchy:['sovereign','autonomous','agentic','services'],mode:env.AI_CONTROL_MODE||'free-first',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,adminUrl:'https://admin.ekodi.kr/?route=common-services&service=ai',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F%3Froute%3Dcommon-services%26service%3Dai',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true}}
 function dbReady(env){return Boolean(env.DB&&typeof env.DB.prepare==='function')}
 function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SUPABASE_PUBLISHABLE_KEY))}
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
@@ -25,14 +25,42 @@ async function exchangeAuth(request,env){
   const data=await response.json().catch(()=>({}));if(!response.ok)return json({error:data?.message||data?.error||'identity_failed'},response.status);
   return json({accessToken:data.access_token||'',refreshToken:data.refresh_token||'',expiresIn:Number(data.expires_in||3600),user:{id:data.user?.id||'',email:data.user?.email||''}});
 }
-async function requireAdmin(request,env){
+function capabilityGranted(authority,required){
+  const need=clean(required).toLowerCase();
+  const grants=Array.isArray(authority?.capabilities)?authority.capabilities:[];
+  const denied=Array.isArray(authority?.deniedCapabilities)?authority.deniedCapabilities:[];
+  const matches=grant=>{const value=clean(grant).toLowerCase();return value==='*'||value===need||(value.endsWith(':*')&&need.startsWith(value.slice(0,-1)))};
+  if(denied.some(matches))return false;
+  return grants.some(matches);
+}
+async function centralAdminSession(request,env,requiredCapability='ai:read'){
+  const token=bearer(request);if(!token)return null;
+  const base=(clean(env.CONTROL_API_URL)||'https://api.ekodi.kr').replace(/\/+$/,'');
+  try{
+    const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
+    if(!response.ok)return null;
+    const data=await response.json().catch(()=>({}));
+    if(data?.authenticated!==true||data?.authority?.kind!=='admin')return null;
+    const role=clean(data.role||data.authority?.role).toLowerCase();
+    if(!capabilityGranted(data.authority,requiredCapability)&&role!=='super_admin')return{error:json({error:'capability_required',capability:requiredCapability},403)};
+    const email=clean(data.email).toLowerCase();if(!email)return{error:json({error:'admin_identity_missing'},403)};
+    return{user:{id:email,email,role,authority:data.authority},source:'central-admin'};
+  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return null}
+}
+async function legacySupabaseAdmin(request,env){
   const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};
   if(!supabaseReady(env))return{error:json({error:'identity_unavailable'},503)};
   const response=await fetch(`${env.SUPABASE_URL}/auth/v1/user`,{headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`}});
   const user=await response.json().catch(()=>({}));if(!response.ok)return{error:json({error:'invalid_session'},401)};
   const email=clean(user?.email).toLowerCase();const admins=clean(env.ADMIN_EMAILS||env.ADMIN_EMAIL).split(',').map(v=>v.trim().toLowerCase()).filter(Boolean);
   if(!email||!admins.includes(email))return{error:json({error:'admin_required'},403)};
-  return{user:{id:clean(user.id),email}};
+  return{user:{id:clean(user.id),email,role:'legacy_admin'},source:'legacy-supabase'};
+}
+async function requireAdmin(request,env,requiredCapability='ai:read'){
+  const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};
+  const central=await centralAdminSession(request,env,requiredCapability);
+  if(central)return central;
+  return legacySupabaseAdmin(request,env);
 }
 async function requireNode(request,env){
   if(!dbReady(env))return{error:json({error:'state_store_unavailable'},503)};
@@ -113,15 +141,25 @@ async function completeNodeJob(request,env,node,jobId){
   const input=await body(request)||{};const job=await env.DB.prepare('SELECT * FROM ai_control_jobs WHERE id=?').bind(jobId).first();if(!job)return json({error:'job_not_found'},404);if(job.lease_owner!==node.id)return json({error:'job_lease_owner_mismatch'},409);const ok=input.ok===true;const stamp=now();const output=clean(input.output).slice(0,250000);const error=clean(input.error).slice(0,8000);
   await env.DB.prepare('UPDATE ai_control_jobs SET state=?,output=?,error=?,updated_at=?,finished_at=? WHERE id=?').bind(ok?'completed':'failed',output,error,stamp,stamp,jobId).run();await finishRun(env,{id:job.run_id,state:ok?'completed':'failed',output,error,finishedAt:stamp});await finalizeTask(env,job.task_id);return json({ok:true});
 }
+function adminControlRedirect(){
+  const target='https://admin.ekodi.kr/?route=common-services&service=ai';
+  const redirect=Response.redirect(target,307);
+  const response=new Response(redirect.body,redirect);
+  response.headers.set('cache-control','no-store');
+  response.headers.set('x-robots-tag','noindex, nofollow, noarchive');
+  response.headers.set('x-ekodi-route','ai-runtime-admin-handoff');
+  return response;
+}
 function taskId(path,suffix=''){const match=path.match(new RegExp(`^/api/tasks/([^/]+)${suffix}$`));return match?decodeURIComponent(match[1]):''}
 function nodeJobId(path){const match=path.match(/^\/api\/node\/jobs\/([^/]+)\/complete$/);return match?decodeURIComponent(match[1]):''}
 
 export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
-  if(url.pathname==='/config.js')return new Response(`window.EKODI_AI_CONFIG=${JSON.stringify(config(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...headers()}});
-  if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=ai-ops&source=ai.ekodi.kr',307);
-  if(request.method==='GET'&&url.pathname==='/api/status'){const nodes=await onlineNodeProviders(env);return json({ok:true,platform:'ai-control',config:config(env),providers:providerStatus(env,nodes),stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes})}
-  if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);
+  if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/'||url.pathname==='/index.html'||url.pathname==='/admin'||url.pathname==='/admin/'))return adminControlRedirect();
+  if(url.pathname==='/config.js')return json({error:'operator_surface_moved',adminUrl:config(env).adminUrl},410);
+  if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:'1.8.0',surface:'runtime-only'});
+  if(request.method==='GET'&&url.pathname==='/api/status'){const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;const nodes=await onlineNodeProviders(env);return json({ok:true,platform:'ai-control',config:config(env),providers:providerStatus(env,nodes),stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'})}
+  if(url.pathname==='/api/auth/exchange')return json({error:'service_local_auth_retired',adminUrl:config(env).adminUrl},410);
   if(request.method==='POST'&&url.pathname==='/api/node/enroll')return enrollNode(request,env);
   if(url.pathname.startsWith('/api/node/')){
     const auth=await requireNode(request,env);if(auth.error)return auth.error;
@@ -130,8 +168,9 @@ export default{async fetch(request,env,ctx){
     return json({error:'not_found'},404);
   }
   if(url.pathname.startsWith('/api/')){
-    const auth=await requireAdmin(request,env);if(auth.error)return auth.error;
-    if(request.method==='GET'&&url.pathname==='/api/session')return json({ok:true,user:auth.user});
+    const writeAction=request.method!=='GET'&&request.method!=='HEAD';
+    const auth=await requireAdmin(request,env,writeAction?'ai:operate':'ai:read');if(auth.error)return auth.error;
+    if(request.method==='GET'&&url.pathname==='/api/session')return json({ok:true,user:auth.user,authoritySource:auth.source||'admin'});
     if(request.method==='GET'&&url.pathname==='/api/nodes'){try{return json({nodes:await listNodes(env)})}catch(error){return json({error:error.message},503)}}
     if(request.method==='POST'&&url.pathname==='/api/nodes/pair'){try{return json(await createPairing(env,auth.user.email),201)}catch(error){return json({error:error.message},503)}}
     if(request.method==='GET'&&url.pathname==='/api/tasks'){try{return json({tasks:await listTasks(env)})}catch(error){return json({error:error.message},503)}}
