@@ -38,6 +38,10 @@ jobs:
       FAIL_SECONDS: '5.0'
     steps:
       - uses: actions/checkout@v7
+      - name: Identify EKODI monitor traffic
+        shell: bash
+        run: |
+          printf '%s\n' 'user-agent = "EKODI-github-monitor/1.0"' > "$HOME/.curlrc"
 
       - name: Measure public entry performance
         id: perf

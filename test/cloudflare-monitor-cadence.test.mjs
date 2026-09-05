@@ -20,3 +20,11 @@ test('deployment-triggered verification remains enabled', () => {
   assert.match(performance, /push:\s*\n\s*branches: \[main\]/);
   assert.match(availability, /push:\s*\n\s*branches: \[main\]/);
 });
+
+
+test('scheduled monitors identify themselves as EKODI internal traffic', () => {
+  for (const source of [availability, revenue, performance]) {
+    assert.match(source, /EKODI-github-monitor\/1\.0/);
+    assert.match(source, /user-agent =/);
+  }
+});
