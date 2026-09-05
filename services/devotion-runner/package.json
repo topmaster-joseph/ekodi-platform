@@ -1,0 +1,10 @@
+{
+  "name": "@ekodi/devotion-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run": "node src/run.js",
+    "test": "node --test test/*.test.mjs"
+  }
+}

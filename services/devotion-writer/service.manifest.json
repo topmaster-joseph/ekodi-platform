@@ -1,0 +1,17 @@
+{
+  "service_id": "ekodi.devotion-writer",
+  "display_name": "EKODI Devotion Writer",
+  "version": "0.1.0",
+  "scope": "shared-independent-service",
+  "tenant_neutral": true,
+  "interfaces": { "http": ["GET /health", "POST /v1/write"] },
+  "providers": { "default_adapter": "gemini", "fallback_adapter": "codex-cli", "replaceable": true },
+  "output": { "format": "structured-json", "language": "ko", "narration_target_seconds": 30 },
+  "forbidden_core_dependencies": [
+    "specific church or mission names",
+    "YouTube publishing",
+    "FFmpeg rendering",
+    "specific storage vendor",
+    "QTIN commentary copying"
+  ]
+}

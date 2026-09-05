@@ -1,0 +1,92 @@
+name: Devotion Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_day:
+        description: 'First September day (blank = today KST)'
+        required: false
+        type: string
+      to_day:
+        description: 'Last September day (blank = 7-day buffer)'
+        required: false
+        type: string
+      publish_youtube:
+        description: 'Upload privately and schedule YouTube'
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: '30 17 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: devotion-cloud-run
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GEMINI_API_KEY: ${{ secrets.DEVOTION_GEMINI_API_KEY }}
+      STORAGE_GATEWAY_ENDPOINT: ${{ secrets.DEVOTION_STORAGE_GATEWAY_ENDPOINT }}
+      STORAGE_GATEWAY_TOKEN: ${{ secrets.DEVOTION_STORAGE_GATEWAY_TOKEN }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.DEVOTION_YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.DEVOTION_YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_CHURCH_REFRESH_TOKEN: ${{ secrets.DEVOTION_YOUTUBE_CHURCH_REFRESH_TOKEN }}
+      YOUTUBE_MISSION_REFRESH_TOKEN: ${{ secrets.DEVOTION_YOUTUBE_MISSION_REFRESH_TOKEN }}
+      PUBLISH_REQUESTED: ${{ github.event_name == 'schedule' && 'true' || inputs.publish_youtube }}
+      RUN_FROM_DAY: ${{ inputs.from_day }}
+      RUN_TO_DAY: ${{ inputs.to_day }}
+      DEVOTION_ASSET_DIR: ${{ runner.temp }}/devotion-assets
+      DEVOTION_OUTPUT_DIR: ${{ runner.temp }}/devotion-output
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve connected capabilities
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'generate=false' >> "$GITHUB_OUTPUT"
+          echo 'publish=false' >> "$GITHUB_OUTPUT"
+          if [[ -z "$GEMINI_API_KEY" ]]; then
+            echo '::notice::Devotion generation is idle until DEVOTION_GEMINI_API_KEY is connected.'
+            exit 0
+          fi
+          if [[ "${{ github.event_name }}" == "schedule" && -z "$STORAGE_GATEWAY_ENDPOINT" ]]; then
+            echo '::notice::Scheduled generation is idle until durable Storage Gateway is connected.'
+            exit 0
+          fi
+          echo 'generate=true' >> "$GITHUB_OUTPUT"
+          if [[ "$PUBLISH_REQUESTED" == "true" ]]; then
+            if [[ -n "$YOUTUBE_CLIENT_ID" && -n "$YOUTUBE_CLIENT_SECRET" && -n "$YOUTUBE_CHURCH_REFRESH_TOKEN" && -n "$YOUTUBE_MISSION_REFRESH_TOKEN" ]]; then
+              echo 'publish=true' >> "$GITHUB_OUTPUT"
+            else
+              echo '::notice::YouTube scheduling is idle until both channel OAuth connections are complete.'
+            fi
+          fi
+      - name: Install FFmpeg and Korean fonts
+        if: steps.preflight.outputs.generate == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+      - name: Run seven-day devotional buffer
+        if: steps.preflight.outputs.generate == 'true'
+        env:
+          PUBLISH_YOUTUBE: ${{ steps.preflight.outputs.publish }}
+        run: node services/devotion-runner/src/run.js
+      - name: Retain fallback artifacts
+        if: always() && steps.preflight.outputs.generate == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: devotional-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/devotion-assets
+            ${{ runner.temp }}/devotion-output
+          if-no-files-found: ignore
+          retention-days: 14

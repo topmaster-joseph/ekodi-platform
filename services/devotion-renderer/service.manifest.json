@@ -1,0 +1,31 @@
+{
+  "service_id": "ekodi.devotion-renderer.ffmpeg",
+  "display_name": "EKODI Devotion Renderer",
+  "version": "0.1.0",
+  "scope": "shared-independent-service",
+  "tenant_neutral": true,
+  "runtime": "container",
+  "interfaces": {
+    "http": ["GET /health", "POST /v1/render"]
+  },
+  "input_contract": {
+    "job": "generic render job",
+    "batch": "workspace-neutral devotional batch"
+  },
+  "output_contract": {
+    "artifacts": "rendered MP4 metadata and local/staged paths"
+  },
+  "render_defaults": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "video_codec": "libx264",
+    "audio_codec": "aac"
+  },
+  "forbidden_core_dependencies": [
+    "specific workspace names",
+    "specific YouTube channels",
+    "EKODI admin authentication",
+    "Google Drive folder IDs"
+  ]
+}
