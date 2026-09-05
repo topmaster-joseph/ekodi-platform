@@ -31,7 +31,7 @@ const WRITE_FIELDS={
 };
 
 function cors(origin){
-  const h={'access-control-allow-headers':'authorization,content-type,apikey,prefer','access-control-allow-methods':'GET,POST,OPTIONS','access-control-max-age':'86400','vary':'Origin'};
+  const h={'access-control-allow-headers':'authorization,content-type,apikey,prefer','access-control-allow-methods':'GET,POST,OPTIONS','access-control-expose-headers':'content-range','access-control-max-age':'86400','vary':'Origin'};
   if(origin&&ALLOWED_ORIGINS.has(origin))h['access-control-allow-origin']=origin;
   return h;
 }
