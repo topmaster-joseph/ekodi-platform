@@ -58,6 +58,9 @@ test('developer browser preflight never submits manifest data',()=>{
   assert.doesNotMatch(js,/method\s*:\s*['"]POST['"]/i);
   assert.doesNotMatch(js,/fetch\(['"]https:\/\//i);
   assert.match(html,/JSON은 서버로 전송하지 않습니다/);
+  const workerSource=read('experience-worker.js');
+  assert.match(workerSource,/htmlAsset\(env,request,'\/developer','developer'\)/);
+  assert.doesNotMatch(workerSource,/htmlAsset\(env,request,'\/developer\.html','developer'\)/);
 });
 
 test('legacy try.ekodi.kr permanently redirects to canonical exp.ekodi.kr',async()=>{

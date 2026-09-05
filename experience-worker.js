@@ -69,7 +69,7 @@ export default {
       if(path==='/api/contract')return json(PUBLIC_CONFORMANCE_CONTRACT,200,PUBLIC_CACHE);
       if(path==='/admin')return adminRedirect();
       if(path==='/experience')return withHeaders(Response.redirect('https://exp.ekodi.kr/',307),'no-store');
-      if(['/','/standard','/standards','/contract','/validate','/sdk','/sandbox','/certify','/certification'].includes(path))return htmlAsset(env,request,'/developer.html','developer');
+      if(['/','/standard','/standards','/contract','/validate','/sdk','/sandbox','/certify','/certification'].includes(path))return htmlAsset(env,request,'/developer','developer');
       if(path==='/developer.css'||path==='/developer.js')return staticAsset(env,request,path);
       return json({error:'not_found'},404,PUBLIC_CACHE);
     }
