@@ -146,7 +146,7 @@
         </div>
         <div id="affiliateFeedProviders" class="integration-capabilities" aria-live="polite"><span>서버 Feed 연결 상태를 확인하는 중입니다.</span></div>
         <form id="affiliateMerchantRouteForm" class="integration-account-form">
-          <div class="integration-form-heading"><div><strong>판매처 제휴 경로 설정</strong><p>최저가 판매처를 발견해도 제휴가 active이고 추천 허용된 판매처만 사용자 추천에 올라갑니다.</p></div><span class="integration-mode">ROUTE</span></div>
+          <div class="integration-form-heading"><div><strong>판매처 제휴 경로 설정</strong><p>최저가여도 제휴 active, 추적링크 ready, 상품·가격 공급 ready, 추천 허용까지 모두 완료된 판매처만 사용자 추천에 올라갑니다.</p></div><span class="integration-mode">ROUTE</span></div>
           <div class="integration-form-grid">
             <label>판매처 코드<input name="merchantKey" maxlength="80" placeholder="예: elevenst" required></label>
             <label>판매처 이름<input name="merchantName" maxlength="120" placeholder="예: 11번가" required></label>
@@ -154,8 +154,11 @@
             <label>정산 통화<input name="settlementCurrency" maxlength="3" value="KRW" placeholder="KRW · USD · JPY"></label>
             <label>제휴 방식<select name="affiliateMode"><option value="network">간접 제휴망</option><option value="direct">직접 제휴</option></select></label>
             <label>제휴 상태<select name="affiliateStatus"><option value="candidate">후보</option><option value="pending">신청/승인 대기</option><option value="approved">승인됨</option><option value="active">활성</option><option value="suspended">중지</option></select></label>
-            <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" placeholder="예: linkprice"></label>
-            <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="예: LinkPrice"></label>
+            <label>추적링크 상태<select name="trackingStatus"><option value="not_ready">미준비</option><option value="pending">확인 중</option><option value="ready">추적 확인 완료</option><option value="failed">오류</option></select></label>
+            <label>상품·가격 공급<select name="catalogStatus"><option value="not_ready">미준비</option><option value="manual_verified">수동 가격 검증</option><option value="feed_ready">Feed/API 정상</option><option value="stale">가격 만료</option><option value="failed">오류</option></select></label>
+            <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" list="affiliateNetworkKeys" placeholder="linkprice · awin · impact"></label>
+            <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="LinkPrice · Awin · impact.com"></label>
+            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="awin"><option value="impact"><option value="cj"><option value="rakuten"></datalist>
             <label class="integration-wide">제휴 프로그램/관리 URL<input name="programUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
             <label class="integration-wide">운영 메모<textarea name="notes" maxlength="500" rows="2" placeholder="승인일, 담당자, 해외 세금/통화 메모 등"></textarea></label>
             <label class="integration-toggle"><input name="recommendationEnabled" type="checkbox"> 제휴 완료 후 이 판매처의 상품을 추천 후보로 허용</label>
@@ -170,7 +173,7 @@
             <label>판매처 이름<input name="providerName" maxlength="120" placeholder="예: 11번가" required></label>
             <label>상품명<input name="productName" maxlength="240" required></label>
             <label>카테고리<input name="category" maxlength="120" placeholder="건강 · 식품 · 생활"></label>
-            <label>비교가격(원)<input name="priceKrw" type="number" min="0" step="1" placeholder="해외상품은 검증된 원화 환산값만"></label>
+            <label>검증 비교가격(원)<input name="priceKrw" type="number" min="1" step="1" required placeholder="해외상품도 현재 검증된 원화 환산값"></label>
             <label>원 판매가<input name="sourcePriceAmount" type="number" min="0" step="0.01" placeholder="해외 판매가 선택"></label>
             <label>원 판매가 통화<input name="sourcePriceCurrency" maxlength="3" placeholder="KRW · USD · JPY"></label>
             <label>제휴처 상품 ID<input name="sourceId" maxlength="160" placeholder="선택"></label>
@@ -293,8 +296,8 @@
         const label = document.createElement('span');
         const via = route.affiliateMode === 'network' ? `간접 · ${route.networkName || route.networkKey}` : '직접 제휴';
         const market = `${route.marketCountry || 'KR'} · ${route.settlementCurrency || 'KRW'}`;
-        const eligible = route.affiliateStatus === 'active' && route.recommendationEnabled ? '추천 허용' : '추천 대기';
-        label.textContent = `${route.merchantName || route.merchantKey} · ${via} · ${route.affiliateStatus} · ${eligible} · ${market}`;
+        const eligible = route.recommendationReady ? '추천 가능' : '추천 차단';
+        label.textContent = `${route.merchantName || route.merchantKey} · ${via} · 제휴 ${route.affiliateStatus} · 추적 ${route.trackingStatus || 'not_ready'} · 가격 ${route.catalogStatus || 'not_ready'} · ${eligible} · ${market}`;
         row.append(label);
         merchantRoutes.append(row);
       }
@@ -421,8 +424,8 @@
         payload.recommendationEnabled = form.elements.recommendationEnabled.checked;
         const data = await api('/api/affiliate/routes', { method: 'POST', body: JSON.stringify(payload) });
         const route = data.route || {};
-        setMessage(`${route.merchantName || route.merchantKey} 제휴 경로를 저장했습니다.${route.recommendationEnabled ? ' 추천 후보로 활성화되었습니다.' : ' 제휴 완료 전에는 추천되지 않습니다.'}`);
-        if (state) state.textContent = route.recommendationEnabled ? '제휴 완료 · 추천 허용' : `${route.affiliateStatus || 'candidate'} · 추천 대기`;
+        setMessage(`${route.merchantName || route.merchantKey} 제휴 경로를 저장했습니다.${route.recommendationReady ? ' 제휴·추적·가격 검증을 통과해 추천 가능합니다.' : ' 모든 게이트를 통과하기 전에는 추천되지 않습니다.'}`);
+        if (state) state.textContent = route.recommendationReady ? '검증 완료 · 추천 가능' : `제휴 ${route.affiliateStatus || 'candidate'} · 추적 ${route.trackingStatus || 'not_ready'} · 가격 ${route.catalogStatus || 'not_ready'}`;
         await loadOverview();
       } catch (error) {
         setMessage(error.message, true);
