@@ -72,6 +72,7 @@ body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
 body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#c6d4df;font:inherit;font-size:13px;font-weight:760;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
 body.admin-compact .admin-context-tab:hover{background:var(--admin-soft);color:#fff}
 body.admin-compact .admin-context-tab.active{border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.16);color:#fff}
+body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:32px;padding:0 10px;border:1px solid rgba(56,189,248,.24);border-radius:8px;background:rgba(56,189,248,.08);color:#dff6ff;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
 body.admin-compact .content{padding:14px 16px 28px!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
@@ -246,6 +247,15 @@ function renderContextTabs(nav, shell, group, section, locale) {
 function syncWorkbenchState(nav, locale, preferredSection = '') {
   const { globals, shell } = ensureContainers(nav);
   globalButtons(globals, locale);
+  if (shell && !shell.querySelector('[data-admin-capability-shortcut]')) {
+    const shortcut = document.createElement('button');
+    shortcut.type = 'button';
+    shortcut.className = 'admin-capability-shortcut';
+    shortcut.dataset.adminCapabilityShortcut = 'true';
+    shortcut.textContent = locale === 'en' ? '⚡ Capabilities' : '⚡ 기능';
+    shortcut.addEventListener('click', () => activateSection(nav, 'capabilities'));
+    shell.append(shortcut);
+  }
   const section = preferredSection || activeSection(nav);
   const group = getAdminMenuGroupForSection(section);
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
