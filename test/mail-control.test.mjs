@@ -34,7 +34,7 @@ test('Workspace admin includes tenant-local Mail management under the canonical 
   assert.match(admin, /\['mail','메일'\]/);
   assert.match(admin, /api\.ekodi\.kr\/api\/mail\/control/);
   assert.match(admin, /ekodi-workspace-admin-session/);
-  assert.match(admin, /\/api\/auth\/exchange/);
+  assert.match(admin, /\/auth\/v1\/verify/);
   assert.match(admin, /'ekodi-church':'에코디교회'/);
   assert.match(admin, /DNS 다시 확인/);
   assert.match(admin, /발신 미설정/);

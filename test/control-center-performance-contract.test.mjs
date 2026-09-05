@@ -62,7 +62,7 @@ test('Admin live surfaces avoid hidden-tab polling and coalesce slow refreshes',
 test('Shared Site release is triggered and syntax-checks Clients assets', () => {
   assert.ok(sharedDeploy.includes("- 'client-access.js'"));
   assert.ok(sharedDeploy.includes("- 'client-access.css'"));
-  assert.match(sharedDeploy, /admin-public-site-controls\.js client-access\.js ai-ops-admin\.js/);
+  assert.match(sharedDeploy, /admin-public-site-controls\.js client-access\.js [^\r\n]*ai-ops-admin\.js/);
 });
 
 test('production build ships optional modules as standalone assets and retired loaders stay removed', () => {

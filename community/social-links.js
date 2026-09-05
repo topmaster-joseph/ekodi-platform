@@ -2,6 +2,7 @@
   const API = 'https://api.ekodi.kr/api/social/registry';
   const HUB = 'https://social.ekodi.kr';
   const icons = { youtube:'▶', instagram:'◎', facebook:'f', kakao:'◇', blog:'N', threads:'@', live:'●', tiktok:'♪', linkedin:'in', other:'↗' };
+  const recommendationTags = { youtube:'영상,찬양,성경공부,음악', instagram:'영상,지역활동,여행,디자인', live:'찬양,성경공부,기도,선교', facebook:'지역활동,봉사', blog:'독서,지역활동', threads:'영상,디자인', tiktok:'영상,음악', linkedin:'경영,마케팅,창업', other:'지역활동' };
   let targets = [...document.querySelectorAll('[data-ekodi-social-links]')];
   if (!targets.length) {
     const grid = document.querySelector('.channel-grid');
@@ -35,6 +36,7 @@
     a.dataset.authHref = channel.url;
     a.dataset.authTarget = '_blank';
     a.dataset.provider = channel.provider || 'other';
+    a.dataset.recommendTags = recommendationTags[a.dataset.provider] || recommendationTags.other;
     if (variant === 'cards') {
       a.className = 'channel-card';
       const icon = document.createElement('span'); icon.textContent = icons[channel.provider] || '↗';
@@ -55,6 +57,7 @@
     a.rel = 'noopener noreferrer';
     a.dataset.authHref = a.href;
     a.dataset.authTarget = '_blank';
+    a.dataset.recommendTags = '지역활동,외국인교류,영상';
     if (variant === 'cards') {
       a.className = 'channel-card';
       const icon = document.createElement('span'); icon.textContent = 'E';
@@ -90,6 +93,7 @@
       target.dataset.registryRevision = String(registry.revision || registry.version || 'live');
       target.dataset.socialReady = 'true';
     }
+    window.dispatchEvent(new CustomEvent('ekodi:social-ready',{ detail:{ organizationIds:targets.map(target=>target.dataset.org||'community') } }));
   }
 
   render();

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [api, admin, build, featureLoader, siteWorker, booksWorker, publishingHtml, publishingApp, migration] = await Promise.all([
+const [api, admin, build, featureLoader, siteWorker, booksWorker, publishingHtml, publishingApp, migration, sharedDeploy] = await Promise.all([
   readFile(new URL('../books-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../books-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
@@ -12,6 +12,7 @@ const [api, admin, build, featureLoader, siteWorker, booksWorker, publishingHtml
   readFile(new URL('../books/publishing/index.html', import.meta.url), 'utf8'),
   readFile(new URL('../books/publishing/app.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0009_books_operations.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
 ]);
 
 test('Books control plane exposes publications, services, features and inquiries', () => {
@@ -42,6 +43,16 @@ test('Books admin ships with the current Admin Shell and loads heavy modules onl
   assert.match(siteWorker, /'\/books'/);
   assert.match(siteWorker, /'\/books-admin\.js'/);
   assert.match(siteWorker, /'\/books-finance-admin\.js'/);
+});
+
+test('Shared Site release follows every Books admin source that feeds the deployed lazy bundle', () => {
+  for (const asset of [
+    'books-admin.js', 'books-admin.css', 'books-finance-admin.js', 'books-finance-admin.css',
+    'books-distribution-admin.js', 'books-distribution-admin.css', 'books-pipeline-admin.js',
+    'books-pipeline-admin.css', 'books-pipeline-bridge.js', 'books-royalty-admin.js',
+    'books-royalty-admin.css', 'author-billing-admin.js', 'author-billing-admin.css',
+  ]) assert.ok(sharedDeploy.includes(`- '${asset}'`), `${asset} must trigger Shared Site production release`);
+  assert.match(sharedDeploy, /client-access\.js books-admin\.js books-finance-admin\.js books-distribution-admin\.js books-pipeline-admin\.js books-pipeline-bridge\.js books-royalty-admin\.js author-billing-admin\.js ai-ops-admin\.js/);
 });
 
 test('Public publishing page has transparent pricing and consultation submission', () => {
