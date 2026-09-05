@@ -157,7 +157,7 @@ export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
   if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/'||url.pathname==='/index.html'||url.pathname==='/admin'||url.pathname==='/admin/'))return adminControlRedirect();
   if(url.pathname==='/config.js')return json({error:'operator_surface_moved',adminUrl:config(env).adminUrl},410);
-  if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:'1.8.0',surface:'runtime-only'});
+  if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:config(env).architectureVersion,surface:'runtime-only'});
   if(request.method==='GET'&&url.pathname==='/api/status'){const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;const nodes=await onlineNodeProviders(env);return json({ok:true,platform:'ai-control',config:config(env),providers:providerStatus(env,nodes),stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'})}
   if(url.pathname==='/api/auth/exchange')return json({error:'service_local_auth_retired',adminUrl:config(env).adminUrl},410);
   if(request.method==='POST'&&url.pathname==='/api/node/enroll')return enrollNode(request,env);
