@@ -1,5 +1,5 @@
 {
-  "version": "1.8.0",
+  "version": "1.8.1",
   "effectiveDate": "2026-09-05",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -47,7 +47,7 @@
       "external-provider-responsible"
     ],
     "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate.",
-    "operatingArchitectureVersion": "1.8.0",
+    "operatingArchitectureVersion": "1.8.1",
     "sovereignOperationsRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json"
   },
   "systemBoundaries": {
@@ -377,7 +377,8 @@
       "secure_projection"
     ],
     "autonomousAuthorityExpansionForbidden": true,
-    "verificationAfterAutonomousExecutionRequired": true
+    "verificationAfterAutonomousExecutionRequired": true,
+    "productionChangeApprovalMode": "explicit_or_preapproved_bounded_standing_delegation"
   },
   "sustainableEvolutionModel": {
     "registry": "governance/architecture/ekodi-evolution-model.json",
@@ -416,7 +417,7 @@
     "providerTopologyVisibleToOrdinaryUsers": false
   },
   "sovereignAutonomousOperations": {
-    "version": "1.8.0",
+    "version": "1.8.1",
     "hierarchy": [
       "sovereign",
       "autonomous",
@@ -454,6 +455,11 @@
     "failedVerificationRequiresRecoveryOrSafeDegradedState": true,
     "providerIndependenceRequired": true,
     "currentGenerationUnchanged": true,
-    "currentScaleTierUnchanged": true
+    "currentScaleTierUnchanged": true,
+    "productionPromotionRequiresIndependentControlPlane": true,
+    "boundedProductionStandingDelegation": true,
+    "standingDelegationScope": "existing_registered_boundary_only",
+    "automaticSafeRecoveryForFailedBoundedPromotion": true,
+    "unbudgetedPaidCommitmentForbidden": true
   }
 }
