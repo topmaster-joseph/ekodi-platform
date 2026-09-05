@@ -4,6 +4,34 @@
  * Served from shell.ekodi.kr so strict service CSPs can keep inline styles disabled.
  */
 
+/* Natural-language word integrity
+ * Korean and other natural-language UI copy wraps at word/eojeol boundaries by default.
+ * Technical identifiers opt in to anywhere wrapping with a utility class or data marker.
+ */
+html[data-ekodi-user-ui] body {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: auto;
+  hyphens: none;
+}
+html[data-ekodi-user-ui] :where(button, [role="button"]) {
+  white-space: normal;
+}
+html[data-ekodi-user-ui] :where(code, kbd, samp, .url, .domain, .email, [data-ekodi-break-anywhere]) {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  hyphens: none;
+}
+html[data-ekodi-user-ui] .ekodi-nowrap {
+  white-space: nowrap !important;
+  word-break: normal !important;
+}
+html[data-ekodi-user-ui] .ekodi-break-anywhere {
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  hyphens: none !important;
+}
+
 html[data-ekodi-user-ui] {
   --ekodi-user-chrome-bg: color-mix(in srgb, var(--ekodi-service-paper, #fafaf7) 94%, var(--ekodi-service-accent, #315d48) 6%);
   --ekodi-user-chrome-text: var(--ekodi-service-ink, #18251d);

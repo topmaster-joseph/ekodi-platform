@@ -1,5 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 
@@ -451,6 +452,7 @@ export default {
       }
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
         const page=ekodiBizInvestAdminPage(request);
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
@@ -458,6 +460,7 @@ export default {
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return churchPastorAdminPage();
       if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
         const page=ekodiBizInvestBusinessPage(request);

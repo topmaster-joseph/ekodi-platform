@@ -12,6 +12,7 @@ import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } fr
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -171,10 +172,12 @@ export default {
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
+        if(url.pathname==='/church-pastor-admin.js')return churchPastorAdminScript();
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return tradePartnerPage();
         if(url.pathname==='/mall/admin'||url.pathname.startsWith('/mall/admin/')){const target=new URL(request.url);target.pathname=`/ekodibiz${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
+        if(isChurchPastorAdminPath(url.pathname))return churchPastorAdminPage();
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return workspaceAdminPage();
       }
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}

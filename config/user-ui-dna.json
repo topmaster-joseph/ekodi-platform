@@ -1,8 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "policy": "Each public EKODI service must have a distinct visual family. Share accessibility, responsive behavior, EKODI identity and navigation conventions, but do not clone palette, card geometry, typography hierarchy or information rhythm across services.",
   "shared": {
-    "mustKeep": ["EKODI brand relationship", "WCAG-conscious contrast", "keyboard focus", "responsive layout", "clear return path to ekodi.kr"],
+    "mustKeep": ["EKODI brand relationship", "WCAG-conscious contrast", "keyboard focus", "responsive layout", "clear return path to ekodi.kr", "natural-language word integrity (no arbitrary word splitting)"],
     "mustVary": ["dominant palette", "headline typography", "corner geometry", "information density", "hero composition", "motion character", "card language"]
   },
   "services": {

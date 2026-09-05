@@ -6,13 +6,14 @@ import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const [registry,dna,shell,messageUI,injectorSource,userUiStyle,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource,ccmMrSource] = await Promise.all([
+const [registry,dna,shell,messageUI,injectorSource,userUiStyle,responsiveTypographySource,siteShellSource,shellWorkerSource,clientFooterSource,userLanguageSource,designInheritanceSource,ccmMrSource] = await Promise.all([
   readJson('config/ecosystem-services.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
   readJson('config/message-ui.json'),
   readText('ekodi-shell-injector.js'),
   readText('shell/user-ui-shell.css'),
+  readText('responsive.css'),
   readText('site-shell-worker.js'),
   readText('ekodi-shell-worker.js'),
   readText('shell/user-ui-footer.js'),
@@ -32,6 +33,9 @@ if (!Array.isArray(dna.shared?.mustKeep) || dna.shared.mustKeep.length < 4) {
 }
 if (!Array.isArray(dna.shared?.mustVary) || dna.shared.mustVary.length < 5) {
   errors.push('UI DNA shared.mustVary must define the visual dimensions that services vary.');
+}
+if (!dna.shared?.mustKeep?.includes('natural-language word integrity (no arbitrary word splitting)')) {
+  errors.push('UI DNA must preserve natural-language word integrity as a shared invariant.');
 }
 
 for (const service of registry.services ?? []) {
@@ -151,6 +155,12 @@ for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallba
 }
 for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.ekodi-user-ui-footer','.ekodi-user-ui-header','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','text-align: center','.ekodi-user-language','justify-content: center']) {
   if (!userUiStyle.includes(marker)) errors.push(`Shared CSP-safe user UI stylesheet lost required marker: ${marker}`);
+}
+for (const marker of ['Natural-language word integrity','word-break: keep-all','overflow-wrap: break-word','hyphens: none','[data-ekodi-break-anywhere]']) {
+  if (!userUiStyle.includes(marker)) errors.push(`Shared User UI typography lost required marker: ${marker}`);
+}
+for (const marker of ['Responsive Typography Standard v2','word-break:keep-all','overflow-wrap:break-word','hyphens:none','[data-ekodi-break-anywhere]','.ekodi-break-anywhere']) {
+  if (!responsiveTypographySource.includes(marker)) errors.push(`Responsive typography standard lost required marker: ${marker}`);
 }
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
