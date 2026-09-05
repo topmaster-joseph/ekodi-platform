@@ -4,11 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = async (name) => JSON.parse(await readFile(path.join(root, 'content', name), 'utf8'));
-const [site, products, pages, stores] = await Promise.all([
+const [site, products, pages, stores, regionsConfig] = await Promise.all([
   load('site.json'),
   load('products.json'),
   load('pages.json'),
-  load('stores.json')
+  load('stores.json'),
+  load('regions.json')
 ]);
 
 const errors = [];
@@ -48,6 +49,25 @@ if (!site?.commerce?.paymentsEnabled && site?.commerce?.orderMode === 'live') er
 
 const categoryIds = new Set((site.categories || []).map((item) => item.id));
 if (!categoryIds.has('all')) errors.push('site.categories must include "all"');
+if (!categoryIds.has('general')) errors.push('site.categories must include "general"');
+if (categoryIds.has('local')) errors.push('site.categories must not use "local" as a product category; local is a geographic filter');
+
+const regions = Array.isArray(regionsConfig?.regions) ? regionsConfig.regions : [];
+const regionIds = new Set();
+for (const [index, region] of regions.entries()) {
+  const label = `regions[${index}]`;
+  required(region.id, `${label}.id`);
+  required(region.label, `${label}.label`);
+  required(region.type, `${label}.type`);
+  if (regionIds.has(region.id)) errors.push(`${label}.id duplicates ${region.id}`);
+  regionIds.add(region.id);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(region.id || '')) errors.push(`${label}.id must be a stable lowercase region id`);
+  if (!Array.isArray(region.path) || !region.path.includes(region.id)) errors.push(`${label}.path must include its own id`);
+}
+for (const [index, region] of regions.entries()) {
+  if (region.parentId && !regionIds.has(region.parentId)) errors.push(`regions[${index}].parentId does not match a region`);
+  for (const id of region.path || []) if (!regionIds.has(id)) errors.push(`regions[${index}].path contains unknown region ${id}`);
+}
 
 const storeIds = new Set();
 const storeSlugs = new Set();
@@ -82,6 +102,15 @@ for (const [index, product] of products.entries()) {
   ids.add(product.id); slugs.add(product.slug);
   if (!/^[a-z0-9-]+$/.test(product.slug || '')) errors.push(`${label}.slug must use lowercase letters, numbers, and hyphens`);
   if (!categoryIds.has(product.category)) errors.push(`${label}.category is not defined in site.categories`);
+  if (product.region) {
+    required(product.region.primaryRegionId, `${label}.region.primaryRegionId`);
+    required(product.region.label, `${label}.region.label`);
+    required(product.region.relationship, `${label}.region.relationship`);
+    if (!regionIds.has(product.region.primaryRegionId)) errors.push(`${label}.region.primaryRegionId is not defined in regions.json`);
+    if (!Array.isArray(product.region.regionIds) || !product.region.regionIds.includes(product.region.primaryRegionId)) errors.push(`${label}.region.regionIds must include primaryRegionId`);
+    for (const id of product.region.regionIds || []) if (!regionIds.has(id)) errors.push(`${label}.region.regionIds contains unknown region ${id}`);
+    if (typeof product.region.verified !== 'boolean') errors.push(`${label}.region.verified must be boolean`);
+  }
   if (!storeIds.has(product.storeId)) errors.push(`${label}.storeId does not match a store`);
   if (typeof product.published !== 'boolean') errors.push(`${label}.published must be boolean`);
   if (product.price !== null && product.price !== undefined && (!Number.isFinite(product.price) || product.price < 0)) errors.push(`${label}.price must be null or a non-negative number`);

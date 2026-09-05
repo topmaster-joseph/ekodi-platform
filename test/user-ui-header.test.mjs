@@ -55,7 +55,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(worker,/x-ekodi-user-language/);
   assert.match(legacyMobileHeader,/if\(window\.__EKODI_USER_UI_HEADER_BOOTED\)return/);
 
-  assert.match(footerClient,/const VERSION=4/);
+  assert.match(footerClient,/const VERSION=5/);
   assert.match(footerClient,/__EKODI_USER_FOOTER_CONFIG__/);
   assert.match(footerClient,/user-footer\.json/);
   assert.match(footerClient,/ekodi-user-ui-footer__copy/);
@@ -102,6 +102,12 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/text-align:\s*center/);
   assert.match(sharedCss,/justify-content:\s*center/);
   assert.match(sharedCss,/\.ekodi-user-language\s*\{/);
+  assert.match(sharedCss,/--ekodi-user-header-inline-gutter/);
+  assert.match(sharedCss,/Selective geometry principle/);
+  assert.match(sharedCss,/consumer-commerce/);
+  assert.match(sharedCss,/body > \[data-ekodi-user-footer\] ~ \[data-ekodi-user-footer\]/);
+  assert.match(footerClient,/dedupeSharedFooters/);
+  assert.match(footerClient,/observeFooterChanges/);
   assert.match(sharedCss,/z-index:\s*2147483400/);
   assert.match(sharedCss,/overflow:\s*visible/);
   assert.match(userLanguage,/z-index:2147483400!important/);
@@ -123,17 +129,22 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   const parsedPolicy=JSON.parse(shellPolicy);
   assert.equal(parsedPolicy.footer.contentSource,'config/user-footer.js');
   assert.equal(parsedPolicy.footer.alignment,'center');
+  assert.equal(parsedPolicy.footer.dedupe,'exactly-one-shared-footer');
+  assert.equal(parsedPolicy.header.alignment,'centered-canvas');
+  assert.equal(parsedPolicy.principles.selectiveRoundedInteraction,true);
+  assert.equal(parsedPolicy.experienceProfiles['consumer-commerce'].appliesTo[0],'mall');
   assert.match(parsedPolicy.footer.layout,/centered/);
   assert.match(parsedPolicy.footer.themePolicy,/inherit each service/);
   assert.equal(parsedPolicy.language.owner,'shared-shell');
   assert.equal(parsedPolicy.language.adminExcluded,true);
   assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja','ne','vi']);
 
+  assert.match(principles,/consumer-commerce/);
+
   const strictCsp=shellCsp("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'");
   assert.match(strictCsp,/style-src 'self' https:\/\/shell\.ekodi\.kr/);
   assert.doesNotMatch(strictCsp,/style-src[^;]*'unsafe-inline'/);
 
-  assert.match(principles,/중앙 정렬 원칙은 \*\*헤더 영역에만\*\* 적용한다/);
   assert.match(principles,/관리자 화면\(`admin`\)/);
   assert.match(principles,/각 사이트의 브랜드, 목적, 사용자 흐름/);
 });
