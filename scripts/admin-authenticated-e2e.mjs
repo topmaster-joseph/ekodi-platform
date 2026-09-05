@@ -113,7 +113,8 @@ async function waitForVisiblePanel(id) {
       const ids = String(panel.dataset.panel || '').split(/\s+/).filter(Boolean);
       if (!ids.includes(section)) return false;
       const style = getComputedStyle(panel);
-      return !panel.hidden && !panel.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
+      const text = String(panel.innerText || '').replace(/\s+/g, ' ').trim();
+      return !panel.hidden && !panel.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden' && text.length >= 4;
     });
   }, id, { timeout: 5_000 });
 }
