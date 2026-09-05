@@ -29,6 +29,7 @@
   const CONFIRM_MESSAGES = {
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
+    'maintenance.safe_optimize': '전후 상태를 측정하고 7일 이상 지난 임시파일만 정리합니다. 시작프로그램·업데이트·전원·레지스트리·재부팅은 건드리지 않습니다. 안전 최적화를 진행할까요?',
     'updates.install': '대기 중인 Windows 소프트웨어 업데이트를 설치합니다. EKODI는 자동 재부팅하지 않습니다. 진행할까요?',
     'profile.workstation.apply': '바탕화면과 시작 메뉴에 EKODI 업무 바로가기를 구성할까요?',
     'profile.workstation.restore': 'EKODI가 만든 업무 바로가기를 제거할까요?',
@@ -36,27 +37,88 @@
     'startup.disable': '이 시작 프로그램을 비활성화할까요? EKODI가 복원 정보를 로컬에 보관합니다.',
     'startup.restore': '이 시작 프로그램을 다시 활성화할까요?',
   };
+  const REQUEST_TIMEOUT_MS = 12000;
+  const POLL_INTERVAL_MS = 15000;
+  const MAX_GET_RETRIES = 2;
+  const inFlightRequests = new Map();
   let timer = null;
   let currentEnrollmentUrl = '';
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   let activeType = 'all';
+  let loadDevicesPromise = null;
+  let refreshBlockedUntil = 0;
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
     return { authorization: `Bearer ${token}`, ...(json ? { 'content-type': 'application/json' } : {}) };
   }
 
+  function sleep(ms) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
+
+  function retryDelay(response, attempt = 0) {
+    const value = response?.headers?.get('retry-after') || '';
+    const seconds = Number(value);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(60000, Math.ceil(seconds * 1000));
+    const date = Date.parse(value);
+    if (Number.isFinite(date)) return Math.max(0, Math.min(60000, date - Date.now()));
+    return Math.min(30000, (1000 * (2 ** attempt)) + Math.floor(Math.random() * 250));
+  }
+
   async function request(path, options = {}) {
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers: { ...authHeaders(Boolean(options.body)), ...(options.headers || {}) },
-      cache: 'no-store',
-    });
-    let data = {};
-    try { data = await response.json(); } catch {}
-    if (!response.ok) throw new Error(data.error || `Device Control API 오류 (${response.status})`);
-    return data;
+    const method = String(options.method || 'GET').toUpperCase();
+    const requestKey = method === 'GET' ? `${method}:${path}` : '';
+    if (requestKey && inFlightRequests.has(requestKey)) return inFlightRequests.get(requestKey);
+
+    const run = async () => {
+      const attempts = method === 'GET' ? MAX_GET_RETRIES + 1 : 1;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: { ...authHeaders(Boolean(options.body)), ...(options.headers || {}) },
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+        } catch (error) {
+          if (attempt + 1 < attempts && (error?.name === 'AbortError' || error instanceof TypeError)) {
+            await sleep(Math.min(5000, 750 * (2 ** attempt)));
+            continue;
+          }
+          if (error?.name === 'AbortError') throw new Error('Device Control API 응답 시간이 초과되었습니다.');
+          throw error;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+
+        let data = {};
+        try { data = await response.json(); } catch {}
+        if (response.ok) return data;
+
+        const delay = retryDelay(response, attempt);
+        if (response.status === 429) refreshBlockedUntil = Math.max(refreshBlockedUntil, Date.now() + delay);
+        if (method === 'GET' && [429, 502, 503, 504].includes(response.status) && attempt + 1 < attempts) {
+          await sleep(delay);
+          continue;
+        }
+        const error = new Error(data.error || `Device Control API 오류 (${response.status})`);
+        error.status = response.status;
+        error.retryAfterMs = delay;
+        throw error;
+      }
+      throw new Error('Device Control API 요청을 완료하지 못했습니다.');
+    };
+
+    const promise = run();
+    if (requestKey) {
+      inFlightRequests.set(requestKey, promise);
+      const clear = () => { if (inFlightRequests.get(requestKey) === promise) inFlightRequests.delete(requestKey); };
+      promise.then(clear, clear);
+    }
+    return promise;
   }
 
   function setPageTitle(value) {
@@ -94,7 +156,7 @@
       'lock.resume_off': '복귀 잠금 해제', 'lock.resume_on': '복귀 잠금 사용', 'autologon.open': '자동로그인 관리',
       'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
-      'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
+      'maintenance.safe_optimize': '안전 최적화', 'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트',
     };
     return labels[type] || type;
@@ -164,13 +226,28 @@
     return button;
   }
 
+  function commandResultText(command) {
+    const result = command?.result || {};
+    if (command?.type === 'maintenance.safe_optimize' && command.status === 'succeeded') {
+      const parts = [];
+      if (result.freedMB != null) parts.push(`${result.freedMB}MB 확보`);
+      if (result.beforeMinFreePct != null && result.afterMinFreePct != null) parts.push(`최소 여유 ${result.beforeMinFreePct}% → ${result.afterMinFreePct}%`);
+      if (result.removedFiles != null) parts.push(`${result.removedFiles}개 파일 정리`);
+      return parts.join(' · ') || result.message || '';
+    }
+    return result.message || '';
+  }
+
   function latestCommandMarkup(commands = []) {
     if (!commands.length) return '<p class="device-command-empty">아직 실행한 작업이 없습니다.</p>';
-    return `<div class="device-command-history">${commands.slice(0, 4).map(command => `
+    return `<div class="device-command-history">${commands.slice(0, 4).map(command => {
+      const detail = commandResultText(command);
+      return `
       <div class="device-command-row" data-status="${command.status}">
         <span>${commandLabel(command.type)}</span><strong>${commandStatus(command.status)}</strong>
-        <small>${timeLabel(command.completedAt || command.claimedAt || command.issuedAt)}${command.result?.message ? ` · ${escapeHtml(command.result.message)}` : ''}</small>
-      </div>`).join('')}</div>`;
+        <small>${timeLabel(command.completedAt || command.claimedAt || command.issuedAt)}${detail ? ` · ${escapeHtml(detail)}` : ''}</small>
+      </div>`;
+    }).join('')}</div>`;
   }
 
   function healthMarkup(device) {
@@ -313,7 +390,8 @@
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid';
     mainActions.append(
-      makeActionButton(device, 'diagnostics.collect', '🩺 전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
+      makeActionButton(device, 'maintenance.safe_optimize', '✨ 안전 최적화', 'primary', {}, !capability(device, 'storageMaintenance')),
+      makeActionButton(device, 'diagnostics.collect', '🩺 전체 진단', 'secondary', {}, !capability(device, 'diagnostics')),
       makeActionButton(device, 'maintenance.temp_cleanup', '🧹 임시파일 정리', 'ghost', {}, !capability(device, 'storageMaintenance')),
       makeActionButton(device, 'updates.scan', '🔄 업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
       makeActionButton(device, 'updates.install', '⬆ 업데이트 설치', 'ghost', {}, !capability(device, 'windowsUpdate')),
@@ -394,12 +472,32 @@
   async function loadDevices() {
     const list = document.querySelector('#ekodiDeviceList');
     if (!list || !sessionStorage.getItem(TOKEN_KEY)) return;
-    try {
-      const data = await request('/api/control/devices');
-      if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
-      renderDevices(data.devices || []); renderJobs(data.jobs || []);
-      const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
-    } catch (error) { list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>'; list.querySelector('p').textContent = error.message; }
+    if (loadDevicesPromise) return loadDevicesPromise;
+    if (Date.now() < refreshBlockedUntil) {
+      const stamp = document.querySelector('#deviceGeneratedAt');
+      if (stamp) stamp.textContent = `요청 보호 중 · ${Math.max(1, Math.ceil((refreshBlockedUntil - Date.now()) / 1000))}초 후 자동 갱신`;
+      return;
+    }
+
+    loadDevicesPromise = (async () => {
+      try {
+        const data = await request('/api/control/devices');
+        if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
+        renderDevices(data.devices || []); renderJobs(data.jobs || []);
+        const stamp = document.querySelector('#deviceGeneratedAt');
+        if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
+      } catch (error) {
+        const stamp = document.querySelector('#deviceGeneratedAt');
+        if (stamp) stamp.textContent = error.status === 429 ? '요청 보호 중 · 자동 재시도 예정' : `갱신 지연 · ${error.message}`;
+        if (!currentDevices.length) {
+          list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>';
+          list.querySelector('p').textContent = error.message;
+        }
+      } finally {
+        loadDevicesPromise = null;
+      }
+    })();
+    return loadDevicesPromise;
   }
 
   async function createEnrollment() {
@@ -453,7 +551,7 @@
       </div>
       <section class="device-job-console">
         <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 후보가 됩니다. POS·키오스크·태블릿·센서·로봇은 자동 실행 대상에서 제외합니다.</p></div>
-        <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
+        <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.safe_optimize">안전 최적화</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
         <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
       </section>
       <div class="device-onboarding-grid">
@@ -480,7 +578,9 @@
 
     if (location.hash === '#devices') showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
-    timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
+    timer = window.setInterval(() => {
+      if (!document.hidden && !panel.classList.contains('hidden-panel')) loadDevices();
+    }, POLL_INTERVAL_MS);
   }
 
   installPanel();
