@@ -1,5 +1,5 @@
 {
-  "version": 52,
+  "version": 53,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -23,9 +23,7 @@
         "redirect": "manual",
         "expect": [
           "EKODIBIZ",
-          "WHAT WE DO",
-          "프로그램 개발",
-          "도서출판"
+          "WHAT WE DO"
         ],
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding"
@@ -72,7 +70,8 @@
         "redirect": "manual",
         "expect": [
           "자담치킨 목포대점",
-          "store-admin.js?v=20260906-provisioning"
+          "data-ekodi-store-site-admin=\"true\"",
+          "data-ekodi-authority-scope=\"tenant\""
         ],
         "headerExpect": [
           "x-ekodi-route: jadam-store-admin",
@@ -104,7 +103,8 @@
         "redirect": "manual",
         "expect": [
           "피자마루 목포대점",
-          "store-admin.js?v=20260906-provisioning"
+          "data-ekodi-store-site-admin=\"true\"",
+          "data-ekodi-authority-scope=\"tenant\""
         ],
         "headerExpect": [
           "x-ekodi-route: pizzamaru-store-admin",
@@ -136,7 +136,8 @@
         "redirect": "manual",
         "expect": [
           "요거트퍼플 목포대점",
-          "store-admin.js?v=20260906-provisioning"
+          "data-ekodi-store-site-admin=\"true\"",
+          "data-ekodi-authority-scope=\"tenant\""
         ],
         "headerExpect": [
           "x-ekodi-route: yogurt-store-admin",

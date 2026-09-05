@@ -69,7 +69,7 @@ test('canonical EKODIBIZ URL slug maps to immutable internal tenant slug',async(
 });
 
 test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async()=>{
-  const [router,wrangler,html,manifestText]=await Promise.all([read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('ekodibiz/index.html'),read('deploy/manifests/shared-site.worker.json')]);
+  const [router,wrangler,html,manifestText,deployWorkflow]=await Promise.all([read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('ekodibiz/index.html'),read('deploy/manifests/shared-site.worker.json'),read('.github/workflows/deploy-ekodibiz.yml')]);
   assert.ok(router.includes('EKODIBIZ_PUBLIC_ROUTE'));
   assert.ok(router.includes("env?.EKODIBIZ?.fetch"));
   assert.ok(router.includes("x-ekodi-workspace-gateway','ekodibiz-service-binding"));
@@ -77,5 +77,13 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(router.includes("on('script[src]'"));
   assert.match(wrangler,/binding = "EKODIBIZ"[\s\S]*service = "ekodibiz-revenue-os"/);
   assert.ok(html.includes('<link rel="canonical" href="https://ekodi.kr/ekodibiz">'));
-  const manifest=JSON.parse(manifestText);assert.ok(manifest.worker.requests.some(x=>x.url==='https://ekodi.kr/ekodibiz'));
+  const manifest=JSON.parse(manifestText);
+  const rootProbe=manifest.worker.requests.find(x=>x.url==='https://ekodi.kr/ekodibiz');
+  assert.ok(rootProbe);
+  assert.ok(rootProbe.expect.includes('EKODIBIZ'));
+  assert.ok(rootProbe.expect.includes('WHAT WE DO'));
+  assert.equal(rootProbe.expect.length,2);
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-workspace-gateway: ekodibiz-service-binding'));
+  assert.ok(deployWorkflow.includes("grep -Fq 'WHAT WE DO'"));
+  assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
 });

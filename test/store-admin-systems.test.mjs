@@ -106,6 +106,9 @@ test('production smoke preserves all three first-store URLs on the common engine
     const row=urls.get(`https://ekodi.kr/${store.slug}/admin`);
     assert.ok(row,`missing smoke ${store.slug}`);assert.deepEqual(row.statuses,[200]);
     assert.ok(row.expect.includes(store.brand));
+    assert.ok(row.expect.includes('data-ekodi-store-site-admin=\"true\"'));
+    assert.ok(row.expect.includes('data-ekodi-authority-scope=\"tenant\"'));
+    assert.ok(!row.expect.some(marker=>marker.startsWith('store-admin.js?v=')));
     assert.ok(row.headerExpect.includes(`x-ekodi-route: ${store.slug}-store-admin`));
   }
 });
