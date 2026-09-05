@@ -54,3 +54,13 @@ test('advisory check recognizes shared Shell architecture without over-indexing 
   assert.match(serviceInternal,/Result:\*\* PASS/);
   assert.doesNotMatch(serviceInternal,/ARCH-001/);
 });
+
+
+test('advisory check recognizes provider-independence boundary without over-indexing provider adapters',()=>{
+  const boundary=run('config/ai-provider-independence.json,core-ai-gateway.js,ai-control-provider-router.js,scripts/validate-ai-provider-independence.mjs');
+  assert.match(boundary,/Result:\*\* RELATED/);
+  assert.match(boundary,/PROVIDER-001/);
+  const adapter=run('openai-provider-adapter.js');
+  assert.match(adapter,/Result:\*\* PASS/);
+  assert.doesNotMatch(adapter,/PROVIDER-001/);
+});
