@@ -68,11 +68,13 @@ async function workerUsage(account, window) {
   const scripts = new Map();
   for (const row of rows) {
     const name = String(row?.dimensions?.scriptName || 'unknown');
-    if (!scripts.has(name)) scripts.set(name, { script:name, requests:0, subrequests:0, errors:0, cpuP99:0 });
+    if (!scripts.has(name)) scripts.set(name, { script:name, requests:0, subrequests:0, errors:0, cpuP99:0, statuses:{} });
     const item = scripts.get(name);
     item.requests += Number(row?.sum?.requests || 0);
     item.subrequests += Number(row?.sum?.subrequests || 0);
     item.errors += Number(row?.sum?.errors || 0);
+    const status=String(row?.dimensions?.status || 'unknown');
+    item.statuses[status]=(item.statuses[status]||0)+Number(row?.sum?.requests || 0);
     item.cpuP99 = Math.max(item.cpuP99, Number(row?.quantiles?.cpuTimeP99 || 0));
   }
   const list = [...scripts.values()].map(item => ({
@@ -385,7 +387,7 @@ function markdown(report) {
       `4. Cron/Health: ${icon(s.cronHealth.severity)} health ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthRequests} (${s.cronHealth.healthPercent}%)` : 'analytics unavailable'} | zones ${s.cronHealth.coverage}, scheduled top scripts ${s.cronHealth.scheduledScripts}, every-minute ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}`,
       `5. DEV->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'} | zones ${s.boundary.coverage}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
       '', 'Top Workers:',
-      ...row.workers.top.slice(0,10).map(item => `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | cpuP99 raw ${item.cpuP99} | \`${item.script}\``),
+      ...row.workers.top.slice(0,10).map(item => { const statusSummary=Object.entries(item.statuses||{}).sort((a,b)=>b[1]-a[1]).map(([status,count])=>status+':'+count).join(', ')||'n/a'; return `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | status ${statusSummary} | cpuP99 raw ${item.cpuP99} | \`${item.script}\``; }),
       '', 'Top Hosts (covered Zone Analytics):',
       ...(row.topHosts.length ? row.topHosts.slice(0,10).map(item=>'- '+item.requests+' requests | '+item.host+'') : ['- n/a']),
       '', 'Top Bot Hosts (covered Zone Analytics):',
