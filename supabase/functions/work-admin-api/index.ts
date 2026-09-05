@@ -12,6 +12,22 @@ import {
   type TrustPolicyVersion,
 } from "../_shared/trust.ts";
 
+type AdminAuthority = {
+  role: string;
+  scope: { type?: string; id?: string } | null;
+  capabilities: string[];
+  deniedCapabilities: string[];
+  elevated: boolean;
+  elevatedUntil: string | null;
+};
+
+type AdminSession = {
+  email: string;
+  name: string;
+  role: string;
+  authority: AdminAuthority | null;
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_admin_environment_missing");
@@ -27,9 +43,9 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
 
-function cors(req) {
+function cors(req: Request): Record<string, string> {
   const origin = req.headers.get("Origin") || "";
-  const headers = {
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, content-type, x-client-info",
     "Access-Control-Allow-Methods": "GET,PATCH,OPTIONS",
     "Access-Control-Max-Age": "600",
@@ -39,7 +55,7 @@ function cors(req) {
   return headers;
 }
 
-function json(req, body, status = 200) {
+function json(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -51,7 +67,7 @@ function json(req, body, status = 200) {
   });
 }
 
-async function verifyEkodiAdmin(req) {
+async function verifyEkodiAdmin(req: Request): Promise<AdminSession | null> {
   const origin = req.headers.get("Origin") || "";
   if (origin && !ALLOWED_ORIGINS.has(origin)) return null;
   const authorization = req.headers.get("Authorization") || "";
@@ -66,19 +82,19 @@ async function verifyEkodiAdmin(req) {
     cache: "no-store",
   });
   if (!response.ok) return null;
-  const session = await response.json().catch(() => null);
+  const session: any = await response.json().catch(() => null);
   if (!session?.email) return null;
-  const rawAuthority = session?.authority && typeof session.authority === "object" ? session.authority : null;
-  const authority = rawAuthority && Array.isArray(rawAuthority.capabilities)
+  const rawAuthority: any = session?.authority && typeof session.authority === "object" ? session.authority : null;
+  const authority: AdminAuthority | null = rawAuthority && Array.isArray(rawAuthority.capabilities)
     ? {
       role: String(rawAuthority.role || session.role || "viewer").toLowerCase(),
       scope: rawAuthority.scope && typeof rawAuthority.scope === "object" ? rawAuthority.scope : null,
-      capabilities: rawAuthority.capabilities.map(value => String(value || "").toLowerCase()).filter(Boolean),
+      capabilities: rawAuthority.capabilities.map((value: unknown) => String(value || "").toLowerCase()).filter(Boolean),
       deniedCapabilities: Array.isArray(rawAuthority.deniedCapabilities)
-        ? rawAuthority.deniedCapabilities.map(value => String(value || "").toLowerCase()).filter(Boolean)
+        ? rawAuthority.deniedCapabilities.map((value: unknown) => String(value || "").toLowerCase()).filter(Boolean)
         : [],
       elevated: rawAuthority.elevated === true,
-      elevatedUntil: rawAuthority.elevatedUntil || null,
+      elevatedUntil: rawAuthority.elevatedUntil ? String(rawAuthority.elevatedUntil) : null,
     }
     : null;
   return {
@@ -97,11 +113,11 @@ async function trustAuditSalt() {
   return data;
 }
 
-async function trustSubjectHash(subjectId) {
+async function trustSubjectHash(subjectId: string) {
   const salt = await trustAuditSalt();
   const bytes = new TextEncoder().encode(`${salt}:${subjectId}`);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(digest)).map((byte: number) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function workAdminCandidatePolicy() {
@@ -114,7 +130,11 @@ async function workAdminCandidatePolicy() {
   return (data ?? null) as TrustPolicyVersion | null;
 }
 
-async function observeWorkAdminTrustShadow(adminSession, action: "job.moderate" | "organization.verify", risk: RiskLevel = "high") {
+async function observeWorkAdminTrustShadow(
+  adminSession: AdminSession,
+  action: "job.moderate" | "organization.verify",
+  risk: RiskLevel = "high",
+) {
   try {
     const legacyAllowed = true;
     const authority = adminSession.authority;
@@ -188,33 +208,33 @@ async function observeWorkAdminTrustShadow(adminSession, action: "job.moderate" 
   }
 }
 
-function pathOf(req) {
+function pathOf(req: Request) {
   const pathname = new URL(req.url).pathname;
   return pathname.replace(/^\/(?:functions\/v1\/)?work-admin-api/, "") || "/";
 }
 
-function limitOf(req) {
+function limitOf(req: Request) {
   const value = Number(new URL(req.url).searchParams.get("limit") || 80);
   return Math.max(1, Math.min(200, Math.trunc(value) || 80));
 }
 
-function queryOf(req) {
+function queryOf(req: Request) {
   return String(new URL(req.url).searchParams.get("q") || "").trim().toLocaleLowerCase("ko-KR").slice(0, 120);
 }
 
-function uuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+function uuid(value: unknown) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value ?? ""));
 }
 
-async function count(table, column, value) {
-  let query = admin.from(table).select("*", { count: "exact", head: true });
+async function count(table: string, column?: string, value?: unknown) {
+  let query: any = admin.from(table).select("*", { count: "exact", head: true });
   if (column) query = query.eq(column, value);
   const { count: total, error } = await query;
   if (error) throw error;
   return Number(total || 0);
 }
 
-async function summary(req) {
+async function summary(req: Request) {
   const [
     profilesTotal, discoverable, organizationsTotal, verified, jobsTotal, published, draft, closed,
     applicationsTotal, submitted, reviewing, interview, accepted, rejected, withdrawn,
@@ -234,7 +254,7 @@ async function summary(req) {
   });
 }
 
-async function listJobs(req) {
+async function listJobs(req: Request) {
   const url = new URL(req.url);
   const status = String(url.searchParams.get("status") || "").trim();
   let query = admin.from("work_jobs")
@@ -245,20 +265,20 @@ async function listJobs(req) {
   const { data, error } = await query;
   if (error) throw error;
   const rows = data || [];
-  const jobIds = rows.map(row => row.id);
-  const counts = new Map();
+  const jobIds = rows.map((row: any) => row.id);
+  const counts = new Map<string, number>();
   if (jobIds.length) {
     const { data: applications, error: appError } = await admin.from("work_applications").select("job_id").in("job_id", jobIds);
     if (appError) throw appError;
     for (const item of applications || []) counts.set(item.job_id, (counts.get(item.job_id) || 0) + 1);
   }
   const q = queryOf(req);
-  const filtered = rows.filter(row => {
+  const filtered = rows.filter((row: any) => {
     if (!q) return true;
     const org = Array.isArray(row.work_organizations) ? row.work_organizations[0] : row.work_organizations;
     return [row.title, row.region, row.category, org?.name].some(value => String(value || "").toLocaleLowerCase("ko-KR").includes(q));
   }).slice(0, limitOf(req));
-  return json(req, { jobs: filtered.map(row => {
+  return json(req, { jobs: filtered.map((row: any) => {
     const org = Array.isArray(row.work_organizations) ? row.work_organizations[0] : row.work_organizations;
     return {
       id: row.id,
@@ -282,7 +302,7 @@ async function listJobs(req) {
   }) });
 }
 
-async function listApplications(req) {
+async function listApplications(req: Request) {
   const url = new URL(req.url);
   const status = String(url.searchParams.get("status") || "").trim();
   let query = admin.from("work_applications")
@@ -293,8 +313,8 @@ async function listApplications(req) {
   const { data, error } = await query;
   if (error) throw error;
   const rows = data || [];
-  const userIds = [...new Set(rows.map(row => row.applicant_user_id).filter(Boolean))];
-  const profileMap = new Map();
+  const userIds = [...new Set(rows.map((row: any) => row.applicant_user_id).filter(Boolean))];
+  const profileMap = new Map<string, any>();
   if (userIds.length) {
     const { data: profiles, error: profileError } = await admin.from("work_profiles")
       .select("user_id,display_name,region,skills,languages")
@@ -303,7 +323,7 @@ async function listApplications(req) {
     for (const profile of profiles || []) profileMap.set(profile.user_id, profile);
   }
   const q = queryOf(req);
-  const result = rows.map(row => {
+  const result = rows.map((row: any) => {
     const profile = profileMap.get(row.applicant_user_id) || {};
     const job = Array.isArray(row.work_jobs) ? row.work_jobs[0] : row.work_jobs;
     const orgRaw = job?.work_organizations;
@@ -327,7 +347,7 @@ async function listApplications(req) {
   return json(req, { applications: result });
 }
 
-async function listOrganizations(req) {
+async function listOrganizations(req: Request) {
   const url = new URL(req.url);
   const verified = String(url.searchParams.get("verified") || "").trim();
   let query = admin.from("work_organizations")
@@ -338,10 +358,10 @@ async function listOrganizations(req) {
   const { data, error } = await query;
   if (error) throw error;
   const rows = data || [];
-  const ownerIds = rows.map(row => row.owner_user_id).filter(Boolean);
-  const orgIds = rows.map(row => row.id);
-  const profileMap = new Map();
-  const jobCounts = new Map();
+  const ownerIds = rows.map((row: any) => row.owner_user_id).filter(Boolean);
+  const orgIds = rows.map((row: any) => row.id);
+  const profileMap = new Map<string, any>();
+  const jobCounts = new Map<string, number>();
   if (ownerIds.length) {
     const { data: profiles, error: profileError } = await admin.from("work_profiles").select("user_id,display_name").in("user_id", ownerIds);
     if (profileError) throw profileError;
@@ -353,7 +373,7 @@ async function listOrganizations(req) {
     for (const job of jobs || []) jobCounts.set(job.organization_id, (jobCounts.get(job.organization_id) || 0) + 1);
   }
   const q = queryOf(req);
-  return json(req, { organizations: rows.map(row => ({
+  return json(req, { organizations: rows.map((row: any) => ({
     id: row.id,
     name: row.name,
     region: row.region,
@@ -365,7 +385,7 @@ async function listOrganizations(req) {
   })).filter(row => !q || [row.name, row.region, row.ownerName].some(value => String(value || "").toLocaleLowerCase("ko-KR").includes(q))).slice(0, limitOf(req)) });
 }
 
-async function listProfiles(req) {
+async function listProfiles(req: Request) {
   const url = new URL(req.url);
   const role = String(url.searchParams.get("role") || "").trim();
   let query = admin.from("work_profiles")
@@ -376,7 +396,7 @@ async function listProfiles(req) {
   const { data, error } = await query;
   if (error) throw error;
   const q = queryOf(req);
-  return json(req, { profiles: (data || []).filter(row => !q || [row.display_name, row.region, row.role, ...(row.skills || []), ...(row.languages || [])].some(value => String(value || "").toLocaleLowerCase("ko-KR").includes(q))).slice(0, limitOf(req)).map(row => ({
+  return json(req, { profiles: (data || []).filter((row: any) => !q || [row.display_name, row.region, row.role, ...(row.skills || []), ...(row.languages || [])].some(value => String(value || "").toLocaleLowerCase("ko-KR").includes(q))).slice(0, limitOf(req)).map((row: any) => ({
     displayName: row.display_name,
     role: row.role,
     region: row.region,
@@ -389,17 +409,17 @@ async function listProfiles(req) {
   })) });
 }
 
-async function security(req) {
+async function security(req: Request) {
   const tableChecks = await Promise.all(["work_profiles", "work_organizations", "work_jobs", "work_applications"].map(async table => {
     const { error } = await admin.from(table).select("*", { count: "exact", head: true });
     return { table, reachable: !error, detail: error?.message || "" };
   }));
-  let serviceHealth = null;
+  let serviceHealth: any = null;
   try {
     const response = await fetch(WORK_HEALTH_URL, { headers: { accept: "application/json" }, cache: "no-store" });
     serviceHealth = response.ok ? await response.json().catch(() => ({ ok: true, httpStatus: response.status })) : { ok: false, httpStatus: response.status };
   } catch (error) {
-    serviceHealth = { ok: false, error: String(error?.message || error) };
+    serviceHealth = { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
   return json(req, {
     generatedAt: new Date().toISOString(),
@@ -410,7 +430,14 @@ async function security(req) {
   });
 }
 
-async function audit(adminSession, action, resourceType, resourceId, reason, detail = {}) {
+async function audit(
+  adminSession: AdminSession,
+  action: string,
+  resourceType: string,
+  resourceId: string,
+  reason: string,
+  detail: Record<string, unknown> = {},
+) {
   const { error } = await admin.from("work_admin_audit").insert({
     admin_email: adminSession.email,
     action,
@@ -422,9 +449,9 @@ async function audit(adminSession, action, resourceType, resourceId, reason, det
   if (error) throw error;
 }
 
-async function moderateJob(req, adminSession, id) {
+async function moderateJob(req: Request, adminSession: AdminSession, id: string) {
   if (!uuid(id)) return json(req, { error: "invalid_job_id" }, 400);
-  const body = await req.json().catch(() => ({}));
+  const body: any = await req.json().catch(() => ({}));
   const status = String(body?.status || "").trim();
   const reason = String(body?.reason || "").trim().slice(0, 300);
   if (!["draft", "closed"].includes(status)) return json(req, { error: "admin_can_only_unpublish_or_close" }, 400);
@@ -432,7 +459,7 @@ async function moderateJob(req, adminSession, id) {
   const { data: current, error: currentError } = await admin.from("work_jobs").select("id,title,status").eq("id", id).maybeSingle();
   if (currentError) throw currentError;
   if (!current) return json(req, { error: "job_not_found" }, 404);
-  const patch = { status, updated_at: new Date().toISOString() };
+  const patch: { status: string; updated_at: string; published_at?: string | null } = { status, updated_at: new Date().toISOString() };
   if (status === "draft") patch.published_at = null;
   const { data, error } = await admin.from("work_jobs").update(patch).eq("id", id).select("id,title,status,updated_at").single();
   if (error) throw error;
@@ -440,9 +467,9 @@ async function moderateJob(req, adminSession, id) {
   return json(req, { job: data });
 }
 
-async function verifyOrganization(req, adminSession, id) {
+async function verifyOrganization(req: Request, adminSession: AdminSession, id: string) {
   if (!uuid(id)) return json(req, { error: "invalid_organization_id" }, 400);
-  const body = await req.json().catch(() => ({}));
+  const body: any = await req.json().catch(() => ({}));
   const verified = body?.verified === true;
   const reason = String(body?.reason || "").trim().slice(0, 300);
   if (reason.length < 3) return json(req, { error: "verification_reason_required" }, 400);
@@ -455,7 +482,7 @@ async function verifyOrganization(req, adminSession, id) {
   return json(req, { organization: data });
 }
 
-Deno.serve(async req => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     const origin = req.headers.get("Origin") || "";
     if (origin && !ALLOWED_ORIGINS.has(origin)) return json(req, { error: "origin_not_allowed" }, 403);
