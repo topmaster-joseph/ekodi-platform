@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -55,7 +55,8 @@
     "meetingProviders": ["jitsi"],
     "mediaProviders": ["youtube"],
     "stateOrder": ["language", "authentication", "provider state", "fallback"],
-    "fallbackRequired": true
+    "fallbackRequired": true,
+    "statusResolver": {"provider":"youtube","endpoint":"https://social.ekodi.kr/api/media/youtube/status","strategy":"official-api-when-configured + public-page fallback","pollSeconds":60,"failSafe":"retain localized fallback"}
   },
   "ambientAudio": {
     "owner": "shared-shell",
