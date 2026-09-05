@@ -1,0 +1,172 @@
+name: Deploy EKODI Personal Finance API
+
+on:
+  workflow_dispatch:
+    inputs:
+      promote_production:
+        description: "Promote the verified Personal Finance candidate to Production"
+        required: false
+        default: false
+        type: boolean
+  pull_request:
+    paths:
+      [
+        "personal-finance-worker.js",
+        "wrangler.personal-finance.toml",
+        "personal-finance-migrations/**",
+        "test/personal-finance-worker.test.mjs",
+        "deploy/manifests/personal-finance-api.worker.json",
+        ".github/workflows/deploy-personal-finance.yml",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "personal-finance-worker.js",
+        "wrangler.personal-finance.toml",
+        "personal-finance-migrations/**",
+        "test/personal-finance-worker.test.mjs",
+        "deploy/manifests/personal-finance-api.worker.json",
+        ".github/workflows/deploy-personal-finance.yml",
+      ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-personal-finance-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: "4.127.1"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate Personal Finance source and isolated migration
+        run: |
+          set -euo pipefail
+          node --check personal-finance-worker.js
+          node --test test/personal-finance-worker.test.mjs
+          node scripts/validate-additive-migrations.mjs personal-finance-migrations
+          test -f deploy/manifests/personal-finance-api.worker.json
+          grep -Fq 'binding = "PERSONAL_DB"' wrangler.personal-finance.toml
+          grep -Fq 'database_name = "ekodi-personal-finance"' wrangler.personal-finance.toml
+          ! grep -R -Fq 'DROP TABLE' personal-finance-migrations
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply PERSONAL_DB --local --config wrangler.personal-finance.toml
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Resolve or create isolated Personal Finance staging D1
+        id: staging_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db(){ npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-personal-finance-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"; }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-personal-finance-staging --location apac; DB_ID=$(list_db); fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated staging config
+        shell: bash
+        env:
+          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.personal-finance.staging.runtime.toml <<EOF
+          name = "ekodi-personal-finance-api-staging"
+          main = "personal-finance-worker.js"
+          compatibility_date = "2026-09-05"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+          [[d1_databases]]
+          binding = "PERSONAL_DB"
+          database_name = "ekodi-personal-finance-staging"
+          database_id = "$DB_ID"
+          migrations_dir = "personal-finance-migrations"
+          EOF
+      - name: Apply staging migrations and deploy candidate
+        run: |
+          bash scripts/apply-d1-migrations-with-retry.sh PERSONAL_DB wrangler.personal-finance.staging.runtime.toml "$WRANGLER_VERSION"
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.personal-finance.staging.runtime.toml
+      - name: Verify local runtime auth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply PERSONAL_DB --local --config wrangler.personal-finance.staging.runtime.toml >/tmp/pf-local-migrations.log 2>&1
+          npx --yes wrangler@${WRANGLER_VERSION} dev --local --config wrangler.personal-finance.staging.runtime.toml --ip 127.0.0.1 --port 8794 >/tmp/pf-dev.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do code=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8794/health || true); [ "$code" = '200' ] && break; sleep 2; done
+          health=$(curl -fsS http://127.0.0.1:8794/health)
+          auth_code=$(curl -sS -o /tmp/pf-auth.json -w '%{http_code}' http://127.0.0.1:8794/api/finance/personal/summary)
+          printf '%s' "$health" | grep -Fq '"dataBoundary":"dedicated-d1"'
+          [ "$auth_code" = '401' ]
+      - name: Cleanup staging config
+        if: always()
+        run: rm -f wrangler.personal-finance.staging.runtime.toml
+
+  production:
+    needs: [validate, staging]
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_production == true && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Verify Production account boundary
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Capture Personal Finance D1 recovery bookmark
+        id: d1_bookmark
+        shell: bash
+        run: |
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-personal-finance --config wrangler.personal-finance.toml --json >/tmp/pf-bookmark.json
+          BOOKMARK=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/pf-bookmark.json','utf8'));const walk=x=>{if(!x||typeof x!=='object')return '';if(typeof x.bookmark==='string')return x.bookmark;for(const v of Object.values(x)){const r=walk(v);if(r)return r}return ''};process.stdout.write(walk(j))")
+          test -n "$BOOKMARK"
+          echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
+      - name: Apply isolated production migrations
+        run: bash scripts/apply-d1-migrations-with-retry.sh PERSONAL_DB wrangler.personal-finance.toml "$WRANGLER_VERSION"
+      - name: Guarded first deployment or promotion
+        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/personal-finance-api.worker.json
+      - name: Deep verify production privacy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          health=$(curl -fsS --retry 8 --retry-delay 3 https://personal-finance-api.ekodi.kr/health)
+          auth_code=$(curl -sS --retry 8 --retry-delay 3 -o /tmp/pf-production-auth.json -w '%{http_code}' https://personal-finance-api.ekodi.kr/api/finance/personal/summary)
+          printf '%s' "$health" | grep -Fq 'ekodi-personal-finance-api'
+          printf '%s' "$health" | grep -Fq '"dataBoundary":"dedicated-d1"'
+          [ "$auth_code" = '401' ]
+      - name: Record recovery point
+        env:
+          BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
+        run: |
+          echo "Personal Finance D1 bookmark before production migration: $BOOKMARK" >> "$GITHUB_STEP_SUMMARY"

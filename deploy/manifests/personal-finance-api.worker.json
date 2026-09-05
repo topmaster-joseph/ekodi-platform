@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-personal-finance-api",
+    "config": "wrangler.personal-finance.toml",
+    "allowFirstDeploy": true,
+    "requests": [
+      {
+        "url": "https://personal-finance-api.ekodi.kr/health",
+        "statuses": [200],
+        "expect": ["\"ok\":true", "ekodi-personal-finance-api", "\"dataBoundary\":\"dedicated-d1\""]
+      },
+      {
+        "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/summary",
+        "statuses": [401]
+      }
+    ]
+  }
+}

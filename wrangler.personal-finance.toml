@@ -1,0 +1,25 @@
+name = "ekodi-personal-finance-api"
+main = "personal-finance-worker.js"
+compatibility_date = "2026-09-05"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "personal-finance-api.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[vars]
+DATA_MODE = "production"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "PERSONAL_DB"
+database_name = "ekodi-personal-finance"
+database_id = "0d6e2677-98c1-4853-88d2-99227c51e306"
+migrations_dir = "personal-finance-migrations"
