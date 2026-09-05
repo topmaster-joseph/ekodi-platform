@@ -14,6 +14,8 @@ test('AI membership operations is a separate lazy admin menu', async () => {
   assert.match(loader, /scripts: \['ai-ops-admin\.js'\]/);
 
   assert.match(panel, /button\.dataset\.section = SECTION/);
+  assert.doesNotMatch(panel, /data-demand-feature=\"aimembers\"[^\n]*\.remove\(\)/);
+  assert.doesNotMatch(panel, /data-demand-feature=\"aiops\"[^\n]*\.remove\(\)/);
   assert.match(panel, /AI 회원운영/);
   assert.match(panel, /회원단계/);
   assert.match(panel, /AI 허용량/);
