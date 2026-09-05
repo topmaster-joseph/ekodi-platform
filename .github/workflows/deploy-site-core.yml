@@ -50,6 +50,8 @@ on:
       - 'admin-ai-governor.js'
       - 'admin-secret-generator.js'
       - 'admin-demand-loader.js'
+      - 'personal-finance-admin.js'
+      - 'personal-finance-admin.css'
       - 'admin-public-site-controls.js'
       - 'client-access.js'
       - 'client-access.css'

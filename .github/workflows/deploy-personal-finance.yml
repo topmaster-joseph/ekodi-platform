@@ -12,9 +12,11 @@ on:
     paths:
       [
         "personal-finance-worker.js",
+        "personal-finance-service-control.js",
         "wrangler.personal-finance.toml",
         "personal-finance-migrations/**",
         "test/personal-finance-worker.test.mjs",
+        "test/personal-finance-admin-control.test.mjs",
         "deploy/manifests/personal-finance-api.worker.json",
         "governance/services/personal-finance-ai.service.json",
         "governance/architecture/responsible-independent-service-contract.v1.json",
@@ -26,9 +28,11 @@ on:
     paths:
       [
         "personal-finance-worker.js",
+        "personal-finance-service-control.js",
         "wrangler.personal-finance.toml",
         "personal-finance-migrations/**",
         "test/personal-finance-worker.test.mjs",
+        "test/personal-finance-admin-control.test.mjs",
         "deploy/manifests/personal-finance-api.worker.json",
         "governance/services/personal-finance-ai.service.json",
         "governance/architecture/responsible-independent-service-contract.v1.json",
@@ -59,6 +63,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check personal-finance-worker.js
+          node --check personal-finance-service-control.js
+          node --check personal-finance-admin.js
           node --test test/personal-finance-worker.test.mjs
           node scripts/validate-responsible-independent-services.mjs
           node scripts/validate-additive-migrations.mjs personal-finance-migrations
