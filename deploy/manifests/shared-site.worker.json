@@ -1,5 +1,5 @@
 {
-  "version": 50,
+  "version": 51,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -108,6 +108,22 @@
         "headerExpect": [
           "x-ekodi-route: workspace-admin",
           "cache-control: no-store"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodi-church/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디교회 목회자 관리자",
+          "church-pastor-admin.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: church-pastor-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ]
       },
       {
