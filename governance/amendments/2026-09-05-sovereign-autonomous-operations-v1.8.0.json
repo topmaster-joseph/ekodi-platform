@@ -1,32 +1,32 @@
-﻿{
-    "id":  "2026-09-05-sovereign-autonomous-operations-v1.8.0",
-    "constitutionVersion":  "1.8.0",
-    "status":  "approved",
-    "approvedBy":  "topmaster-joseph",
-    "approvedAt":  "2026-09-05",
-    "changeClass":  "C2",
-    "taskId":  "ekodi-v18-sovereign-autonomous-20260905",
-    "issue":  null,
-    "pullRequest":  1007,
-    "summary":  "Adopt Sovereign \u003e Autonomous \u003e Agentic \u003e Services as the EKODI v1.8 operating hierarchy and unify UI, Service, Tenant, Knowledge, Content and Agent work under bounded autonomous operations.",
-    "approvalBasis":  "The platform owner explicitly instructed the v1.8 Sovereign Autonomous Operations redesign to continue through completion with UI, service, tenant, knowledge, content and agent work proceeding in parallel while Core, Control Plane and Autonomous Operations are consolidated.",
-    "generationImpact":  "No generation promotion. EKODI remains Generation 2 / S0 until evidence satisfies the existing constitutional promotion and scale gates.",
-    "adds":  [
-                 "Sovereign \u003e Autonomous \u003e Agentic \u003e Services operating hierarchy",
-                 "Person + Workspace + Role + Capability execution authority context",
-                 "Observe \u003e Detect \u003e Reason \u003e Plan \u003e Execute \u003e Verify \u003e Recover \u003e Learn autonomous loop",
-                 "Green, Yellow and Red parallel change classes",
-                 "cross-cutting UI, Service, Tenant, Knowledge, Content and Agent surface policy",
-                 "machine-readable sovereign autonomous operations registry and runtime policy"
-             ],
-    "preserves":  [
-                      "human stewardship and final authority",
-                      "workspace_id as canonical workspace identity",
-                      "modular-monolith-first and shared-before-dedicated economics",
-                      "provider independence",
-                      "guarded production promotion",
-                      "secure projection and least privilege",
-                      "Generation 2 and S0 until evidence-driven promotion"
-                  ],
-    "rollback":  "Revert the v1.8.0 constitution, sovereign operations registry, surface policy, runtime integration and validators to v1.7.0. Do not remove existing services, workspaces, data, provider integrations or production routes. No destructive data or DNS change is authorized by this amendment."
+{
+  "id": "2026-09-05-sovereign-autonomous-operations-v1.8.0",
+  "constitutionVersion": "1.8.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-05",
+  "changeClass": "C2",
+  "taskId": "ekodi-v18-sovereign-autonomous-20260905",
+  "issue": null,
+  "pullRequest": 1007,
+  "summary": "Adopt Sovereign > Autonomous > Agentic > Services as the EKODI v1.8 operating hierarchy and unify UI, Service, Tenant, Knowledge, Content and Agent work under bounded autonomous operations.",
+  "approvalBasis": "The platform owner explicitly instructed the v1.8 Sovereign Autonomous Operations redesign to continue through completion with UI, service, tenant, knowledge, content and agent work proceeding in parallel while Core, Control Plane and Autonomous Operations are consolidated.",
+  "generationImpact": "No generation promotion. EKODI remains Generation 2 / S0 until evidence satisfies the existing constitutional promotion and scale gates.",
+  "adds": [
+    "Sovereign > Autonomous > Agentic > Services operating hierarchy",
+    "Person + Workspace + Role + Capability execution authority context",
+    "Observe > Detect > Reason > Plan > Execute > Verify > Recover > Learn autonomous loop",
+    "Green, Yellow and Red parallel change classes",
+    "cross-cutting UI, Service, Tenant, Knowledge, Content and Agent surface policy",
+    "machine-readable sovereign autonomous operations registry and runtime policy"
+  ],
+  "preserves": [
+    "human stewardship and final authority",
+    "workspace_id as canonical workspace identity",
+    "modular-monolith-first and shared-before-dedicated economics",
+    "provider independence",
+    "guarded production promotion",
+    "secure projection and least privilege",
+    "Generation 2 and S0 until evidence-driven promotion"
+  ],
+  "rollback": "Revert the v1.8.0 constitution, sovereign operations registry, surface policy, runtime integration and validators to v1.7.0. Do not remove existing services, workspaces, data, provider integrations or production routes. No destructive data or DNS change is authorized by this amendment."
 }
