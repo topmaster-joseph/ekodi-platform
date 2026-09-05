@@ -402,41 +402,6 @@
         ]
       },
       {
-        "url": "https://ai.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI AI Gateway",
-          "ACTIVE AI PROVIDER",
-          "AI COMMAND CONSOLE",
-          "Provider 독립"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: ai-gateway",
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
-        ]
-      },
-      {
-        "url": "https://ai.ekodi.kr/ai-gateway.js",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "/api/control/ai/provider-status",
-          "/api/control/ai/assist",
-          "/api/control/ai/actions",
-          "ekodi_admin_token"
-        ],
-        "headerExpect": [
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
-        ]
-      },
-      {
         "url": "https://auth.ekodi.kr/",
         "statuses": [
           200

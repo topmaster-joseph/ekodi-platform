@@ -51,18 +51,19 @@ test('AI Gateway client preserves Google admin handoff until session validation'
   assert.match(acceptBody, /setToken\(value\)/);
 });
 
-test('Worker, auth and release contracts include the AI Gateway hostname', () => {
-  const router = read('platform-router-entry-worker.js');
-  const wrangler = read('wrangler.site.toml');
+test('dedicated AI control owns ai.ekodi.kr while Shared Site does not compete for the hostname', () => {
+  const sharedWrangler = read('wrangler.site.toml');
+  const aiWrangler = read('wrangler.ai.toml');
   const auth = read('auth-site/admin-auth.js');
   const manifest = JSON.parse(read('deploy/manifests/shared-site.worker.json'));
 
-  assert.match(router, /host===AI_GATEWAY_HOST/);
-  assert.match(wrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
+  assert.match(aiWrangler, /name = "ekodi-ai-control"/);
+  assert.match(aiWrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
+  assert.doesNotMatch(sharedWrangler, /pattern = "ai\.ekodi\.kr"/);
   assert.match(auth, /u\.origin==='https:\/\/ai\.ekodi\.kr'/);
   assert.match(auth, /ekodi_admin_token:result\.token/);
 
   const urls = new Set(manifest.worker.requests.map(item => item.url));
-  assert.equal(urls.has('https://ai.ekodi.kr/'), true);
-  assert.equal(urls.has('https://ai.ekodi.kr/ai-gateway.js'), true);
+  assert.equal(urls.has('https://ai.ekodi.kr/'), false);
+  assert.equal(urls.has('https://ai.ekodi.kr/ai-gateway.js'), false);
 });
