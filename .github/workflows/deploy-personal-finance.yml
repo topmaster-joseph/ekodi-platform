@@ -99,7 +99,7 @@ jobs:
           cat > wrangler.personal-finance.staging.runtime.toml <<EOF
           name = "ekodi-personal-finance-api-staging"
           main = "personal-finance-worker.js"
-          compatibility_date = "2026-09-05"
+          compatibility_date = "2026-09-04"
           workers_dev = true
           preview_urls = false
           [vars]
