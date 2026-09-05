@@ -332,6 +332,11 @@ async function renderAccess(s){
         return;
       }
     }
+    if(site==='cgma'&&authorized.length===0){
+      routing=true;showProcessing('청계면상인회 관리자 권한을 확인하고 있습니다.');
+      try{await handoffToService();return;}
+      catch(e){if(e.message!=='site_access_required')console.error('cgma reviewer handoff',e);routing=false;}
+    }
     if(marketing){location.assign(marketingFreeTarget());return;}
     showAccessFallback(s,config.requestable?'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 권한을 신청하거나 다른 계정으로 다시 시도할 수 있습니다.':'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 다른 계정으로 다시 시도하거나 취소해 주세요.','warn');
     await loadLinkedIdentities();if(config.requestable)show('requestActions',true);await loadReviewConsole();

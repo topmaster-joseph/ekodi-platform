@@ -7,6 +7,9 @@ on:
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
       - 'supabase/functions/access-api/**'
+      - 'supabase/functions/membership-api/**'
+      - 'auth-site/auth.js'
+      - 'test/sovereign-tenant-delegation.test.mjs'
       - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
@@ -17,6 +20,9 @@ on:
       - 'supabase/functions/_shared/trust.test.ts'
       - 'supabase/functions/trust-api/**'
       - 'supabase/functions/access-api/**'
+      - 'supabase/functions/membership-api/**'
+      - 'auth-site/auth.js'
+      - 'test/sovereign-tenant-delegation.test.mjs'
       - 'supabase/migrations/*trust*.sql'
       - 'docs/security/TRUST_LAYER.md'
       - '.github/workflows/trust-layer-ci.yml'
@@ -39,6 +45,10 @@ jobs:
         run: deno check --node-modules-dir=auto supabase/functions/trust-api/index.ts
       - name: Type-check access API Trust adapter
         run: deno check --node-modules-dir=auto supabase/functions/access-api/index.ts
+      - name: Type-check membership reviewer adapter
+        run: deno check --node-modules-dir=auto supabase/functions/membership-api/index.ts
+      - name: Run Sovereign tenant delegation contract
+        run: node --test test/sovereign-tenant-delegation.test.mjs
       - name: Run Trust invariants
         run: deno test supabase/functions/_shared/trust.test.ts
       - name: Verify shadow-only cutover guard
