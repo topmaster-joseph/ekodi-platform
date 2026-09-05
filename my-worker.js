@@ -180,8 +180,9 @@ async function routedMyHome(request,env,route=null){
     headers.set('x-ekodi-private-workspace','v1');
     headers.set('x-ekodi-workspace-service',route.serviceId||'workspace-home');
   }
+  const shellSurface=route?'workspace':'public';
   const memberGate=route?'shared':'service-owned';
-  return injectEkodiShell(withHeaders(env,new Response(source,{status:asset.status,statusText:asset.statusText,headers})),'my','',{memberGate});
+  return injectEkodiShell(withHeaders(env,new Response(source,{status:asset.status,statusText:asset.statusText,headers})),'my',shellSurface,{memberGate});
 }
 
 export default{
