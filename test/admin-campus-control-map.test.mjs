@@ -8,8 +8,8 @@ const [registry, campus, css] = await Promise.all([
   readFile(new URL('../admin-compact.css', import.meta.url), 'utf8'),
 ]);
 
-test('Site Management is the canonical home entry and renders registry-driven site groups', () => {
-  assert.match(registry, /id: 'campus'[\s\S]*en: 'Site Management'/);
+test('Site Structure is the canonical home entry and renders registry-driven site groups', () => {
+  assert.match(registry, /id: 'campus'[\s\S]*en: 'Site Structure'/);
   assert.ok(campus.includes('const ALL_SITES = ['));
   assert.ok(campus.includes('const SITE_GROUPS = ['));
   assert.ok(campus.includes('function renderSiteItem(site)'));
@@ -27,7 +27,7 @@ test('site rows keep bounded manage, status and public-open actions', () => {
   assert.ok(campus.includes("link.rel = 'noopener'"));
 });
 
-test('compact styling retains Site Management focus affordances', () => {
+test('compact styling retains Site Structure focus affordances', () => {
   assert.match(css, /campus/);
   assert.match(css, /campus-focus/);
 });

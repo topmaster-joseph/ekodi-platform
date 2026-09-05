@@ -13,13 +13,14 @@ const TRAFFIC_TELEMETRY='https://api.ekodi.kr/api/telemetry/visit';
 const explicitService=String(script?.dataset?.ekodiService||'').trim().toLowerCase();
 const hidden=script?.dataset?.ekodiShell==='off';
 const requestedSurface=normalizeSurface(script?.dataset?.ekodiSurface||'workspace');
+const memberGateMode=String(script?.dataset?.ekodiMemberGate||'shared').trim().toLowerCase();
 const fragment=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'');
 const handedWorkspace=fragment.get('ekodi_workspace')||'';
 const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:2,
+  version:3,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -219,7 +220,7 @@ function myUrl(){const u=new URL(MY);u.searchParams.set('return_to',currentRetur
 
 function memberPolicy(){return service?.userAccessPolicy||null;}
 function guestPublicException(){const p=location.pathname.toLowerCase();return p==='/health'||p.startsWith('/health/')||p.startsWith('/api/')||p.includes('callback')||/(?:^|\/)(?:privacy|terms|legal|policy)(?:[.\/-]|$)/.test(p);}
-function memberGateApplies(){const p=memberPolicy();return Boolean(p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&!guestPublicException()&&(surface==='public'||surface==='workspace'));}
+function memberGateApplies(){const p=memberPolicy();return Boolean(memberGateMode!=='service-owned'&&p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&!guestPublicException()&&(surface==='public'||surface==='workspace'));}
 function handoffPending(){try{return new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'').has('ekodi_token');}catch{return false;}}
 function localMemberSession(){
   try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let parsed;try{parsed=JSON.parse(localStorage.getItem(key)||'null');}catch{continue;}const s=parsed?.currentSession||parsed?.session||parsed;const token=String(s?.access_token||'');const user=s?.user;const exp=Number(s?.expires_at||0);if(token&&user?.id&&(!exp||exp*1000>Date.now()-60000))return true;}}catch{}return false;

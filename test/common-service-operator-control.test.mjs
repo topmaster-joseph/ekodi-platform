@@ -24,7 +24,7 @@ test('Admin menu mounts the common-service operator module', () => {
   const common = read('common-services-admin.js');
   const handoff = read('admin-central-handoff.js');
   const site = read('site-worker.js');
-  assert.match(registry, /id: 'common-services'.*group: 'services'/);
+  assert.match(registry, /id: 'common-services'.*group: 'common'/);
   assert.doesNotMatch(loader, /common-services-admin\.(?:css|js)/);
   assert.match(layout, /import\('\.\/common-services-admin\.js'\)/);
   assert.match(common, /common-services-admin\.css/);

@@ -68,14 +68,15 @@ class ShellHtmlInjector{
 }
 
 class ShellHeadInjector{
-  constructor(serviceId,surface){this.serviceId=serviceId;this.surface=surface;}
+  constructor(serviceId,surface,memberGate='shared'){this.serviceId=serviceId;this.surface=surface;this.memberGate=memberGate;}
   element(element){
     const service=cleanServiceId(this.serviceId);
     const surface=resolvedSurface(service,this.surface);
     const sharedStyle=INTERNAL_SURFACES.has(surface)?`<link rel="stylesheet" href="${SHELL_WORKSPACE_STYLE}" data-ekodi-workspace-style>`:'';
     const bootStyle=surfaceBootStyle(surface);
     const visualShellMode=isMyEkodi(service)?'':` data-ekodi-shell="off"`;
-    element.prepend(`${bootStyle}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}"${visualShellMode}></script>`,{html:true});
+    const memberGate=this.memberGate==='service-owned'?'service-owned':'shared';
+    element.prepend(`${bootStyle}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}" data-ekodi-member-gate="${memberGate}"${visualShellMode}></script>`,{html:true});
   }
 }
 
@@ -154,11 +155,12 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
-export function injectEkodiShell(response,serviceId,surface=''){
+export function injectEkodiShell(response,serviceId,surface='',options={}){
   if(!response||!serviceId)return response;
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
   const resolved=resolvedSurface(serviceId,surface);
+  const memberGate=options?.memberGate==='service-owned'?'service-owned':'shared';
   const headers=new Headers(response.headers);
   headers.set('content-security-policy',shellCsp(headers.get('content-security-policy')));
   headers.set('x-ekodi-shell','v2');
@@ -166,7 +168,7 @@ export function injectEkodiShell(response,serviceId,surface=''){
   headers.set('x-ekodi-user-shortcuts',isMyEkodi(serviceId)?'my-only':'hidden');
   const transformed=new HTMLRewriter()
     .on('html',new ShellHtmlInjector(serviceId))
-    .on('head',new ShellHeadInjector(serviceId,resolved))
+    .on('head',new ShellHeadInjector(serviceId,resolved,memberGate))
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
   return injectEkodiUserUi(transformed,serviceId,resolved);
 }

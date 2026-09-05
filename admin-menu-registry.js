@@ -20,6 +20,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'workspace', group: 'common', icon: '▧', labels: { ko: '공간·자료', en: 'Spaces & Files' } },
   { id: 'finance', group: 'common', icon: '₩', labels: { ko: '결제·회계', en: 'Finance & Accounting' } },
   { id: 'life-ai', group: 'vertical', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
+  { id: 'personal-finance', group: 'vertical', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
   { id: 'community', group: 'vertical', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
   { id: 'books', group: 'vertical', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
   { id: 'social', group: 'vertical', icon: 'S', labels: { ko: '소셜', en: 'Social' } },
@@ -51,7 +52,7 @@ export function getAdminMenuLabel(id, locale = 'ko') { const item = getAdminMenu
 export function getAdminMenuGroup(id) { return GROUP_BY_ID.get(String(id || '').trim()) || null; }
 export function getAdminMenuGroupLabel(id, locale = 'ko') { const group = getAdminMenuGroup(id); const language = normalizeAdminLocale(locale); return group?.labels?.[language] || group?.labels?.ko || String(id || ''); }
 export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'structure'; }
-export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || group.defaultSection || 'campus'; }
+export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || 'campus'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }
 export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id); }
 

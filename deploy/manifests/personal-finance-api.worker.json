@@ -16,7 +16,10 @@
           "\"dataBoundary\":\"dedicated-d1\"",
           "\"referenceService\":true",
           "\"actionCeiling\":\"L2\"",
-          "\"evidenceLinked\":true"
+          "\"evidenceLinked\":true",
+          "\"version\":3",
+          "\"adminControl\":true",
+          "\"personalDataAdminReadable\":false"
         ]
       },
       {
@@ -33,6 +36,12 @@
       },
       {
         "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/insights",
+        "statuses": [
+          401
+        ]
+      },
+      {
+        "url": "https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control",
         "statuses": [
           401
         ]

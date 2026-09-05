@@ -330,7 +330,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "label: '실행 인프라'",
+          "label: '실행 인프라·Nodes'",
           "remote-power-admin.js",
           "remote-power-admin.css",
           "device-browser-diagnostics.js",
@@ -868,6 +868,38 @@
           "x-ekodi-route: yogurt-store-admin",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
+        ]
+      },
+      {
+        "url": "https://admin.ekodi.kr/personal-finance-admin.js?pf=v1",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "전문서비스 · PERSONAL FINANCE",
+          "/api/admin/personal-finance/control",
+          "개인 금융원장의 내용은 이 화면에서 조회하지 않습니다"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: admin-asset",
+          "cache-control: public, max-age=31536000, immutable"
+        ]
+      },
+      {
+        "url": "https://admin.ekodi.kr/personal-finance-admin.css?pf=v1",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".personal-finance-admin",
+          ".pf-admin-setting",
+          ".pf-admin-locks"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: admin-asset",
+          "cache-control: public, max-age=31536000, immutable"
         ]
       }
     ]

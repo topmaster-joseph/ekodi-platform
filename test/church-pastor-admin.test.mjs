@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from '../church-pastor-admin-page.js';
+import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath, churchPastorCanAccess, churchPastorSectionsForRole } from '../church-pastor-admin-page.js';
 
 test('pastor admin route is scoped to ekodi-church', () => {
   assert.equal(isChurchPastorAdminPath('/ekodi-church/admin'), true);
@@ -11,10 +11,23 @@ test('pastor admin route is scoped to ekodi-church', () => {
   assert.equal(isChurchPastorAdminPath('/other-church/admin'), false);
 });
 
+test('one pastor admin page projects navigation from the church-local role', () => {
+  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','worship','care','calendar','ministry','ai','access']);
+  assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','worship','care','calendar','ministry','ai']);
+  assert.deepEqual(churchPastorSectionsForRole('care_staff'), ['overview','people','care','calendar','ministry','ai']);
+  assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','worship','calendar','ministry']);
+  assert.deepEqual(churchPastorSectionsForRole('viewer'), ['overview','worship','calendar']);
+  assert.equal(churchPastorCanAccess('viewer','care'), false);
+  assert.equal(churchPastorCanAccess('pastor','access'), false);
+});
+
 test('pastor admin page is private-by-default', async () => {
   const response = churchPastorAdminPage();
   const html = await response.text();
   assert.equal(response.status, 200);
+  assert.match(html, /data-ekodi-admin-sidebar/);
+  assert.match(html, /data-ekodi-authority-scope="tenant"/);
+  assert.equal(response.headers.get('x-ekodi-authority-scope'), 'tenant');
   assert.match(html, /noindex,nofollow,noarchive/);
   assert.match(html, /church-pastor-admin\.js/);
   assert.match(html, /목회자 운영/);
@@ -30,6 +43,9 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /권한이 없습니다/);
   assert.match(source, /church_care_tasks/);
   assert.match(source, /senior_pastor/);
+  assert.match(source, /noRoleSpecificAdminPages/);
+  assert.match(source, /ekodi:tenant-context/);
+  assert.match(source, /canSection\(section\)/);
 });
 
 test('production entry routes church admin before generic workspace admin', async () => {

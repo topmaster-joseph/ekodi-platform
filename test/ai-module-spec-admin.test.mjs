@@ -11,9 +11,10 @@ const [menu, demand, layout, page, build, perf] = await Promise.all([
   readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8'),
 ]);
 
-test('administrator menu exposes a dedicated external AI integration spec', () => {
+test('administrator menu exposes the AI and API integration contract under Core', () => {
   assert.match(menu, /id: 'ai-module-spec'/);
-  assert.match(menu, /외부 AI 연동규격/);
+  assert.match(menu, /id: 'ai-module-spec'[^\n]*group: 'core'/);
+  assert.match(menu, /AI & API Contracts/);
   assert.match(demand, /ai-module-spec-admin\.js/);
   assert.match(demand, /ai-module-spec-admin\.css/);
   assert.match(layout, /#ai-module-spec:ai-module-spec/);
