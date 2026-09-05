@@ -1,0 +1,142 @@
+name: Support Jubilee Shadow
+
+on:
+  pull_request:
+    paths:
+      - "jubilee-*.js"
+      - "support-jubilee-boundary.js"
+      - "support-jubilee-shadow-worker.js"
+      - "wrangler.support-jubilee-shadow.toml"
+      - ".github/workflows/support-jubilee-shadow.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: support-jubilee-shadow-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: "4.127.1"
+
+jobs:
+  shadow:
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      WORKER_NAME: ekodi-support-jubilee-shadow-${{ github.event.pull_request.number }}
+      DEV_SUBDOMAIN: ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate shadow boundary
+        run: |
+          set -euo pipefail
+          node --check support-jubilee-boundary.js
+          node --check support-jubilee-shadow-worker.js
+          node --check jubilee-capability-provider.js
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import worker from './support-jubilee-shadow-worker.js';
+          const payload={jubileeConsent:true,assessment:{needScore:.99,confidence:.9,beneficiaryIdentity:{name:'private'},supportSignals:[{type:'affordability_constraint',source:'consented',reason:'private'}]}};
+          const request=new Request('https://shadow.invalid/preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+          const response=await worker.fetch(request,{ENVIRONMENT:'development',JUBILEE_MODE:'shadow'});
+          assert.equal(response.status,200);
+          const text=await response.text();
+          assert.equal(text.includes('needScore'),false);
+          assert.equal(text.includes('confidence'),false);
+          assert.equal(text.includes('beneficiaryIdentity'),false);
+          assert.equal(text.includes('reason'),false);
+          assert.equal(text.includes('private'),false);
+          assert.equal(text.includes('affordability_constraint'),true);
+          NODE
+      - name: Verify Development credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated shadow worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.support-jubilee-shadow.toml --name "$WORKER_NAME"
+      - name: Confirm deployed shadow revision exists
+        run: npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.support-jubilee-shadow.toml --name "$WORKER_NAME" --json > /tmp/jubilee-shadow-deployments.json
+      - name: Verify deployed privacy projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://${WORKER_NAME}.${DEV_SUBDOMAIN}"
+          verify_base="$url"
+          remote_ready=0
+          remote_protected=0
+          runtime_pid=''
+          cleanup_local() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup_local EXIT
+
+          for attempt in $(seq 1 18); do
+            access_code=$(curl -sS -D /tmp/jubilee-shadow-access.headers -o /tmp/jubilee-shadow-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/health" || true)
+            if [[ "$access_code" == '200' ]]; then remote_ready=1; break; fi
+            if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/jubilee-shadow-access.headers; then remote_protected=1; break; fi
+            sleep 4
+          done
+
+          if [[ "$remote_ready" != '1' && "$remote_protected" != '1' ]]; then
+            echo "Shadow deployment did not become reachable or Cloudflare Access-protected. Last code=$access_code" >&2
+            cat /tmp/jubilee-shadow-access.headers >&2 || true
+            exit 1
+          fi
+
+          if [[ "$remote_protected" == '1' ]]; then
+            echo 'Support Jubilee shadow is protected by Cloudflare Access. Keeping Access enabled and validating the exact Development configuration locally.'
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.support-jubilee-shadow.toml --local --port 8791 >/tmp/jubilee-shadow-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8791'
+            local_ready=0
+            for attempt in $(seq 1 30); do
+              local_code=$(curl -sS -o /tmp/jubilee-shadow-local-health.json -w '%{http_code}' --connect-timeout 3 --max-time 5 "$verify_base/health" || true)
+              if [[ "$local_code" == '200' ]]; then local_ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/jubilee-shadow-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$local_ready" != '1' ]]; then
+              cat /tmp/jubilee-shadow-local.log >&2 || true
+              exit 1
+            fi
+          fi
+
+          health=$(curl -sS -o /tmp/jubilee-shadow-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
+          preview=$(curl -sS -o /tmp/jubilee-shadow-preview.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST -H 'content-type: application/json' -d '{"jubileeConsent":true,"assessment":{"needScore":0.99,"confidence":0.9,"beneficiaryIdentity":{"name":"private"},"supportSignals":[{"type":"affordability_constraint","source":"consented","reason":"private"}]}}' "$verify_base/preview" || true)
+
+          if [[ "$health" == '200' && "$preview" == '200' ]] \
+            && grep -Fq '"mode":"shadow"' /tmp/jubilee-shadow-health.json \
+            && grep -Fq '"productionExecution":false' /tmp/jubilee-shadow-health.json \
+            && grep -Fq 'affordability_constraint' /tmp/jubilee-shadow-preview.json \
+            && ! grep -Fq 'needScore' /tmp/jubilee-shadow-preview.json \
+            && ! grep -Fq 'confidence' /tmp/jubilee-shadow-preview.json \
+            && ! grep -Fq 'beneficiaryIdentity' /tmp/jubilee-shadow-preview.json \
+            && ! grep -Fq '"reason"' /tmp/jubilee-shadow-preview.json \
+            && ! grep -Fq 'private' /tmp/jubilee-shadow-preview.json; then
+            if [[ "$remote_protected" == '1' ]]; then
+              echo 'Support Jubilee shadow deployment exists in Development, Cloudflare Access remains enforced, and the exact Development runtime passes privacy contracts.'
+            else
+              echo 'Support Jubilee isolated shadow verified remotely.'
+            fi
+            exit 0
+          fi
+
+          cat /tmp/jubilee-shadow-access.headers >&2 || true
+          cat /tmp/jubilee-shadow-health.json >&2 || true
+          cat /tmp/jubilee-shadow-preview.json >&2 || true
+          cat /tmp/jubilee-shadow-local.log >&2 2>/dev/null || true
+          exit 1
+      - name: Remove ephemeral shadow worker
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          npx --yes wrangler@${WRANGLER_VERSION} delete "$WORKER_NAME" --config wrangler.support-jubilee-shadow.toml
+          exit 0
