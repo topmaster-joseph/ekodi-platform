@@ -36,7 +36,7 @@ const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
 const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
-const EKODIBIZ_ASSETS=new Set(['style.css']);
+const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
@@ -124,7 +124,7 @@ async function routeEkodiBizAsset(request,env){
 }
 async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
-  return new HTMLRewriter().on('link[href]',{element:e=>{const v=e.getAttribute('href')||'';if(v==='/style.css'||v.startsWith('/style.css?'))e.setAttribute('href',EKODIBIZ_ASSET_PREFIX+'style.css'+v.slice('/style.css'.length));}}).transform(routed);
+  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);
 }
 async function routeDeploymentProbe(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
