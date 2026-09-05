@@ -1,5 +1,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  buildSecurityContext,
+  canonicalCapability,
+  compareWithLegacy,
+  compatibilityDecision,
+  evaluatePolicy,
+  policyCovers,
+  safeAuditObject,
+  type PolicyCoverage,
+  type PolicyRule,
+  type RiskLevel,
+} from "../_shared/trust.ts";
 
 const allowedOrigin=(origin:string|null)=>{
   if(!origin) return "https://auth.ekodi.kr";
@@ -35,11 +47,12 @@ async function platformAdmin(userId:string){
   const {data}=await admin.from("profiles").select("platform_admin").eq("user_id",userId).maybeSingle();
   return data?.platform_admin===true;
 }
-async function tenantReviewer(userId:string,tenantId:string|null){
-  if(await platformAdmin(userId))return true;
-  if(!tenantId)return false;
-  const {data}=await admin.from("tenant_members").select("role,status").eq("tenant_id",tenantId).eq("user_id",userId).eq("status","active").in("role",["tenant_admin","platform_admin"]).limit(1);
-  return (data?.length??0)>0;
+async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
+  if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"]};
+  if(!tenantId)return {allowed:false,roles:[] as string[]};
+  const {data}=await admin.from("tenant_members").select("role,status").eq("tenant_id",tenantId).eq("user_id",userId).eq("status","active");
+  const roles=[...new Set((data??[]).map((row:any)=>clip(row?.role,80)).filter(Boolean))];
+  return {allowed:roles.some((role)=>role==="tenant_admin"||role==="platform_admin"),roles};
 }
 async function tenantBySlug(slug:string){
   if(!slug)return null;
@@ -54,6 +67,99 @@ async function personAuthUserIds(userId:string){
   if(membersError)throw membersError;
   const ids=(data??[]).map((item:any)=>item.auth_user_id).filter(Boolean);
   return ids.length?[...new Set(ids)]:[userId];
+}
+async function shadowPolicy(){
+  const {data,error}=await admin.from("trust_policy_versions")
+    .select("policy_version,capability_schema_version,projection_version,config,status")
+    .in("status",["shadow","active"])
+    .order("created_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(error)throw error;
+  return data??null;
+}
+async function trustAuditSalt(){
+  const configured=Deno.env.get("TRUST_AUDIT_SALT")?.trim();
+  if(configured)return configured;
+  const {data,error}=await admin.rpc("trust_runtime_audit_salt");
+  if(error||typeof data!=="string"||data.length<32)throw new Error("trust_audit_salt_missing");
+  return data;
+}
+async function trustSubjectHash(subjectId:string){
+  const salt=await trustAuditSalt();
+  const bytes=new TextEncoder().encode(`${salt}:${subjectId}`);
+  const digest=await crypto.subtle.digest("SHA-256",bytes);
+  return Array.from(new Uint8Array(digest)).map((byte)=>byte.toString(16).padStart(2,"0")).join("");
+}
+async function observeAccessTrustShadow(input:{
+  subjectId:string;
+  workspaceId:string|null;
+  site:string;
+  action:"pending.read"|"review";
+  risk:RiskLevel;
+  legacyAllowed:boolean;
+  roles:string[];
+}){
+  try{
+    const policy=await shadowPolicy();
+    const context=buildSecurityContext({
+      subjectId:input.subjectId,
+      workspaceId:input.workspaceId,
+      roles:input.roles,
+      service:input.site,
+      resource:"access-request",
+      action:input.action,
+      purpose:"authorization-migration",
+      risk:input.risk,
+      attributes:{migration_surface:"access-api",legacy_predicate:"tenantReviewer"},
+    });
+    const rules=Array.isArray(policy?.config?.rules)?policy.config.rules as PolicyRule[]:[];
+    const coverage=Array.isArray(policy?.config?.coverage)?policy.config.coverage as PolicyCoverage[]:[];
+    const candidateCovered=rules.length>0&&policyCovers(context,coverage);
+    const capability=input.action==="pending.read"
+      ?canonicalCapability("workspace","access","read")
+      :canonicalCapability("workspace","access","review");
+    const projectionProfile=input.roles.some((role)=>role==="platform_admin"||role==="tenant_admin")?"safe-admin":"workspace-member";
+    const decision=candidateCovered
+      ?evaluatePolicy(context,rules)
+      :compatibilityDecision(input.legacyAllowed,{
+        capabilities:[capability],
+        projectionProfile,
+        reason:"Outside explicit Trust migration coverage; mirrored access-api legacy reviewer authorization.",
+      });
+    const comparison=compareWithLegacy(input.legacyAllowed,decision,"shadow");
+    const {error:auditError}=await admin.from("trust_shadow_decisions").insert({
+      subject_hash:await trustSubjectHash(input.subjectId),
+      workspace_id:input.workspaceId,
+      service:input.site,
+      resource:"access-request",
+      action:input.action,
+      purpose:"authorization-migration",
+      risk:input.risk,
+      legacy_allowed:comparison.legacyAllowed,
+      trust_allowed:comparison.trustAllowed,
+      effective_allowed:comparison.effectiveAllowed,
+      parity:comparison.parity,
+      severity:comparison.severity,
+      policy_version:policy?.policy_version??decision.policyVersion,
+      capability_schema_version:policy?.capability_schema_version??decision.capabilitySchemaVersion,
+      projection_version:policy?.projection_version??decision.projectionVersion,
+      projection_profile:decision.projectionProfile,
+      rule_id:decision.ruleId,
+      context_summary:safeAuditObject({
+        roles:input.roles,
+        migration_surface:"access-api",
+        legacy_predicate:"tenantReviewer",
+        candidate_policy_covered:candidateCovered,
+        canonical_capability:capability,
+      }),
+    });
+    if(auditError)throw auditError;
+    if(comparison.severity!=="ok")console.warn("access-api trust shadow divergence",{action:input.action,severity:comparison.severity,parity:comparison.parity});
+  }catch(error){
+    // Shadow telemetry must never change the live legacy authorization result.
+    console.error("access-api trust shadow observation failed",error);
+  }
 }
 function validMarketingOrigin(origin:string){
   const fixed=["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"];
@@ -211,7 +317,9 @@ Deno.serve(async(req)=>{
       const site=clip(requestUrl.searchParams.get("site"),60),tenantSlug=clip(requestUrl.searchParams.get("tenant"),80);
       if(!site)return json(req,{error:"site_required"},400);
       const tenant=tenantSlug?await tenantBySlug(tenantSlug):null;
-      if(!(await tenantReviewer(auth.user.id,tenant?.id??null)))return json(req,{error:"reviewer_required"},403);
+      const reviewer=await tenantReviewerAuthorization(auth.user.id,tenant?.id??null);
+      await observeAccessTrustShadow({subjectId:auth.user.id,workspaceId:tenant?.id??null,site,action:"pending.read",risk:"medium",legacyAllowed:reviewer.allowed,roles:reviewer.roles});
+      if(!reviewer.allowed)return json(req,{error:"reviewer_required"},403);
       let q=admin.from("site_access_requests").select("id,user_id,email,site_key,tenant_id,requested_role,requested_plan,status,business_name,contact_phone,business_number,applicant_note,requested_at").eq("site_key",site).eq("status","pending").order("requested_at");
       if(tenant?.id)q=q.eq("tenant_id",tenant.id);
       const {data,error}=await q;
@@ -224,7 +332,9 @@ Deno.serve(async(req)=>{
       if(!id||!decision)return json(req,{error:"request_and_decision_required"},400);
       const {data:row}=await admin.from("site_access_requests").select("*").eq("id",id).maybeSingle();
       if(!row||row.status!=="pending")return json(req,{error:"request_not_pending"},400);
-      if(!(await tenantReviewer(auth.user.id,row.tenant_id)))return json(req,{error:"reviewer_required"},403);
+      const reviewer=await tenantReviewerAuthorization(auth.user.id,row.tenant_id);
+      await observeAccessTrustShadow({subjectId:auth.user.id,workspaceId:row.tenant_id??null,site:clip(row.site_key,60),action:"review",risk:"high",legacyAllowed:reviewer.allowed,roles:reviewer.roles});
+      if(!reviewer.allowed)return json(req,{error:"reviewer_required"},403);
       let tenant:any=null;
       let store:any=null;
       if(decision==="approved"){
