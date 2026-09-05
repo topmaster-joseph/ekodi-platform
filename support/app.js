@@ -2,11 +2,11 @@ import {SUPPORT_STAGES,OPPORTUNITY_SERVICES,getOpportunityService,resolveOpportu
 
 const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
-const stageLabels={discovery:'발굴','fit-review':'적합도 검토','application-prep':'신청 준비',submitted:'신청 완료','document-review':'서류평가',presentation:'발표평가',selected:'선정',agreement:'협약',execution:'수행','mid-review':'중간점검','change-control':'변경관리','final-report':'결과보고',settlement:'정산',completed:'완료','follow-up':'후속사업'};
+const stageLabels={discovery:'발굴','fit-review':'적합도 검토','application-prep':'신청 준비',submitted:'신청 완료','document-review':'서류평가',presentation:'발표평가',selected:'선정',agreement:'협약',execution:'수행','mid-review':'중간점검','change-control':'변경관리','final-report':'결과보고',settlement:'정산',completed:'완료',follow-up:'후속사업'};
 const statusLabels={live:'공식 연결 운영',expanding:'공식 원천 확장 중',planned:'전문 원천 준비 중'};
 const savedWorkspace=JSON.parse(localStorage.getItem('ekodi.support.workspace')||'{}');
 const savedProfile=JSON.parse(localStorage.getItem('ekodi.support.profile')||'null')||savedWorkspace.profile||{};
-const profile={profileType:savedProfile.profileType||'개인',region:savedProfile.region||'',need:savedProfile.need||'',interests:Array.isArray(savedProfile.interests)?savedProfile.interests:[],industry:savedProfile.industry||'',businessType:savedProfile.businessType||'',businessName:savedProfile.businessName||'',registrationNumber:savedProfile.registrationNumber||'',summary:savedProfile.summary||'',recentRevenue:savedProfile.recentRevenue||''};
+const profile={profileType:savedProfile.profileType||'',region:savedProfile.region||'',need:savedProfile.need||'',interests:Array.isArray(savedProfile.interests)?savedProfile.interests:[],industry:savedProfile.industry||'',businessType:savedProfile.businessType||'',businessName:savedProfile.businessName||'',registrationNumber:savedProfile.registrationNumber||'',summary:savedProfile.summary||'',recentRevenue:savedProfile.recentRevenue||'',proactiveBenefits:Boolean(savedProfile.proactiveBenefits)};
 const project={id:savedWorkspace.id||'primary',name:savedWorkspace.name||'새 지원기회',stage:savedWorkspace.stage||'discovery'};
 const pathService=resolveOpportunityService(location.pathname,'all');
 const queryService=new URLSearchParams(location.search).get('service');
@@ -34,6 +34,7 @@ function renderProfile(){
   $('region').value=profile.region;
   $('interests').value=(profile.interests||[]).join(', ');
   $('needInput').value=profile.need||'';
+  if($('proactiveBenefits'))$('proactiveBenefits').checked=profile.proactiveBenefits;
 }
 
 function readProfile(){
@@ -41,15 +42,15 @@ function readProfile(){
   profile.region=$('region').value.trim();
   profile.need=$('needInput').value.trim();
   profile.interests=$('interests').value.split(',').map(v=>v.trim()).filter(Boolean);
+  profile.proactiveBenefits=Boolean($('proactiveBenefits')?.checked);
   profile.keywords=[profile.need,...profile.interests].filter(Boolean);
-  if(profile.profileType==='사업자'&&!profile.businessType)profile.businessType='소상공인';
   return profile;
 }
 
 function persistProfile(showMessage=true){
   readProfile();
   localStorage.setItem('ekodi.support.profile',JSON.stringify(profile));
-  if(showMessage){$('profileStatus').textContent='이 브라우저에 기본조건을 저장했습니다. 계정 프로필 연동 전까지 로컬에서만 사용합니다.'}
+  if(showMessage){$('profileStatus').textContent=profile.proactiveBenefits?'기본조건을 이 브라우저에 저장했습니다. 이 최소정보를 바탕으로 받을 수 있는 혜택을 먼저 제안합니다.':'기본조건을 이 브라우저에 저장했습니다. 선제 제안은 꺼져 있으며 직접 요청할 때만 기회를 찾습니다.'}
 }
 
 for(const stage of SUPPORT_STAGES){const option=document.createElement('option');option.value=stage;option.textContent=stageLabels[stage]||stage;$('stageSelect').append(option)}
@@ -82,10 +83,20 @@ function renderOpportunity(opportunity){
   return `<div class="opportunity">${titleNode}<div class="opportunity-meta"><span class="tag">${escapeHtml(specialist)}</span><span>적합도 ${Number(opportunity.score)||0}%</span><span>${escapeHtml(days)}</span><span>${escapeHtml(opportunity.agency||opportunity.operator||opportunity.sourceName||'공식 출처')}</span></div></div>`;
 }
 
+function renderNeedAssessment(assessment={}){
+  const mode=assessment.proactiveEligible?'선제 제안 가능':'직접 요청 중심';
+  const confidence=assessment.confidenceLabel||'추가 확인 필요';
+  const categories=(assessment.categories||[]).slice(0,3).map(item=>escapeHtml(item.label)).join(' · ');
+  const reasons=(assessment.reasons||[]).slice(0,3).map(reason=>`• ${escapeHtml(reason)}`).join('<br>');
+  const questions=(assessment.questions||[]).slice(0,2).map(item=>`<div class="radar-question"><strong>확인하면 더 정확해져요</strong><br>${escapeHtml(item.question)}</div>`).join('');
+  return `<div class="radar-assessment"><strong>Benefit Radar · ${escapeHtml(mode)}</strong><div class="opportunity-meta"><span>판단 신뢰도 ${escapeHtml(confidence)}</span>${categories?`<span>${categories}</span>`:''}</div>${reasons?`<div class="radar-reasons">${reasons}</div>`:''}${questions}</div>`;
+}
+
 async function buildBrief(){
   const box=$('briefResult');box.textContent='정리 중...';persistProfile(false);
   try{
-    const payload={profile,projects:[project],hashtags:[profile.region,profile.need,...(profile.interests||[])].filter(Boolean),limit:80,minScore:(profile.need||profile.region)?54:50};
+    const needContext={consent:{proactiveBenefits:profile.proactiveBenefits,activityContext:false,externalData:false,sensitiveBenefits:false},signals:[]};
+    const payload={profile,needContext,projects:[project],hashtags:[profile.region,profile.need,...(profile.interests||[])].filter(Boolean),limit:80,minScore:(profile.need||profile.region)?54:50};
     if(activeService)payload.serviceId=activeService.id;
     const response=await fetch('/api/proactive-brief',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     const data=await response.json();const brief=data.brief||data;const opportunities=brief.opportunities||[];const actions=brief.projectActions||[];
@@ -93,7 +104,8 @@ async function buildBrief(){
     $('matchCount').textContent=opportunities.length;
     $('soonCount').textContent=soon;
     const noResults=activeService&&activeService.sourceStatus!=='live'?`<p class="empty-note">현재 ${escapeHtml(activeService.label)}의 전용 공식 데이터 원천은 확장 중입니다. 확인되지 않은 공고를 임의 생성하지 않습니다.</p>`:'<p class="empty-note">현재 조건에서 우선 검토할 공식 공고가 없습니다. 지역·관심 키워드를 조금 넓혀 다시 확인해 보세요.</p>';
-    box.innerHTML=`<strong>${escapeHtml(brief.summary||data.reason||'브리프 준비 중')}</strong>${opportunities.length?opportunities.map(renderOpportunity).join(''):noResults}${actions.length?'<br><strong>진행 중 기회의 다음 행동</strong><br>'+actions.map(a=>`• ${escapeHtml(a.projectName)}: ${escapeHtml(a.action)}`).join('<br>'):''}`;
+    const assessment=renderNeedAssessment(brief.needAssessment||{});
+    box.innerHTML=`${assessment}<strong>${escapeHtml(brief.summary||data.reason||'브리프 준비 중')}</strong>${opportunities.length?opportunities.map(renderOpportunity).join(''):noResults}${actions.length?'<br><strong>진행 중 기회의 다음 행동</strong><br>'+actions.map(a=>`• ${escapeHtml(a.projectName)}: ${escapeHtml(a.action)}`).join('<br>'):''}`;
   }catch{box.textContent='기회 브리프를 만들지 못했습니다.';$('matchCount').textContent='-';$('soonCount').textContent='-'}
 }
 
