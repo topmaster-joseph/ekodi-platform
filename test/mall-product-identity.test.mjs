@@ -100,12 +100,13 @@ test('exact sufficiently specific titles remain a conservative compatibility fal
 });
 
 test('public Mall contract exposes server identities while keeping flat products for compatibility', async () => {
-  const [api, marketplace, curator, admin, routeMigration] = await Promise.all([
+  const [api, marketplace, curator, admin, routeMigration, gateMigration] = await Promise.all([
     read('affiliate-control.js'),
     read('affiliate-marketplace.js'),
     read('sites/ekodi-mall/assets/context-curator.js'),
     read('marketing-funnel-admin.js'),
     read('migrations/0063_affiliate_merchant_routes.sql'),
+    read('migrations/0064_affiliate_recommendation_gate.sql'),
   ]);
   assert.match(api, /groupProductOffers/);
   assert.match(api, /catalogMode: 'product_identity_v1'/);
@@ -118,13 +119,21 @@ test('public Mall contract exposes server identities while keeping flat products
   assert.match(admin, /name="brand"/);
   assert.match(admin, /name="model"/);
   assert.match(admin, /name="productIdentityKey"/);
-  for (const field of ['merchantKey', 'marketCountry', 'settlementCurrency', 'affiliateMode', 'affiliateStatus', 'networkKey', 'recommendationEnabled']) assert.match(admin, new RegExp(`name="${field}"`));
-  assert.match(admin, /LinkPrice/);
+  for (const field of ['merchantKey', 'marketCountry', 'settlementCurrency', 'affiliateMode', 'affiliateStatus', 'trackingStatus', 'catalogStatus', 'networkKey', 'recommendationEnabled']) assert.match(admin, new RegExp(`name="${field}"`));
+  for (const network of ['LinkPrice', 'awin', 'impact', 'cj', 'rakuten']) assert.match(admin, new RegExp(network, 'i'));
   assert.match(api, /recommendationRequiresActiveAffiliate: true/);
-  assert.match(api, /affiliateStatus !== 'active'/);
+  assert.match(api, /recommendationRequiresVerifiedTrackingAndCatalog: true/);
+  assert.match(api, /freshPriceRequiredForRecommendation: true/);
+  assert.match(api, /trackingStatus !==? 'ready'|trackingStatus === 'ready'/);
+  assert.match(api, /RECOMMENDABLE_CATALOG_STATUSES/);
   assert.match(api, /recommendedMerchants\.has\('coupang_partners'\)/);
-  assert.match(marketplace, /affiliate_status = 'active' AND recommendation_enabled = 1/);
+  assert.match(marketplace, /tracking_status = 'ready'/);
+  assert.match(marketplace, /catalog_status IN \('manual_verified','feed_ready'\)/);
+  assert.match(marketplace, /if \(!\(priceKrw > 0\)\) return null/);
   assert.match(curator, /제휴가 완료된 판매처 안에서/);
   assert.match(routeMigration, /'elevenst', '11번가'.*'network'/s);
   assert.match(routeMigration, /'linkprice', 'LinkPrice', 'pending', 0/);
+  assert.match(gateMigration, /ADD COLUMN tracking_status/);
+  assert.match(gateMigration, /ADD COLUMN catalog_status/);
+  assert.match(gateMigration, /merchant_key = 'coupang_partners'/);
 });

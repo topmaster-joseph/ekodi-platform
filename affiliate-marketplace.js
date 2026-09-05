@@ -3,6 +3,7 @@ import { normalizeGtin } from './product-identity.js';
 
 export const MULTI_AFFILIATE_DISCLOSURE = '에코디몰에는 여러 외부 판매처의 상품이 함께 표시됩니다. 일부 구매 링크는 제휴 링크일 수 있으며, 제휴 링크를 통한 구매 시 에코디가 수수료를 받을 수 있습니다. 상품별 판매처는 구매 전에 표시됩니다.';
 const FEED_PRICE_FRESH_MS = 24 * 60 * 60 * 1000;
+const MANUAL_PRICE_FRESH_MS = 24 * 60 * 60 * 1000;
 
 function cleanText(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
@@ -35,9 +36,10 @@ function metadataOf(offer) {
 function offerFreshness(metadata, updatedAt) {
   const sourceType = cleanText(metadata?.sourceType, 40);
   const verifiedAt = cleanText(metadata?.syncedAt || updatedAt, 80);
-  if (sourceType !== 'json_feed_v1') return { status: 'current', verifiedAt };
+  if (!['json_feed_v1', 'manual'].includes(sourceType)) return { status: 'current', verifiedAt };
   const timestamp = Date.parse(verifiedAt);
-  const fresh = Number.isFinite(timestamp) && Date.now() - timestamp <= FEED_PRICE_FRESH_MS;
+  const ttl = sourceType === 'json_feed_v1' ? FEED_PRICE_FRESH_MS : MANUAL_PRICE_FRESH_MS;
+  const fresh = Number.isFinite(timestamp) && Date.now() - timestamp <= ttl;
   return { status: fresh ? 'fresh' : 'stale', verifiedAt };
 }
 
@@ -55,7 +57,7 @@ export async function listMarketplaceProducts(request, env, limit = 100) {
   if (!env.DB?.prepare) return [];
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(Number(limit) || 100)));
   const offers = await listPublicOffers(env.DB, { offerType: 'product', excludeSourceProvider: 'coupang_partners', limit: safeLimit });
-  const routeRows = await env.DB.prepare(`SELECT merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name FROM affiliate_merchant_routes WHERE affiliate_status = 'active' AND recommendation_enabled = 1`).all().catch(() => ({ results: [] }));
+  const routeRows = await env.DB.prepare(`SELECT merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name FROM affiliate_merchant_routes WHERE affiliate_status = 'active' AND tracking_status = 'ready' AND catalog_status IN ('manual_verified','feed_ready') AND recommendation_enabled = 1`).all().catch(() => ({ results: [] }));
   const routeByMerchant = new Map((routeRows.results || []).map(route => [route.merchant_key, route]));
   const baseUrl = new URL(request.url);
   return offers.map((offer, index) => {
@@ -67,12 +69,14 @@ export async function listMarketplaceProducts(request, env, limit = 100) {
     const providerName = cleanText(metadata.providerName, 120) || cleanText(offer.sourceProvider, 120) || '제휴 판매처';
     const clickUrl = new URL(`/api/affiliate/public/link/${linkId}`, baseUrl).toString();
     const freshness = offerFreshness(metadata, offer.updatedAt);
+    const priceKrw = freshness.status === 'stale' ? 0 : Number(offer.priceAmount || 0);
+    if (!(priceKrw > 0)) return null;
     return {
       id: `affiliate-${linkId}`,
       productId: cleanText(metadata.merchantSourceId, 160) || offer.sourceId,
       merchantSourceId: cleanText(metadata.merchantSourceId, 160),
       productName: offer.title,
-      priceKrw: freshness.status === 'stale' ? 0 : Number(offer.priceAmount || 0),
+      priceKrw,
       sourcePriceAmount: Number(metadata.sourcePriceAmount || 0),
       sourcePriceCurrency: cleanText(metadata.sourcePriceCurrency, 3).toUpperCase() || route.settlement_currency,
       priceFreshness: freshness.status,
@@ -140,7 +144,7 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
   if (!affiliateUrl) return { ok: false, error: 'HTTPS 형식의 제휴 구매 링크가 필요합니다.' };
   if (destinationUrl === null) return { ok: false, error: '원본 상품 URL은 HTTPS 형식이어야 합니다.' };
   if (imageUrl === null) return { ok: false, error: '상품 이미지 URL은 HTTPS 형식이어야 합니다.' };
-  if (priceKrw === null) return { ok: false, error: '가격은 0 이상의 숫자여야 합니다.' };
+  if (priceKrw === null || priceKrw <= 0) return { ok: false, error: '추천 상품은 현재 검증된 1원 이상의 비교가격이 필요합니다.' };
 
   const now = new Date().toISOString();
   const accountId = safeKey(input.accountId, 80) || `${providerKey}-ekodibiz`;
@@ -205,7 +209,7 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
     canonicalUrl: `https://api.ekodi.kr/api/affiliate/public/link/${linkId}`, imageUrl: imageUrl || '',
     actionKind: 'external_purchase', visibility: 'public', status: 'active',
     discoveryKeywords: [providerName, category, productName, '에코디몰'],
-    metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, productIdentityKey, gtin, brand, model, sourcePriceAmount: safeSourcePriceAmount, sourcePriceCurrency: safeSourcePriceCurrency, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName, sourceType: normalizedConnectionMode, syncedAt: normalizedConnectionMode === 'json_feed_v1' ? now : '' },
+    metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, productIdentityKey, gtin, brand, model, sourcePriceAmount: safeSourcePriceAmount, sourcePriceCurrency: safeSourcePriceCurrency, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName, sourceType: normalizedConnectionMode, syncedAt: now },
   });
   return { ok: true, linkId, accountId, providerKey, providerName, productIdentityKey, gtin, brand, model, connectionMode: normalizedConnectionMode, stableSourceId: stableOfferSourceId, created, offer };
 }
