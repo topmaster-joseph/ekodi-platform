@@ -4,7 +4,9 @@
   const API_BASE = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const ENGINE_MARKER = 'EKODI HYBRID EXECUTION';
+  const HYBRID_REFRESH_MS = 30 * 1000;
   let timer = null;
+  let loadPromise = null;
   let lastDashboard = { fabric:{ enabled:true }, nodes:[], jobs:[], events:[], monitoring:null };
 
   function authHeaders(json = false) {
@@ -204,8 +206,9 @@
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
     load();
     if (!timer) timer = window.setInterval(() => {
-      if (!host.classList.contains('hidden-panel')) load();
-    }, 10000);
+      if (document.visibilityState === 'visible' && !host.classList.contains('hidden-panel')) load();
+    }, HYBRID_REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !host.classList.contains('hidden-panel')) load(); });
     return true;
   }
 
@@ -347,7 +350,9 @@
     events.innerHTML = rows.length ? rows.slice(0, 100).map(eventMarkup).join('') : '<div class="hybrid-empty">아직 감사 이벤트가 없습니다.</div>';
   }
 
-  async function load() {
+  function load() {
+    if (loadPromise) return loadPromise;
+    loadPromise = (async () => {
     const panel = document.querySelector('#hybridExecutionPanel');
     if (!panel || !sessionStorage.getItem(TOKEN_KEY)) return;
     try {
@@ -374,6 +379,8 @@
       const nodes = panel.querySelector('#hybridNodeList');
       if (nodes) nodes.innerHTML = `<div class="hybrid-empty">${escapeHtml(error.message)}</div>`;
     }
+    })().finally(() => { loadPromise = null; });
+    return loadPromise;
   }
 
   async function saveNode(event) {

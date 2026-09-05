@@ -8,7 +8,7 @@
   const STORAGE_API = '/api/control/storage/google';
   const AUTO_RECONNECT_KEY = 'ekodi-storage-auto-reconnect-at';
   const AUTO_RECONNECT_COOLDOWN_MS = 5 * 60 * 1000;
-  const POLL_MS = 15000;
+  const POLL_MS = 60 * 1000;
 
   let rows = [];
   let sort = { key: 'no', dir: 'asc' };
