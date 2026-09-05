@@ -69,7 +69,7 @@ export const EKODI_SERVICE_MANIFEST = Object.freeze({
   updatedAt: '2026-08-30',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
-  shellVersion: 2,
+  shellVersion: 3,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
   userAccessPolicy: 'public-guide-workspace-member-content',
