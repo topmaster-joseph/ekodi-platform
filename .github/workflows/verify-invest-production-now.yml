@@ -1,0 +1,42 @@
+name: Verify Invest Production Now
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-invest-production-now.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify live Workspace API
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 12 --retry-delay 5 --retry-all-errors 'https://workspace-api.ekodi.kr/health' > /tmp/health.json
+          grep -Fq '"profileSchemaReady":true' /tmp/health.json
+          grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/health.json
+          grep -Fq '"investPersonalization":"v1"' /tmp/health.json
+          grep -Fq '"transactionExecution":false' /tmp/health.json
+      - name: Verify live Invest surface
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 12 --retry-delay 5 --retry-all-errors 'https://invest.ekodi.kr/?production-probe=20260824' > /tmp/invest.html
+          curl -fsS --retry 12 --retry-delay 5 --retry-all-errors 'https://invest.ekodi.kr/invest-ui.js?production-probe=20260824' > /tmp/invest-ui.js
+          curl -fsS --retry 12 --retry-delay 5 --retry-all-errors 'https://invest.ekodi.kr/invest-subject-ui.js?production-probe=20260824' > /tmp/invest-subject.js
+          grep -Fq 'EVIDENCE FIRST' /tmp/invest.html
+          grep -Fq 'investConnections' /tmp/invest.html
+          grep -Fq '/v1/invest/context' /tmp/invest-ui.js
+          grep -Fq 'renderConnections' /tmp/invest-ui.js
+          grep -Fq '/v1/invest/subjects' /tmp/invest-subject.js
+          grep -Fq 'matchesHint' /tmp/invest-subject.js
+      - name: Verify My EKODI handoff source
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 12 --retry-delay 5 --retry-all-errors 'https://my.ekodi.kr/user-ai-ui.js?production-probe=20260824' > /tmp/my-user-ai-ui.js
+          grep -Fq 'https://invest.ekodi.kr/' /tmp/my-user-ai-ui.js
+          grep -Fq "searchParams.set('workspace'" /tmp/my-user-ai-ui.js
