@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { tenantAdminCan, tenantAdminPolicySnapshot } from '../tenant-admin-policy.js';
 import { storeAdminPage } from '../store-admin-engine.js';
 import { churchPastorAdminPage } from '../church-pastor-admin-page.js';
-import { workspaceAdminPage } from '../workspace-admin-page.js';
+import { workspaceAdminPage, workspaceAdminScript, workspaceAdminCanAccess, workspaceAdminSectionsForRole } from '../workspace-admin-page.js';
 
 test('tenant admin constitution keeps one page and projects authority by capability', async()=>{
   const policy=tenantAdminPolicySnapshot();
@@ -23,6 +23,23 @@ test('tenant admin constitution keeps one page and projects authority by capabil
     assert.equal(response.headers.get('x-ekodi-authority-scope'),'tenant');
     assert.doesNotMatch(html,/super[-_]?admin|master[-_]?admin/i);
   }
+});
+
+test('workspace admin projects root and mall sections from tenant-local capabilities',async()=>{
+  assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager'),['overview','mall','publishing','marketing']);
+  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance']);
+  assert.deepEqual(workspaceAdminSectionsForRole('client_viewer'),['overview','mall']);
+  assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','marketing','channels','automation','analytics']);
+  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager','mall'),['overview','sales','analytics']);
+  assert.equal(workspaceAdminCanAccess('manager','members'),false);
+  assert.equal(workspaceAdminCanAccess('workspace_admin','members'),true);
+  assert.equal(workspaceAdminCanAccess('member','overview'),false);
+  const source=await (await workspaceAdminScript()).text();
+  assert.match(source,/current_site_activity_contexts/);
+  assert.match(source,/authorization_role/);
+  assert.match(source,/canSection\(section\)/);
+  assert.match(source,/noRoleSpecificAdminPages/);
+  assert.match(source,/ekodi:tenant-context/);
 });
 
 test('entry router applies the shared Admin Shell to tenant admin pages',async()=>{
