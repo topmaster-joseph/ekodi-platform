@@ -1,12 +1,6 @@
 import { buildFinancialCleanupBrief } from './core.js';
 
-const demoAccounts = [
-  {id:'a1',institution:'국민은행',alias:'생활계좌',balance:1324000,inactiveDays:2,autoDebits:[{name:'통신비',amount:62000},{name:'보험료',amount:89000}],primary:true},
-  {id:'a2',institution:'농협',alias:'예전 생활비',balance:67300,inactiveDays:482,autoDebits:[]},
-  {id:'a3',institution:'신한은행',alias:'모임통장',balance:120120,inactiveDays:395,autoDebits:[{name:'정기후원',amount:10000}]},
-  {id:'a4',institution:'우리은행',alias:'예전 급여계좌',balance:0,inactiveDays:228,autoDebits:[],linkedCard:true},
-  {id:'a5',institution:'하나은행',alias:'대출연결계좌',balance:24000,inactiveDays:560,autoDebits:[],linkedLoan:true}
-];
+const demoAccounts = [];
 
 const money = value => `${Number(value||0).toLocaleString('ko-KR')}원`;
 const labels = {keep:'유지',review:'검토',cleanup:'정리 추천',attention:'확인 필요'};
@@ -15,7 +9,13 @@ const defaultScopes=['accounts:read','balances:read','transactions:read','autopa
 
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));}
 
-function render(accounts=demoAccounts){
+function render(accounts=[]){
+  if(!accounts.length){
+    document.querySelector('#summary').innerHTML='<article class="metric"><span>개인 원장</span><strong>실데이터 미연결</strong><small>My EKODI에서 로그인 후 확인</small></article>';
+    document.querySelector('#findings').innerHTML='<p class="empty">공개 Money 화면에는 개인 잔액이나 예시 숫자를 표시하지 않습니다.</p>';
+    document.querySelector('#plan').innerHTML='<p class="empty">나의 재무는 My EKODI의 개인 원장에서 확인합니다.</p>';
+    return;
+  }
   const brief=buildFinancialCleanupBrief(accounts,'a1');
   const s=brief.summary;
   document.querySelector('#summary').innerHTML = `
@@ -97,7 +97,7 @@ function announce(){
 }
 
 document.querySelector('#analyze')?.addEventListener('click',announce);
-document.querySelector('#load-demo')?.addEventListener('click',render);
+
 document.querySelector('#integrations')?.addEventListener('click',event=>{
   const card=event.target.closest('[data-provider]');if(!card)return;
   const providerId=card.dataset.provider;
