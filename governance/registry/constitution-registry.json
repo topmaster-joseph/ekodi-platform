@@ -90,6 +90,7 @@
       "sourcePointer": "/systemBoundaries",
       "impactPaths": [
         "wrangler.ai*.toml",
+        "wrangler.site.toml",
         ".github/workflows/deploy-ai-control.yml",
         ".github/workflows/deploy-ai-gateway.yml",
         ".github/workflows/verify-ai-gateway-production.yml",
