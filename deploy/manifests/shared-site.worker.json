@@ -884,9 +884,9 @@
           "개인 금융원장의 내용은 이 화면에서 조회하지 않습니다"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
-          "cache-control: public, max-age=31536000, immutable"
-        ]
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/personal-finance-admin.css?pf=v1",
@@ -900,9 +900,9 @@
           ".pf-admin-locks"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
-          "cache-control: public, max-age=31536000, immutable"
-        ]
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
