@@ -1,3 +1,4 @@
+import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
 import { getControlPlaneSummary } from './cognitive-control-plane.js';
 import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
@@ -46,14 +47,21 @@ export function normalizeTaskInput(input = {}) {
   const requestedProviders = unique(Array.isArray(input.providers) ? input.providers.map(clean) : []);
   const needsCodeBranch = input.needsCodeBranch === true || /\b(code|coding|git|github|branch|deploy|worker|repository|repo)\b/i.test(prompt) || /코드|코딩|깃|브랜치|배포|저장소/.test(prompt);
   const g = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const governance = Object.freeze({agentId:clean(g.agentId||input.agentId||'chief')||'chief',area:clean(g.area||input.actionArea||(needsCodeBranch?'software_change':'general_assistance'))||'general_assistance',delegated:g.delegated===true,reversible:g.reversible===true,logged:g.logged===true,preflightVerified:g.preflightVerified===true,reducesUserRights:g.reducesUserRights===true,crossTenantPrivateData:g.crossTenantPrivateData===true,violates:unique(Array.isArray(g.violates)?g.violates.map(clean):[])});
+  const governance = Object.freeze({agentId:clean(g.agentId||input.agentId||'chief')||'chief',area:clean(g.area||input.actionArea||(needsCodeBranch?'software_change':'general_assistance'))||'general_assistance',delegated:g.delegated===true,reversible:g.reversible===true,logged:g.logged===true,preflightVerified:g.preflightVerified===true,reducesUserRights:g.reducesUserRights===true,crossTenantPrivateData:g.crossTenantPrivateData===true,highImpact:g.highImpact===true,personId:clean(g.personId||g.person_id),workspaceId:clean(g.workspaceId||g.workspace_id),role:clean(g.role),capability:clean(g.capability),production:g.production===true,standingDelegation:g.standingDelegation===true,existingBoundary:g.existingBoundary===true,rollbackDefined:g.rollbackDefined===true,verificationDefined:g.verificationDefined===true,postVerificationRequired:g.postVerificationRequired===true,automaticRollback:g.automaticRollback===true,knownStableTarget:g.knownStableTarget===true,paidCommitment:g.paidCommitment===true,explicitDelegatedBudget:g.explicitDelegatedBudget===true,permissionExpansion:g.permissionExpansion===true,canonicalIdentityChange:g.canonicalIdentityChange===true,workspaceAuthorityChange:g.workspaceAuthorityChange===true,destructiveDataChange:g.destructiveDataChange===true,massDataChange:g.massDataChange===true,newDomainOwnership:g.newDomainOwnership===true,securityBoundaryChange:g.securityBoundaryChange===true,newIndependentDeployment:g.newIndependentDeployment===true,providerLockIn:g.providerLockIn===true,productionSecretChange:g.productionSecretChange===true,productionDnsChange:g.productionDnsChange===true,violates:unique(Array.isArray(g.violates)?g.violates.map(clean):[])});
   return Object.freeze({title,prompt,mode,requestedProviders,needsCodeBranch,executionEnvironment:AI_CONTROL_POLICY.executionEnvironment,governance});
 }
 
 export function evaluateTaskMissionPolicy(task = {}) {
-  const decision=evaluateMissionAction(task.governance||{agentId:'chief'});
+  const governance=task.governance||{agentId:'chief'};
+  const decision=evaluateMissionAction(governance);
+  if (decision.tier==='forbidden'||decision.tier==='human_gate') return Object.freeze({...decision,forbidden:decision.tier==='forbidden',humanGate:decision.tier==='human_gate',analysisOnly:true,allowModelConsultation:decision.tier!=='forbidden',autonomousActionAllowed:false,humanApprovalRequired:decision.tier==='human_gate'});
+  if (governance.production) {
+    const sovereign=evaluateAutonomousOperation({area:'bounded_production_promotion',...governance,audited:governance.logged});
+    const humanGate=sovereign.tier==='human_gate';
+    return Object.freeze({...decision,forbidden:false,humanGate,analysisOnly:true,allowModelConsultation:true,autonomousActionAllowed:false,humanApprovalRequired:humanGate,controlPlaneRequired:true,standingDelegationEligible:sovereign.standingDelegationEligible===true,standingDelegationMissing:sovereign.standingDelegationMissing||[],sovereignDecision:sovereign});
+  }
   const autonomousActionAllowed=['observe','execute_reversible'].includes(decision.tier);
-  return Object.freeze({...decision,forbidden:decision.tier==='forbidden',humanGate:decision.tier==='human_gate',analysisOnly:!autonomousActionAllowed,allowModelConsultation:decision.tier!=='forbidden',autonomousActionAllowed,humanApprovalRequired:decision.tier!=='forbidden'});
+  return Object.freeze({...decision,forbidden:false,humanGate:false,analysisOnly:!autonomousActionAllowed,allowModelConsultation:true,autonomousActionAllowed,humanApprovalRequired:false});
 }
 
 export function availableProviderIds(capabilities = {}) {

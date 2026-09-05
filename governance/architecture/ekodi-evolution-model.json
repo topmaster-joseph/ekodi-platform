@@ -8,7 +8,7 @@
   "currentGeneration": 2,
   "currentGenerationLabel": "Integrated Platform moving toward Capability Platform",
   "currentScaleTier": "S0",
-  "operatingArchitectureVersion": "1.8.0",
+  "operatingArchitectureVersion": "1.8.1",
   "operatingArchitectureName": "Sovereign Autonomous Operations",
   "operatingArchitectureRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json",
   "generationPromotion": {
@@ -129,5 +129,6 @@
     "generationAdvancementIsNotDateDriven": true,
     "requirements":["previous generation contracts are stable","security and authorization remain centralized and auditable","cost profile is sustainable","measured user value exists","rollback and degraded operation are defined"],
     "authority":"EKODI Platform Super Administrator through constitutional change control"
-  }
+  },
+  "boundedProductionStandingDelegation": {"enabled":true,"scope":"existing_registered_boundary_only","directAgentMutationForbidden":true,"highImpactRemainsSovereign":true}
 }
