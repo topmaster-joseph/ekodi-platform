@@ -524,6 +524,8 @@
           "use_fedcm_for_button:false",
           "ux_mode:'popup'",
           "directEntry",
+          "isDisplayed",
+          "clearDirectFallback",
           "button_auto_select:false",
           "isEmbeddedWebView",
           "Chrome에서 관리자 로그인 열기",

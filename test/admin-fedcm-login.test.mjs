@@ -32,7 +32,11 @@ test('admin direct entry automatically opens Google account selection and keeps 
   assert.match(adminAuth, /const directEntry=params\.get\('direct'\)==='1'/);
   assert.match(adminAuth, /window\.google\.accounts\.id\.prompt\(/);
   assert.match(adminAuth, /revealDirectFallback/);
+  assert.match(adminAuth, /clearDirectFallback/);
+  assert.match(adminAuth, /moment\?\.isDisplayed\?\.\(\)===true/);
+  assert.match(adminAuth, /if\(displayed\)\{clearDirectFallback\(\);return\}/);
   assert.match(adminAuth, /adminDirectBridge='fallback'/);
+  assert.match(adminAuth, /adminDirectBridge='prompt'/);
   assert.match(adminAuth, /auto_select:false/);
 });
 
