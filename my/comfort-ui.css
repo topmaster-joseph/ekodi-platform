@@ -18,7 +18,7 @@ body[data-ekodi-ui="USER"] .topbar.my-comfort-header{min-height:68px;padding:10p
 html[data-ekodi-global-nav="off"] [data-ekodi-user-global-nav]{display:none!important}
 
 /* Hero: quiet field, warm paper, restrained motion. */
-body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{position:relative;isolation:isolate;max-width:none!important;min-height:520px;margin:0!important;padding:68px max(28px,calc((100vw - 1160px)/2)) 72px!important;grid-template-columns:minmax(0,1.1fr) minmax(310px,.62fr)!important;gap:42px!important;align-items:center!important;background:linear-gradient(90deg,rgba(252,251,244,.98) 0%,rgba(250,250,242,.94) 37%,rgba(246,249,239,.43) 61%,rgba(246,249,239,.10) 100%),url('/quiet-field.svg?v=20260906-comfort-v1') center/cover no-repeat!important;border-bottom:1px solid rgba(50,81,60,.08)}
+body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{position:relative;isolation:isolate;max-width:none!important;min-height:520px;margin:0!important;padding:68px max(28px,calc((100vw - 1160px)/2)) 72px!important;grid-template-columns:minmax(0,1.1fr) minmax(310px,.62fr)!important;gap:42px!important;align-items:center!important;background:linear-gradient(90deg,rgba(252,251,244,.98) 0%,rgba(250,250,242,.94) 37%,rgba(246,249,239,.43) 61%,rgba(246,249,239,.10) 100%)!important;border-bottom:1px solid rgba(50,81,60,.08)}
 .comfort-hero::before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 16% 18%,rgba(255,255,243,.95),transparent 34%),linear-gradient(180deg,transparent 67%,rgba(255,255,251,.25));pointer-events:none}
 .comfort-hero .welcome-copy{max-width:620px;padding:0!important;text-shadow:0 1px 0 rgba(255,255,255,.75)}
 .comfort-hero .eyebrow{margin:0 0 12px;color:#4f755e!important;letter-spacing:.18em;font-size:10px!important}
@@ -58,14 +58,14 @@ body[data-ekodi-ui="USER"] .my-custom-footer{display:block!important;margin-top:
 /* Shared shell common/footer remains canonical for operator and legal identity. */
 body[data-ekodi-ui="USER"]+.ekodi-user-ui-footer,.ekodi-user-ui-footer{--ekodi-user-footer-background:#eef3e9;--ekodi-user-footer-border:#d9e3d6;margin-top:0!important}
 @media(max-width:1080px){.header-search{display:none}.my-comfort-header nav{gap:0!important}.my-comfort-header nav a{padding-inline:9px}.comfort-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:900px){body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{grid-template-columns:1fr!important;min-height:0;padding-top:46px!important;background:linear-gradient(180deg,rgba(252,251,244,.96),rgba(247,249,240,.78)),url('/quiet-field.svg?v=20260906-comfort-v1') 64% center/cover no-repeat!important}.comfort-hero .welcome-copy{max-width:690px}.comfort-identity{max-width:520px}.my-footer-inner{grid-template-columns:1fr;gap:18px}.my-custom-footer nav{justify-content:flex-start}.my-footer-note{text-align:left}.my-comfort-header nav{display:none!important}}
+@media(max-width:900px){body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{grid-template-columns:1fr!important;min-height:0;padding-top:46px!important;background:linear-gradient(180deg,rgba(252,251,244,.96),rgba(247,249,240,.78))!important}.comfort-hero .welcome-copy{max-width:690px}.comfort-identity{max-width:520px}.my-footer-inner{grid-template-columns:1fr;gap:18px}.my-custom-footer nav{justify-content:flex-start}.my-footer-note{text-align:left}.my-comfort-header nav{display:none!important}}
 @media(max-width:760px){body[data-ekodi-ui="USER"] .topbar.my-comfort-header{min-height:64px;padding:8px 14px!important}.my-comfort-header .brand{min-width:0}.brand-leaf{width:30px;height:30px;flex-basis:30px}.top-actions{margin-left:auto}.my-comfort-header .ghost{font-size:11px!important;padding:8px 10px!important}.comfort-hero .welcome-copy h1{font-size:40px!important}.comfort-hero .lead{font-size:14px!important}.hero-promises{gap:6px}.comfort-quick-grid{grid-template-columns:1fr 1fr}.comfort-quick-grid>a{padding:15px}.my-footer-inner{width:min(100% - 30px,1160px)}.my-footer-common{justify-content:flex-start}}
 @media(max-width:520px){body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{padding:34px 16px 38px!important}.comfort-hero .welcome-copy h1{font-size:34px!important}.hero-whisper{font-size:13px}.hero-promises span{font-size:9px}.comfort-quick-grid{grid-template-columns:1fr}.sprout-orb{right:18px;width:66px;height:66px}.comfort-identity .identity-top{padding-right:48px}.my-footer-brand{align-items:flex-start}.my-footer-common{gap:9px 12px}}
 @media(prefers-reduced-motion:reduce){.my-comfort-header nav a,.comfort-quick-grid>a,.hero-auth-link{transition:none!important}}
 
 /* v2 polish: calmer hierarchy, readable Korean line breaks, cleaner common/custom footer split. */
 @media(min-width:901px){
-  body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{min-height:500px!important;grid-template-columns:minmax(520px,1.18fr) minmax(330px,.66fr)!important;gap:54px!important;background:linear-gradient(90deg,rgba(252,251,244,.98) 0%,rgba(250,250,242,.90) 34%,rgba(246,249,239,.25) 57%,rgba(246,249,239,.03) 100%),url('/quiet-field.svg?v=20260906-comfort-v2') right center/cover no-repeat!important}
+  body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{min-height:500px!important;grid-template-columns:minmax(520px,1.18fr) minmax(330px,.66fr)!important;gap:54px!important;background:linear-gradient(90deg,rgba(252,251,244,.98) 0%,rgba(250,250,242,.90) 34%,rgba(246,249,239,.25) 57%,rgba(246,249,239,.03) 100%)!important}
   .comfort-hero .welcome-copy{max-width:660px!important}
   .comfort-hero .welcome-copy h1{max-width:620px;font-size:clamp(46px,4.35vw,58px)!important;line-height:1.08!important;word-break:keep-all;overflow-wrap:normal}
   .comfort-hero .lead{max-width:610px!important}
@@ -77,3 +77,16 @@ body[data-ekodi-ui="USER"]+.ekodi-user-ui-footer,.ekodi-user-ui-footer{--ekodi-u
 .my-footer-credo{border-top:1px solid #e1e7dd;padding:15px max(20px,calc((100vw - 1160px)/2));display:flex;gap:12px 18px;justify-content:center;align-items:center;flex-wrap:wrap;background:rgba(255,255,251,.72);font-size:11px}
 .my-footer-credo strong{color:#315744!important;font-size:11px}.my-footer-credo span{color:#748078}
 body[data-ekodi-ui="USER"] .ekodi-user-ui-footer{margin-top:0!important;border-top-color:#d6e0d3!important}
+
+/* v3: CSS-only ambient landscape. Removes the broken decorative asset completely. */
+body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{background:
+  radial-gradient(circle at 84% 18%,rgba(255,244,194,.42) 0 5%,transparent 18%),
+  radial-gradient(ellipse at 91% 111%,rgba(77,117,76,.17) 0 28%,transparent 29%),
+  radial-gradient(ellipse at 73% 116%,rgba(121,151,103,.13) 0 37%,transparent 38%),
+  linear-gradient(105deg,#fdfbf3 0%,#fafaf2 48%,#f0f5e9 100%)!important}
+.comfort-hero::before{background:
+  radial-gradient(circle at 13% 20%,rgba(255,255,247,.92),transparent 34%),
+  radial-gradient(circle at 88% 30%,rgba(232,241,221,.42),transparent 28%),
+  linear-gradient(180deg,transparent 65%,rgba(255,255,251,.28))!important}
+@media(max-width:900px){body[data-ekodi-ui="USER"] .welcome-shell.comfort-hero{background:linear-gradient(160deg,#fffdf6 0%,#f2f6eb 100%)!important}}
+@media(max-width:760px){.my-footer-credo{justify-content:flex-start;padding-inline:15px}}
