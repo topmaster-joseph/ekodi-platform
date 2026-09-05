@@ -35,7 +35,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'api-cost', group: 'data', icon: '₩', labels: { ko: 'API · 비용', en: 'API & Cost' } },
   { id: 'health', group: 'system', icon: '♥', labels: { ko: '시스템 건강', en: 'System Health' } },
   { id: 'security', group: 'system', icon: 'S', labels: { ko: '보안', en: 'Security' } },
-  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '원격 작업', en: 'Remote Work' } },
+  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' } },
   { id: 'architecture', group: 'system', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'services', group: 'data', icon: '◉', labels: { ko: '서비스 · 통계', en: 'Services & Metrics' }, internal: true },
   { id: 'deployments', group: 'operations', icon: '↥', labels: { ko: '배포', en: 'Deployments' }, internal: true },
