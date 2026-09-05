@@ -8,6 +8,7 @@ test('Devotional admin renders immediately and refreshes without blocking naviga
     readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
   ]);
   assert.match(admin, /let loadingPromise=null/);
+  assert.match(admin, /if\(!button\.dataset\.section\)button\.dataset\.section='devotional'/);
   assert.match(admin, /AbortSignal\.timeout\(8000\)/);
   assert.match(admin, /if\(loadingPromise\)return loadingPromise/);
   assert.match(admin, /render\(fallback\(\)\);\s*button\.addEventListener/);
