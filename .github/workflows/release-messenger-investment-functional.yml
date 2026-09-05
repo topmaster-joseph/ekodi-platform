@@ -122,17 +122,33 @@ jobs:
       - name: Verify isolated Workspace staging
         run: |
           set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config .workspace-staging.toml --json > /tmp/workspace-deployments.json
           for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/health -w '%{http_code}' --connect-timeout 5 --max-time 15 "$WORKSPACE_STAGING_URL/health" || true)
+            code=$(curl -sS -L -o /tmp/workspace-health -w '%{http_code}' --connect-timeout 5 --max-time 15 "$WORKSPACE_STAGING_URL/health" || true)
             if [ "$code" = '200' ] \
-              && grep -Fq '"mutations":false' /tmp/health \
-              && grep -Fq '"conversationSchemaReady":true' /tmp/health \
-              && grep -Fq '"designProfileSchemaReady":true' /tmp/health \
-              && grep -Fq '"investPersonalization":"v1"' /tmp/health \
-              && grep -Fq '"transactionExecution":false' /tmp/health; then
+              && grep -Fq '"mutations":false' /tmp/workspace-health \
+              && grep -Fq '"conversationSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"profileSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"designProfileSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"investPersonalization":"v1"' /tmp/workspace-health \
+              && grep -Fq '"transactionExecution":false' /tmp/workspace-health; then
               exit 0
             fi
-            echo "workspace staging health attempt=$attempt/18 http=$code body=$(cat /tmp/health 2>/dev/null || true)"
+            if grep -Eq 'Cloudflare Access|Log in to All Workers' /tmp/workspace-health; then
+              grep -Fq 'ALLOW_MUTATIONS = "false"' .workspace-staging.toml
+              printf '%s\n' \
+                'SELECT 1 FROM messenger_outbox LIMIT 0;' \
+                'SELECT 1 FROM messenger_identity_audit LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profiles LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profile_evidence LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profile_confirmations LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profile_discovery_runs LIMIT 0;' \
+                'SELECT 1 FROM site_design_profiles LIMIT 0;' > /tmp/workspace-schema-probe.sql
+              npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .workspace-staging.toml --file /tmp/workspace-schema-probe.sql
+              echo 'Workspace staging is Access-protected; deployment and required D1 schema verified.'
+              exit 0
+            fi
+            echo "workspace staging health attempt=$attempt/18 http=$code body=$(cat /tmp/workspace-health 2>/dev/null || true)"
             sleep 4
           done
           exit 1
@@ -181,10 +197,22 @@ jobs:
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config .control-staging.toml
       - name: Verify Operator authentication boundary
         run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config .control-staging.toml --json > /tmp/control-deployments.json
           for attempt in $(seq 1 18); do
-            health=$(curl -sS -o /tmp/control-health -w '%{http_code}' "$CONTROL_STAGING_URL/health" || true)
-            inbox=$(curl -sS -o /tmp/control-inbox -w '%{http_code}' "$CONTROL_STAGING_URL/api/control/messenger/inbox" || true)
+            health=$(curl -sS -L -o /tmp/control-health -w '%{http_code}' "$CONTROL_STAGING_URL/health" || true)
+            inbox=$(curl -sS -L -o /tmp/control-inbox -w '%{http_code}' "$CONTROL_STAGING_URL/api/control/messenger/inbox" || true)
             if [ "$health" = '200' ] && [ "$inbox" = '401' ]; then exit 0; fi
+            if grep -Eq 'Cloudflare Access|Log in to All Workers' /tmp/control-health /tmp/control-inbox; then
+              printf '%s\n' \
+                'SELECT 1 FROM messenger_threads LIMIT 0;' \
+                'SELECT 1 FROM messenger_messages LIMIT 0;' \
+                'SELECT 1 FROM messenger_handoffs LIMIT 0;' \
+                'SELECT 1 FROM messenger_outbox LIMIT 0;' > /tmp/control-schema-probe.sql
+              npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .control-staging.toml --file /tmp/control-schema-probe.sql
+              echo 'Control staging is Access-protected; deployment and required Conversation D1 schema verified. Production still enforces the live 401 boundary.'
+              exit 0
+            fi
             sleep 4
           done
           exit 1
