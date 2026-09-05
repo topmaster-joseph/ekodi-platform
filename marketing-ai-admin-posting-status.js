@@ -261,3 +261,114 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
   else start();
 })();
+
+// Shared deterministic route bridge for every Marketing AI submenu. Kept in this
+// demand-loaded bundle so the global admin shell remains thin.
+(() => {
+  'use strict';
+
+  const PARAM = 'marketing_tab';
+  const ROOT_HASH = '#marketing-ai';
+  const DEFAULT_TAB = 'overview';
+  let suppressWrite = false;
+  let installedPanel = null;
+  let navObserver = null;
+
+  const panel = () => document.querySelector('#marketingAiAdminPanel');
+  const tabButtons = () => [...(panel()?.querySelectorAll('[data-marketing-tab]') || [])];
+  const tabButton = tab => tabButtons().find(button => button.dataset.marketingTab === tab) || null;
+
+  function requestedTab() {
+    try {
+      return new URL(location.href).searchParams.get(PARAM) || DEFAULT_TAB;
+    } catch {
+      return DEFAULT_TAB;
+    }
+  }
+
+  function routeFor(tab) {
+    const url = new URL(location.href);
+    if (tab === DEFAULT_TAB) url.searchParams.delete(PARAM);
+    else url.searchParams.set(PARAM, tab);
+    url.hash = ROOT_HASH;
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
+  function writeRoute(tab, replace = false) {
+    if (suppressWrite) return;
+    const next = routeFor(tab);
+    const current = `${location.pathname}${location.search}${location.hash}`;
+    if (next === current) return;
+    history[replace ? 'replaceState' : 'pushState']({ marketingTab:tab }, '', next);
+  }
+
+  function annotateRoutes() {
+    for (const button of tabButtons()) {
+      const tab = button.dataset.marketingTab || DEFAULT_TAB;
+      button.dataset.marketingRoute = routeFor(tab);
+      button.setAttribute('aria-controls', 'marketingAiConsoleView');
+      button.setAttribute('aria-current', button.classList.contains('active') ? 'page' : 'false');
+    }
+  }
+
+  function activateFromLocation({ normalize = true } = {}) {
+    if (location.hash !== ROOT_HASH) return false;
+    const requested = requestedTab();
+    const target = tabButton(requested) || tabButton(DEFAULT_TAB);
+    if (!target) return false;
+    const resolved = target.dataset.marketingTab || DEFAULT_TAB;
+    if (!target.classList.contains('active')) {
+      suppressWrite = true;
+      try { target.click(); }
+      finally { suppressWrite = false; }
+    }
+    if (normalize && requested !== resolved) writeRoute(resolved, true);
+    annotateRoutes();
+    return true;
+  }
+
+  function install() {
+    const host = panel();
+    if (!host || installedPanel === host) return Boolean(host);
+    installedPanel = host;
+    host.dataset.submenuRoutes = 'deterministic-v1';
+    host.addEventListener('click', event => {
+      const button = event.target.closest('[data-marketing-tab]');
+      if (!button || !host.contains(button)) return;
+      const tab = button.dataset.marketingTab || DEFAULT_TAB;
+      writeRoute(tab);
+      queueMicrotask(annotateRoutes);
+    });
+    const nav = host.querySelector('.marketing-ai-console-tabs');
+    if (nav) {
+      navObserver?.disconnect();
+      navObserver = new MutationObserver(() => {
+        annotateRoutes();
+        if (location.hash === ROOT_HASH && requestedTab() !== DEFAULT_TAB) queueMicrotask(() => activateFromLocation());
+      });
+      navObserver.observe(nav, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
+    }
+    annotateRoutes();
+    setTimeout(() => activateFromLocation(), 0);
+    return true;
+  }
+
+  function start() {
+    if (install()) return;
+    const observer = new MutationObserver(() => {
+      if (install()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList:true, subtree:true });
+    setTimeout(() => observer.disconnect(), 20_000);
+  }
+
+  window.addEventListener('popstate', () => {
+    if (location.hash === ROOT_HASH) queueMicrotask(() => activateFromLocation());
+  });
+  window.addEventListener('ekodi-admin-section-changed', event => {
+    if (event.detail?.section === 'marketing-ai') setTimeout(() => activateFromLocation(), 0);
+  });
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
+  else start();
+})();
