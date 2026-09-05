@@ -1,0 +1,3 @@
+EKODI Mall live verification trigger
+2026-09-01
+Purpose: trigger the shared-site production deployment and the existing post-deploy mall verifier without changing storefront behavior.
