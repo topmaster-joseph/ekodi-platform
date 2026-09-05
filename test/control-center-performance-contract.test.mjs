@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [loader, layout, handoff, finance, billing, build, mission, hybrid, cheonggye] = await Promise.all([
+const [loader, layout, handoff, finance, billing, build, mission, hybrid, cheonggye, sharedDeploy] = await Promise.all([
   readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
@@ -12,6 +12,7 @@ const [loader, layout, handoff, finance, billing, build, mission, hybrid, cheong
   readFile(new URL('../mission-control-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../hybrid-execution-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../cheonggye-members-admin.js', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
 ]);
 
 test('heavy Admin features are demand-loaded rather than added to the first-path shell', () => {
@@ -55,6 +56,7 @@ test('Admin live surfaces avoid hidden-tab polling and coalesce slow refreshes',
   assert.ok(hybrid.includes("document.visibilityState === 'visible'"));
   assert.ok(hybrid.includes('loadPromise'));
   assert.ok(cheonggye.includes('POLL_MS = 60 * 1000'));
+  for (const asset of ['device-control-admin.js','hybrid-execution-admin.js','mission-control-admin.js','cheonggye-members-admin.js']) assert.ok(sharedDeploy.includes(`- '${asset}'`));
 });
 
 test('production build ships optional modules as standalone assets and retired loaders stay removed', () => {
