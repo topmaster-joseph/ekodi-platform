@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 import { shellServiceForHost, shellServiceForRootPath } from '../ekodi-shell-injector.js';
 import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.js';
+import { EKODI_USER_EXPERIENCE_PROFILES } from '../config/user-ui-experience-profiles.js';
 
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -86,9 +87,23 @@ if (shell?.header?.alignment !== 'centered-canvas' || shell?.footer?.dedupe !== 
 if (shell?.geometry?.strategy !== 'selective-by-semantic-role-and-service-profile' || !shell?.geometry?.tokens?.includes('--ekodi-control-radius')) {
   errors.push('Shared geometry policy must expose semantic, service-aware radius tokens.');
 }
-if (shell?.experienceProfiles?.['consumer-commerce']?.appliesTo?.includes('mall') !== true || services.mall?.experienceProfile !== 'consumer-commerce') {
-  errors.push('Mall must inherit the reusable consumer-commerce experience profile.');
+if (shell?.experienceProfiles?.source !== 'config/user-ui-experience-profiles.js' || shell?.experienceProfiles?.strategy !== 'service-opt-in') {
+  errors.push('User UI Shell must use the central experience-profile registry with service opt-in.');
 }
+const experienceProfiles=EKODI_USER_EXPERIENCE_PROFILES.profiles||{};
+const serviceProfiles=EKODI_USER_EXPERIENCE_PROFILES.serviceProfiles||{};
+for(const [id,profile] of Object.entries(services)){
+  const requested=String(profile?.experienceProfile||'').trim();
+  if(!requested)continue;
+  if(!experienceProfiles[requested])errors.push(`UI DNA service "${id}" references missing experience profile "${requested}".`);
+  if(serviceProfiles[id]!==requested)errors.push(`Runtime experience profile for "${id}" must match UI DNA "${requested}".`);
+}
+for(const [id,requested] of Object.entries(serviceProfiles)){
+  if(!services[id])errors.push(`Experience profile registry references missing UI DNA service "${id}".`);
+  else if(services[id]?.experienceProfile!==requested)errors.push(`Experience profile registry "${id}" must match UI DNA assignment.`);
+}
+const commerceProfile=experienceProfiles['consumer-commerce'];
+if(!commerceProfile?.geometry?.controlRadius || serviceProfiles.mall!=='consumer-commerce') errors.push('Mall must inherit the reusable consumer-commerce experience profile from the central registry.');
 for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
@@ -174,7 +189,7 @@ for (const marker of ['Natural-language word integrity','word-break: keep-all','
 for (const marker of ['Responsive Typography Standard v2','word-break:keep-all','overflow-wrap:break-word','hyphens:none','[data-ekodi-break-anywhere]','.ekodi-break-anywhere']) {
   if (!responsiveTypographySource.includes(marker)) errors.push(`Responsive typography standard lost required marker: ${marker}`);
 }
-for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
+for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','USER_EXPERIENCE_PROFILES_BOOTSTRAP','x-ekodi-user-experience-profiles','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
 for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=5','ekodi-user-ui-footer__copy','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {
@@ -191,7 +206,7 @@ for(const id of Object.keys(services)){
   if(id==='mission')continue;
   if(!designInheritanceSource.includes(`${id}:`))errors.push(`Runtime design inheritance is missing UI DNA service "${id}".`);
 }
-for(const marker of ['EXPERIENCE_PROFILES','consumer-commerce','--ekodi-control-radius','--ekodi-field-radius','--ekodi-chip-radius','--ekodi-panel-radius','ekodiExperienceProfile']){
+for(const marker of ['__EKODI_USER_EXPERIENCE_PROFILES__','experienceRegistry','consumer-commerce','--ekodi-control-radius','--ekodi-field-radius','--ekodi-chip-radius','--ekodi-panel-radius','ekodiExperienceProfile']){
   if(!designInheritanceSource.includes(marker))errors.push(`Runtime design inheritance lost semantic geometry marker: ${marker}`);
 }
 
