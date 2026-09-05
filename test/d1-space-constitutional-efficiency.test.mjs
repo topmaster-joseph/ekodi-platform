@@ -31,6 +31,18 @@ test('high-frequency D1 paths do not scan sqlite_master',async()=>{
   assert.doesNotMatch(scheduler,/schemaReady\(/);
   assert.match(scheduler,/no such table/i);
 });
+test('Marketing Publishing migration gate uses zero-row probes instead of sqlite_master polling',async()=>{
+  const workflow=await read('.github/workflows/deploy-marketing-publishing.yml');
+  const start=workflow.indexOf('Wait for shared D1 migration gate on normal production push');
+  const end=workflow.indexOf('Verify production D1 publication tables and entitlement triggers',start);
+  assert.ok(start>=0&&end>start);
+  const gate=workflow.slice(start,end);
+  assert.doesNotMatch(gate,/sqlite_master/);
+  assert.match(gate,/SELECT 1 FROM marketing_publication_jobs LIMIT 0/);
+  assert.match(gate,/SELECT 1 FROM channel_automation_profiles LIMIT 0/);
+  assert.match(gate,/SELECT 1 FROM channel_oauth_connections LIMIT 0/);
+});
+
 test('Space stays an internal engine while public aliases follow canonical workspace routing',async()=>{
   const [worker,manifest,shell,services,policy]=await Promise.all([
     read('space-worker.js'),read('ekodi-service-manifest.js'),read('shell/shell.js'),

@@ -145,12 +145,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          probe_sql='SELECT 1 FROM marketing_publication_jobs LIMIT 0; SELECT 1 FROM channel_automation_profiles LIMIT 0; SELECT 1 FROM channel_oauth_connections LIMIT 0;'
           for attempt in $(seq 1 30); do
-            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_publication_jobs','channel_automation_profiles','channel_oauth_connections');" --json > /tmp/schema.json 2>/tmp/schema.err; then
-              if grep -Fq 'marketing_publication_jobs' /tmp/schema.json && grep -Fq 'channel_automation_profiles' /tmp/schema.json && grep -Fq 'channel_oauth_connections' /tmp/schema.json; then
-                echo 'Shared Marketing publication schema is ready.'
-                exit 0
-              fi
+            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-publishing.toml --command "$probe_sql" --json > /tmp/schema.json 2>/tmp/schema.err; then
+              echo 'Shared Marketing publication schema is ready.'
+              exit 0
             fi
             sleep 5
           done
