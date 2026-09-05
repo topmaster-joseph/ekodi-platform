@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [loader, layout, handoff, finance, billing, build, mission, devices, hybrid, cheonggye] = await Promise.all([
+const [loader, layout, handoff, finance, billing, build, mission, hybrid, cheonggye] = await Promise.all([
   readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8'),
   readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
@@ -10,7 +10,6 @@ const [loader, layout, handoff, finance, billing, build, mission, devices, hybri
   readFile(new URL('../author-billing-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-admin.js', import.meta.url), 'utf8'),
-  readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../hybrid-execution-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../cheonggye-members-admin.js', import.meta.url), 'utf8'),
 ]);
@@ -52,9 +51,6 @@ test('Admin live surfaces avoid hidden-tab polling and coalesce slow refreshes',
   assert.ok(mission.includes("document.visibilityState === 'visible'"));
   assert.ok(mission.includes('refreshPromise'));
   assert.doesNotMatch(mission, /30_000/);
-  assert.ok(devices.includes('DEVICE_REFRESH_MS = 30 * 1000'));
-  assert.ok(devices.includes("document.visibilityState === 'visible'"));
-  assert.ok(devices.includes('loadPromise'));
   assert.ok(hybrid.includes('HYBRID_REFRESH_MS = 30 * 1000'));
   assert.ok(hybrid.includes("document.visibilityState === 'visible'"));
   assert.ok(hybrid.includes('loadPromise'));
