@@ -115,7 +115,9 @@
         "workspace-admin-page.js",
         "workspace-route-policy.js",
         "space-worker.js",
-        "platform-router-entry-worker.js"
+        "platform-router-entry-worker.js",
+        "config/data-plane-contract.json",
+        "scripts/validate-cognitive-control-plane.mjs"
       ]
     },
     {
@@ -148,7 +150,10 @@
         "scripts/validate-core-data-boundaries.mjs",
         "scripts/validate-storage-ai-contracts.mjs",
         "migrations/**",
-        "database/**"
+        "database/**",
+        "config/cognitive-control-plane.json",
+        "config/data-plane-contract.json",
+        "scripts/validate-cognitive-control-plane.mjs"
       ]
     },
     {
@@ -165,7 +170,10 @@
         "ai-control-provider-router.js",
         "scripts/validate-ai-provider-independence.mjs",
         "mail-google-adapter.js",
-        "config/storage-policy.json"
+        "config/storage-policy.json",
+        "config/cognitive-control-plane.json",
+        "config/data-plane-contract.json",
+        "scripts/validate-cognitive-control-plane.mjs"
       ]
     },
     {
@@ -193,7 +201,9 @@
         "ai-governance.js",
         "ai-governance-runtime.js",
         "ai-resilience-runtime.js",
-        "config/ai-mission-governance.json"
+        "config/ai-mission-governance.json",
+        "config/cognitive-control-plane.json",
+        "scripts/validate-cognitive-control-plane.mjs"
       ]
     },
     {
@@ -207,7 +217,10 @@
         "deploy/**",
         "scripts/guarded-pages-release.mjs",
         "scripts/guarded-worker-release.mjs",
-        "scripts/validate-deployment-guardrails.mjs"
+        "scripts/validate-deployment-guardrails.mjs",
+        "config/cognitive-control-plane.json",
+        "config/data-plane-contract.json",
+        "scripts/validate-cognitive-control-plane.mjs"
       ]
     },
     {
@@ -237,7 +250,10 @@
         "hybrid-execution-monitor.js",
         "docs/ARCHITECTURE.md",
         "config/user-ui-shell.json",
-        "shell/media-meeting-adapter.js"
+        "shell/media-meeting-adapter.js",
+        "config/cognitive-control-plane.json",
+        "config/data-plane-contract.json",
+        "scripts/validate-cognitive-control-plane.mjs"
       ]
     },
     {
