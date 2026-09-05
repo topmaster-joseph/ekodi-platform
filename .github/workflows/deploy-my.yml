@@ -6,6 +6,12 @@ on:
     paths:
       - 'my/**'
       - 'my-worker.js'
+      - 'config/capability-registry.json'
+      - 'config/workspace-packs.json'
+      - 'capability-intent-runtime.js'
+      - 'scripts/validate-capability-registry.mjs'
+      - 'test/my-intent-os.test.mjs'
+      - 'test/my-intent-execution-bridge.test.mjs'
       - 'ekodi-service-manifest.js'
       - 'config/ecosystem-services.json'
       - 'config/universal-membership.json'
@@ -28,12 +34,17 @@ on:
       - 'supabase/migrations/*creator_*'
       - 'supabase/migrations/*my_personalization*.sql'
       - '.github/workflows/deploy-my.yml'
-      - 'release/my-manifest-auto-services-20260819.marker'
   push:
     branches: [main]
     paths:
       - 'my/**'
       - 'my-worker.js'
+      - 'config/capability-registry.json'
+      - 'config/workspace-packs.json'
+      - 'capability-intent-runtime.js'
+      - 'scripts/validate-capability-registry.mjs'
+      - 'test/my-intent-os.test.mjs'
+      - 'test/my-intent-execution-bridge.test.mjs'
       - 'ekodi-service-manifest.js'
       - 'config/ecosystem-services.json'
       - 'config/universal-membership.json'
@@ -87,6 +98,10 @@ jobs:
           node --check my/approval-brief.js
           node --check my/approvals/app.js
           node --check my/progressive-personalization.js
+          node --check my/intent-navigator.js
+          node --check capability-intent-runtime.js
+          node --check scripts/validate-capability-registry.mjs
+          node scripts/validate-capability-registry.mjs
           node --check my/private-workspace-router.js
           node --check my/journey/app.js
           node --check my/membership-summary.js
@@ -98,7 +113,7 @@ jobs:
           node --check scripts/validate-universal-membership.mjs
           node scripts/validate-my.mjs
           node scripts/validate-universal-membership.mjs
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
@@ -189,9 +204,7 @@ jobs:
   production:
     if: >-
       always() && needs.validate.result == 'success' &&
-      (github.event_name != 'pull_request' ||
-       ((github.event.pull_request.head.ref == 'release/marketing-personal-brand-20260818' ||
-         github.event.pull_request.head.ref == 'release/my-manifest-auto-services-20260819') && needs.staging.result == 'success'))
+      github.event_name != 'pull_request'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 22

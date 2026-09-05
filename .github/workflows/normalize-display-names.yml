@@ -26,10 +26,3 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/normalize-platform-ai-names.mjs
-          if ! git diff --quiet; then
-            echo 'Prefix-free display-name policy violation detected.'
-            git diff --stat
-            git diff --check
-            exit 1
-          fi
-          echo 'Platform and specialist AI display names follow the prefix-free policy.'

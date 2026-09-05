@@ -45,7 +45,8 @@
     "validate:user-surfaces": "node scripts/validate-user-surfaces.mjs",
     "validate:responsible-services": "node scripts/validate-responsible-independent-services.mjs",
     "validate:sovereign": "node scripts/validate-sovereign-autonomous-operations.mjs",
-    "validate:capabilities": "node scripts/validate-capability-registry.mjs"
+    "validate:capabilities": "node scripts/validate-capability-registry.mjs",
+    "pretest": "npm run generate:user-services"
   },
   "engines": {
     "node": ">=20"
