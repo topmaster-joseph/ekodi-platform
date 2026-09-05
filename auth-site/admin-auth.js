@@ -14,6 +14,7 @@ const isAndroid=/Android/i.test(ua);
 const isEmbeddedWebView=/\bwv\b|;\s*wv\)|ChatGPT|FBAN|FBAV|Instagram|KAKAOTALK|NAVER\(inapp|Line\//i.test(ua);
 
 function show(id,on=true){$(id)?.classList.toggle('hide',!on)}
+function clearDirectFallback(message='등록된 관리자 Google 계정을 선택해 주세요.'){if(directFallbackTimer){window.clearTimeout(directFallbackTimer);directFallbackTimer=0}if(directEntry)directBridgeRoot.dataset.adminDirectBridge='prompt';notice(message)}
 function revealDirectFallback(message='Google 계정 선택창이 자동으로 열리지 않았습니다. 아래 Google 로그인 버튼을 눌러 주세요.'){if(directFallbackTimer){window.clearTimeout(directFallbackTimer);directFallbackTimer=0}if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice(message,'error')}
 function notice(text,type=''){const el=$('authStatus');el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
 async function request(path,options={}){const headers={...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const r=await fetch(`${ADMIN_API}${path}`,{...options,headers,cache:'no-store'});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{}if(!r.ok)throw Object.assign(new Error(data.error||`http_${r.status}`),{status:r.status,data});return data}
@@ -122,8 +123,10 @@ async function prepare(){
       directFallbackTimer=window.setTimeout(()=>revealDirectFallback(),4000);
       try{
         window.google.accounts.id.prompt(moment=>{
+          const displayed=moment?.isDisplayed?.()===true;
           const notDisplayed=moment?.isNotDisplayed?.()===true;
           const skipped=moment?.isSkippedMoment?.()===true;
+          if(displayed){clearDirectFallback();return}
           if(notDisplayed||skipped)revealDirectFallback()
         });
       }catch(error){console.warn('admin direct Google prompt',error);revealDirectFallback()}
