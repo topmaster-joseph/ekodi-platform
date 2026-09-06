@@ -103,8 +103,13 @@ jobs:
           mkdir -p /tmp/ekodi-church-pages
           rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
           cd /tmp/ekodi-church-pages
-          npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
-          test -s /tmp/ekodi-church-functions/index.js
+          if [[ -d functions ]] && find functions -type f -print -quit | grep -q .; then
+            npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
+            test -s /tmp/ekodi-church-functions/index.js
+            echo 'Church Pages Functions payload prepared.'
+          else
+            echo 'Church source is static-only; Pages Functions build skipped.'
+          fi
 
       - name: Deploy Church to Cloudflare Pages
         shell: bash
