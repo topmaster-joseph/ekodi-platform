@@ -35,6 +35,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'cheonggye-members', group: 'tenants', icon: '名', labels: { ko: '청계면상인회 정회원', en: 'Cheonggye Members' } },
   { id: 'capabilities', group: 'operations-center', icon: '⚡', labels: { ko: 'Capability Center', en: 'Capability Center' } },
   { id: 'aiops', group: 'operations-center', icon: 'AI', labels: { ko: 'AI·Agent', en: 'AI & Agents' } },
+  { id: 'openai', group: 'operations-center', icon: 'O', labels: { ko: 'OpenAI', en: 'OpenAI' }, providerWorkspace: true },
   { id: 'devices', group: 'operations-center', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'health', group: 'operations-center', icon: '◉', labels: { ko: '상태·관측', en: 'Health & Observability' } },
   { id: 'api-cost', group: 'operations-center', icon: '₩', labels: { ko: 'API·비용', en: 'API & Cost' } },
